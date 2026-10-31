@@ -16,7 +16,7 @@ public final class BootTests {
 
     /** zas_atmos loads alongside zas on a dedicated server (NFR-020, NFR-023). */
     @GameTest(template = "empty")
-    public static void nfr023_zasAtmosLoadsOnDedicatedServer(GameTestHelper h) {
+    public static void nfr_023_zas_atmos_loads_on_dedicated_server(GameTestHelper h) {
         h.assertTrue(FMLEnvironment.dist == Dist.DEDICATED_SERVER, "not a dedicated server");
         h.assertTrue(ModList.get().isLoaded("zas"), "zas is not loaded");
         h.assertTrue(ModList.get().isLoaded(ZasAtmosMod.MOD_ID), "zas_atmos is not loaded");
