@@ -15,7 +15,9 @@ import java.util.Arrays;
  * @param zoneEdges its number of edges to other zones
  * @param ambientEdges its number of edges to the ambient: 0 or 1; 1 means breached
  * @param openFaces the open cell faces across all its edges (CORE-037)
- * @param paused whether it is paused (GEO-030); always false until paused zones exist (#27)
+ * @param paused whether it is paused (GEO-030): part of it is in an unloaded chunk, it waits for
+ *     saved shares, or it opens onto a region that reaches an unloaded chunk (GEO-026); its
+ *     mixture is then its last-known state (GEO-035)
  */
 public record ZoneView(
         long id,

@@ -31,5 +31,11 @@ public enum LedgerCategory {
     /** Gas voided at, or supplied by, paused zones and unresolved regions (GEO-036, GEO-038). */
     PAUSED,
     /** Operator commands that reset a region to ambient (OPS-013). */
-    OPERATOR
+    OPERATOR,
+    /**
+     * Gas moved between memory and chunk storage (DATA-002, DATA-008): zones built or extended
+     * from the shares saved in chunks as those chunks load, and zones taken out of memory once
+     * every chunk they span has unloaded.
+     */
+    STORAGE
 }

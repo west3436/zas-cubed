@@ -75,8 +75,10 @@ public final class AmbientTests {
         // A gas from another datapack works in an ambient.
         close(h, cell.partialPressures().get(TEST_GAS), 25, "test gas partial pressure");
 
-        // Queries return the dimension's ambient, not the Overworld's.
+        // Queries return the dimension's ambient, not the Overworld's. A point in an unloaded chunk
+        // is unresolved (API-010), so the chunk is loaded first; nothing keeps it loaded.
         ServerLevel nether = level(h, Level.NETHER);
+        nether.getChunk(OPEN);
         withPreset(h, AtmospherePreset.NORMAL, () -> {
             AtmosphereSample sample = Atmospheres.at(nether, OPEN);
             h.assertValueEqual(sample.state(), AtmosphereState.AMBIENT, "state");

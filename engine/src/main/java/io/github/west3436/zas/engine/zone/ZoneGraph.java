@@ -134,6 +134,31 @@ public final class ZoneGraph {
         return ambient;
     }
 
+    /** The id the next new zone gets; ids below it have been issued (CORE-026). */
+    public long nextZoneId() {
+        return nextZoneId;
+    }
+
+    /**
+     * Makes sure new zones get ids of at least {@code next}, so ids saved in an earlier session
+     * are never issued again (CORE-026). Never lowers the counter.
+     */
+    public void reserveZoneIds(long next) {
+        if (next > nextZoneId) {
+            nextZoneId = next;
+        }
+    }
+
+    /**
+     * Pauses or resumes a zone (GEO-030). While paused it keeps its mixture: {@link #exchange()}
+     * leaves it out. Pausing changes nothing else; the scheduler holds the zone's block changes
+     * and gas operations itself.
+     */
+    public void setPaused(Zone zone, boolean paused) {
+        requireLive(zone);
+        zone.paused = paused;
+    }
+
     /** The live zones, in id order. */
     public Collection<Zone> zones() {
         return zonesView;
@@ -825,6 +850,12 @@ public final class ZoneGraph {
      *       Its other edges become its neighbours' ambient connections. This
      *       takes the place of snapping to the ambient (CORE-039).
      * </ol>
+     *
+     * <p>Paused zones (GEO-030) take no part: they don't exchange with the ambient, merge or
+     * dissolve, and their mixtures don't change. An active zone across an edge from a paused one
+     * exchanges with a copy of the paused zone's mixture, its last-known state (GEO-035): gas it
+     * sends is voided (GEO-036) and gas it draws is supplied without depleting the paused zone
+     * (GEO-038), both recorded as {@link LedgerCategory#PAUSED}.
      */
     public void exchange() {
         for (Zone z : zones.values()) {
@@ -852,14 +883,22 @@ public final class ZoneGraph {
                 continue;
             }
             if (e.isAmbient()) {
-                exchangeWithAmbient(e);
+                if (!e.first().paused) {
+                    exchangeWithAmbient(e);
+                }
+            } else if (e.first().paused || e.second().paused) {
+                if (!e.first().paused) {
+                    exchangeWithPaused(e, e.first(), e.second());
+                } else if (!e.second().paused) {
+                    exchangeWithPaused(e, e.second(), e.first());
+                }
             } else {
                 exchangeZones(e);
             }
         }
         edgeBuffer.clear();
         for (Zone z : zones.values()) {
-            if (z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
+            if (!z.paused && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
                 dissolveBuffer.add(z);
             }
         }
@@ -943,6 +982,29 @@ public final class ZoneGraph {
             z.changed = true;
             exchangeCount++;
         }
+    }
+
+    /**
+     * One exchange of an active zone with a paused one's last-known state (GEO-035): the
+     * zone-to-zone share, against a copy of the paused zone's mixture, so the paused zone doesn't
+     * change. The edge never sleeps or merges while a side is paused.
+     */
+    private void exchangeWithPaused(Edge e, Zone active, Zone paused) {
+        if (active.mixture().isEquivalent(paused.mixture())) {
+            return;
+        }
+        double va = active.volume();
+        double vp = paused.volume();
+        double r = settings.ratio(e.connections);
+        GasMixture out = active.mixture().removeFraction(r * vp / (va + vp));
+        GasMixture in = paused.mixture().copy().removeFraction(r * va / (va + vp));
+        if (active.mixture().merge(in)) {
+            ledger.record(LedgerCategory.PAUSED, in, 1);
+        }
+        ledger.record(LedgerCategory.PAUSED, out, -1);
+        drainPruned(out);
+        active.changed = true;
+        exchangeCount++;
     }
 
     /**
@@ -1153,6 +1215,105 @@ public final class ZoneGraph {
         drainPruned(z.mixture());
         zones.remove(z.id());
         z.destroy();
+    }
+
+    // ---- Storage (DATA-002, DATA-008) ----------------------------------------
+
+    /**
+     * Builds or extends a zone from a share saved in a chunk (DATA-002): the share's cells join
+     * the zone with that id, which is created if it isn't live, and the share's gas is merged into
+     * it, recorded as {@link LedgerCategory#STORAGE}. A zone rebuilt from its chunks therefore holds
+     * the sum of their shares (DATA-008).
+     *
+     * <p>Cells that are no longer cells, or that another zone holds, are left out, but the share's
+     * gas is kept in full, as when a cell is filled (CORE-022). The cells need not be connected to
+     * each other or to the zone: a zone may be rebuilt a chunk at a time.
+     *
+     * @param id the zone's saved id; the counter is raised past it (CORE-026)
+     * @param cellIds the share's cells
+     * @param gas the share's gas; not changed
+     * @return the zone, or null if it isn't live and none of the cells could join it, in which
+     *     case nothing changes
+     * @throws IllegalArgumentException if the id isn't positive
+     */
+    public Zone loadShare(long id, long[] cellIds, GasMixture gas) {
+        Objects.requireNonNull(gas, "gas");
+        if (id <= 0) {
+            throw new IllegalArgumentException("zone id must be positive, got " + id);
+        }
+        long[] sorted = cellIds.clone();
+        Arrays.sort(sorted);
+        long[] usable = new long[sorted.length];
+        int n = 0;
+        for (int i = 0; i < sorted.length; i++) {
+            long c = sorted[i];
+            if ((i == 0 || c != sorted[i - 1]) && topology.volume(c) > 0 && zoneOf(c) == null) {
+                usable[n++] = c;
+            }
+        }
+        Zone zone = zones.get(id);
+        if (zone == null) {
+            if (n == 0) {
+                return null;
+            }
+            zone = new Zone(id, new GasMixture(registry, config, 1, gas.temperature()));
+            zones.put(id, zone);
+            reserveZoneIds(id + 1);
+        }
+        for (int i = 0; i < n; i++) {
+            Cell c = cells.get(usable[i]);
+            if (c == null) {
+                c = new Cell(usable[i]);
+                cells.put(usable[i], c);
+            }
+            unlinkAll(c);
+            c.volume = topology.volume(usable[i]);
+            zone.addCell(c);
+            linkFromTopology(c);
+        }
+        if (zone.mixture().merge(gas)) {
+            ledger.record(LedgerCategory.STORAGE, gas, 1);
+        }
+        zone.changed = true;
+        return zone;
+    }
+
+    /**
+     * Takes a zone out of memory once its state is in chunk storage (DATA-002): its gas leaves,
+     * recorded as {@link LedgerCategory#STORAGE}, and its cells leave the graph. Unlike {@link
+     * #leave} or dissolution, nothing goes to the ambient and no neighbour gains an ambient
+     * connection: the edges to the zone simply disappear, as if the cells beyond were unknown.
+     *
+     * @return the gas the zone held
+     */
+    public GasMixture evict(Zone zone) {
+        requireLive(zone);
+        GasMixture gas = zone.mixture().removeFraction(1);
+        ledger.record(LedgerCategory.STORAGE, gas, -1);
+        drainPruned(gas);
+        for (Edge e : new ArrayList<>(zone.edges)) {
+            removeEdge(e);
+            Zone other = e.other(zone);
+            if (other != null) {
+                other.changed = true;
+            }
+        }
+        // The edges are gone, so the pairs are dropped without counting.
+        while (zone.cellCount() > 0) {
+            Cell c = zone.cellAt(zone.cellCount() - 1);
+            for (int i = c.degree - 1; i >= 0; i--) {
+                Cell n = cells.get(c.neighbours[i]);
+                c.removeLinkAt(i);
+                n.removeLinkAt(n.indexOf(c.id));
+                dropIfIdle(n);
+            }
+            zone.removeCell(c);
+            cells.remove(c.id);
+        }
+        drainPruned(zone.mixture());
+        zones.remove(zone.id());
+        zone.destroy();
+        return gas;
     }
 
     // ---- Rollback (CORE-070, CORE-074) ---------------------------------------

@@ -25,6 +25,8 @@ public final class Zone {
     private boolean alive = true;
     /** Set by any change to the mixture; wakes sleeping edges at the next exchange (CORE-066). */
     boolean changed;
+    /** Whether the zone is paused (GEO-030): it doesn't exchange, merge or dissolve. */
+    boolean paused;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 
@@ -59,6 +61,15 @@ public final class Zone {
 
     public int cellCount() {
         return cellCount;
+    }
+
+    /**
+     * Whether the zone is paused (GEO-030): part of it is in an unloaded chunk, or it opens onto a
+     * region that can't be classified yet (GEO-026). A paused zone keeps its mixture: it doesn't
+     * exchange, merge or dissolve, and zones across its edges see it as it last was (GEO-035).
+     */
+    public boolean isPaused() {
+        return paused;
     }
 
     /** Whether the zone still exists in its graph (CORE-065). */
