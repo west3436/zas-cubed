@@ -41,4 +41,17 @@ data/<namespace>/zas/gas/<path>.json   →   gas id <namespace>:<path>
   because zones store their gas by the loaded set.
 - **Clients** receive the server's definitions when they join and after each
   `/reload` (CORE-014), so a server-only datapack is enough.
-- **Built-in gases** arrive in R1 (CORE-011). Until then `zas` ships none.
+- **Built-in gases:** `zas` ships `zas:nitrogen` and `zas:oxygen`, the gases
+  of standard air, which the API's `StandardAir` names. The rest of the
+  built-in set (CORE-011) arrives in R1.
+
+### Built-in gas constants
+
+Molar heat capacity is at constant volume near 298 K: C_v = C_p − R, with
+C_p from the NIST Chemistry WebBook and R = 8.314 J/(mol·K). Molar mass is
+from the IUPAC standard atomic weights (N 14.007, O 15.999).
+
+| Gas | Molar mass (kg/mol) | C_p (J/(mol·K)) | C_v (J/(mol·K)) | Source |
+|---|---|---|---|---|
+| `zas:nitrogen` (N₂) | 0.028014 | 29.12 | 20.81 | [NIST WebBook, N₂](https://webbook.nist.gov/cgi/cbook.cgi?ID=C7727379&Mask=1) |
+| `zas:oxygen` (O₂) | 0.031998 | 29.38 | 21.06 | [NIST WebBook, O₂](https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447&Mask=1) |

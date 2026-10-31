@@ -51,3 +51,6 @@
 # out.
 #
 # Run the check locally with: python scripts/check_credits.py
+
+path: zas/src/main/resources/assets/zas/lang/en_us.json
+origin: original

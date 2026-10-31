@@ -29,6 +29,9 @@ public final class GasRegistryTests {
         h.assertTrue(plain != null, "zas_gametest:plain_gas did not load");
         h.assertTrue(plain.visibility().isEmpty(), "visibility is optional");
         h.assertValueEqual(plain.molarHeatCapacity(), 12.5, "plain_gas molar heat capacity");
+        // The standard-air gases ship with zas, under the ids the API's StandardAir uses.
+        h.assertTrue(registry.find("zas:nitrogen").isPresent(), "zas:nitrogen did not load");
+        h.assertTrue(registry.find("zas:oxygen").isPresent(), "zas:oxygen did not load");
         h.succeed();
     }
 
