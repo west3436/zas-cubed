@@ -512,6 +512,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
   nest a newer minor version, which then wins; the fallback never needs `zas`.
 - **CI:** an API binary-compatibility check (japicmp) against the last
   release (API-043), and the example addon run without `zas` (API-048, S-12).
+  The policy and the consumer snippet are in
+  [api-consumers.md](api-consumers.md).
 
 ### 6.3 Threading contract (API-004, API-045, API-046)
 

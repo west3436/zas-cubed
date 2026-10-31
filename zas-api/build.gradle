@@ -1,9 +1,19 @@
-apply plugin: 'net.neoforged.moddev'
-apply plugin: 'maven-publish'
+import com.vanniktech.maven.publish.JavaLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
 
-// Independent semver (API-002). Loads as its own GAMELIBRARY module in dev and
-// production, so no mod lists this project's source set (architecture §2.1).
-version = api_version
+apply plugin: 'net.neoforged.moddev'
+apply plugin: 'com.vanniktech.maven.publish'
+
+// Independent semver (API-002), 0.x until R1 (API-041). It loads as its own
+// GAMELIBRARY module in dev and production, so no mod lists this project's
+// source set (architecture §2.1).
+//
+// -PapiSnapshot=true (or ORG_GRADLE_PROJECT_apiSnapshot=true) builds
+// <api_version>-SNAPSHOT for the Central snapshots repository. The mods' nested
+// API keeps its [api_version,1.0) range either way.
+def snapshot = providers.gradleProperty('apiSnapshot').getOrElse('false').toBoolean()
+version = snapshot ? "${api_version}-SNAPSHOT" : api_version
 
 jar {
     manifest {
@@ -15,11 +25,160 @@ jar {
     }
 }
 
-publishing {
-    publications {
-        register('mavenJava', MavenPublication) {
-            artifactId = 'zas-api'
-            from components.java
+// javadoc fails when there are no classes, only package-info. Until the first
+// type lands the javadoc jar is empty, which Central accepts.
+tasks.named('javadoc', Javadoc) {
+    def types = source.matching { exclude '**/package-info.java' }
+    onlyIf('the API has types to document') { !types.isEmpty() }
+}
+
+// Maven Central through the Sonatype Central Portal (API-008, D-18). A
+// -SNAPSHOT version goes to https://central.sonatype.com/repository/maven-snapshots/;
+// a release becomes a Portal deployment that is published by hand. Credentials
+// come from the mavenCentralUsername and mavenCentralPassword Gradle
+// properties (a Portal user token). docs/api-consumers.md has the details.
+mavenPublishing {
+    configure(new JavaLibrary(new JavadocJar.Javadoc(), new SourcesJar.Sources()))
+    coordinates('io.github.west3436', 'zas-api', project.version.toString())
+    publishToMavenCentral()
+
+    // Central requires signatures on releases, not on snapshots. Sign whenever
+    // an in-memory key is given (signingInMemoryKey, and
+    // signingInMemoryKeyPassword if it has one), so publishToMavenLocal works
+    // without a key.
+    if (!providers.gradleProperty('signingInMemoryKey').getOrElse('').isBlank()) {
+        signAllPublications()
+    }
+
+    pom {
+        name = 'ZAS³ API'
+        description = 'The public API of ZAS³, zone-based atmospherics for NeoForge. ' +
+                'Mods may bundle it (jar-in-jar) and call it whether or not ZAS³ is installed.'
+        url = 'https://github.com/west3436/zas-cubed'
+        inceptionYear = '2026'
+        licenses {
+            license {
+                name = 'MIT License'
+                url = 'https://opensource.org/licenses/MIT'
+                distribution = 'repo'
+            }
+        }
+        developers {
+            developer {
+                id = 'west3436'
+                name = 'west3436'
+                url = 'https://github.com/west3436'
+            }
+        }
+        scm {
+            url = 'https://github.com/west3436/zas-cubed'
+            connection = 'scm:git:https://github.com/west3436/zas-cubed.git'
+            developerConnection = 'scm:git:ssh://git@github.com/west3436/zas-cubed.git'
+        }
+        issueManagement {
+            system = 'GitHub'
+            url = 'https://github.com/west3436/zas-cubed/issues'
         }
     }
+}
+
+// API binary-compatibility check (API-043, NFR-033), run by `check`. It
+// compares this jar with the released API named by api_baseline_version, using
+// japicmp. The version policy is in docs/api-consumers.md: a binary-
+// incompatible change needs a new major version, or, while the API is 0.x
+// (API-041), a new minor version.
+def baselineVersion = providers.gradleProperty('api_baseline_version').getOrElse('').trim()
+
+if (baselineVersion.isEmpty()) {
+    def apiCompat = tasks.register('apiCompat') {
+        group = 'verification'
+        description = 'Checks binary compatibility with the last released API (no baseline set).'
+        doLast {
+            // On GitHub Actions the ::notice:: prefix turns this into an annotation.
+            def prefix = System.getenv('GITHUB_ACTIONS') ? '::notice::' : ''
+            logger.lifecycle(prefix + 'apiCompat: skipped, no baseline. Set api_baseline_version in ' +
+                    'gradle.properties to the last released API version to enable the check.')
+        }
+    }
+    tasks.named('check') { dependsOn apiCompat }
+} else {
+    // -Papi_baseline_repo=<url or path> adds a repository to find the baseline
+    // in, for testing the check against a local repository.
+    def baselineRepo = providers.gradleProperty('api_baseline_repo').getOrNull()
+    if (baselineRepo) {
+        repositories {
+            maven {
+                name = 'apiBaseline'
+                url = baselineRepo.contains('://') ? baselineRepo : file(baselineRepo).toURI()
+            }
+        }
+    }
+
+    configurations { japicmp }
+    dependencies {
+        japicmp 'com.github.siom79.japicmp:japicmp:0.26.5:jar-with-dependencies'
+    }
+    // Detached, because a normal configuration of this project resolves its
+    // own coordinates to the project itself rather than to the release.
+    def apiBaseline = configurations.detachedConfiguration(
+            dependencies.create("io.github.west3436:zas-api:${baselineVersion}"))
+    apiBaseline.transitive = false
+
+    // Breaking changes are allowed only when the version says so: a major
+    // bump, or a minor bump while both versions are 0.x.
+    def parse = { String v ->
+        def m = v =~ /^(\d+)\.(\d+)/
+        if (!m.find()) throw new GradleException("apiCompat: not a semver version: ${v}")
+        [m.group(1) as int, m.group(2) as int]
+    }
+    def (oldMajor, oldMinor) = parse(baselineVersion)
+    def (newMajor, newMinor) = parse(api_version.toString())
+    def breakingAllowed = newMajor > oldMajor || (newMajor == 0 && oldMajor == 0 && newMinor > oldMinor)
+
+    def report = layout.buildDirectory.file('reports/apiCompat/apiCompat.html')
+    def apiCompat = tasks.register('apiCompat', JavaExec) {
+        group = 'verification'
+        description = "Checks binary compatibility with the released API ${baselineVersion}."
+        classpath = configurations.japicmp
+        mainClass = 'japicmp.JApiCmp'
+
+        def oldJar = apiBaseline
+        def newJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+        def libs = configurations.compileClasspath
+        inputs.files(oldJar).withPropertyName('baseline')
+        inputs.file(newJar).withPropertyName('current')
+        outputs.file(report)
+
+        doFirst {
+            report.get().asFile.parentFile.mkdirs()
+            def cp = libs.files.join(File.pathSeparator)
+            def a = [
+                '--old', oldJar.singleFile.absolutePath,
+                '--new', newJar.get().asFile.absolutePath,
+                '--old-classpath', cp,
+                '--new-classpath', cp,
+                '--only-modified',
+                '--html-file', report.get().asFile.absolutePath,
+            ]
+            if (breakingAllowed) {
+                logger.lifecycle("apiCompat: ${api_version} may break ${baselineVersion} " +
+                        '(new major, or new minor under 0.x); reporting only.')
+            } else {
+                a << '--error-on-binary-incompatibility'
+            }
+            args(a)
+        }
+        ignoreExitValue = true
+        doLast {
+            def file = report.get().asFile
+            if (executionResult.get().exitValue != 0) {
+                throw new GradleException("apiCompat: ${api_version} has binary-incompatible changes " +
+                        "against ${baselineVersion}. Revert them, or bump the minor version under 0.x " +
+                        "(the major from 1.0) in api_version. Report: ${file}")
+            }
+            def how = breakingAllowed ? 'breaking changes allowed by the version bump' : 'binary compatible'
+            logger.lifecycle("apiCompat: passed against ${baselineVersion} (${how}). Report: ${file}")
+        }
+    }
+    tasks.named('check') { dependsOn apiCompat }
 }

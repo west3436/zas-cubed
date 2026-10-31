@@ -33,12 +33,50 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v6
         if: steps.gradle.outputs.present == 'true'
+      # check, inside build, runs the API compatibility check (API-043,
+      # NFR-033): :zas-api:apiCompat.
       - name: Build
         if: steps.gradle.outputs.present == 'true'
         run: ./gradlew build --stacktrace
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
         run: ./gradlew runGameTestServer --stacktrace
+
+  # Snapshot of the API on the Central Portal (API-008, D-18), after a green
+  # build on main. Never on PRs: they don't get the secrets.
+  publish-api-snapshot:
+    name: Publish API snapshot
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
+      ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
+      # Optional: Central doesn't require signed snapshots. The build signs
+      # when a key is set.
+      ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+    steps:
+      - name: Check for Central credentials
+        id: creds
+        run: |
+          if [ -n "$ORG_GRADLE_PROJECT_mavenCentralUsername" ] && [ -n "$ORG_GRADLE_PROJECT_mavenCentralPassword" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CENTRAL_USERNAME or CENTRAL_PASSWORD is not set; skipping the API snapshot."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.creds.outputs.present == 'true'
+      - uses: actions/setup-java@v6
+        if: steps.creds.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.creds.outputs.present == 'true'
+      - name: Publish the snapshot
+        if: steps.creds.outputs.present == 'true'
+        run: ./gradlew :zas-api:publishToMavenCentral -PapiSnapshot=true --stacktrace
 
   docs:
     name: Docs links
