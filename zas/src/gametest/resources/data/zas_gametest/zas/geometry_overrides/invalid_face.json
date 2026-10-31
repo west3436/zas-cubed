@@ -1,0 +1,5 @@
+{
+  "blocks": ["minecraft:sponge"],
+  "sealed_faces": ["sideways"],
+  "volume": 0
+}

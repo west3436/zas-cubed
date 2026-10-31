@@ -137,6 +137,22 @@ public final class ChangeTracker {
                 : d.dirty.drainWithin(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
     }
 
+    /**
+     * Marks a position dirty as if its geometry had changed, so the next batch captures its section
+     * again if the worker mirrors it: the geometry audit's repair (GEO-032). Server thread.
+     */
+    public static void markDirty(ServerLevel level, BlockPos pos) {
+        flushOffThread();
+        dimension(level).dirty.mark(pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    /** Whether any position of section {@code sectionKey} ({@link SectionKeys}) is waiting to be drained. */
+    public static boolean isSectionDirty(ServerLevel level, long sectionKey) {
+        flushOffThread();
+        Dimension d = LEVELS.get(level);
+        return d != null && d.dirty.isSectionDirty(sectionKey);
+    }
+
     /** Whether {@code pos} has changed geometry since it was last drained. */
     public static boolean isDirty(ServerLevel level, BlockPos pos) {
         flushOffThread();

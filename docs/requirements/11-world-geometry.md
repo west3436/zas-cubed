@@ -451,7 +451,7 @@ as open to ambient. Each dimension may override this.
   that a dimension override seals it.
 
 #### GEO-032 · Geometry audit
-`Should` · `R0` · `Accepted` · Verify: GameTest
+`Should` · `R0` · `Implemented` · Verify: GameTest
 
 A debug command shall check, for a given region, that zone membership and
 connections match the actual blocks, and report any differences.
