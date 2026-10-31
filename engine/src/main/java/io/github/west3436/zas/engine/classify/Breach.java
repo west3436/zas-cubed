@@ -32,7 +32,9 @@ public sealed interface Breach {
     /**
      * The region is open: the openings are ambient edges of the zones, and the zones vent through
      * them (GEO-025). The zone graph already counts every opening onto an unzoned cell as an
-     * ambient connection, so nothing more needs doing.
+     * ambient connection, so nothing more needs doing; once the zone is nearly equivalent to the
+     * ambient, {@link io.github.west3436.zas.engine.zone.ZoneGraph#exchange()} dissolves it
+     * (CORE-076).
      *
      * @param reason why the region is open
      */
