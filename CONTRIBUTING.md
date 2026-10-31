@@ -26,6 +26,23 @@ Every PR confirms this with the first checkbox in the
 [PR template](.github/pull_request_template.md) (NFR-043). A reviewer who
 suspects a copy asks for a rewrite from the description.
 
+## Using AI
+
+Using AI tools to write code, docs, tests or assets is fully acceptable. The
+one condition: **if a PR includes a player-facing change, it must show how a
+human tested that change in game.** Player-facing means anything a player can see, hear or
+feel, such as blocks, items, gas behaviour, hazards, the HUD or messages.
+
+In the PR description, say:
+
+- what you tested, in a dev client, on a dedicated server, or both
+- the steps you took and what happened
+- evidence: screenshots, a short video or log excerpts
+
+Passing GameTests and unit tests don't replace this for player-facing
+changes, though they're still expected. AI-written code follows the same
+rules as any other code, the clean-room rule included.
+
 ## Assets
 
 Code is MIT; assets are CC BY-SA 4.0 International (D-39, D-56). Every file
@@ -73,7 +90,9 @@ uses only the public API at compile time.
 
 1. Branch from `main`. Keep a PR to one issue where you can.
 2. Fill in the PR template: link the issue (`Closes #nn`), list the
-   requirement IDs touched, and tick the checklist.
+   requirement IDs touched, and tick the checklist. For a player-facing
+   change made with AI, include the human testing evidence described in
+   [Using AI](#using-ai).
 3. CI must pass: "Build and test" (build, unit tests, formatting, GameTests)
    and "Docs links".
 4. PRs are squash-merged, so the PR title becomes the commit subject. Write it
