@@ -218,6 +218,16 @@ R1 end-to-end test plan (NFR-032).
   opens the valve, and the tank explodes; under Normal no blocks break. A
   Manual playtest runs it by hand.
 
+*2026-10-31: R0 (the Phase D exit) runs S-01, S-02 and S-09 as far as R0 can,
+with no devices, pipes, canisters, alarms, firelocks or hazards: S-01 fills
+the room with the `/zas gas` commands and skips the helmet check; S-02 checks
+the ambient edge, the 27-cell room draining faster than the 1,000-cell one,
+and zone splits and merges, with no item or player movement, damage or
+firelock; S-09 keeps zones and a paused zone, with no pipe or canister
+contents. The vacuum test dimension is the End with a test datapack's vacuum
+ambient, since the GameTest server has only the vanilla dimensions. The plans
+above stay the R1 plans. See [Phase D exit status](../plan.md#phase-d-exit-status-2026-10-31).*
+
 ## Questions
 
 ### Resolved (2026-10-30)

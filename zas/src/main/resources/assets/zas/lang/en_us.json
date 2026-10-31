@@ -45,7 +45,7 @@
   "commands.zas.audit.started": "Auditing %s sections; the result follows from the atmos worker",
   "commands.zas.audit.clean": "Geometry audit: no differences in %2$s sections and %3$s zones",
   "commands.zas.audit.differences": "Geometry audit: %s differences in %s sections and %s zones",
-  "commands.zas.audit.skipped": "  Not checked: %s unloaded sections, %s sections with changes still queued, %s zones reaching unknown sections",
+  "commands.zas.audit.skipped": "  Not checked: %s unloaded sections, %s sections with changes still queued, %s zones reaching unknown sections, %s paused zones, %s positions with changes held for paused zones",
   "commands.zas.audit.kind": "  %s: %s",
   "commands.zas.audit.finding": "  %s at %s (zone %s)",
   "commands.zas.audit.repairable": "  %s stale sections can be sent to the engine again with \"repair\"",

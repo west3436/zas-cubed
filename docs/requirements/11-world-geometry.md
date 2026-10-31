@@ -267,7 +267,7 @@ shapes driven by block-entity data.
 ## Enclosure detection
 
 #### GEO-020 · Bounded enclosure test
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: D-23
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest, Bench · Trace: D-23
 
 Whether a seed cell is enclosed shall be decided by a fill through connected
 cells, bounded by a configurable maximum volume (default 65,536 cells).
@@ -276,6 +276,12 @@ Exceeding the bound means "open to ambient".
 - **Rationale:** Decision: D-23.
 - **Verify:** Unit tests check enclosures of 65,535 and 65,537 cells; a
   GameTest checks a large hall reports open; Bench measures fill cost.
+
+*2026-10-31: Implemented. `geo_020_bounded_enclosure_test` (Unit) checks
+65,535, 65,536 and 65,537 cells; `geo_020_hall_too_big_to_enclose_reports_open`
+(GameTest) checks a sealed hall of 67,240 cells classifies as open, and that
+its halves zone once a wall parts them; the R0 bench records 7.5 ms per fill
+at the cap ([benchmarks](../research/benchmarks.md)).*
 
 #### GEO-024 · Fills that reach unloaded chunks
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-24, D-43
@@ -313,13 +319,21 @@ a fill, until a block change invalidates that classification.
   no fill and a block change invalidates it; Bench measures the saving.
 
 #### GEO-022 · Off-thread classification
-`Must` · `R0` · `Accepted` · Verify: Bench, GameTest · Trace: D-30, CORE-045
+`Must` · `R0` · `Implemented` · Verify: Bench, GameTest · Trace: D-30, CORE-045
 
 Enclosure classification shall run off the server thread, on world snapshots.
 
 - **Rationale:** Decision: D-30.
 - **Verify:** Bench checks a 65,536-cell fill doesn't stall the server thread;
   GameTests check the results.
+
+*2026-10-31: Implemented. The R0 bench shows a 65,536-cell fill runs on the
+worker with at most 0.71 ms of server-thread time per round
+([benchmarks](../research/benchmarks.md)). `geo_022_classification_results_from_worker`
+(GameTest) checks classification happens on the atmos worker, never at batch
+close on the server thread, and that a sealed room zones and a room with a
+hole goes to the ambient; `geo_024_room_reaching_unloaded_chunk_is_unresolved`
+covers the unresolved result.*
 
 #### GEO-028 · Operations wait for classification
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: CORE-036

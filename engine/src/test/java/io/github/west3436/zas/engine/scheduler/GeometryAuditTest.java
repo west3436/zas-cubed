@@ -1,5 +1,6 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -107,6 +108,42 @@ class GeometryAuditTest {
         sim.steps(2);
         GeometryAudit.Report r = audit(sim, ROOM);
         assertTrue(r.clean(), () -> "findings: " + r.findings());
+    }
+
+    /**
+     * A wall broken beside a paused zone is held until the zone resumes (GEO-037). The audit counts
+     * the held position instead of reporting it as stale geometry, and leaves the paused zone
+     * unchecked; once the zone resumes and the change applies, the region audits clean.
+     */
+    @Test
+    void geo_032_held_changes_are_not_stale() {
+        Sim sim = new Sim(Ambient.VACUUM);
+        sim.world.room(12, 64, 1, 19, 66, 3); // across chunks (0, 0) and (1, 0)
+        sim.add(13, 65, 2, 40, 10);
+        sim.step();
+        long east = SectionKeys.chunk(1, 0);
+        ChunkRecord saved = sim.unload(east);
+        sim.step();
+        sim.world.set(11, 65, 2, TestWorld.AIR);
+        sim.step();
+        assertArrayEquals(new long[] {SectionKeys.block(11, 65, 2)}, sim.pipeline.heldBlocks());
+
+        GeometryAudit.Region west = new GeometryAudit.Region(8, 63, 0, 15, 67, 4);
+        GeometryAudit.Report r = audit(sim, west);
+        assertTrue(r.clean(), () -> "findings: " + r.findings());
+        assertEquals(1, r.heldPositions());
+        assertEquals(1, r.zonesPaused());
+        assertEquals(0, r.zonesChecked());
+        assertEquals(0, r.staleSections().length);
+
+        sim.load(east, saved);
+        sim.step();
+        assertEquals(0, sim.pipeline.heldBlocks().length);
+        GeometryAudit.Report after = audit(sim, west);
+        assertTrue(after.clean(), () -> "findings after resuming: " + after.findings());
+        assertEquals(0, after.heldPositions());
+        assertEquals(0, after.zonesPaused());
+        assertEquals(1, after.zonesChecked());
     }
 
     /** Findings past the limit are counted but not listed. */

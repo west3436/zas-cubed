@@ -44,6 +44,11 @@ import java.util.TreeSet;
  *       cells is {@link Kind#STALE_AMBIENT_EDGE}.
  * </ul>
  *
+ * <p>Paused zones (GEO-030) are left out: block changes that touch them are held until they resume
+ * (GEO-037), so the mirror keeps the old geometry there on purpose. Held positions are counted, not
+ * reported as {@link Kind#STALE_GEOMETRY}, and a paused zone's cells aren't checked; the report
+ * counts both.
+ *
  * <p>Fresh sections stand in for mirrored ones inside the region; outside it the audit reads the
  * mirror, so a fill that leaves the region sees what the engine sees. A fill that reaches a
  * section neither holds is unresolved and the zone is counted, not reported.
@@ -154,6 +159,9 @@ public final class GeometryAudit {
      *     zone checks still read them)
      * @param zonesChecked zones with cells in the region
      * @param zonesUnresolved zones whose fresh fill reached a section neither view holds
+     * @param zonesPaused paused zones with cells in the region, not checked (GEO-030)
+     * @param heldPositions positions in the region whose block changes are held for paused zones
+     *     (GEO-037): the mirror differs from the blocks there on purpose, so they aren't findings
      * @param counts findings per {@link Kind}, by ordinal
      * @param findings the first findings, sorted by kind and position
      * @param staleSections mirrored sections with {@link Kind#STALE_GEOMETRY}, which a repair sends
@@ -164,6 +172,8 @@ public final class GeometryAudit {
             int sectionsUnmirrored,
             int zonesChecked,
             int zonesUnresolved,
+            int zonesPaused,
+            int heldPositions,
             int[] counts,
             List<Finding> findings,
             long[] staleSections) {
@@ -235,7 +245,9 @@ public final class GeometryAudit {
 
         Collector out = new Collector(maxFindings);
 
-        // The mirror against the blocks.
+        // The mirror against the blocks, except where changes are held for paused zones.
+        long[] held = engine.heldBlocks();
+        int heldPositions = 0;
         long[] keys = live.keySet().stream().mapToLong(Long::longValue).toArray();
         Arrays.sort(keys);
         int unmirrored = 0;
@@ -259,7 +271,12 @@ public final class GeometryAudit {
                         }
                         int index = SectionKeys.index(x, y, z);
                         if (old.geometryId(index) != now.geometryId(index)) {
-                            out.add(Kind.STALE_GEOMETRY, SectionKeys.block(bx + x, by + y, bz + z), 0);
+                            long block = SectionKeys.block(bx + x, by + y, bz + z);
+                            if (Arrays.binarySearch(held, block) >= 0) {
+                                heldPositions++;
+                                continue;
+                            }
+                            out.add(Kind.STALE_GEOMETRY, block, 0);
                             differs = true;
                         }
                     }
@@ -274,9 +291,20 @@ public final class GeometryAudit {
         EnclosureFill fill = new EnclosureFill();
         int zonesChecked = 0;
         int unresolved = 0;
+        int paused = 0;
         for (Zone zone : sortedZones(graph)) {
             long[] cells = zone.cells();
             Arrays.sort(cells);
+            if (zone.isPaused()) {
+                // Its mirror is behind the blocks on purpose until it resumes (GEO-037).
+                for (long cell : cells) {
+                    if (region.contains(CellIds.x(cell), CellIds.y(cell), CellIds.z(cell))) {
+                        paused++;
+                        break;
+                    }
+                }
+                continue;
+            }
             long seed = -1;
             boolean inRegion = false;
             for (long cell : cells) {
@@ -352,7 +380,16 @@ public final class GeometryAudit {
             staleSections[i] = stale.get(i);
         }
         Arrays.sort(staleSections);
-        return new Report(keys.length, unmirrored, zonesChecked, unresolved, out.counts, out.sorted(), staleSections);
+        return new Report(
+                keys.length,
+                unmirrored,
+                zonesChecked,
+                unresolved,
+                paused,
+                heldPositions,
+                out.counts,
+                out.sorted(),
+                staleSections);
     }
 
     /** The block position ({@link SectionKeys#block}) of a cell. */
