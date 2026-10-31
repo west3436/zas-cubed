@@ -31,7 +31,8 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
   **clean-room**. vgstation13's code (GPLv3/AGPLv3) is used strictly as a
   design reference: its documented behaviour, algorithms and physical
   constants inform this project, but no vgstation13 code is copied or
-  translated into this repository. Contributions must follow the same rule.
+  translated into this repository. Contributions must follow the same rule;
+  see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Art assets** are planned to be derived from vgstation13's sprites, which
   are licensed CC BY-SA 3.0. Derived assets will be licensed CC BY-SA 4.0, with
   per-asset attribution in `CREDITS` and the asset license in
