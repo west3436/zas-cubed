@@ -1,5 +1,6 @@
 package io.github.west3436.zas.simulation;
 
+import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -8,7 +9,6 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -25,6 +25,7 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.slf4j.Logger;
 
 /**
  * The atmos scheduler on a running server (architecture §3): one {@link DimensionAtmos} per
@@ -40,6 +41,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * and the published tables may be read from any thread (API-046).
  */
 public final class AtmosService {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static volatile AtmosService current;
 
     private final MinecraftServer server;
@@ -94,7 +96,7 @@ public final class AtmosService {
             if (s != null && e.getLevel() instanceof ServerLevel level) {
                 DimensionAtmos d = s.dimensions.remove(level.dimension());
                 if (d != null) {
-                    d.failAll(new CancellationException("level unloaded"));
+                    d.shutdown("level unloaded");
                 }
             }
         });
@@ -175,13 +177,17 @@ public final class AtmosService {
     }
 
     private void stop() {
+        // Never wait for a worker without bound: abandon ticks in flight, then give the pool a
+        // short grace period. Its threads are daemons, so a stuck one can't keep the JVM alive.
         for (DimensionAtmos d : dimensions.values()) {
-            d.failAll(new CancellationException("server stopping"));
+            d.shutdown("server stopping");
         }
         dimensions.clear();
         workers.shutdownNow();
         try {
-            workers.awaitTermination(5, TimeUnit.SECONDS);
+            if (!workers.awaitTermination(2, TimeUnit.SECONDS)) {
+                LOGGER.warn("Atmos workers didn't stop within 2 s; leaving them to the JVM");
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

@@ -302,8 +302,8 @@ public final class DimensionAtmos {
     /** Drops the engine, failing the mutations still waiting on it. */
     private void retire(String why) {
         DimensionPipeline p = pipeline;
-        if (p != null && p.isInFlight()) {
-            p.apply(); // collect it so the worker is idle; its results are discarded
+        if (p != null) {
+            p.scheduler().abandon(); // never wait for the worker; its results are discarded
         }
         pipeline = null;
         failAll(new CancellationException(why));
@@ -440,6 +440,19 @@ public final class DimensionAtmos {
             }
         }
         return new GasParcel(map, temperature);
+    }
+
+    /**
+     * Stops the dimension for a server stop or level unload: abandons the tick in flight without
+     * waiting for the worker, and fails the waiting mutations.
+     */
+    void shutdown(String why) {
+        DimensionPipeline p = pipeline;
+        pipeline = null;
+        if (p != null) {
+            p.scheduler().abandon();
+        }
+        failAll(new CancellationException(why));
     }
 
     /** Fails every waiting mutation. */

@@ -42,6 +42,7 @@ jobs:
         run: ./gradlew build --stacktrace
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
+        timeout-minutes: 10
         run: ./gradlew runGameTestServer --stacktrace
 
   # Snapshot of the API on the Central Portal (API-008, D-18), after a green

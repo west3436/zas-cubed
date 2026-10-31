@@ -133,25 +133,20 @@ public final class AtmosTests {
     }
 
     /**
-     * Gives a test its own building area in the Overworld, at a fixed place near the origin, and
-     * keeps the chunks around it loaded.
+     * Gives a test its own building area in the Overworld, at a fixed place near the origin.
      *
      * <p>GameTest structures land at random coordinates up to about 15 million blocks out, but
      * cell ids name positions only within {@link CellIds#MAX_XZ} of the origin; farther out,
      * every position counts as outside the world and nothing can be zoned. Building near the
      * origin also makes the tests independent of where the structures land.
+     *
+     * <p>No chunk is forced: building loads the area's chunks, and each test runs within one game
+     * tick (it drives atmos ticks itself), so nothing unloads under it. Forced chunks and their
+     * neighbours, generated asynchronously, once left the server's shutdown waiting on chunk work
+     * on a slow CI runner.
      */
     private static void area(GameTestHelper h, int index) {
-        BlockPos origin = new BlockPos(4096 + 256 * index, 100, 4096);
-        ServerLevel level = h.getLevel();
-        ChunkPos c = new ChunkPos(origin);
-        for (int x = c.x - 2; x <= c.x + 2; x++) {
-            for (int z = c.z - 2; z <= c.z + 2; z++) {
-                level.setChunkForced(x, z, true);
-                level.getChunk(x, z);
-            }
-        }
-        AREAS.put(h, origin);
+        AREAS.put(h, new BlockPos(4096 + 256 * index, 100, 4096));
     }
 
     private static void requireArea(GameTestHelper h) {
@@ -516,45 +511,39 @@ public final class AtmosTests {
         ServerLevel nether = h.getLevel().getServer().getLevel(Level.NETHER);
         h.assertTrue(nether != null, "no Nether");
         BlockPos base = new BlockPos(1024, 100, 1024);
-        ChunkPos chunk = new ChunkPos(base);
-        nether.setChunkForced(chunk.x, chunk.z, true);
-        try {
-            for (BlockPos p : BlockPos.betweenClosed(base, base.offset(4, 4, 4))) {
-                boolean wall = p.getX() == base.getX()
-                        || p.getX() == base.getX() + 4
-                        || p.getY() == base.getY()
-                        || p.getY() == base.getY() + 4
-                        || p.getZ() == base.getZ()
-                        || p.getZ() == base.getZ() + 4;
-                nether.setBlockAndUpdate(p, wall ? STONE : AIR);
-            }
-            BlockPos netherInside = base.offset(2, 2, 2);
-            CompletableFuture<MutationResult> inNether =
-                    GasMutations.add(nether, Vec3.atCenterOf(netherInside), oxygen(40), source("core_042"));
-            for (int i = 0; i < 8 && !inNether.isDone(); i++) {
-                service().tickNow(nether);
-            }
-            h.assertValueEqual(inNether.join().outcome(), MutationOutcome.ZONE, "Nether outcome");
-            ZoneInfo netherZone = Atmospheres.zoneAt(nether, netherInside).orElseThrow();
-
-            clear(h);
-            shell(h, new BlockPos(0, 0, 0), new BlockPos(4, 4, 4));
-            settle(h, GasMutations.add(h.getLevel(), point(h, 2, 2, 2), oxygen(10), source("core_042")));
-            // Hold the Nether's batch in flight while the Overworld changes and ticks.
-            service().closeNow(nether);
-            ZoneInfo before = zone(h, 2, 2, 2);
-            settle(h, GasMutations.add(h.getLevel(), point(h, 2, 2, 2), oxygen(10), source("core_042")));
-            close(h, zone(h, 2, 2, 2).mixture().moles(O2), before.mixture().moles(O2) + 10, "Overworld zone");
-            h.assertValueEqual(
-                    Atmospheres.zoneAt(nether, netherInside).orElseThrow(), netherZone, "the Nether's table changed");
-            service().applyNow(nether);
-            h.assertValueEqual(
-                    Atmospheres.zoneAt(nether, netherInside).orElseThrow().mixture(),
-                    netherZone.mixture(),
-                    "the Overworld changed the Nether's zone");
-        } finally {
-            nether.setChunkForced(chunk.x, chunk.z, false);
+        for (BlockPos p : BlockPos.betweenClosed(base, base.offset(4, 4, 4))) {
+            boolean wall = p.getX() == base.getX()
+                    || p.getX() == base.getX() + 4
+                    || p.getY() == base.getY()
+                    || p.getY() == base.getY() + 4
+                    || p.getZ() == base.getZ()
+                    || p.getZ() == base.getZ() + 4;
+            nether.setBlockAndUpdate(p, wall ? STONE : AIR);
         }
+        BlockPos netherInside = base.offset(2, 2, 2);
+        CompletableFuture<MutationResult> inNether =
+                GasMutations.add(nether, Vec3.atCenterOf(netherInside), oxygen(40), source("core_042"));
+        for (int i = 0; i < 8 && !inNether.isDone(); i++) {
+            service().tickNow(nether);
+        }
+        h.assertValueEqual(inNether.join().outcome(), MutationOutcome.ZONE, "Nether outcome");
+        ZoneInfo netherZone = Atmospheres.zoneAt(nether, netherInside).orElseThrow();
+
+        clear(h);
+        shell(h, new BlockPos(0, 0, 0), new BlockPos(4, 4, 4));
+        settle(h, GasMutations.add(h.getLevel(), point(h, 2, 2, 2), oxygen(10), source("core_042")));
+        // Hold the Nether's batch in flight while the Overworld changes and ticks.
+        service().closeNow(nether);
+        ZoneInfo before = zone(h, 2, 2, 2);
+        settle(h, GasMutations.add(h.getLevel(), point(h, 2, 2, 2), oxygen(10), source("core_042")));
+        close(h, zone(h, 2, 2, 2).mixture().moles(O2), before.mixture().moles(O2) + 10, "Overworld zone");
+        h.assertValueEqual(
+                Atmospheres.zoneAt(nether, netherInside).orElseThrow(), netherZone, "the Nether's table changed");
+        service().applyNow(nether);
+        h.assertValueEqual(
+                Atmospheres.zoneAt(nether, netherInside).orElseThrow().mixture(),
+                netherZone.mixture(),
+                "the Overworld changed the Nether's zone");
         h.succeed();
     }
 

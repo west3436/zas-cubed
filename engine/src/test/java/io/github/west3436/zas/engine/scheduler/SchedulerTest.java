@@ -191,4 +191,43 @@ class SchedulerTest {
         assertThrows(IllegalStateException.class, () -> sim.pipeline.close(3, sim.settings, () -> false));
         assertEquals(ExchangeSettings.DEFAULT, EngineSettings.DEFAULT.exchange());
     }
+
+    /**
+     * A worker stuck mid-tick never hangs the server thread: collecting the result gives up after
+     * the timeout and faults the dimension, and abandoning a tick for shutdown doesn't wait at all.
+     */
+    @Test
+    void stuck_worker_never_blocks_the_caller() throws InterruptedException {
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool = AtmosWorkers.create(1);
+        try {
+            Sim sim = new Sim(new TestWorld(Ambient.STANDARD_AIR), null, EnclosureClassifier.FACTORY);
+            sim.engine.setPhaseListener(p -> {
+                if (p == Phase.GEOMETRY) {
+                    try {
+                        release.await();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
+            DimensionScheduler timed = new DimensionScheduler(sim.engine, pool, 200);
+            long start = System.nanoTime();
+            timed.submit(Batch.of(1, Ambient.STANDARD_AIR, List.of(), List.of()));
+            assertEquals(null, timed.await());
+            assertTrue(timed.isFaulted());
+            assertTrue(timed.fault() instanceof java.util.concurrent.TimeoutException, () -> "" + timed.fault());
+            assertTrue(System.nanoTime() - start < 5_000_000_000L, "await waited too long");
+
+            DimensionScheduler other = new DimensionScheduler(
+                    new Sim(new TestWorld(Ambient.STANDARD_AIR), null, EnclosureClassifier.FACTORY).engine, pool);
+            other.submit(Batch.of(1, Ambient.STANDARD_AIR, List.of(), List.of()));
+            other.abandon();
+            assertTrue(!other.isInFlight());
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+            assertTrue(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS));
+        }
+    }
 }

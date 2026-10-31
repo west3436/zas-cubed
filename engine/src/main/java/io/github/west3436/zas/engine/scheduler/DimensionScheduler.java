@@ -4,6 +4,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Runs one {@link DimensionEngine}'s ticks, one at a time: on a worker executor (CORE-045), or
@@ -13,13 +15,18 @@ import java.util.concurrent.Executor;
  *
  * <p><b>Fault isolation</b> (D-55, NFR-014): an exception inside the engine faults the dimension.
  * {@link #await()} returns null and later submissions are refused; the last published snapshot
- * stays readable.
+ * stays readable. Collecting a result never waits without bound: a tick that hasn't finished
+ * within the timeout faults the dimension too, so a stuck worker can't hang the server thread.
  *
  * <p>Submit and await from one thread, the server thread in game.
  */
 public final class DimensionScheduler {
+    /** The default longest wait for a tick in {@link #await()}: 60 s, far beyond NFR-005's 250 ms. */
+    public static final long DEFAULT_TIMEOUT_MILLIS = 60_000;
+
     private final DimensionEngine engine;
     private final Executor executor;
+    private final long timeoutMillis;
     private CompletableFuture<Result> inFlight;
     private Throwable fault;
 
@@ -28,8 +35,21 @@ public final class DimensionScheduler {
      * @param executor the worker executor, or null to run each tick inline when it is submitted
      */
     public DimensionScheduler(DimensionEngine engine, Executor executor) {
+        this(engine, executor, DEFAULT_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * @param engine the engine; this scheduler becomes its only caller
+     * @param executor the worker executor, or null to run each tick inline when it is submitted
+     * @param timeoutMillis the longest {@link #await()} waits before faulting the dimension
+     */
+    public DimensionScheduler(DimensionEngine engine, Executor executor, long timeoutMillis) {
         this.engine = Objects.requireNonNull(engine, "engine");
         this.executor = executor;
+        if (timeoutMillis <= 0) {
+            throw new IllegalArgumentException("timeout must be positive, got " + timeoutMillis);
+        }
+        this.timeoutMillis = timeoutMillis;
     }
 
     public DimensionEngine engine() {
@@ -61,6 +81,18 @@ public final class DimensionScheduler {
     }
 
     /**
+     * Abandons the tick in flight, if any, without waiting for it: for shutdown. The engine must
+     * not be used afterwards.
+     */
+    public void abandon() {
+        CompletableFuture<Result> f = inFlight;
+        inFlight = null;
+        if (f != null) {
+            f.cancel(true);
+        }
+    }
+
+    /**
      * Starts a tick.
      *
      * @throws IllegalStateException if a tick is in flight or the dimension is faulted
@@ -87,9 +119,10 @@ public final class DimensionScheduler {
     }
 
     /**
-     * Collects the in-flight tick's result, waiting for the worker if it hasn't finished.
+     * Collects the in-flight tick's result, waiting for the worker if it hasn't finished, but no
+     * longer than the timeout.
      *
-     * @return the result, or null if the engine threw, which faults the dimension
+     * @return the result, or null if the engine threw or timed out, which faults the dimension
      * @throws IllegalStateException if nothing is in flight
      */
     public Result await() {
@@ -99,8 +132,16 @@ public final class DimensionScheduler {
         CompletableFuture<Result> f = inFlight;
         inFlight = null;
         try {
-            return f.join();
-        } catch (CompletionException e) {
+            return f.get(timeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            f.cancel(true);
+            fault = new TimeoutException("atmos tick didn't finish within " + timeoutMillis + " ms");
+            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            fault = e;
+            return null;
+        } catch (java.util.concurrent.ExecutionException | CompletionException e) {
             fault = e.getCause() != null ? e.getCause() : e;
             return null;
         } catch (RuntimeException e) {
