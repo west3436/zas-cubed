@@ -1,0 +1,6 @@
+{
+  "name": "gas.zas_gametest.plain_gas",
+  "formula": "Pg",
+  "molar_mass": 0.002,
+  "molar_heat_capacity": 12.5
+}
