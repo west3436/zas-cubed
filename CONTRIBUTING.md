@@ -46,20 +46,34 @@ rules as any other code, the clean-room rule included.
 
 ## Assets
 
-Code is MIT; assets are CC BY-SA 4.0 International (D-39, D-56). Every file
-under `assets/` needs a `CREDITS` entry, and CI checks this (NFR-045):
+Code is MIT; assets are CC BY-SA 4.0 International, under
+[`LICENSE-ASSETS`](LICENSE-ASSETS) (D-39, D-56). Every file under a
+project's `src/*/resources/assets/` needs an entry in [`CREDITS`](CREDITS)
+(NFR-045). An entry is a block of `key: value` lines, starting with the
+file's path from the repository root; blank lines separate entries:
 
-- **Derived from a vg sprite:** the vg source file, icon state and commit,
-  with attribution to the vgstation13 contributors. Use only vg's CC BY-SA 3.0
-  US assets, never the CC BY-NC-SA `goon/` folder. Leave out any sprite whose
-  origin is unclear (NFR-041).
-- **Drawn from scratch:** `original`.
+- **Derived from a vg sprite:** `source` (the `.dmi` path in the vg
+  repository), `state` (the icon state), `commit` (the full vg commit hash)
+  and `attribution` naming the vgstation13 contributors. Use only vg's CC
+  BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder. Leave out any
+  sprite whose origin is unclear (NFR-041).
+- **Drawn from scratch:** `source: original`.
+
+```
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister.png
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 0123456789abcdef0123456789abcdef01234567
+attribution: vgstation13 contributors, CC BY-SA 3.0 US
+```
+
+The full format is at the top of `CREDITS`. Check it with
+`python scripts/check_credits.py` (Python 3, no dependencies). It lists asset
+files with no entry, entries for files that don't exist, malformed entries
+and `goon/` sources. CI runs it in "Build and test".
 
 No NonCommercial asset ships in any jar (NFR-046). RE:SS3D and Stationeers are
 reference and inspiration only.
-
-`LICENSE-ASSETS` and the `CREDITS` format arrive with
-[#17](https://github.com/west3436/zas-cubed/issues/17).
 
 ## Building and testing
 
@@ -94,8 +108,8 @@ uses only the public API at compile time.
    requirement IDs touched, and tick the checklist. For a player-facing
    change made with AI, include the human testing evidence described in
    [Using AI](#using-ai).
-3. CI must pass: "Build and test" (build, unit tests, formatting, GameTests)
-   and "Docs links".
+3. CI must pass: "Build and test" (asset credits, build, unit tests,
+   formatting, GameTests) and "Docs links".
 4. PRs are squash-merged, so the PR title becomes the commit subject. Write it
    in the imperative: "Add Spotless formatting".
 
