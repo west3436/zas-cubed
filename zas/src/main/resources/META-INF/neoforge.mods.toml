@@ -13,6 +13,9 @@ Zone-based atmospherics: sealed spaces hold real gas mixtures that equalize,
 vent, burn and conduct heat. Provides the shared atmosphere API.
 '''
 
+[[mixins]]
+config = "zas.mixins.json"
+
 [[dependencies.zas]]
 modId = "neoforge"
 type = "required"

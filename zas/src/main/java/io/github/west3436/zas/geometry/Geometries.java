@@ -55,6 +55,18 @@ public final class Geometries {
         return f != null ? f.join() : GeometryDerivation.derived();
     }
 
+    /**
+     * The current table without waiting: {@code null} while a rebuild is in progress. For hot paths
+     * on the server thread, such as the change hook, that must never block.
+     */
+    public static GeometryTable tableIfReady() {
+        CompletableFuture<GeometryTable> f = current;
+        if (f == null) {
+            return GeometryDerivation.derived();
+        }
+        return f.isDone() && !f.isCompletedExceptionally() ? f.join() : null;
+    }
+
     /** The geometry id of {@code state} in the current table. */
     public static int geometryId(BlockState state) {
         return table().geometryId(state);

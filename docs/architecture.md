@@ -194,6 +194,11 @@ attachment):
 - **Lifecycle generation:** bumped when a chunk unloads.
 - **Block generation:** bumped by the change hook on every write.
 
+Both are opaque stamps from one per-dimension counter that never goes back
+(`ChunkGenerations`), compared only for equality. An unloaded chunk drops
+out of the map and reads as 0, so when it loads again it gets stamps it has
+never had.
+
 They are checked differently:
 
 | Result part | Validated against | When stale |
@@ -229,7 +234,8 @@ Requirements: CORE-036, CORE-048, CORE-070, CORE-074, D-43.
 **Per batch (every T):**
 
 - Snapshot dirty sections with `PalettedContainer#copy()` (*spike (S5):*
-  0.3 µs per section).
+  0.3 µs per section). `SectionCapture` takes the copy; the worker decodes
+  it into a `SectionSnapshot`.
 - Evaluate position-dependent shapes and seal providers for dirty positions
   (API-028).
 - Read ambient providers (ENV-015).
@@ -340,18 +346,27 @@ uncovered part of the face (GEO-003, GEO-004).
 
 ### 4.2 Change detection (GEO-010 to GEO-014)
 
-- **One mixin:** `LevelChunk#setBlockState(BlockPos, BlockState, boolean)` at
-  RETURN, on server levels only, when the return value is non-null.
-  *Spike (S1):* it sees every source tested, including direct chunk writes
-  that `onBlockStateChange` misses. Its cost doesn't show above noise.
-- **The hook only enqueues.** It sets a bit in a per-section dirty bitset
-  (64 longs, allocated lazily) and bumps the chunk's block generation, which
-  coalesces for free (GEO-012). *Spike (S1):* sorting a queue cost 20 ms per
-  100,000 changes, which is too slow for explosion bursts. Off-thread writes
-  go to a concurrent queue that is drained at batch close.
-- **Locality filter (GEO-011).** At batch close only dirty sections that hold
-  zoned cells, border a zone, or contain a pending classification are
-  snapshotted. All other dirty bits are cleared without work.
+- **One mixin:** inside `LevelChunk#setBlockState(BlockPos, BlockState,
+  boolean)`, wrapping its call to `LevelChunkSection#setBlockState`, on server
+  levels only, when the stored state changed. *Spike (S1):* the method sees
+  every source tested, including direct chunk writes that
+  `onBlockStateChange` misses. Its cost doesn't show above noise. Wrapping the
+  section write rather than injecting at RETURN also catches writes where the
+  method returns `null` because `onRemove` replaced the block again.
+- **The hook only enqueues** (`ChangeTracker`). It bumps the chunk's block
+  generation on every write and, if the geometry id changed, sets a bit in a
+  per-section dirty bitset (64 longs, allocated lazily, `DirtySections`),
+  which coalesces for free (GEO-012). *Spike (S1):* sorting a queue cost 20 ms
+  per 100,000 changes, which is too slow for explosion bursts. Off-thread
+  writes go to a concurrent queue that is folded in on the server thread
+  before any query and at the end of each server tick. A chunk's dirty bits
+  are dropped when it unloads.
+- **Locality filter (GEO-011).** In the hook, a write that keeps the geometry
+  id (stone to cobblestone, air to a torch) sets no dirty bit. At batch close
+  the scheduler drains with the set of sections that hold zoned cells, border
+  a zone, or contain a pending classification, and only those are
+  snapshotted (`ChangeTracker.drain(level, interest)`). All other dirty bits
+  are cleared without work. Drains come out sorted by section x, z, then y.
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
   saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
@@ -559,7 +574,7 @@ because STARTUP config is too late for block classes.
 
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
-| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)` | `@Inject` RETURN | Change hook: enqueue the dirty position and bump the block generation | GEO-010, GEO-011, GEO-012 | **S1** |
+| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation and mark the position dirty if its geometry changed | GEO-010, GEO-011, GEO-012 | **S1**, GameTests |
 | M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable | Fire inside a zone without enough O₂ goes out; burning consumes O₂ | FIRE-020, FIRE-022, FIRE-023, FIRE-030 | research only |
 | M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` | No ignition without enough O₂ | FIRE-020, FIRE-014 | research only |
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` and `FireBlock#canCatchFire(BlockGetter, BlockPos, Direction)` | `@WrapMethod` / `@ModifyReturnValue` | Fire spread depends on O₂ | FIRE-016, FIRE-020 | research only |
@@ -600,7 +615,7 @@ The test names include requirement IDs (README rule 5).
 |---|---|---|
 | O-1 | **S6 (Ad Astra) not run.** The adapter design (events only, no mixins) is unproven. | [#9](https://github.com/west3436/zas-cubed/issues/9). Run S6 when downloading Ad Astra for a GameTest is allowed. It blocks E7, not R0. |
 | O-2 | ~~**S0 on a real dedicated server.**~~ **Done** 2026-10-31. | [#77](https://github.com/west3436/zas-cubed/issues/77). On an installer-built 21.1.265 server, one API copy loads and the newest wins (0.1.1 over 0.1.0), the addon starts without `zas`, and no client classes load ([spikes · S0](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)). The fallback and provider are rechecked once the API has content (API-048). |
-| O-3 | **Piston coverage in S1** not exercised | In the GEO-010 GameTest, [#25](https://github.com/west3436/zas-cubed/issues/25) |
+| O-3 | ~~**Piston coverage in S1** not exercised~~ **Done.** | [#25](https://github.com/west3436/zas-cubed/issues/25). The `geo_010_piston` GameTest sees both the pushed-into and the vacated position. |
 | O-4 | **Memory** (NFR-004) estimated, not measured | [#78](https://github.com/west3436/zas-cubed/issues/78). Measure the palette membership layout in the R0 benchmark. |
 | O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
