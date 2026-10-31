@@ -6,9 +6,13 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.change.ChangeTracker;
+import io.github.west3436.zas.change.SectionCapture;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.SectionSnapshot;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasConfig;
@@ -19,9 +23,9 @@ import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.DimensionScheduler;
 import io.github.west3436.zas.engine.scheduler.EnclosureClassifier;
 import io.github.west3436.zas.engine.scheduler.EngineSettings;
+import io.github.west3436.zas.engine.scheduler.GeometryAudit;
 import io.github.west3436.zas.engine.scheduler.OpOutcome;
 import io.github.west3436.zas.engine.scheduler.OpenAirEvent;
-import io.github.west3436.zas.engine.scheduler.Phase;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.environment.Ambients;
@@ -36,6 +40,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -72,13 +77,17 @@ public final class DimensionAtmos {
     private final List<Long> excludedQueue = new ArrayList<>();
 
     // Statistics for commands and the profiler (OPS-004).
+    private final AtmosProfiler profiler = new AtmosProfiler();
     private long lastCloseNanos;
     private long lastApplyNanos;
     private long applyWaits;
     private long rejectedComponents;
-    private volatile String lastWorkerThread = "";
     private boolean lastApplyOnServerThread;
     private ConservationReport lastConservation;
+
+    // On-demand invariant checks (OPS-010): asked for, then carried by the next batch.
+    private final List<CompletableFuture<ConservationReport>> checkRequests = new ArrayList<>();
+    private final List<CompletableFuture<ConservationReport>> checksInFlight = new ArrayList<>();
 
     private record Pending(
             CompletableFuture<MutationResult> future,
@@ -135,7 +144,12 @@ public final class DimensionAtmos {
 
     /** The name of the worker thread that ran the last atmos tick (CORE-045). */
     public String lastWorkerThread() {
-        return lastWorkerThread;
+        return profiler.workerThread();
+    }
+
+    /** The timings of the last atmos ticks (OPS-004). Server thread. */
+    public AtmosProfiler profiler() {
+        return profiler;
     }
 
     /** Whether the last result was applied on the server thread (CORE-069). */
@@ -289,11 +303,7 @@ public final class DimensionAtmos {
                 maxSectionY,
                 ambient,
                 settings(ZasServerConfig.scheduler()));
-        engine.setPhaseListener(phase -> {
-            if (phase == Phase.GEOMETRY) {
-                lastWorkerThread = Thread.currentThread().getName();
-            }
-        });
+        engine.setPhaseListener(profiler.listener);
         DimensionScheduler scheduler =
                 new DimensionScheduler(engine, ZasServerConfig.singleThreaded() ? null : workers);
         pipeline = new DimensionPipeline(scheduler, new LevelWorld(level), minSectionY, maxSectionY);
@@ -326,6 +336,114 @@ public final class DimensionAtmos {
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()), ZasServerConfig.conservationChecker());
     }
 
+    // ---- Commands and the profiler ------------------------------------------------------
+
+    /**
+     * Runs a read-only query on the engine on the thread that owns it, between atmos ticks
+     * (OPS-004, GEO-032). The future completes on the worker. Server thread.
+     *
+     * @return the query's result; failed if the dimension has no engine or is faulted
+     */
+    public <T> CompletableFuture<T> inspect(Function<? super DimensionEngine, ? extends T> query) {
+        ensureEngine();
+        DimensionPipeline p = pipeline;
+        if (p == null) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException(dimension().location() + " isn't simulated"));
+        }
+        return p.scheduler().inspect(query);
+    }
+
+    /**
+     * Runs the invariant checker on the next atmos tick, whether or not it is switched on
+     * (OPS-010, CORE-073). The future completes on the server thread when that tick is applied.
+     * Server thread.
+     */
+    public CompletableFuture<ConservationReport> checkConservation() {
+        CompletableFuture<ConservationReport> f = new CompletableFuture<>();
+        ensureEngine();
+        if (pipeline == null || isFaulted()) {
+            f.completeExceptionally(new IllegalStateException(dimension().location() + " isn't simulated"));
+        } else {
+            checkRequests.add(f);
+        }
+        return f;
+    }
+
+    /**
+     * What a geometry audit found (GEO-032).
+     *
+     * @param report the engine's findings
+     * @param unloadedSections sections of the region whose chunks aren't loaded, never loaded for
+     *     the audit (GEO-034)
+     * @param pendingSections sections with block changes the engine hasn't been sent yet, left out
+     *     of the comparison
+     */
+    public record AuditResult(GeometryAudit.Report report, int unloadedSections, int pendingSections) {}
+
+    /**
+     * Audits a region (GEO-032): captures its loaded sections now, without loading any chunk, and
+     * compares them with the engine on the worker, between atmos ticks. Sections with block
+     * changes still waiting for the next batch are left out. The future completes on the worker.
+     * Server thread.
+     *
+     * @param maxFindings how many findings to list
+     */
+    public CompletableFuture<AuditResult> audit(GeometryAudit.Region region, int maxFindings) {
+        ensureEngine();
+        DimensionPipeline p = pipeline;
+        if (p == null || isFaulted()) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException(dimension().location() + " isn't simulated"));
+        }
+        GeometryTable table = Geometries.tableIfReady();
+        if (table == null || table.palette() != palette) {
+            return CompletableFuture.failedFuture(new IllegalStateException("the gas geometry is being rebuilt"));
+        }
+        int minY = level.getMinSection();
+        int maxY = level.getMaxSection() - 1;
+        List<SectionCapture> captures = new ArrayList<>();
+        int unloaded = 0;
+        int dirty = 0;
+        for (long key : region.sections()) {
+            int y = SectionKeys.y(key);
+            if (y < minY || y > maxY) {
+                continue;
+            }
+            if (ChangeTracker.isSectionDirty(level, key)) {
+                dirty++;
+                continue;
+            }
+            SectionCapture c = SectionCapture.capture(level, key);
+            if (c == null) {
+                unloaded++;
+            } else {
+                captures.add(c);
+            }
+        }
+        int unloadedSections = unloaded;
+        int pendingSections = dirty;
+        return p.scheduler().inspect(engine -> {
+            List<SectionSnapshot> fresh = new ArrayList<>(captures.size());
+            for (SectionCapture c : captures) {
+                fresh.add(c.decode());
+            }
+            return new AuditResult(
+                    GeometryAudit.run(engine, region, fresh, maxFindings), unloadedSections, pendingSections);
+        });
+    }
+
+    /**
+     * Has the next batch send stale sections to the engine again, so its geometry phase brings the
+     * mirror and zones back in step with the blocks: the audit's repair (GEO-032). Server thread.
+     */
+    public void resend(long[] sections) {
+        for (long key : sections) {
+            ChangeTracker.markDirty(
+                    level, new BlockPos(SectionKeys.x(key) << 4, SectionKeys.y(key) << 4, SectionKeys.z(key) << 4));
+        }
+    }
+
     // ---- Close and apply ----------------------------------------------------------------
 
     /** Closes a batch at game tick {@code gameTick} (architecture §3.2). */
@@ -342,9 +460,16 @@ public final class DimensionAtmos {
             excludedQueue.clear();
             excludedClosed = true;
         } else if (!p.scheduler().isFaulted()) {
-            p.close(nextAtmosTick++, settings(timing), overBudget);
+            EngineSettings settings = settings(timing);
+            if (!checkRequests.isEmpty()) {
+                settings = settings.withConservationCheck(true);
+                checksInFlight.addAll(checkRequests);
+                checkRequests.clear();
+            }
+            p.close(nextAtmosTick++, settings, overBudget);
         }
         lastCloseNanos = System.nanoTime() - start;
+        profiler.closed(lastCloseNanos);
     }
 
     /** Whether the in-flight batch is due at {@code gameTick}. */
@@ -355,6 +480,13 @@ public final class DimensionAtmos {
     /** Applies the in-flight batch on the server thread (CORE-069). Never split (CORE-047). */
     void apply() {
         long start = System.nanoTime();
+        boolean ranTick = applyBatch();
+        lastApplyNanos = System.nanoTime() - start;
+        profiler.applied(lastApplyNanos, ranTick);
+    }
+
+    /** Applies the in-flight batch; returns whether it held an engine tick. */
+    private boolean applyBatch() {
         lastApplyOnServerThread = level.getServer().isSameThread();
         if (excludedClosed) {
             excludedClosed = false;
@@ -368,8 +500,7 @@ public final class DimensionAtmos {
         }
         DimensionPipeline pl = pipeline;
         if (pl == null || !pl.isInFlight()) {
-            lastApplyNanos = System.nanoTime() - start;
-            return;
+            return false;
         }
         if (!pl.scheduler().isDone()) {
             applyWaits++;
@@ -381,13 +512,13 @@ public final class DimensionAtmos {
                     dimension().location(),
                     a.fault());
             failAll(new IllegalStateException("the atmosphere of " + dimension().location() + " failed", a.fault()));
-            lastApplyNanos = System.nanoTime() - start;
-            return;
+            return true;
         }
         rejectedComponents += a.rejected();
         if (a.conservation() != null) {
             lastConservation = a.conservation();
         }
+        completeChecks(a.conservation());
         for (OpenAirEvent e : a.events()) {
             Pending p = pending.get(e.seq());
             SourceId source = p != null ? p.source() : SourceId.of("zas", "unknown");
@@ -400,7 +531,19 @@ public final class DimensionAtmos {
                 p.future().complete(new MutationResult(outcome(o.outcome()), parcel(o.moved(), o.temperature())));
             }
         }
-        lastApplyNanos = System.nanoTime() - start;
+        return true;
+    }
+
+    private void completeChecks(ConservationReport report) {
+        List<CompletableFuture<ConservationReport>> done = new ArrayList<>(checksInFlight);
+        checksInFlight.clear();
+        for (CompletableFuture<ConservationReport> f : done) {
+            if (report != null) {
+                f.complete(report);
+            } else {
+                f.completeExceptionally(new IllegalStateException("the atmos tick produced no report"));
+            }
+        }
     }
 
     private static MutationOutcome outcome(OpOutcome.Outcome o) {
@@ -455,8 +598,15 @@ public final class DimensionAtmos {
         failAll(new CancellationException(why));
     }
 
-    /** Fails every waiting mutation. */
+    /** Fails every waiting mutation and invariant check. */
     void failAll(Throwable why) {
+        List<CompletableFuture<ConservationReport>> checks = new ArrayList<>(checkRequests);
+        checks.addAll(checksInFlight);
+        checkRequests.clear();
+        checksInFlight.clear();
+        for (CompletableFuture<ConservationReport> f : checks) {
+            f.completeExceptionally(why);
+        }
         List<Pending> all = new ArrayList<>(pending.values());
         pending.clear();
         excludedQueue.clear();

@@ -2,6 +2,9 @@ package io.github.west3436.zas.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.west3436.zas.config.ZasClientConfig;
+import io.github.west3436.zas.config.ZasClientConfig.PressureUnit;
+import io.github.west3436.zas.config.ZasClientConfig.TemperatureUnit;
 import io.github.west3436.zas.debug.ClientDebugOverlay;
 import io.github.west3436.zas.debug.DebugLayer;
 import io.github.west3436.zas.debug.DebugOverlayPayload;
@@ -33,7 +36,8 @@ import org.joml.Matrix4f;
  *
  * <ul>
  *   <li><b>zones:</b> the outer faces of each zone's cells, tinted by zone id; paused zones grey,
- *       unresolved regions magenta; a label per zone with its id, pressure and temperature
+ *       unresolved regions magenta; a label per zone with its id, pressure and temperature, in
+ *       the units of {@code zas-client.toml}
  *   <li><b>edges:</b> each open face out of a zone, coloured by kind (zone direct cyan, zone
  *       boundary blue, ambient direct red, ambient boundary orange), with a label per edge giving
  *       its pressure difference
@@ -213,7 +217,7 @@ public final class DebugOverlayRenderer {
                         quads.rect(h.dx(), h.dy(), h.dz(), f, 0, 0, 1, 1, 0.02F, HOTSPOT);
                     }
                     labels.add(new Label(
-                            I18n.get("debug.zas.hotspot", format(h.temperature())),
+                            I18n.get("debug.zas.hotspot", temperature(h.temperature())),
                             o.getX() + h.dx() + 0.5,
                             o.getY() + h.dy() + 1.3,
                             o.getZ() + h.dz() + 0.5,
@@ -256,7 +260,7 @@ public final class DebugOverlayRenderer {
                 DebugOverlayPayload.Zone z = p.zones().get(i);
                 String key = z.paused() ? "debug.zas.zone.paused" : "debug.zas.zone";
                 labels.add(new Label(
-                        I18n.get(key, z.id(), format(z.pressure()), format(z.temperature())),
+                        I18n.get(key, z.id(), pressure(z.pressure()), temperature(z.temperature())),
                         o.getX() + s[0] / s[3] + 0.5,
                         o.getY() + s[1] / s[3] + 0.5,
                         o.getZ() + s[2] / s[3] + 0.5,
@@ -308,7 +312,8 @@ public final class DebugOverlayRenderer {
                     continue;
                 }
                 DebugOverlayPayload.Edge e = p.edges().get(i);
-                String dp = String.format(Locale.ROOT, "%+.1f", e.pressureDifference());
+                PressureUnit unit = ZasClientConfig.pressureUnit();
+                String dp = String.format(Locale.ROOT, "%+.2f %s", unit.fromKpa(e.pressureDifference()), unit.symbol());
                 String text = e.ambient()
                         ? I18n.get(e.direct() ? "debug.zas.edge.ambient.direct" : "debug.zas.edge.ambient.boundary", dp)
                         : I18n.get(
@@ -355,6 +360,20 @@ public final class DebugOverlayRenderer {
             }
         }
         return false;
+    }
+
+    /** A pressure in kPa, in the client's display unit (CLIENT-006). */
+    private static String pressure(double kpa) {
+        PressureUnit unit = ZasClientConfig.pressureUnit();
+        return Double.isNaN(kpa) ? "?" : String.format(Locale.ROOT, "%.2f %s", unit.fromKpa(kpa), unit.symbol());
+    }
+
+    /** A temperature in K, in the client's display unit (CLIENT-006). */
+    private static String temperature(double kelvin) {
+        TemperatureUnit unit = ZasClientConfig.temperatureUnit();
+        return Double.isNaN(kelvin)
+                ? "?"
+                : String.format(Locale.ROOT, "%.1f %s", unit.fromKelvin(kelvin), unit.symbol());
     }
 
     private static String format(double v) {

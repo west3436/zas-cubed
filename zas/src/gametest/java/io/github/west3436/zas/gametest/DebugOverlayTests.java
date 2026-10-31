@@ -9,6 +9,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.debug.DebugLayer;
 import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.debug.DebugOverlayPayload;
@@ -141,8 +142,9 @@ public final class DebugOverlayTests {
     // ---- Permission (CLIENT-005, OPS-011) ------------------------------------------------
 
     /**
-     * {@code /zas debug} needs permission level 2: a player below it is refused, an operator can
-     * switch layers on and off (CLIENT-005).
+     * {@code /zas debug} needs permission level 2 by default: a player below it is refused, an
+     * operator can switch layers on and off (CLIENT-005); the level follows {@code [commands]
+     * permission_level} like every {@code /zas} command (OPS-011).
      */
     @GameTest(template = "empty")
     public static void client_005_overlay_needs_permission_level_2(GameTestHelper h) throws CommandSyntaxException {
@@ -175,6 +177,23 @@ public final class DebugOverlayTests {
             h.assertValueEqual(DebugOverlay.layers(player), ALL, "all");
             dispatcher.execute("zas debug off", operator);
             h.assertValueEqual(DebugOverlay.layers(player), 0, "off");
+
+            // The level follows the configurable /zas level (OPS-011).
+            int was = ZasServerConfig.PERMISSION_LEVEL.get();
+            try {
+                ZasServerConfig.PERMISSION_LEVEL.set(3);
+                try {
+                    dispatcher.execute("zas debug zones", operator);
+                    throw new GameTestAssertException("level 2 switched the overlay on with the level set to 3");
+                } catch (CommandSyntaxException expected) {
+                    // refused
+                }
+                dispatcher.execute(
+                        "zas debug zones", player.createCommandSourceStack().withPermission(3));
+                h.assertValueEqual(DebugOverlay.layers(player), DebugLayer.ZONES.bit(), "zones on at level 3");
+            } finally {
+                ZasServerConfig.PERMISSION_LEVEL.set(was);
+            }
         } finally {
             DebugOverlay.setLayers(player, 0);
         }

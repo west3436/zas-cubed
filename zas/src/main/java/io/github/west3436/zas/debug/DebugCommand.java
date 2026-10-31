@@ -3,6 +3,7 @@ package io.github.west3436.zas.debug;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.west3436.zas.command.ZasCommands;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
@@ -12,8 +13,9 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * {@code /zas debug}: switches the operator debug overlay's layers for the player running it
- * (CLIENT-005, CLIENT-011 to CLIENT-013). Needs permission level {@link
- * DebugOverlay#PERMISSION_LEVEL}.
+ * (CLIENT-005, CLIENT-011 to CLIENT-013). Needs the {@code /zas} permission level, {@code
+ * [commands] permission_level} in the server config, 2 by default ({@link ZasCommands#permitted},
+ * OPS-011).
  *
  * <ul>
  *   <li>{@code /zas debug}: lists the layers that are on
@@ -23,23 +25,21 @@ import net.minecraft.server.level.ServerPlayer;
  * </ul>
  *
  * <p>Registered under the shared {@code /zas} root; Brigadier merges it with the other {@code
- * /zas} subcommands.
+ * /zas} subcommands in {@link ZasCommands}, so the root's requirement must match theirs.
  */
 public final class DebugCommand {
     private DebugCommand() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        LiteralArgumentBuilder<CommandSourceStack> debug = Commands.literal("debug")
-                .requires(s -> s.hasPermission(DebugOverlay.PERMISSION_LEVEL))
-                .executes(c -> status(c.getSource()));
+        LiteralArgumentBuilder<CommandSourceStack> debug =
+                Commands.literal("debug").requires(ZasCommands::permitted).executes(c -> status(c.getSource()));
         for (DebugLayer layer : DebugLayer.values()) {
             debug.then(Commands.literal(layer.id()).executes(c -> toggle(c.getSource(), layer)));
         }
         debug.then(Commands.literal("all").executes(c -> set(c.getSource(), DebugLayer.ALL)));
         debug.then(Commands.literal("off").executes(c -> set(c.getSource(), 0)));
-        dispatcher.register(Commands.literal("zas")
-                .requires(s -> s.hasPermission(DebugOverlay.PERMISSION_LEVEL))
-                .then(debug));
+        dispatcher.register(
+                Commands.literal("zas").requires(ZasCommands::permitted).then(debug));
     }
 
     private static int status(CommandSourceStack source) throws CommandSyntaxException {

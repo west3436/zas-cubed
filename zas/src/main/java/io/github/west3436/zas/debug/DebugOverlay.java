@@ -1,5 +1,6 @@
 package io.github.west3436.zas.debug;
 
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -48,15 +48,13 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  * per atmos tick (D-53). Zone pressures, temperatures and the paused flag come from the published
  * table.
  *
- * <p><b>Who.</b> Only players with permission level {@link #PERMISSION_LEVEL} can switch it on; a
- * player who loses it has the overlay switched off. Nothing is sent to anyone else (DATA-005).
+ * <p><b>Who.</b> Only players with the {@code /zas} permission level ({@code [commands]
+ * permission_level}, 2 by default, OPS-011) can switch it on; a player who loses it has the
+ * overlay switched off. Nothing is sent to anyone else (DATA-005).
  *
  * <p>Server thread only.
  */
 public final class DebugOverlay {
-    /** The permission level the overlay needs: vanilla's operator level (CLIENT-005, OPS-011). */
-    public static final int PERMISSION_LEVEL = Commands.LEVEL_GAMEMASTERS;
-
     /** How far from the operator cells, edges and hotspots are shown: 2 chunks (CLIENT-005). */
     public static final int RADIUS = 32;
 
@@ -135,7 +133,7 @@ public final class DebugOverlay {
             if (player == null) {
                 continue; // between respawn and the new player object, or gone
             }
-            if (!player.hasPermissions(PERMISSION_LEVEL)) {
+            if (!player.hasPermissions(ZasServerConfig.permissionLevel())) {
                 setLayers(player, 0);
                 continue;
             }

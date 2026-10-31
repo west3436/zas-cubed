@@ -3,6 +3,12 @@
 ZAS³ reads these files from datapacks. Mods ship them in their own
 `data/` folder; servers can add them with an ordinary datapack.
 
+R0 reads three formats: [gases](#gases), [ambients](#ambients) and
+[geometry overrides](#geometry-overrides). The rest of OPS-002's list
+(reactions, thermal properties, fuel, protection and hazard profiles, entity
+and block tags) arrives with its features in R1. Every format reports invalid
+files the same way ([Invalid files](#invalid-files)).
+
 ## Gases
 
 Gas types are data (CORE-010, D-08). Each file defines one gas:
@@ -34,8 +40,8 @@ data/<namespace>/zas/gas/<path>.json   →   gas id <namespace>:<path>
 | `visibility.color` | string | yes, in `visibility` | Colour as `"#RRGGBB"` |
 | `visibility.density_threshold` | number | yes, in `visibility` | Molar density in mol/L above which the gas shows; greater than 0 |
 
-- **Invalid files** are skipped with an error in the server log. The other
-  gases still load.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)). The other gases still load.
 - **When it applies:** gas definitions load when the server starts. A
   `/reload` that changes them is logged and takes effect at the next start,
   because zones store their gas by the loaded set.
@@ -115,9 +121,9 @@ atmosphere for at least one preset or exclude the dimension:
   standard Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 % O₂ (ENV-011).
 - **Gases** must exist in the running server's gas definitions; a file
   naming an unknown gas is skipped with an error.
-- **Invalid files** are skipped with an error in the server log naming the
-  file and field (OPS-008); the dimension falls back as above. Unknown
-  fields are ignored with a warning.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)); the dimension falls back as above.
+  Unknown fields are ignored with a warning.
 - **When it applies:** ambients load when the server starts and reload with
   `/reload`.
 
@@ -135,8 +141,8 @@ Standard air is N₂ 80.04675 kPa and O₂ 21.27825 kPa.
 
 ### Server config
 
-Two settings in the per-world server config,
-`<world>/serverconfig/zas-server.toml` (OPS-001), go with ambients:
+Two settings in the server config, `zas-server.toml` (OPS-001, see
+[config.md](config.md)), go with ambients:
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -144,3 +150,55 @@ Two settings in the per-world server config,
 | `excluded_dimensions` | `[]` | Dimension ids excluded from simulation, in addition to files with `"excluded": true` (ENV-007) |
 
 A change applies from the next lookup, without a restart.
+
+## Geometry overrides
+
+A block's gas geometry, which faces seal and how much gas it holds, is derived
+from its collision shape (GEO-001 to GEO-004). An override replaces it for
+chosen blocks (GEO-005):
+
+```
+data/<namespace>/zas/geometry_overrides/<path>.json
+```
+
+```json
+{
+  "blocks": ["minecraft:honey_block", "#minecraft:leaves"],
+  "sealed_faces": ["down", "up", "north", "south", "west", "east"],
+  "volume": 0
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped, so a pack can name blocks of mods that aren't installed |
+| `sealed_faces` | list of strings | no | The gas-tight faces: `down`, `up`, `north`, `south`, `west`, `east`. The others are fully open. Default none |
+| `volume` | number | yes | Gas volume in L, 0 to 1,000 |
+
+- An overridden block is a single cell.
+- When several overrides match a block, one naming the block directly beats
+  one matching it through a tag; between equals, the file whose id sorts last
+  wins.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** overrides load when the server starts and reload with
+  `/reload`, which rebuilds the geometry table; zones are rebuilt if the
+  geometry changed.
+
+## Invalid files
+
+An invalid entry in any format is logged as an error naming the file and the
+field at fault, and skipped; the rest of the pack loads, and the game never
+crashes over it (OPS-008). For example:
+
+```
+Skipping gas definition data/mypack/zas/gas/argon.json: molar_mass: Not a number: "heavy"
+Skipping geometry override data/mypack/zas/geometry_overrides/sponge.json: sealed_faces: Unknown face 'sideways'; expected down, up, north, south, west or east
+Skipping ambient definition data/mypack/zas/ambient/overworld.json: temperature is required
+```
+
+Nested fields are named by their path, such as `visibility: color: ...` or
+`presets.hardcore.partial_pressures."zas:oxygen" ...`. Content that is ignored
+while the rest of a file loads, such as an unknown field of an ambient, is
+logged as a warning in the same form. Operators can list the last load's
+problems in game with `/zas datapacks` ([commands.md](commands.md)).
