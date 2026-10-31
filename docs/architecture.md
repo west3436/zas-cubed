@@ -429,6 +429,18 @@ table keyed by packed position.
   per-edge list of packed face ids, so geometry changes can update counts
   without rescanning.
 
+**Engine implementation (R0).** The zone graph is
+`io.github.west3436.zas.engine.zone.ZoneGraph`. It runs on an abstract
+`CellTopology` (cell volumes and open neighbours, each flagged direct or zone
+boundary), so its tests need no geometry. Cells are `long` ids, membership is
+a primitive map from cell to zone, and every open pair of cells with at least
+one zoned cell is stored on both cells, so edge counts follow joins, leaves,
+merges and geometry changes without rescanning. The section palette above is
+the layout the platform's topology moves to when sections arrive. Every change
+to zoned gas is recorded in
+`io.github.west3436.zas.engine.conservation.ConservationLedger` by category
+(CORE-036, CORE-073).
+
 **Memory** (NFR-004, to be measured in R0):
 
 - 8 KiB per section that holds any zoned cell, about 2 B per position

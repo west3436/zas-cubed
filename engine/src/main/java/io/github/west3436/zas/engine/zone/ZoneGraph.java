@@ -1,0 +1,1097 @@
+package io.github.west3436.zas.engine.zone;
+
+import io.github.west3436.zas.engine.conservation.ConservationLedger;
+import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.gas.GasConfig;
+import io.github.west3436.zas.engine.gas.GasMixture;
+import io.github.west3436.zas.engine.gas.GasRegistry;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.TreeMap;
+
+/**
+ * The zones of one dimension, the edges between them and to the ambient, and
+ * the exchange across those edges (CORE-020 to CORE-039).
+ *
+ * <p>The graph runs on an abstract {@link CellTopology}. It stores which zone
+ * each cell is in and the open pairs of cells around zones, and keeps the
+ * edges' connection counts up to date as cells join, leave and change.
+ *
+ * <p><b>Driving it.</b> The scheduler (architecture §3.2) calls, in each atmos
+ * tick:
+ *
+ * <ol>
+ *   <li>{@link #beginConservationPeriod()} when the invariant checker is on;
+ *   <li>geometry: {@link #refresh(long)} for every changed cell, then {@link
+ *       #createZone}, {@link #join} and {@link #leave} as classification decides;
+ *   <li>gas operations: {@link #add}, {@link #remove}, {@link #addThermalEnergy}
+ *       and the like, each attributed to a {@link LedgerCategory};
+ *   <li>{@link #exchange()}: every awake edge exchanges once, equivalent zones
+ *       joined by a direct opening merge, and other equivalent edges sleep;
+ *   <li>{@link #checkConservation(long)} when the checker is on.
+ * </ol>
+ *
+ * <p><b>Determinism</b> (architecture §3.5): zones are kept in id order, edges
+ * are processed in (zone id, other zone id) order, and nothing iterates a hash
+ * structure. New zone ids come from a per-graph counter and are never reused.
+ *
+ * <p>Single-threaded: the atmos worker owns the graph, its zones and their
+ * mixtures.
+ */
+public final class ZoneGraph {
+    private final GasRegistry registry;
+    private final GasConfig config;
+    private final CellTopology topology;
+    private final ConservationLedger ledger;
+    private ExchangeSettings settings;
+    private GasMixture ambient;
+
+    private final LongObjectMap<Cell> cells = new LongObjectMap<>(64);
+    private final TreeMap<Long, Zone> zones = new TreeMap<>();
+    private final Collection<Zone> zonesView = Collections.unmodifiableCollection(zones.values());
+    private long nextZoneId = 1;
+
+    private final Linker linker = new Linker();
+    private final double[] pruneScratch;
+    private final ArrayList<Edge> edgeBuffer = new ArrayList<>();
+    private long[] seeds = new long[8];
+    private int seedCount;
+    private int searchEpoch;
+
+    private long exchangeCount;
+    private long mergeCount;
+    private long splitCount;
+    private int lastSplitVisits;
+
+    /**
+     * @param registry the gases
+     * @param config mixture settings; its tolerances decide equivalence
+     * @param topology the cells and their connections
+     * @param ambient the ambient: the gas of every unzoned cell, at any volume; copied
+     * @param settings exchange settings
+     * @param ledger where every change to zoned gas is recorded
+     */
+    public ZoneGraph(
+            GasRegistry registry,
+            GasConfig config,
+            CellTopology topology,
+            GasMixture ambient,
+            ExchangeSettings settings,
+            ConservationLedger ledger) {
+        this.registry = Objects.requireNonNull(registry, "registry");
+        this.config = Objects.requireNonNull(config, "config");
+        this.topology = Objects.requireNonNull(topology, "topology");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.ledger = Objects.requireNonNull(ledger, "ledger");
+        if (!ledger.registry().equals(registry)) {
+            throw new IllegalArgumentException("ledger counts a different gas registry");
+        }
+        this.ambient = requireAmbient(ambient);
+        this.pruneScratch = new double[registry.size()];
+    }
+
+    // ---- Queries ------------------------------------------------------------
+
+    public GasRegistry registry() {
+        return registry;
+    }
+
+    public ConservationLedger ledger() {
+        return ledger;
+    }
+
+    public ExchangeSettings settings() {
+        return settings;
+    }
+
+    public void setSettings(ExchangeSettings exchangeSettings) {
+        settings = Objects.requireNonNull(exchangeSettings, "settings");
+    }
+
+    /** The ambient, as a mixture whose volume is arbitrary. Read only. */
+    public GasMixture ambient() {
+        return ambient;
+    }
+
+    /** The live zones, in id order. */
+    public Collection<Zone> zones() {
+        return zonesView;
+    }
+
+    public int zoneCount() {
+        return zones.size();
+    }
+
+    /** The live zone with this id, or null. */
+    public Zone zone(long id) {
+        return zones.get(id);
+    }
+
+    /** The zone a cell is in, or null if it is unzoned. */
+    public Zone zoneOf(long cell) {
+        Cell c = cells.get(cell);
+        return c == null ? null : c.zone;
+    }
+
+    /** Every edge, in the order {@link #exchange()} processes them. */
+    public List<Edge> edges() {
+        List<Edge> out = new ArrayList<>();
+        for (Zone z : zones.values()) {
+            for (Edge e : z.edges) {
+                if (e.first() == z) {
+                    out.add(e);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** The edge between two zones, or null. */
+    public Edge edgeBetween(Zone a, Zone b) {
+        return a.edgeTo(b);
+    }
+
+    /** How many times an edge has exchanged gas since the graph was created (CORE-033). */
+    public long exchangeCount() {
+        return exchangeCount;
+    }
+
+    /** How many merges have happened since the graph was created. */
+    public long mergeCount() {
+        return mergeCount;
+    }
+
+    /** How many remnants have split off zones since the graph was created. */
+    public long splitCount() {
+        return splitCount;
+    }
+
+    /** How many cells the last split check visited (CORE-025). */
+    public int lastSplitVisits() {
+        return lastSplitVisits;
+    }
+
+    /** The moles of each gas held in all zones, summed in zone id order, into {@code out}. */
+    public void totalMoles(double[] out) {
+        Arrays.fill(out, 0);
+        for (Zone z : zones.values()) {
+            GasMixture m = z.mixture();
+            for (int i = 0; i < out.length; i++) {
+                out[i] += m.moles(i);
+            }
+        }
+    }
+
+    // ---- Ambient ------------------------------------------------------------
+
+    /**
+     * Replaces the ambient. A sleeping ambient edge wakes only if its zone is no
+     * longer equivalent to the new ambient (CORE-066, ENV-017).
+     */
+    public void setAmbient(GasMixture newAmbient) {
+        ambient = requireAmbient(newAmbient);
+        for (Zone z : zones.values()) {
+            Edge e = z.ambientEdge();
+            if (e != null && e.sleeping && !z.mixture().isEquivalent(ambient)) {
+                e.sleeping = false;
+            }
+        }
+    }
+
+    private GasMixture requireAmbient(GasMixture mixture) {
+        Objects.requireNonNull(mixture, "ambient");
+        if (!mixture.registry().equals(registry)) {
+            throw new IllegalArgumentException("ambient uses a different gas registry");
+        }
+        return mixture.copy();
+    }
+
+    /** A new mixture holding the ambient's gas for a volume. */
+    private GasMixture ambientFor(double litres) {
+        GasMixture m = new GasMixture(registry, config, litres, ambient.temperature());
+        double scale = litres / ambient.volume();
+        for (int i = 0; i < registry.size(); i++) {
+            double n = ambient.moles(i);
+            if (n > 0) {
+                m.setMoles(i, n * scale);
+            }
+        }
+        return m;
+    }
+
+    // ---- Zones from cells (CORE-020, CORE-021, CORE-027, CORE-028) ----------
+
+    /**
+     * Creates a zone from unzoned cells, each bringing the ambient gas for its
+     * volume (CORE-028).
+     *
+     * @param cellIds the cells; they must be connected to each other by direct openings
+     * @throws IllegalArgumentException if the list is empty or has duplicates, a
+     *     cell is zoned or is not a cell, or the cells aren't connected
+     */
+    public Zone createZone(long... cellIds) {
+        if (cellIds.length == 0) {
+            throw new IllegalArgumentException("a zone needs at least one cell");
+        }
+        long[] sorted = cellIds.clone();
+        Arrays.sort(sorted);
+        for (int i = 0; i < sorted.length; i++) {
+            if (i > 0 && sorted[i] == sorted[i - 1]) {
+                throw new IllegalArgumentException("cell " + sorted[i] + " is listed twice");
+            }
+            if (!(topology.volume(sorted[i]) > 0)) {
+                throw new IllegalArgumentException("position " + sorted[i] + " is not a cell");
+            }
+            if (zoneOf(sorted[i]) != null) {
+                throw new IllegalArgumentException("cell " + sorted[i] + " is already zoned");
+            }
+        }
+        requireConnected(sorted, cellIds[0]);
+        Zone zone = newZone(new GasMixture(registry, config, 1, ambient.temperature()));
+        for (long id : cellIds) {
+            joinCell(zone, id, null, LedgerCategory.AMBIENT);
+        }
+        return zone;
+    }
+
+    private void requireConnected(long[] sorted, long start) {
+        boolean[] reached = new boolean[sorted.length];
+        long[] queue = new long[sorted.length];
+        int head = 0;
+        int tail = 0;
+        reached[Arrays.binarySearch(sorted, start)] = true;
+        queue[tail++] = start;
+        int[] count = {1};
+        while (head < tail) {
+            long cell = queue[head++];
+            int[] tailRef = {tail};
+            topology.forEachOpenNeighbour(cell, (neighbour, direct) -> {
+                if (!direct) {
+                    return;
+                }
+                int index = Arrays.binarySearch(sorted, neighbour);
+                if (index >= 0 && !reached[index]) {
+                    reached[index] = true;
+                    queue[tailRef[0]++] = neighbour;
+                    count[0]++;
+                }
+            });
+            tail = tailRef[0];
+        }
+        if (count[0] != sorted.length) {
+            throw new IllegalArgumentException("the cells of a zone must be connected by direct openings");
+        }
+    }
+
+    /**
+     * An unzoned cell joins a zone, bringing the ambient gas for its volume
+     * (CORE-021, CORE-028).
+     *
+     * @throws IllegalArgumentException if the cell is zoned or not a cell, or has
+     *     no direct opening to the zone
+     */
+    public void join(long cell, Zone zone) {
+        requireJoinable(cell, zone);
+        joinCell(zone, cell, null, LedgerCategory.AMBIENT);
+    }
+
+    /**
+     * An unzoned cell joins a zone, bringing gas of its own, which is merged into
+     * the zone's mixture (CORE-021). The gas isn't changed.
+     *
+     * @param gas the cell's gas
+     * @param category where that gas comes from, for the ledger
+     */
+    public void join(long cell, Zone zone, GasMixture gas, LedgerCategory category) {
+        Objects.requireNonNull(gas, "gas");
+        Objects.requireNonNull(category, "category");
+        requireJoinable(cell, zone);
+        joinCell(zone, cell, gas, category);
+    }
+
+    private void requireJoinable(long cell, Zone zone) {
+        requireLive(zone);
+        if (!(topology.volume(cell) > 0)) {
+            throw new IllegalArgumentException("position " + cell + " is not a cell");
+        }
+        if (zoneOf(cell) != null) {
+            throw new IllegalArgumentException("cell " + cell + " is already zoned");
+        }
+        boolean[] touches = {false};
+        topology.forEachOpenNeighbour(cell, (neighbour, direct) -> {
+            if (direct && zoneOf(neighbour) == zone) {
+                touches[0] = true;
+            }
+        });
+        if (!touches[0]) {
+            throw new IllegalArgumentException("cell " + cell + " has no direct opening to " + zone);
+        }
+    }
+
+    private void joinCell(Zone zone, long id, GasMixture gas, LedgerCategory category) {
+        Cell c = cells.get(id);
+        if (c == null) {
+            c = new Cell(id);
+            cells.put(id, c);
+        }
+        unlinkAll(c);
+        c.volume = topology.volume(id);
+        zone.addCell(c);
+        linkFromTopology(c);
+        GasMixture added = gas != null ? gas : ambientFor(c.volume);
+        if (zone.mixture().merge(added)) {
+            ledger.record(category, added, 1);
+        }
+        zone.changed = true;
+    }
+
+    /**
+     * A zoned cell leaves its zone but stays a cell, now unzoned, so it holds the
+     * ambient again. Its share of the zone's gas, by volume, goes to the ambient.
+     * If the zone is left disconnected it splits (CORE-024); if it is left empty
+     * it is destroyed (CORE-065).
+     *
+     * @throws IllegalArgumentException if the cell is not zoned
+     */
+    public void leave(long cell) {
+        Cell c = cells.get(cell);
+        if (c == null || c.zone == null) {
+            throw new IllegalArgumentException("cell " + cell + " is not zoned");
+        }
+        Zone zone = c.zone;
+        GasMixture share = zone.cellCount() == 1
+                ? zone.mixture().removeFraction(1)
+                : zone.mixture().removeFraction(c.volume / zone.volume());
+        ledger.record(LedgerCategory.AMBIENT, share, -1);
+        drainPruned(share);
+        collectZoneNeighbours(c);
+        unlinkAll(c);
+        zone.removeCell(c);
+        c.volume = topology.volume(cell);
+        if (c.volume > 0) {
+            linkFromTopology(c);
+        }
+        dropIfIdle(c);
+        if (zone.cellCount() == 0) {
+            destroyZone(zone);
+        } else {
+            zone.changed = true;
+            splitCheck(zone);
+        }
+    }
+
+    // ---- Geometry changes (CORE-022, CORE-024, CORE-075) --------------------
+
+    /**
+     * Brings one cell up to date with the topology: its volume and open faces.
+     * See {@link CellTopology} for which cells to refresh.
+     *
+     * <ul>
+     *   <li>A zoned cell that stopped being a cell leaves its zone and its gas
+     *       stays in the zone, so the zone's pressure rises (CORE-022). If it was
+     *       the zone's last cell, its gas moves to the zones it was connected to,
+     *       by volume, or else to the ambient (CORE-075).
+     *   <li>A zoned cell whose volume changed changes its zone's volume; the gas
+     *       is kept.
+     *   <li>A zone left disconnected splits (CORE-024, CORE-064), found by a
+     *       search local to the change (CORE-025).
+     *   <li>Edge connection counts follow the faces (CORE-030, CORE-037).
+     * </ul>
+     *
+     * <p>Unzoned cells never join a zone here: classification decides that
+     * (GEO), through {@link #join} or {@link #createZone}.
+     */
+    public void refresh(long cell) {
+        double volume = topology.volume(cell);
+        Cell c = cells.get(cell);
+        if (c == null) {
+            if (volume > 0) {
+                c = new Cell(cell);
+                c.volume = volume;
+                cells.put(cell, c);
+                linkFromTopology(c);
+                dropIfIdle(c);
+            }
+            return;
+        }
+        Zone zone = c.zone;
+        if (zone == null) {
+            unlinkAll(c);
+            c.volume = volume;
+            if (volume > 0) {
+                linkFromTopology(c);
+            }
+            dropIfIdle(c);
+            return;
+        }
+        if (!(volume > 0)) {
+            fill(c);
+            return;
+        }
+        collectZoneNeighbours(c);
+        unlinkAll(c);
+        if (volume != c.volume) {
+            double old = c.volume;
+            c.volume = volume;
+            zone.setVolume(zone.volume() - old + volume);
+            zone.changed = true;
+        }
+        linkFromTopology(c);
+        // Keep only the neighbours this cell lost a direct opening to.
+        int kept = 0;
+        for (int i = 0; i < seedCount; i++) {
+            int index = c.indexOf(seeds[i]);
+            if (index < 0 || !c.direct[index]) {
+                seeds[kept++] = seeds[i];
+            }
+        }
+        seedCount = kept;
+        if (seedCount > 0) {
+            addSeed(c.id);
+            splitCheck(zone);
+        }
+    }
+
+    /** Refreshes several cells, in order. */
+    public void refreshAll(long... cellIds) {
+        for (long id : cellIds) {
+            refresh(id);
+        }
+    }
+
+    private void fill(Cell c) {
+        Zone zone = c.zone;
+        if (zone.cellCount() == 1) {
+            List<Zone> neighbours = neighbourZones(c);
+            unlinkAll(c);
+            zone.removeCell(c);
+            cells.remove(c.id);
+            GasMixture gas = zone.mixture();
+            if (neighbours.isEmpty()) {
+                ledger.record(LedgerCategory.AMBIENT, gas, -1);
+                gas.clear();
+            } else {
+                double remaining = 0;
+                for (Zone z : neighbours) {
+                    remaining += z.volume();
+                }
+                for (int i = 0; i < neighbours.size(); i++) {
+                    Zone z = neighbours.get(i);
+                    double fraction = i == neighbours.size() - 1 ? 1 : z.volume() / remaining;
+                    remaining -= z.volume();
+                    GasMixture parcel = gas.removeFraction(fraction);
+                    z.mixture().merge(parcel);
+                    drainPruned(parcel);
+                    z.changed = true;
+                }
+            }
+            destroyZone(zone);
+            return;
+        }
+        collectZoneNeighbours(c);
+        unlinkAll(c);
+        zone.removeCell(c);
+        cells.remove(c.id);
+        zone.changed = true;
+        splitCheck(zone);
+    }
+
+    /** The other zones a cell is connected to, in id order. */
+    private List<Zone> neighbourZones(Cell c) {
+        List<Zone> out = new ArrayList<>(2);
+        for (int i = 0; i < c.degree; i++) {
+            Zone z = cells.get(c.neighbours[i]).zone;
+            if (z != null && z != c.zone && !out.contains(z)) {
+                out.add(z);
+            }
+        }
+        out.sort((x, y) -> Long.compare(x.id(), y.id()));
+        return out;
+    }
+
+    /** Puts the cell's neighbours in its own zone, across direct openings, into the seed buffer. */
+    private void collectZoneNeighbours(Cell c) {
+        seedCount = 0;
+        for (int i = 0; i < c.degree; i++) {
+            if (c.direct[i] && cells.get(c.neighbours[i]).zone == c.zone) {
+                addSeed(c.neighbours[i]);
+            }
+        }
+    }
+
+    private void addSeed(long id) {
+        if (seedCount == seeds.length) {
+            seeds = Arrays.copyOf(seeds, seedCount * 2);
+        }
+        seeds[seedCount++] = id;
+    }
+
+    // ---- Split (CORE-024, CORE-025, CORE-064) --------------------------------
+
+    /**
+     * Checks whether the zone is still connected, after a change next to the
+     * seed cells. Interleaved breadth-first searches run from each seed, one
+     * step each in turn, across direct openings inside the zone. Searches that
+     * meet are united; once all are united the zone is still connected. A group
+     * of searches that runs out of cells first has found a complete remnant,
+     * which becomes a new zone. The work depends on how far apart the seeds are
+     * inside the zone, not on its size (CORE-025). The remnant found last keeps
+     * the zone and its id.
+     */
+    private void splitCheck(Zone zone) {
+        int epoch = ++searchEpoch;
+        int k = 0;
+        long[] starts = new long[seedCount];
+        for (int i = 0; i < seedCount; i++) {
+            Cell s = cells.get(seeds[i]);
+            if (s != null && s.zone == zone && s.visitEpoch != epoch) {
+                s.visitEpoch = epoch;
+                s.visitSearch = k;
+                starts[k++] = s.id;
+            }
+        }
+        seedCount = 0;
+        lastSplitVisits = k;
+        if (k <= 1) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        ArrayDeque<Cell>[] queues = new ArrayDeque[k];
+        @SuppressWarnings("unchecked")
+        ArrayList<Cell>[] found = new ArrayList[k];
+        int[] parent = new int[k];
+        boolean[] done = new boolean[k];
+        for (int i = 0; i < k; i++) {
+            Cell s = cells.get(starts[i]);
+            queues[i] = new ArrayDeque<>();
+            queues[i].add(s);
+            found[i] = new ArrayList<>();
+            found[i].add(s);
+            parent[i] = i;
+        }
+        int groups = k;
+        int visits = k;
+        while (groups > 1) {
+            for (int i = 0; i < k && groups > 1; i++) {
+                Cell cell = queues[i].poll();
+                if (cell == null) {
+                    continue;
+                }
+                for (int l = 0; l < cell.degree; l++) {
+                    if (!cell.direct[l]) {
+                        continue;
+                    }
+                    Cell n = cells.get(cell.neighbours[l]);
+                    if (n.zone != zone) {
+                        continue;
+                    }
+                    if (n.visitEpoch != epoch) {
+                        n.visitEpoch = epoch;
+                        n.visitSearch = i;
+                        queues[i].add(n);
+                        found[i].add(n);
+                        visits++;
+                    } else {
+                        int a = root(parent, i);
+                        int b = root(parent, n.visitSearch);
+                        if (a != b) {
+                            parent[Math.max(a, b)] = Math.min(a, b);
+                            groups--;
+                        }
+                    }
+                }
+            }
+            if (groups <= 1) {
+                break;
+            }
+            // A group whose searches have all run out is a complete remnant.
+            for (int g = 0; g < k && groups > 1; g++) {
+                if (done[g] || root(parent, g) != g || !groupExhausted(parent, queues, g)) {
+                    continue;
+                }
+                List<Cell> remnant = new ArrayList<>();
+                for (int i = 0; i < k; i++) {
+                    if (root(parent, i) == g) {
+                        remnant.addAll(found[i]);
+                        done[i] = true;
+                    }
+                }
+                splitOff(zone, remnant);
+                groups--;
+            }
+        }
+        lastSplitVisits = visits;
+    }
+
+    private static int root(int[] parent, int i) {
+        while (parent[i] != i) {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        return i;
+    }
+
+    private static boolean groupExhausted(int[] parent, ArrayDeque<Cell>[] queues, int group) {
+        for (int i = 0; i < queues.length; i++) {
+            if (root(parent, i) == group && !queues[i].isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Moves a remnant into a new zone. It takes the zone's composition and
+     * temperature, with moles in proportion to its volume (CORE-064).
+     */
+    private void splitOff(Zone zone, List<Cell> remnant) {
+        double volume = 0;
+        for (Cell c : remnant) {
+            volume += c.volume;
+        }
+        GasMixture parcel = zone.mixture().removeFraction(volume / zone.volume());
+        Zone created = newZone(parcel);
+        for (Cell c : remnant) {
+            relabel(c, created);
+        }
+        splitCount++;
+        created.changed = true;
+        zone.changed = true;
+    }
+
+    // ---- Merge (CORE-023) ---------------------------------------------------
+
+    /**
+     * Merges two zones into one: the one with more cells (on a tie, the lower id)
+     * keeps its id and takes the other's cells and gas, which is conserved. The
+     * other is destroyed. {@link #exchange()} calls this for equivalent zones
+     * joined by a direct opening (CORE-023).
+     *
+     * @return the surviving zone
+     * @throws IllegalArgumentException if the zones are the same, dead or not
+     *     joined by a direct opening
+     */
+    public Zone merge(Zone a, Zone b) {
+        requireLive(a);
+        requireLive(b);
+        Edge e = a.edgeTo(b);
+        if (a == b || e == null || e.direct == 0) {
+            throw new IllegalArgumentException(a + " and " + b + " are not joined by a direct opening");
+        }
+        return mergeZones(a, b);
+    }
+
+    private Zone mergeZones(Zone a, Zone b) {
+        boolean aKeeps = a.cellCount() > b.cellCount() || (a.cellCount() == b.cellCount() && a.id() < b.id());
+        Zone big = aKeeps ? a : b;
+        Zone small = aKeeps ? b : a;
+        while (small.cellCount() > 0) {
+            relabel(small.cellAt(small.cellCount() - 1), big);
+        }
+        big.mixture().merge(small.mixture());
+        drainPruned(small.mixture());
+        destroyZone(small);
+        big.changed = true;
+        mergeCount++;
+        return big;
+    }
+
+    /** Moves a cell to another zone, keeping the edge counts right. */
+    private void relabel(Cell c, Zone to) {
+        for (int i = 0; i < c.degree; i++) {
+            countPair(c, cells.get(c.neighbours[i]), c.direct[i], -1);
+        }
+        c.zone.removeCell(c);
+        to.addCell(c);
+        for (int i = 0; i < c.degree; i++) {
+            countPair(c, cells.get(c.neighbours[i]), c.direct[i], 1);
+        }
+    }
+
+    // ---- Gas operations -----------------------------------------------------
+
+    /**
+     * Adds gas to a zone; the gas isn't changed.
+     *
+     * @param category where the gas comes from, for the ledger
+     * @return false, changing nothing, if the mixture rejected it
+     */
+    public boolean add(Zone zone, GasMixture gas, LedgerCategory category) {
+        requireLive(zone);
+        if (!zone.mixture().merge(gas)) {
+            return false;
+        }
+        ledger.record(category, gas, 1);
+        zone.changed = true;
+        return true;
+    }
+
+    /**
+     * Removes a fraction of a zone's gas.
+     *
+     * @param category where the gas goes, for the ledger
+     * @return the removed gas
+     */
+    public GasMixture remove(Zone zone, double fraction, LedgerCategory category) {
+        requireLive(zone);
+        GasMixture parcel = zone.mixture().removeFraction(fraction);
+        ledger.record(category, parcel, -1);
+        drainPruned(parcel);
+        zone.changed = true;
+        return parcel;
+    }
+
+    /**
+     * Removes moles of a zone's gas, in proportion to its composition.
+     *
+     * @param category where the gas goes, for the ledger
+     * @return the removed gas
+     */
+    public GasMixture removeMoles(Zone zone, double moles, LedgerCategory category) {
+        requireLive(zone);
+        GasMixture parcel = zone.mixture().removeMoles(moles);
+        ledger.record(category, parcel, -1);
+        drainPruned(parcel);
+        zone.changed = true;
+        return parcel;
+    }
+
+    /** Adds thermal energy to a zone's gas; returns the energy added. */
+    public double addThermalEnergy(Zone zone, double joules) {
+        requireLive(zone);
+        zone.changed = true;
+        return zone.mixture().addThermalEnergy(joules);
+    }
+
+    /** Removes thermal energy from a zone's gas; returns the energy removed. */
+    public double removeThermalEnergy(Zone zone, double joules) {
+        requireLive(zone);
+        zone.changed = true;
+        return zone.mixture().removeThermalEnergy(joules);
+    }
+
+    /**
+     * Notes that a zone's mixture was changed directly, so its sleeping edges
+     * are re-checked at the next exchange (CORE-066). Changes made through the
+     * graph do this already.
+     */
+    public void markChanged(Zone zone) {
+        requireLive(zone);
+        zone.changed = true;
+    }
+
+    // ---- Exchange (CORE-031 to CORE-039, CORE-066) --------------------------
+
+    /**
+     * One atmos tick's exchange.
+     *
+     * <ol>
+     *   <li>Sleeping edges of zones that changed since the last exchange wake if
+     *       their sides are no longer equivalent (CORE-066).
+     *   <li>Every awake edge, in order, exchanges once: zone to zone by the
+     *       sharing ratio for its connection count, weighted by the two volumes
+     *       (CORE-031); zone to ambient the same way against ambient gas that is
+     *       refilled each time, so the ambient never changes (CORE-032,
+     *       CORE-038).
+     *   <li>Then, if its sides are equivalent: zones joined by a direct opening
+     *       merge (CORE-023), a zone and its ambient snap to the ambient exactly
+     *       (CORE-039), and other edges sleep (CORE-033). Sleeping edges cost no
+     *       exchange work.
+     * </ol>
+     */
+    public void exchange() {
+        for (Zone z : zones.values()) {
+            if (!z.changed) {
+                continue;
+            }
+            z.changed = false;
+            for (Edge e : z.edges) {
+                if (e.sleeping && !sidesEquivalent(e)) {
+                    e.sleeping = false;
+                }
+            }
+        }
+        edgeBuffer.clear();
+        for (Zone z : zones.values()) {
+            for (Edge e : z.edges) {
+                if (e.first() == z && !e.sleeping) {
+                    edgeBuffer.add(e);
+                }
+            }
+        }
+        for (int i = 0; i < edgeBuffer.size(); i++) {
+            Edge e = edgeBuffer.get(i);
+            if (e.removed || e.sleeping) {
+                continue;
+            }
+            if (e.isAmbient()) {
+                exchangeWithAmbient(e);
+            } else {
+                exchangeZones(e);
+            }
+        }
+        edgeBuffer.clear();
+    }
+
+    private boolean sidesEquivalent(Edge e) {
+        GasMixture other = e.isAmbient() ? ambient : e.second().mixture();
+        return e.first().mixture().isEquivalent(other);
+    }
+
+    private void exchangeZones(Edge e) {
+        Zone a = e.first();
+        Zone b = e.second();
+        if (!a.mixture().isEquivalent(b.mixture())) {
+            share(a, b, settings.ratio(e.connections));
+            if (!a.mixture().isEquivalent(b.mixture())) {
+                return;
+            }
+        }
+        if (e.direct > 0) {
+            mergeZones(a, b);
+        } else {
+            e.sleeping = true;
+        }
+    }
+
+    /**
+     * A gives up r·V_B/(V_A+V_B) of its gas and B gives up r·V_A/(V_A+V_B); each
+     * merges the other's parcel, moving both toward the volume-weighted mean.
+     */
+    private void share(Zone a, Zone b, double r) {
+        double va = a.volume();
+        double vb = b.volume();
+        GasMixture fromA = a.mixture().removeFraction(r * vb / (va + vb));
+        GasMixture fromB = b.mixture().removeFraction(r * va / (va + vb));
+        a.mixture().merge(fromB);
+        b.mixture().merge(fromA);
+        drainPruned(fromA);
+        drainPruned(fromB);
+        a.changed = true;
+        b.changed = true;
+        exchangeCount++;
+    }
+
+    private void exchangeWithAmbient(Edge e) {
+        Zone z = e.first();
+        if (!z.mixture().isEquivalent(ambient)) {
+            double vz = z.volume();
+            double vs =
+                    settings.ambientSharerVolume() + (settings.venting() == ExchangeSettings.Venting.FAITHFUL ? vz : 0);
+            double r = settings.ratio(e.connections);
+            GasMixture sharer = ambientFor(vs);
+            GasMixture out = z.mixture().removeFraction(r * vs / (vz + vs));
+            GasMixture in = sharer.removeFraction(r * vz / (vz + vs));
+            if (z.mixture().merge(in)) {
+                ledger.record(LedgerCategory.AMBIENT, in, 1);
+            }
+            ledger.record(LedgerCategory.AMBIENT, out, -1);
+            drainPruned(out);
+            z.changed = true;
+            exchangeCount++;
+            if (!z.mixture().isEquivalent(ambient)) {
+                return;
+            }
+        }
+        snapToAmbient(z);
+        e.sleeping = true;
+    }
+
+    /** The zone takes the ambient's composition and temperature exactly (CORE-039). */
+    private void snapToAmbient(Zone z) {
+        GasMixture m = z.mixture();
+        double scale = z.volume() / ambient.volume();
+        for (int i = 0; i < registry.size(); i++) {
+            double target = ambient.moles(i) * scale;
+            double before = m.moles(i);
+            if (target != before && m.setMoles(i, target)) {
+                ledger.record(LedgerCategory.AMBIENT, i, target - before);
+            }
+        }
+        m.setTemperature(ambient.temperature());
+        z.changed = true;
+    }
+
+    // ---- Conservation (CORE-036, CORE-073) ----------------------------------
+
+    /** Moves the moles pruned in every zone's mixture into the ledger, as {@link LedgerCategory#PRUNING}. */
+    public void drainPruning() {
+        for (Zone z : zones.values()) {
+            drainPruned(z.mixture());
+        }
+    }
+
+    /** Starts a ledger period from the zones' current totals. */
+    public void beginConservationPeriod() {
+        drainPruning();
+        double[] totals = new double[registry.size()];
+        totalMoles(totals);
+        ledger.begin(totals);
+    }
+
+    /**
+     * Ends a ledger period: reports every change in zoned moles that no category
+     * explains (CORE-073), and starts the next period.
+     */
+    public ConservationReport checkConservation(long tick) {
+        drainPruning();
+        double[] totals = new double[registry.size()];
+        totalMoles(totals);
+        return ledger.check(tick, totals);
+    }
+
+    private void drainPruned(GasMixture m) {
+        Arrays.fill(pruneScratch, 0);
+        m.drainPruned(pruneScratch);
+        for (int i = 0; i < pruneScratch.length; i++) {
+            if (pruneScratch[i] != 0) {
+                ledger.record(LedgerCategory.PRUNING, i, -pruneScratch[i]);
+            }
+        }
+    }
+
+    // ---- Connections and edges (CORE-030, CORE-037) -------------------------
+
+    /** Adds the cell's open pairs from the topology. Its own stored pairs must be empty. */
+    private void linkFromTopology(Cell c) {
+        linker.current = c;
+        topology.forEachOpenNeighbour(c.id, linker);
+        linker.current = null;
+    }
+
+    private final class Linker implements CellTopology.NeighbourVisitor {
+        Cell current;
+
+        @Override
+        public void accept(long neighbour, boolean direct) {
+            Cell c = current;
+            if (neighbour == c.id) {
+                return;
+            }
+            int existing = c.indexOf(neighbour);
+            if (existing >= 0) {
+                if (direct && !c.direct[existing]) {
+                    Cell n = cells.get(neighbour);
+                    countPair(c, n, false, -1);
+                    c.direct[existing] = true;
+                    n.direct[n.indexOf(c.id)] = true;
+                    countPair(c, n, true, 1);
+                }
+                return;
+            }
+            Cell n = cells.get(neighbour);
+            if (c.zone == null && (n == null || n.zone == null)) {
+                return;
+            }
+            if (n == null) {
+                double volume = topology.volume(neighbour);
+                if (!(volume > 0)) {
+                    return;
+                }
+                n = new Cell(neighbour);
+                n.volume = volume;
+                cells.put(neighbour, n);
+            }
+            c.addLink(neighbour, direct);
+            n.addLink(c.id, direct);
+            countPair(c, n, direct, 1);
+        }
+    }
+
+    /** Removes every stored pair of a cell, on both sides. */
+    private void unlinkAll(Cell c) {
+        for (int i = 0; i < c.degree; i++) {
+            Cell n = cells.get(c.neighbours[i]);
+            countPair(c, n, c.direct[i], -1);
+            n.removeLinkAt(n.indexOf(c.id));
+            dropIfIdle(n);
+        }
+        c.degree = 0;
+    }
+
+    private void dropIfIdle(Cell c) {
+        if (c.zone == null && c.degree == 0) {
+            cells.remove(c.id);
+        }
+    }
+
+    /** Adds ({@code sign} 1) or removes (-1) one pair's connection on the edge it belongs to. */
+    private void countPair(Cell x, Cell y, boolean direct, int sign) {
+        Zone zx = x.zone;
+        Zone zy = y.zone;
+        if (zx == zy) {
+            return; // inside one zone, or both unzoned
+        }
+        Edge e;
+        if (zx == null) {
+            e = edgeFor(zy, null);
+        } else if (zy == null) {
+            e = edgeFor(zx, null);
+        } else {
+            e = edgeFor(zx, zy);
+        }
+        e.connections += sign;
+        if (direct) {
+            e.direct += sign;
+        }
+        e.sleeping = false;
+        if (e.connections == 0) {
+            removeEdge(e);
+        }
+    }
+
+    private Edge edgeFor(Zone z, Zone other) {
+        Edge e = other == null ? z.ambientEdge() : z.edgeTo(other);
+        if (e != null) {
+            return e;
+        }
+        if (other == null) {
+            e = new Edge(z, null);
+            z.insertEdge(e);
+        } else {
+            e = z.id() < other.id() ? new Edge(z, other) : new Edge(other, z);
+            z.insertEdge(e);
+            other.insertEdge(e);
+        }
+        return e;
+    }
+
+    private static void removeEdge(Edge e) {
+        e.removed = true;
+        e.first().edges.remove(e);
+        if (e.second() != null) {
+            e.second().edges.remove(e);
+        }
+    }
+
+    // ---- Zone lifecycle (CORE-026, CORE-065) ---------------------------------
+
+    private Zone newZone(GasMixture mixture) {
+        Zone z = new Zone(nextZoneId++, mixture);
+        zones.put(z.id(), z);
+        return z;
+    }
+
+    /** Destroys an empty zone (CORE-065). */
+    private void destroyZone(Zone z) {
+        for (Edge e : new ArrayList<>(z.edges)) {
+            removeEdge(e);
+        }
+        drainPruned(z.mixture());
+        zones.remove(z.id());
+        z.destroy();
+    }
+
+    private void requireLive(Zone zone) {
+        Objects.requireNonNull(zone, "zone");
+        if (!zone.isAlive() || zones.get(zone.id()) != zone) {
+            throw new IllegalArgumentException(zone + " is not a live zone of this graph");
+        }
+    }
+}
