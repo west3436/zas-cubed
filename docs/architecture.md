@@ -406,6 +406,35 @@ section, S-10's station needs about 1–2 MiB.
 3. **Cache.** Cells classified open are cached per section until a dirty bit
    in that section clears the entry (GEO-027).
 
+**Engine implementation (R0).** The pure logic is in
+`io.github.west3436.zas.engine.classify`; the scheduler owns the mirror and
+drives it.
+
+- `SectionTopology` is the `CellTopology` over the mirror: a read-only adapter
+  around a section lookup (null means not in the mirror) and the geometry
+  palette. Cell ids (`CellIds`) pack 24 bits of x, 24 of z, 12 of y and a
+  4-bit sub-cell index. Faces leading outside the build height, or beyond the
+  ids' ±8,388,607 horizontal range, count as open (GEO-031's default). Through
+  `ResolvableTopology` it also reports the faces that reach sections not in the
+  mirror.
+- `EnclosureFill` is the bounded fill: `Enclosed` (sorted cells and volume),
+  `Open` (bound exceeded, or outside the world) or `Unresolved` with every
+  missing section key. The fill can't tell an unloaded section from one the
+  mirror hasn't been sent; the scheduler splits the keys into *unresolved*
+  and *needs more sections*. *Measured:* 8.5 ms for a 65,536-cell fill with
+  a `HashMap` lookup.
+- `EnclosureZones` turns an enclosed region into zones, one per set of cells
+  joined by direct openings, so a room behind an open door becomes its own
+  zone rather than an ambient edge.
+- `BreachResolver` finds the unzoned cells a refreshed change opened onto a
+  zone and classifies each region, with zoned cells as walls: `Pocket` joins
+  the zones (GEO-023), `Vent` needs nothing because the graph already counts
+  the opening as an ambient connection (GEO-025), and `Hold` names the zones
+  to pause and the sections to wait for (GEO-026).
+- `PendingClassifications` holds operations by seed cell, in arrival order,
+  until their region classifies, including across rounds that wait for
+  sections (GEO-028).
+
 ### 4.4 Zone membership and the zone graph (CORE-020 to CORE-039)
 
 **Membership.** Each mirrored section with zoned cells has a `short[4096]` of
