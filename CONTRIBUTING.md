@@ -88,16 +88,20 @@ mods itself.
 
 | Command | What it does |
 |---|---|
-| `./gradlew build` | Compiles, runs the engine's unit tests and checks formatting |
+| `./gradlew build` | Compiles, runs the engine's unit tests and checks formatting and API compatibility |
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
+| `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
 
 The projects and the rules for what may depend on what are in
 [architecture §2](docs/architecture.md#2-modules-and-packaging). In short: the
 `engine` never imports Minecraft, NeoForge or Mojang classes, and `zas-atmos`
 uses only the public API at compile time.
+
+The API's version policy, the compatibility check and how mods depend on the
+API are in [docs/api-consumers.md](docs/api-consumers.md).
 
 ### Tests
 

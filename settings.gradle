@@ -1,6 +1,8 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        // com.vanniktech.maven.publish is published to Maven Central only.
+        mavenCentral()
     }
 }
 
