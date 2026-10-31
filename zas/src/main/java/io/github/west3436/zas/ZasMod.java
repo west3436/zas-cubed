@@ -1,6 +1,7 @@
 package io.github.west3436.zas;
 
 import io.github.west3436.zas.gas.GasRegistryEvents;
+import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -15,6 +16,7 @@ public final class ZasMod {
         // Installed while constructing, so consumers ordered AFTER zas see it
         // in their own constructors (architecture §6.2).
         ZasApiProviderImpl.install(NeoForge.EVENT_BUS);
+        Geometries.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
     }
 }

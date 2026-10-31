@@ -232,7 +232,7 @@ on chunk load (GEO-013) uses the snapshot path measured in S5.
 | Block | Result |
 |---|---|
 | Slab | 500 L. Bottom face sealed, top open, sides half covered. Double slab: full. |
-| Stairs | 375 L (straight), 250 L (inner), 125 L (outer) |
+| Stairs | 250 L (straight), 125 L (inner), 375 L (outer). *Corrected 2026-10-31: the labels were swapped; the production GameTest `geo_002_volumes` confirms these.* |
 | Glass pane | 1 sub-cell (post only, 984 L) up to 4 (cross, 191 L each). A straight pane is 2 × 438 L, so a line of panes seals like a wall. |
 | Iron bars | Same as panes (they need the GEO-009 permeable override) |
 | Fence | 1 to 4 sub-cells. Its 1.5-block collision is clipped to the block, and it needs the GEO-009 override as well. |
