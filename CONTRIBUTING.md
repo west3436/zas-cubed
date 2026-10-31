@@ -47,32 +47,38 @@ rules as any other code, the clean-room rule included.
 ## Assets
 
 Code is MIT; assets are CC BY-SA 4.0 International, under
-[`LICENSE-ASSETS`](LICENSE-ASSETS) (D-39, D-56). Every file under a
-project's `src/*/resources/assets/` needs an entry in [`CREDITS`](CREDITS)
-(NFR-045). An entry is a block of `key: value` lines, starting with the
-file's path from the repository root; blank lines separate entries:
+[`LICENSE-ASSETS`](LICENSE-ASSETS) (D-39, D-56). Assets can be drawn from
+scratch, derived from vgstation13, or taken from anywhere else whose license
+allows it (D-62). Every file under a project's `src/*/resources/assets/`
+needs an entry in [`CREDITS`](CREDITS) (NFR-045). An entry is a block of
+`key: value` lines, starting with the file's path from the repository root
+and its `origin`; blank lines separate entries:
 
-- **Derived from a vg sprite:** `source` (the `.dmi` path in the vg
-  repository), `state` (the icon state), `commit` (the full vg commit hash)
-  and `attribution` naming the vgstation13 contributors. Use only vg's CC
-  BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder. Leave out any
-  sprite whose origin is unclear (NFR-041).
-- **Drawn from scratch:** `source: original`.
+- **`origin: original`:** drawn from scratch. Nothing else is needed.
+- **`origin: vgstation13`:** `source` (the `.dmi` path in the vg
+  repository), `state` (the icon state) and `commit` (the vg commit hash).
+  Use only vg's CC BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder
+  (NFR-041).
+- **`origin: other`:** `source` (a URL, or a description), `license` (an
+  SPDX id: `CC0-1.0`, `CC-BY-3.0`, `CC-BY-4.0`, `CC-BY-SA-3.0` or
+  `CC-BY-SA-4.0`, the licenses that can be adapted under CC BY-SA 4.0) and
+  `attribution` (the author to credit; not needed for `CC0-1.0`).
 
 ```
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister.png
+origin: vgstation13
 source: icons/obj/atmos.dmi
 state: yellow
-commit: 0123456789abcdef0123456789abcdef01234567
-attribution: vgstation13 contributors, CC BY-SA 3.0 US
+commit: 0123456789ab
 ```
 
-The full format is at the top of `CREDITS`. Check it with
-`python scripts/check_credits.py` (Python 3, no dependencies). It lists asset
-files with no entry, entries for files that don't exist, malformed entries
-and `goon/` sources. CI runs it in "Build and test".
+Leave out any asset whose origin or license is unclear. The full format is
+at the top of `CREDITS`. Check it with `python scripts/check_credits.py`
+(Python 3, no dependencies). It lists asset files with no entry, entries for
+files that don't exist, malformed entries, `goon/` sources and licenses that
+aren't allowed. CI runs it in "Build and test".
 
-No NonCommercial asset ships in any jar (NFR-046). RE:SS3D and Stationeers are
+No NonCommercial or NoDerivatives asset ships in any jar (NFR-046). RE:SS3D and Stationeers are
 reference and inspiration only.
 
 ## Building and testing

@@ -1,7 +1,7 @@
 # 00 · Overview
 
 **Status:** Accepted 2026-10-31, baselined as `req-r1-baseline`. Decisions D-11 to D-40 were added on 2026-10-30 from the
-open-questions walkthrough, D-41 and D-42 from the CORE review, D-43 and D-44 from the GEO review, and D-45 from the ENV review, D-46 from the API review, D-47 from the LIFE review, D-48 and D-49 from the HEAT/FIRE/FLOW review, D-50 from the CONT review, D-51 and D-52 from the SPACE review, D-53 and D-54 from the CLIENT/DATA/OPS review, D-55 and D-56 from the NFR review, D-57 and D-58 from the post-review gap check, D-59 from the gap-check answers, D-60 on the full form, and D-61 before the baseline.
+open-questions walkthrough, D-41 and D-42 from the CORE review, D-43 and D-44 from the GEO review, and D-45 from the ENV review, D-46 from the API review, D-47 from the LIFE review, D-48 and D-49 from the HEAT/FIRE/FLOW review, D-50 from the CONT review, D-51 and D-52 from the SPACE review, D-53 and D-54 from the CLIENT/DATA/OPS review, D-55 and D-56 from the NFR review, D-57 and D-58 from the post-review gap check, D-59 from the gap-check answers, D-60 on the full form, D-61 before the baseline, and D-62 during Phase C.
 
 ## Vision
 
@@ -105,6 +105,7 @@ decision that supersedes it.
 | D-59 | 2026-10-31 | **Container failure values.** Pipe networks burst in R1: more than 100 atm above a segment's cell, one segment breaks and dumps the network into its cell, without exploding. Canisters explode above 135 atm with power (P − 135 atm) / 10 atm. Tank and canister explosion power is capped at 16 (configurable). An igniting container burns a parcel of 375 L per second, or all of it if smaller, so a TTV tank burns in one tick. The igniter draws 20 FE/t, and the TTV timer runs 0–600 s (default 10 s). | Answers to the post-review gap check. Refines D-57. CONT-005, CONT-100, CONT-102, CONT-104, CONT-105, CONT-108, CONT-109, CONT-065, FIRE-031. Leaks and configurable pipe thresholds stay R2 (CONT-005). |
 | D-60 | 2026-10-31 | **The full form is a rationale and a verification plan, nothing more.** The rationale says where a requirement comes from: vg behaviour (`vg:`), a user decision (`Decision:`), or an inference with its reason (`Inferred:`). The verification plan is one or two sentences naming the Unit, GameTest, Bench, Manual or Inspect checks. Numbers stay in the statement; Depends stays optional. | README entry format. Replaces the earlier full form (separate acceptance numbers and mandatory Depends). |
 | D-61 | 2026-10-31 | **Photosynthesis follows the preset.** At light 15, 8 lit crops supply one breather's O₂ under Normal and 16 under Hardcore (0.125 and 0.0625 mol/h per crop), with leaves at half the crop rate. | CONT-057, OPS-007. Replaces defaults under which one crop supplied about 7 breathers. |
+| D-62 | 2026-10-31 | **Assets from other sources.** Besides original and vg-derived assets, an asset may come from any other source whose license allows adapting it under CC BY-SA 4.0 (CC0 1.0, CC BY 3.0 or 4.0, CC BY-SA 3.0 or 4.0). Its `CREDITS` entry records the source, the SPDX license id and the attribution. A vg entry may use a short commit hash. | Amends D-56. NFR-045. |
 
 ## Assumptions (confirmed 2026-10-31)
 

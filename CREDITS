@@ -8,28 +8,46 @@
 #
 # An entry is a block of "key: value" lines. Blank lines separate entries.
 # Lines starting with "#" are comments. Each entry starts with "path", the
-# file's path from the repository root, with forward slashes.
+# file's path from the repository root, with forward slashes, followed by
+# "origin": original, vgstation13 or other.
 #
-# An asset derived from a vgstation13 sprite records where it came from:
+# An asset drawn from scratch for ZAS³:
+#
+#   path: zas/src/main/resources/assets/zas/textures/item/gauge.png
+#   origin: original
+#
+# An asset derived from a vgstation13 sprite:
 #
 #   path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister.png
+#   origin: vgstation13
 #   source: icons/obj/atmos.dmi
 #   state: yellow
-#   commit: 0123456789abcdef0123456789abcdef01234567
-#   attribution: vgstation13 contributors, CC BY-SA 3.0 US
+#   commit: 0123456789ab
 #
 #   source       the .dmi file, as a path in the vgstation13 repository.
 #                Never a file under goon/ (CC BY-NC-SA, NFR-041).
 #   state        the icon state used. List several separated by ", ".
-#   commit       the full 40-character vgstation13 commit hash.
-#   attribution  must name the vgstation13 contributors.
+#   commit       the vgstation13 commit hash, 7 to 40 hex digits.
+#   attribution  optional; defaults to "vgstation13 contributors, CC BY-SA 3.0 US".
 #
-# An asset drawn from scratch says so:
+# An asset taken or adapted from any other source:
 #
-#   path: zas/src/main/resources/assets/zas/textures/item/gauge.png
-#   source: original
+#   path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/hiss.ogg
+#   origin: other
+#   source: https://example.org/sounds/hiss
+#   license: CC-BY-4.0
+#   attribution: Jane Doe
 #
-# Either kind may add "author: <name>" and "notes: <text>".
+#   source       where it came from: a URL, or a description if there is none.
+#   license      its SPDX license id. Allowed, because they can be adapted
+#                under CC BY-SA 4.0: CC0-1.0, CC-BY-3.0, CC-BY-4.0,
+#                CC-BY-SA-3.0, CC-BY-SA-4.0. NonCommercial (NC) and
+#                NoDerivatives (ND) licenses are never allowed (NFR-046).
+#   attribution  the author to credit, as the license asks. Required except
+#                for CC0-1.0.
+#
+# Any entry may add "author: <name>" (who made or adapted the file for ZAS³)
+# and "notes: <text>". If an asset's origin or license is unclear, leave it
+# out.
 #
 # Run the check locally with: python scripts/check_credits.py
-
