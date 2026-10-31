@@ -1,0 +1,51 @@
+apply plugin: 'net.neoforged.moddev'
+
+base { archivesName = 'zas_atmos' }
+
+evaluationDependsOn(':zas')
+
+sourceSets {
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+// The full stack: dev runs here load both mods, since zas_atmos requires zas.
+def zasMod = project(':zas').neoForge.mods.zas
+
+neoForge {
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas,zas_atmos'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    mods {
+        zas {
+            zasMod.modSourceSets.get().each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.gametest
+        }
+    }
+}
+
+dependencies {
+    // Compile against the public API only (D-50); zas is required at runtime.
+    implementation project(':zas-api')
+    runtimeOnly project(':zas')
+    gametestRuntimeOnly project(':zas').sourceSets.gametest.output
+}

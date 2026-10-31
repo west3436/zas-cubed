@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'zas-cubed'
+
+// Architecture §2.1. The API project is named `zas-api`, the same as its
+// published artifactId: ModDevGradle writes a project's jar-in-jar identity
+// as group:<project name>, and a mismatch makes FML treat consumers' copies
+// and ours as one library and keep whichever it saw first.
+include 'engine', 'zas-api', 'zas', 'compat-adastra', 'zas-atmos', 'example-addon'

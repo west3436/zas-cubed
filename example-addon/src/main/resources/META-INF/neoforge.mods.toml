@@ -1,0 +1,23 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "zas_example"
+version = "${mod_version}"
+displayName = "ZAS³ Example Addon"
+description = "An example of a mod built on the ZAS³ API alone."
+
+[[dependencies.zas_example]]
+modId = "zas"
+type = "optional"
+versionRange = "[${mod_version},)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.zas_example]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neo_version_min},)"
+ordering = "NONE"
+side = "BOTH"

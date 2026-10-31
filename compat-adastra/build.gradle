@@ -1,0 +1,9 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Ad Astra adapter. Its classes ship inside the zas jar and are loaded only
+// when Ad Astra is present (architecture §2.1, SPACE-003). Ad Astra joins as a
+// compile-only dependency once S6 settles the version (#9).
+
+dependencies {
+    implementation project(':zas-api')
+}
