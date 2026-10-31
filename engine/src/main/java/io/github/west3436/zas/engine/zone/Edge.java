@@ -5,9 +5,11 @@ package io.github.west3436.zas.engine.zone;
  * ambient, aggregated (CORE-030). A connection is one open pair of cells.
  *
  * <p>An edge counts its connections and how many are direct, that is not
- * through a zone boundary such as an open door (CORE-037). It sleeps while its
- * two sides are equivalent (CORE-033) and wakes when either changes (CORE-066).
- * It disappears when its last connection closes.
+ * through a zone boundary such as an open door (CORE-037). A zone-to-zone edge
+ * sleeps while its two sides are equivalent (CORE-033) and wakes when either
+ * changes (CORE-066). An ambient edge doesn't sleep: once its zone nearly
+ * matches the ambient, the zone dissolves (CORE-076). An edge disappears when
+ * its last connection closes or a side is destroyed.
  */
 public final class Edge {
     private final Zone a;

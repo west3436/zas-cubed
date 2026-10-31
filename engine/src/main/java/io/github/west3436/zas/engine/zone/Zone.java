@@ -12,8 +12,9 @@ import java.util.function.LongConsumer;
  * destroyed only by their {@link ZoneGraph}.
  *
  * <p>The id is unique within the graph and never changes while the zone lives
- * (CORE-026). After a zone is destroyed (it emptied, or merged into another
- * zone) {@link #isAlive()} is false and it holds no cells.
+ * (CORE-026). After a zone is destroyed (it emptied, merged into another zone,
+ * or dissolved into the ambient) {@link #isAlive()} is false and it holds no
+ * cells.
  */
 public final class Zone {
     private final long id;
