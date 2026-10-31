@@ -16,7 +16,7 @@ Per D-07, biome- and altitude-varying ambients are **not** shipped in R1.
 ## Definitions and defaults
 
 #### ENV-001 · Per-dimension ambient
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-07, S-06
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-07, S-06
 
 Each dimension shall have an ambient atmosphere defined in datapacks, keyed by
 dimension id. The definition gives a composition (moles per 1,000 L, or
@@ -30,7 +30,7 @@ partial pressures) and a temperature.
   checks queries return it.
 
 #### ENV-010 · Per-preset variants
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-14, D-19
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-14, D-19
 
 An ambient definition may give separate variants for the Normal and Hardcore
 presets. The variant for the active preset applies.
@@ -40,7 +40,7 @@ presets. The variant for the active preset applies.
   the matching variant.
 
 #### ENV-011 · Fallback for undefined dimensions
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-45
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-45
 
 A dimension with no ambient from any source (ENV-014) shall get standard
 Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 % O₂.
@@ -50,7 +50,7 @@ Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 % O₂.
   air.
 
 #### ENV-002 · Normal vanilla defaults
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-19
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-19
 
 ZAS³ shall ship these Normal-preset ambients, all breathable:
 
@@ -64,7 +64,7 @@ ZAS³ shall ship these Normal-preset ambients, all breathable:
 - **Verify:** Inspect the shipped ambient data.
 
 #### ENV-012 · Hardcore vanilla defaults
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-19, D-14
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-19, D-14
 
 ZAS³ shall ship these Hardcore-preset ambients:
 
@@ -84,7 +84,7 @@ defaults and are retuned if those change.
   occur.
 
 #### ENV-003 · Vacuum
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-07, S-01
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-07, S-01
 
 A dimension shall be able to declare a vacuum ambient: no gas, at the cosmic
 background temperature (2.7 K) unless the definition gives another

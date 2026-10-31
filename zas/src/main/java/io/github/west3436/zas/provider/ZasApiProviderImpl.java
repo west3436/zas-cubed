@@ -7,16 +7,18 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.environment.Ambients;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -31,16 +33,16 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * ZAS³'s implementation of the API (architecture §6.2).
  *
  * <p>TODO(#23): this is a stand-in until the atmos scheduler exists. Every
- * point answers as ambient standard air, no zone exists, and mutations
- * resolve against the ambient: added gas is lost to the open air and removed
- * gas is supplied without depletion, at the end of the next server tick. The
+ * point answers as its dimension's ambient ({@link Ambients}, ENV-001), no
+ * zone exists, and mutations resolve against the ambient: added gas is lost
+ * to the open air and removed gas is supplied without depletion, at the end of the next server tick. The
  * scheduler replaces {@link #sample}, {@link #zone} and the mutation queue
  * with the published snapshot and its own queued operations; the threading
  * rules stay the same.
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
-    private static final GasMixture AIR = StandardAir.mixture(StandardAir.CELL_VOLUME);
-    private static final AtmosphereSample AMBIENT = AtmosphereSample.ambient(AIR);
+    /** One cell of each ambient seen, by value; ambients are few. */
+    private final Map<Ambient, AtmosphereSample> ambientSamples = new ConcurrentHashMap<>();
 
     /** Mutations waiting for the next tick. Touched only on the server thread. */
     private final ArrayDeque<Pending> pending = new ArrayDeque<>();
@@ -70,13 +72,13 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     // TODO(#23): read the published snapshot; resolve the point to a cell (API-015).
     @Override
     public AtmosphereSample sample(Level level, Vec3 point) {
-        return AMBIENT;
+        return ambientSample(level);
     }
 
     // TODO(#23): read the published snapshot; use the position's largest cell (API-015).
     @Override
     public AtmosphereSample sample(Level level, BlockPos pos) {
-        return AMBIENT;
+        return ambientSample(level);
     }
 
     // TODO(#23): look the zone up in the published snapshot.
@@ -98,14 +100,21 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source) {
         // The ambient supplies any gas it contains, without depleting.
         return queue(level, () -> {
+            GasMixture ambient = ambientSample(level).mixture();
             Map<ResourceLocation, Double> supplied = new HashMap<>();
             moles.forEach((gas, n) -> {
-                if (AIR.moles(gas) > 0) {
+                if (ambient.moles(gas) > 0) {
                     supplied.put(gas, n);
                 }
             });
-            return new MutationResult(MutationOutcome.AMBIENT, new GasParcel(supplied, AIR.temperature()));
+            return new MutationResult(MutationOutcome.AMBIENT, new GasParcel(supplied, ambient.temperature()));
         });
+    }
+
+    /** One cell of the level's dimension's ambient. Excluded dimensions keep theirs (ENV-018). */
+    private AtmosphereSample ambientSample(Level level) {
+        return ambientSamples.computeIfAbsent(
+                Ambients.ambient(level.dimension()), ambient -> AtmosphereSample.ambient(Ambients.cell(ambient)));
     }
 
     private CompletableFuture<MutationResult> queue(ServerLevel level, Supplier<MutationResult> result) {
