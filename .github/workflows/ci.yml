@@ -43,7 +43,13 @@ jobs:
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 10
-        run: ./gradlew runGameTestServer --stacktrace
+        run: ./gradlew runGameTestServer -x :example-addon:runGameTestServer --stacktrace
+      # S-12 (API-048): the example addon, which nests the API, on a GameTest
+      # server without zas. The fallback must answer with standard air.
+      - name: S-12 API without ZAS³ (example addon alone)
+        if: steps.gradle.outputs.present == 'true'
+        timeout-minutes: 5
+        run: ./gradlew :example-addon:runGameTestServer --stacktrace
 
   # Snapshot of the API on the Central Portal (API-008, D-18), after a green
   # build on main. Never on PRs: they don't get the secrets.

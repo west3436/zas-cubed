@@ -140,7 +140,8 @@ Still open:
   - S-02 works without hazards: breach, vent, the zone splits and merges
     correctly.
   - S-09 and S-12 pass.
-  - Benchmarks are recorded against the NFR targets.
+  - Benchmarks are recorded against the NFR targets
+    ([R0 engine benchmarks](research/benchmarks.md)).
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
