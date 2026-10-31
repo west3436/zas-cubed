@@ -27,10 +27,10 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * The API as installed by {@code zas}. Until the atmos scheduler exists (#23)
- * the provider answers every point as ambient, so these tests cover the
- * ambient cases and the threading contract; the zoned, paused and unresolved
- * cases of API-010, API-011, API-012 and API-016 come with it.
+ * The API as installed by {@code zas}: the ambient cases and the threading
+ * contract. The zoned cases of API-010, API-011, API-012 and API-016 are in
+ * {@link AtmosTests}; the paused and unresolved ones come with paused zones
+ * (#27).
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)

@@ -52,6 +52,36 @@ public final class SectionKeys {
         return chunk(x(section), z(section));
     }
 
+    /**
+     * The key of block position {@code (x, y, z)}: 26 bits of x, 26 bits of z and 12 bits of y,
+     * from the high bits down, the layout of Minecraft's {@code BlockPos#asLong}.
+     */
+    public static long block(int x, int y, int z) {
+        return ((x & 0x3FFFFFFL) << 38) | ((z & 0x3FFFFFFL) << 12) | (y & 0xFFFL);
+    }
+
+    public static int blockX(long block) {
+        return (int) (block >> 38);
+    }
+
+    public static int blockY(long block) {
+        return (int) (block << 52 >> 52);
+    }
+
+    public static int blockZ(long block) {
+        return (int) (block << 26 >> 38);
+    }
+
+    /** The key of the section holding the block with key {@code block}. */
+    public static long sectionOfBlockKey(long block) {
+        return sectionOfBlock(blockX(block), blockY(block), blockZ(block));
+    }
+
+    /** The key of the chunk column holding the block with key {@code block}. */
+    public static long chunkOfBlockKey(long block) {
+        return chunk(blockX(block) >> 4, blockZ(block) >> 4);
+    }
+
     /** The index of local position {@code (x, y, z)}, each 0–15, within a section: y, z, x order. */
     public static int index(int x, int y, int z) {
         return (y << 8) | (z << 4) | x;

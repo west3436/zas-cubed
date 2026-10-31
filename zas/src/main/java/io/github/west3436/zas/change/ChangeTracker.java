@@ -158,6 +158,18 @@ public final class ChangeTracker {
         return d == null ? ChunkGenerations.UNLOADED : d.generations.lifecycle(pos.toLong());
     }
 
+    /**
+     * Gives a loaded chunk a new lifecycle generation, as if it had unloaded and loaded again,
+     * without touching the chunk. For tests of stale results (CORE-070), which can't unload a
+     * chunk the test holds. Server thread.
+     */
+    public static void markReloaded(ServerLevel level, ChunkPos pos) {
+        flushOffThread();
+        Dimension d = dimension(level);
+        d.generations.unload(pos.toLong());
+        d.generations.load(pos.toLong());
+    }
+
     // ---- internals ----
 
     private static Dimension dimension(ServerLevel level) {

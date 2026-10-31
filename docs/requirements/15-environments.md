@@ -224,7 +224,7 @@ ambient is no longer equivalent (CORE-006) to the mixture the zone snapped to.
   large one wakes it; Bench measures a provider changing every tick.
 
 #### ENV-007 · Excluded dimensions
-`Must` · `R0` · `Accepted` · Verify: GameTest
+`Must` · `R0` · `Implemented` · Verify: GameTest
 
 Config or datapacks shall be able to exclude a dimension from simulation, so
 that no zones exist there.

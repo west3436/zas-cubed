@@ -318,7 +318,7 @@ Enclosure classification shall run off the server thread, on world snapshots.
   GameTests check the results.
 
 #### GEO-028 · Operations wait for classification
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
 Gas operations waiting on classification shall be buffered and applied once
 it completes, without any loss of gas.
@@ -330,7 +330,7 @@ it completes, without any loss of gas.
   that forms holds all of it.
 
 #### GEO-023 · Breach into an enclosed pocket
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-02
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-02
 
 When a zone's face opens onto unzoned cells that classify as an enclosed
 pocket, the pocket shall join the zone, bringing ambient gas (CORE-028).
@@ -343,7 +343,7 @@ pocket, the pocket shall join the zone, bringing ambient gas (CORE-028).
   ambient share.
 
 #### GEO-025 · Breach to the open
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-02
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-02
 
 When a zone's face opens onto unzoned cells that classify as open, the opening
 shall become an ambient edge.
