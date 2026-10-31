@@ -268,7 +268,7 @@ and the location.
 ## Zones
 
 #### CORE-020 · Zone definition
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 A zone shall be a connected set of cells that share one mixture.
 
@@ -278,7 +278,7 @@ A zone shall be a connected set of cells that share one mixture.
   share one mixture.
 
 #### CORE-027 · Zone volume
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 A zone's mixture volume shall be the sum of its cells' gas volumes (GEO-002).
 
@@ -288,7 +288,7 @@ A zone's mixture volume shall be the sum of its cells' gas volumes (GEO-002).
   volume.
 
 #### CORE-021 · Joining cells
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 When a cell joins a zone, the cell's gas shall be merged into the zone's
 mixture.
@@ -299,7 +299,7 @@ mixture.
   moles and temperature.
 
 #### CORE-028 · Unzoned cells bring ambient gas
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 A previously unzoned cell that joins a zone shall contribute the ambient gas
 for its volume.
@@ -371,7 +371,7 @@ its own zone.
   zones result.
 
 #### CORE-064 · Gas shared on split
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Each remnant of a split shall keep the original mixture's composition and
 temperature, with moles in proportion to its volume.
@@ -396,7 +396,7 @@ neighbourhood around the change, not on the zone's size.
   zone; Bench covers it in S-10.
 
 #### CORE-026 · Zone identity
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Every zone shall have an id that is unique within its dimension and stable for
 the zone's lifetime.
@@ -407,7 +407,7 @@ the zone's lifetime.
   destructions and unchanged while a zone lives.
 
 #### CORE-065 · Empty zones are destroyed
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 A zone with no cells shall be destroyed.
 
@@ -419,7 +419,7 @@ A zone with no cells shall be destroyed.
 ## Edges and exchange
 
 #### CORE-030 · Edges
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 All connections between the same pair of zones, or between a zone and the
 same ambient, shall be aggregated into one edge.
@@ -430,7 +430,7 @@ same ambient, shall be aggregated into one edge.
   one edge with three connections.
 
 #### CORE-037 · Edge connection counts
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 Each edge shall track how many connections it has and how many of them are
 direct.
@@ -442,7 +442,7 @@ direct.
   check both counts.
 
 #### CORE-031 · Exchange rule
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03 · [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03 · [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 
 Each atmos tick, an active zone-to-zone edge shall exchange gas using a
 sharing ratio looked up from its connection count and weighted by the two
@@ -463,7 +463,7 @@ r_T = 1 − (1 − r_ZAS)^(T / 2 s).
   each connection count, and that two 1 s ticks match one ZAS 2 s tick.
 
 #### CORE-032 · Ambient edges
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03, D-07
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03, D-07
 
 A zone shall exchange gas with its ambient across ambient edges.
 
@@ -473,7 +473,7 @@ A zone shall exchange gas with its ambient across ambient edges.
   tick.
 
 #### CORE-038 · Ambient is never changed
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 Exchange with a zone shall never change the ambient.
 
@@ -483,7 +483,7 @@ Exchange with a zone shall never change the ambient.
   unchanged.
 
 #### CORE-039 · Snap to ambient
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03 · [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03 · [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 
 Once a zone is equivalent to its ambient, it shall take the ambient's
 composition and temperature exactly.
@@ -494,7 +494,7 @@ composition and temperature exactly.
   composition and temperature exactly.
 
 #### CORE-033 · Sleeping edges
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Edges whose two sides are equivalent shall sleep and cost no exchange work.
 
@@ -504,7 +504,7 @@ Edges whose two sides are equivalent shall sleep and cost no exchange work.
   none.
 
 #### CORE-066 · Waking edges
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Any change to either side of a sleeping edge shall wake it within one atmos
 tick.
