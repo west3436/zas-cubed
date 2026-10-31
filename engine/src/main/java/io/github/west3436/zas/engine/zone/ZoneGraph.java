@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.zone;
 import io.github.west3436.zas.engine.conservation.ConservationLedger;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.gas.EquivalenceTolerances;
 import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -33,7 +34,8 @@ import java.util.TreeMap;
  *   <li>gas operations: {@link #add}, {@link #remove}, {@link #addThermalEnergy}
  *       and the like, each attributed to a {@link LedgerCategory};
  *   <li>{@link #exchange()}: every awake edge exchanges once, equivalent zones
- *       joined by a direct opening merge, and other equivalent edges sleep;
+ *       joined by a direct opening merge, other equivalent edges sleep, and
+ *       zones that match their ambient dissolve into it;
  *   <li>{@link #checkConservation(long)} when the checker is on.
  * </ol>
  *
@@ -60,6 +62,10 @@ public final class ZoneGraph {
     private final Linker linker = new Linker();
     private final double[] pruneScratch;
     private final ArrayList<Edge> edgeBuffer = new ArrayList<>();
+    private final ArrayList<Zone> dissolveBuffer = new ArrayList<>();
+    /** CORE-006's tolerances without the temperature test, for near-empty zones (CORE-076). */
+    private final EquivalenceTolerances ignoringTemperature;
+
     private long[] seeds = new long[8];
     private int seedCount;
     private int searchEpoch;
@@ -67,6 +73,7 @@ public final class ZoneGraph {
     private long exchangeCount;
     private long mergeCount;
     private long splitCount;
+    private long dissolveCount;
     private int lastSplitVisits;
 
     /**
@@ -94,6 +101,14 @@ public final class ZoneGraph {
         }
         this.ambient = requireAmbient(ambient);
         this.pruneScratch = new double[registry.size()];
+        EquivalenceTolerances t = config.equivalence();
+        this.ignoringTemperature = new EquivalenceTolerances(
+                Double.MAX_VALUE,
+                t.temperatureRelative(),
+                t.pressureAbsolute(),
+                t.pressureRelative(),
+                t.densityAbsolute(),
+                t.densityRelative());
     }
 
     // ---- Queries ------------------------------------------------------------
@@ -172,6 +187,11 @@ public final class ZoneGraph {
         return splitCount;
     }
 
+    /** How many zones have dissolved into the ambient since the graph was created (CORE-076). */
+    public long dissolveCount() {
+        return dissolveCount;
+    }
+
     /** How many cells the last split check visited (CORE-025). */
     public int lastSplitVisits() {
         return lastSplitVisits;
@@ -191,17 +211,12 @@ public final class ZoneGraph {
     // ---- Ambient ------------------------------------------------------------
 
     /**
-     * Replaces the ambient. A sleeping ambient edge wakes only if its zone is no
-     * longer equivalent to the new ambient (CORE-066, ENV-017).
+     * Replaces the ambient. Ambient edges never sleep (CORE-076), so the next
+     * exchange vents toward the new ambient, and zones that nearly match it
+     * dissolve into it.
      */
     public void setAmbient(GasMixture newAmbient) {
         ambient = requireAmbient(newAmbient);
-        for (Zone z : zones.values()) {
-            Edge e = z.ambientEdge();
-            if (e != null && e.sleeping && !z.mixture().isEquivalent(ambient)) {
-                e.sleeping = false;
-            }
-        }
     }
 
     private GasMixture requireAmbient(GasMixture mixture) {
@@ -800,9 +815,15 @@ public final class ZoneGraph {
      *       refilled each time, so the ambient never changes (CORE-032,
      *       CORE-038).
      *   <li>Then, if its sides are equivalent: zones joined by a direct opening
-     *       merge (CORE-023), a zone and its ambient snap to the ambient exactly
-     *       (CORE-039), and other edges sleep (CORE-033). Sleeping edges cost no
-     *       exchange work.
+     *       merge (CORE-023), and other zone-to-zone edges sleep (CORE-033).
+     *       Sleeping edges cost no exchange work.
+     *   <li>Last, in zone id order, every zone with an ambient edge that is
+     *       nearly equivalent to the ambient dissolves into it (CORE-076, D-63):
+     *       its gas goes to the ambient, recorded as {@link
+     *       LedgerCategory#AMBIENT}, and its cells become unzoned, so they hold
+     *       the ambient again (CORE-050) and a later trigger can zone them anew.
+     *       Its other edges become its neighbours' ambient connections. This
+     *       takes the place of snapping to the ambient (CORE-039).
      * </ol>
      */
     public void exchange() {
@@ -837,6 +858,31 @@ public final class ZoneGraph {
             }
         }
         edgeBuffer.clear();
+        for (Zone z : zones.values()) {
+            if (z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
+                dissolveBuffer.add(z);
+            }
+        }
+        for (int i = 0; i < dissolveBuffer.size(); i++) {
+            dissolve(dissolveBuffer.get(i));
+        }
+        dissolveBuffer.clear();
+    }
+
+    /**
+     * Whether a mixture is nearly equivalent to the ambient (CORE-076, D-63): the
+     * full CORE-006 test, except that temperature isn't compared once the
+     * mixture is near-empty, its pressure within the absolute pressure tolerance
+     * both of the ambient's and of vacuum, since near-empty gas carries
+     * negligible heat. At ordinary pressures temperature is always compared.
+     */
+    private boolean nearlyAmbient(GasMixture m) {
+        double p = m.pressure();
+        double tolerance = ignoringTemperature.pressureAbsolute();
+        if (p <= tolerance && Math.abs(p - ambient.pressure()) <= tolerance) {
+            return m.isEquivalent(ambient, ignoringTemperature);
+        }
+        return m.isEquivalent(ambient);
     }
 
     private boolean sidesEquivalent(Edge e) {
@@ -878,9 +924,10 @@ public final class ZoneGraph {
         exchangeCount++;
     }
 
+    /** One exchange with the ambient, unless the zone is about to dissolve into it (CORE-076). */
     private void exchangeWithAmbient(Edge e) {
         Zone z = e.first();
-        if (!z.mixture().isEquivalent(ambient)) {
+        if (!nearlyAmbient(z.mixture())) {
             double vz = z.volume();
             double vs =
                     settings.ambientSharerVolume() + (settings.venting() == ExchangeSettings.Venting.FAITHFUL ? vz : 0);
@@ -895,27 +942,47 @@ public final class ZoneGraph {
             drainPruned(out);
             z.changed = true;
             exchangeCount++;
-            if (!z.mixture().isEquivalent(ambient)) {
-                return;
-            }
         }
-        snapToAmbient(z);
-        e.sleeping = true;
     }
 
-    /** The zone takes the ambient's composition and temperature exactly (CORE-039). */
-    private void snapToAmbient(Zone z) {
-        GasMixture m = z.mixture();
-        double scale = z.volume() / ambient.volume();
-        for (int i = 0; i < registry.size(); i++) {
-            double target = ambient.moles(i) * scale;
-            double before = m.moles(i);
-            if (target != before && m.setMoles(i, target)) {
-                ledger.record(LedgerCategory.AMBIENT, i, target - before);
+    /**
+     * Dissolves a zone into the ambient (CORE-076): its gas goes to the ambient,
+     * its cells become unzoned, and each zone edge becomes the other zone's
+     * ambient connections, since the cells across it are now ambient.
+     */
+    private void dissolve(Zone z) {
+        GasMixture gas = z.mixture().removeFraction(1);
+        ledger.record(LedgerCategory.AMBIENT, gas, -1);
+        drainPruned(gas);
+        for (Edge e : new ArrayList<>(z.edges)) {
+            removeEdge(e);
+            Zone other = e.other(z);
+            if (other != null) {
+                Edge toAmbient = edgeFor(other, null);
+                toAmbient.connections += e.connections;
+                toAmbient.direct += e.direct;
+                toAmbient.sleeping = false;
+                other.changed = true;
             }
         }
-        m.setTemperature(ambient.temperature());
-        z.changed = true;
+        // Stored pairs between two unzoned cells are dropped; pairs with other zones stay.
+        while (z.cellCount() > 0) {
+            Cell c = z.cellAt(z.cellCount() - 1);
+            for (int i = c.degree - 1; i >= 0; i--) {
+                Cell n = cells.get(c.neighbours[i]);
+                if (n.zone == null || n.zone == z) {
+                    c.removeLinkAt(i);
+                    n.removeLinkAt(n.indexOf(c.id));
+                    dropIfIdle(n);
+                }
+            }
+            z.removeCell(c);
+            dropIfIdle(c);
+        }
+        drainPruned(z.mixture());
+        zones.remove(z.id());
+        z.destroy();
+        dissolveCount++;
     }
 
     // ---- Conservation (CORE-036, CORE-073) ----------------------------------

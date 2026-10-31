@@ -38,10 +38,10 @@ class ConservationTest {
      */
     @Test
     void core_036_conservation_invariant() {
-        String first = fuzz(0x5A5C0DEL, 1500);
+        String first = fuzz(0x5A5C0DEL, 3000);
         // The same seed gives bit-identical results (architecture §3.5).
-        assertEquals(first, fuzz(0x5A5C0DEL, 1500));
-        fuzz(42L, 1500);
+        assertEquals(first, fuzz(0x5A5C0DEL, 3000));
+        fuzz(42L, 3000);
     }
 
     private static String fuzz(long seed, int ticks) {
@@ -69,6 +69,7 @@ class ConservationTest {
         assertTrue(warnings.isEmpty(), warnings::toString);
         assertTrue(created > 50, "the fuzz should create many zones, created " + created);
         assertTrue(graph.mergeCount() > 20, "merges: " + graph.mergeCount());
+        assertTrue(graph.dissolveCount() > 20, "dissolves: " + graph.dissolveCount());
         assertTrue(graph.splitCount() > 20, "splits: " + graph.splitCount());
         StringBuilder state = new StringBuilder();
         for (Zone z : graph.zones()) {
@@ -104,7 +105,13 @@ class ConservationTest {
             }
             case 2, 3 -> {
                 if (grid.volume(c) > 0 && graph.zoneOf(c) == null) {
-                    graph.createZone(c);
+                    // A trigger modifies the air (CORE-051), so the zone doesn't
+                    // dissolve straight back into the ambient (CORE-076).
+                    Zone z = graph.createZone(c);
+                    graph.add(
+                            z,
+                            air(50 + random.nextDouble() * 300, CELL, 200 + random.nextDouble() * 300),
+                            LedgerCategory.API);
                     return true;
                 }
             }
