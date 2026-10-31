@@ -14,7 +14,7 @@ is in [GEO](11-world-geometry.md). Where ambients come from is in
 ## Gas mixture model
 
 #### CORE-001 · Gas mixture state
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 The engine shall represent a gas mixture as moles per gas type, a temperature
 (K) and a volume (L). It shall derive total moles and pressure (P = nRT/V) from
@@ -27,7 +27,7 @@ that state.
   against hand-computed values.
 
 #### CORE-002 · Energy-conserving merge
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 Merging two mixtures shall conserve total thermal energy, so the resulting
 temperature is the heat-capacity-weighted mean.
@@ -38,7 +38,7 @@ temperature is the heat-capacity-weighted mean.
   compositions and check that total thermal energy is unchanged.
 
 #### CORE-008 · Mole-conserving merge
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 Merging two mixtures shall conserve the moles of each gas.
 
@@ -48,7 +48,7 @@ Merging two mixtures shall conserve the moles of each gas.
   sum of the inputs.
 
 #### CORE-003 · Heat capacity
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 A mixture's heat capacity shall be the sum, over gases, of moles times that
 gas's molar heat capacity.
@@ -59,7 +59,7 @@ gas's molar heat capacity.
   hand-computed values.
 
 #### CORE-009 · Heat capacity floor
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
 
 A mixture's heat capacity shall never be less than a small positive floor
 (default 0.0003 J/K, as in ZAS), so an empty mixture never divides by zero.
@@ -70,7 +70,7 @@ A mixture's heat capacity shall never be less than a small positive floor
   adding energy to it gives a finite temperature.
 
 #### CORE-004 · Removal operations
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 The engine shall support removing gas by moles, by fraction, and by volume.
 
@@ -81,7 +81,7 @@ The engine shall support removing gas by moles, by fraction, and by volume.
   the removed and remaining amounts.
 
 #### CORE-060 · Removed parcel temperature
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 A parcel removed from a mixture shall have the source mixture's temperature.
 
@@ -91,7 +91,7 @@ A parcel removed from a mixture shall have the source mixture's temperature.
   source's.
 
 #### CORE-061 · Removal never goes negative
-`Must` · `R0` · `Accepted` · Verify: Unit (fuzz) · Trace: [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
+`Must` · `R0` · `Implemented` · Verify: Unit (fuzz) · Trace: [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
 
 A removal that asks for more than is present shall remove only what is
 present, never leaving any gas with a negative amount.
@@ -102,7 +102,7 @@ present, never leaving any gas with a negative amount.
   asserts no gas ever goes negative.
 
 #### CORE-005 · Thermal energy changes
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03, D-05
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03, D-05
 
 The engine shall support adding and removing thermal energy, changing the
 mixture's temperature by ΔE/C.
@@ -113,7 +113,7 @@ mixture's temperature by ΔE/C.
 - **Verify:** Unit tests add and remove energy and check ΔT = ΔE/C.
 
 #### CORE-062 · Temperature floor
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03
 
 Removing thermal energy shall never take a mixture below a configurable
 temperature floor (default 2.7 K). The operation returns the energy actually
@@ -127,7 +127,7 @@ removed.
   configured floor.
 
 #### CORE-006 · Equivalence test
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-03 · [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03 · [zas-core §2.1](../research/zas-core.md#21-gas-mixture-_gas_mixturedm)
 
 Two mixtures shall count as equivalent unless their temperature, pressure, or
 any single gas's molar density differs by more than *both* an absolute and a
@@ -147,7 +147,7 @@ defaults:
   each absolute and relative tolerance, and a configured override.
 
 #### CORE-007 · Pruning
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Amounts below a configurable epsilon shall be pruned.
 
@@ -158,7 +158,7 @@ Amounts below a configurable epsilon shall be pruned.
   amounts above it kept.
 
 #### CORE-063 · No non-finite values
-`Must` · `R0` · `Accepted` · Verify: Unit (fuzz)
+`Must` · `R0` · `Implemented` · Verify: Unit (fuzz)
 
 NaN or infinite values shall never be stored. An operation that would produce
 one is rejected and logged.
@@ -172,7 +172,7 @@ one is rejected and logged.
 ## Gas registry
 
 #### CORE-010 · Data-driven gases
-`Must` · `R0` · `Accepted` · Verify: Unit, Inspect · Trace: D-08
+`Must` · `R0` · `Implemented` · Verify: Unit, Inspect · Trace: D-08
 
 Gas types shall be defined in datapacks. Each definition has: an id, a
 translatable name, a formula label, molar mass (kg/mol), molar heat capacity
@@ -185,7 +185,7 @@ translatable name, a formula label, molar mass (kg/mol), molar heat capacity
   Inspect the documented format.
 
 #### CORE-014 · Gas definitions sync to clients
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-08
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-08
 
 Gas definitions shall be synced to clients.
 
