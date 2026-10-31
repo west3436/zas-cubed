@@ -88,7 +88,7 @@ mods itself.
 
 | Command | What it does |
 |---|---|
-| `./gradlew build` | Compiles, runs the engine's unit tests and checks formatting and API compatibility |
+| `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks formatting, the API's packages and dependencies, its javadoc and its compatibility |
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
@@ -106,6 +106,8 @@ API are in [docs/api-consumers.md](docs/api-consumers.md).
 ### Tests
 
 - **Engine logic** gets JUnit 5 tests in `engine`, with no Minecraft.
+- **API value types and checks** get JUnit 5 tests in `zas-api`. Minecraft's
+  classes are on that classpath, but the game is never bootstrapped.
 - **Anything in the world** gets a GameTest in the mod's `src/gametest`
   source set, which stays out of the mod jar.
 - **Names trace back** to the requirement they verify (requirements writing

@@ -13,7 +13,7 @@ makes it the intended shared atmosphere API for NeoForge 1.21.1.
 ## Packaging and stability
 
 #### API-001 · Standalone API module
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-04, D-12, D-15, D-17
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-04, D-12, D-15, D-17
 
 The public API shall be its own module jar whose packages all sit under
 `io.github.west3436.zas.api`, with none of the framework's packages. It holds
@@ -116,7 +116,7 @@ CI shall check API compatibility automatically against the last release.
   deliberate test break.
 
 #### API-003 · No optional-mod references
-`Must` · `R0` · `Accepted` · Verify: Inspect
+`Must` · `R0` · `Implemented` · Verify: Inspect
 
 The API shall not reference Mekanism or any other optional mod.
 
@@ -126,7 +126,7 @@ The API shall not reference Mekanism or any other optional mod.
   Minecraft and NeoForge.
 
 #### API-044 · No internal references
-`Must` · `R0` · `Accepted` · Verify: Inspect
+`Must` · `R0` · `Implemented` · Verify: Inspect
 
 The API shall not reference ZAS³ internals.
 
@@ -135,7 +135,7 @@ The API shall not reference ZAS³ internals.
   framework.
 
 #### API-004 · Documented threads
-`Must` · `R0` · `Accepted` · Verify: Inspect
+`Must` · `R0` · `Implemented` · Verify: Inspect
 
 Every API method shall document which thread it may be called from.
 
@@ -143,7 +143,7 @@ Every API method shall document which thread it may be called from.
 - **Verify:** Inspect the javadoc of every API method.
 
 #### API-045 · Server-thread mutations
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-30
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-30
 
 Mutations shall be callable only from the server thread.
 
@@ -152,7 +152,7 @@ Mutations shall be callable only from the server thread.
   is refused.
 
 #### API-046 · Snapshot reads
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-30, CORE-069
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-30, CORE-069
 
 Read queries shall return immutable snapshots of the last applied atmos tick.
 
