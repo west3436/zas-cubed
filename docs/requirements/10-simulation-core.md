@@ -514,7 +514,8 @@ tolerance, default 0.1 kPa, of both the ambient's and vacuum). Its cells
 become unzoned and hold the ambient (CORE-050), and its gas goes to the
 ambient, recorded in the conservation ledger as exchange with the ambient
 (CORE-036). Zones are dissolved in id order, and a later trigger can zone the
-cells again.
+cells again. A pinned zone (CORE-052, API-017) is never dissolved: its ambient
+edges keep exchanging (D-64).
 
 - **Rationale:** Decision: D-63. A zone venting to a vacuum keeps its own
   temperature, so under CORE-006 it never matched the ambient and its ambient
@@ -522,6 +523,12 @@ cells again.
 - **Verify:** Unit tests vent a room into a 2.7 K vacuum and dissolve a room
   near standard air, with the ledger balanced, and check a sealed room equal
   to the ambient and a room 10 K warmer at ambient pressure are kept.
+
+*2026-10-31: D-64 exempts pinned zones: a pinned zone venting to a vacuum or
+matching the ambient keeps its ambient edge exchanging instead of dissolving.
+A zone that merges with a pinned zone is pinned, and every part of a pinned
+zone that splits is pinned. Unit tests cover both, the unpinned twin
+dissolving, merge, split, save and load.*
 
 #### CORE-033 · Sleeping edges
 `Must` · `R0` · `Implemented` · Verify: Unit
@@ -738,6 +745,11 @@ A zone shall be dissolved back to ambient when both hold:
   §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
 - **Verify:** A GameTest vents a room, opens it to ambient and waits the
   configured time, then checks the zone dissolves and a pinned zone doesn't.
+
+*2026-10-31: D-64: a pinned zone is also exempt from CORE-076's dissolution,
+so with an ambient edge it keeps exchanging however close to the ambient it
+gets. The engine already carries the pin on each zone (set only by tests in
+R0) and saves it with the zone.*
 
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest
