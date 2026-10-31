@@ -25,12 +25,69 @@ jar {
     }
 }
 
-// javadoc fails when there are no classes, only package-info. Until the first
-// type lands the javadoc jar is empty, which Central accepts.
-tasks.named('javadoc', Javadoc) {
-    def types = source.matching { exclude '**/package-info.java' }
-    onlyIf('the API has types to document') { !types.isEmpty() }
+// Unit tests of the API's pure logic. Minecraft's classes are on the test
+// classpath, but the game is never bootstrapped.
+neoForge {
+    addModdingDependenciesTo(sourceSets.test)
 }
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // ApiReferencesTest scans the compiled API classes (API-003, API-044).
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('apiClasses')
+    systemProperty 'zas.api.classes', classes.files.join(File.pathSeparator)
+}
+
+// API-001: the jar holds nothing but io.github.west3436.zas.api and its
+// subpackages (plus META-INF). Run by check.
+def checkApiPackages = tasks.register('checkApiPackages') {
+    group = 'verification'
+    description = 'Fails if the API jar holds a package outside io.github.west3436.zas.api (API-001).'
+    def jarFile = tasks.named('jar', Jar).flatMap { it.archiveFile }
+    inputs.file(jarFile)
+    doLast {
+        def bad = []
+        zipTree(jarFile.get().asFile).visit { d ->
+            if (d.directory) return
+            def path = d.relativePath.pathString
+            if (!path.startsWith('META-INF/') && !path.startsWith('io/github/west3436/zas/api/')) bad << path
+        }
+        if (bad) {
+            throw new GradleException("API-001: the API jar holds files outside io.github.west3436.zas.api:\n  " +
+                    bad.join('\n  '))
+        }
+    }
+}
+
+// API-003, API-044: the API declares no dependency on another project (zas,
+// the engine) or on any library; Minecraft and NeoForge come from ModDevGradle.
+// ApiReferencesTest checks the compiled classes reference nothing else.
+def checkApiDependencies = tasks.register('checkApiDependencies') {
+    group = 'verification'
+    description = 'Fails if the API declares a dependency other than Minecraft and NeoForge (API-003, API-044).'
+    def declared = ['api', 'implementation', 'compileOnly', 'compileOnlyApi', 'runtimeOnly'].collectMany { name ->
+        def c = configurations.findByName(name)
+        c == null ? [] : c.dependencies.collect { "${name}: ${it.group}:${it.name}" }
+    }
+    inputs.property('declared', declared)
+    doLast {
+        if (declared) {
+            throw new GradleException('API-003/API-044: the API may depend only on Minecraft and NeoForge, ' +
+                    "but declares:\n  " + declared.join('\n  '))
+        }
+    }
+}
+
+// javadoc runs with check so a broken comment fails the build, not the
+// publish (API-004, API-008).
+tasks.named('check') { dependsOn checkApiPackages, checkApiDependencies, tasks.named('javadoc') }
 
 // Maven Central through the Sonatype Central Portal (API-008, D-18). A
 // -SNAPSHOT version goes to https://central.sonatype.com/repository/maven-snapshots/;
