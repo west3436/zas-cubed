@@ -1,5 +1,6 @@
 package io.github.west3436.zas;
 
+import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
@@ -18,5 +19,6 @@ public final class ZasMod {
         ZasApiProviderImpl.install(NeoForge.EVENT_BUS);
         Geometries.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
+        Ambients.register(NeoForge.EVENT_BUS);
     }
 }

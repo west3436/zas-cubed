@@ -1,0 +1,15 @@
+{
+  "partial_pressures": {
+    "zas:oxygen": 50.0,
+    "zas_gametest:test_gas": 25.0
+  },
+  "temperature": 250.0,
+  "presets": {
+    "hardcore": {
+      "moles": {
+        "zas:nitrogen": 20.0
+      },
+      "temperature": 400.0
+    }
+  }
+}

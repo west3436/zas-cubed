@@ -1,0 +1,18 @@
+{
+  "presets": {
+    "normal": {
+      "partial_pressures": {
+        "zas:nitrogen": 80.04675,
+        "zas:oxygen": 21.27825
+      },
+      "temperature": 293.15
+    },
+    "hardcore": {
+      "partial_pressures": {
+        "zas:nitrogen": 31.6,
+        "zas:oxygen": 8.4
+      },
+      "temperature": 263.15
+    }
+  }
+}
