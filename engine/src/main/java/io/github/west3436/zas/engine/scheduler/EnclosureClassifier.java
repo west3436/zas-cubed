@@ -158,6 +158,11 @@ public final class EnclosureClassifier implements Classifier {
         return fetching;
     }
 
+    @Override
+    public long[] unresolvedSeeds() {
+        return held.clone();
+    }
+
     /** The topology plus the block-position mapping the scheduler needs. */
     private final class Space implements CellSpace {
         @Override

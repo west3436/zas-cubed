@@ -1,4 +1,17 @@
 {
+  "commands.zas.debug.off": "Debug overlay off",
+  "commands.zas.debug.on": "Debug overlay: %s",
+  "debug.zas.cell": "%s: %s sub-cells, %s L",
+  "debug.zas.cell.sealed": "Sealed faces: %s",
+  "debug.zas.edge.ambient.boundary": "Δp %s kPa to ambient (boundary)",
+  "debug.zas.edge.ambient.direct": "Δp %s kPa to ambient",
+  "debug.zas.edge.zone.boundary": "Δp %s kPa to zone #%s (boundary)",
+  "debug.zas.edge.zone.direct": "Δp %s kPa to zone #%s",
+  "debug.zas.hotspot": "Hotspot %s K",
+  "debug.zas.truncated": "Debug overlay truncated: too much to show",
+  "debug.zas.unresolved": "Unresolved region",
+  "debug.zas.zone": "Zone #%s: %s kPa, %s K",
+  "debug.zas.zone.paused": "Zone #%s (paused): %s kPa, %s K",
   "gas.zas.carbon_dioxide": "Carbon Dioxide",
   "gas.zas.nitrogen": "Nitrogen",
   "gas.zas.oxygen": "Oxygen"

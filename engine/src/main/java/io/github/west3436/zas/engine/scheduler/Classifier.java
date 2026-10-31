@@ -53,6 +53,15 @@ public interface Classifier {
     }
 
     /**
+     * Unzoned cells known to lie in regions left unresolved because they reach unloaded chunks
+     * (GEO-024, GEO-026), such as the seeds of breaches held until those chunks load. For the
+     * debug overlay (CLIENT-005), which shows those regions; the default knows of none.
+     */
+    default long[] unresolvedSeeds() {
+        return new long[0];
+    }
+
+    /**
      * How many sections around a new zone-triggering operation the server thread captures at
      * batch close, so most enclosures classify in the same tick (architecture §4.3: 3, a 7³ cube).
      */

@@ -617,6 +617,23 @@ That is well under the 64 MiB total budget.
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
+*Implemented (#31):* the operator debug overlay (CLIENT-005, CLIENT-011 to
+CLIENT-013). `/zas debug <zones|edges|cells|hotspots|all|off>` needs
+permission level 2. Each server tick `DebugOverlay` (package
+`io.github.west3436.zas.debug`) hands the boxes within 32 blocks of operators
+with the overlay on to their dimension's `DimensionScheduler`
+(`setDebugRegions`). Right after the next tick, on the worker,
+`DimensionEngine.debugView` exports the zoned cells, the faces out of zones and
+the cells of unresolved regions inside those boxes, capped, as an immutable
+`DebugView`, so the server thread never reads the zone graph. When a dimension
+publishes a new atmos tick, each of its operators gets one
+`DebugOverlayPayload`. It carries that export with zone pressures and the
+paused flag from the published table, and the block geometry within 6 blocks of
+their eyes for the crosshair. Nothing is sent to anyone else (DATA-005). The
+renderer is in `io.github.west3436.zas.client`, loaded through a
+`@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
+Hotspots are a FIRE concept (R1), so their list stays empty for now.
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing

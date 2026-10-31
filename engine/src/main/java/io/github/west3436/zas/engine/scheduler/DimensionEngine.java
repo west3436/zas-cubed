@@ -84,6 +84,9 @@ public final class DimensionEngine {
     private List<Component> lastComponents = List.of();
     private Map<Long, GasOp> lastZoneOps = Map.of();
 
+    /** The cells operations found unresolved in the last tick, for the debug overlay (CLIENT-005). */
+    private final List<Long> lastUnresolved = new ArrayList<>();
+
     /**
      * @param registry the gases; fixed for the engine's lifetime
      * @param config mixture settings
@@ -236,6 +239,12 @@ public final class DimensionEngine {
         List<GasOp> ops = mergeBySeq(requeued, buffered, batch.ops());
         buffered.clear();
         Target[] targets = classifyAll(ops, requested);
+        lastUnresolved.clear();
+        for (Target t : targets) {
+            if (t.route() == Route.UNRESOLVED && t.cell() != CellSpace.NO_CELL) {
+                lastUnresolved.add(t.cell());
+            }
+        }
         if (membership == null || refreshed.length > 0 || !membership.sameZones(graph)) {
             membership = Membership.of(graph, space);
         }
@@ -806,6 +815,169 @@ public final class DimensionEngine {
             }
         }
         return false;
+    }
+
+    // ---- Debug export (CLIENT-005, CLIENT-011) ------------------------------------------
+
+    /** The most cells a {@link #debugView} lists. */
+    public static final int DEBUG_MAX_CELLS = 65_536;
+
+    /** The most faces a {@link #debugView} lists. */
+    public static final int DEBUG_MAX_FACES = 32_768;
+
+    /** The most unresolved cells a {@link #debugView} lists. */
+    public static final int DEBUG_MAX_UNRESOLVED = 16_384;
+
+    /**
+     * Exports the zoned cells, the faces leading out of zones and the cells of unresolved regions
+     * inside the given regions, for the operator debug overlay (CLIENT-005, CLIENT-011). Read
+     * only: it changes nothing, so it can't affect the simulation (CORE-044). Call it on the thread
+     * that ticks this engine, between ticks; {@link DimensionScheduler} does so right after a tick
+     * when the server asked for regions.
+     *
+     * <p>The cost is one pass over the zones' cells plus the neighbours of those inside a region.
+     * Each list stops at its cap ({@link #DEBUG_MAX_CELLS}, {@link #DEBUG_MAX_FACES}, {@link
+     * #DEBUG_MAX_UNRESOLVED}) and the view is then marked truncated. A failure is logged and
+     * gives an empty view: the overlay never faults the dimension.
+     */
+    public DebugView debugView(List<DebugRegion> regions) {
+        if (regions.isEmpty()) {
+            return DebugView.EMPTY;
+        }
+        try {
+            return collectDebugView(regions);
+        } catch (RuntimeException e) {
+            log.warn("The debug overlay export failed: " + e);
+            return DebugView.EMPTY;
+        }
+    }
+
+    private DebugView collectDebugView(List<DebugRegion> regions) {
+        DebugCollector out = new DebugCollector(regions);
+        for (Zone z : graph.zones()) {
+            z.forEachCell(cell -> {
+                long block = space.position(cell);
+                if (!out.inside(block)) {
+                    return;
+                }
+                int sub = subIndex(cell, block);
+                out.cell(new DebugView.CellEntry(block, sub, z.id()));
+                space.forEachOpenNeighbour(cell, (neighbour, direct) -> {
+                    Zone other = graph.zoneOf(neighbour);
+                    if (other == z) {
+                        return;
+                    }
+                    long there = space.position(neighbour);
+                    if (other != null && other.id() < z.id() && out.inside(there)) {
+                        return; // listed from the other zone's side
+                    }
+                    Face face = faceBetween(block, there);
+                    if (face != null) {
+                        out.face(new DebugView.FaceEntry(
+                                block, sub, face, z.id(), other == null ? DebugView.AMBIENT : other.id(), direct));
+                    }
+                });
+            });
+        }
+
+        // Unresolved regions: flood the unzoned cells reachable from known seeds, inside the regions.
+        TreeSet<Long> seeds = new TreeSet<>(lastUnresolved);
+        for (long s : classifier.unresolvedSeeds()) {
+            seeds.add(s);
+        }
+        Set<Long> seen = new HashSet<>(seeds);
+        java.util.ArrayDeque<Long> queue = new java.util.ArrayDeque<>(seeds);
+        while (!queue.isEmpty() && !out.unresolvedFull()) {
+            long cell = queue.poll();
+            long block = space.position(cell);
+            if (graph.zoneOf(cell) != null || !out.inside(block) || space.volume(cell) <= 0) {
+                continue;
+            }
+            out.unresolved(new DebugView.UnresolvedEntry(block, subIndex(cell, block)));
+            space.forEachOpenNeighbour(cell, (neighbour, direct) -> {
+                if (seen.add(neighbour)) {
+                    queue.add(neighbour);
+                }
+            });
+        }
+        return new DebugView(
+                lastTick,
+                out.cells,
+                out.faces,
+                out.unresolved,
+                out.truncated || (out.unresolvedFull() && !queue.isEmpty()));
+    }
+
+    /** A cell's index among the cells of its block, in {@link CellSpace#forEachCellAt} order. */
+    private int subIndex(long cell, long block) {
+        int[] index = {-1};
+        int[] n = {0};
+        space.forEachCellAt(block, c -> {
+            if (c == cell) {
+                index[0] = n[0];
+            }
+            n[0]++;
+        });
+        return Math.max(index[0], 0);
+    }
+
+    /** The face of block {@code from} that touches the adjacent block {@code to}, or null. */
+    private static Face faceBetween(long from, long to) {
+        int dx = SectionKeys.blockX(to) - SectionKeys.blockX(from);
+        int dy = SectionKeys.blockY(to) - SectionKeys.blockY(from);
+        int dz = SectionKeys.blockZ(to) - SectionKeys.blockZ(from);
+        for (Face f : Face.values()) {
+            if (f.dx() == dx && f.dy() == dy && f.dz() == dz) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    /** Collects a {@link DebugView}'s entries up to their caps. */
+    private static final class DebugCollector {
+        final List<DebugRegion> regions;
+        final List<DebugView.CellEntry> cells = new ArrayList<>();
+        final List<DebugView.FaceEntry> faces = new ArrayList<>();
+        final List<DebugView.UnresolvedEntry> unresolved = new ArrayList<>();
+        boolean truncated;
+
+        DebugCollector(List<DebugRegion> regions) {
+            this.regions = regions;
+        }
+
+        boolean inside(long block) {
+            for (DebugRegion r : regions) {
+                if (r.contains(block)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void cell(DebugView.CellEntry e) {
+            if (cells.size() < DEBUG_MAX_CELLS) {
+                cells.add(e);
+            } else {
+                truncated = true;
+            }
+        }
+
+        void face(DebugView.FaceEntry e) {
+            if (faces.size() < DEBUG_MAX_FACES) {
+                faces.add(e);
+            } else {
+                truncated = true;
+            }
+        }
+
+        void unresolved(DebugView.UnresolvedEntry e) {
+            unresolved.add(e);
+        }
+
+        boolean unresolvedFull() {
+            return unresolved.size() >= DEBUG_MAX_UNRESOLVED;
+        }
     }
 
     // ---- Helpers -----------------------------------------------------------------------
