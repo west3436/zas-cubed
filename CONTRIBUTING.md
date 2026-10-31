@@ -30,10 +30,11 @@ suspects a copy asks for a rewrite from the description.
 
 Using AI tools to write code, docs, tests or assets is fully acceptable. The
 one condition: **if a PR includes a player-facing change, it must show how a
-human tested that change in game.** Player-facing means anything a player can see, hear or
-feel, such as blocks, items, gas behaviour, hazards, the HUD or messages.
+human tested that change in game.** Player-facing means anything a player
+can see, hear or feel, such as blocks, items, gas behaviour, hazards, the HUD
+or messages.
 
-In the PR description, say:
+In the PR template's "Human testing" section, say:
 
 - what you tested, in a dev client, on a dedicated server, or both
 - the steps you took and what happened
