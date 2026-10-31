@@ -1,0 +1,13 @@
+// Plain Java: no Minecraft, no NeoForge (CORE-043). The classes ship inside
+// the zas jar (architecture §2.1); this project exists so the engine's tests
+// and benchmarks run without Minecraft.
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}

@@ -1,0 +1,43 @@
+plugins {
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+}
+
+subprojects {
+    apply plugin: 'java-library'
+
+    group = 'io.github.west3436'
+    version = mod_version
+
+    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+    repositories {
+        mavenCentral()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    // Every ModDevGradle project uses the same NeoForge and Parchment.
+    plugins.withId('net.neoforged.moddev') {
+        neoForge {
+            version = neo_version
+            parchment {
+                mappingsVersion = parchment_mappings_version
+                minecraftVersion = parchment_minecraft_version
+            }
+        }
+    }
+
+    // Expanded into each mod's neoforge.mods.toml.
+    tasks.named('processResources', ProcessResources) {
+        def props = [
+            mod_version     : mod_version,
+            api_version     : api_version,
+            neo_version_min : neo_version_min,
+            minecraft_version: minecraft_version,
+        ]
+        inputs.properties(props)
+        filesMatching('META-INF/neoforge.mods.toml') { expand(props) }
+    }
+}

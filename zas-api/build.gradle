@@ -1,0 +1,25 @@
+apply plugin: 'net.neoforged.moddev'
+apply plugin: 'maven-publish'
+
+// Independent semver (API-002). Loads as its own GAMELIBRARY module in dev and
+// production, so no mod lists this project's source set (architecture §2.1).
+version = api_version
+
+jar {
+    manifest {
+        attributes(
+            'Automatic-Module-Name': 'io.github.west3436.zas.api',
+            'FMLModType': 'GAMELIBRARY',
+            'Implementation-Version': project.version,
+        )
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = 'zas-api'
+            from components.java
+        }
+    }
+}

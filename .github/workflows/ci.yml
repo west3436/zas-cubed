@@ -36,6 +36,9 @@ jobs:
       - name: Build
         if: steps.gradle.outputs.present == 'true'
         run: ./gradlew build --stacktrace
+      - name: GameTests (dedicated server)
+        if: steps.gradle.outputs.present == 'true'
+        run: ./gradlew runGameTestServer --stacktrace
 
   docs:
     name: Docs links

@@ -1,0 +1,35 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT; assets CC BY-SA 4.0"
+issueTrackerURL = "https://github.com/west3436/zas-cubed/issues"
+
+[[mods]]
+modId = "zas_atmos"
+version = "${mod_version}"
+displayName = "ZAS³ Atmospherics"
+authors = "west3436"
+description = '''
+SS13-style atmospherics for ZAS³: pipes, pumps, vents, scrubbers, canisters,
+air alarms, firelocks, suits and power.
+'''
+
+[[dependencies.zas_atmos]]
+modId = "zas"
+type = "required"
+versionRange = "[${mod_version}]"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.zas_atmos]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neo_version_min},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.zas_atmos]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version}]"
+ordering = "NONE"
+side = "BOTH"

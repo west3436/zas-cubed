@@ -1,0 +1,22 @@
+apply plugin: 'net.neoforged.moddev'
+
+// A consumer of the API alone, never published. CI runs it with and without
+// zas (API-048, S-12). It nests the API the way the developer docs tell
+// consumers to.
+base { archivesName = 'zas_example' }
+
+dependencies {
+    implementation project(':zas-api')
+    jarJar('io.github.west3436:zas-api') {
+        version {
+            strictly "[${api_version},1.0)"
+            prefer api_version
+        }
+    }
+}
+
+configurations.named('jarJar') {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('io.github.west3436:zas-api') using project(':zas-api')
+    }
+}

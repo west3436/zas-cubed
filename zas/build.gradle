@@ -1,0 +1,61 @@
+apply plugin: 'net.neoforged.moddev'
+
+base { archivesName = 'zas' }
+
+evaluationDependsOn(':engine')
+evaluationDependsOn(':compat-adastra')
+
+// GameTests live in their own source set so they stay out of the mod jar.
+sourceSets {
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+// Source sets compiled elsewhere whose classes ship inside the zas jar.
+def bundled = [project(':engine'), project(':compat-adastra')].collect { it.sourceSets.main }
+
+neoForge {
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+        }
+    }
+    mods {
+        // The API is never listed: it loads as its own GAMELIBRARY module, and
+        // listing it splits its package across two modules (architecture §2.1).
+        zas {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.gametest
+            bundled.each { sourceSet it }
+        }
+    }
+}
+
+dependencies {
+    implementation project(':engine')
+    implementation project(':compat-adastra')
+    implementation project(':zas-api')
+
+    // ModDevGradle takes the jar-in-jar range only from a module selector, so
+    // the API is requested by coordinates and substituted with the project.
+    jarJar('io.github.west3436:zas-api') {
+        version {
+            strictly "[${api_version},1.0)"
+            prefer api_version
+        }
+    }
+}
+
+configurations.named('jarJar') {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('io.github.west3436:zas-api') using project(':zas-api')
+    }
+}
+
+tasks.named('jar', Jar) {
+    bundled.each { from it.output }
+}
