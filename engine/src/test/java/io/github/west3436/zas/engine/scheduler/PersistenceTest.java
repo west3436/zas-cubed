@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -252,5 +253,39 @@ class PersistenceTest {
         sim.step();
         assertEquals(50, sim.zoneAt(3, 65, 3).id());
         assertEquals(51, sim.pipeline.nextZoneId());
+    }
+
+    /**
+     * A pinned zone is saved with its pin, leaves memory, and is rebuilt pinned from the saved
+     * bytes; an unpinned zone beside it comes back unpinned (D-64, API-018, DATA-002).
+     */
+    @Test
+    void d_064_pin_survives_save_and_load() throws Exception {
+        Sim sim = new Sim(Ambient.VACUUM);
+        sim.world.room(1, 64, 1, 3, 66, 3);
+        sim.world.room(6, 64, 1, 8, 66, 3);
+        sim.add(2, 65, 2, 10, 0);
+        sim.add(7, 65, 2, 10, 0);
+        sim.step();
+        long pinnedId = sim.zoneAt(2, 65, 2).id();
+        long plainId = sim.zoneAt(7, 65, 2).id();
+        sim.engine.graph().setPinned(sim.engine.graph().zone(pinnedId), true);
+        sim.step();
+        assertTrue(sim.zoneAt(2, 65, 2).pinned(), "the snapshot shows the pin");
+        assertFalse(sim.zoneAt(7, 65, 2).pinned());
+
+        long chunk = SectionKeys.chunk(0, 0);
+        byte[] bytes = ChunkRecordCodec.encode(sim.unload(chunk), Sim.REGISTRY);
+        sim.step();
+        assertEquals(0, sim.snapshot().zoneCount());
+        ChunkRecord saved = ChunkRecordCodec.decode(bytes, chunk, Sim.REGISTRY, m -> {
+            throw new AssertionError(m);
+        });
+        sim.load(chunk, saved);
+        sim.step();
+        assertTrue(sim.engine.graph().zone(pinnedId).isPinned(), "the pin was lost on reload");
+        assertFalse(sim.engine.graph().zone(plainId).isPinned());
+        assertTrue(sim.snapshot().zone(pinnedId).pinned());
+        close(10, sim.snapshot().zone(pinnedId).moles(N2), "N2 of the pinned zone");
     }
 }

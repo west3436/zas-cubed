@@ -319,6 +319,11 @@ Zone pins shall be saved and restored with their zone.
 - **Verify:** A GameTest saves and reloads a pinned zone and checks the pin
   and owner remain.
 
+*2026-10-31: D-64: a pin also keeps its zone from dissolving into the ambient
+(CORE-076), so losing it on reload would dissolve a zone with an ambient edge.
+The R0 chunk record (format version 2) already saves whether each zone is
+pinned; the owner ids remain to be added with API-017.*
+
 ## Extension points
 
 #### API-020 · Code-defined reactions

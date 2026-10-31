@@ -108,6 +108,7 @@ public final class DimensionEngine {
     // The last tick's undo point, kept until the next tick in case its components are rejected.
     private Membership undoMembership = Membership.EMPTY;
     private GasMixture[] undoMixtures = new GasMixture[0];
+    private boolean[] undoPinned = new boolean[0];
     private List<Component> lastComponents = List.of();
     private Map<Long, GasOp> lastZoneOps = Map.of();
 
@@ -300,9 +301,11 @@ public final class DimensionEngine {
         Membership undo = membership;
         GasMixture[] undoCopies = new GasMixture[undo.zoneIds.length];
         long[][] undoPartners = new long[undo.zoneIds.length][];
+        boolean[] undoPins = new boolean[undo.zoneIds.length];
         int zi = 0;
         for (Zone z : graph.zones()) {
             undoCopies[zi] = z.mixture().copy();
+            undoPins[zi] = z.isPinned();
             undoPartners[zi] = partners(z);
             zi++;
         }
@@ -353,6 +356,7 @@ public final class DimensionEngine {
 
         undoMembership = undo;
         undoMixtures = undoCopies;
+        undoPinned = undoPins;
         lastComponents = components;
         lastZoneOps = zoneOps;
         lastSnapshot = snapshot;
@@ -401,11 +405,13 @@ public final class DimensionEngine {
             for (long id : c.zoneIds()) {
                 if (graph.zone(id) == null) {
                     int i = undoMembership.indexOf(id);
-                    graph.restoreZone(id, undoMembership.cells(i), undoMixtures[i]);
+                    graph.restoreZone(id, undoMembership.cells(i), undoMixtures[i], undoPinned[i]);
                 }
             }
             for (long id : c.zoneIds()) {
-                graph.restoreMixture(graph.zone(id), undoMixtures[undoMembership.indexOf(id)]);
+                int i = undoMembership.indexOf(id);
+                graph.restoreMixture(graph.zone(id), undoMixtures[i]);
+                graph.setPinned(graph.zone(id), undoPinned[i]);
             }
             for (long seq : c.opSeqs()) {
                 requeued.add(lastZoneOps.get(seq));
@@ -691,7 +697,7 @@ public final class DimensionEngine {
                         continue;
                     }
                 }
-                Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share));
+                Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share), share.pinned());
                 if (loaded == null) {
                     log.warn("The saved share of zone " + share.zoneId() + " in chunk " + SectionKeys.chunkX(r.chunk())
                             + ", " + SectionKeys.chunkZ(r.chunk()) + " has no cells left; its gas is dropped");
@@ -1213,7 +1219,8 @@ public final class DimensionEngine {
                     zoneEdges,
                     ambientEdges,
                     faces,
-                    z.isPaused()));
+                    z.isPaused(),
+                    z.isPinned()));
         }
         long[][] chunks = new long[membership.size()][];
         for (int i = 0; i < chunks.length; i++) {

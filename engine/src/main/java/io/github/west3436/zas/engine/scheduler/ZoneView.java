@@ -18,6 +18,7 @@ import java.util.Arrays;
  * @param paused whether it is paused (GEO-030): part of it is in an unloaded chunk, it waits for
  *     saved shares, or it opens onto a region that reaches an unloaded chunk (GEO-026); its
  *     mixture is then its last-known state (GEO-035)
+ * @param pinned whether it is pinned (D-64): it never dissolves into the ambient (CORE-076)
  */
 public record ZoneView(
         long id,
@@ -28,10 +29,25 @@ public record ZoneView(
         int zoneEdges,
         int ambientEdges,
         int openFaces,
-        boolean paused) {
+        boolean paused,
+        boolean pinned) {
 
     public ZoneView {
         moles = moles.clone();
+    }
+
+    /** A view of an unpinned zone. */
+    public ZoneView(
+            long id,
+            double volume,
+            int cellCount,
+            double[] moles,
+            double temperature,
+            int zoneEdges,
+            int ambientEdges,
+            int openFaces,
+            boolean paused) {
+        this(id, volume, cellCount, moles, temperature, zoneEdges, ambientEdges, openFaces, paused, false);
     }
 
     @Override
@@ -79,7 +95,8 @@ public record ZoneView(
                 && zoneEdges == z.zoneEdges
                 && ambientEdges == z.ambientEdges
                 && openFaces == z.openFaces
-                && paused == z.paused;
+                && paused == z.paused
+                && pinned == z.pinned;
     }
 
     @Override
@@ -91,6 +108,6 @@ public record ZoneView(
     public String toString() {
         return "ZoneView#" + id + "[" + cellCount + " cells, " + volume + " L, " + Arrays.toString(moles) + " mol, "
                 + temperature + " K, " + zoneEdges + " zone edges, " + ambientEdges + " ambient edges, " + openFaces
-                + " open faces" + (paused ? ", paused" : "") + "]";
+                + " open faces" + (paused ? ", paused" : "") + (pinned ? ", pinned" : "") + "]";
     }
 }

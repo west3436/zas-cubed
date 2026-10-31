@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.scheduler;
 import static io.github.west3436.zas.engine.scheduler.Sim.N2;
 import static io.github.west3436.zas.engine.scheduler.Sim.O2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -168,5 +169,40 @@ class RejectionTest {
             assertEquals(expected[g], actual[g], tolerance, "seed " + seed + " gas " + g);
             assertEquals(actual[g], published[g], tolerance, "seed " + seed + " published gas " + g);
         }
+    }
+
+    /**
+     * A pinned room merges into an unpinned one during a rejected tick, pinning the survivor: the
+     * restore gives the pin back to the recreated room and takes it from the survivor (D-64,
+     * CORE-074).
+     */
+    @Test
+    void d_064_rejected_merge_restores_the_pins() {
+        Sim sim = new Sim(Ambient.VACUUM);
+        sim.world.room(1, 64, 1, 3, 66, 3);
+        sim.world.room(5, 64, 1, 7, 66, 3);
+        sim.add(2, 65, 2, 10, 0);
+        sim.add(6, 65, 2, 10, 0);
+        sim.step();
+        // The opening joins room a, so b is absorbed.
+        long a = sim.zoneAt(2, 65, 2).id();
+        long b = sim.zoneAt(6, 65, 2).id();
+        sim.engine.graph().setPinned(sim.engine.graph().zone(b), true);
+        sim.world.set(4, 65, 2, TestWorld.AIR);
+        sim.betweenCloseAndApply = s -> bounce(s, SectionKeys.chunk(0, 0));
+        assertEquals(1, sim.step().rejected());
+        sim.betweenCloseAndApply = s -> {};
+        assertNull(sim.engine.graph().zone(b), "the rooms didn't merge in the rejected tick");
+        assertTrue(sim.engine.graph().zone(a).isPinned(), "the survivor takes the pin");
+
+        // Wall the rooms off again, so the redone tick doesn't merge them.
+        sim.world.set(4, 65, 2, TestWorld.SOLID);
+        sim.step();
+        assertNotNull(sim.engine.graph().zone(b), "the restore recreates the absorbed room");
+        assertTrue(sim.engine.graph().zone(b).isPinned(), "the recreated room keeps its pin");
+        assertFalse(sim.engine.graph().zone(a).isPinned(), "the survivor's pin is undone");
+        assertTrue(sim.snapshot().zone(b).pinned());
+        assertFalse(sim.snapshot().zone(a).pinned());
+        assertEquals(10, sim.snapshot().zone(b).moles(N2), 1e-9);
     }
 }

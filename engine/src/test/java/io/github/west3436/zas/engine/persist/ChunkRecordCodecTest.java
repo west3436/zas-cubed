@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.persist;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,9 +12,12 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.ZoneShare;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.CRC32;
 import org.junit.jupiter.api.Test;
 
 /** The saved form of a chunk's atmosphere (DATA-003, DATA-004). */
@@ -31,7 +35,7 @@ class ChunkRecordCodecTest {
         ZoneShare a = new ZoneShare(
                 4, new long[] {5, 3, 9}, new double[] {1.25, 0.5}, 293.15, new long[] {CHUNK, SectionKeys.chunk(-2, 7)
                 });
-        ZoneShare b = new ZoneShare(11, new long[] {42}, new double[] {0, 1e-7}, 80, new long[] {CHUNK});
+        ZoneShare b = new ZoneShare(11, new long[] {42}, new double[] {0, 1e-7}, 80, new long[] {CHUNK}, true);
         GasOp op = new GasOp(
                 17,
                 GasOp.Kind.ADD,
@@ -101,5 +105,50 @@ class ChunkRecordCodecTest {
         assertEquals(0, back.zones().get(0).moles(reordered.indexOf("zas:argon")));
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("zas:nitrogen"));
+    }
+
+    /** A zone's pin is saved and read back (D-64, API-018). */
+    @Test
+    void d_064_pin_is_saved() throws Exception {
+        ChunkRecord back = ChunkRecordCodec.decode(ChunkRecordCodec.encode(sample(), GASES), CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        assertFalse(back.zones().get(0).pinned());
+        assertTrue(back.zones().get(1).pinned());
+    }
+
+    /** Version 1 records, saved before pins, still read, their zones unpinned (DATA-003, D-64). */
+    @Test
+    void d_064_version_1_reads_unpinned() throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(bytes);
+        out.writeInt(0x5A415333);
+        out.writeInt(1);
+        out.writeLong(CHUNK);
+        out.writeInt(2);
+        out.writeUTF("zas:nitrogen");
+        out.writeUTF("zas:oxygen");
+        out.writeInt(1); // one zone
+        out.writeLong(11);
+        out.writeInt(1);
+        out.writeLong(42);
+        out.writeDouble(3);
+        out.writeDouble(1);
+        out.writeDouble(80);
+        out.writeInt(1);
+        out.writeLong(CHUNK);
+        out.writeInt(0); // no held blocks
+        out.writeInt(0); // no queued additions
+        out.flush();
+        CRC32 crc = new CRC32();
+        crc.update(bytes.toByteArray());
+        out.writeInt((int) crc.getValue());
+
+        ChunkRecord back = ChunkRecordCodec.decode(bytes.toByteArray(), CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        ZoneShare expected = new ZoneShare(11, new long[] {42}, new double[] {3, 1}, 80, new long[] {CHUNK});
+        assertEquals(List.of(expected), back.zones());
+        assertFalse(back.zones().get(0).pinned());
     }
 }

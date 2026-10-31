@@ -27,6 +27,8 @@ public final class Zone {
     boolean changed;
     /** Whether the zone is paused (GEO-030): it doesn't exchange, merge or dissolve. */
     boolean paused;
+    /** Whether the zone is pinned (D-64): it never dissolves into the ambient. */
+    boolean pinned;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 
@@ -70,6 +72,16 @@ public final class Zone {
      */
     public boolean isPaused() {
         return paused;
+    }
+
+    /**
+     * Whether the zone is pinned (D-64): it never dissolves into the ambient (CORE-076), however
+     * close to it its mixture gets, and its ambient edges keep exchanging. Set through {@link
+     * ZoneGraph#setPinned}. A zone that merges with a pinned zone is pinned, and every part of a
+     * pinned zone that splits is pinned.
+     */
+    public boolean isPinned() {
+        return pinned;
     }
 
     /** Whether the zone still exists in its graph (CORE-065). */
