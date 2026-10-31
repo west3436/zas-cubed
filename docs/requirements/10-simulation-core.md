@@ -333,7 +333,7 @@ A config option shall instead delete a displaced cell's gas, as ZAS does.
   volume share of the moles.
 
 #### CORE-075 · Displaced gas from a zone's last cell
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065
 
 If the filled cell was its zone's last cell, its gas shall move into the zones
 that cell was connected to, shared in proportion to their volumes. If there
@@ -345,6 +345,12 @@ were none, the gas is released to the ambient.
 - **Verify:** Unit tests and a GameTest fill a one-cell zone between two zones
   and check the moles split by volume, and with no neighbours that they go to
   the ambient.
+
+*2026-10-31: Implemented. `core_075_displaced_gas_from_last_cell` (Unit) and
+`core_075_one_cell_zone_filled_between_two_zones` (GameTest) fill a one-cell
+zone between zones of 28 and 19 cells and check its moles split 28:19, and
+fill a lone one-cell zone and check the checker records its gas as going to
+the ambient.*
 
 #### CORE-023 · Zone merge
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
@@ -589,7 +595,7 @@ depend on volume, shall be selectable in config.
   fraction per tick.
 
 #### CORE-036 · Conservation invariant
-`Must` · `R0` · `Accepted` · Verify: Unit (fuzz), GameTest
+`Must` · `R0` · `Implemented` · Verify: Unit (fuzz), GameTest
 
 The moles of each gas shall change only through these sources and sinks:
 - API calls
@@ -621,6 +627,13 @@ Gas-editing commands (OPS-009) count as API calls.*
 
 *2026-10-31: zone dissolution includes zones dissolving into the ambient
 (CORE-076, D-63).*
+
+*2026-10-31: Implemented. The Unit fuzz test is in `ConservationTest`; the R0
+scenario GameTests in `ScenarioTests` (`s_01_pressurise_sealed_room_by_commands`,
+the two `s_02_` tests, `s_09_restart_keeps_zones_and_paused_zone_resumes` and
+the requirement tests beside them) run with the invariant checker on and check
+every atmos tick is conserved. S-01 and S-02 run as adapted for R0, without
+devices or hazards ([Scenario verification](00-overview.md#scenario-verification)).*
 
 #### CORE-073 · Invariant checker
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Depends: CORE-036
@@ -671,7 +684,7 @@ affects it.
   stay unzoned until a vent adds gas to the room, which then forms a zone.
 
 #### CORE-054 · No world scanning
-`Must` · `R0` · `Accepted` · Verify: Inspect, Bench · Trace: D-13
+`Must` · `R0` · `Implemented` · Verify: Inspect, Bench · Trace: D-13
 
 Zones shall never be created by scanning the world. Only a triggering
 operation starts enclosure detection.
@@ -679,6 +692,12 @@ operation starts enclosure detection.
 - **Rationale:** Decision: D-13.
 - **Verify:** Inspect the code for world scans; Bench checks world generation
   and exploration create no zones and no fills.
+
+*2026-10-31: Implemented. The R0 bench generates 320 chunks of terrain with
+sealed caves and makes 20,000 block edits in them next to a zoned station:
+no section captured, no fill, no zone ([benchmarks · scaling](../research/benchmarks.md#nfr-003-and-core-054-cost-follows-activity)).
+The platform has no world scans: `LevelWorld` only drains dirty sections,
+captures sections the engine names and reads chunk generations.*
 
 #### CORE-055 · Normal zone triggers
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-13, D-14
@@ -808,7 +827,7 @@ changing the period changes smoothness and cost but not real-time behaviour.
   checks the state after 10 s agrees; Bench records the cost at each period.
 
 #### CORE-047 · Server-thread budget
-`Must` · `R0` · `Accepted` · Verify: Bench · Trace: D-30 · Depends: NFR-001
+`Must` · `R0` · `Implemented` · Verify: Bench · Trace: D-30 · Depends: NFR-001
 
 Work that touches the server thread, such as snapshotting and applying
 results, shall stay within a per-server-tick budget.
@@ -819,6 +838,14 @@ results, shall stay within a per-server-tick budget.
 
 *2026-10-31: the budget defaults to 10 ms (configurable), and work beyond it
 is deferred to the next tick. Added during the NFR review (NFR-002).*
+
+*2026-10-31: Implemented for R0. The headless S-10 engine bench keeps every
+batch close and apply under 0.3 ms, an explosion breach included, and a burst
+of 1,000 zone-creating adds closes in under 1 ms; with no budget left the
+prefetch is deferred and the rooms zone a tick later
+([benchmarks · S-10](../research/benchmarks.md#s-10-engine-load)). R0 has no devices,
+hazards or sync, so the server thread's atmos work is close and apply plus the
+change hook; the full S-10 with R1's work is NFR-001 and NFR-002's bench.*
 
 #### CORE-048 · Exactly-once processing
 `Must` · `R0` · `Implemented` · Verify: Unit

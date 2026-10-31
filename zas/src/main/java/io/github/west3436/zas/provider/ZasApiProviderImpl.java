@@ -17,6 +17,7 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
@@ -71,6 +73,13 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         AtmosSnapshot table = d == null ? null : d.published();
         ZoneView zone = table == null ? null : table.zoneAt(pos.asLong());
         if (zone == null) {
+            if (level instanceof ServerLevel server && !isLoaded(server, d, pos)) {
+                // An unloaded chunk is unresolved; its last-known state is the ambient (GEO-035).
+                return new AtmosphereSample(
+                        AtmosphereState.UNRESOLVED,
+                        Optional.empty(),
+                        ambientSample(level).mixture());
+            }
             return ambientSample(level);
         }
         return new AtmosphereSample(
@@ -105,6 +114,11 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             return CompletableFuture.completedFuture(new MutationResult(MutationOutcome.AMBIENT, GasParcel.EMPTY));
         }
         return service.remove(level, BlockPos.containing(point), moles, source);
+    }
+
+    private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {
+        long chunk = ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4);
+        return d != null ? d.isChunkLoaded(chunk) : AtmosPersistence.isLoaded(level.dimension(), chunk);
     }
 
     private static DimensionAtmos dimension(Level level) {

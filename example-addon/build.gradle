@@ -5,6 +5,34 @@ apply plugin: 'net.neoforged.moddev'
 // consumers to.
 base { archivesName = 'zas_example' }
 
+// GameTests live in their own source set so they stay out of the addon jar.
+sourceSets {
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+neoForge {
+    runs {
+        // S-12 (API-048): a GameTest server with the addon and the API only.
+        // zas is never on this classpath, so the API's fallback answers.
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas_example'
+        }
+    }
+    mods {
+        // As in zas, the API is never listed: it loads as its own GAMELIBRARY
+        // module (architecture §2.1).
+        zas_example {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.gametest
+        }
+    }
+}
+
 dependencies {
     implementation project(':zas-api')
     jarJar('io.github.west3436:zas-api') {

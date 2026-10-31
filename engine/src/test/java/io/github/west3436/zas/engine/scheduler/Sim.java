@@ -114,6 +114,23 @@ final class Sim {
         }
     }
 
+    /**
+     * Unloads a chunk as the server would: it saves first, from the published table, then
+     * unloads. Returns what it saved, or null.
+     */
+    ChunkRecord unload(long chunk) {
+        ChunkRecord saved = pipeline.recordFor(chunk, false);
+        world.unload(chunk);
+        pipeline.chunkUnloaded(chunk);
+        return saved;
+    }
+
+    /** Loads a chunk with what it saved, or null. */
+    void load(long chunk, ChunkRecord saved) {
+        world.load(chunk);
+        pipeline.chunkLoaded(chunk, saved);
+    }
+
     AtmosSnapshot snapshot() {
         return pipeline.published();
     }

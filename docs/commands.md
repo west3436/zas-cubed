@@ -88,8 +88,10 @@ compares them on the worker with the engine's section mirror and zones:
 
 It lists the count of each kind and the first 10 findings. Sections whose
 chunks aren't loaded are skipped, never loaded; so are sections with block
-changes still queued for the next atmos tick. An audit covers at most 512
-sections.
+changes still queued for the next atmos tick. Paused zones (GEO-030) aren't
+checked, and positions whose block changes are held until a paused zone
+resumes (GEO-037) aren't stale geometry: the audit counts both under "Not
+checked". An audit covers at most 512 sections.
 
 With `repair`, sections with stale geometry are sent to the simulation again
 with the next atmos tick, whose geometry phase brings the mirror and zones back
@@ -99,7 +101,7 @@ in step. Other findings are reported only.
 > /zas audit -1 63 -1 5 69 5
 Auditing 4 sections; the result follows from the atmos worker
 Geometry audit: 2 differences in 1 sections and 1 zones
-  Not checked: 3 unloaded sections, 0 sections with changes still queued, 0 zones reaching unknown sections
+  Not checked: 3 unloaded sections, 0 sections with changes still queued, 0 zones reaching unknown sections, 0 paused zones, 0 positions with changes held for paused zones
   Stale geometry: 1
   Zoned cell the blocks don't have: 1
   Stale geometry at 2 64 2 (zone -)

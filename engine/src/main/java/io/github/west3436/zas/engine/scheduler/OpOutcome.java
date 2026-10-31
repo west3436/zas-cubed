@@ -10,7 +10,8 @@ import java.util.Objects;
  *
  * @param seq the operation's sequence number
  * @param outcome where the gas went or came from
- * @param zoneId the zone, for {@link Outcome#ZONE}; otherwise 0
+ * @param zoneId the zone, for {@link Outcome#ZONE}, or the paused zone for {@link
+ *     Outcome#UNRESOLVED} at a paused zone; otherwise 0
  * @param moved per gas: for an addition, the moles taken; for a removal, the moles delivered
  * @param temperature the temperature of the moved gas in K
  * @param component the index of the operation's exchange component in {@link

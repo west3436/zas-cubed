@@ -33,11 +33,12 @@ import java.util.function.LongConsumer;
  *   <li>After geometry changes, {@link BreachResolver} classifies the unzoned cells newly open to a
  *       zone: an enclosed pocket joins it (GEO-023), the open air leaves an ambient edge (GEO-025),
  *       and a region reaching missing sections is held and classified again each tick until it
- *       resolves (GEO-026).
+ *       resolves (GEO-026). Once every section it still lacks is in an unloaded chunk, its zones
+ *       are {@linkplain #heldZones() held}, and the scheduler pauses them (GEO-030) until it
+ *       classifies, through any rounds of fetching after the chunks load. While loaded sections
+ *       are still being fetched, the opening counts as an ambient connection, as before. A held
+ *       region that no zone opens onto any more is dropped.
  * </ul>
- *
- * <p>TODO(#27): a breach held at unloaded chunks should pause its zones (GEO-026, GEO-030);
- * until paused zones exist the opening counts as an ambient connection meanwhile.
  *
  * <p>Single-threaded, like the engine that owns it.
  */
@@ -55,6 +56,8 @@ public final class EnclosureClassifier implements Classifier {
     private long[] held = new long[0];
     /** Whether a held breach asked for sections this tick. */
     private boolean fetching;
+    /** Zones of breaches held at unloaded chunks, ascending. */
+    private long[] heldZones = new long[0];
 
     public EnclosureClassifier(SectionLookup sections, GeometryPalette palette) {
         this(sections, palette, EnclosureFill.DEFAULT_MAX_CELLS);
@@ -130,18 +133,37 @@ public final class EnclosureClassifier implements Classifier {
             seeds = all;
         }
         fetching = false;
+        long[] previouslyHeld = heldZones;
+        heldZones = new long[0];
         if (seeds.length == 0) {
+            held = new long[0];
             return;
         }
         List<Long> stillHeld = new ArrayList<>();
+        java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
         for (Breach b : breaches.classify(graph, topology, seeds)) {
             if (b instanceof Breach.Hold hold) {
+                if (hold.zones().length == 0) {
+                    continue; // no zone opens onto it any more
+                }
                 for (long s : hold.seeds()) {
                     stillHeld.add(s);
                 }
-                for (long k : loadedOnly(hold.missingSections())) {
+                long[] fetch = loadedOnly(hold.missingSections());
+                for (long k : fetch) {
                     requestSection.accept(k);
                     fetching = true;
+                }
+                boolean wasPaused = false;
+                for (long z : hold.zones()) {
+                    wasPaused |= Arrays.binarySearch(previouslyHeld, z) >= 0;
+                }
+                // Pause once only unloaded chunks stand in the way, and stay paused while the
+                // sections arrive after they load.
+                if (fetch.length == 0 || wasPaused) {
+                    for (long z : hold.zones()) {
+                        pausing.add(z);
+                    }
                 }
             } else {
                 BreachResolver.apply(graph, topology, b);
@@ -150,6 +172,11 @@ public final class EnclosureClassifier implements Classifier {
         held = new long[stillHeld.size()];
         for (int i = 0; i < held.length; i++) {
             held[i] = stillHeld.get(i);
+        }
+        heldZones = new long[pausing.size()];
+        int i = 0;
+        for (long z : pausing) {
+            heldZones[i++] = z;
         }
     }
 
@@ -161,6 +188,16 @@ public final class EnclosureClassifier implements Classifier {
     @Override
     public long[] unresolvedSeeds() {
         return held.clone();
+    }
+
+    @Override
+    public long[] heldZones() {
+        return heldZones.clone();
+    }
+
+    @Override
+    public long sectionOf(long cell) {
+        return CellIds.section(cell);
     }
 
     /** The topology plus the block-position mapping the scheduler needs. */

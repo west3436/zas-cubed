@@ -281,6 +281,81 @@ public final class DebugOverlayTests {
     }
 
     /**
+     * A zone paused by an unloaded chunk (GEO-030) is sent with its paused flag set, so the client
+     * draws it grey, and its cells are still listed (CLIENT-005). The chunk is unloaded only as far
+     * as the atmosphere is concerned ({@code DimensionAtmos#simulateUnload}, see {@link
+     * PausedZoneTests}).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void client_005_payload_flags_paused_zone(GameTestHelper h) {
+        Rooms r = new Rooms(h, 60);
+        r.clear(8, 23);
+        r.shell(10, 21); // across the chunk border at x 16
+        BlockPos center = r.abs(12, 2, 2);
+        watch(h, center);
+        byte[] saved = null;
+        try {
+            r.settle(GasMutations.add(r.level, r.point(12, 2, 2), Rooms.oxygen(40), Rooms.source("client_005")));
+            ZoneInfo zone = r.zone(12, 2, 2);
+            saved = r.dimension().simulateUnload(r.chunk(16));
+            r.tick();
+            h.assertTrue(r.zone(12, 2, 2).paused(), "the zone didn't pause");
+            DebugOverlayPayload p = roundTrip(DebugOverlay.build(r.level, center, center, ALL));
+            h.assertValueEqual(p.zones().size(), 1, "zones");
+            DebugOverlayPayload.Zone z = p.zones().get(0);
+            h.assertValueEqual(z.id(), zone.id().value(), "zone id");
+            h.assertTrue(z.paused(), "the paused flag wasn't sent");
+            h.assertValueEqual(p.cells().size(), zone.cellCount(), "the paused zone's cells");
+        } finally {
+            unwatch(h);
+            r.dimension().simulateLoad(r.chunk(16), saved);
+            r.tick();
+        }
+        h.succeed();
+    }
+
+    /**
+     * Opening a zone onto a region that reaches an unloaded chunk holds the breach (GEO-026): the
+     * zone is sent paused and the held region's cells are sent as unresolved, so the client draws
+     * them magenta (CLIENT-005).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void client_005_payload_lists_unresolved_region(GameTestHelper h) {
+        Rooms r = new Rooms(h, 61);
+        r.clear(0, 23);
+        r.shell(2, 9); // A, in the west chunk
+        r.shell(9, 21); // B, unzoned, across both chunks; they share the wall at x 9
+        BlockPos center = r.abs(9, 2, 2);
+        watch(h, center);
+        byte[] saved = null;
+        try {
+            r.settle(GasMutations.add(r.level, r.point(5, 2, 2), Rooms.oxygen(50), Rooms.source("client_005")));
+            saved = r.dimension().simulateUnload(r.chunk(16));
+            r.tick();
+            r.set(9, 2, 2, Rooms.AIR);
+            r.tick();
+            h.assertTrue(r.zone(5, 2, 2).paused(), "the zone didn't pause at the held breach");
+            DebugOverlayPayload p = roundTrip(DebugOverlay.build(r.level, center, center, ALL));
+            h.assertTrue(p.zones().stream().allMatch(DebugOverlayPayload.Zone::paused), "a zone not paused");
+            h.assertFalse(p.unresolved().isEmpty(), "no unresolved cells sent");
+            boolean opening = false;
+            for (DebugOverlayPayload.Unresolved u : p.unresolved()) {
+                // Relative to the opening at area (9, 2, 2): B's interior runs from x 10 to 20.
+                h.assertTrue(
+                        u.dx() >= 0 && u.dx() <= 11 && Math.abs(u.dy()) <= 1 && Math.abs(u.dz()) <= 1,
+                        "an unresolved cell outside B: " + u);
+                opening |= u.dx() == 0 && u.dy() == 0 && u.dz() == 0;
+            }
+            h.assertTrue(opening, "the opening isn't unresolved");
+        } finally {
+            unwatch(h);
+            r.dimension().simulateLoad(r.chunk(16), saved);
+            r.ticks(3);
+        }
+        h.succeed();
+    }
+
+    /**
      * A broken window gives one direct face to the ambient, labelled with the zone's pressure
      * minus the ambient's (CLIENT-011).
      */

@@ -315,7 +315,14 @@ public final class OpsTests {
 
         c.clear();
         run(op, "zas zones");
-        h.assertTrue(c.text().contains("Zone " + id + ": 27 cells"), "zones: " + c.text());
+        // It lists the first zones by id; other tests' zones in the Overworld may come first.
+        List<Long> ids = service().dimensionFor(h.getLevel()).published().zones().stream()
+                .map(v -> v.id())
+                .toList();
+        h.assertTrue(c.text().contains(" " + ids.size() + " zones"), "zones: " + c.text());
+        if (ids.indexOf(id) < ZasCommands.LISTED_ZONES) {
+            h.assertTrue(c.text().contains("Zone " + id + ": 27 cells"), "zones: " + c.text());
+        }
 
         c.clear();
         try {

@@ -5,7 +5,9 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -18,10 +20,15 @@ import java.util.Objects;
  *
  * <p>When the server thread rejects components of a result (CORE-070), it publishes {@link
  * #withRejected}: the result's table, with the rejected zones answered from the previous table.
+ *
+ * <p><b>Persistence.</b> A table built by the engine also knows each zone's cells, so the server
+ * thread can compute any chunk's {@linkplain #shares share} of the zones in it when the chunk is
+ * saved (DATA-002, architecture §4.5). Only published tables are ever saved.
  */
 public final class AtmosSnapshot {
     private static final long[] NO_LONGS = new long[0];
     private static final int[] NO_INTS = new int[0];
+    private static final long[][] NO_CHUNKS = new long[0][];
 
     private final long tick;
     private final GasRegistry registry;
@@ -31,7 +38,14 @@ public final class AtmosSnapshot {
     // Overlay for rejected components.
     private final long[] rejected; // sorted zone ids
     private final AtmosSnapshot previous;
+    // Persistence: each zone's cells, aligned with zones, and the chunks each zone spans.
+    private final Membership membership; // null when the table has no cell lists
+    private final long[][] zoneChunks;
     private volatile List<ZoneView> zoneList;
+    private volatile Map<Long, List<ChunkPart>> chunkIndex;
+
+    /** One zone's cells in one chunk. */
+    private record ChunkPart(int zone, long[] cells, double volume) {}
 
     private AtmosSnapshot(
             long tick,
@@ -40,7 +54,9 @@ public final class AtmosSnapshot {
             long[] positions,
             int[] zoneOfPosition,
             long[] rejected,
-            AtmosSnapshot previous) {
+            AtmosSnapshot previous,
+            Membership membership,
+            long[][] zoneChunks) {
         this.tick = tick;
         this.registry = registry;
         this.zones = zones;
@@ -48,11 +64,13 @@ public final class AtmosSnapshot {
         this.zoneOfPosition = zoneOfPosition;
         this.rejected = rejected;
         this.previous = previous;
+        this.membership = membership;
+        this.zoneChunks = zoneChunks;
     }
 
     /** A table with no zones, before the first atmos tick. */
     public static AtmosSnapshot empty(GasRegistry registry) {
-        return new AtmosSnapshot(-1, registry, new ZoneView[0], NO_LONGS, NO_INTS, NO_LONGS, null);
+        return new AtmosSnapshot(-1, registry, new ZoneView[0], NO_LONGS, NO_INTS, NO_LONGS, null, null, NO_CHUNKS);
     }
 
     /**
@@ -83,7 +101,35 @@ public final class AtmosSnapshot {
                 throw new IllegalArgumentException("zone index out of range: " + zoneOfPosition[i]);
             }
         }
-        return new AtmosSnapshot(tick, registry, z, positions.clone(), zoneOfPosition.clone(), NO_LONGS, null);
+        return new AtmosSnapshot(
+                tick,
+                registry,
+                z,
+                positions.clone(),
+                zoneOfPosition.clone(),
+                NO_LONGS,
+                null,
+                null,
+                new long[z.length][]);
+    }
+
+    /**
+     * The engine's table: zones, the membership they were built from, and the chunks each zone
+     * spans, including chunks it is waiting for (GEO-030).
+     */
+    static AtmosSnapshot of(
+            long tick, GasRegistry registry, List<ZoneView> zones, Membership membership, long[][] zoneChunks) {
+        AtmosSnapshot t = of(tick, registry, zones, membership.positions, membership.zoneOfPosition);
+        if (membership.size() != t.zones.length || zoneChunks.length != t.zones.length) {
+            throw new IllegalArgumentException("membership doesn't match the zones");
+        }
+        for (int i = 0; i < t.zones.length; i++) {
+            if (membership.zoneIds[i] != t.zones[i].id()) {
+                throw new IllegalArgumentException("membership doesn't match the zones");
+            }
+        }
+        return new AtmosSnapshot(
+                tick, registry, t.zones, t.positions, t.zoneOfPosition, NO_LONGS, null, membership, zoneChunks);
     }
 
     /**
@@ -98,7 +144,8 @@ public final class AtmosSnapshot {
         }
         long[] sorted = rejectedZones.clone();
         Arrays.sort(sorted);
-        return new AtmosSnapshot(tick, registry, zones, positions, zoneOfPosition, sorted, previous);
+        return new AtmosSnapshot(
+                tick, registry, zones, positions, zoneOfPosition, sorted, previous, membership, zoneChunks);
     }
 
     /** The atmos tick this table is from; -1 before the first. */
@@ -177,6 +224,128 @@ public final class AtmosSnapshot {
     /** The number of block positions holding zoned cells in this tick's own table. */
     public int zonedPositions() {
         return positions.length;
+    }
+
+    // ---- Persistence (DATA-002) ----------------------------------------------------
+
+    /**
+     * The chunks a zone spans, ascending: those its cells are in, and, for a zone rebuilt from
+     * saved shares, those it is still waiting for (GEO-030). Empty for an unknown zone, or a table
+     * without cell lists.
+     */
+    public long[] zoneChunks(long id) {
+        if (isRejected(id)) {
+            return previous.zoneChunks(id);
+        }
+        int i = ownIndex(id);
+        return i < 0 || zoneChunks[i] == null ? NO_LONGS : zoneChunks[i].clone();
+    }
+
+    /**
+     * A chunk's share of every zone with cells in it (DATA-002): the zone's cells there, and its
+     * mixture scaled by their share of its volume. In ascending zone id order; empty if no zone
+     * has cells in the chunk. Paused zones are included, with their last-known state.
+     */
+    public List<ZoneShare> shares(long chunk) {
+        List<ZoneShare> out = new ArrayList<>();
+        if (membership != null) {
+            for (ChunkPart part : index().getOrDefault(chunk, List.of())) {
+                ZoneView v = zones[part.zone()];
+                if (!isRejected(v.id())) {
+                    out.add(share(v, part));
+                }
+            }
+        }
+        if (rejected.length > 0) {
+            for (ZoneShare share : previous.shares(chunk)) {
+                if (isRejected(share.zoneId())) {
+                    out.add(share);
+                }
+            }
+            out.sort((a, b) -> Long.compare(a.zoneId(), b.zoneId()));
+        }
+        return out;
+    }
+
+    /** Every chunk some zone of this table spans, ascending. */
+    public long[] chunks() {
+        java.util.TreeSet<Long> all = new java.util.TreeSet<>();
+        for (ZoneView z : zones()) {
+            for (long c : zoneChunks(z.id())) {
+                all.add(c);
+            }
+        }
+        long[] out = new long[all.size()];
+        int i = 0;
+        for (long c : all) {
+            out[i++] = c;
+        }
+        return out;
+    }
+
+    private ZoneShare share(ZoneView v, ChunkPart part) {
+        double total = zoneVolume(part.zone());
+        double f = part.volume() >= total ? 1 : part.volume() / total;
+        double[] moles = new double[v.gasCount()];
+        for (int g = 0; g < moles.length; g++) {
+            moles[g] = f == 1 ? v.moles(g) : v.moles(g) * f;
+        }
+        return new ZoneShare(v.id(), part.cells(), moles, v.temperature(), zoneChunks[part.zone()]);
+    }
+
+    private double zoneVolume(int zone) {
+        double total = 0;
+        for (int i = membership.from(zone); i < membership.to(zone); i++) {
+            total += membership.volume(i);
+        }
+        return total;
+    }
+
+    private Map<Long, List<ChunkPart>> index() {
+        Map<Long, List<ChunkPart>> index = chunkIndex;
+        if (index == null) {
+            index = new HashMap<>();
+            for (int z = 0; z < zones.length; z++) {
+                Map<Long, List<Integer>> byChunk = new java.util.TreeMap<>();
+                for (int i = membership.from(z); i < membership.to(z); i++) {
+                    byChunk.computeIfAbsent(chunkOfCell(i), k -> new ArrayList<>())
+                            .add(i);
+                }
+                for (Map.Entry<Long, List<Integer>> e : byChunk.entrySet()) {
+                    List<Integer> flat = e.getValue();
+                    long[] cells = new long[flat.size()];
+                    double volume = 0;
+                    for (int k = 0; k < cells.length; k++) {
+                        cells[k] = membership.cell(flat.get(k));
+                        volume += membership.volume(flat.get(k));
+                    }
+                    index.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(new ChunkPart(z, cells, volume));
+                }
+            }
+            chunkIndex = index;
+        }
+        return index;
+    }
+
+    private long chunkOfCell(int flat) {
+        return SectionKeys.chunkOfBlockKey(membership.position(flat));
+    }
+
+    private int ownIndex(long id) {
+        int lo = 0;
+        int hi = zones.length - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            long v = zones[mid].id();
+            if (v < id) {
+                lo = mid + 1;
+            } else if (v > id) {
+                hi = mid - 1;
+            } else {
+                return mid;
+            }
+        }
+        return -1;
     }
 
     private boolean isRejected(long id) {

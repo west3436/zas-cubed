@@ -56,6 +56,19 @@ public final class SectionMirror implements SectionLookup {
         return maxSectionY;
     }
 
+    /**
+     * Whether a chunk the mirror holds or held sections of is unloaded: its sections are kept while
+     * they hold cells of zones in memory, which are paused (GEO-030).
+     */
+    public boolean isChunkUnloaded(long chunk) {
+        return unloadedChunks.contains(chunk);
+    }
+
+    /** Whether any chunk is known to be unloaded. */
+    boolean hasUnloadedChunks() {
+        return !unloadedChunks.isEmpty();
+    }
+
     /** The number of mirrored sections. */
     public int size() {
         return sections.size();

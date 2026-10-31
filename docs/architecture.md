@@ -145,7 +145,7 @@ NFR-022.
 | State | Owner | Others get |
 |---|---|---|
 | Level, chunks, block entities, capabilities, attachments | server thread | nothing (CORE-049) |
-| Persisted zone shares (chunk attachment `zas:atmos`) | server thread | copies inside `Batch` at chunk load |
+| Persisted zone shares (chunk data tag `zas:atmos`) | server thread | copies inside `Batch` at chunk load |
 | Op queue, dirty-section bitsets, chunk generations | server thread | the closed `Batch` |
 | Published `ZoneSnapshot` table | server thread publishes; immutable | any thread may read it through a `volatile` reference (API-046) |
 | Zone graph, mixtures, edges, membership, section mirror, pending shares | worker | the immutable `Result` |
@@ -487,7 +487,7 @@ seam, and `SectionTopology` over the mirror is also the zone graph's topology.
   for sections it drops nothing, so repeated rounds always make progress.
 - **Unresolved operations** act as at a paused zone (GEO-036, GEO-038): an
   addition is voided and a removal is supplied from the ambient; the API
-  reports `PAUSED`. Pausing the zones themselves is #27.
+  reports `PAUSED`, and the ledger keeps both (§4.6).
 
 **Engine implementation (R0).** The pure logic is in
 `io.github.west3436.zas.engine.classify`; the scheduler owns the mirror and
@@ -564,46 +564,108 @@ That is well under the 64 MiB total budget.
 
 ### 4.5 Persistence (DATA-001 to DATA-016, D-54)
 
-- **Chunk attachment `zas:atmos`**, serialized with a versioned codec
-  (DATA-003). It holds:
-  - membership per section: the palette of saved zone ids and the packed
-    local indices
-  - per zone in this chunk: the zone's persistent id and this chunk's share
-    of its mixture (moles per gas, temperature) by volume, plus the zone's
-    pins (API-018)
-  - held block changes for paused zones (DATA-010) and queued additions that
-    target this chunk (DATA-011)
+- **Chunk data tag `zas:atmos`**, a byte array in the chunk's own saved data,
+  written at `ChunkDataEvent.Save` and read at `ChunkDataEvent.Load`. The
+  bytes are a versioned, checksummed `ChunkRecord` (DATA-003). It holds:
+  - per zone with cells in the chunk: the zone's persistent id, its cells
+    there (sub-cells included, D-44), this chunk's share of its mixture
+    (moles per gas, temperature) by volume, and every chunk the zone spans
+  - block positions whose changes are held for a paused zone (DATA-010)
+  - at shutdown only, queued additions that target the chunk (DATA-011)
+  - zone pins (API-018) once they exist (R1)
 - **Shares are written at chunk save.** They are computed on the server
   thread from the **published** snapshot (moles × this chunk's volume ÷ zone
-  volume). Nothing is written per tick. Only the published snapshot is ever
-  saved, which is why an in-flight tick must be rejectable (§3.3).
+  volume). Nothing is written per tick; chunks whose share changed are marked
+  for saving at each apply, so autosaves pick them up. Only the published
+  snapshot is ever saved, which is why an in-flight tick must be rejectable
+  (§3.3).
 - **Saved shares are authoritative only while their zone is not in memory.**
-  When a chunk loads, the server thread copies its attachment into the next
-  batch. If the zone is in memory (it was paused, so it hasn't changed), the
-  worker ignores the copy. Otherwise it holds it as a *pending share* until
-  every chunk of the zone has loaded, then rebuilds the zone as the sum of its
-  shares (DATA-008, GEO-033). *Spike (S5):* conservation was exact across
-  repeated unload and reload cycles.
-- **Level-wide state is tiny.** It is kept in a `SavedData`:
-  - the per-dimension zone-id counter
-  - dimension pause flags (OPS-005)
+  When a chunk loads, the server thread copies its record into the next batch,
+  with the sections its cells are in and their neighbours. If the zone is in
+  memory with cells in that chunk (it was paused, so it hasn't changed), the
+  worker ignores the share. Otherwise the share's cells and gas join the zone
+  with that id, which is created if needed (`ZoneGraph.loadShare`). A zone
+  built this way stays paused while any chunk its shares list is unloaded, so
+  it is rebuilt a chunk at a time and holds the sum of its shares once complete
+  (DATA-008, GEO-033). *Spike (S5):* conservation was exact across repeated
+  unload and reload cycles.
+- **Leaving memory.** Once every chunk a zone spans has unloaded, and no zone
+  with a loaded chunk shares an edge with it, the worker drops it
+  (`ZoneGraph.evict`); its state is in the chunks. Moving gas between memory
+  and storage is the ledger's `STORAGE` category (CORE-036).
+- **Rebuilt zones are checked against the blocks.** When a zone rebuilt from
+  shares resumes, what its cells open onto is classified again (GEO-023,
+  GEO-025, GEO-026), together with its saved held positions, so changes made
+  while it was stored apply. Saved cells that are no longer cells are left
+  out, and their gas stays in the zone (CORE-022). The zone stays paused until
+  that classification finishes.
+- **Records not yet taken in are kept.** A record the worker hasn't confirmed
+  (its batch isn't applied yet), or that no engine has taken (the dimension is
+  excluded, or its engine doesn't exist yet), is written back as it is.
+- **Unloading.** At `ChunkEvent.Unload`, before the change tracker drops the
+  chunk's dirty bits, the record is built and the chunk marked for saving;
+  changed positions the worker hasn't seen, in sections it mirrors, are saved
+  as held positions.
+- **Shutdown** never waits for the worker: the tick in flight is abandoned and
+  the last published snapshot is saved. Queued additions (including those
+  re-queued under CORE-074, and those of the abandoned tick) are saved with
+  their target chunk, or with the dimension if that chunk isn't loaded; they
+  are queued again after load. Queued removals complete with nothing moved
+  (outcome `PAUSED`); waiting additions are cancelled, their gas saved.
+- **Level-wide state is tiny.** It is kept in a `SavedData`, `zas_atmos`, per
+  dimension:
+  - the zone-id counter, so saved ids are never issued again (CORE-026)
   - queued additions that couldn't be assigned to a loaded chunk
-- **Corruption** of a chunk's attachment resets that chunk's cells to
-  unzoned, with one warning per chunk (DATA-004, DATA-013).
+  - dimension pause flags (OPS-005) once they exist (R1)
+- **Corruption** of a chunk's record (bad checksum, unknown version, another
+  chunk's data, a bad value) resets that chunk's cells to unzoned, with one
+  warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
+  zone is rebuilt from its other chunks. Nothing is decoded while a chunk
+  loads, so a bad tag can never stop it loading.
 - **Derived state is rebuilt on load:** edges, the geometry palette,
   sub-cells and hotspots (DATA-009).
 
+*Implemented (#27, #29):* `ChunkRecord`, `ZoneShare` and
+`DimensionPipeline.recordFor` in `engine.scheduler`; the byte format is
+`engine.persist.ChunkRecordCodec`, unit-tested without Minecraft; the platform
+side is `io.github.west3436.zas.persistence` (`AtmosPersistence`,
+`DimensionData`) and `DimensionAtmos`. GameTests can't unload chunks or
+restart the server, so they use `DimensionAtmos.simulateUnload` and
+`simulateLoad` and `AtmosService.stopForTest` and `startForTest`, which run the
+same save code and byte format; the real chunk events run whenever the test
+server saves or unloads, and at its shutdown. The GameTest server starts from a
+fresh world each run, since saved zones would otherwise come back.
+
 ### 4.6 Paused zones (GEO-030 to GEO-038)
 
-- **When a zone pauses.** The worker pauses a zone when any of its sections'
-  chunks is unloaded, or when a classification touching it is unresolved.
-- **What a paused zone does.** It keeps its mixture and publishes its
-  last-known state. Operations into it are voided, and draws from it are
-  supplied without depletion; both are ledger categories (CORE-036).
-- **Held changes.** Block changes touching a paused zone are held in the
-  worker and in the chunk attachment (DATA-010), and replayed in order when
-  the zone resumes.
-- **Never force-load.** The engine never adds chunk tickets (GEO-034).
+- **When a zone pauses.** The worker pauses a zone when any chunk its cells are
+  in is unloaded, while it waits for chunks its saved shares list (§4.5), and
+  when it opens onto a region whose classification is held at unloaded chunks
+  (GEO-026): once only unloaded chunks stand in the way, and then through any
+  rounds of fetching after they load. `ZoneView.paused` publishes it; the API
+  reports `PAUSED`.
+- **What a paused zone does.** It keeps its cells and mixture and publishes
+  its last-known state (GEO-035). It doesn't exchange, merge or dissolve.
+  Operations into it are voided, and draws from it are supplied at its
+  last-known state, up to what it holds, without depleting it (GEO-036,
+  GEO-038); the outcome is `UNRESOLVED` with the zone's id. An active zone
+  across an edge exchanges with a copy of the paused zone's mixture, so it
+  sees the last-known state too; that gas is the ledger's `PAUSED` category.
+  Voided and supplied operation gas never touches zoned gas, so the ledger
+  keeps it apart (`ConservationReport.voided` and `supplied`).
+- **Held changes.** A changed position touching a paused zone (its cells or
+  their neighbours) is held: the worker's mirror keeps the old geometry there
+  and the latest capture of the section is kept, so the change applies, in
+  order with everything else, once the zone resumes (GEO-037). Held positions
+  are published in `Result.heldBlocks` and saved with their chunk (DATA-010).
+- **Unloaded chunks in the mirror.** Sections of an unloaded chunk are kept
+  while they hold cells of zones in memory, and dropped once they don't, with
+  the zoned cells across their faces refreshed, so faces into unloaded chunks
+  lead nowhere and fills reaching them are unresolved (GEO-024). A chunk that
+  loads again has its mirrored sections captured afresh, so changes made while
+  it was unloaded are found.
+- **Never force-load.** The engine never adds chunk tickets (GEO-034): the
+  platform only ever reads chunks with `getChunkNow`.
 
 ## 5. Services around the engine (server thread)
 
@@ -642,11 +704,17 @@ with the overlay on to their dimension's `DimensionScheduler`
 (`setDebugRegions`). Right after the next tick, on the worker,
 `DimensionEngine.debugView` exports the zoned cells, the faces out of zones and
 the cells of unresolved regions inside those boxes, capped, as an immutable
-`DebugView`, so the server thread never reads the zone graph. When a dimension
+`DebugView`, so the server thread never reads the zone graph. A paused zone
+(GEO-030: part of it in an unloaded chunk, or held at a breach into an
+unresolved region) keeps its cells in memory, so they are exported like any
+other. The unresolved cells are flooded from the seeds of breaches the
+classifier holds (`Classifier.unresolvedSeeds`, GEO-026) and from gas
+operations that landed in an unresolved region that tick. When a dimension
 publishes a new atmos tick, each of its operators gets one
 `DebugOverlayPayload`. It carries that export with zone pressures and the
-paused flag from the published table, and the block geometry within 6 blocks of
-their eyes for the crosshair. Nothing is sent to anyone else (DATA-005). The
+paused flag from the published table (`ZoneView.paused`), and the block
+geometry within 6 blocks of their eyes for the crosshair. The client draws
+paused zones grey and unresolved cells magenta. Nothing is sent to anyone else (DATA-005). The
 renderer is in `io.github.west3436.zas.client`, loaded through a
 `@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
 Hotspots are a FIRE concept (R1), so their list stays empty for now.
@@ -762,7 +830,7 @@ GameTest in R1 (E3).
 | Layer | Tool | What runs there |
 |---|---|---|
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
-| Engine benchmarks | JMH or a scripted harness in `engine` | The headless S-10 scenario (NFR-034), checked in CI against a recorded baseline with a 10 % tolerance |
+| Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check against the recorded baseline, with a 10 % tolerance, comes in R1 |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023) |
 | Packaging | GameTest harness loading built jars | The S0 harness, kept: `zas` plus example addon, and example addon alone (API-048) |
 
@@ -780,6 +848,8 @@ The test names include requirement IDs (README rule 5).
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
 | O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |
 | O-8 | **Cell ids name x and z only within ±8,388,608** (`CellIds`), about a quarter of the way to the world border; farther out every position counts as outside the world, so nothing can be zoned there | Widen the id layout or offset it per dimension. GameTests build near the origin for now, because test structures land up to 15 million blocks out. |
+| O-9 | **Geometry in the tick a chunk unloads.** A block change applied by the tick in flight when a chunk of its zone unloads isn't in that chunk's share, which was saved from the previous snapshot. Mixtures are rejected and restored (§3.3), but geometry effects aren't, so the zone's shares can differ from the zone in memory by that change | Rare: it needs a change to the zone within about a second of the unload. A rebuilt zone re-classifies its surface (§4.5), which picks up openings; record the zone's volume with its shares if it matters in practice. |
+| O-10 | **A geometry palette change drops every zone** (`DimensionAtmos.retire`), and with persistence the next save forgets them | Rebuild from the records of the loaded chunks instead, as after a restart (§4.5). |
 
 ## 10. Requirement coverage
 

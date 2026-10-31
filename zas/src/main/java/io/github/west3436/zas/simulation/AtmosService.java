@@ -240,11 +240,48 @@ public final class AtmosService {
         }
     }
 
+    /**
+     * Stops a level's atmosphere as a server stop would, and returns what the given chunks write in
+     * the final save (DATA-011), by chunk; chunks that save nothing are left out. For GameTests of
+     * save and reload, which can't restart the server. Server thread.
+     */
+    public Map<Long, byte[]> stopForTest(ServerLevel level, long... chunks) {
+        DimensionAtmos d = dimensions.remove(level.dimension());
+        Map<Long, byte[]> out = new java.util.TreeMap<>();
+        if (d == null) {
+            return out;
+        }
+        if (d.isInFlight()) {
+            d.apply();
+        }
+        d.stop();
+        for (long chunk : chunks) {
+            byte[] bytes = d.finalSave(chunk);
+            if (bytes != null) {
+                out.put(chunk, bytes);
+            }
+        }
+        d.detach();
+        return out;
+    }
+
+    /**
+     * Starts a level's atmosphere again after {@link #stopForTest}, as after a restart: the given
+     * bytes are what its loaded chunks saved. Server thread.
+     */
+    public DimensionAtmos startForTest(ServerLevel level, Map<Long, byte[]> saved) {
+        saved.forEach(
+                (chunk, bytes) -> io.github.west3436.zas.persistence.AtmosPersistence.restore(level, chunk, bytes));
+        DimensionAtmos d = dimensionFor(level);
+        d.start();
+        return d;
+    }
+
     private void stop() {
         // Never wait for a worker without bound: abandon ticks in flight, then give the pool a
         // short grace period. Its threads are daemons, so a stuck one can't keep the JVM alive.
         for (DimensionAtmos d : dimensions.values()) {
-            d.shutdown("server stopping");
+            d.stop(); // keeps its published table for the final save, which follows (DATA-011)
         }
         dimensions.clear();
         workers.shutdownNow();

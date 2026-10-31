@@ -607,12 +607,18 @@ public final class ZasCommands {
                 r.total(),
                 r.sectionsChecked(),
                 r.zonesChecked()));
-        if (result.unloadedSections() > 0 || result.pendingSections() > 0 || r.zonesUnresolved() > 0) {
+        if (result.unloadedSections() > 0
+                || result.pendingSections() > 0
+                || r.zonesUnresolved() > 0
+                || r.zonesPaused() > 0
+                || r.heldPositions() > 0) {
             out.add(Component.translatable(
                     "commands.zas.audit.skipped",
                     result.unloadedSections(),
                     result.pendingSections(),
-                    r.zonesUnresolved()));
+                    r.zonesUnresolved(),
+                    r.zonesPaused(),
+                    r.heldPositions()));
         }
         for (GeometryAudit.Kind kind : GeometryAudit.Kind.values()) {
             if (r.count(kind) > 0) {

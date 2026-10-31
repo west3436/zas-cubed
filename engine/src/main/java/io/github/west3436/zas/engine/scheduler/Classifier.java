@@ -62,6 +62,24 @@ public interface Classifier {
     }
 
     /**
+     * The zones that open onto a region the last {@link #afterGeometry} couldn't classify because
+     * it reaches an unloaded chunk (GEO-026), ascending. The scheduler pauses them (GEO-030) until
+     * the region classifies. The default holds none.
+     */
+    default long[] heldZones() {
+        return new long[0];
+    }
+
+    /**
+     * The section ({@link io.github.west3436.zas.engine.SectionKeys}) a cell id is in. A pure
+     * function of the id, so the server thread may call it to know which sections to capture for
+     * a chunk's saved shares (DATA-002). The default maps through {@link CellSpace#position}.
+     */
+    default long sectionOf(long cell) {
+        return io.github.west3436.zas.engine.SectionKeys.sectionOfBlockKey(space().position(cell));
+    }
+
+    /**
      * How many sections around a new zone-triggering operation the server thread captures at
      * batch close, so most enclosures classify in the same tick (architecture §4.3: 3, a 7³ cube).
      */

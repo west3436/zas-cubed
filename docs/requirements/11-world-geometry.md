@@ -212,7 +212,7 @@ whatever its cause:
   the engine sees it.
 
 #### GEO-011 · Locality filter
-`Must` · `R0` · `Accepted` · Verify: Bench · Trace: CORE-051, CORE-054
+`Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054
 
 A block change that isn't in or next to a zone, and doesn't touch a pending
 operation, shall cost a constant amount of work: no flood fill, no graph
@@ -223,6 +223,10 @@ update.
   §3](../research/neoforge-1.21.1.md#3-block-change-detection)).
 - **Verify:** Bench makes mass block changes away from any zone and checks the
   cost per change is constant.
+
+*2026-10-31: Implemented. The R0 bench measures 5.3 to 5.8 ns per change, hook
+and filtered drain together, from 16,384 to 1,048,576 changes and with 278 or
+1,278 zones ([benchmarks · GEO-011](../research/benchmarks.md#geo-011-change-tracking-and-the-locality-filter)).*
 
 #### GEO-012 · Coalescing
 `Must` · `R0` · `Implemented` · Verify: Unit
@@ -263,7 +267,7 @@ shapes driven by block-entity data.
 ## Enclosure detection
 
 #### GEO-020 · Bounded enclosure test
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: D-23
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest, Bench · Trace: D-23
 
 Whether a seed cell is enclosed shall be decided by a fill through connected
 cells, bounded by a configurable maximum volume (default 65,536 cells).
@@ -273,8 +277,14 @@ Exceeding the bound means "open to ambient".
 - **Verify:** Unit tests check enclosures of 65,535 and 65,537 cells; a
   GameTest checks a large hall reports open; Bench measures fill cost.
 
+*2026-10-31: Implemented. `geo_020_bounded_enclosure_test` (Unit) checks
+65,535, 65,536 and 65,537 cells; `geo_020_hall_too_big_to_enclose_reports_open`
+(GameTest) checks a sealed hall of 67,240 cells classifies as open, and that
+its halves zone once a wall parts them; the R0 bench records 7.5 ms per fill
+at the cap ([benchmarks](../research/benchmarks.md)).*
+
 #### GEO-024 · Fills that reach unloaded chunks
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-24, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-24, D-43
 
 A fill that reaches an unloaded chunk shall leave the region *unresolved*, not
 open. No zone forms for it until its chunks are loaded and it can be
@@ -309,13 +319,21 @@ a fill, until a block change invalidates that classification.
   no fill and a block change invalidates it; Bench measures the saving.
 
 #### GEO-022 · Off-thread classification
-`Must` · `R0` · `Accepted` · Verify: Bench, GameTest · Trace: D-30, CORE-045
+`Must` · `R0` · `Implemented` · Verify: Bench, GameTest · Trace: D-30, CORE-045
 
 Enclosure classification shall run off the server thread, on world snapshots.
 
 - **Rationale:** Decision: D-30.
 - **Verify:** Bench checks a 65,536-cell fill doesn't stall the server thread;
   GameTests check the results.
+
+*2026-10-31: Implemented. The R0 bench shows a 65,536-cell fill runs on the
+worker with at most 0.71 ms of server-thread time per round
+([benchmarks](../research/benchmarks.md)). `geo_022_classification_results_from_worker`
+(GameTest) checks classification happens on the atmos worker, never at batch
+close on the server thread, and that a sealed room zones and a room with a
+hole goes to the ambient; `geo_024_room_reaching_unloaded_chunk_is_unresolved`
+covers the unresolved result.*
 
 #### GEO-028 · Operations wait for classification
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: CORE-036
@@ -355,7 +373,7 @@ shall become an ambient edge.
   edge forms and the room vents (S-02).
 
 #### GEO-026 · Breach into an unresolved region
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 When a zone's face opens onto an unresolved region (GEO-024), the zone shall
 pause (GEO-030) until the region can be classified.
@@ -367,7 +385,7 @@ pause (GEO-030) until the region can be classified.
 ## Boundaries and lifecycle
 
 #### GEO-030 · Paused zones
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-09, D-24, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-09, D-24, D-43
 
 A zone with any cell in an unloaded chunk shall pause as a whole: no exchange,
 reactions, heat transfer or device action inside it.
@@ -377,7 +395,7 @@ reactions, heat transfer or device action inside it.
   changes over 10 s.
 
 #### GEO-033 · Resuming unchanged
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-09, D-24
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-09, D-24
 
 A paused zone shall resume with its mixture unchanged once all of its chunks
 are loaded.
@@ -387,7 +405,7 @@ are loaded.
   mixture is identical.
 
 #### GEO-034 · No force-loading
-`Must` · `R0` · `Accepted` · Verify: Inspect, GameTest · Trace: D-24
+`Must` · `R0` · `Implemented` · Verify: Inspect, GameTest · Trace: D-24
 
 The engine shall never force chunks to stay loaded.
 
@@ -408,7 +426,7 @@ queries. An unresolved region's last-known state is the ambient.
   at a paused zone all see its last-known state.
 
 #### GEO-036 · Gas into paused zones is voided
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
 
 Gas sent into a paused zone or an unresolved region shall be voided. Rates are
 computed against the last-known state (GEO-035), so pipe networks keep running
@@ -419,7 +437,7 @@ and no pressure builds up against a zone that can't absorb gas.
   unchanged and the checker records the gas as voided.
 
 #### GEO-038 · Paused zones supply without depleting
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
 
 Gas drawn out of a paused zone or an unresolved region shall be supplied at
 its last-known state (GEO-035) without depleting it, as the ambient is.
@@ -429,7 +447,7 @@ its last-known state (GEO-035) without depleting it, as the ambient is.
   when it resumes.
 
 #### GEO-037 · Changes to paused zones are held
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 Block changes touching a paused zone shall be held and processed when the zone
 resumes.

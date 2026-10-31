@@ -178,7 +178,7 @@ The repository shall include an example addon that uses each extension point.
 - **Verify:** Inspect the example addon against the list of extension points.
 
 #### API-048 · Example addon without ZAS³ in CI
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-12, D-17
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-12, D-17
 
 CI shall run the example addon without ZAS³ installed, as the S-12 test.
 
@@ -186,10 +186,16 @@ CI shall run the example addon without ZAS³ installed, as the S-12 test.
 - **Verify:** Inspect the CI configuration; the job itself is the S-12
   GameTest.
 
+*2026-10-31: Implemented. CI's "S-12 API without ZAS³" step runs
+`:example-addon:runGameTestServer`, a GameTest server with the example addon
+and its nested API but no `zas`; `WithoutZasTests` checks the API reports
+absent, every query reads ambient standard air with no zone, and mutations
+complete at once as `ABSENT`.*
+
 ## Queries and mutations
 
 #### API-010 · Atmosphere query
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-06, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-06, D-43
 
 Given a level and a point, the API shall return:
 - composition
@@ -218,7 +224,7 @@ its eye position.
   pane, inside a block's shape, at a block position and at an entity's eyes.
 
 #### API-011 · Zone query
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 Given a zone id or a point, the API shall return the zone's:
 - volume and cell count
@@ -243,7 +249,7 @@ attribution.
   checks the amounts and attribution.
 
 #### API-016 · Asynchronous mutation results
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-46, D-30, CORE-036, CORE-040
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-46, D-30, CORE-036, CORE-040
 
 A mutation shall return a future that completes on the server thread once the
 atmos tick that applies it has been applied. Its result gives the amounts

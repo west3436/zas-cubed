@@ -39,6 +39,8 @@ public final class ConservationLedger {
     private final EngineLog log;
     private final double[][] recorded;
     private final double[] start;
+    private final double[] voided;
+    private final double[] supplied;
     private boolean begun;
 
     /**
@@ -61,6 +63,8 @@ public final class ConservationLedger {
         this.relativeTolerance = relativeTolerance;
         this.recorded = new double[CATEGORIES.length][registry.size()];
         this.start = new double[registry.size()];
+        this.voided = new double[registry.size()];
+        this.supplied = new double[registry.size()];
     }
 
     /**
@@ -109,6 +113,24 @@ public final class ConservationLedger {
         }
     }
 
+    /**
+     * Records gas voided at a paused zone or an unresolved region (GEO-036): it was taken from its
+     * sender but entered no zone, so zoned totals don't change. Kept apart from the categories,
+     * which explain changes to zoned gas, and reported with the period ({@link
+     * ConservationReport#voided}).
+     */
+    public void recordVoided(int gas, double moles) {
+        voided[gas] += moles;
+    }
+
+    /**
+     * Records gas supplied by a paused zone or an unresolved region without depleting it (GEO-038).
+     * Like {@link #recordVoided}, it doesn't change zoned totals.
+     */
+    public void recordSupplied(int gas, double moles) {
+        supplied[gas] += moles;
+    }
+
     /** The moles recorded against a category for one gas since {@link #begin}. */
     public double recorded(LedgerCategory category, int gas) {
         return recorded[category.ordinal()][gas];
@@ -130,6 +152,8 @@ public final class ConservationLedger {
         for (double[] row : recorded) {
             Arrays.fill(row, 0);
         }
+        Arrays.fill(voided, 0);
+        Arrays.fill(supplied, 0);
         begun = true;
     }
 
@@ -151,6 +175,8 @@ public final class ConservationLedger {
         for (int c = 0; c < CATEGORIES.length; c++) {
             byCategory[c] = recorded[c].clone();
         }
+        double[] voidedNow = voided.clone();
+        double[] suppliedNow = supplied.clone();
         List<ConservationReport.Violation> violations = new ArrayList<>();
         for (int i = 0; i < start.length; i++) {
             double explained = 0;
@@ -171,7 +197,7 @@ public final class ConservationLedger {
             }
         }
         begin(totals);
-        return new ConservationReport(tick, byCategory, violations);
+        return new ConservationReport(tick, byCategory, voidedNow, suppliedNow, violations);
     }
 
     private void requireLength(double[] totals) {

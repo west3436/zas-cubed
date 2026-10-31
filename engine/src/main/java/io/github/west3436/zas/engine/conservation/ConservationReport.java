@@ -8,9 +8,14 @@ import java.util.List;
  *
  * @param tick the atmos tick checked
  * @param byCategory moles recorded per category (by ordinal) and gas index; sinks are negative
+ * @param voided per gas index, moles voided at paused zones and unresolved regions (GEO-036);
+ *     they never entered a zone, so they explain no change
+ * @param supplied per gas index, moles supplied by paused zones and unresolved regions without
+ *     depleting them (GEO-038)
  * @param violations unexplained changes, in gas index order; empty when conserved
  */
-public record ConservationReport(long tick, double[][] byCategory, List<Violation> violations) {
+public record ConservationReport(
+        long tick, double[][] byCategory, double[] voided, double[] supplied, List<Violation> violations) {
 
     public ConservationReport {
         violations = List.copyOf(violations);
@@ -19,6 +24,16 @@ public record ConservationReport(long tick, double[][] byCategory, List<Violatio
     /** Whether every change was explained. */
     public boolean conserved() {
         return violations.isEmpty();
+    }
+
+    /** The moles of one gas voided at paused zones and unresolved regions (GEO-036). */
+    public double voided(int gas) {
+        return voided[gas];
+    }
+
+    /** The moles of one gas supplied by paused zones and unresolved regions (GEO-038). */
+    public double supplied(int gas) {
+        return supplied[gas];
     }
 
     /** The moles recorded against a category for one gas. */
