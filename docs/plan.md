@@ -55,7 +55,13 @@ Requirements first, then risk-driven work:
   They become the R1 test plan.
 - **Exit:** every R1 `Must` is *Accepted*. Tag `req-r1-baseline`.
 
-### Phase B: architecture and spikes (overlaps late Phase A)
+### Phase B: architecture and spikes (in progress since 2026-10-31)
+
+**Status:** the [architecture](architecture.md) draft is ready for review.
+Spikes S0–S5 are done ([results](research/spikes.md)). Still open:
+
+- S6 (Ad Astra) is not started ([#9](https://github.com/west3436/zas-cubed/issues/9)).
+- S0 still needs a check on a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)).
 
 - **Architecture doc** (`docs/architecture.md`):
   - module layout and the engine/platform boundary
@@ -196,9 +202,9 @@ Requirements first, then risk-driven work:
 
 | # | Risk | Impact | Mitigation |
 |---|---|---|---|
-| R1 | Block changes that bypass our hook (other mods, world editors) leave zones out of sync with the world | Ghost zones, air leaking through walls | Hook at `LevelChunk#setBlockState` (spike S1); revalidate on chunk load and offer an API `markDirty` (GEO-013); geometry audit command |
-| R2 | Enclosure detection is too slow for large stations | Slow zone formation | Bounded fills at 65,536 cells on snapshots; the trigger-only model (D-13) keeps fills rare; caching (spike S3) |
-| R3 | Zone rebuilds of O(zone size) on edits inside large zones | Latency when building inside stations | Local split detection (CORE-025); spike S4 |
+| R1 | Block changes that bypass our hook (other mods, world editors) leave zones out of sync with the world | Ghost zones, air leaking through walls | Hook at `LevelChunk#setBlockState` (spike S1); revalidate on chunk load and offer an API `markDirty` (GEO-013); geometry audit command. **S1 (2026-10-31):** the hook sees direct chunk writes, and its cost is below noise. |
+| R2 | Enclosure detection is too slow for large stations | Slow zone formation | Bounded fills at 65,536 cells on snapshots; the trigger-only model (D-13) keeps fills rare; caching (spike S3). **Retired by S3:** 5.5 ms per 65,536-cell fill on the worker. |
+| R3 | Zone rebuilds of O(zone size) on edits inside large zones | Latency when building inside stations | Local split detection (CORE-025); spike S4. **Mostly retired by S4:** 2 µs per ordinary edit; 5 ms worst-case detour; 6.7 ms for a real 50k split, all on the worker. |
 | R4 | Zones that cross unloaded chunks | Inconsistent state | Freeze, never force-load (D-24) |
 | R5 | ~~Mekanism venting needs fragile mixins~~ | — | **Retired for R1:** Mekanism deferred (D-11). It comes back as an API-only reference integration. |
 | R6 | Ad Astra's API changes, or Ad Astra stops updating on 1.21.1 | The adapter breaks | Public `api` package; pinned version range; adapter isolated in its own module (SPACE-003) |
@@ -206,16 +212,14 @@ Requirements first, then risk-driven work:
 | R8 | Clean-room drift: vg code leaks in | License violation | NFR-040; review checklist; research notes in prose only |
 | R9 | Hazard checks on every entity cost too much | Tick cost | Per-entity cadence, cached zone lookups, spatial bucketing |
 | R10 | Gameplay feel at Minecraft scale | Balance | Volume-aware venting (D-21); per-second rates (D-20); the preset (D-14); playtest scenarios |
-| R11 | **Off-thread engine complexity:** races with block changes, stale results, nondeterminism | Subtle desync bugs; slower development | Snapshot-only inputs, generation counters, apply on the server thread, single-thread equivalence tests (CORE-071); spike S5 first |
+| R11 | **Off-thread engine complexity:** races with block changes, stale results, nondeterminism | Subtle desync bugs; slower development | Snapshot-only inputs, generation counters, apply on the server thread, single-thread equivalence tests (CORE-071); spike S5 first. **S5:** the fixed-latency apply plus reject-on-unload protocol gave bit-identical and conserving results headless ([architecture §3](architecture.md#3-the-off-thread-engine)). |
 | R12 | **Asset provenance:** a vg sprite with unclear or non-free origin | License violation in shipped assets | CC BY-SA sources only, never `goon/`; per-asset provenance in `CREDITS`; leave out anything unclear (NFR-041) |
 
 ## Immediate next steps
 
-1. **Review the docs.** Read the updated overview and this plan. Everything
-   under `docs/` stays uncommitted, along with an updated root README, until
-   you say otherwise.
-2. **Start the requirements review** with CORE and GEO, which drive the
-   architecture.
-3. **Then the architecture doc and the first spikes:** S0 (packaging), S5
-   (off-thread pipeline) and S1 (change hook). These retire the risks that
-   would change the architecture.
+1. **Review the [architecture](architecture.md)** and the
+   [spike results](research/spikes.md), then accept the doc or send changes.
+2. **Close the Phase B gaps:** run S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9)), and the S0 check on a
+   real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)).
+3. **Then Phase C:** scaffold the multi-project build, following the
+   packaging rules in [architecture §2](architecture.md#2-modules-and-packaging).
