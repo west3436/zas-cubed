@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = '0.0.1'
+group = 'io.github.west3436'
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+// -Phooks=chunk,poi | none   chooses which mixins apply (spike S1 baseline runs).
+def hooks = project.findProperty('hooks') ?: 'chunk,poi'
+
+neoForge {
+    version = project.neo_version
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = file("run-${hooks.replace(',', '-')}")
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zasspike'
+            systemProperty 'zasspike.hooks', hooks
+            jvmArguments.addAll('-Xmx4G')
+        }
+    }
+    mods {
+        zasspike { sourceSet sourceSets.main }
+    }
+}

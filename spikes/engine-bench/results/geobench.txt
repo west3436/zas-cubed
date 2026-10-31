@@ -1,0 +1,25 @@
+JVM 21.0.6, 24 cpus, max heap 4096 MiB
+
+== S3 bounded fills (cap 65536 cells)
+sealed room, 65,536 cells -> ENCLOSED            ENCLOSED   cells= 65536 volume= 65536000 L  median    5.442 ms  p99    6.497 ms   12.0 Mcells/s
+room breached to open air -> OPEN at cap         OPEN       cells= 65537 volume= 61140000 L  median    6.547 ms  p99    7.081 ms   10.0 Mcells/s
+sealed room with 20k slabs (mixed shapes)        ENCLOSED   cells= 65534 volume= 56886000 L  median    5.339 ms  p99    5.826 ms   12.3 Mcells/s
+3x3x3 room, 27 cells                             ENCLOSED   cells=    27 volume=    27000 L  median    0.002 ms  p99    0.005 ms   16.9 Mcells/s
+S-10 largest zone, 20x10x40 = 8,000 cells        ENCLOSED   cells=  8000 volume=  8000000 L  median    0.592 ms  p99    0.929 ms   13.5 Mcells/s
+fill + zone creation, 65,536 cells                           median    5.7511 ms  p99    6.3277 ms  max    6.3518 ms
+GEO-021 column scan, 260 positions (sky)                     median    0.0007 ms  p99    0.0012 ms  max    0.0392 ms
+
+== S4 merge, split, local split detection (50,000-cell zone)
+zone cells 50000 volume 5.0E7 L
+A. random interior block, no split (0 splits)                median    0.0023 ms  p99    0.0037 ms  max    0.1467 ms
+   visits per placement: median 6, p99 6, max 21
+A2. removing those blocks (cell joins zone)                  median    0.0001 ms  p99    0.0002 ms  max    0.0061 ms
+   zone cells back to 50000
+B. wall of 999 blocks with a corner hole: total 2.3 ms, mean 0.002 ms, worst 0.029 ms, worst visits 4, mean visits 3
+C. closing the hole splits: 10.356 ms, 1 new zone(s) of 24000 cells, original keeps 25000, visits 48000, relabels 24000
+D. reopening merges: 0.415 ms, merged zone 49001 cells, relabels 24000
+E. repeated split of the 50k zone into 24.5k + 25k           median    6.7499 ms  p99    8.9718 ms  max    9.0974 ms
+E. repeated merge of 24.5k + 25k                             median    0.1456 ms  p99    0.2245 ms  max    0.2663 ms
+B2. connected only by a 70-block detour (worst case)         median    4.9534 ms  p99    5.1822 ms  max    5.8110 ms
+   visits 43563 (both searches run until they meet at the far hole)
+F. cutting a 36-cell alcove off a 50k zone (+ re-merge)      median    0.0053 ms  p99    0.0070 ms  max    0.0193 ms

@@ -1,0 +1,95 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :engine:compileJava UP-TO-DATE
+> Task :engine:processResources NO-SOURCE
+> Task :engine:classes UP-TO-DATE
+> Task :engine:jar UP-TO-DATE
+> Task :zas:createMinecraftArtifacts UP-TO-DATE
+> Task :zas-api:createMinecraftArtifacts UP-TO-DATE
+> Task :zas-api:compileJava UP-TO-DATE
+> Task :zas:compileJava UP-TO-DATE
+> Task :zas:processResources UP-TO-DATE
+> Task :zas:classes UP-TO-DATE
+
+> Task :zas:downloadAssets
+Loaded 145 artifacts from <repo>\spikes\s0-packaging\zas\build\tmp\downloadAssets\nfrt_artifact_manifest.properties
+Downloading asset index 17
+Using Minecraft asset root: C:\Users\<user>\.gradle\caches\neoformruntime\assets
+  DL    https://piston-meta.mojang.com/v1/packages/9ee72f902d76d30eea52f65eb09aa7a34401f59f/17.json
+
+> Task :zas:writeGameTestServerLegacyClasspath
+> Task :zas:prepareGameTestServerRun
+> Task :zas-api:processResources UP-TO-DATE
+> Task :zas-api:classes UP-TO-DATE
+> Task :zas-api:jarJar NO-SOURCE
+> Task :zas-api:jar UP-TO-DATE
+
+> Task :zas:runGameTestServer
+WARN StatusConsoleListener Advanced terminal features are not available in this environment
+[11:27:52] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeserverdev, --gameDir, ., --fml.fmlVersion, 4.0.45, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.265, --fml.neoFormVersion, 20240808.144430]
+[11:27:52] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Oracle Corporation Java HotSpot(TM) 64-Bit Server VM 21.0.6+8-LTS-188
+[11:27:52] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.6 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
+[11:27:52] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgeserverdev
+[11:27:52] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:<gradle-home>/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar%2394!/ Service=ModLauncher Env=SERVER
+[11:27:52] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[11:27:52] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		Minecraft 1.21.1 (minecraft)
+		NeoForge 21.1.265 (neoforge)
+		ZAS3 (S0 spike) 0.0.1 (zas)
+[11:27:53] [main/ERROR] [cp.mo.mo.ModuleLayerHandler/]: Error while resolving modules.
+java.lang.module.ResolutionException: Modules io.github.west3436.zas.api and zas export package io.github.west3436.zas.api to module mixinextras.neoforge
+	at java.base/java.lang.module.Resolver.resolveFail(Resolver.java:900) ~[?:?] {}
+	at java.base/java.lang.module.Resolver.failTwoSuppliers(Resolver.java:814) ~[?:?] {}
+	at java.base/java.lang.module.Resolver.checkExportSuppliers(Resolver.java:735) ~[?:?] {}
+	at java.base/java.lang.module.Resolver.finish(Resolver.java:380) ~[?:?] {}
+	at java.base/java.lang.module.Configuration.<init>(Configuration.java:139) ~[?:?] {}
+	at java.base/java.lang.module.Configuration.resolveAndBind(Configuration.java:493) ~[?:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.ModuleLayerHandler.buildLayer(ModuleLayerHandler.java:81) [modlauncher-11.0.5.jar%2382!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.TransformationServicesHandler.buildTransformingClassLoader(TransformationServicesHandler.java:54) [modlauncher-11.0.5.jar%2382!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:101) [modlauncher-11.0.5.jar%2382!/:?] {}
+Exception in thread "main" 	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74) [modlauncher-11.0.5.jar%2382!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) [modlauncher-11.0.5.jar%2382!/:?] {}
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) [modlauncher-11.0.5.jar%2382!/:?] {}
+java.lang.module.ResolutionException: Modules io.github.west3436.zas.api and zas export package io.github.west3436.zas.api to module mixinextras.neoforge
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/java.lang.module.Resolver.resolveFail(Resolver.java:900)
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69) [bootstraplauncher-2.0.2.jar:?] {}
+	at java.base/java.lang.module.Resolver.failTwoSuppliers(Resolver.java:814)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.base/java.lang.module.Resolver.checkExportSuppliers(Resolver.java:735)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at java.base/java.lang.module.Resolver.finish(Resolver.java:380)
+	at net.neoforged.devlaunch.Main.main(Main.java:57) [DevLaunch-1.0.2.jar:?] {}
+	at java.base/java.lang.module.Configuration.<init>(Configuration.java:139)
+	at java.base/java.lang.module.Configuration.resolveAndBind(Configuration.java:493)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.ModuleLayerHandler.buildLayer(ModuleLayerHandler.java:81)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.TransformationServicesHandler.buildTransformingClassLoader(TransformationServicesHandler.java:54)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.run(Launcher.java:101)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.Launcher.main(Launcher.java:74)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@11.0.5/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23)
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.run(BootstrapLauncher.java:210)
+	at cpw.mods.bootstraplauncher@2.0.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at net.neoforged.devlaunch.Main.main(Main.java:57)
+
+> Task :zas:runGameTestServer FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':zas:runGameTestServer'.
+> Process 'command 'C:\Program Files\Java\jdk-21\bin\java.exe'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to generate a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
+13 actionable tasks: 4 executed, 9 up-to-date

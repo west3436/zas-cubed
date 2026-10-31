@@ -1,0 +1,9 @@
+[11:32:25] [main/WARN] [ne.ne.ja.se.JarSelector/]: Attempted to select two dependency jars from JarJar which have the same identification: Nested Mod File  in Mod File: <repo>\spikes\s0-packaging\evidence\zas-0.0.1-wrong-identity.jar and Nested Mod File  in Mod File: <repo>\spikes\s0-packaging\consumer\build\libs\s0consumer-0.0.1.jar. Using Nested Mod File  in Mod File: <repo>\spikes\s0-packaging\evidence\zas-0.0.1-wrong-identity.jar
+[11:32:31] [modloading-worker-0/INFO] [io.gi.we.za.ZasMod/]: S0 zas: constructed, engine=engine-ok engineModule=zas
+[11:32:31] [modloading-worker-0/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: constructed, api present at construction=true
+[11:32:32] [Server thread/INFO] [io.gi.we.za.ZasMod/]: S0 zas: api version=0.1.0 present=true impl=zas module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/evidence/zas-0.0.1-wrong-identity.jar%23126_/META-INF/jarjar/io.github.west3436.zas-api-0.1.0.jar%23186!/
+[11:32:32] [Server thread/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: api version=0.1.0 present=true impl=zas pressure=101.38956256 module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/evidence/zas-0.0.1-wrong-identity.jar%23126_/META-INF/jarjar/io.github.west3436.zas-api-0.1.0.jar%23186!/
+[11:32:33] [Server thread/ERROR] [minecraft/LogTestReporter]: s0_consumer_sees_expected_api failed at 12606361, -60, -6825861! isPresent=true expected false
+[11:32:33] [Server thread/INFO] [minecraft/GameTestServer]: 1 required tests failed :(
+FAILURE: Build failed with an exception.
+Execution failed for task ':harness:runGameTestServer'.

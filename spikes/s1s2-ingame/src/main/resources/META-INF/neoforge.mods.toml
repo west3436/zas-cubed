@@ -1,0 +1,18 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "zasspike"
+version = "0.0.1"
+displayName = "ZAS3 spikes S1/S2"
+
+[[mixins]]
+config = "zasspike.mixins.json"
+
+[[dependencies.zasspike]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.264,)"
+ordering = "NONE"
+side = "BOTH"

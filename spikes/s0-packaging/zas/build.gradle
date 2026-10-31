@@ -1,0 +1,54 @@
+apply plugin: 'net.neoforged.moddev'
+
+version = '0.0.1'
+base { archivesName = 'zas' }
+
+evaluationDependsOn(':engine')
+evaluationDependsOn(':zas-api')
+
+neoForge {
+    version = project.neo_version
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+        }
+    }
+    mods {
+        // Dev runs: the engine source set joins the zas mod's module. The API is
+        // not listed: its jar carries FMLModType GAMELIBRARY and loads as its own
+        // module, and listing it too splits its package across two modules.
+        zas {
+            sourceSet sourceSets.main
+            sourceSet project(':engine').sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    implementation project(':engine')
+    implementation project(':zas-api')
+    // MDG takes the jar-in-jar range from a module selector only, so the API is
+    // requested by coordinates and substituted with the local project below.
+    jarJar('io.github.west3436:zas-api') {
+        version {
+            strictly '[0.1,1.0)'
+            prefer api_version
+        }
+    }
+}
+
+configurations.named('jarJar') {
+    resolutionStrategy.dependencySubstitution {
+        substitute module('io.github.west3436:zas-api') using project(':zas-api')
+    }
+}
+
+// Production: copy the plain-Java engine classes into the mod jar itself.
+tasks.named('jar', Jar) {
+    from(project(':engine').sourceSets.main.output)
+}

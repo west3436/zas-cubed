@@ -1,0 +1,40 @@
+apply plugin: 'net.neoforged.moddev'
+apply plugin: 'maven-publish'
+
+version = project.findProperty('apiVersionOverride') ?: api_version
+base { archivesName = 'zas-api' }
+
+neoForge {
+    version = project.neo_version
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+}
+
+processResources {
+    inputs.property 'v', project.version
+    filesMatching('META-INF/zas-api.properties') { expand(version: project.version) }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Automatic-Module-Name': 'io.github.west3436.zas.api',
+            'FMLModType': 'GAMELIBRARY',
+            'Implementation-Version': project.version,
+        )
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = 'zas-api'
+            from components.java
+        }
+    }
+    repositories {
+        maven { url = rootProject.file('repo').toURI() }
+    }
+}

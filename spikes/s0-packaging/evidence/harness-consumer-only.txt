@@ -1,0 +1,3 @@
+[11:31:28] [modloading-worker-0/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: constructed, api present at construction=false
+[11:31:30] [Server thread/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: api version=0.2.0 present=false impl=fallback pressure=101.325 module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/consumer/build/libs/s0consumer-0.0.1.jar%23126_/META-INF/jarjar/zas-api-0.2.0.jar%23184!/
+[11:31:30] [Server thread/INFO] [minecraft/GameTestServer]: All 1 required tests passed :)

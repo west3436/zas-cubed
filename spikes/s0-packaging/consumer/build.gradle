@@ -1,0 +1,33 @@
+apply plugin: 'net.neoforged.moddev'
+
+version = '0.0.1'
+base { archivesName = 's0consumer' }
+
+neoForge {
+    version = project.neo_version
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 's0consumer'
+            systemProperty 's0.expectPresent', 'false'
+        }
+    }
+    mods {
+        s0consumer { sourceSet sourceSets.main }
+    }
+}
+
+dependencies {
+    // A consumer mod depends on the published API like any third party would.
+    implementation "io.github.west3436:zas-api:${consumer_api_version}"
+    jarJar("io.github.west3436:zas-api") {
+        version {
+            strictly '[0.1,1.0)'
+            prefer consumer_api_version
+        }
+    }
+}

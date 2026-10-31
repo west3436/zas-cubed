@@ -1,0 +1,24 @@
+== S5 off-thread pipeline, S-10 shape, 600 s of game time
+
+inline (single-threaded)
+  atmos ticks applied 600; rejected components 51, ops re-queued 1475
+  worker tick: mean 0.054 ms, max 0.290 ms
+  server thread per atmos tick: snapshot 0.0052 ms, apply 0.0040 ms, waiting on worker 0.0000 ms
+  server thread per game tick (incl. simulated gameplay): mean 0.0041 ms, p99 0.0706 ms, max 0.3048 ms
+  conservation: worst relative unexplained change 3.222e-14 (OK)
+
+threaded (one worker)
+  atmos ticks applied 600; rejected components 51, ops re-queued 1475
+  worker tick: mean 0.050 ms, max 0.394 ms
+  server thread per atmos tick: snapshot 0.0037 ms, apply 0.0019 ms, waiting on worker 0.0491 ms
+  server thread per game tick (incl. simulated gameplay): mean 0.0039 ms, p99 0.0538 ms, max 0.4491 ms
+  conservation: worst relative unexplained change 3.222e-14 (OK)
+state hash inline   cc1d518f2622c538
+state hash threaded cc1d518f2622c538
+CORE-071 single-threaded equivalence: IDENTICAL
+
+With rejection disabled (control):
+  conservation: worst relative unexplained change 1.681e-03 (VIOLATION)
+
+section snapshot (clone of 512 longs): 347 ns each, 512
+section decode to state ids (worker): 1.7 us each

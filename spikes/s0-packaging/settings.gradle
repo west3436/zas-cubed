@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 's0-packaging'
+include 'engine', 'zas-api', 'zas', 'consumer', 'harness'
+// The project name becomes the jar-in-jar artifact id, so it must match the
+// published artifactId or FML sees two different libraries.
+project(':zas-api').projectDir = file('api')

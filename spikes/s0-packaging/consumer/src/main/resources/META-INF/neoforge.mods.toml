@@ -1,0 +1,15 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "s0consumer"
+version = "0.0.1"
+displayName = "S0 consumer"
+
+[[dependencies.s0consumer]]
+modId = "zas"
+type = "optional"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "BOTH"

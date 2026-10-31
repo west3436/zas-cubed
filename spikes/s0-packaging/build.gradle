@@ -1,0 +1,13 @@
+plugins {
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    group = 'io.github.west3436'
+    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+    repositories {
+        maven { url = rootProject.file('repo').toURI() }
+    }
+    tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+}

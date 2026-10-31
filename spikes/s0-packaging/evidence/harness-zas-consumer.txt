@@ -1,0 +1,5 @@
+[11:30:52] [modloading-worker-0/INFO] [io.gi.we.za.ZasMod/]: S0 zas: constructed, engine=engine-ok engineModule=zas
+[11:30:52] [modloading-worker-0/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: constructed, api present at construction=true
+[11:30:54] [Server thread/INFO] [io.gi.we.za.ZasMod/]: S0 zas: api version=0.2.0 present=true impl=zas module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/consumer/build/libs/s0consumer-0.0.1.jar%23127_/META-INF/jarjar/zas-api-0.2.0.jar%23186!/
+[11:30:54] [Server thread/INFO] [io.gi.we.s0.ConsumerMod/]: S0 consumer: api version=0.2.0 present=true impl=zas pressure=101.38956256 module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/consumer/build/libs/s0consumer-0.0.1.jar%23127_/META-INF/jarjar/zas-api-0.2.0.jar%23186!/
+[11:30:55] [Server thread/INFO] [minecraft/GameTestServer]: All 2 required tests passed :)

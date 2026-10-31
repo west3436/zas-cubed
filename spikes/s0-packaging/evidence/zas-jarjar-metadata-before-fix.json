@@ -1,0 +1,16 @@
+{
+  "jars": [
+    {
+      "identifier": {
+        "group": "io.github.west3436",
+        "artifact": "api"
+      },
+      "version": {
+        "range": "[0.1.0,)",
+        "artifactVersion": "0.1.0"
+      },
+      "path": "META-INF/jarjar/io.github.west3436.zas-api-0.1.0.jar",
+      "isObfuscated": false
+    }
+  ]
+}

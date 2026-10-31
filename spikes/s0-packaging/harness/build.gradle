@@ -1,0 +1,32 @@
+// Loads the built mod jars as mod files (not source sets), so FML's
+// jar-in-jar locator picks between their nested API copies as in production.
+// -Pmods=zas,consumer chooses which jars are present.
+apply plugin: 'net.neoforged.moddev'
+
+def wanted = (project.findProperty('mods') ?: 'zas,consumer').split(',') as List
+def jars = [
+    zas     : project(':zas').layout.buildDirectory.file('libs/zas-0.0.1.jar'),
+    zaswrong: rootProject.layout.projectDirectory.file('evidence/zas-0.0.1-wrong-identity.jar'),
+    consumer: project(':consumer').layout.buildDirectory.file('libs/s0consumer-0.0.1.jar'),
+]
+
+neoForge {
+    version = project.neo_version
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = file("run-${wanted.join('-')}")
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas,s0consumer'
+            systemProperty 's0.expectPresent', String.valueOf(wanted.contains('zas'))
+        }
+    }
+}
+
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    wanted.each { localRuntime files(jars[it]) }
+}

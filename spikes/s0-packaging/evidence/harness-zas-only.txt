@@ -1,0 +1,3 @@
+[11:31:42] [modloading-worker-0/INFO] [io.gi.we.za.ZasMod/]: S0 zas: constructed, engine=engine-ok engineModule=zas
+[11:31:44] [Server thread/INFO] [io.gi.we.za.ZasMod/]: S0 zas: api version=0.1.0 present=true impl=zas module=io.github.west3436.zas.api loader=TRANSFORMER source=union:/<repo>/spikes/s0-packaging/zas/build/libs/zas-0.0.1.jar%23126_/META-INF/jarjar/io.github.west3436.zas-api-0.1.0.jar%23182!/
+[11:31:44] [Server thread/INFO] [minecraft/GameTestServer]: All 1 required tests passed :)

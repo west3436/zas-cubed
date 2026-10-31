@@ -1,0 +1,8 @@
+.gradle/
+build/
+run/
+repo/
+server/
+run-*/
+*.log
+!evidence/*.log

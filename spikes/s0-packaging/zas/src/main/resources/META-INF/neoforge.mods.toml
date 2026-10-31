@@ -1,0 +1,15 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "zas"
+version = "0.0.1"
+displayName = "ZAS3 (S0 spike)"
+
+[[dependencies.zas]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.264,)"
+ordering = "NONE"
+side = "BOTH"
