@@ -232,7 +232,7 @@ Given a zone id or a point, the API shall return the zone's:
   breached and a paused zone, and checks every field.
 
 #### API-012 · Gas mutation
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: CORE-036, CORE-053, CORE-057
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: CORE-036, CORE-053, CORE-057
 
 The API shall allow adding or removing a gas mixture at a point, with a source
 attribution.

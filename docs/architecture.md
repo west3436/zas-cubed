@@ -116,6 +116,17 @@ The engine sees the world only through these types, all in
 The platform (`zas`) converts Minecraft state into these types on the server
 thread and turns `Result` back into world effects on the server thread.
 
+*Implemented (#23):* `Batch` and `Result` are records in
+`io.github.west3436.zas.engine.scheduler`. A `Batch` carries the atmos tick,
+`SectionSource`s (captures decoded on the worker), chunk loads and unloads,
+sections that couldn't be captured, the ambient, sequence-numbered `GasOp`s,
+the previous apply's `Rejection` and `EngineSettings` (exchange settings and
+the checker switch). A `Result` carries the `AtmosSnapshot` to publish, the
+exchange `Component`s, per-operation `OpOutcome`s, `OpenAirEvent`s, the
+conservation report, the sections the worker mirrors and the sections it
+asks for. Saved shares, seal providers, edge flows and world-write intents
+are added by the requirements that need them.
+
 Requirements: API-001, API-003, API-007, API-044, CORE-043, D-15–D-17, D-38,
 NFR-022.
 
@@ -127,6 +138,8 @@ NFR-022.
   daemon executor, `zas-atmos-N`, never `Util.backgroundExecutor()`. Its size
   is a COMMON config option, default 1 thread (NFR-005 is set against one).
   Dimensions are independent, so with more threads they run in parallel.
+- *Implemented (#23):* `AtmosWorkers.create(n)` makes the pool;
+  `worker_threads` in `zas-common.toml` sets n.
 - **Ownership is exclusive:**
 
 | State | Owner | Others get |
@@ -179,6 +192,21 @@ outcome.
   closes and holds the result until the apply tick. Tests and the CORE-071
   equivalence harness use it. It is also a debug config option.
 
+*Implemented (#23):* `AtmosService` (package `io.github.west3436.zas.simulation`)
+runs the timing at the end of each server tick, level by level in the
+server's order; `DimensionAtmos` holds one level's state; the protocol itself
+is `DimensionPipeline` in the engine, so the whole close/apply cycle,
+rejection included, runs in unit tests without Minecraft. `DimensionScheduler`
+runs a `DimensionEngine` on the pool or inline (`single_threaded` in
+`zas-server.toml`). `period_ticks` and `apply_delay_ticks` are server config;
+a delay not shorter than the period falls back to the defaults (O-7).
+Atmos tick numbers are a per-dimension counter. `AtmosService.tickNow(level)`
+runs a whole atmos tick at once (apply anything in flight, close, apply), for
+GameTests and commands. One deviation from the diagram: zones that
+classification creates for zone triggers are created in phase 3 *before* the
+undo point, like other geometry effects, so a restore never has to destroy a
+zone; the triggering operation is re-queued and finds the zone.
+
 **Latency.** A mutation's future completes at the apply tick: from 0.5 s
 (the call lands just before a batch closes) to 1.5 s (just after) with the
 defaults. That satisfies D-46's "at most one atmos tick" counted from the batch
@@ -228,6 +256,27 @@ They are checked differently:
   during an in-flight tick needs no rejection. *Spike (S5):* counting loads
   as well doubled the rejections.
 
+*Implemented (#23):*
+
+- At batch close the pipeline records the lifecycle generation of every chunk
+  holding a mirrored or captured section; the worker builds zones only there.
+  At apply a component is stale if any of its chunks now has a different
+  generation, or none was recorded.
+- A component is the set of zones whose mixture differs bit for bit from the
+  undo point, or that were destroyed since (merged or dissolved, CORE-076),
+  linked when they shared a zone edge at the undo point. A zone that absorbs
+  another inherits its edges, so every chain of exchange stays inside one
+  component. Unchanged zones are in no component and need no check.
+- The worker keeps the last tick's undo point: membership per zone and a copy
+  of each mixture. Restoring a component recreates its destroyed zones under
+  their old ids (`ZoneGraph.restoreZone`, which moves cells back out of the
+  zone that absorbed them) and copies the mixtures back
+  (`ZoneGraph.restoreMixture`), before the ledger period begins, so the ledger
+  needs no entry for it.
+- The server thread publishes `AtmosSnapshot.withRejected(previous, zones)`:
+  the new table, with the rejected zones and their positions answered from
+  the previous one.
+
 Requirements: CORE-036, CORE-048, CORE-070, CORE-074, D-43.
 
 ### 3.4 Server-thread work and budget
@@ -265,6 +314,14 @@ shared by all of `zas`'s server-thread work through a cooperative
 `TickBudget`. Work that would exceed it carries over to the next game tick,
 with one exception: the apply step itself is never split, so a result is
 always applied atomically.
+
+*Implemented (#23):* `server_budget_ms` (default 10) bounds atmos work per
+game tick. Draining and capturing dirty sections is never deferred (it keeps
+the worker's graph consistent with the world at batch close); the prefetch for
+new zone triggers stops once the budget is spent, and those operations fetch
+their sections a tick later. Applying is never split. Close and apply times
+and waits for the worker are kept per dimension (`DimensionAtmos`) for the
+profiler (OPS-004). The bench (NFR-002) is still to do.
 
 Requirements: CORE-047, NFR-001, NFR-002, NFR-003.
 
@@ -368,6 +425,9 @@ uncovered part of the face (GEO-003, GEO-004).
   a zone, or contain a pending classification, and only those are
   snapshotted (`ChangeTracker.drain(level, interest)`). All other dirty bits
   are cleared without work. Drains come out sorted by section x, z, then y.
+  *Implemented (#23):* the interest set is the sections the worker mirrors,
+  from the last applied `Result`; as §4.3 says, those are exactly the sections
+  holding or bordering zoned cells or a pending classification.
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
   saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
@@ -405,6 +465,29 @@ section, S-10's station needs about 1–2 MiB.
      large or thin enclosure takes one or more extra atmos ticks.
 3. **Cache.** Cells classified open are cached per section until a dirty bit
    in that section clears the entry (GEO-027).
+
+*Implemented (#23):* the mirror is `SectionMirror`; `EnclosureClassifier`
+wires `engine.classify` (#26) into the scheduler through the `Classifier`
+seam, and `SectionTopology` over the mirror is also the zone graph's topology.
+
+- **Geometry phase.** A new snapshot of a mirrored section is compared with
+  the old one; the cells of every changed position are refreshed first, then
+  those of its six neighbours, so a filled cell's gas stays in its zone before
+  a split is found. A newly mirrored section refreshes the cells on its faces
+  that border zoned sections.
+- **Prefetch** happens only when the target's section isn't mirrored; a target
+  in an unloaded chunk is unresolved straight away.
+- **Missing sections.** A fill that reaches sections the mirror lacks splits
+  them: those of unloaded chunks (known from unload events and from requests
+  that couldn't be captured) make the region unresolved; the rest are asked
+  for in the `Result`, and the operation waits. Held breaches are classified
+  again every tick.
+- **Retention.** After each tick the mirror keeps sections holding zoned cells
+  and their six neighbours, and drops the rest; while any classification waits
+  for sections it drops nothing, so repeated rounds always make progress.
+- **Unresolved operations** act as at a paused zone (GEO-036, GEO-038): an
+  addition is voided and a removal is supplied from the ambient; the API
+  reports `PAUSED`. Pausing the zones themselves is #27.
 
 **Engine implementation (R0).** The pure logic is in
 `io.github.west3436.zas.engine.classify`; the scheduler owns the mirror and
@@ -661,7 +744,8 @@ The test names include requirement IDs (README rule 5).
 | O-4 | **Memory** (NFR-004) estimated, not measured | [#78](https://github.com/west3436/zas-cubed/issues/78). Measure the palette membership layout in the R0 benchmark. |
 | O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
-| O-7 | **Apply delay and period** must satisfy D < T | In the scheduler config, [#23](https://github.com/west3436/zas-cubed/issues/23). Reject combinations where D ≥ T. |
+| O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |
+| O-8 | **Cell ids name x and z only within ±8,388,608** (`CellIds`), about a quarter of the way to the world border; farther out every position counts as outside the world, so nothing can be zoned there | Widen the id layout or offset it per dimension. GameTests build near the origin for now, because test structures land up to 15 million blocks out. |
 
 ## 10. Requirement coverage
 

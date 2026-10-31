@@ -312,7 +312,7 @@ for its volume.
   ambient moles for its volume.
 
 #### CORE-022 · Displaced gas is conserved
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-41
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-41
 
 When a cell stops being a cell (for example a solid block is placed in it),
 its share of the gas shall stay in the zone, so the zone's pressure rises.
@@ -347,7 +347,7 @@ were none, the gas is released to the ambient.
   the ambient.
 
 #### CORE-023 · Zone merge
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 
 Two zones joined by at least one direct opening shall merge into one zone once
 their mixtures are equivalent (CORE-006).
@@ -359,7 +359,7 @@ their mixtures are equivalent (CORE-006).
   opening and check they become one zone with total moles conserved.
 
 #### CORE-024 · Zone split
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest
 
 When a geometry change disconnects a zone, each connected remnant shall become
 its own zone.
@@ -623,7 +623,7 @@ Gas-editing commands (OPS-009) count as API calls.*
 (CORE-076, D-63).*
 
 #### CORE-073 · Invariant checker
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Depends: CORE-036
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Depends: CORE-036
 
 A debug checker shall record every change in moles by source or sink category
 and report any change larger than the pruning epsilon that no category
@@ -645,7 +645,7 @@ These requirements define how a world with no "unsimulated" marking still
 behaves like ZAS ([zas-core §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
 
 #### CORE-050 · Unzoned cells are ambient
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-07
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-07
 
 A query for a cell that belongs to no zone shall return the ambient for that
 cell's dimension.
@@ -657,7 +657,7 @@ cell's dimension.
   ambient.
 
 #### CORE-051 · Zones on demand
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-13, D-14
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-13, D-14
 
 A zone shall be created only when a region is enclosed *and* a triggering
 operation (CORE-055, CORE-056) modifies its air. Ambient air, natural caves
@@ -681,7 +681,7 @@ operation starts enclosure detection.
   and exploration create no zones and no fills.
 
 #### CORE-055 · Normal zone triggers
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-13, D-14
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-13, D-14
 
 With the Normal preset, these operations shall trigger a zone:
 - devices adding, removing or heating gas
@@ -721,7 +721,7 @@ A zone shall be dissolved back to ambient when both hold:
   configured time, then checks the zone dissolves and a pinned zone doesn't.
 
 #### CORE-053 · Adding gas to open air
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest
 
 Adding gas at a cell that isn't enclosed shall release the gas into the
 ambient. The caller is told where the gas went (API-016).
@@ -735,7 +735,7 @@ ambient. The caller is told where the gas went (API-016).
 *2026-10-30: reference changed from API-012 to API-016 after the API split.*
 
 #### CORE-057 · Removing gas from open air
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest
 
 Removing gas from a cell that isn't enclosed shall yield gas of the ambient's
 composition.
@@ -747,7 +747,7 @@ composition.
   it has the ambient's composition.
 
 #### CORE-058 · Open-air events
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: API-012, API-032
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: API-012, API-032
 
 Adding gas to or removing gas from open air (CORE-053, CORE-057) shall raise
 an API event.
@@ -760,7 +760,7 @@ an API event.
 ## Scheduler
 
 #### CORE-040 · Phase order
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: [zas-core §3](../research/zas-core.md#3-control-flow) · D-31, D-50 · Depends: GEO-012, HEAT-001, FLOW-001, CORE-052
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: [zas-core §3](../research/zas-core.md#3-control-flow) · D-31, D-50 · Depends: GEO-012, HEAT-001, FLOW-001, CORE-052
 
 Each atmos tick shall run these phases in order:
 1. geometry updates (coalesced block changes, GEO-012)
@@ -789,7 +789,7 @@ review. Devices run in the content mod on the server thread and reach zones
 through API mutations, which arrive in phase 3 (D-50).*
 
 #### CORE-041 · Atmos tick period
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-20
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-20
 
 The atmos tick period shall be configurable, with a default of 1 s.
 
@@ -798,7 +798,7 @@ The atmos tick period shall be configurable, with a default of 1 s.
   are honoured.
 
 #### CORE-046 · Per-second rates
-`Must` · `R0` · `Accepted` · Verify: Unit, Bench · Trace: D-20
+`Must` · `R0` · `Implemented` · Verify: Unit, Bench · Trace: D-20
 
 Every rate (sharing, venting, reactions, heat) shall be defined per second, so
 changing the period changes smoothness and cost but not real-time behaviour.
@@ -821,7 +821,7 @@ results, shall stay within a per-server-tick budget.
 is deferred to the next tick. Added during the NFR review (NFR-002).*
 
 #### CORE-048 · Exactly-once processing
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 No item shall be skipped or processed twice in one atmos tick.
 
@@ -831,7 +831,7 @@ No item shall be skipped or processed twice in one atmos tick.
   processed in one tick, including items added mid-tick.
 
 #### CORE-042 · Per-dimension engines
-`Must` · `R0` · `Accepted` · Verify: GameTest
+`Must` · `R0` · `Implemented` · Verify: GameTest
 
 Each dimension shall have its own zone graph and scheduler state. Excluding a
 dimension from simulation is ENV-007.
@@ -842,7 +842,7 @@ dimension from simulation is ENV-007.
   and checks neither affects the other.
 
 #### CORE-043 · Engine independent of Minecraft
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-04, D-30
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-04, D-30
 
 The gas math, zone graph and scheduler shall depend only on an abstract voxel
 topology, not on Minecraft classes. This allows headless unit tests and
@@ -854,7 +854,7 @@ off-thread execution.
   classes.
 
 #### CORE-045 · Off-thread execution
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: D-30 · [neoforge §5](../research/neoforge-1.21.1.md#5-ticking--threading)
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest, Bench · Trace: D-30 · [neoforge §5](../research/neoforge-1.21.1.md#5-ticking--threading)
 
 The simulation shall run on worker thread(s), using immutable snapshots of the
 world data it needs: chunk-section block data or derived face masks, plus
@@ -866,7 +866,7 @@ queued gas operations.
   worker time.
 
 #### CORE-049 · No live-world access off-thread
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-30 · [neoforge §5](../research/neoforge-1.21.1.md#5-ticking--threading)
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-30 · [neoforge §5](../research/neoforge-1.21.1.md#5-ticking--threading)
 
 Simulation code shall never read or write the live world, chunks,
 capabilities or attachments off the server thread.
@@ -877,7 +877,7 @@ capabilities or attachments off the server thread.
   world access.
 
 #### CORE-069 · Results applied on the server thread
-`Must` · `R0` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30
+`Must` · `R0` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30
 
 Simulation results shall be applied to the world on the server thread.
 
@@ -886,7 +886,7 @@ Simulation results shall be applied to the world on the server thread.
   applied.
 
 #### CORE-070 · Stale results discarded
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-30
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-30
 
 The server thread shall discard a result if the world changed under it,
 detected with a per-chunk generation counter.
@@ -897,7 +897,7 @@ detected with a per-chunk generation counter.
   the result is discarded.
 
 #### CORE-074 · Discarded results don't lose gas
-`Must` · `R0` · `Accepted` · Verify: GameTest, Unit (fuzz) · Trace: D-30 · Depends: CORE-036, CORE-070
+`Must` · `R0` · `Implemented` · Verify: GameTest, Unit (fuzz) · Trace: D-30 · Depends: CORE-036, CORE-070
 
 When a result is discarded as stale (CORE-070), its queued gas operations
 shall be run again in a later atmos tick, not dropped.
@@ -907,7 +907,7 @@ shall be run again in a later atmos tick, not dropped.
   later; a Unit fuzz test with random discards checks the ledger.
 
 #### CORE-071 · Single-threaded equivalence
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-30 · Depends: CORE-044
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-30 · Depends: CORE-044
 
 Running the simulation off-thread shall give the same outcome as running it
 single-threaded on the same inputs.
@@ -917,7 +917,7 @@ single-threaded on the same inputs.
   and compares the states exactly.
 
 #### CORE-044 · Deterministic results
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: D-30
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-30
 
 Given the same world state and inputs, the engine shall produce the same
 results.
@@ -928,7 +928,7 @@ results.
   exactly.
 
 #### CORE-072 · Hash-independent iteration
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-30
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-30
 
 Iteration order shall never depend on hash order or identity hash codes.
 

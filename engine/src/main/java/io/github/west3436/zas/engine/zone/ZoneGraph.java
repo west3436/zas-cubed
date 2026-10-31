@@ -1155,6 +1155,84 @@ public final class ZoneGraph {
         z.destroy();
     }
 
+    // ---- Rollback (CORE-070, CORE-074) ---------------------------------------
+
+    /**
+     * Recreates a zone that was destroyed since an undo point, under its old id,
+     * from its cells and its mixture at that point. Cells now in another zone
+     * move back (undoing a merge); unzoned cells rejoin (undoing a dissolution).
+     * The scheduler uses this to restore a rejected exchange component
+     * (architecture §3.3).
+     *
+     * <p>Nothing is recorded in the ledger: call it only between conservation
+     * periods, before {@link #beginConservationPeriod()}. The cells must be
+     * cells of the current topology and connected, as they were.
+     *
+     * @param id the destroyed zone's id
+     * @param cellIds its cells at the undo point
+     * @param mixture its mixture at the undo point; copied
+     * @return the recreated zone
+     * @throws IllegalArgumentException if the id is live or was never issued, or
+     *     the list is empty
+     */
+    public Zone restoreZone(long id, long[] cellIds, GasMixture mixture) {
+        Objects.requireNonNull(mixture, "mixture");
+        if (id <= 0 || id >= nextZoneId || zones.containsKey(id)) {
+            throw new IllegalArgumentException("zone id " + id + " is live or was never issued");
+        }
+        if (cellIds.length == 0) {
+            throw new IllegalArgumentException("a zone needs at least one cell");
+        }
+        Zone zone = new Zone(id, mixture.copy());
+        zones.put(id, zone);
+        for (long cellId : cellIds) {
+            Cell c = cells.get(cellId);
+            if (c != null && c.zone != null) {
+                Zone from = c.zone;
+                relabel(c, zone);
+                from.changed = true;
+                if (from.cellCount() == 0) {
+                    destroyZone(from);
+                }
+            } else {
+                if (c == null) {
+                    c = new Cell(cellId);
+                    cells.put(cellId, c);
+                }
+                unlinkAll(c);
+                c.volume = topology.volume(cellId);
+                zone.addCell(c);
+                linkFromTopology(c);
+            }
+        }
+        zone.setVolume(mixture.volume());
+        zone.mixture().copyFrom(mixture);
+        zone.changed = true;
+        return zone;
+    }
+
+    /**
+     * Overwrites a live zone's mixture with its copy from an undo point
+     * (architecture §3.3). Like {@link #restoreZone}, it records nothing in the
+     * ledger, so call it only between conservation periods.
+     *
+     * <p>The zone's volume is set to the copy's too: moving cells out and back
+     * in may leave the summed volume off by a rounding error.
+     *
+     * @throws IllegalArgumentException if the zone isn't live or the volumes
+     *     differ by more than rounding
+     */
+    public void restoreMixture(Zone zone, GasMixture mixture) {
+        requireLive(zone);
+        if (Math.abs(mixture.volume() - zone.volume()) > 1e-9 * zone.volume()) {
+            throw new IllegalArgumentException(
+                    "restored volume " + mixture.volume() + " L differs from " + zone + "'s " + zone.volume() + " L");
+        }
+        zone.setVolume(mixture.volume());
+        zone.mixture().copyFrom(mixture);
+        zone.changed = true;
+    }
+
     private void requireLive(Zone zone) {
         Objects.requireNonNull(zone, "zone");
         if (!zone.isAlive() || zones.get(zone.id()) != zone) {

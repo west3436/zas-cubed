@@ -190,10 +190,9 @@ public final class AmbientTests {
     /**
      * A datapack or the config can exclude a dimension (ENV-007), and an excluded dimension
      * keeps its ambient (ENV-018). Gas vented in a sealed room there goes to the ambient and no
-     * zone forms. The room is built in the End, excluded by the config for the test.
-     *
-     * <p>TODO(#23): until the scheduler exists no dimension has zones, so the vent check only
-     * becomes meaningful once it skips excluded dimensions.
+     * zone forms, where the same vent in a dimension that isn't excluded forms one
+     * ({@code core_051_sealed_room_zones_only_on_demand}). The room is built in the End, excluded
+     * by the config for the test.
      */
     @GameTest(template = "empty", timeoutTicks = 40)
     public static void env_007_excluded_dimension_forms_no_zone(GameTestHelper h) {

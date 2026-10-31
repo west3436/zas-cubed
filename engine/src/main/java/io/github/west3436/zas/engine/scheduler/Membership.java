@@ -1,0 +1,132 @@
+package io.github.west3436.zas.engine.scheduler;
+
+import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.zone.Zone;
+import io.github.west3436.zas.engine.zone.ZoneGraph;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Which cells each zone holds, as of one point in an atmos tick: zone by zone for restoring
+ * rejected components (architecture §3.3), and by block position for the published lookup.
+ * Immutable once built. Hash sets are used for membership tests only.
+ */
+final class Membership {
+    final long[] zoneIds; // ascending
+    private final int[] offsets; // zone i's cells are cells[offsets[i] .. offsets[i + 1])
+    private final long[] cells;
+    /** Block keys, ascending, without duplicates; the zone index of each position's largest cell. */
+    final long[] positions;
+
+    final int[] zoneOfPosition;
+    /** Sections holding zoned cells. */
+    final Set<Long> sections;
+
+    private Membership(
+            long[] zoneIds, int[] offsets, long[] cells, long[] positions, int[] zoneOfPosition, Set<Long> sections) {
+        this.zoneIds = zoneIds;
+        this.offsets = offsets;
+        this.cells = cells;
+        this.positions = positions;
+        this.zoneOfPosition = zoneOfPosition;
+        this.sections = sections;
+    }
+
+    static final Membership EMPTY =
+            new Membership(new long[0], new int[] {0}, new long[0], new long[0], new int[0], Set.of());
+
+    static Membership of(ZoneGraph graph, CellSpace space) {
+        int zoneCount = graph.zoneCount();
+        long[] ids = new long[zoneCount];
+        int[] offsets = new int[zoneCount + 1];
+        int total = 0;
+        for (Zone z : graph.zones()) {
+            total += z.cellCount();
+        }
+        long[] cells = new long[total];
+        long[] pos = new long[total];
+        double[] vol = new double[total];
+        int[] zoneOf = new int[total];
+        int zi = 0;
+        int n = 0;
+        for (Zone z : graph.zones()) {
+            ids[zi] = z.id();
+            offsets[zi] = n;
+            for (long cell : z.cells()) {
+                cells[n] = cell;
+                pos[n] = space.position(cell);
+                vol[n] = space.volume(cell);
+                zoneOf[n] = zi;
+                n++;
+            }
+            zi++;
+        }
+        offsets[zoneCount] = n;
+
+        // Sort by position, then volume descending, then cell id: the first of each position wins.
+        Integer[] order = new Integer[total];
+        for (int i = 0; i < total; i++) {
+            order[i] = i;
+        }
+        Arrays.sort(order, (a, b) -> {
+            int c = Long.compare(pos[a], pos[b]);
+            if (c == 0) {
+                c = Double.compare(vol[b], vol[a]);
+            }
+            return c != 0 ? c : Long.compare(cells[a], cells[b]);
+        });
+        long[] positions = new long[total];
+        int[] zoneOfPosition = new int[total];
+        Set<Long> sections = new HashSet<>();
+        int p = 0;
+        for (int k = 0; k < total; k++) {
+            int i = order[k];
+            if (p > 0 && positions[p - 1] == pos[i]) {
+                continue;
+            }
+            positions[p] = pos[i];
+            zoneOfPosition[p] = zoneOf[i];
+            sections.add(SectionKeys.sectionOfBlockKey(pos[i]));
+            p++;
+        }
+        return new Membership(
+                ids, offsets, cells, Arrays.copyOf(positions, p), Arrays.copyOf(zoneOfPosition, p), sections);
+    }
+
+    /** The index of a zone id, or -1. */
+    int indexOf(long zoneId) {
+        return Math.max(-1, Arrays.binarySearch(zoneIds, zoneId));
+    }
+
+    /** The cells of the zone at an index. */
+    long[] cells(int index) {
+        return Arrays.copyOfRange(cells, offsets[index], offsets[index + 1]);
+    }
+
+    /** The chunks the zone at an index spans, through {@code space}, into {@code out}. */
+    void addChunks(int index, CellSpace space, Set<Long> out) {
+        for (int i = offsets[index]; i < offsets[index + 1]; i++) {
+            out.add(SectionKeys.chunkOfBlockKey(space.position(cells[i])));
+        }
+    }
+
+    /**
+     * Whether the graph still has the same zones with the same cell counts. Cells change zone only
+     * through refreshes (which the engine tracks itself), joins, merges, splits and dissolution,
+     * and each of those changes a zone's cell count or the set of zones.
+     */
+    boolean sameZones(ZoneGraph graph) {
+        if (graph.zoneCount() != zoneIds.length) {
+            return false;
+        }
+        int i = 0;
+        for (Zone z : graph.zones()) {
+            if (z.id() != zoneIds[i] || z.cellCount() != offsets[i + 1] - offsets[i]) {
+                return false;
+            }
+            i++;
+        }
+        return true;
+    }
+}
