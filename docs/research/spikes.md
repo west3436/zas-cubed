@@ -14,7 +14,7 @@ GameTest servers started by ModDevGradle 2.0.148.
 
 | # | Question | Answer | Status |
 |---|---|---|---|
-| S0 | Packaging | **Yes,** with three rules: name the API project `zas-api`, declare its jar-in-jar range through module coordinates, and keep it out of the mod's `mods {}` source sets. FML keeps one copy (the newest) and the fallback works. | Done in dev and in a jar-in-jar harness. A production-server check is pending ([#77](https://github.com/west3436/zas-cubed/issues/77)). |
+| S0 | Packaging | **Yes,** with three rules: name the API project `zas-api`, declare its jar-in-jar range through module coordinates, and keep it out of the mod's `mods {}` source sets. FML keeps one copy (the newest) and the fallback works. | Done in dev, in a jar-in-jar harness and on a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)). |
 | S1 | Change hook | `LevelChunk#setBlockState` sees everything `onBlockStateChange` sees, **plus** direct chunk writes. The enqueue cost is below measurement noise. | Done. The piston case was not exercised. |
 | S2 | Seal masks for every state | 26,684 vanilla states in 0.62 s, or **0.12 s** when cached per `VoxelShape` instance. Only **287 unique geometries**, about 180 KiB. Panes and walls come out as sub-cells. | Done (vanilla only, no large pack) |
 | S3 | Bounded fills | A 65,536-cell fill takes **5.5 ms**, about 12 M cells/s. With zone creation, 5.6 ms. | Done (headless) |
@@ -90,11 +90,62 @@ choose between the nested copies, which is the code path production uses.
   `isPresent()` true already during the consumer's mod construction.
 - A GameTest server needs no `eula.txt`, so CI can run these as is.
 
-**Not yet verified:** a real dedicated server built with the NeoForge
-installer, with both jars in `mods/`. Running the downloaded installer was
-blocked by this session's permission rules. The harness exercises the same
-locator, so the risk is low, but production layout differences (e.g. the
-`libraries/` layer) are unchecked. **Action:** [#77](https://github.com/west3436/zas-cubed/issues/77).
+**Not verified in the spike:** a real dedicated server built with the NeoForge
+installer. Running the installer was blocked in that session. See the
+follow-up below.
+
+### Follow-up: real dedicated server (2026-10-31)
+
+[#77](https://github.com/west3436/zas-cubed/issues/77), run on the Phase C
+build from `main`, not the spike code.
+
+**Method.**
+
+- Server: `neoforge-21.1.265-installer.jar --installServer` (SHA-256 checked
+  against the Maven `.sha256`), started with
+  `@libraries/net/neoforged/neoforge/21.1.265/win_args.txt nogui` on JDK
+  21.0.6, `view-distance=3`. Each run got a fresh `mods/` and world, then
+  `stop` on stdin after `Done`.
+- Jars: `zas`, `zas_atmos` and `zas_example` from `./gradlew build`, each
+  nesting `zas-api` 0.1.0 (`zas_atmos` nests nothing). For "newest wins", a
+  second `zas_example` was built in a scratch copy with
+  `-Papi_version=0.1.1`, so it nests 0.1.1 with range `[0.1.1,1.0)`.
+- Evidence: FML's `debug.log`, and `-Xlog:class+load` for the classes loaded.
+  No probe code. The API is still empty, so these runs show which copy is
+  selected, not the fallback or the provider (those need Phase D's API; the
+  harness above covered them).
+
+**Runs.** All passed: `Done (~3 s)`, a clean stop, no `ERROR` and no crash
+report.
+
+| Run | `mods/` | API copy selected |
+|---|---|---|
+| a | `zas`, `zas_atmos`, `zas_example` (API 0.1.1) | **One:** 0.1.1, from `zas_example`. Both copies were read; the newer won though `zas` was scanned first. |
+| a0 | `zas`, `zas_atmos`, `zas_example` (both API 0.1.0) | One: 0.1.0, from `zas`. |
+| b | `zas_example` alone (API 0.1.0) | 0.1.0, from `zas_example`. Starts without `zas`. |
+| d | `zas`, `zas_atmos` | 0.1.0, from `zas`. |
+
+Key lines from run a (timestamps cut):
+
+```text
+JarInJarDependencyLocator: Failed to load resource META-INF\jarjar\metadata.json from io.github.west3436.zas-api-0.1.1.jar, it does not contain dependency information.
+JarInJarDependencyLocator: Failed to load resource META-INF\jarjar\metadata.json from io.github.west3436.zas-api-0.1.0.jar, it does not contain dependency information.
+JarInJarDependencyLocator: Found 3 dependencies adding them to mods collection
+ModDiscoverer/SCAN: Found gamelibrary file "io.github.west3436.zas-api-0.1.1.jar" [parent: zas_example-0.0.1.jar, locator: jarinjar, reader: mod manifest]
+```
+
+The two `Failed to load` lines are FML reading each nested copy (they nest
+nothing further). Only one `zas-api` gamelibrary is then added; the other two
+dependencies are NeoForge's own (`mixinextras`, `coremods`). There was no
+`Attempted to select two dependency jars` warning, so the identity rule
+(pitfall 1) holds in production. Runs a0, b and d show the same single line
+with the expected version and parent.
+
+**Client classes (NFR-023).** The class-load log has no `com.mojang.blaze3d`
+class and one `net.minecraft.client` class, `LanServerPinger`, which is part
+of the vanilla server jar and loads on a server with an empty `mods/` too. The
+only `WARN` lines (*Assets URL … uses unexpected schema*) also appear on the
+empty server.
 
 ## S1 · Change hook
 

@@ -58,10 +58,12 @@ Requirements first, then risk-driven work:
 ### Phase B: architecture and spikes (in progress since 2026-10-31)
 
 **Status:** the [architecture](architecture.md) draft is ready for review.
-Spikes S0–S5 are done ([results](research/spikes.md)). Still open:
+Spikes S0–S5 are done ([results](research/spikes.md)), including S0's check on
+a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77),
+[follow-up](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)).
+Still open:
 
 - S6 (Ad Astra) is not started ([#9](https://github.com/west3436/zas-cubed/issues/9)).
-- S0 still needs a check on a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)).
 
 - **Architecture doc** (`docs/architecture.md`):
   - module layout and the engine/platform boundary
@@ -219,7 +221,6 @@ Spikes S0–S5 are done ([results](research/spikes.md)). Still open:
 
 1. **Review the [architecture](architecture.md)** and the
    [spike results](research/spikes.md), then accept the doc or send changes.
-2. **Close the Phase B gaps:** run S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9)), and the S0 check on a
-   real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)).
+2. **Close the Phase B gap:** run S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9)).
 3. **Then Phase C:** scaffold the multi-project build, following the
    packaging rules in [architecture §2](architecture.md#2-modules-and-packaging).

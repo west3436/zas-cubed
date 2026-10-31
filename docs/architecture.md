@@ -587,7 +587,7 @@ The test names include requirement IDs (README rule 5).
 | # | Item | Plan |
 |---|---|---|
 | O-1 | **S6 (Ad Astra) not run.** The adapter design (events only, no mixins) is unproven. | [#9](https://github.com/west3436/zas-cubed/issues/9). Run S6 when downloading Ad Astra for a GameTest is allowed. It blocks E7, not R0. |
-| O-2 | **S0 on a real dedicated server.** Proven only through the jar-in-jar harness. | [#77](https://github.com/west3436/zas-cubed/issues/77). Run once on a server built with the NeoForge installer during Phase C. |
+| O-2 | ~~**S0 on a real dedicated server.**~~ **Done** 2026-10-31. | [#77](https://github.com/west3436/zas-cubed/issues/77). On an installer-built 21.1.265 server, one API copy loads and the newest wins (0.1.1 over 0.1.0), the addon starts without `zas`, and no client classes load ([spikes · S0](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)). The fallback and provider are rechecked once the API has content (API-048). |
 | O-3 | **Piston coverage in S1** not exercised | In the GEO-010 GameTest, [#25](https://github.com/west3436/zas-cubed/issues/25) |
 | O-4 | **Memory** (NFR-004) estimated, not measured | [#78](https://github.com/west3436/zas-cubed/issues/78). Measure the palette membership layout in the R0 benchmark. |
 | O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
