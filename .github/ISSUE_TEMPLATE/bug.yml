@@ -1,0 +1,39 @@
+name: Bug report
+description: Something behaves wrongly, crashes or breaks a world.
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Build a sealed room in ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: ZAS³, ZAS³ Atmospherics, NeoForge, and any related mods (e.g. Ad Astra).
+      placeholder: "zas 0.1.0, zas_atmos 0.1.0, NeoForge 21.1.265"
+    validations:
+      required: true
+  - type: dropdown
+    id: preset
+    attributes:
+      label: Preset
+      options: ["Normal", "Hardcore", "Not sure"]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or crash report
+      description: Paste the relevant part, or link a gist.
+      render: text
