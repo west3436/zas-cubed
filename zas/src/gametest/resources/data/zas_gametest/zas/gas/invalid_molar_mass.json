@@ -1,0 +1,6 @@
+{
+  "name": "gas.zas_gametest.invalid_molar_mass",
+  "formula": "Iv",
+  "molar_mass": "heavy",
+  "molar_heat_capacity": 20.0
+}

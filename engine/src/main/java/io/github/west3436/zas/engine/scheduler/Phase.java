@@ -24,11 +24,21 @@ public enum Phase {
     /** 8: zone garbage collection (CORE-052, R1). */
     GARBAGE_COLLECTION;
 
-    /** Observes phase starts, for tests and the profiler (OPS-004). Called on the worker. */
+    /**
+     * Observes phase starts, for tests and the profiler (OPS-004). Called on the thread that runs
+     * the tick: the worker, or the server thread in single-threaded mode.
+     */
     @FunctionalInterface
     public interface Listener {
         Listener NONE = phase -> {};
 
+        /** A phase starts; the previous one, if any, has ended. */
         void enter(Phase phase);
+
+        /**
+         * The tick has ended: the last phase, the invariant checker and building the result are
+         * done. The default does nothing.
+         */
+        default void finished() {}
     }
 }

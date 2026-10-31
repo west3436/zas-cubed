@@ -6,6 +6,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 /**
  * Runs one {@link DimensionEngine}'s ticks, one at a time: on a worker executor (CORE-045), or
@@ -18,7 +19,11 @@ import java.util.concurrent.TimeoutException;
  * stays readable. Collecting a result never waits without bound: a tick that hasn't finished
  * within the timeout faults the dimension too, so a stuck worker can't hang the server thread.
  *
- * <p>Submit and await from one thread, the server thread in game.
+ * <p><b>Inspections</b> ({@link #inspect}) read the engine on the thread that owns it, between
+ * ticks: they queue behind the tick in flight, and the next tick queues behind them, so commands
+ * and the profiler can look inside the engine without racing the worker (OPS-004, GEO-032).
+ *
+ * <p>Submit, await and inspect from one thread, the server thread in game.
  */
 public final class DimensionScheduler {
     /** The default longest wait for a tick in {@link #await()}: 60 s, far beyond NFR-005's 250 ms. */
@@ -28,6 +33,10 @@ public final class DimensionScheduler {
     private final Executor executor;
     private final long timeoutMillis;
     private CompletableFuture<Result> inFlight;
+    /** The last work handed to the executor: a tick or an inspection. The next one waits for it. */
+    private CompletableFuture<?> tail = CompletableFuture.completedFuture(null);
+
+    private volatile boolean abandoned;
     private Throwable fault;
 
     /**
@@ -85,11 +94,52 @@ public final class DimensionScheduler {
      * not be used afterwards.
      */
     public void abandon() {
+        abandoned = true;
         CompletableFuture<Result> f = inFlight;
         inFlight = null;
         if (f != null) {
             f.cancel(true);
         }
+        tail.cancel(true);
+    }
+
+    /**
+     * Runs a read-only query against the engine on the thread that owns it, between ticks: after
+     * the tick in flight, if any, and before the next one. In single-threaded mode it runs now, on
+     * the caller's thread, which owns the engine.
+     *
+     * <p>The query must not change the engine. Its result completes the future on the worker, so
+     * a caller on the server thread hands the result back to itself (in game, {@code
+     * server.execute}). A query that throws fails its future and nothing else. A slow query delays
+     * the next tick, whose {@link #await()} still waits no longer than the timeout.
+     *
+     * @return the query's result; failed if the dimension is faulted or the scheduler abandoned
+     */
+    public <T> CompletableFuture<T> inspect(Function<? super DimensionEngine, ? extends T> query) {
+        Objects.requireNonNull(query, "query");
+        if (fault != null || abandoned) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("the dimension's engine is faulted or stopped", fault));
+        }
+        if (executor == null) {
+            try {
+                return CompletableFuture.completedFuture(query.apply(engine));
+            } catch (RuntimeException | Error e) {
+                return CompletableFuture.failedFuture(e);
+            }
+        }
+        CompletableFuture<T> f = tail.handleAsync(
+                (ignored, error) -> {
+                    if (abandoned) {
+                        throw new java.util.concurrent.CancellationException("the scheduler was abandoned");
+                    }
+                    return query.apply(engine);
+                },
+                executor);
+        tail = f;
+        // A copy, so a caller that cancels or times out its future can't mark the query done
+        // while it still runs, which would let the next tick start beside it.
+        return f.copy();
     }
 
     /**
@@ -113,8 +163,13 @@ public final class DimensionScheduler {
                 done.completeExceptionally(e);
             }
             inFlight = done;
-        } else {
+        } else if (tail.isDone()) {
             inFlight = CompletableFuture.supplyAsync(() -> engine.tick(batch), executor);
+            tail = inFlight;
+        } else {
+            // An inspection is still running: the tick waits for it, so they never overlap.
+            inFlight = tail.handleAsync((ignored, error) -> engine.tick(batch), executor);
+            tail = inFlight;
         }
     }
 

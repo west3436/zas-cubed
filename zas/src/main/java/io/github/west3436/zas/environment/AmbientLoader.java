@@ -3,6 +3,7 @@ package io.github.west3436.zas.environment;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.data.DatapackErrors;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -18,6 +19,8 @@ import org.slf4j.Logger;
  */
 final class AmbientLoader extends SimpleJsonResourceReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
+    /** The kind of entry, in {@link DatapackErrors} messages. */
+    static final String KIND = "ambient definition";
 
     AmbientLoader() {
         super(new Gson(), AmbientFormat.DIRECTORY);
@@ -26,15 +29,17 @@ final class AmbientLoader extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resources, ProfilerFiller profiler) {
         Map<ResourceLocation, DimensionAmbient> definitions = new LinkedHashMap<>();
+        DatapackErrors.beginLoad(KIND);
         // Sorted, so errors are logged in the same order every time.
         new TreeMap<>(files).forEach((dimension, json) -> {
             try {
                 definitions.put(
                         dimension,
                         AmbientFormat.parse(
-                                json, warning -> LOGGER.warn("Ambient definition {}: {}", dimension, warning)));
+                                json,
+                                warning -> DatapackErrors.warn(KIND, AmbientFormat.DIRECTORY, dimension, warning)));
             } catch (AmbientFormat.InvalidAmbientException e) {
-                LOGGER.error("Skipping ambient definition {}: {}", dimension, e.getMessage());
+                DatapackErrors.skip(KIND, AmbientFormat.DIRECTORY, dimension, e.getMessage());
             }
         });
         LOGGER.info("Loaded {} ambient definitions", definitions.size());

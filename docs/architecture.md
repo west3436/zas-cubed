@@ -617,6 +617,23 @@ That is well under the 64 MiB total budget.
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
+*Implemented (#30):* the `/zas` commands ([commands.md](commands.md)) read
+the published snapshot and edit gas through the API. Anything that needs the
+engine itself goes through `DimensionScheduler.inspect`: a read-only query
+queued on the worker behind the tick in flight, with the next tick queued
+behind it, so it never races a tick and the server thread never waits for it;
+the result comes back with `server.execute`. In single-threaded mode the query
+runs at once on the server thread, which then owns the engine. The geometry
+audit (`GeometryAudit`) is one such query: the server thread captures the
+region's loaded sections, skipping those with changes still queued, and the
+worker compares them with the mirror, the zones' cells and edges, and a fresh
+`EnclosureFill` per zone; its repair marks stale sections dirty, so the next
+batch's geometry phase resynchronises them. The profiler (`AtmosProfiler`)
+times each phase through the engine's phase listener on the worker, publishes
+a finished tick's row with one volatile write, and keeps a 100-tick window on
+the server thread; `AtmosService` keeps the server thread's per-game-tick time
+for 1,200 game ticks (average and p99, NFR-001).
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing

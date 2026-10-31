@@ -1,10 +1,10 @@
 package io.github.west3436.zas.environment;
 
-import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.gas.ServerGasRegistry;
@@ -21,7 +21,6 @@ import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import org.slf4j.Logger;
 
 /**
  * Each dimension's ambient atmosphere on the running server (ENV-001, ENV-010, ENV-011,
@@ -38,7 +37,6 @@ import org.slf4j.Logger;
  * from {@link ZasServerConfig} on each call, so a preset change applies to the next lookup.
  */
 public final class Ambients {
-    private static final Logger LOGGER = LogUtils.getLogger();
 
     /** The most recent load, checked for syntax only. */
     private static volatile Map<ResourceLocation, DimensionAmbient> loaded = Map.of();
@@ -131,7 +129,11 @@ public final class Ambients {
             if (missing.isEmpty()) {
                 checked.put(e.getKey(), e.getValue());
             } else {
-                LOGGER.error("Skipping ambient definition {}: unknown gases {}", e.getKey(), missing);
+                DatapackErrors.skip(
+                        AmbientLoader.KIND,
+                        AmbientFormat.DIRECTORY,
+                        e.getKey(),
+                        "gas ids " + missing + ": no gas definition has these ids");
             }
         });
         active = Map.copyOf(checked);

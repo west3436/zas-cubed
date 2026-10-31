@@ -103,6 +103,11 @@ uses only the public API at compile time.
 The API's version policy, the compatibility check and how mods depend on the
 API are in [docs/api-consumers.md](docs/api-consumers.md).
 
+To inspect a running simulation, the `/zas` operator commands
+([docs/commands.md](docs/commands.md)) report zones and atmospheres, edit gas,
+audit zones against the blocks and profile each phase. The config files are in
+[docs/config.md](docs/config.md).
+
 ### Tests
 
 - **Engine logic** gets JUnit 5 tests in `engine`, with no Minecraft.
