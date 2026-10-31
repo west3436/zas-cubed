@@ -11,3 +11,34 @@ dependencies {
 tasks.named('test', Test) {
     useJUnitPlatform()
 }
+
+// Engine benchmarks (architecture §8, docs/research/benchmarks.md): a plain
+// main program in its own source set, so no Minecraft and no extra plugin.
+// `./gradlew :engine:bench` runs them all; `-Pbench.args="s10 fill"` picks
+// cases and `-Pbench.args=--quick` shortens every run. Not part of build, but
+// check compiles them so they can't rot.
+sourceSets {
+    bench {
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+    }
+}
+
+tasks.register('bench', JavaExec) {
+    group = 'verification'
+    description = 'Runs the headless engine benchmarks (not part of build).'
+    classpath = sourceSets.bench.runtimeClasspath
+    mainClass = 'io.github.west3436.zas.engine.bench.EngineBench'
+    // D-40: the reference dedicated server runs with a 4 GB heap.
+    jvmArgs '-Xms4g', '-Xmx4g', '-Dstdout.encoding=UTF-8'
+    def benchArgs = providers.gradleProperty('bench.args').getOrElse('')
+    if (!benchArgs.isBlank()) {
+        args benchArgs.trim().split(/\s+/)
+    }
+    // Always run when asked: the numbers are the output.
+    outputs.upToDateWhen { false }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('benchClasses')
+}

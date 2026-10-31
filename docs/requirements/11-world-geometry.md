@@ -212,7 +212,7 @@ whatever its cause:
   the engine sees it.
 
 #### GEO-011 · Locality filter
-`Must` · `R0` · `Accepted` · Verify: Bench · Trace: CORE-051, CORE-054
+`Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054
 
 A block change that isn't in or next to a zone, and doesn't touch a pending
 operation, shall cost a constant amount of work: no flood fill, no graph
@@ -223,6 +223,10 @@ update.
   §3](../research/neoforge-1.21.1.md#3-block-change-detection)).
 - **Verify:** Bench makes mass block changes away from any zone and checks the
   cost per change is constant.
+
+*2026-10-31: Implemented. The R0 bench measures 5.3 to 5.8 ns per change, hook
+and filtered drain together, from 16,384 to 1,048,576 changes and with 278 or
+1,278 zones ([benchmarks · GEO-011](../research/benchmarks.md#geo-011-change-tracking-and-the-locality-filter)).*
 
 #### GEO-012 · Coalescing
 `Must` · `R0` · `Implemented` · Verify: Unit

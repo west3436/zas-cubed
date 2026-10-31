@@ -178,13 +178,19 @@ The repository shall include an example addon that uses each extension point.
 - **Verify:** Inspect the example addon against the list of extension points.
 
 #### API-048 · Example addon without ZAS³ in CI
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-12, D-17
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-12, D-17
 
 CI shall run the example addon without ZAS³ installed, as the S-12 test.
 
 - **Rationale:** Decision: D-17 (S-12).
 - **Verify:** Inspect the CI configuration; the job itself is the S-12
   GameTest.
+
+*2026-10-31: Implemented. CI's "S-12 API without ZAS³" step runs
+`:example-addon:runGameTestServer`, a GameTest server with the example addon
+and its nested API but no `zas`; `WithoutZasTests` checks the API reports
+absent, every query reads ambient standard air with no zone, and mutations
+complete at once as `ABSENT`.*
 
 ## Queries and mutations
 
