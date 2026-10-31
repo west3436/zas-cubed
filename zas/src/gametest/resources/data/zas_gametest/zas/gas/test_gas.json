@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas_gametest.test_gas",
+  "formula": "Tg₂",
+  "molar_mass": 0.05,
+  "molar_heat_capacity": 25.5,
+  "visibility": {
+    "color": "#80FF20",
+    "density_threshold": 0.01
+  }
+}
