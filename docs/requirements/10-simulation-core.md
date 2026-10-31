@@ -333,7 +333,7 @@ A config option shall instead delete a displaced cell's gas, as ZAS does.
   volume share of the moles.
 
 #### CORE-075 · Displaced gas from a zone's last cell
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065
 
 If the filled cell was its zone's last cell, its gas shall move into the zones
 that cell was connected to, shared in proportion to their volumes. If there
@@ -345,6 +345,12 @@ were none, the gas is released to the ambient.
 - **Verify:** Unit tests and a GameTest fill a one-cell zone between two zones
   and check the moles split by volume, and with no neighbours that they go to
   the ambient.
+
+*2026-10-31: Implemented. `core_075_displaced_gas_from_last_cell` (Unit) and
+`core_075_one_cell_zone_filled_between_two_zones` (GameTest) fill a one-cell
+zone between zones of 28 and 19 cells and check its moles split 28:19, and
+fill a lone one-cell zone and check the checker records its gas as going to
+the ambient.*
 
 #### CORE-023 · Zone merge
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
@@ -589,7 +595,7 @@ depend on volume, shall be selectable in config.
   fraction per tick.
 
 #### CORE-036 · Conservation invariant
-`Must` · `R0` · `Accepted` · Verify: Unit (fuzz), GameTest
+`Must` · `R0` · `Implemented` · Verify: Unit (fuzz), GameTest
 
 The moles of each gas shall change only through these sources and sinks:
 - API calls
@@ -621,6 +627,13 @@ Gas-editing commands (OPS-009) count as API calls.*
 
 *2026-10-31: zone dissolution includes zones dissolving into the ambient
 (CORE-076, D-63).*
+
+*2026-10-31: Implemented. The Unit fuzz test is in `ConservationTest`; the R0
+scenario GameTests in `ScenarioTests` (`s_01_pressurise_sealed_room_by_commands`,
+the two `s_02_` tests, `s_09_restart_keeps_zones_and_paused_zone_resumes` and
+the requirement tests beside them) run with the invariant checker on and check
+every atmos tick is conserved. S-01 and S-02 run as adapted for R0, without
+devices or hazards ([Scenario verification](00-overview.md#scenario-verification)).*
 
 #### CORE-073 · Invariant checker
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Depends: CORE-036

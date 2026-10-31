@@ -771,8 +771,11 @@ public final class DimensionEngine {
         }
     }
 
-    /** The positions whose changes are held, ascending (DATA-010). */
-    private long[] heldBlocks() {
+    /**
+     * The positions whose block changes are held for paused zones, ascending (GEO-037, DATA-010).
+     * Engine thread, between ticks.
+     */
+    public long[] heldBlocks() {
         if (heldTruth.isEmpty()) {
             return new long[0];
         }

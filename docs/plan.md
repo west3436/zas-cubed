@@ -143,6 +143,40 @@ Still open:
   - Benchmarks are recorded against the NFR targets
     ([R0 engine benchmarks](research/benchmarks.md)).
 
+#### Phase D exit status (2026-10-31)
+
+Every exit item passes in CI ([#33](https://github.com/west3436/zas-cubed/issues/33)).
+R0 has no devices, pipes or hazards, so the scenarios run as adapted below;
+the full plans in [Scenario verification](requirements/00-overview.md#scenario-verification)
+are the Phase E exit. The scenario GameTests are in
+[`ScenarioTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/ScenarioTests.java). They run in
+the End, which the GameTest server has, with the vacuum ambient of the test
+datapack's `zas_gametest:vacuum` for the length of each test, in a batch of
+their own and with the invariant checker on (CORE-036).
+
+| Item | Result | Tests |
+|---|---|---|
+| S-01 by commands | Pass. A sealed 27-cell room in vacuum is filled with `/zas gas add` and `/zas gas fill` to 101.325 kPa at 21 % O₂ and 293.15 K, forms one zone and holds it for 60 s. No air alarm, canisters, vent or helmet check: those are R1 (CONT, LIFE). | `s_01_pressurise_sealed_room_by_commands` |
+| S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
+| S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
+| S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
+| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). | `./gradlew :engine:bench` |
+
+The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
+*Implemented*. CORE-025 (R1) stays *Accepted*: its split search is local, but
+the worker's tick still grows with zone size
+([benchmarks](research/benchmarks.md#merge-and-split-core-023-core-024-and-core-025)).
+
+**R0 issues still open:**
+
+| Issue | Why |
+|---|---|
+| [#20](https://github.com/west3436/zas-cubed/issues/20) CORE: zones, [#21](https://github.com/west3436/zas-cubed/issues/21) edges and exchange, [#26](https://github.com/west3436/zas-cubed/issues/26) enclosure detection | Every listed requirement is *Implemented*: CORE-075, CORE-036, GEO-020 and GEO-022, the last, came with the scenario tests. Ready to close. |
+| [#22](https://github.com/west3436/zas-cubed/issues/22) ambient and sparse zoning, [#23](https://github.com/west3436/zas-cubed/issues/23) scheduler, [#25](https://github.com/west3436/zas-cubed/issues/25) change tracking, [#28](https://github.com/west3436/zas-cubed/issues/28) ambients | Every listed requirement is *Implemented*. They stayed open because the PRs that finished them said "Part of" (#97, #100, #92). Ready to close. |
+| [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
+| [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
+| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay is in review in [#98](https://github.com/west3436/zas-cubed/pull/98). CLIENT-013 shows hotspots, which arrive with FIRE (R1). |
+
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
 | Track | Area | Notes |

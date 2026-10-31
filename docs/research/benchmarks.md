@@ -42,7 +42,8 @@ NFR-003 (each with a dated note), and API-048, since S-12 now runs in CI (see
 
 - **GEO-020 and GEO-022** meet their Bench plans, but their GameTest plans
   (a large hall reporting open; checks of off-thread results) aren't written
-  yet.
+  yet. *2026-10-31: written with the R0 scenario tests; both are now
+  `Implemented`.*
 - **CORE-025** (R1): the split search is local, but the tick that holds the
   edit rebuilds the zone-membership table over every zoned cell, so the
   worker's cost still grows with zone size. See [Findings](#findings).

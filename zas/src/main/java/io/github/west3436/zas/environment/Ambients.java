@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
@@ -45,6 +46,9 @@ public final class Ambients {
 
     private static volatile boolean running;
 
+    /** Ambients GameTests put in place of a dimension's own, by dimension. */
+    private static final Map<ResourceLocation, Ambient> testOverrides = new ConcurrentHashMap<>();
+
     private Ambients() {}
 
     /**
@@ -68,6 +72,10 @@ public final class Ambients {
 
     /** The ambient of a dimension under a preset. */
     public static Ambient ambient(ResourceKey<Level> dimension, AtmospherePreset preset) {
+        Ambient override = testOverrides.get(dimension.location());
+        if (override != null) {
+            return override;
+        }
         DimensionAmbient definition = active.get(dimension.location());
         return definition == null
                 ? Ambient.STANDARD_AIR
@@ -86,6 +94,22 @@ public final class Ambients {
     public static boolean isExcluded(ResourceKey<Level> dimension) {
         DimensionAmbient definition = active.get(dimension.location());
         return (definition != null && definition.excluded()) || ZasServerConfig.excludes(dimension.location());
+    }
+
+    /**
+     * Gives a dimension another ambient, under every preset, until cleared: for GameTests. The
+     * GameTest server has only the vanilla dimensions, so a test that needs one with another
+     * ambient, such as a vacuum, borrows a vanilla one and gives it a test datapack's ambient. The
+     * simulation picks it up with its next batch. Any thread.
+     *
+     * @param ambient the ambient, or null to give the dimension back its own
+     */
+    public static void overrideForTest(ResourceKey<Level> dimension, Ambient ambient) {
+        if (ambient == null) {
+            testOverrides.remove(dimension.location());
+        } else {
+            testOverrides.put(dimension.location(), ambient);
+        }
     }
 
     /**
@@ -116,6 +140,7 @@ public final class Ambients {
     private static void serverStopped() {
         running = false;
         active = Map.of();
+        testOverrides.clear();
     }
 
     /** Checks the loaded definitions against the running server's gases and puts them in force. */
