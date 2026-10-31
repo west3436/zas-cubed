@@ -13,7 +13,6 @@ import static io.github.west3436.zas.engine.zone.ZoneFixtures.graph;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.vacuum;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -202,12 +201,12 @@ class EdgesTest {
             previous = p;
             previousT = room.mixture().temperature();
         }
-        // Eventually it reaches the ambient.
-        for (int t = 0; t < 200 && !room.ambientEdge().isSleeping(); t++) {
+        // Eventually it reaches the ambient and dissolves into it (CORE-076).
+        for (int t = 0; t < 200 && room.isAlive(); t++) {
             graph.exchange();
         }
-        assertTrue(room.ambientEdge().isSleeping());
-        assertEquals(ambient.pressure(), room.mixture().pressure(), 1e-9);
+        assertFalse(room.isAlive());
+        assertEquals(0, graph.zoneCount());
     }
 
     @Test
@@ -216,9 +215,13 @@ class EdgesTest {
         GasMixture before = ambient.copy();
         Grid grid = roomWithOpening();
         ZoneGraph graph = graph(grid, ambient);
-        Zone room = graph.createZone(Grid.cells(0, 0, 0, 1, 0, 1));
+        long[] roomCells = Grid.cells(0, 0, 0, 1, 0, 1);
+        Zone room = graph.createZone(roomCells);
         GasMixture held = graph.ambient().copy();
         for (int t = 0; t < 500; t++) {
+            if (!room.isAlive()) {
+                room = graph.createZone(roomCells);
+            }
             if (t % 50 == 0) {
                 // Keep the zone far from the ambient, alternately high and low.
                 fillWith(graph, room, air(t % 100 == 0 ? 500 : 1, CELL, t % 100 == 0 ? 600 : 100));
@@ -248,13 +251,14 @@ class EdgesTest {
         graph.beginConservationPeriod();
         graph.exchange();
 
-        double scale = room.volume() / ambient.volume();
-        assertEquals(ambient.moles(N2) * scale, room.mixture().moles(N2), 0, "exactly the ambient composition");
-        assertEquals(ambient.moles(O2) * scale, room.mixture().moles(O2), 0);
-        assertEquals(ambient.temperature(), room.mixture().temperature(), 0, "exactly the ambient temperature");
-        assertTrue(room.ambientEdge().isSleeping());
+        // CORE-076 now governs a zone with an ambient edge: it dissolves, so its
+        // cells hold exactly the ambient (CORE-050).
+        assertFalse(room.isAlive());
+        for (long c : Grid.cells(0, 0, 0, 1, 0, 1)) {
+            assertNull(graph.zoneOf(c), "exactly the ambient");
+        }
         var report = graph.checkConservation(1);
-        assertTrue(report.conserved(), "snapping is recorded as exchange with the ambient");
+        assertTrue(report.conserved(), "dissolving is recorded as exchange with the ambient");
         assertTrue(report.recorded(LedgerCategory.AMBIENT, N2) < 0);
     }
 
@@ -279,12 +283,12 @@ class EdgesTest {
         assertEquals(calls, graph.exchangeCount(), "sleeping edges get no exchange calls");
         assertTrue(edge.isSleeping());
 
-        // A snapped ambient edge sleeps too.
+        // A zone that matches its ambient dissolves (CORE-076), so nothing is left to exchange.
         Grid open = roomWithOpening();
         ZoneGraph openGraph = graph(open, air(101.325, CELL, ROOM_T));
         Zone room = openGraph.createZone(Grid.cells(0, 0, 0, 1, 0, 1));
         openGraph.exchange();
-        assertTrue(room.ambientEdge().isSleeping());
+        assertFalse(room.isAlive());
         long before = openGraph.exchangeCount();
         for (int t = 0; t < 20; t++) {
             openGraph.exchange();
@@ -321,22 +325,5 @@ class EdgesTest {
         calls = graph.exchangeCount();
         graph.exchange();
         assertEquals(calls + 1, graph.exchangeCount());
-
-        // A sleeping ambient edge wakes when the ambient changes enough to break
-        // equivalence, and not for a small change (ENV-017).
-        Grid open = roomWithOpening();
-        ZoneGraph openGraph = graph(open, air(101.325, CELL, ROOM_T));
-        Zone room = openGraph.createZone(Grid.cells(0, 0, 0, 1, 0, 1));
-        openGraph.exchange();
-        Edge ambientEdge = room.ambientEdge();
-        assertNotNull(ambientEdge);
-        assertTrue(ambientEdge.isSleeping());
-        openGraph.setAmbient(air(101.6, CELL, ROOM_T + 0.5));
-        assertTrue(ambientEdge.isSleeping(), "a small change leaves it asleep");
-        openGraph.setAmbient(air(60, CELL, ROOM_T));
-        assertFalse(ambientEdge.isSleeping());
-        long before = openGraph.exchangeCount();
-        openGraph.exchange();
-        assertEquals(before + 1, openGraph.exchangeCount());
     }
 }

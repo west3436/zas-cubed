@@ -493,6 +493,30 @@ composition and temperature exactly.
 - **Verify:** A Unit test checks a zone inside tolerance takes the ambient's
   composition and temperature exactly.
 
+*2026-10-31: CORE-076 (D-63) now governs zones with an ambient edge: one that
+reaches the ambient dissolves into it instead of snapping, so its cells hold
+the ambient exactly.*
+
+#### CORE-076 · Zones dissolve into the ambient
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-63
+
+A zone with at least one ambient edge shall be destroyed once, after an atmos
+tick's exchange, it is nearly equivalent to its ambient: within CORE-006's
+tolerances on pressure and on each gas's molar density, and also on
+temperature unless it is near-empty (its pressure within the absolute pressure
+tolerance, default 0.1 kPa, of both the ambient's and vacuum). Its cells
+become unzoned and hold the ambient (CORE-050), and its gas goes to the
+ambient, recorded in the conservation ledger as exchange with the ambient
+(CORE-036). Zones are dissolved in id order, and a later trigger can zone the
+cells again.
+
+- **Rationale:** Decision: D-63. A zone venting to a vacuum keeps its own
+  temperature, so under CORE-006 it never matched the ambient and its ambient
+  edge exchanged trivial amounts forever.
+- **Verify:** Unit tests vent a room into a 2.7 K vacuum and dissolve a room
+  near standard air, with the ledger balanced, and check a sealed room equal
+  to the ambient and a room 10 K warmer at ambient pressure are kept.
+
 #### CORE-033 · Sleeping edges
 `Must` · `R0` · `Implemented` · Verify: Unit
 
@@ -574,7 +598,7 @@ The moles of each gas shall change only through these sources and sinks:
 - respiration (LIFE-005) and photosynthesis (CONT-053)
 - exchange with the ambient: ambient edges (CORE-032), snapping to the
   ambient (CORE-039), open-air operations (CORE-053, CORE-057) and zone
-  dissolution (CORE-052)
+  dissolution (CORE-052, CORE-076)
 - pruning below epsilon (CORE-007)
 - removed gas definitions (CORE-013)
 - the ZAS displaced-gas option (CORE-029)
@@ -594,6 +618,9 @@ during the GEO review.*
 
 *2026-10-31: added the operator-command sink (OPS-013) during the OPS review.
 Gas-editing commands (OPS-009) count as API calls.*
+
+*2026-10-31: zone dissolution includes zones dissolving into the ambient
+(CORE-076, D-63).*
 
 #### CORE-073 · Invariant checker
 `Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Depends: CORE-036
