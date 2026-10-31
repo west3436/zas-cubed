@@ -488,10 +488,10 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 
 | Package | Contents |
 |---|---|
-| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, version), `ZasApiProvider` (the service interface `zas` installs), threading annotations |
-| `.api.gas` | `GasType` (registry key, properties), `GasMixture` (immutable record: moles per gas, T, V, with derived P and partial pressures), `GasTags` |
-| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(id)`), `AtmosphereSample` (composition, pressures, T, state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id), `ZoneInfo` |
-| `.api.mutation` | `GasMutations` (`add`, `remove`, `addHeat`, `removeHeat` with a `SourceId`), `MutationResult` (amount moved, outcome), `CompletableFuture`-based returns |
+| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread` and `@ServerThread`, and the `ServerThreads` check |
+| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011); later `GasType` (registry key, properties) and `GasTags` |
+| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
+| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
