@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Asset provenance (CREDITS)
+        run: python3 scripts/check_credits.py
       - name: Check for Gradle build
         id: gradle
         run: |
