@@ -11,7 +11,7 @@ controls. Background:
 ## Config and data
 
 #### OPS-001 · Config tiers
-`Must` · `R0` · `Accepted` · Verify: Inspect
+`Must` · `R0` · `Implemented` · Verify: Inspect
 
 There shall be three config tiers:
 - **Server (per world):** simulation tuning (tick period, budgets, sharing
@@ -53,7 +53,7 @@ The following shall be data-driven, with documented JSON formats:
 - **Verify:** Inspect the documented formats against the loaders.
 
 #### OPS-008 · Datapack validation
-`Must` · `R0` · `Accepted` · Verify: GameTest · Depends: OPS-002
+`Must` · `R0` · `Implemented` · Verify: GameTest · Depends: OPS-002
 
 An invalid datapack entry shall log an error naming the file and field, and be
 skipped. It never crashes the game.
@@ -65,7 +65,7 @@ skipped. It never crashes the game.
 ## Commands
 
 #### OPS-011 · Command permission
-`Must` · `R0` · `Accepted` · Verify: GameTest
+`Must` · `R0` · `Implemented` · Verify: GameTest
 
 Every `/zas` command shall need permission level 2 by default
 (configurable).
@@ -76,7 +76,7 @@ Every `/zas` command shall need permission level 2 by default
   is configurable.
 
 #### OPS-003 · Inspection commands
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: API-010, API-011
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: API-010, API-011
 
 Commands shall report the atmosphere at a point (API-010) and a zone's details
 (API-011).
@@ -86,7 +86,7 @@ Commands shall report the atmosphere at a point (API-010) and a zone's details
 - **Verify:** A GameTest runs each command and checks the output.
 
 #### OPS-009 · Gas editing commands
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: API-012, CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: API-012, CORE-036
 
 Commands shall add, remove or set gas at a point, and fill or vent a region.
 They act through API-012, attributed to `command:<player>`.
@@ -97,7 +97,7 @@ They act through API-012, attributed to `command:<player>`.
   attribution.
 
 #### OPS-010 · Audit and invariant commands
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: GEO-032, CORE-073
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-032, CORE-073
 
 Commands shall run the geometry audit (GEO-032) on a region, and switch the
 invariant checker (CORE-073) on or off and print its report.
@@ -109,7 +109,7 @@ invariant checker (CORE-073) on or off and print its report.
 ## Profiling
 
 #### OPS-004 · Profiling command
-`Must` · `R0` · `Accepted` · Verify: Manual · Trace: NFR-001 · [zas-core §8](../research/zas-core.md#8-debug-tooling)
+`Must` · `R0` · `Implemented` · Verify: Manual · Trace: NFR-001 · [zas-core §8](../research/zas-core.md#8-debug-tooling)
 
 A command shall report:
 - timings for each phase: geometry, exchange, reactions, heat, apply
@@ -123,7 +123,7 @@ A command shall report:
 - **Verify:** Manual check of the report during S-10.
 
 #### OPS-012 · Periodic profiling log
-`Should` · `R0` · `Accepted` · Verify: Manual · Depends: OPS-004
+`Should` · `R0` · `Implemented` · Verify: Manual · Depends: OPS-004
 
 The OPS-004 report may be logged periodically. This is off by default, with a
 configurable interval.

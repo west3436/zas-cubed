@@ -54,6 +54,11 @@ public final class DirtySections {
         return bits != null && (bits[index >>> 6] & (1L << index)) != 0;
     }
 
+    /** Whether any position of section {@code key} ({@link SectionKeys}) is dirty. */
+    public boolean isSectionDirty(long key) {
+        return sections.containsKey(key);
+    }
+
     /** Whether nothing is dirty. */
     public boolean isEmpty() {
         return sections.isEmpty();

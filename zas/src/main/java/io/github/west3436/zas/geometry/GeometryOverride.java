@@ -3,6 +3,7 @@ package io.github.west3436.zas.geometry;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import java.util.EnumSet;
@@ -57,14 +58,13 @@ public record GeometryOverride(List<Target> targets, Set<Face> sealedFaces, doub
             f -> f.name().toLowerCase(Locale.ROOT));
 
     public static final Codec<GeometryOverride> CODEC = RecordCodecBuilder.create(i -> i.group(
-                    Target.CODEC.listOf().fieldOf("blocks").forGetter(GeometryOverride::targets),
-                    FACE_CODEC
-                            .listOf()
-                            .optionalFieldOf("sealed_faces", List.of())
+                    DatapackErrors.field(Target.CODEC.listOf(), "blocks").forGetter(GeometryOverride::targets),
+                    DatapackErrors.optionalField(FACE_CODEC.listOf(), "sealed_faces", List.<Face>of())
                             .<Set<Face>>xmap(
                                     l -> l.isEmpty() ? EnumSet.noneOf(Face.class) : EnumSet.copyOf(l), List::copyOf)
                             .forGetter(GeometryOverride::sealedFaces),
-                    Codec.doubleRange(0, Geometry.FULL_VOLUME).fieldOf("volume").forGetter(GeometryOverride::volume))
+                    DatapackErrors.field(Codec.doubleRange(0, Geometry.FULL_VOLUME), "volume")
+                            .forGetter(GeometryOverride::volume))
             .apply(i, GeometryOverride::new));
 
     public GeometryOverride {

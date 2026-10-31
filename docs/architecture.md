@@ -679,6 +679,23 @@ fresh world each run, since saved zones would otherwise come back.
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
+*Implemented (#30):* the `/zas` commands ([commands.md](commands.md)) read
+the published snapshot and edit gas through the API. Anything that needs the
+engine itself goes through `DimensionScheduler.inspect`: a read-only query
+queued on the worker behind the tick in flight, with the next tick queued
+behind it, so it never races a tick and the server thread never waits for it;
+the result comes back with `server.execute`. In single-threaded mode the query
+runs at once on the server thread, which then owns the engine. The geometry
+audit (`GeometryAudit`) is one such query: the server thread captures the
+region's loaded sections, skipping those with changes still queued, and the
+worker compares them with the mirror, the zones' cells and edges, and a fresh
+`EnclosureFill` per zone; its repair marks stale sections dirty, so the next
+batch's geometry phase resynchronises them. The profiler (`AtmosProfiler`)
+times each phase through the engine's phase listener on the worker, publishes
+a finished tick's row with one volatile write, and keeps a 100-tick window on
+the server thread; `AtmosService` keeps the server thread's per-game-tick time
+for 1,200 game ticks (average and p99, NFR-001).
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
@@ -790,7 +807,7 @@ GameTest in R1 (E3).
 | Layer | Tool | What runs there |
 |---|---|---|
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
-| Engine benchmarks | JMH or a scripted harness in `engine` | The headless S-10 scenario (NFR-034), checked in CI against a recorded baseline with a 10 % tolerance |
+| Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check against the recorded baseline, with a 10 % tolerance, comes in R1 |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023) |
 | Packaging | GameTest harness loading built jars | The S0 harness, kept: `zas` plus example addon, and example addon alone (API-048) |
 

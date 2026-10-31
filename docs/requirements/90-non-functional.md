@@ -56,7 +56,7 @@ and the zone still vents correctly.
   atmos time.
 
 #### NFR-003 · Cost scales with activity
-`Must` · `R0` · `Accepted` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011
+`Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011
 
 Simulation cost shall scale with active zones, edges and changed cells, not
 with world size, loaded chunks or idle zones. Adding 1,000 idle zones (all
@@ -66,6 +66,14 @@ loaded chunks that hold no zones changes atmos cost by less than 5 %.
 - **Rationale:** Decision: D-13. Cost must follow activity, not world size.
 - **Verify:** Bench adds 1,000 idle zones and doubles empty loaded chunks and
   compares costs.
+
+*2026-10-31: Implemented. In the R0 bench 1,000 idle zones add 0.022 ms per
+server tick on average (0.8 µs on the server thread, 0.021 ms of worker time
+spread over the tick's 20 game ticks), and doubling the loaded chunks with no
+zones changes atmos cost by +0.2 %, within noise ([benchmarks ·
+scaling](../research/benchmarks.md#nfr-003-and-core-054-cost-follows-activity)). Idle
+zones aren't quite free: each atmos tick still copies every zone's mixture and
+rebuilds the published table, about 0.4 µs per zone.*
 
 #### NFR-004 · Memory
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10

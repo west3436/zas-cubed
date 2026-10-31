@@ -8,12 +8,17 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * The per-world server config, {@code <world>/serverconfig/zas-server.toml} (OPS-001).
+ * The server config, {@code config/zas-server.toml}, which a world's {@code
+ * serverconfig/zas-server.toml} overrides: the server tier of
+ * OPS-001's three (with {@link ZasCommonConfig} and {@link ZasClientConfig}).
  *
- * <p>For now it holds only what R0 needs: the atmosphere preset, which selects ambient variants
- * (ENV-010), the dimensions excluded from simulation (ENV-007), and the atmos scheduler's timing
- * and debug switches (CORE-041, CORE-047, CORE-071, CORE-073). The full preset system,
- * with every preset-controlled option and per-option overrides, is OPS-007 and OPS-014 in R1.
+ * <p>For now it holds what R0 needs: the atmosphere preset, which selects ambient variants
+ * (ENV-010), the dimensions excluded from simulation (ENV-007), the atmos scheduler's timing and
+ * debug switches (CORE-041, CORE-047, CORE-071, CORE-073) under {@code [atmos]}, the permission
+ * level of the {@code /zas} commands (OPS-011) under {@code [commands]}, and the periodic profiling
+ * log (OPS-012) under {@code [profiling]}. The full preset system, with every preset-controlled
+ * option and per-option overrides, is OPS-007 and OPS-014 in R1; the sharing table, thresholds and
+ * hazard toggles join this file as their features land.
  */
 public final class ZasServerConfig {
     public static final ModConfigSpec SPEC;
@@ -38,6 +43,15 @@ public final class ZasServerConfig {
 
     /** Run the conservation checker every atmos tick (CORE-073; debug). */
     public static final ModConfigSpec.BooleanValue CONSERVATION_CHECKER;
+
+    /** The permission level every {@code /zas} command needs (OPS-011). */
+    public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
+
+    /** Seconds between profiling reports in the log; 0 turns the log off (OPS-012). */
+    public static final ModConfigSpec.IntValue PROFILING_LOG_INTERVAL;
+
+    /** {@code /zas checker on|off} until the server stops; null follows the config (OPS-010). */
+    private static volatile Boolean checkerOverride;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -74,6 +88,18 @@ public final class ZasServerConfig {
                         "Debug: check every atmos tick that gas changed only through known sources",
                         "and sinks, and log any discrepancy.")
                 .define("conservation_checker", false);
+        builder.pop();
+        builder.push("commands");
+        PERMISSION_LEVEL = builder.comment(
+                        "The permission level every /zas command needs: 0 everyone, 2 operators (the",
+                        "vanilla level for game-changing commands), 4 the server owner and console.")
+                .defineInRange("permission_level", 2, 0, 4);
+        builder.pop();
+        builder.push("profiling");
+        PROFILING_LOG_INTERVAL = builder.comment(
+                        "Seconds between profiling reports (the /zas profile report) in the server log.",
+                        "0 turns the log off.")
+                .defineInRange("log_interval_seconds", 0, 0, 86_400);
         builder.pop();
         SPEC = builder.build();
     }
@@ -115,8 +141,35 @@ public final class ZasServerConfig {
         return SPEC.isLoaded() && SINGLE_THREADED.get();
     }
 
-    /** Whether the conservation checker runs. */
+    /** Whether the conservation checker runs: {@code /zas checker} if it was used, else the config. */
     public static boolean conservationChecker() {
+        Boolean override = checkerOverride;
+        if (override != null) {
+            return override;
+        }
         return SPEC.isLoaded() && CONSERVATION_CHECKER.get();
+    }
+
+    /**
+     * Switches the conservation checker on or off until the server stops, whatever the config says;
+     * null returns to the config (OPS-010). Any thread.
+     */
+    public static void overrideConservationChecker(Boolean on) {
+        checkerOverride = on;
+    }
+
+    /** Whether {@code /zas checker} overrides the config. */
+    public static boolean conservationCheckerOverridden() {
+        return checkerOverride != null;
+    }
+
+    /** The permission level of the {@code /zas} commands; 2 while no world's config is loaded. */
+    public static int permissionLevel() {
+        return SPEC.isLoaded() ? PERMISSION_LEVEL.get() : 2;
+    }
+
+    /** Game ticks between profiling log reports, or 0 when the log is off. */
+    public static int profilingLogIntervalTicks() {
+        return SPEC.isLoaded() ? PROFILING_LOG_INTERVAL.get() * 20 : 0;
     }
 }

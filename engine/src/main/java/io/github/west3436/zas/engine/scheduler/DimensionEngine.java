@@ -83,6 +83,7 @@ public final class DimensionEngine {
     private final Classifier classifier;
     private final CellSpace space;
     private final ZoneGraph graph;
+    private final GeometryPalette palette;
 
     private Ambient ambient;
     private Phase.Listener phases = Phase.Listener.NONE;
@@ -132,6 +133,7 @@ public final class DimensionEngine {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.config = Objects.requireNonNull(config, "config");
         this.log = config.log();
+        this.palette = Objects.requireNonNull(palette, "palette");
         this.mirror = new SectionMirror(minSectionY, maxSectionY);
         this.classifier = Objects.requireNonNull(classifierFactory.create(mirror, palette), "classifier");
         this.space = Objects.requireNonNull(classifier.space(), "cell space");
@@ -156,6 +158,11 @@ public final class DimensionEngine {
     /** The section mirror. Same thread rule as {@link #graph()}. */
     public SectionMirror mirror() {
         return mirror;
+    }
+
+    /** The geometry palette the mirrored sections' ids index. */
+    public GeometryPalette palette() {
+        return palette;
     }
 
     public Classifier classifier() {
@@ -357,7 +364,7 @@ public final class DimensionEngine {
         for (long k : requested) {
             wanted[w++] = k;
         }
-        return new Result(
+        Result result = new Result(
                 tick,
                 snapshot,
                 components,
@@ -369,6 +376,8 @@ public final class DimensionEngine {
                 buffered.size(),
                 heldBlocks(),
                 graph.nextZoneId());
+        phases.finished();
+        return result;
     }
 
     // ---- 0. Restore ---------------------------------------------------------------

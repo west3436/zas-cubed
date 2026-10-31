@@ -89,7 +89,8 @@ mods itself.
 | Command | What it does |
 |---|---|
 | `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks formatting, the API's packages and dependencies, its javadoc and its compatibility |
-| `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests |
+| `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests, including S-12 (the example addon without `zas`) |
+| `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](docs/research/benchmarks.md)); not part of `build` |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
@@ -102,6 +103,11 @@ uses only the public API at compile time.
 
 The API's version policy, the compatibility check and how mods depend on the
 API are in [docs/api-consumers.md](docs/api-consumers.md).
+
+To inspect a running simulation, the `/zas` operator commands
+([docs/commands.md](docs/commands.md)) report zones and atmospheres, edit gas,
+audit zones against the blocks and profile each phase. The config files are in
+[docs/config.md](docs/config.md).
 
 ### Tests
 

@@ -8,12 +8,14 @@ import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -39,10 +41,21 @@ import org.slf4j.Logger;
  *
  * <p><b>Threads.</b> Mutations and {@link #tickNow} are server-thread only; {@link #dimension}
  * and the published tables may be read from any thread (API-046).
+ *
+ * <p><b>Profiling.</b> The server thread's time on atmos work is kept for each of the last {@value
+ * #TICK_WINDOW} game ticks (OPS-004, NFR-001); with {@code [profiling] log_interval_seconds} set,
+ * every dimension's {@link ProfileReport} is logged at that interval (OPS-012).
  */
 public final class AtmosService {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static volatile AtmosService current;
+
+    /** Game ticks of server-thread time kept for the profiler: one minute. */
+    public static final int TICK_WINDOW = 1200;
+
+    private final long[] tickNanos = new long[TICK_WINDOW];
+    private int tickNext;
+    private int tickSamples;
 
     private final MinecraftServer server;
     private final ExecutorService workers;
@@ -59,6 +72,7 @@ public final class AtmosService {
         gameBus.addListener((ServerStoppingEvent e) -> {
             AtmosService s = current;
             current = null;
+            ZasServerConfig.overrideConservationChecker(null);
             if (s != null) {
                 s.stop();
             }
@@ -145,6 +159,56 @@ public final class AtmosService {
             if (timing.closesAt(gameTick)) {
                 d.close(gameTick, timing, () -> System.nanoTime() - start > budget);
             }
+        }
+        tickNanos[tickNext] = System.nanoTime() - start;
+        tickNext = (tickNext + 1) % TICK_WINDOW;
+        tickSamples = Math.min(tickSamples + 1, TICK_WINDOW);
+        int logInterval = ZasServerConfig.profilingLogIntervalTicks();
+        if (logInterval > 0 && gameTick % logInterval == 0) {
+            logProfile();
+        }
+    }
+
+    /**
+     * The server thread's time on atmos work per game tick over the last game ticks.
+     *
+     * @param samples game ticks measured, up to {@link #TICK_WINDOW}
+     */
+    public record TickTimes(int samples, double averageMs, double p99Ms, double maxMs) {}
+
+    /** The server thread's time on atmos work per game tick (OPS-004, NFR-001). Server thread. */
+    public TickTimes tickTimes() {
+        if (tickSamples == 0) {
+            return new TickTimes(0, 0, 0, 0);
+        }
+        long[] sorted = Arrays.copyOf(tickNanos, tickSamples);
+        Arrays.sort(sorted);
+        long sum = 0;
+        for (long v : sorted) {
+            sum += v;
+        }
+        int p99 = Math.min(sorted.length - 1, (int) Math.ceil(sorted.length * 0.99) - 1);
+        return new TickTimes(
+                sorted.length,
+                sum / 1e6 / sorted.length,
+                sorted[Math.max(0, p99)] / 1e6,
+                sorted[sorted.length - 1] / 1e6);
+    }
+
+    /** Logs every dimension's profiling report (OPS-012). Server thread. */
+    private void logProfile() {
+        for (ServerLevel level : server.getAllLevels()) {
+            DimensionAtmos d = dimensions.get(level.dimension());
+            if (d == null) {
+                continue;
+            }
+            ProfileReport.of(this, d).thenAccept(report -> {
+                StringBuilder text = new StringBuilder();
+                for (Component line : report.lines()) {
+                    text.append(text.isEmpty() ? "" : "\n").append(line.getString());
+                }
+                LOGGER.info("{}", text);
+            });
         }
     }
 

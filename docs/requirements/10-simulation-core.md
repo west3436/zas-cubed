@@ -671,7 +671,7 @@ affects it.
   stay unzoned until a vent adds gas to the room, which then forms a zone.
 
 #### CORE-054 · No world scanning
-`Must` · `R0` · `Accepted` · Verify: Inspect, Bench · Trace: D-13
+`Must` · `R0` · `Implemented` · Verify: Inspect, Bench · Trace: D-13
 
 Zones shall never be created by scanning the world. Only a triggering
 operation starts enclosure detection.
@@ -679,6 +679,12 @@ operation starts enclosure detection.
 - **Rationale:** Decision: D-13.
 - **Verify:** Inspect the code for world scans; Bench checks world generation
   and exploration create no zones and no fills.
+
+*2026-10-31: Implemented. The R0 bench generates 320 chunks of terrain with
+sealed caves and makes 20,000 block edits in them next to a zoned station:
+no section captured, no fill, no zone ([benchmarks · scaling](../research/benchmarks.md#nfr-003-and-core-054-cost-follows-activity)).
+The platform has no world scans: `LevelWorld` only drains dirty sections,
+captures sections the engine names and reads chunk generations.*
 
 #### CORE-055 · Normal zone triggers
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-13, D-14
@@ -808,7 +814,7 @@ changing the period changes smoothness and cost but not real-time behaviour.
   checks the state after 10 s agrees; Bench records the cost at each period.
 
 #### CORE-047 · Server-thread budget
-`Must` · `R0` · `Accepted` · Verify: Bench · Trace: D-30 · Depends: NFR-001
+`Must` · `R0` · `Implemented` · Verify: Bench · Trace: D-30 · Depends: NFR-001
 
 Work that touches the server thread, such as snapshotting and applying
 results, shall stay within a per-server-tick budget.
@@ -819,6 +825,14 @@ results, shall stay within a per-server-tick budget.
 
 *2026-10-31: the budget defaults to 10 ms (configurable), and work beyond it
 is deferred to the next tick. Added during the NFR review (NFR-002).*
+
+*2026-10-31: Implemented for R0. The headless S-10 engine bench keeps every
+batch close and apply under 0.3 ms, an explosion breach included, and a burst
+of 1,000 zone-creating adds closes in under 1 ms; with no budget left the
+prefetch is deferred and the rooms zone a tick later
+([benchmarks · S-10](../research/benchmarks.md#s-10-engine-load)). R0 has no devices,
+hazards or sync, so the server thread's atmos work is close and apply plus the
+change hook; the full S-10 with R1's work is NFR-001 and NFR-002's bench.*
 
 #### CORE-048 · Exactly-once processing
 `Must` · `R0` · `Implemented` · Verify: Unit
