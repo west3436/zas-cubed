@@ -301,7 +301,12 @@ context (GEO-041).
    then derive the geometry **once per distinct `VoxelShape` instance**
    (*spike (S2):* vanilla has 4,811 instances, taking 120 ms). Derivation runs
    at server start and again on `TagsUpdatedEvent`, on a background thread,
-   and finishes before the first atmos tick.
+   and finishes before the first atmos tick. *Implemented (#24):* the
+   shape-derived table is computed once per game session; distinct shape
+   instances that rasterize to the same voxels share one derivation, which
+   takes vanilla to about 60 ms and 303 geometries. Each reload only reapplies
+   overrides. The lookup is `GeometryTable#geometryId(BlockState)` from
+   `Geometries.table()` in `io.github.west3436.zas.geometry`, about 20 ns.
 2. **Rasterization.** The shape is rasterized to 16³ voxels. Each face's
    coverage is its 16×16 boundary layer (GEO-003). Free space reaching a face
    is split into 6-connected components, the sub-cells (GEO-004), each with its
@@ -313,7 +318,12 @@ context (GEO-041).
    vanilla.
 4. **Overrides and flags.** Datapack overrides (GEO-005, GEO-009), fluids
    (GEO-006) and zone-boundary tags (GEO-007) are applied over the derived
-   geometry. Each produces a new palette entry, a single cell.
+   geometry. Each produces a new palette entry, a single cell. Overrides are
+   JSON files at `data/<namespace>/zas/geometry_overrides/<path>.json`:
+   `blocks` (block ids, or tags prefixed with `#`; unknown ones are skipped),
+   `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
+   default none) and `volume` (litres, 0 to 1,000). A block named directly
+   beats a tag match; between equals, the file whose id sorts last wins.
 5. **Position-dependent states** (*spike (S2):* 32 in vanilla, found by
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
