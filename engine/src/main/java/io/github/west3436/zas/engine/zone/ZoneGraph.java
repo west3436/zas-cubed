@@ -35,7 +35,7 @@ import java.util.TreeMap;
  *       and the like, each attributed to a {@link LedgerCategory};
  *   <li>{@link #exchange()}: every awake edge exchanges once, equivalent zones
  *       joined by a direct opening merge, other equivalent edges sleep, and
- *       zones that match their ambient dissolve into it;
+ *       zones that match their ambient dissolve into it unless pinned (D-64);
  *   <li>{@link #checkConservation(long)} when the checker is on.
  * </ol>
  *
@@ -157,6 +157,24 @@ public final class ZoneGraph {
     public void setPaused(Zone zone, boolean paused) {
         requireLive(zone);
         zone.paused = paused;
+    }
+
+    /**
+     * Pins or unpins a zone (D-64). A pinned zone never dissolves into the ambient (CORE-076): once
+     * nearly equivalent to it, its ambient edge keeps exchanging as usual instead.
+     *
+     * <p>The pin follows the zone's gas and cells, the way its identity does (CORE-026): when two
+     * zones merge, the surviving zone is pinned if either was, since the absorbed zone's cells and
+     * gas live on in it; when a zone splits, the part that keeps the id and every remnant split off
+     * under a new id are all pinned if it was, so no part of a pinned zone dissolves. Saving and
+     * loading keeps the pin (DATA-002), and so does the scheduler's undo of a rejected component.
+     *
+     * <p>Set by the zone pins of API-017, persisted by API-018, in R1; nothing sets it in R0 except
+     * tests.
+     */
+    public void setPinned(Zone zone, boolean pinned) {
+        requireLive(zone);
+        zone.pinned = pinned;
     }
 
     /** The live zones, in id order. */
@@ -582,7 +600,7 @@ public final class ZoneGraph {
      * of searches that runs out of cells first has found a complete remnant,
      * which becomes a new zone. The work depends on how far apart the seeds are
      * inside the zone, not on its size (CORE-025). The remnant found last keeps
-     * the zone and its id.
+     * the zone and its id. Every remnant inherits the zone's pin (D-64).
      */
     private void splitCheck(Zone zone) {
         int epoch = ++searchEpoch;
@@ -688,7 +706,8 @@ public final class ZoneGraph {
 
     /**
      * Moves a remnant into a new zone. It takes the zone's composition and
-     * temperature, with moles in proportion to its volume (CORE-064).
+     * temperature, with moles in proportion to its volume (CORE-064), and the
+     * zone's pin (D-64).
      */
     private void splitOff(Zone zone, List<Cell> remnant) {
         double volume = 0;
@@ -697,6 +716,7 @@ public final class ZoneGraph {
         }
         GasMixture parcel = zone.mixture().removeFraction(volume / zone.volume());
         Zone created = newZone(parcel);
+        created.pinned = zone.pinned;
         for (Cell c : remnant) {
             relabel(c, created);
         }
@@ -710,8 +730,9 @@ public final class ZoneGraph {
     /**
      * Merges two zones into one: the one with more cells (on a tie, the lower id)
      * keeps its id and takes the other's cells and gas, which is conserved. The
-     * other is destroyed. {@link #exchange()} calls this for equivalent zones
-     * joined by a direct opening (CORE-023).
+     * other is destroyed. The surviving zone is pinned if either was (D-64).
+     * {@link #exchange()} calls this for equivalent zones joined by a direct
+     * opening (CORE-023).
      *
      * @return the surviving zone
      * @throws IllegalArgumentException if the zones are the same, dead or not
@@ -735,6 +756,7 @@ public final class ZoneGraph {
             relabel(small.cellAt(small.cellCount() - 1), big);
         }
         big.mixture().merge(small.mixture());
+        big.pinned |= small.pinned;
         drainPruned(small.mixture());
         destroyZone(small);
         big.changed = true;
@@ -848,7 +870,8 @@ public final class ZoneGraph {
      *       LedgerCategory#AMBIENT}, and its cells become unzoned, so they hold
      *       the ambient again (CORE-050) and a later trigger can zone them anew.
      *       Its other edges become its neighbours' ambient connections. This
-     *       takes the place of snapping to the ambient (CORE-039).
+     *       takes the place of snapping to the ambient (CORE-039). Pinned zones
+     *       never dissolve (D-64): their ambient edges keep exchanging.
      * </ol>
      *
      * <p>Paused zones (GEO-030) take no part: they don't exchange with the ambient, merge or
@@ -898,7 +921,7 @@ public final class ZoneGraph {
         }
         edgeBuffer.clear();
         for (Zone z : zones.values()) {
-            if (!z.paused && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
+            if (!z.paused && !z.pinned && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
                 dissolveBuffer.add(z);
             }
         }
@@ -963,10 +986,13 @@ public final class ZoneGraph {
         exchangeCount++;
     }
 
-    /** One exchange with the ambient, unless the zone is about to dissolve into it (CORE-076). */
+    /**
+     * One exchange with the ambient, unless the zone is about to dissolve into it (CORE-076). A
+     * pinned zone never dissolves, so it always exchanges (D-64).
+     */
     private void exchangeWithAmbient(Edge e) {
         Zone z = e.first();
-        if (!nearlyAmbient(z.mixture())) {
+        if (z.pinned || !nearlyAmbient(z.mixture())) {
             double vz = z.volume();
             double vs =
                     settings.ambientSharerVolume() + (settings.venting() == ExchangeSettings.Venting.FAITHFUL ? vz : 0);
@@ -1232,11 +1258,13 @@ public final class ZoneGraph {
      * @param id the zone's saved id; the counter is raised past it (CORE-026)
      * @param cellIds the share's cells
      * @param gas the share's gas; not changed
+     * @param pinned whether the share was saved pinned (D-64, API-018); a pinned share pins the
+     *     zone, and an unpinned one leaves its pin as it is
      * @return the zone, or null if it isn't live and none of the cells could join it, in which
      *     case nothing changes
      * @throws IllegalArgumentException if the id isn't positive
      */
-    public Zone loadShare(long id, long[] cellIds, GasMixture gas) {
+    public Zone loadShare(long id, long[] cellIds, GasMixture gas, boolean pinned) {
         Objects.requireNonNull(gas, "gas");
         if (id <= 0) {
             throw new IllegalArgumentException("zone id must be positive, got " + id);
@@ -1274,6 +1302,7 @@ public final class ZoneGraph {
         if (zone.mixture().merge(gas)) {
             ledger.record(LedgerCategory.STORAGE, gas, 1);
         }
+        zone.pinned |= pinned;
         zone.changed = true;
         return zone;
     }
@@ -1332,11 +1361,12 @@ public final class ZoneGraph {
      * @param id the destroyed zone's id
      * @param cellIds its cells at the undo point
      * @param mixture its mixture at the undo point; copied
+     * @param pinned whether it was pinned at the undo point (D-64)
      * @return the recreated zone
      * @throws IllegalArgumentException if the id is live or was never issued, or
      *     the list is empty
      */
-    public Zone restoreZone(long id, long[] cellIds, GasMixture mixture) {
+    public Zone restoreZone(long id, long[] cellIds, GasMixture mixture, boolean pinned) {
         Objects.requireNonNull(mixture, "mixture");
         if (id <= 0 || id >= nextZoneId || zones.containsKey(id)) {
             throw new IllegalArgumentException("zone id " + id + " is live or was never issued");
@@ -1345,6 +1375,7 @@ public final class ZoneGraph {
             throw new IllegalArgumentException("a zone needs at least one cell");
         }
         Zone zone = new Zone(id, mixture.copy());
+        zone.pinned = pinned;
         zones.put(id, zone);
         for (long cellId : cellIds) {
             Cell c = cells.get(cellId);

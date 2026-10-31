@@ -17,8 +17,10 @@ import java.util.Arrays;
  * @param temperature the zone's temperature in K
  * @param zoneChunks every chunk the zone spans, this one included, ascending: the zone is complete
  *     once all of them have loaded
+ * @param pinned whether the zone is pinned (D-64, API-018); every share of a zone has its pin
  */
-public record ZoneShare(long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks) {
+public record ZoneShare(
+        long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks, boolean pinned) {
 
     /**
      * Checks and copies the arguments.
@@ -41,6 +43,11 @@ public record ZoneShare(long zoneId, long[] cells, double[] moles, double temper
             throw new IllegalArgumentException("temperature must be finite and >= 0 K: " + temperature);
         }
         zoneChunks = Membership.sortedDistinct(zoneChunks);
+    }
+
+    /** A share of an unpinned zone. */
+    public ZoneShare(long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks) {
+        this(zoneId, cells, moles, temperature, zoneChunks, false);
     }
 
     @Override
@@ -75,7 +82,8 @@ public record ZoneShare(long zoneId, long[] cells, double[] moles, double temper
                 && Arrays.equals(cells, z.cells)
                 && Arrays.equals(moles, z.moles)
                 && Double.compare(temperature, z.temperature) == 0
-                && Arrays.equals(zoneChunks, z.zoneChunks);
+                && Arrays.equals(zoneChunks, z.zoneChunks)
+                && pinned == z.pinned;
     }
 
     @Override
@@ -86,6 +94,6 @@ public record ZoneShare(long zoneId, long[] cells, double[] moles, double temper
     @Override
     public String toString() {
         return "ZoneShare#" + zoneId + "[" + cells.length + " cells, " + Arrays.toString(moles) + " mol, " + temperature
-                + " K, " + zoneChunks.length + " chunks]";
+                + " K, " + zoneChunks.length + " chunks" + (pinned ? ", pinned" : "") + "]";
     }
 }

@@ -23,8 +23,11 @@ import java.util.List;
  */
 public record ChunkRecord(long chunk, List<ZoneShare> zones, long[] heldBlocks, List<GasOp> queuedAdditions) {
 
-    /** The current format version (DATA-003), written by {@code ChunkRecordCodec}. */
-    public static final int FORMAT_VERSION = 1;
+    /**
+     * The current format version (DATA-003), written by {@code ChunkRecordCodec}. Version 2 adds
+     * each zone's pin (D-64); version 1 is still read, its zones unpinned.
+     */
+    public static final int FORMAT_VERSION = 2;
 
     /**
      * Checks and copies the arguments.

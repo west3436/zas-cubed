@@ -28,8 +28,8 @@ import java.util.zip.CRC32;
  *   <li>magic {@code "ZAS3"} and the format version ({@link ChunkRecord#FORMAT_VERSION});
  *   <li>the gas table: a count, then each gas id; every amount below is listed in this order, so
  *       saves don't depend on the order of the gas registry;
- *   <li>the zones: a count, then per zone its id, its cells, its moles per gas, its temperature and
- *       the chunks it spans;
+ *   <li>the zones: a count, then per zone its id, its cells, its moles per gas, its temperature,
+ *       the chunks it spans and, from version 2, whether it is pinned (D-64);
  *   <li>the held block positions (DATA-010);
  *   <li>the queued additions (DATA-011): per operation its original sequence number, block,
  *       moles per gas, temperature, ledger category, whether it triggers a zone, and its source;
@@ -37,13 +37,16 @@ import java.util.zip.CRC32;
  * </ol>
  *
  * <p>Only what can't be rebuilt is written: no edges, seal masks, sub-cell shapes or hotspots
- * (DATA-009). Reading checks the magic, the version, the checksum and every value; anything wrong
+ * (DATA-009). Version 1, which has no pins, is still read, its zones unpinned. Reading checks the
+ * magic, the version, the checksum and every value; anything wrong
  * throws {@link CorruptRecordException}, and the caller resets the chunk to unzoned (DATA-004).
  * Gases the registry no longer has are dropped with a warning (CORE-013).
  */
 public final class ChunkRecordCodec {
     private static final int MAGIC = 0x5A415333; // "ZAS3"
     private static final int MAX_COUNT = 1 << 24;
+    /** The first format version, without zone pins. */
+    private static final int VERSION_1 = 1;
 
     /**
      * The chunk key of the level-wide record, which holds queued additions whose target chunk
@@ -81,6 +84,7 @@ public final class ChunkRecordCodec {
                 writeMoles(out, z.moles(), gases);
                 out.writeDouble(z.temperature());
                 writeLongs(out, z.zoneChunks());
+                out.writeBoolean(z.pinned());
             }
             writeLongs(out, record.heldBlocks());
             out.writeInt(record.queuedAdditions().size());
@@ -144,7 +148,7 @@ public final class ChunkRecordCodec {
                 throw new CorruptRecordException("not a zas atmos record");
             }
             int version = in.readInt();
-            if (version != ChunkRecord.FORMAT_VERSION) {
+            if (version != ChunkRecord.FORMAT_VERSION && version != VERSION_1) {
                 throw new CorruptRecordException("unknown format version " + version);
             }
             long savedChunk = in.readLong();
@@ -168,7 +172,8 @@ public final class ChunkRecordCodec {
                 double[] moles = readMoles(in, gases, index, registry.size());
                 double temperature = in.readDouble();
                 long[] chunks = readLongs(in);
-                zones.add(new ZoneShare(id, cells, moles, temperature, chunks));
+                boolean pinned = version != VERSION_1 && in.readBoolean();
+                zones.add(new ZoneShare(id, cells, moles, temperature, chunks, pinned));
             }
             long[] held = readLongs(in);
             int opCount = count(in);
