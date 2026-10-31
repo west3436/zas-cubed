@@ -1,0 +1,5 @@
+{
+  "blocks": ["#zas:geo_005_override"],
+  "sealed_faces": ["down", "north", "south", "west", "east"],
+  "volume": 600
+}

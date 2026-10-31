@@ -19,7 +19,7 @@ the [README](README.md#writing-rules).
 ## Cells and sealing
 
 #### GEO-001 · Cell definition
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-44
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-44
 
 A cell shall be a connected region of a block position's free space (space
 outside its collision shape) that reaches at least one of the position's
@@ -31,7 +31,7 @@ such region (GEO-004). Free space that reaches no face is ignored.
   with a sealed internal void; a GameTest checks the same blocks in-world.
 
 #### GEO-002 · Cell volume
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: A-02, D-22
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: A-02, D-22
 
 A cell's gas volume shall be its share of the free space: 1,000 L for an air
 position, and proportionally less for a partial block (a bottom slab holds
@@ -42,7 +42,7 @@ position, and proportionally less for a partial block (a bottom slab holds
   their free space.
 
 #### GEO-003 · Derived seal mask
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: [neoforge §4](../research/neoforge-1.21.1.md#4-block-geometry)
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: [neoforge §4](../research/neoforge-1.21.1.md#4-block-geometry)
 
 By default, the face between two adjacent positions shall be gas-tight wherever
 the two blocks' collision shapes *together* cover it, so complementary
@@ -60,7 +60,7 @@ therefore leak around their edges. This is intended.
   a GameTest checks complementary slabs seal a room and a chest leaks.
 
 #### GEO-041 · Collision shapes only
-`Must` · `R0` · `Accepted` · Verify: Unit · Trace: [neoforge §4](../research/neoforge-1.21.1.md#4-block-geometry)
+`Must` · `R0` · `Implemented` · Verify: Unit · Trace: [neoforge §4](../research/neoforge-1.21.1.md#4-block-geometry)
 
 Cells, volumes and seal masks shall be derived from collision shapes in an
 empty collision context, never from render or light occlusion. (Glass and
@@ -74,7 +74,7 @@ snow change with the entity.)
   snow use their empty-context shapes.
 
 #### GEO-040 · Geometry cached per block state
-`Must` · `R0` · `Accepted` · Verify: Bench, Unit
+`Must` · `R0` · `Implemented` · Verify: Bench, Unit
 
 Cells, volumes and seal masks shall be computed once per block state and
 cached, except for the blocks in GEO-043.
@@ -110,7 +110,7 @@ shall be evaluated per position and re-evaluated whenever the block changes
   differ, and that a change re-evaluates them.
 
 #### GEO-004 · Sub-cells
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-44
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-44
 
 When a block's shape divides its free space into separate regions (glass
 panes, walls), each region shall be an independent cell. Gas doesn't pass
@@ -122,7 +122,7 @@ line of panes seals like a wall.
   line of panes keeps two zones at different pressures apart.
 
 #### GEO-005 · Geometry overrides
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-04
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-04
 
 A datapack override, by block or block tag, shall replace a block's derived
 geometry with a declared one: which faces are gas-tight, and its gas volume.

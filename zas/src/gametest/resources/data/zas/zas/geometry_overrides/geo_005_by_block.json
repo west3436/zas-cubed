@@ -1,0 +1,5 @@
+{
+  "blocks": ["minecraft:lectern", "notamod:missing_block"],
+  "sealed_faces": ["north", "south"],
+  "volume": 250
+}
