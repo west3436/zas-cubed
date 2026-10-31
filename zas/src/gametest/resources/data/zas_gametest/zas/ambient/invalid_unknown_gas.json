@@ -1,0 +1,6 @@
+{
+  "partial_pressures": {
+    "zas_gametest:no_such_gas": 10.0
+  },
+  "temperature": 300.0
+}
