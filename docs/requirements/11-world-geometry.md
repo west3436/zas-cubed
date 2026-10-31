@@ -193,7 +193,7 @@ rebuild.
 ## Change tracking
 
 #### GEO-010 · Complete change detection
-`Must` · `R0` · `Accepted` · Verify: GameTest
+`Must` · `R0` · `Implemented` · Verify: GameTest
 
 Every server-side block state change in a loaded chunk shall reach the engine,
 whatever its cause:
@@ -225,7 +225,7 @@ update.
   cost per change is constant.
 
 #### GEO-012 · Coalescing
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Multiple changes during one atmos tick shall be coalesced and processed once
 in the next geometry phase.
