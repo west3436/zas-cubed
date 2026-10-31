@@ -43,6 +43,13 @@ neoForge {
     }
 }
 
+// GameTests start from a fresh world, as in :zas: saved zones would otherwise come back.
+tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.projectDirectory.dir('run/world')
+    }
+}
+
 dependencies {
     // Compile against the public API only (D-50); zas is required at runtime.
     implementation project(':zas-api')

@@ -274,7 +274,7 @@ Exceeding the bound means "open to ambient".
   GameTest checks a large hall reports open; Bench measures fill cost.
 
 #### GEO-024 · Fills that reach unloaded chunks
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-24, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-24, D-43
 
 A fill that reaches an unloaded chunk shall leave the region *unresolved*, not
 open. No zone forms for it until its chunks are loaded and it can be
@@ -355,7 +355,7 @@ shall become an ambient edge.
   edge forms and the room vents (S-02).
 
 #### GEO-026 · Breach into an unresolved region
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 When a zone's face opens onto an unresolved region (GEO-024), the zone shall
 pause (GEO-030) until the region can be classified.
@@ -367,7 +367,7 @@ pause (GEO-030) until the region can be classified.
 ## Boundaries and lifecycle
 
 #### GEO-030 · Paused zones
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-09, D-24, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-09, D-24, D-43
 
 A zone with any cell in an unloaded chunk shall pause as a whole: no exchange,
 reactions, heat transfer or device action inside it.
@@ -377,7 +377,7 @@ reactions, heat transfer or device action inside it.
   changes over 10 s.
 
 #### GEO-033 · Resuming unchanged
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-09, D-24
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-09, D-24
 
 A paused zone shall resume with its mixture unchanged once all of its chunks
 are loaded.
@@ -387,7 +387,7 @@ are loaded.
   mixture is identical.
 
 #### GEO-034 · No force-loading
-`Must` · `R0` · `Accepted` · Verify: Inspect, GameTest · Trace: D-24
+`Must` · `R0` · `Implemented` · Verify: Inspect, GameTest · Trace: D-24
 
 The engine shall never force chunks to stay loaded.
 
@@ -408,7 +408,7 @@ queries. An unresolved region's last-known state is the ambient.
   at a paused zone all see its last-known state.
 
 #### GEO-036 · Gas into paused zones is voided
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
 
 Gas sent into a paused zone or an unresolved region shall be voided. Rates are
 computed against the last-known state (GEO-035), so pipe networks keep running
@@ -419,7 +419,7 @@ and no pressure builds up against a zone that can't absorb gas.
   unchanged and the checker records the gas as voided.
 
 #### GEO-038 · Paused zones supply without depleting
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43 · Depends: CORE-036
 
 Gas drawn out of a paused zone or an unresolved region shall be supplied at
 its last-known state (GEO-035) without depleting it, as the ambient is.
@@ -429,7 +429,7 @@ its last-known state (GEO-035) without depleting it, as the ambient is.
   when it resumes.
 
 #### GEO-037 · Changes to paused zones are held
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 Block changes touching a paused zone shall be held and processed when the zone
 resumes.

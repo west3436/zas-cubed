@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -39,9 +40,13 @@ import java.util.TreeSet;
  * <ol start="0">
  *   <li>Restore the components the server thread rejected from the previous result, and re-queue
  *       their operations (CORE-070, CORE-074).
- *   <li>Geometry: store the batch's section snapshots in the mirror and refresh the cells of every
- *       changed position and its neighbours (GEO-012).
- *   <li>Boundaries: the classifier resolves breaches ({@link Classifier#afterGeometry}).
+ *   <li>Geometry: note chunk loads and unloads, take zones whose chunks have all unloaded out of
+ *       memory, store the batch's section snapshots in the mirror and refresh the cells of every
+ *       changed position and its neighbours (GEO-012), holding changes that touch paused zones
+ *       (GEO-037); then build or extend zones from the saved shares of chunks that loaded
+ *       (DATA-002).
+ *   <li>Boundaries: the classifier resolves breaches ({@link Classifier#afterGeometry}); then every
+ *       zone is paused or resumed (GEO-030).
  *   <li>Gas operations, in sequence order: each finds the cell it targets. A zone-triggering
  *       operation at an unzoned cell has it classified; if enclosed, the zone is created here
  *       (CORE-051, CORE-055). Then the <i>undo point</i> is taken, and every operation that isn't
@@ -54,6 +59,17 @@ import java.util.TreeSet;
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
  * Result}: the zone table, the exchange components with the chunks they span, operation outcomes
  * and open-air events (CORE-058).
+ *
+ * <p><b>Paused zones</b> (GEO-030 to GEO-038, architecture §4.6). A zone pauses while any chunk
+ * it spans is unloaded, while it waits for chunks its saved shares list, or while it opens onto a
+ * region that can't be classified because it reaches an unloaded chunk ({@link
+ * Classifier#heldZones}, GEO-026). A paused zone keeps its mixture and its cells: it doesn't
+ * exchange, gas operations on it are voided or supplied at its last-known state (GEO-036,
+ * GEO-038), and block changes touching it are held, in order, until it resumes (GEO-037). The
+ * engine never asks for a chunk to be loaded (GEO-034). Once every chunk a paused zone spans has
+ * unloaded, and no zone with a loaded chunk shares an edge with it, it is taken out of memory: its
+ * state is in the chunks' saved shares, from which it is rebuilt when they load again (DATA-002,
+ * DATA-008).
  *
  * <p><b>Determinism</b> (CORE-044, CORE-072, architecture §3.5): operations run in sequence order,
  * sections in key order, cells in ascending id order, zones and edges in id order; hash
@@ -72,6 +88,16 @@ public final class DimensionEngine {
     private Phase.Listener phases = Phase.Listener.NONE;
     private long lastTick = Long.MIN_VALUE;
     private final List<GasOp> buffered = new ArrayList<>();
+
+    // Paused zones and storage (architecture §4.5, §4.6).
+    /** Zone id: the chunks its saved shares list that haven't loaded yet, ascending. */
+    private final TreeMap<Long, long[]> missingChunks = new TreeMap<>();
+    /** Zones rebuilt from saved shares whose surface is classified when they resume: id to held blocks. */
+    private final TreeMap<Long, long[]> rebuilt = new TreeMap<>();
+    /** The latest capture of each section with changes held for paused zones (GEO-037). */
+    private final TreeMap<Long, SectionSnapshot> heldTruth = new TreeMap<>(SectionKeys::compare);
+    /** Zones the classifier holds at unresolved breaches (GEO-026), from the last boundaries phase. */
+    private long[] heldZoneIds = new long[0];
 
     /** Membership as of the end of the last tick, for the snapshot; null when it must be rebuilt. */
     private Membership membership = Membership.EMPTY;
@@ -140,6 +166,15 @@ public final class DimensionEngine {
         return registry;
     }
 
+    /**
+     * Makes sure new zones get ids of at least {@code next} (CORE-026): the platform passes the
+     * counter saved with the dimension before the first tick, so ids are never reused across
+     * sessions. Owner thread, between ticks.
+     */
+    public void reserveZoneIds(long next) {
+        graph.reserveZoneIds(next);
+    }
+
     /** The atmos tick last run, or {@link Long#MIN_VALUE}. */
     public long lastTick() {
         return lastTick;
@@ -180,6 +215,7 @@ public final class DimensionEngine {
                 h.add(m.moles(i));
             }
             h.add(m.temperature());
+            h.add(z.isPaused() ? 1 : 0);
             for (Edge e : z.edges()) {
                 Zone other = e.other(z);
                 h.add(other == null ? 0 : other.id());
@@ -224,19 +260,34 @@ public final class DimensionEngine {
 
         // 1. Geometry.
         phases.enter(Phase.GEOMETRY);
-        long[] refreshed = geometry(batch);
+        CellSet surfaces = new CellSet();
+        List<Long> resuming = new ArrayList<>();
+        long[] refreshed = geometry(batch, surfaces, resuming);
 
-        // 2. Boundaries.
+        // 2. Boundaries, then pause and resume zones.
         phases.enter(Phase.BOUNDARIES);
         TreeSet<Long> requested = new TreeSet<>();
-        classifier.afterGeometry(graph, refreshed, requested::add);
+        long[] extra = surfaces.sorted();
+        long[] toClassify = extra.length == 0 ? refreshed : union(refreshed, extra);
+        classifier.afterGeometry(graph, toClassify, requested::add);
+        heldZoneIds = classifier.heldZones();
+        // A rebuilt zone stays paused until what its surface opens onto is classified.
+        Set<Long> waiting = new HashSet<>();
+        for (long id : resuming) {
+            if (classifier.hasPending()) {
+                waiting.add(id);
+            } else {
+                rebuilt.remove(id);
+            }
+        }
+        updatePaused(waiting);
 
         // 3. Gas operations.
         phases.enter(Phase.GAS_OPERATIONS);
         List<GasOp> ops = mergeBySeq(requeued, buffered, batch.ops());
         buffered.clear();
         Target[] targets = classifyAll(ops, requested);
-        if (membership == null || refreshed.length > 0 || !membership.sameZones(graph)) {
+        if (membership == null || toClassify.length > 0 || !membership.sameZones(graph)) {
             membership = Membership.of(graph, space);
         }
         Membership undo = membership;
@@ -306,7 +357,18 @@ public final class DimensionEngine {
         for (long k : requested) {
             wanted[w++] = k;
         }
-        return new Result(tick, snapshot, components, finished, events, report, mirrored, wanted, buffered.size());
+        return new Result(
+                tick,
+                snapshot,
+                components,
+                finished,
+                events,
+                report,
+                mirrored,
+                wanted,
+                buffered.size(),
+                heldBlocks(),
+                graph.nextZoneId());
     }
 
     // ---- 0. Restore ---------------------------------------------------------------
@@ -346,28 +408,40 @@ public final class DimensionEngine {
 
     // ---- 1. Geometry ----------------------------------------------------------------
 
-    private long[] geometry(Batch batch) {
+    private long[] geometry(Batch batch, CellSet surfaces, List<Long> resuming) {
         for (long chunk : batch.unloadedChunks()) {
-            // TODO(#27): pause the zones of an unloaded chunk; until then their sections stay mirrored.
             mirror.chunkUnloaded(chunk);
         }
         for (long chunk : batch.loadedChunks()) {
             mirror.chunkLoaded(chunk);
+            chunkArrived(chunk);
         }
         for (long section : batch.unavailableSections()) {
             mirror.unavailable(section);
         }
-        Set<Long> zonedSections = zonedSections();
         // The cells of changed positions are refreshed before their neighbours, so a filled cell's
         // gas stays in its zone (CORE-022) before any split the change causes is found (CORE-024).
         CellSet changedCells = new CellSet();
         CellSet toRefresh = new CellSet();
+        if (batch.unloadedChunks().length > 0) {
+            evictUnloaded();
+        }
+        dropUnloadedSections(toRefresh);
+        Set<Long> zonedSections = zonedSections();
+        Set<Long> pausedNow = pausedZones(membership);
+        // This batch's captures, and the latest capture of every section with held changes.
+        TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
+        heldTruth.clear();
         for (SectionSource source : batch.sections()) {
             SectionSnapshot s = source.decode();
             if (s.key() != source.key()) {
                 log.warn("Section capture decoded to the wrong key; skipped");
                 continue;
             }
+            truths.put(s.key(), s);
+        }
+        for (SectionSnapshot truth : truths.values()) {
+            SectionSnapshot s = truth;
             SectionSnapshot old = mirror.section(s.key());
             if (old == null) {
                 mirror.put(s);
@@ -380,6 +454,28 @@ public final class DimensionEngine {
             }
             int[] changed = changedIndices(old, s);
             long base = s.key();
+            if (changed.length > 0 && !pausedNow.isEmpty()) {
+                // Hold the changes that touch a paused zone (GEO-037): the mirror keeps the old
+                // geometry there until the zone resumes.
+                int[] applied = new int[changed.length];
+                int a = 0;
+                short[] ids = null;
+                for (int index : changed) {
+                    if (touchesPaused(blockAt(base, index), pausedNow)) {
+                        if (ids == null) {
+                            ids = s.geometryIds();
+                        }
+                        ids[index] = (short) old.geometryId(index);
+                    } else {
+                        applied[a++] = index;
+                    }
+                }
+                if (ids != null) {
+                    heldTruth.put(s.key(), truth);
+                    s = SectionSnapshot.of(s.key(), s.lifecycleGeneration(), s.blockGeneration(), ids);
+                    changed = Arrays.copyOf(applied, a);
+                }
+            }
             for (int index : changed) {
                 space.forEachCellAt(blockAt(base, index), changedCells::add);
             }
@@ -403,14 +499,298 @@ public final class DimensionEngine {
                 graph.refresh(cell);
             }
         }
+        if (cells.length > 0) {
+            membership = null;
+        }
+        ingest(batch);
+        resumeRebuilt(surfaces, resuming);
         return cells;
     }
 
-    private Set<Long> zonedSections() {
-        if (membership == null) {
+    // ---- 1. Paused zones and storage (architecture §4.5, §4.6) ----------------------------
+
+    /** A chunk the zones rebuilt from saved shares were waiting for has loaded. */
+    private void chunkArrived(long chunk) {
+        for (Map.Entry<Long, long[]> e : missingChunks.entrySet()) {
+            long[] waiting = e.getValue();
+            int i = Arrays.binarySearch(waiting, chunk);
+            if (i >= 0) {
+                long[] rest = new long[waiting.length - 1];
+                System.arraycopy(waiting, 0, rest, 0, i);
+                System.arraycopy(waiting, i + 1, rest, i, rest.length - i);
+                e.setValue(rest);
+            }
+        }
+        missingChunks.values().removeIf(w -> w.length == 0);
+    }
+
+    /**
+     * Takes out of memory every zone whose chunks have all unloaded and that shares no edge with a
+     * zone that has a loaded chunk (architecture §4.5). Its state is in the chunks' saved shares.
+     */
+    private void evictUnloaded() {
+        Membership m = zonedMembership();
+        int n = m.size();
+        boolean[] evict = new boolean[n];
+        boolean any = false;
+        for (int i = 0; i < n; i++) {
+            long[] chunks = m.chunks(i);
+            boolean all = chunks.length > 0;
+            for (long c : chunks) {
+                if (!mirror.isChunkUnloaded(c)) {
+                    all = false;
+                    break;
+                }
+            }
+            evict[i] = all;
+            any |= all;
+        }
+        if (!any) {
+            return;
+        }
+        // Keep zones linked by edges to a zone that stays, so loaded zones keep exchanging with their
+        // last-known state (GEO-035).
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (int i = 0; i < n; i++) {
+                if (!evict[i]) {
+                    continue;
+                }
+                for (Edge e : graph.zone(m.zoneIds[i]).edges()) {
+                    Zone other = e.other(graph.zone(m.zoneIds[i]));
+                    if (other != null && !evict[m.indexOf(other.id())]) {
+                        evict[i] = false;
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < n; i++) {
+            if (evict[i]) {
+                long id = m.zoneIds[i];
+                graph.evict(graph.zone(id));
+                missingChunks.remove(id);
+                rebuilt.remove(id);
+                membership = null;
+            }
+        }
+    }
+
+    /**
+     * Drops mirrored sections of unloaded chunks that hold no zoned cells, refreshing the zoned
+     * cells across their faces: faces into unloaded chunks lead nowhere until they load, and fills
+     * that reach them are unresolved (GEO-024, GEO-026).
+     */
+    private void dropUnloadedSections(CellSet toRefresh) {
+        if (!mirror.hasUnloadedChunks()) {
+            return;
+        }
+        Set<Long> zoned = zonedSections();
+        for (long key : mirror.keys()) {
+            if (mirror.isChunkUnloaded(SectionKeys.chunkOf(key)) && !zoned.contains(key)) {
+                mirror.remove(key);
+                heldTruth.remove(key);
+                addBorderCells(key, zoned, toRefresh);
+            }
+        }
+    }
+
+    /** Whether a position or one of its neighbours holds a cell of a paused zone. */
+    private boolean touchesPaused(long block, Set<Long> paused) {
+        if (holdsPaused(block, paused)) {
+            return true;
+        }
+        for (Face f : Face.values()) {
+            if (holdsPaused(offset(block, f), paused)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean holdsPaused(long block, Set<Long> paused) {
+        boolean[] found = {false};
+        space.forEachCellAt(block, cell -> {
+            Zone z = graph.zoneOf(cell);
+            if (z != null && paused.contains(z.id())) {
+                found[0] = true;
+            }
+        });
+        return found[0];
+    }
+
+    /** The zones paused by an unloaded chunk, a missing share or a held breach, as of {@code m}. */
+    private Set<Long> pausedZones(Membership m) {
+        Set<Long> out = new HashSet<>();
+        if (mirror.hasUnloadedChunks()) {
+            for (int i = 0; i < m.size(); i++) {
+                for (long c : m.chunks(i)) {
+                    if (mirror.isChunkUnloaded(c)) {
+                        out.add(m.zoneIds[i]);
+                        break;
+                    }
+                }
+            }
+        }
+        out.addAll(missingChunks.keySet());
+        for (long z : heldZoneIds) {
+            out.add(z);
+        }
+        return out;
+    }
+
+    /** Sets every zone's paused flag for this tick (GEO-030); {@code extra} are paused too. */
+    private void updatePaused(Set<Long> extra) {
+        missingChunks.keySet().removeIf(id -> graph.zone(id) == null);
+        rebuilt.keySet().removeIf(id -> graph.zone(id) == null);
+        Membership m = zonedMembership();
+        Set<Long> paused = pausedZones(m);
+        paused.addAll(extra);
+        for (Zone z : graph.zones()) {
+            graph.setPaused(z, paused.contains(z.id()));
+        }
+    }
+
+    /** The membership as of now, rebuilt if the zones changed since it was taken. */
+    private Membership zonedMembership() {
+        if (membership == null || !membership.sameZones(graph)) {
             membership = Membership.of(graph, space);
         }
-        return membership.sections;
+        return membership;
+    }
+
+    /**
+     * Builds or extends zones from the saved shares of chunks that loaded (DATA-002). A share of a
+     * zone already in memory with cells in that chunk is ignored: the zone was paused there, so it
+     * hasn't changed (architecture §4.5). A zone stays paused while chunks its shares list are
+     * unloaded, and its surface is classified once it resumes.
+     */
+    private void ingest(Batch batch) {
+        if (batch.records().isEmpty()) {
+            return;
+        }
+        Membership m = zonedMembership();
+        long[] unloadedListed = batch.unloadedListedChunks();
+        for (ChunkRecord r : batch.records()) {
+            for (ZoneShare share : r.zones()) {
+                Zone z = graph.zone(share.zoneId());
+                if (z != null) {
+                    int idx = m.indexOf(z.id());
+                    if (idx >= 0 && Arrays.binarySearch(m.chunks(idx), r.chunk()) >= 0) {
+                        continue;
+                    }
+                }
+                Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share));
+                if (loaded == null) {
+                    log.warn("The saved share of zone " + share.zoneId() + " in chunk " + SectionKeys.chunkX(r.chunk())
+                            + ", " + SectionKeys.chunkZ(r.chunk()) + " has no cells left; its gas is dropped");
+                    continue;
+                }
+                TreeSet<Long> waiting = new TreeSet<>();
+                for (long c : missingChunks.getOrDefault(loaded.id(), new long[0])) {
+                    waiting.add(c);
+                }
+                for (long c : share.zoneChunks()) {
+                    if (c != r.chunk() && Arrays.binarySearch(unloadedListed, c) >= 0) {
+                        waiting.add(c);
+                    }
+                }
+                waiting.remove(r.chunk());
+                if (waiting.isEmpty()) {
+                    missingChunks.remove(loaded.id());
+                } else {
+                    missingChunks.put(loaded.id(), toArray(new ArrayList<>(waiting)));
+                }
+                long[] held = rebuilt.getOrDefault(loaded.id(), new long[0]);
+                rebuilt.put(loaded.id(), Membership.sortedDistinct(concat(held, r.heldBlocks())));
+            }
+        }
+        membership = null;
+    }
+
+    private GasMixture shareMixture(ZoneShare share) {
+        GasMixture m = new GasMixture(registry, config, 1, share.temperature());
+        int n = Math.min(share.moles().length, registry.size());
+        for (int i = 0; i < n; i++) {
+            if (share.moles(i) > 0) {
+                m.setMoles(i, share.moles(i));
+            }
+        }
+        return m;
+    }
+
+    /**
+     * For every zone rebuilt from saved shares that is no longer waiting for a chunk, adds its cells
+     * and those of its held blocks to {@code surfaces}, so the boundaries phase classifies whatever
+     * they open onto (GEO-023, GEO-025, GEO-026): the blocks may have changed while it was saved
+     * (DATA-010). Their ids go to {@code resuming}; they stay paused, and are classified again,
+     * while the classification waits for sections.
+     */
+    private void resumeRebuilt(CellSet surfaces, List<Long> resuming) {
+        if (rebuilt.isEmpty()) {
+            return;
+        }
+        Membership m = zonedMembership();
+        for (java.util.Iterator<Map.Entry<Long, long[]>> it = rebuilt.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Long, long[]> e = it.next();
+            Zone z = graph.zone(e.getKey());
+            if (z == null) {
+                it.remove();
+                continue;
+            }
+            if (missingChunks.containsKey(z.id())) {
+                continue;
+            }
+            int idx = m.indexOf(z.id());
+            boolean unloaded = false;
+            for (long c : m.chunks(idx)) {
+                unloaded |= mirror.isChunkUnloaded(c);
+            }
+            if (unloaded) {
+                continue;
+            }
+            z.forEachCell(surfaces::add);
+            for (long block : e.getValue()) {
+                space.forEachCellAt(block, surfaces::add);
+                for (Face f : Face.values()) {
+                    space.forEachCellAt(offset(block, f), surfaces::add);
+                }
+            }
+            resuming.add(z.id());
+        }
+    }
+
+    /** The positions whose changes are held, ascending (DATA-010). */
+    private long[] heldBlocks() {
+        if (heldTruth.isEmpty()) {
+            return new long[0];
+        }
+        List<Long> out = new ArrayList<>();
+        for (SectionSnapshot truth : heldTruth.values()) {
+            SectionSnapshot now = mirror.section(truth.key());
+            for (int i = 0; i < SectionSnapshot.SIZE; i++) {
+                if (now == null || now.geometryId(i) != truth.geometryId(i)) {
+                    out.add(blockAt(truth.key(), i));
+                }
+            }
+        }
+        return Membership.sortedDistinct(toArray(out));
+    }
+
+    private static long[] concat(long[] a, long[] b) {
+        long[] out = Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, out, a.length, b.length);
+        return out;
+    }
+
+    private static long[] union(long[] a, long[] b) {
+        return Membership.sortedDistinct(concat(a, b));
+    }
+
+    private Set<Long> zonedSections() {
+        return zonedMembership().sections;
     }
 
     /** For a newly mirrored section, the cells on each face that borders a zoned section, both sides. */
@@ -497,6 +877,8 @@ public final class DimensionEngine {
             } else if (cell == CellSpace.NO_CELL) {
                 // TODO(API-015): a point inside a block's shape should use the nearest cell.
                 route = Route.AMBIENT;
+            } else if (graph.zoneOf(cell) == null && mirror.isChunkUnloaded(SectionKeys.chunkOf(section))) {
+                route = Route.UNRESOLVED; // an unzoned cell in an unloaded chunk (GEO-024)
             } else if (graph.zoneOf(cell) != null) {
                 route = Route.ZONE;
             } else if (!op.triggersZone()) {
@@ -542,6 +924,9 @@ public final class DimensionEngine {
                 return null;
             case ZONE: {
                 Zone zone = graph.zoneOf(target.cell());
+                if (zone.isPaused()) {
+                    return atPausedZone(op, zone, moved, n);
+                }
                 opZone[index] = zone.id();
                 if (op.kind() == GasOp.Kind.ADD) {
                     GasMixture parcel = new GasMixture(registry, config, 1, op.temperature());
@@ -576,6 +961,9 @@ public final class DimensionEngine {
                     // Released to the open air, or voided at an unresolved region (GEO-036).
                     for (int i = 0; i < n; i++) {
                         moved[i] = op.moles(i);
+                        if (!open && moved[i] > 0) {
+                            graph.ledger().recordVoided(i, moved[i]);
+                        }
                     }
                     temperature = op.temperature();
                 } else {
@@ -583,6 +971,9 @@ public final class DimensionEngine {
                     GasMixture air = graph.ambient();
                     for (int i = 0; i < n; i++) {
                         moved[i] = air.moles(i) > 0 ? op.moles(i) : 0;
+                        if (!open && moved[i] > 0) {
+                            graph.ledger().recordSupplied(i, moved[i]);
+                        }
                     }
                     temperature = air.temperature();
                 }
@@ -594,6 +985,34 @@ public final class DimensionEngine {
             default:
                 throw new AssertionError(target.route());
         }
+    }
+
+    /**
+     * An operation on a paused zone (GEO-036, GEO-038): an addition is voided, and a removal is
+     * supplied at the zone's last-known state, up to what it holds, without depleting it. Neither
+     * changes the zone; both are kept by the ledger.
+     */
+    private OpOutcome atPausedZone(GasOp op, Zone zone, double[] moved, int n) {
+        double temperature;
+        if (op.kind() == GasOp.Kind.ADD) {
+            for (int i = 0; i < n; i++) {
+                moved[i] = op.moles(i);
+                if (moved[i] > 0) {
+                    graph.ledger().recordVoided(i, moved[i]);
+                }
+            }
+            temperature = op.temperature();
+        } else {
+            GasMixture m = zone.mixture();
+            for (int i = 0; i < n; i++) {
+                moved[i] = Math.min(op.moles(i), m.moles(i));
+                if (moved[i] > 0) {
+                    graph.ledger().recordSupplied(i, moved[i]);
+                }
+            }
+            temperature = m.temperature();
+        }
+        return new OpOutcome(op.seq(), OpOutcome.Outcome.UNRESOLVED, zone.id(), moved, temperature, -1);
     }
 
     private static boolean any(double[] values) {
@@ -690,7 +1109,7 @@ public final class DimensionEngine {
             for (int k = 0; k < members.size(); k++) {
                 int i = members.get(k);
                 ids[k] = undo.zoneIds[i];
-                undo.addChunks(i, space, chunks);
+                undo.addChunks(i, chunks);
             }
             List<Long> seqs = new ArrayList<>();
             for (int i = 0; i < ops.size(); i++) {
@@ -774,9 +1193,22 @@ public final class DimensionEngine {
                 faces += e.connections();
             }
             views.add(new ZoneView(
-                    z.id(), z.volume(), z.cellCount(), moles, m.temperature(), zoneEdges, ambientEdges, faces, false));
+                    z.id(),
+                    z.volume(),
+                    z.cellCount(),
+                    moles,
+                    m.temperature(),
+                    zoneEdges,
+                    ambientEdges,
+                    faces,
+                    z.isPaused()));
         }
-        return AtmosSnapshot.of(tick, registry, views, membership.positions, membership.zoneOfPosition);
+        long[][] chunks = new long[membership.size()][];
+        for (int i = 0; i < chunks.length; i++) {
+            long[] waiting = missingChunks.get(membership.zoneIds[i]);
+            chunks[i] = waiting == null ? membership.chunks(i) : union(membership.chunks(i), waiting);
+        }
+        return AtmosSnapshot.of(tick, registry, views, membership, chunks);
     }
 
     /**
@@ -790,7 +1222,7 @@ public final class DimensionEngine {
         }
         Set<Long> zoned = membership.sections;
         for (long key : mirror.keys()) {
-            if (!zoned.contains(key) && !bordersZoned(key, zoned)) {
+            if (!zoned.contains(key) && !bordersZoned(key, zoned) && !heldTruth.containsKey(key)) {
                 mirror.remove(key);
             }
         }

@@ -24,6 +24,10 @@ import java.util.Objects;
  *     sections a fill reached that the mirror lacks (§4.3); new zone-triggering operations get
  *     their neighbourhood prefetched at batch close instead ({@link Classifier#prefetchRadius()})
  * @param bufferedOps how many operations wait for classification
+ * @param heldBlocks block positions whose changes are held for paused zones (GEO-037), ascending;
+ *     saved with their chunks (DATA-010)
+ * @param nextZoneId the id the next new zone gets, saved per dimension so ids are never reused
+ *     (CORE-026)
  */
 public record Result(
         long tick,
@@ -34,7 +38,9 @@ public record Result(
         ConservationReport conservation,
         long[] mirroredSections,
         long[] requestedSections,
-        int bufferedOps) {
+        int bufferedOps,
+        long[] heldBlocks,
+        long nextZoneId) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
@@ -43,6 +49,12 @@ public record Result(
         events = List.copyOf(events);
         mirroredSections = mirroredSections.clone();
         requestedSections = requestedSections.clone();
+        heldBlocks = heldBlocks.clone();
+    }
+
+    @Override
+    public long[] heldBlocks() {
+        return heldBlocks.clone();
     }
 
     @Override

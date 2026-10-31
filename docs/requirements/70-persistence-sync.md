@@ -41,7 +41,7 @@ Hotspots are rebuilt from fire blocks, since every hotspot is a vanilla fire or
   return after a reload.
 
 #### DATA-002 · Chunk-aligned storage
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: GEO-030, D-43, D-54
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-030, D-43, D-54
 
 Each chunk shall save the zone membership and gas of its own cells: its share
 of each zone's mixture, by volume. Zones are rebuilt from their chunks as they
@@ -55,7 +55,7 @@ last-known state (GEO-035) needs no extra storage.)
   time and checks it reassembles.
 
 #### DATA-008 · Reassembly conserves gas
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: CORE-036 · Depends: DATA-002
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-036 · Depends: DATA-002
 
 A zone rebuilt from its chunks shall hold the sum of their shares' moles, to a
 relative error of 1e-9 per gas.
@@ -65,7 +65,7 @@ relative error of 1e-9 per gas.
   checks a reloaded zone's moles.
 
 #### DATA-010 · Held changes persist
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: GEO-037, D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43
 
 Block changes held for a paused zone (GEO-037) shall be saved in their chunk
 and processed when the zone resumes, even across a restart.
@@ -75,7 +75,7 @@ and processed when the zone resumes, even across a restart.
   the zone and checks the change applies.
 
 #### DATA-011 · Queued operations at save and shutdown
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-46, CORE-036, CORE-074, API-016
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-46, CORE-036, CORE-074, API-016
 
 Queued gas additions not yet applied, including those re-queued under
 CORE-074, shall be saved and applied after load, because their gas has already
@@ -102,7 +102,7 @@ futures complete with nothing moved.
   canisters and tanks and compares their contents within 1e-9.
 
 #### DATA-003 · Versioned format
-`Must` · `R0` · `Accepted` · Verify: Unit
+`Must` · `R0` · `Implemented` · Verify: Unit
 
 Saved data shall carry a format version.
 
@@ -122,7 +122,7 @@ gas ids are handled by CORE-013 and CORE-016.
   loads an old world.
 
 #### DATA-004 · Corruption tolerance
-`Must` · `R0` · `Accepted` · Verify: GameTest
+`Must` · `R0` · `Implemented` · Verify: GameTest
 
 Corrupt or missing atmos data shall never prevent a world from loading. The
 affected chunk's cells revert to unzoned.
@@ -133,7 +133,7 @@ affected chunk's cells revert to unzoned.
   loads with that chunk unzoned.
 
 #### DATA-013 · Corruption warning
-`Must` · `R0` · `Accepted` · Verify: GameTest · Depends: DATA-004
+`Must` · `R0` · `Implemented` · Verify: GameTest · Depends: DATA-004
 
 Each chunk reset under DATA-004 shall log one warning naming the dimension and
 chunk.

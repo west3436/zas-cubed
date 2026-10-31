@@ -35,6 +35,14 @@ neoForge {
     }
 }
 
+// GameTests start from a fresh world: the atmosphere is saved with the chunks (DATA-002), so a
+// world left by an earlier run would bring its zones back into the tests' areas.
+tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.projectDirectory.dir('run/world')
+    }
+}
+
 dependencies {
     implementation project(':engine')
     implementation project(':compat-adastra')
