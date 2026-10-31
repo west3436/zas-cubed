@@ -6,12 +6,13 @@ This license applies to the asset files of ZAS³: every file under any
 packaged in the mod jars. The code is licensed separately under the MIT
 License (see LICENSE).
 
-All assets, whether derived from vgstation13 sprites or drawn from scratch,
-are licensed under the Creative Commons Attribution-ShareAlike 4.0
+All assets, whether drawn from scratch, derived from vgstation13 sprites or
+adapted from other sources under licenses that allow it, are licensed under the Creative Commons Attribution-ShareAlike 4.0
 International license (CC BY-SA 4.0), reproduced in full below and available
 at https://creativecommons.org/licenses/by-sa/4.0/legalcode.
 
-The source and attribution of each asset file are listed in CREDITS.
+The origin, source, license and attribution of each asset file are listed
+in CREDITS.
 
 Note on the upstream license: assets derived from vgstation13 adapt sprites
 that vgstation13 licenses under Creative Commons Attribution-ShareAlike 3.0

@@ -34,7 +34,8 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
   translated into this repository. Contributions must follow the same rule;
   see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Art assets** are licensed CC BY-SA 4.0 International under
-  [LICENSE-ASSETS](LICENSE-ASSETS), whether drawn from scratch or derived
-  from vgstation13's sprites (CC BY-SA 3.0 US). Each asset file's source and
+  [LICENSE-ASSETS](LICENSE-ASSETS), whether drawn from scratch, derived
+  from vgstation13's sprites (CC BY-SA 3.0 US) or adapted from other sources
+  under compatible licenses. Each asset file's source, license and
   attribution are listed in [CREDITS](CREDITS). No NonCommercial-licensed
   assets are used.

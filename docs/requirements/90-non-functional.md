@@ -297,15 +297,19 @@ in a separate `LICENSE-ASSETS` file. Code stays MIT.
 - **Verify:** Inspect `LICENSE-ASSETS`.
 
 #### NFR-045 · Asset provenance
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26, D-56
+`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26, D-56, D-62
 
-Every file under `assets/` shall have a `CREDITS` entry: either its vg source
-file, icon state and commit, with attribution to the vgstation13 contributors,
-or "original". A CI script checks this.
+Every file under `assets/` shall have a `CREDITS` entry giving its origin:
+"original"; its vg source file, icon state and commit, with attribution to
+the vgstation13 contributors; or, for any other source, where it came from,
+its license and its attribution. A CI script checks this.
 
-- **Rationale:** Decision: D-26 and D-56.
+- **Rationale:** Decision: D-26, D-56 and D-62.
 - **Verify:** The CI script fails the build on an asset without a CREDITS
   entry.
+- **Changed 2026-10-31 (D-62):** assets may also come from sources other
+  than vgstation13, under a license that allows adapting them under CC BY-SA
+  4.0. The entry records the source, license and attribution.
 
 #### NFR-046 · No NonCommercial assets
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26

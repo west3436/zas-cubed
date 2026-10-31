@@ -3,8 +3,10 @@
 
 Finds every file under */src/*/resources/assets/ and checks it against the
 entries in CREDITS. Fails when an asset has no entry, when an entry names a
-file that doesn't exist, when an entry is malformed, or when a vg source is
-under goon/ (NFR-041). The format is documented at the top of CREDITS.
+file that doesn't exist, when an entry is malformed, when a vg source is
+under goon/ (NFR-041), or when a third-party license isn't one that can be
+adapted under CC BY-SA 4.0 (D-62). The format is documented at the top of
+CREDITS.
 
 Usage: python scripts/check_credits.py [repo root]
 Needs only Python 3 and its standard library.
@@ -16,9 +18,21 @@ from pathlib import Path
 
 ASSET_GLOB = "*/src/*/resources/assets/**/*"
 ASSET_PATH = re.compile(r"^[^/]+/src/[^/]+/resources/assets/.+")
-KEYS = {"path", "source", "state", "commit", "attribution", "author", "notes"}
-VG_REQUIRED = ("state", "commit", "attribution")
-COMMIT = re.compile(r"^[0-9a-f]{40}$")
+KEYS = {"path", "origin", "source", "state", "commit", "license", "attribution", "author", "notes"}
+ORIGINS = ("original", "vgstation13", "other")
+# Fields that only make sense for one origin, and those each origin requires.
+ONLY = {"state": "vgstation13", "commit": "vgstation13", "license": "other"}
+REQUIRED = {
+    "original": (),
+    "vgstation13": ("source", "state", "commit"),
+    "other": ("source", "license"),
+}
+# SPDX ids of licenses whose works may be adapted and shared under CC BY-SA
+# 4.0 (D-62). NonCommercial and NoDerivatives licenses are never allowed
+# (NFR-046). Add to this list only after checking compatibility.
+LICENSES = {"CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", "CC-BY-SA-3.0", "CC-BY-SA-4.0"}
+NO_ATTRIBUTION = {"CC0-1.0"}
+COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 
 
 def parse(text):
@@ -60,25 +74,33 @@ def parse(text):
 def check_entry(line, entry):
     where = f"CREDITS:{line}"
     errors = []
-    source = entry.get("source")
-    if source is None:
-        errors.append(f"{where}: missing 'source' (a vg .dmi path or 'original')")
-    elif source == "original":
-        for key in VG_REQUIRED:
-            if key in entry:
-                errors.append(f"{where}: an original asset has no '{key}'")
-    else:
+    origin = entry.get("origin")
+    if origin not in ORIGINS:
+        found = "missing" if origin is None else repr(origin)
+        return [f"{where}: 'origin' is {found}; expected one of {', '.join(ORIGINS)}"]
+    for key, owner in ONLY.items():
+        if key in entry and origin != owner:
+            errors.append(f"{where}: '{key}' only applies to origin {owner}")
+    for key in REQUIRED[origin]:
+        if key not in entry:
+            errors.append(f"{where}: origin {origin} needs '{key}'")
+
+    if origin == "vgstation13":
+        source = entry.get("source", "")
         if "goon" in source.replace("\\", "/").lower().split("/"):
             errors.append(f"{where}: source {source!r} is under goon/ (CC BY-NC-SA, NFR-041)")
-        for key in VG_REQUIRED:
-            if key not in entry:
-                errors.append(f"{where}: a vg-derived asset needs '{key}'")
         commit = entry.get("commit")
         if commit is not None and not COMMIT.match(commit):
-            errors.append(f"{where}: commit {commit!r} is not a full 40-character hash")
-        attribution = entry.get("attribution")
-        if attribution is not None and "vgstation13 contributors" not in attribution.lower():
-            errors.append(f"{where}: attribution must name the vgstation13 contributors")
+            errors.append(f"{where}: commit {commit!r} is not a vgstation13 commit hash (7 to 40 hex digits)")
+    elif origin == "other":
+        license = entry.get("license")
+        if license is not None and license not in LICENSES:
+            errors.append(
+                f"{where}: license {license!r} is not one of {', '.join(sorted(LICENSES))} "
+                "(NonCommercial and NoDerivatives licenses are never allowed)"
+            )
+        if license in LICENSES and license not in NO_ATTRIBUTION and "attribution" not in entry:
+            errors.append(f"{where}: license {license} needs 'attribution' (the author to credit)")
     return errors
 
 
