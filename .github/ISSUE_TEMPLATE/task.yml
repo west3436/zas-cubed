@@ -1,0 +1,23 @@
+name: Work item
+description: A feature, task or spike, ideally tied to requirement IDs.
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What this delivers and why.
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: Requirement IDs this covers (see docs/requirements), or "none".
+      placeholder: "CORE-023, CORE-024"
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: How we know it's finished; usually the requirements' Verify plans pass.
+    validations:
+      required: true
