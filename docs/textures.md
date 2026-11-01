@@ -13,7 +13,9 @@ the requirements (D-68, D-69).
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
 pixels per block, flat sprites for handheld items, and the standard armor
 texture layout for wearables. Sources and licensing follow D-26 and D-39, with
-each asset's provenance in `CREDITS` (NFR-045).
+each asset's provenance in `CREDITS` (NFR-045). Where each texture comes from,
+and the order they're made in, is in the
+[texture procurement plan](texture-procurement.md).
 
 In the block tables, the **Item** column says what the block's item looks
 like: the block's own model (no extra texture), a flat sprite (one more
@@ -63,7 +65,7 @@ The heater and freezer are now portables (below).
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:canister` | Canister | Must | CONT-017 | Block model | Valve open and closed. Survival canisters are crafted empty (CONT-086); the filled ones are below. |
+| `zas_atmos:canister` | Canister | Must | CONT-017 | Block model | Valve open and closed. Coloured as vg's canisters, and players dye them, so it needs a texture for each colour ([below](#content-mod-zas_atmos-creative-canisters)). Survival canisters are crafted empty (CONT-086); the filled ones are below. |
 | `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. |
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. |
 | `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. |
@@ -99,10 +101,12 @@ and doors do. Any of them could use its block model instead.
 ### Content mod (`zas_atmos`): creative canisters
 
 Canisters pre-filled with each built-in gas (the 8 of D-42) exist only in
-creative (CONT-086). Each is a canister holding one gas, not a new block. vg
-colours canisters by gas. Each canister below needs its own texture if each
-gas gets its own colour. One texture with a tinted band would cover them all,
-and datapack gases too.
+creative (CONT-086). Each is a canister holding one gas, not a new block.
+Canisters are coloured as vg's, and players dye them by using a dye on one
+(the owner's choice of 2026-11-01, which has no requirement yet). Each
+creative canister comes in its gas's colour. The colours, and which dye
+gives which, are in the
+[texture procurement plan](texture-procurement.md#64-canister-colours).
 
 | Proposed id | Gas | Priority | Requirement | Notes |
 |---|---|---|---|---|
@@ -151,7 +155,7 @@ one suit share their layer files.
 |---|---|---|---|---|
 | `zas_atmos:atmos_analyzer` | Atmos analyzer | Must | CONT-034 | Flat sprite. Was the gas analyzer. |
 | `zas_atmos:wrench` | Wrench | Should | CONT-035 | Flat sprite. Quickly takes pipes apart, and connects portables to connector ports and disconnects them. CONT-035 and CONT-083 need updating to match. |
-| `zas_atmos:crowbar` | Crowbar or halligan bar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. Which of the two it is isn't settled. |
+| `zas_atmos:crowbar` | Crowbar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. A crowbar, not a halligan bar (the owner's choice of 2026-11-01). |
 | `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (D-68). |
 
 **Batteries.** Portables run on these (D-69), and so can other mods' batteries
