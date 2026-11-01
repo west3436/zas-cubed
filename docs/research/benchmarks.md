@@ -293,6 +293,34 @@ CI runs it as its own step, "S-12 API without ZAS³ (example addon alone)"
 (`./gradlew :example-addon:runGameTestServer`, about 35 s, 5-minute timeout).
 Locally, `./gradlew runGameTestServer` runs it with the others.
 
+## Cell-id layout check (2026-10-31)
+
+_[#105](https://github.com/west3436/zas-cubed/issues/105) widened cell ids to
+the world border: 26 bits of x and z, 10 of y and 2 of sub-cell index instead
+of 24, 24, 12 and 4 (architecture §4.3). Same machine and settings;
+`./gradlew :engine:bench -Pbench.args="fill zones s10"` on `main` just before
+the change and on the branch after it._ Medians:
+
+| Measure | Before | After |
+|---|---|---|
+| Fill: sealed hall, 65,536 cells | 7.79 ms | 7.69 ms |
+| Fill: hall of 65,537 cells, open at the cap | 5.22 ms | 5.22 ms |
+| Fill: S-10's largest zone, 8,000 cells | 0.827 ms | 0.813 ms |
+| Fill: 3 × 3 × 3 room | 2.2 µs | 2.1 µs |
+| Pipeline: worker tick zoning the 65,536-cell hall | 81.08 ms | 83.76 ms |
+| Pipeline: server close plus apply | 0.572 ms | 0.528 ms |
+| Split tick, 49,001 cells | 14.45 ms | 15.01 ms |
+| Merge tick | 15.09 ms | 15.36 ms |
+| Local edit, 1,000 / 8,000 / 50,000-cell zone | 0.116 / 0.529 / 3.57 ms | 0.112 / 0.553 / 3.60 ms |
+| S-10 with ops: worker tick, mean / worst | 0.823 / 13.34 ms | 0.839 / 11.97 ms |
+| S-10 heap per zoned cell | 373 B | 373 B |
+
+Every difference is within run-to-run noise (the pipeline row moves by a
+few percent between runs of the same code). Decoding is still a shift per
+field, so nothing was expected to change. The split, merge and edit rows run
+slower than the table above in both columns; they are the same code in both,
+so that is this run's machine state, not the change.
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall

@@ -1,11 +1,13 @@
 package io.github.west3436.zas.engine.persist;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -15,6 +17,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneShare;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.CRC32;
@@ -117,38 +120,104 @@ class ChunkRecordCodecTest {
         assertTrue(back.zones().get(1).pinned());
     }
 
-    /** Version 1 records, saved before pins, still read, their zones unpinned (DATA-003, D-64). */
-    @Test
-    void d_064_version_1_reads_unpinned() throws Exception {
+    /** A record in format 1 or 2, by hand: one zone with these cells, in the old cell-id layout. */
+    private static byte[] oldRecord(int version, long[] cells, boolean pinned) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         DataOutputStream out = new DataOutputStream(bytes);
         out.writeInt(0x5A415333);
-        out.writeInt(1);
+        out.writeInt(version);
         out.writeLong(CHUNK);
         out.writeInt(2);
         out.writeUTF("zas:nitrogen");
         out.writeUTF("zas:oxygen");
         out.writeInt(1); // one zone
         out.writeLong(11);
-        out.writeInt(1);
-        out.writeLong(42);
+        out.writeInt(cells.length);
+        for (long c : cells) {
+            out.writeLong(c);
+        }
         out.writeDouble(3);
         out.writeDouble(1);
         out.writeDouble(80);
         out.writeInt(1);
         out.writeLong(CHUNK);
+        if (version >= 2) {
+            out.writeBoolean(pinned);
+        }
         out.writeInt(0); // no held blocks
         out.writeInt(0); // no queued additions
         out.flush();
         CRC32 crc = new CRC32();
         crc.update(bytes.toByteArray());
         out.writeInt((int) crc.getValue());
+        return bytes.toByteArray();
+    }
 
-        ChunkRecord back = ChunkRecordCodec.decode(bytes.toByteArray(), CHUNK, GASES, m -> {
+    /** An id in the cell-id layout of formats 1 and 2: 24 bits of x and z, 12 of y, 4 of sub-cell. */
+    private static long format2(int x, int y, int z, int sub) {
+        return ((long) (x & 0xFFFFFF) << 40) | ((long) (z & 0xFFFFFF) << 16) | ((long) (y & 0xFFF) << 4) | sub;
+    }
+
+    /** Version 1 records, saved before pins, still read, their zones unpinned (DATA-003, D-64). */
+    @Test
+    void d_064_version_1_reads_unpinned() throws Exception {
+        byte[] bytes = oldRecord(1, new long[] {format2(-48, 70, 112, 1)}, false);
+        ChunkRecord back = ChunkRecordCodec.decode(bytes, CHUNK, GASES, m -> {
             throw new AssertionError(m);
         });
-        ZoneShare expected = new ZoneShare(11, new long[] {42}, new double[] {3, 1}, 80, new long[] {CHUNK});
+        ZoneShare expected = new ZoneShare(
+                11, new long[] {CellIds.of(-48, 70, 112, 1)}, new double[] {3, 1}, 80, new long[] {CHUNK});
         assertEquals(List.of(expected), back.zones());
         assertFalse(back.zones().get(0).pinned());
+    }
+
+    /**
+     * Version 2 records still read, their cells converted to the current layout (#105); cells it
+     * can't name are left out, and the share's gas is kept (DATA-003, architecture §4.5).
+     */
+    @Test
+    void data_003_version_2_cells_convert() throws Exception {
+        long[] old = {
+            format2(-48, 70, 112, 0),
+            format2(-48, 70, 112, 3),
+            format2(-8_388_608, -64, 8_388_607, 1),
+            format2(-48, 1500, 112, 0), // above the current y range
+            format2(-47, 70, 112, 4) // a fifth sub-cell
+        };
+        byte[] bytes = oldRecord(2, old, true);
+        assertEquals(2, ChunkRecordCodec.version(bytes));
+        ChunkRecord back = ChunkRecordCodec.decode(bytes, CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        ZoneShare share = back.zones().get(0);
+        long[] expected = {
+            CellIds.of(-48, 70, 112, 0), CellIds.of(-48, 70, 112, 3), CellIds.of(-8_388_608, -64, 8_388_607, 1)
+        };
+        Arrays.sort(expected);
+        assertArrayEquals(expected, share.cells());
+        assertTrue(share.pinned());
+        assertEquals(3, share.moles(0));
+        assertEquals(1, share.moles(1));
+        // Written again, it is a current record and reads back the same.
+        byte[] again = ChunkRecordCodec.encode(back, GASES);
+        assertEquals(ChunkRecord.FORMAT_VERSION, ChunkRecordCodec.version(again));
+        assertEquals(back, ChunkRecordCodec.decode(again, CHUNK, GASES, m -> {}));
+    }
+
+    /** Cells at the world border are saved and read back as they are (#105). */
+    @Test
+    void data_003_cells_at_the_world_border() throws Exception {
+        long[] cells = {
+            CellIds.of(29_999_984, 319, -29_999_984, 3),
+            CellIds.of(-29_999_984, -64, 29_999_984, 0),
+            CellIds.of(CellIds.MAX_XZ, CellIds.MAX_Y, CellIds.MIN_XZ, CellIds.MAX_SUB_CELLS - 1)
+        };
+        ChunkRecord record = new ChunkRecord(
+                CHUNK,
+                List.of(new ZoneShare(7, cells, new double[] {1, 2}, 290, new long[] {CHUNK})),
+                new long[0],
+                List.of());
+        ChunkRecord back = ChunkRecordCodec.decode(ChunkRecordCodec.encode(record, GASES), CHUNK, GASES, m -> {});
+        assertEquals(record, back);
     }
 }

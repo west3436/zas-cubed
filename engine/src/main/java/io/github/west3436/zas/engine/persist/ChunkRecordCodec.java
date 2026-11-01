@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.persist;
 
 import io.github.west3436.zas.engine.EngineLog;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
@@ -14,6 +15,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.zip.CRC32;
@@ -28,8 +30,8 @@ import java.util.zip.CRC32;
  *   <li>magic {@code "ZAS3"} and the format version ({@link ChunkRecord#FORMAT_VERSION});
  *   <li>the gas table: a count, then each gas id; every amount below is listed in this order, so
  *       saves don't depend on the order of the gas registry;
- *   <li>the zones: a count, then per zone its id, its cells, its moles per gas, its temperature,
- *       the chunks it spans and, from version 2, whether it is pinned (D-64);
+ *   <li>the zones: a count, then per zone its id, its cells ({@link CellIds} ids), its moles per
+ *       gas, its temperature, the chunks it spans and, from version 2, whether it is pinned (D-64);
  *   <li>the held block positions (DATA-010);
  *   <li>the queued additions (DATA-011): per operation its original sequence number, block,
  *       moles per gas, temperature, ledger category, whether it triggers a zone, and its source;
@@ -37,7 +39,11 @@ import java.util.zip.CRC32;
  * </ol>
  *
  * <p>Only what can't be rebuilt is written: no edges, seal masks, sub-cell shapes or hotspots
- * (DATA-009). Version 1, which has no pins, is still read, its zones unpinned. Reading checks the
+ * (DATA-009). Versions 1 and 2 are still read: version 1 has no pins, so its zones are unpinned,
+ * and both store cells in the narrower layout {@link CellIds} used before version 3 (24 bits of x
+ * and z, 12 of y, 4 of sub-cell index), which are converted with {@link CellIds#fromFormat2}; a
+ * saved cell the current layout can't name is left out, and its gas stays in the share, as for any
+ * saved cell that is no longer a cell (architecture §4.5). Reading checks the
  * magic, the version, the checksum and every value; anything wrong
  * throws {@link CorruptRecordException}, and the caller resets the chunk to unzoned (DATA-004).
  * Gases the registry no longer has are dropped with a warning (CORE-013).
@@ -47,6 +53,9 @@ public final class ChunkRecordCodec {
     private static final int MAX_COUNT = 1 << 24;
     /** The first format version, without zone pins. */
     private static final int VERSION_1 = 1;
+
+    /** The second format version: pins, and still the cell ids of version 1. */
+    private static final int VERSION_2 = 2;
 
     /**
      * The chunk key of the level-wide record, which holds queued additions whose target chunk
@@ -148,7 +157,7 @@ public final class ChunkRecordCodec {
                 throw new CorruptRecordException("not a zas atmos record");
             }
             int version = in.readInt();
-            if (version != ChunkRecord.FORMAT_VERSION && version != VERSION_1) {
+            if (version != ChunkRecord.FORMAT_VERSION && version != VERSION_2 && version != VERSION_1) {
                 throw new CorruptRecordException("unknown format version " + version);
             }
             long savedChunk = in.readLong();
@@ -169,6 +178,9 @@ public final class ChunkRecordCodec {
             for (int z = 0; z < zoneCount; z++) {
                 long id = in.readLong();
                 long[] cells = readLongs(in);
+                if (version <= VERSION_2) {
+                    cells = fromFormat2(cells);
+                }
                 double[] moles = readMoles(in, gases, index, registry.size());
                 double temperature = in.readDouble();
                 long[] chunks = readLongs(in);
@@ -199,6 +211,19 @@ public final class ChunkRecordCodec {
         } catch (IllegalArgumentException e) {
             throw new CorruptRecordException("invalid value: " + e.getMessage());
         }
+    }
+
+    /** Cell ids saved by versions 1 and 2, in the current layout, without those it can't name. */
+    private static long[] fromFormat2(long[] old) {
+        long[] cells = new long[old.length];
+        int n = 0;
+        for (long c : old) {
+            long id = CellIds.fromFormat2(c);
+            if (id != CellIds.NONE) {
+                cells[n++] = id;
+            }
+        }
+        return n == cells.length ? cells : Arrays.copyOf(cells, n);
     }
 
     private static int count(DataInputStream in) throws IOException, CorruptRecordException {

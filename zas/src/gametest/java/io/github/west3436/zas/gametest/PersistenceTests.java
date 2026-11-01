@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -79,6 +80,63 @@ public final class PersistenceTests {
         MutationResult m = r.settle(GasMutations.add(r.level, r.point(12, 2, 12), oxygen(o2), source("data")));
         h.assertValueEqual(m.outcome(), MutationOutcome.ZONE, "the room didn't zone");
         return r;
+    }
+
+    /**
+     * A zone at a far corner of the world, x = z = ±29,999,008 by the world border, forms, saves
+     * and reloads from its four chunks, and vents when breached (#105; DATA-002, DATA-008,
+     * GEO-025). Cell ids once reached only about 8.4 million blocks out.
+     */
+    private static void farOut(GameTestHelper h, int sign) {
+        // High up, so the breach opens to the sky whatever the terrain there is.
+        BlockPos corner = new BlockPos(sign * 29_999_008, 280, sign * 29_999_008);
+        h.assertTrue(h.getLevel().getWorldBorder().isWithinBounds(corner.offset(23, 0, 23)), "outside the border");
+        Rooms r = new Rooms(h, h.getLevel(), corner);
+        r.clear(8, 8, 23, 23);
+        r.box(10, 10, 21, 21);
+        MutationResult m = r.settle(GasMutations.add(r.level, r.point(12, 2, 12), oxygen(80), source("far_out")));
+        h.assertValueEqual(m.outcome(), MutationOutcome.ZONE, "the room didn't zone");
+        h.assertTrue(r.zoned(12, 2, 12), "no zone right after it formed: " + m);
+        ZoneInfo before = r.zone(12, 2, 12);
+        h.assertValueEqual(before.cellCount(), 10 * 10 * 3, "the room's cells");
+
+        DimensionAtmos d = r.dimension();
+        Map<ChunkPos, byte[]> saved = new LinkedHashMap<>();
+        int cells = 0;
+        for (ChunkPos c : chunks(r)) {
+            byte[] bytes = d.simulateUnload(c);
+            h.assertTrue(bytes != null, "chunk " + c + " saved nothing");
+            saved.put(c, bytes);
+            cells += decode(h, d, bytes, c).zones().get(0).cellCount();
+        }
+        h.assertValueEqual(cells, before.cellCount(), "the chunks saved every cell");
+        r.tick();
+        h.assertFalse(r.zoned(12, 2, 12), "the zone stayed in memory");
+        saved.forEach(d::simulateLoad);
+        r.ticks(2);
+        ZoneInfo after = Atmospheres.zone(r.level, before.id())
+                .orElseThrow(() -> new GameTestAssertException("the zone wasn't rebuilt under its id"));
+        h.assertFalse(after.paused(), "the rebuilt zone is paused");
+        r.same(before, after, "the reloaded zone");
+
+        double sealed = after.mixture().pressure();
+        r.set(21, 2, 15, AIR);
+        r.tick();
+        h.assertTrue(r.zoned(12, 2, 12), "the breached zone is gone after one tick");
+        ZoneInfo open = r.zone(12, 2, 12);
+        h.assertTrue(open.breached(), "the zone isn't breached");
+        h.assertTrue(open.mixture().pressure() < sealed, "the zone didn't vent");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void data_002_zone_near_the_positive_world_border(GameTestHelper h) {
+        farOut(h, 1);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void data_002_zone_near_the_negative_world_border(GameTestHelper h) {
+        farOut(h, -1);
     }
 
     private static List<ChunkPos> chunks(Rooms r) {

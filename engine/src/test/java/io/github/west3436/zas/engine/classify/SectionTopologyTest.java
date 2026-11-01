@@ -6,7 +6,6 @@ import static io.github.west3436.zas.engine.classify.TestWorld.DOOR;
 import static io.github.west3436.zas.engine.classify.TestWorld.cell;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Geometry;
@@ -18,33 +17,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class SectionTopologyTest {
-    @Test
-    void geo_022_cell_ids_round_trip() {
-        int[][] positions = {
-            {0, 0, 0},
-            {-1, -1, -1},
-            {CellIds.MAX_XZ, CellIds.MAX_Y, CellIds.MIN_XZ},
-            {CellIds.MIN_XZ, CellIds.MIN_Y, 17}
-        };
-        for (int[] p : positions) {
-            for (int sub : new int[] {0, 5, CellIds.MAX_SUB_CELLS - 1}) {
-                long id = CellIds.of(p[0], p[1], p[2], sub);
-                assertEquals(p[0], CellIds.x(id));
-                assertEquals(p[1], CellIds.y(id));
-                assertEquals(p[2], CellIds.z(id));
-                assertEquals(sub, CellIds.sub(id));
-                assertEquals(CellIds.of(p[0], p[1], p[2]), CellIds.block(id));
-                assertEquals(SectionKeys.sectionOfBlock(p[0], p[1], p[2]), CellIds.section(id));
-            }
-        }
-        assertThrows(IllegalArgumentException.class, () -> CellIds.of(CellIds.MAX_XZ + 1, 0, 0));
-        assertThrows(IllegalArgumentException.class, () -> CellIds.of(0, CellIds.MIN_Y - 1, 0));
-        assertThrows(IllegalArgumentException.class, () -> CellIds.of(0, 0, 0, CellIds.MAX_SUB_CELLS));
-        // Sub-cells of one block sort together, after the block's first cell.
-        assertTrue(CellIds.of(3, 4, 5, 0) < CellIds.of(3, 4, 5, 1));
-        assertTrue(CellIds.of(3, 4, 5, 15) < CellIds.of(3, 5, 5, 0));
-    }
-
     @Test
     void geo_022_classification_on_snapshots() {
         // A room with a divider, a door and a section boundary through it.

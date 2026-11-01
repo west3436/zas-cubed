@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.zone.CellTopology;
 import java.util.function.LongConsumer;
 
@@ -13,8 +14,11 @@ import java.util.function.LongConsumer;
  * lacks has no cells.
  */
 public interface CellSpace extends CellTopology {
-    /** What {@link #cellAt} returns for a position with no cell. */
-    long NO_CELL = -1;
+    /**
+     * What {@link #cellAt} returns for a position with no cell: {@link CellIds#NONE}, which is
+     * never a cell id (-1, for one, is the last sub-cell of block (-1, -1, -1)).
+     */
+    long NO_CELL = CellIds.NONE;
 
     /**
      * Visits the cells at a block position ({@link SectionKeys#block}), in a fixed order; none if

@@ -15,7 +15,6 @@ import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.environment.Ambients;
@@ -135,10 +134,10 @@ public final class AtmosTests {
     /**
      * Gives a test its own building area in the Overworld, at a fixed place near the origin.
      *
-     * <p>GameTest structures land at random coordinates up to about 15 million blocks out, but
-     * cell ids name positions only within {@link CellIds#MAX_XZ} of the origin; farther out,
-     * every position counts as outside the world and nothing can be zoned. Building near the
-     * origin also makes the tests independent of where the structures land.
+     * <p>GameTest structures land at random coordinates up to about 15 million blocks out. Cell
+     * ids name every position out to the world border, so a structure's own place would do too
+     * (the {@code PersistenceTests} border tests build there), but a fixed area keeps the tests
+     * independent of where the structures land and of the terrain around them.
      *
      * <p>No chunk is forced: building loads the area's chunks, and each test runs within one game
      * tick (it drives atmos ticks itself), so nothing unloads under it. Forced chunks and their

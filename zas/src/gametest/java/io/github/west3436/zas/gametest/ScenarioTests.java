@@ -70,8 +70,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * but no item or player movement, damage or firelock; S-09 saves and reloads zones and a paused
  * zone, with no pipe or canister contents to keep.
  *
- * <p>Like the other world tests, each test builds in its own area near the origin (see {@link
- * Rooms}; cell ids only reach about 8.4 million blocks out), forces no chunk, runs within one game
+ * <p>Like the other world tests, each test builds in its own area at a fixed place (see {@link
+ * Rooms}), forces no chunk, runs within one game
  * tick by driving atmos ticks itself, and runs with the invariant checker on (CORE-073), checking
  * every atmos tick is conserved (CORE-036).
  */

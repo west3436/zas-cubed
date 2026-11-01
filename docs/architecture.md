@@ -495,9 +495,13 @@ drives it.
 
 - `SectionTopology` is the `CellTopology` over the mirror: a read-only adapter
   around a section lookup (null means not in the mirror) and the geometry
-  palette. Cell ids (`CellIds`) pack 24 bits of x, 24 of z, 12 of y and a
-  4-bit sub-cell index. Faces leading outside the build height, or beyond the
-  ids' ±8,388,607 horizontal range, count as open (GEO-031's default). Through
+  palette. Cell ids (`CellIds`) pack 26 bits of x, 26 of z, 10 of y and a
+  2-bit sub-cell index into a `long`: x and z cover Minecraft's whole world
+  (−30,000,000 to 29,999,999, past the world border at ±29,999,984), y runs
+  from −512 to 511, and a block has at most 4 cells, the most any vanilla
+  shape has (crossed panes, fences and walls; the `geo_004` GameTest checks
+  every vanilla state). Faces leading outside the build height, or beyond the
+  ids' range, count as open (GEO-031's default). Through
   `ResolvableTopology` it also reports the faces that reach sections not in the
   mirror.
 - `EnclosureFill` is the bounded fill: `Enclosed` (sorted cells and volume),
@@ -517,6 +521,37 @@ drives it.
 - `PendingClassifications` holds operations by seed cell, in arrival order,
   until their region classifies, including across rounds that wait for
   sections (GEO-028).
+
+**Cell-id layout** (*2026-10-31,
+[#105](https://github.com/west3436/zas-cubed/issues/105), closing O-8*). The
+ids used to pack 24 bits of x and z, 12 of y and 4 of sub-cell index, so
+nothing more than ±8,388,607 blocks out could be zoned. The world border, a
+datapack dimension's full height (−2,032 to 2,031) and even 2 sub-cells per
+block don't fit one `long` together: 60,000,000² columns × 4,064 heights × 2
+is about 2.9 × 10¹⁹, more than 2⁶⁴. Of the ways out:
+
+- *Two `long`s per cell, or a block key plus a separate sub-cell index,*
+  would change every set, map and neighbour list of cells in the fill, the
+  zone graph and the snapshots, and add at least 8 bytes per stored cell to
+  memory that is already over NFR-004's per-cell budget (#78).
+- *A y offset per dimension* needs a layout per engine, threaded through every
+  decode, and still can't hold a 4,064-high dimension; for a tall dimension
+  centred on sea level it would keep the deep underground rather than the
+  ground and sky.
+- *Fewer y bits and sub-cell bits,* the layout chosen, keeps ids plain bit
+  fields read with constant shifts, as before, so the fill and zone
+  benchmarks are unchanged (S3 and S4 cases, [benchmarks](research/benchmarks.md)).
+  Every vanilla dimension (−64 to 319, 0 to 255) fits, and so does every
+  vanilla block's cells.
+
+The order is the same as before: sorting ids as signed `long`s orders cells
+by x, then z, then y, then sub-cell index (z's and y's negative values after
+their positive ones). Since x and z stop short of what 26 bits hold,
+`CellIds.NONE` (`Long.MIN_VALUE`) is never a cell, and is what `CellSpace`
+returns for "no cell" (−1 is now a real cell). Chunk records moved to format 3;
+formats 1 and 2 are still read, their cells converted, and any the new layout
+can't name are left out with their gas kept in the share (§4.5). What the
+layout gives up is O-11.
 
 ### 4.4 Zone membership and the zone graph (CORE-020 to CORE-039)
 
@@ -544,7 +579,8 @@ table keyed by packed position.
 **Engine implementation (R0).** The zone graph is
 `io.github.west3436.zas.engine.zone.ZoneGraph`. It runs on an abstract
 `CellTopology` (cell volumes and open neighbours, each flagged direct or zone
-boundary), so its tests need no geometry. Cells are `long` ids, membership is
+boundary), so its tests need no geometry. Cells are `long` ids (in the world, `CellIds`;
+see §4.3 for the layout and its range), membership is
 a primitive map from cell to zone, and every open pair of cells with at least
 one zoned cell is stored on both cells, so edge counts follow joins, leaves,
 merges and geometry changes without rescanning. The section palette above is
@@ -568,7 +604,8 @@ That is well under the 64 MiB total budget.
   written at `ChunkDataEvent.Save` and read at `ChunkDataEvent.Load`. The
   bytes are a versioned, checksummed `ChunkRecord` (DATA-003). It holds:
   - per zone with cells in the chunk: the zone's persistent id, its cells
-    there (sub-cells included, D-44), this chunk's share of its mixture
+    there (sub-cells included, D-44; `CellIds` ids, whose layout changed in
+    format 3, so older records are converted, §4.3), this chunk's share of its mixture
     (moles per gas, temperature) by volume, and every chunk the zone spans
   - block positions whose changes are held for a paused zone (DATA-010)
   - at shutdown only, queued additions that target the chunk (DATA-011)
@@ -847,9 +884,10 @@ The test names include requirement IDs (README rule 5).
 | O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
 | O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |
-| O-8 | **Cell ids name x and z only within ±8,388,608** (`CellIds`), about a quarter of the way to the world border; farther out every position counts as outside the world, so nothing can be zoned there | Widen the id layout or offset it per dimension. GameTests build near the origin for now, because test structures land up to 15 million blocks out. |
+| O-8 | ~~**Cell ids name x and z only within ±8,388,608**~~ **Done** 2026-10-31. | [#105](https://github.com/west3436/zas-cubed/issues/105). Ids now pack 26 bits of x and z, 10 of y and 2 of sub-cell index, reaching the whole world past the border (§4.3); chunk records are format 3 and older ones are converted. The `data_002_zone_near_the_*_world_border` GameTests form, save, reload and vent a zone at x = z = ±29,999,008. What the layout gives up is O-11. |
 | O-9 | **Geometry in the tick a chunk unloads.** A block change applied by the tick in flight when a chunk of its zone unloads isn't in that chunk's share, which was saved from the previous snapshot. Mixtures are rejected and restored (§3.3), but geometry effects aren't, so the zone's shares can differ from the zone in memory by that change | Rare: it needs a change to the zone within about a second of the unload. A rebuilt zone re-classifies its surface (§4.5), which picks up openings; record the zone's volume with its shares if it matters in practice. |
 | O-10 | **A geometry palette change drops every zone** (`DimensionAtmos.retire`), and with persistence the next save forgets them | Rebuild from the records of the loaded chunks instead, as after a restart (§4.5). |
+| O-11 | **Cell ids name y only from −512 to 511, and 4 cells per block** (`CellIds`, §4.3). A datapack dimension taller than that can't be zoned above 511 or below −512 (those faces count as open), and a modded shape that splits a block into more than 4 cells loses the rest, which act as solid | Every vanilla dimension and block fits. If a pack needs more, give each engine its own y window (an offset from the dimension's lowest y) or move to wider ids; both cost more than the gain today (§4.3). |
 
 ## 10. Requirement coverage
 

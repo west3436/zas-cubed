@@ -305,7 +305,7 @@ public final class GeometryAudit {
                 }
                 continue;
             }
-            long seed = -1;
+            long seed = CellIds.NONE;
             boolean inRegion = false;
             for (long cell : cells) {
                 if (!region.contains(CellIds.x(cell), CellIds.y(cell), CellIds.z(cell))) {
@@ -316,7 +316,7 @@ public final class GeometryAudit {
                     out.add(Kind.ZONED_NOT_A_CELL, blockOf(cell), zone.id());
                     continue;
                 }
-                if (seed < 0) {
+                if (seed == CellIds.NONE) {
                     seed = cell;
                 }
                 topology.forEachOpenNeighbour(cell, (neighbour, direct) -> {
@@ -334,7 +334,7 @@ public final class GeometryAudit {
                 continue;
             }
             zonesChecked++;
-            if (seed < 0) {
+            if (seed == CellIds.NONE) {
                 continue; // every cell of it in the region is gone; reported above
             }
             FillResult result = fill.fill(topology, seed, c -> {
