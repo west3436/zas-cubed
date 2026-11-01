@@ -303,6 +303,20 @@ single call that space-mod compat layers route their own checks through.
 - **Verify:** GameTests check the answer in air, in vacuum, with internals and
   with a suit.
 
+*2026-11-01: The API and its fallback shipped
+([#59](https://github.com/west3436/zas-cubed/issues/59)); the verdict itself
+waits for LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34) to
+[#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022
+([#60](https://github.com/west3436/zas-cubed/issues/60)), so this stays
+Accepted. `Breathing.of(entity)` returns an immutable `Breathability`: whether
+the entity can breathe and why, the breath source and gas, the hazards its
+protection doesn't cover, and what protects it. It is called on the main thread
+of the entity's logical side. Without ZAS³ the answer is vanilla's verdict
+(API-009): in air the entity breathes, and with its eyes in water it drowns
+unless vanilla lets it breathe there. Until LIFE lands, ZAS³ gives the same
+vanilla verdict, even in a vacuum zone. Checked by the `api_014_` Unit tests
+and GameTests, with and without ZAS³.*
+
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 
