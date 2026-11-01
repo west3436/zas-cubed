@@ -42,7 +42,39 @@ dependencies {
   module; listing it splits its package across two modules and the loader
   crashes (architecture §2.1, rule 3).
 - **FML keeps the newest nested copy** that satisfies every mod's range, so a
-  mod may nest a newer minor version than ZAS³ does.
+  mod may nest a newer minor version than ZAS³ does. Provider methods added in
+  later versions have defaults, so an older ZAS³ still answers them
+  (architecture §6.2).
+
+## Can this entity breathe here?
+
+`Breathing.of(entity)` is the breathability helper (API-014). Route breathing
+and oxygen checks through it, such as a space mod's "has oxygen" check.
+
+```java
+Breathability breath = Breathing.of(player);
+if (!breath.canBreathe()) {
+    // breath.reason() says why: DROWNING, LOW_OXYGEN, ...
+}
+if (!breath.isProtected()) {
+    // breath.hazards() lists what harms it here: COLD, LOW_PRESSURE, ...
+}
+```
+
+- **Threads:** call it on the main thread of the entity's logical side, the
+  server thread for a server-side entity. It throws `IllegalStateException`
+  from any other thread there. On the client, use the answer for display only.
+  The returned `Breathability` is immutable and may go to any thread.
+- **Without ZAS³** it is vanilla's verdict (`Breathing.vanilla`). In air the
+  entity breathes, and with its eyes in water it drowns unless vanilla lets it
+  breathe there, through Water Breathing, Conduit Power or a type that
+  breathes underwater. Nothing harms it otherwise, so it is always protected.
+- **For now ZAS³ answers the same way.** The full verdict, from ZAS³'s
+  breathing, hazard and protection rules and the life-support capability,
+  comes with LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34) to
+  [#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022. Until
+  then the answer ignores the atmosphere, even in a vacuum. The details are in
+  architecture [§6.2](architecture.md#breathability-api-014).
 
 ## Versioning and the compatibility check
 
