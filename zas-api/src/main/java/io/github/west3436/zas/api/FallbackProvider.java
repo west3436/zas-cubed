@@ -72,9 +72,16 @@ final class FallbackProvider implements ZasApiProvider {
         return ABSENT.copy();
     }
 
-    /** Standard air's gases, as ZAS³'s tags group them: only oxygen is in a shipped tag. */
     @Override
     public Set<ResourceLocation> gasesInTag(GasTag tag) {
+        return standardAirGases(tag);
+    }
+
+    /**
+     * Standard air's gases in a tag, as ZAS³'s tags group them: only oxygen is in a shipped tag.
+     * Also {@link ZasApiProvider#gasesInTag}'s default.
+     */
+    static Set<ResourceLocation> standardAirGases(GasTag tag) {
         return tag.equals(GasTags.OXIDIZER) ? OXIDIZERS : Set.of();
     }
 

@@ -14,6 +14,8 @@ import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +94,28 @@ class GasValuesTest {
         assertEquals(Set.of(), GasTags.gases(GasTags.FLAMMABLE));
         assertEquals(Set.of(), GasTags.gases(GasTags.TOXIC));
         assertEquals(Set.of(), GasTags.gases(GasTag.of("other", "tag")));
+    }
+
+    /**
+     * The provider method has a default, so a provider built against an API from before it still
+     * answers when a newer API is loaded. A provider that doesn't override it answers as the
+     * fallback does.
+     */
+    @Test
+    void core_012_provider_gases_in_tag_has_a_default() throws NoSuchMethodException {
+        assertTrue(
+                ZasApiProvider.class.getMethod("gasesInTag", GasTag.class).isDefault(),
+                "ZasApiProvider.gasesInTag has no default");
+        ZasApiProvider older = (ZasApiProvider) Proxy.newProxyInstance(
+                ZasApiProvider.class.getClassLoader(), new Class<?>[] {ZasApiProvider.class}, (proxy, method, args) -> {
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, args);
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
+        assertEquals(Set.of(O2), older.gasesInTag(GasTags.OXIDIZER));
+        assertEquals(Set.of(), older.gasesInTag(GasTags.TOXIC));
+        assertEquals(Set.of(), older.gasesInTag(GasTag.of("other", "tag")));
     }
 
     @Test

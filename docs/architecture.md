@@ -1012,7 +1012,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
   [api-consumers.md](api-consumers.md).
 - **Provider methods added later get a default.** FML may load a newer API
   than the one `zas` was built with, and `zas`'s provider must still
-  implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict.
+  implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict,
+  and `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`).
 
 #### Breathability (API-014)
 

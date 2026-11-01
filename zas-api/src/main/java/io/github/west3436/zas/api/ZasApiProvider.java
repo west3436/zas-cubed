@@ -120,13 +120,21 @@ public interface ZasApiProvider {
      * The gases in a gas tag (CORE-012), for
      * {@link io.github.west3436.zas.api.gas.GasTags}.
      *
+     * <p>The default is the fallback's answer: standard air's gases as ZAS³'s shipped tags group
+     * them, which puts oxygen in {@link io.github.west3436.zas.api.gas.GasTags#OXIDIZER} and
+     * nothing in any other tag. It is there so that a provider built against an API from before
+     * this method still answers when a consumer nests a newer API, which FML then loads instead
+     * (architecture §6.2).
+     *
      * <p>Thread: any.
      *
      * @param tag the tag
      * @return the ids of its gases, immutable; empty if there is no such tag
      */
     @AnyThread
-    Set<ResourceLocation> gasesInTag(GasTag tag);
+    default Set<ResourceLocation> gasesInTag(GasTag tag) {
+        return FallbackProvider.standardAirGases(tag);
+    }
 
     /**
      * Whether an entity can breathe where it is, and whether it is protected (API-014).
