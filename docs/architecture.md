@@ -624,17 +624,35 @@ That is well under the 64 MiB total budget.
   loads, so a bad tag can never stop it loading.
 - **Derived state is rebuilt on load:** edges, the geometry palette,
   sub-cells and hotspots (DATA-009).
+- **A geometry palette change rebuilds from the loaded chunks' records**, as a
+  restart would. When `/reload` (or a mod change) changes the palette's
+  contents, the dimension waits until no batch is in flight, builds each
+  loaded chunk's record from the published snapshot (what a save would write),
+  abandons the old engine without waiting for its worker, and hands the
+  records to a new engine with the new palette through the path of a chunk
+  load. The rebuilt zones classify their surfaces again, so blocks whose
+  geometry changed are picked up. Unloaded chunks keep what they saved; zones
+  across them stay paused until they load. Outstanding operations are queued
+  again on the new engine with their futures kept, so no gas is lost. Zone
+  ids and pins come back with the shares (O-10).
 
 *Implemented (#27, #29):* `ChunkRecord`, `ZoneShare` and
 `DimensionPipeline.recordFor` in `engine.scheduler`; the byte format is
 `engine.persist.ChunkRecordCodec`, unit-tested without Minecraft; the platform
 side is `io.github.west3436.zas.persistence` (`AtmosPersistence`,
 `DimensionData`) and `DimensionAtmos`. GameTests can't unload chunks or
-restart the server, so they use `DimensionAtmos.simulateUnload` and
-`simulateLoad` and `AtmosService.stopForTest` and `startForTest`, which run the
-same save code and byte format; the real chunk events run whenever the test
-server saves or unloads, and at its shutdown. The GameTest server starts from a
+restart the server, so they use `DimensionAtmos.simulateUnload`,
+`simulateLoad` and `simulateSave` and `AtmosService.stopForTest` and
+`startForTest`, which run the same save code and byte format; the real chunk
+events run whenever the test server saves or unloads, and at its shutdown. The GameTest server starts from a
 fresh world each run, since saved zones would otherwise come back.
+
+*Implemented (#104):* the palette-change rebuild is `DimensionAtmos.rebuild`,
+using `DimensionPipeline.recordChunks` and `resubmit`. The records go through
+the byte format, so a gas registry changed by the same reload is remapped as
+after a restart. A faulted engine's outstanding operations aren't run again,
+since their futures already failed. The `data_009_palette_change_rebuilds_zones`
+GameTest changes the palette with `Geometries.overrideForTest`.
 
 ### 4.6 Paused zones (GEO-030 to GEO-038)
 
@@ -849,7 +867,7 @@ The test names include requirement IDs (README rule 5).
 | O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |
 | O-8 | **Cell ids name x and z only within ±8,388,608** (`CellIds`), about a quarter of the way to the world border; farther out every position counts as outside the world, so nothing can be zoned there | Widen the id layout or offset it per dimension. GameTests build near the origin for now, because test structures land up to 15 million blocks out. |
 | O-9 | **Geometry in the tick a chunk unloads.** A block change applied by the tick in flight when a chunk of its zone unloads isn't in that chunk's share, which was saved from the previous snapshot. Mixtures are rejected and restored (§3.3), but geometry effects aren't, so the zone's shares can differ from the zone in memory by that change | Rare: it needs a change to the zone within about a second of the unload. A rebuilt zone re-classifies its surface (§4.5), which picks up openings; record the zone's volume with its shares if it matters in practice. |
-| O-10 | **A geometry palette change drops every zone** (`DimensionAtmos.retire`), and with persistence the next save forgets them | Rebuild from the records of the loaded chunks instead, as after a restart (§4.5). |
+| O-10 | ~~**A geometry palette change drops every zone**~~ **Done** 2026-10-31. | [#104](https://github.com/west3436/zas-cubed/issues/104). The zones are rebuilt from the loaded chunks' records, as after a restart, and classified again with the new geometry; unloaded chunks keep their saved records, and outstanding operations carry over (§4.5). |
 
 ## 10. Requirement coverage
 

@@ -101,9 +101,17 @@ public final class DimensionAtmos {
     private boolean stopping;
     private final Set<Long> withData = new HashSet<>();
     private final Set<Long> simulatedUnloaded = ConcurrentHashMap.newKeySet();
+    /** What each simulated-unloaded chunk saved at its unload, which its saves keep writing. */
+    private final Map<Long, byte[]> simulatedSaved = new ConcurrentHashMap<>();
+
     private final AtmosPersistence.Store store = new AtmosPersistence.Store() {
         @Override
         public byte[] save(long chunk) {
+            if (simulatedUnloaded.contains(chunk)) {
+                // An unloaded chunk is never saved again; its data stays what it saved at unload.
+                byte[] saved = simulatedSaved.get(chunk);
+                return saved == null ? null : saved.clone();
+            }
             return saveBytes(chunk, new long[0]);
         }
 
@@ -378,6 +386,15 @@ public final class DimensionAtmos {
 
     // ---- Simulated unloads and restarts, for GameTests -------------------------------------
 
+    /**
+     * What a chunk writes if it is saved now, as {@link AtmosPersistence#TAG} would hold it, or
+     * null. A chunk unloaded with {@link #simulateUnload} writes what it saved at its unload, as a
+     * really unloaded chunk keeps its data. For GameTests. Server thread.
+     */
+    public byte[] simulateSave(ChunkPos pos) {
+        return store.save(pos.toLong());
+    }
+
     /** What a chunk writes in the final save after {@link #stop}. Server thread. */
     byte[] finalSave(long chunk) {
         return store.save(chunk);
@@ -405,6 +422,9 @@ public final class DimensionAtmos {
         byte[] saved = store.unloading(chunk);
         withData.remove(chunk);
         simulatedUnloaded.add(chunk);
+        if (saved != null) {
+            simulatedSaved.put(chunk, saved.clone());
+        }
         DimensionPipeline p = pipeline;
         if (p != null) {
             p.chunkUnloaded(chunk);
@@ -419,6 +439,7 @@ public final class DimensionAtmos {
     public void simulateLoad(ChunkPos pos, byte[] saved) {
         long chunk = pos.toLong();
         simulatedUnloaded.remove(chunk);
+        simulatedSaved.remove(chunk);
         ChangeTracker.markReloaded(level, pos);
         DimensionPipeline p = pipeline;
         if (p == null) {
@@ -433,7 +454,8 @@ public final class DimensionAtmos {
 
     /**
      * Creates the engine if the dimension isn't excluded and has none; drops it if the dimension
-     * became excluded or the geometry palette changed.
+     * became excluded, and rebuilds it from the loaded chunks' records if the geometry palette
+     * changed ({@link #rebuild}).
      */
     private void ensureEngine() {
         boolean excluded = Ambients.isExcluded(level.dimension());
@@ -455,14 +477,96 @@ public final class DimensionAtmos {
                 palette = table.palette();
             } else if (!pipeline.isInFlight()) {
                 LOGGER.warn(
-                        "Gas geometry changed; the zones of {} are rebuilt from scratch",
+                        "Gas geometry changed; the zones of {} are rebuilt from the loaded chunks' saved"
+                                + " atmosphere and their surfaces classified again",
                         dimension().location());
-                retire("the gas geometry changed");
+                rebuild(table);
             }
         }
         if (pipeline == null) {
             create(table);
         }
+    }
+
+    /**
+     * Replaces the engine after a geometry palette change, as a restart would (architecture §4.5,
+     * O-10): each loaded chunk's record is built from the published table, exactly what a save
+     * would write, and goes to a new engine with the new palette through the path of a chunk load;
+     * the zones rebuilt from those records classify their surfaces again with the new geometry.
+     * Unloaded chunks keep what they saved, and zones across them wait for them to load. The
+     * operations still outstanding are queued again on the new engine, their futures kept, so no
+     * gas is lost. Only between batches, so no result is in flight; the old worker is abandoned,
+     * never awaited.
+     */
+    private void rebuild(GeometryTable table) {
+        DimensionPipeline old = pipeline;
+        GasRegistry oldRegistry = registry;
+        Map<Long, byte[]> records = new TreeMap<>();
+        for (long chunk : old.recordChunks()) {
+            if (!isChunkLoaded(chunk)) {
+                continue; // it saved its record at unload, and keeps it
+            }
+            ChunkRecord r = old.recordFor(chunk, false);
+            if (r != null) {
+                // Through the byte format, so the new engine reads it as after a restart, under
+                // the gas registry it is created with.
+                records.put(chunk, ChunkRecordCodec.encode(r, oldRegistry));
+            }
+        }
+        // Operations whose futures already failed with a fault aren't run again.
+        List<GasOp> carried = old.scheduler().isFaulted() ? List.of() : old.outstanding();
+        DimensionData.of(level).raiseNextZoneId(old.nextZoneId());
+        old.scheduler().abandon();
+        pipeline = null;
+        create(table);
+        for (Map.Entry<Long, byte[]> e : records.entrySet()) {
+            deliver(e.getKey(), e.getValue());
+        }
+        Map<Long, Pending> moved = new TreeMap<>();
+        for (GasOp op : carried) {
+            Pending p = pending.remove(op.seq());
+            long seq = pipeline.resubmit(remap(op, oldRegistry));
+            if (p != null) {
+                moved.put(seq, p);
+            }
+        }
+        // Anything left under the old engine's numbers has no operation to complete it.
+        List<Pending> orphans = new ArrayList<>();
+        pending.entrySet().removeIf(e -> {
+            if (e.getKey() > 0) {
+                orphans.add(e.getValue());
+                return true;
+            }
+            return false;
+        });
+        pending.putAll(moved);
+        for (Pending p : orphans) {
+            p.future().completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
+    }
+
+    /** An operation with its amounts indexed by the current gas registry instead of {@code from}. */
+    private GasOp remap(GasOp op, GasRegistry from) {
+        if (from == registry) {
+            return op;
+        }
+        double[] moles = new double[registry.size()];
+        double[] old = op.moles();
+        for (int i = 0; i < old.length && i < from.size(); i++) {
+            int index = registry.indexOf(from.definition(i).id());
+            if (index >= 0) {
+                moles[index] = old[i];
+            }
+        }
+        return new GasOp(
+                op.seq(),
+                op.kind(),
+                op.block(),
+                moles,
+                op.temperature(),
+                op.category(),
+                op.triggersZone(),
+                op.source());
     }
 
     private void create(GeometryTable table) {
