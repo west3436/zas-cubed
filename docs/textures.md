@@ -11,7 +11,8 @@ set. The changes made in #127, the area air controller and batteries, are in
 the requirements (D-68, D-69).
 
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
-pixels per block, flat sprites for handheld items, and the standard armor
+pixels per block (the wrench's 32×32 sprite is the one exception, D-70), flat
+sprites for handheld items, and the standard armor
 texture layout for wearables. Sources and licensing follow D-26 and D-39, with
 each asset's provenance in `CREDITS` (NFR-045). Where each texture comes from,
 and the order they're made in, is in the
@@ -35,7 +36,7 @@ texture), or none (the block has no item).
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Flat sprite | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. |
+| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). |
 | `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). |
 | `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Flat sprite | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it. |
 | `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind. |
@@ -157,7 +158,7 @@ one suit share their layer files.
 | Proposed id | Name | Priority | Requirement | States and notes |
 |---|---|---|---|---|
 | `zas_atmos:atmos_analyzer` | Atmos analyzer | Must | CONT-034 | Flat sprite. Was the gas analyzer. |
-| `zas_atmos:wrench` | Wrench | Should | CONT-035 | Flat sprite. Quickly takes pipes apart, and connects portables to connector ports and disconnects them. CONT-035 and CONT-083 need updating to match. |
+| `zas_atmos:wrench` | Wrench | Should | CONT-035 | Flat sprite, vg's own at 32×32 (D-70). Quickly takes pipes apart, and connects portables to connector ports and disconnects them. CONT-035 and CONT-083 need updating to match. |
 | `zas_atmos:crowbar` | Crowbar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. A crowbar, not a halligan bar (the owner's choice of 2026-11-01). |
 | `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (D-68). |
 

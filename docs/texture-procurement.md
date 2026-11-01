@@ -15,24 +15,27 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   at 32 px, so each face is redrawn at 16 px per block (D-67).
 - **11 of the 23 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
-  ones are redrawn at half size.
+  ones are redrawn at half size, except the wrench, which is vg's own sprite
+  at 32×32 (D-70).
 - **Worn textures are redrawn** onto Minecraft's armor layout from vg's
   four-direction worn sprites.
 - **Canisters come in vg's colours,** and players dye them. All 16 dyes give
   a colour, so with vg's red-and-white there are 17
   ([§6.4](#64-canister-colours)).
-- **AI tools make the textures** ([§7](#7-order-of-work)), and a person
-  checks each one in game before it merges.
+- **AI tools make the textures,** the owner reviews each one before it
+  merges, and a person checks it in game when its block or item is
+  registered ([§7](#7-order-of-work)).
 - **A set-up batch, then five batches** that follow the build order, starting
   with the S-01 slice ([§7](#7-order-of-work)).
 
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
 | Crop | – | – | 12 | – |
-| Redraw | 30 | 17 | 18 | 8 files |
+| Redraw | 30 | 17 | 16 | 8 files |
+| As is | – | – | 1 | – |
 | Original | 2 | – | – | – |
 
-The item sprites include the 7 blocks whose item is a flat sprite. The
+The item sprites include the 6 blocks whose item is a flat sprite. The
 canister counts once under Blocks, and its 17 colours separately.
 
 ## 2. Routes
@@ -41,6 +44,7 @@ canister counts once under Blocks, and its 17 colours separately.
 |---|---|---|
 | **Crop** | A vg item sprite fits in 16×16 px, or is within 2 px of it. It's cut out of its 32 px frame, trimmed to fit, and touched up. | `vgstation13` |
 | **Redraw** | Any other texture with a vg sprite: every block face, and item sprites larger than 16 px. It's drawn at 16 px per block from the sprite's shapes, markings and colours. | `vgstation13` |
+| **As is** | vg's sprite unchanged, at its own size. Only the wrench (D-70). | `vgstation13` |
 | **Original** | No usable vg sprite. | `original` |
 | **Other** | A fallback only, for a texture that's hard to draw from scratch (D-62). | `other` |
 
@@ -51,7 +55,7 @@ canister counts once under Blocks, and its 17 colours separately.
   have, such as the scrubber's panic mode, still follows its vg sprite.
 - **Models and animation files are assets too.** Each JSON model and each
   `.png.mcmeta` file needs its own `CREDITS` entry (NFR-045). Models are
-  built from boxes in Blockbench, so they are `original`.
+  built from boxes, in Blockbench or by hand, so they are `original`.
 
 ## 3. Sources
 
@@ -90,11 +94,23 @@ statement before using it.
 
 ## 5. Style
 
-- **16 px per block,** on the 1/16-block grid (D-67). No higher resolutions.
+- **16 px per block,** on the 1/16-block grid (D-67). No higher resolutions,
+  except vg's wrench sprite at 32×32 (D-70). A block taller than a block,
+  like the 26 px canister, uses a 32×32 texture, still at 16 px per block.
+- **vg's colours with a vanilla finish** (style A, the owner's pick in the
+  pilot): no black outlines on block faces, flat colour with one light and
+  one dark edge per face, and no wear. Item sprites keep vg's outlines.
+- **Round where vg is round.** Round parts are discs drawn in pixels, built
+  as stacks of crossed boxes: the pipe is a 4 px disc, the canister's body a
+  12 px disc.
 - **Light from the top left,** as in vanilla.
 - **vg's colour coding stays:** grey pipe, near-black radiator pipe, vg's
   canister colours, and the controller's green, yellow and red lights.
-- **One port design.** Every device port uses the same flange. Output ports
+- **Dyed blocks are tinted.** A block players dye, such as the pipe, is drawn
+  in light greys and tinted in code. Parts that should stand out, like the
+  pipe's flanges, are drawn darker, so they come out a darker shade of the
+  dye.
+- **One port design.** Every device port uses the pipe's 6 px round flange. Output ports
   carry an arrow, so a pump's input and output are easy to tell apart.
 - **States** are separate textures, or overlays where only a light changes.
 
@@ -118,7 +134,7 @@ face.
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | A tube face, an end face and a flange, for a small model. |
+| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. |
 | `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | |
 | `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. |
 | `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. |
@@ -208,7 +224,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:hardsuit_boots` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. |
 | `zas_atmos:magnetic_boots` | `icons/obj/clothing/shoes.dmi` | `magboots0`, `magboots1` | 18×12 | Crop | Off and on. |
 | `zas_atmos:atmos_analyzer` | `icons/obj/device.dmi` | `atmos` | 14×22 | Redraw | |
-| `zas_atmos:wrench` | `icons/obj/items.dmi` | `wrench` | 23×22 | Redraw | |
+| `zas_atmos:wrench` | `icons/obj/items.dmi` | `wrench` | 23×22 | As is | Done in the pilot: vg's sprite unchanged, at 32×32 and not mirrored (D-70). |
 | `zas_atmos:crowbar` | `icons/obj/items.dmi` | `crowbar` | 27×21 | Redraw | |
 | `zas_atmos:multitool` | `icons/obj/device.dmi` | `multitool` | 9×17 | Crop | |
 | `zas_atmos:battery` | `icons/obj/power.dmi` | `cell`, `cell-o1`, `cell-o2` | 11×8 | Crop | The overlays show the charge. |
@@ -272,20 +288,25 @@ texture of its own, not a tint, because vg's red-and-white has a stripe.
 ## 7. Order of work
 
 Art follows the build order in the [plan](plan.md#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done):
-first the S-01 slice, then scenario by scenario. A block's art ships in the
-PR that registers it, or right after, so it can be checked in game. Until
-then a block may use a plain placeholder texture, credited `original`.
+first the S-01 slice, then scenario by scenario. Art can ship ahead of its
+blocks (the owner's change, 2026-11-01). Each batch is made in waves that
+the owner reviews on a page that renders the JSON models in 3D, in every
+state and dye colour, and an approved wave goes in one art PR. Its files sit
+unused until their block or item is registered, and the PR that registers
+it checks them in game. A block registered before its art may use a plain
+placeholder texture, credited `original`.
 
 **AI tools make the textures,** crops and redraws alike (the owner's choice,
 2026-11-01). They write each PNG at 16 px from the vg sprite, the palette
-and the textures already approved, and Blockbench puts the textures on the
-models. The pilot in batch 0 sets the style the rest follow. A person checks
-every texture in game before it merges, as CONTRIBUTING asks of AI-made
-assets.
+and the textures already approved, and the models are built in Blockbench
+or written as JSON. The pilot in batch 0 set the style the rest follow
+([§5](#5-style)). A person checks every texture in game in the PR that
+registers its block or item, as CONTRIBUTING asks of AI-made player-facing
+changes.
 
 | Batch | Scope | Rows |
 |---|---|---|
-| 0. Set-up | The DMI extractor, the palette, the history check of each vg file ([§3](#3-sources)), and a pilot to settle the style: the pipe, the canister and the wrench, one of each kind of texture, reviewed in game | – |
+| 0. Set-up | The DMI extractor, the palette, the history check of each vg file ([§3](#3-sources)), and a pilot to settle the style: the pipe, the canister and the wrench, one of each kind of texture. The pilot is done (2026-11-01) | – |
 | 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer | 12 |
 | 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit | 12 |
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters | 14 |
@@ -300,7 +321,10 @@ leaks (CONT-004). Batches 4 and 5 can run alongside 2 and 3.
 - adds a `CREDITS` entry for every texture, model and `.mcmeta` file, and
   passes `python scripts/check_credits.py`
 - shows each texture in game, in every state, with screenshots in "Human
-  testing" (player-facing, per [CONTRIBUTING](../CONTRIBUTING.md#using-ai))
+  testing" (player-facing, per [CONTRIBUTING](../CONTRIBUTING.md#using-ai)),
+  if its block or item is registered. Otherwise the PR says the owner
+  approved it on the review page, and the in-game check comes with the PR
+  that registers it.
 
 ## 8. Not covered
 
@@ -323,6 +347,15 @@ The owner settled these on 2026-11-01:
 6. **Firelocks follow vg's old full-tile firelock,** and can be placed on
    doors, where they're drawn as an overlay
    ([Firelocks on doors](#firelocks-on-doors)).
+7. **Art can ship ahead of its blocks,** reviewed on a review page, with the
+   in-game check in the PR that registers each block or item
+   ([§7](#7-order-of-work)).
+8. **The pilot settled the style** ([§5](#5-style)): vg's colours with a
+   vanilla finish; a round 4 px pipe with 6 px flanges, dyed by players, its
+   item the 3D model; a round canister 26 px tall with a ball valve on a front
+   port; and vg's own wrench sprite (D-70).
+9. **Players dye pipes,** as they dye canisters. Dyeing pipes has no
+   requirement yet.
 
 Still open:
 
