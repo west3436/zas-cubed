@@ -188,6 +188,38 @@ class GeometryTest {
         assertThrows(IllegalArgumentException.class, () -> Geometry.declared(EnumSet.noneOf(Face.class), 1001, 0));
     }
 
+    /** Zone-boundary flags are per face; {@link Geometry#FLAG_ZONE_BOUNDARY} is all six (GEO-007). */
+    @Test
+    void geo_007_boundary_faces() {
+        Geometry door = Geometry.AIR.withFlags(Geometry.boundaryFlag(Face.WEST) | Geometry.boundaryFlag(Face.NORTH));
+        for (Face f : Face.values()) {
+            assertEquals(f == Face.WEST || f == Face.NORTH, door.isBoundary(f), f.name());
+            assertFalse(Geometry.AIR.isBoundary(f), "air is no boundary");
+        }
+        assertTrue(door.hasFlag(Geometry.FLAG_ZONE_BOUNDARY), "a boundary across some faces is a zone boundary");
+        assertFalse(door.equals(Geometry.AIR), "the flags tell a palette entry apart");
+
+        Geometry every = Geometry.declared(EnumSet.noneOf(Face.class), 1000, Geometry.FLAG_ZONE_BOUNDARY);
+        for (Face f : Face.values()) {
+            assertTrue(every.isBoundary(f), f.name());
+        }
+        assertTrue(every.hasFlag(Geometry.FLAG_OVERRIDE), "other flags are kept");
+        int flags = 0;
+        for (Face f : Face.values()) {
+            assertEquals(0, flags & Geometry.boundaryFlag(f), "one bit per face");
+            assertEquals(
+                    0,
+                    Geometry.boundaryFlag(f)
+                            & (Geometry.FLAG_OVERRIDE
+                                    | Geometry.FLAG_FLUID
+                                    | Geometry.FLAG_HEAT_SOURCE
+                                    | Geometry.FLAG_POSITIONAL),
+                    "apart from the other flags");
+            flags |= Geometry.boundaryFlag(f);
+        }
+        assertEquals(Geometry.FLAG_ZONE_BOUNDARY, flags);
+    }
+
     @Test
     void geo_040_palette_deduplicates() {
         GeometryPalette.Builder b = GeometryPalette.builder();

@@ -33,8 +33,9 @@ class ConservationTest {
 
     /**
      * Random sequences of geometry changes, zone creation, joins, leaves, gas
-     * operations, ambient changes and exchange, with the ledger checked every
-     * tick and the graph checked against a brute-force recomputation.
+     * operations, ambient changes and exchange (door groups' equalization,
+     * CORE-067, included), with the ledger checked every tick and the graph
+     * checked against a brute-force recomputation.
      */
     @Test
     void core_036_conservation_invariant() {
@@ -70,7 +71,10 @@ class ConservationTest {
         assertTrue(created > 50, "the fuzz should create many zones, created " + created);
         assertTrue(graph.mergeCount() > 20, "merges: " + graph.mergeCount());
         assertTrue(graph.dissolveCount() > 20, "dissolves: " + graph.dissolveCount());
-        assertTrue(graph.splitCount() > 20, "splits: " + graph.splitCount());
+        // Equalized door groups (CORE-067) merge sooner once a direct opening joins them, so fewer
+        // zones are left to split than before CORE-067.
+        assertTrue(graph.splitCount() > 10, "splits: " + graph.splitCount());
+        assertTrue(graph.equalizeCount() > 20, "equalized groups: " + graph.equalizeCount());
         StringBuilder state = new StringBuilder();
         for (Zone z : graph.zones()) {
             state.append(z.id())

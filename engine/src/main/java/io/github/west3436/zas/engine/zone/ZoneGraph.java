@@ -34,7 +34,8 @@ import java.util.TreeMap;
  *   <li>gas operations: {@link #add}, {@link #remove}, {@link #addThermalEnergy}
  *       and the like, each attributed to a {@link LedgerCategory};
  *   <li>{@link #exchange()}: every awake edge exchanges once, equivalent zones
- *       joined by a direct opening merge, other equivalent edges sleep, and
+ *       joined by a direct opening merge, other equivalent edges sleep and
+ *       equalize the zones they join through zone boundaries (CORE-067), and
  *       zones that match their ambient dissolve into it unless pinned (D-64);
  *   <li>{@link #checkConservation(long)} when the checker is on.
  * </ol>
@@ -64,6 +65,8 @@ public final class ZoneGraph {
     private final double[] pruneScratch;
     private final ArrayList<Edge> edgeBuffer = new ArrayList<>();
     private final ArrayList<Zone> dissolveBuffer = new ArrayList<>();
+    private final ArrayList<Zone> groupBuffer = new ArrayList<>();
+    private int groupEpoch;
     /** CORE-006's tolerances without the temperature test, for near-empty zones (CORE-076). */
     private final EquivalenceTolerances ignoringTemperature;
 
@@ -75,6 +78,8 @@ public final class ZoneGraph {
     private long mergeCount;
     private long splitCount;
     private long dissolveCount;
+    private long splitCheckCount;
+    private long equalizeCount;
     private int lastSplitVisits;
 
     /**
@@ -251,9 +256,26 @@ public final class ZoneGraph {
         return dissolveCount;
     }
 
+    /**
+     * How many times a change made the graph check a zone for a split (CORE-024) since it was
+     * created, whether or not the zone split. A change checks only when a cell loses a direct
+     * opening to its own zone, so opening and closing a zone boundary never does (GEO-044).
+     */
+    public long splitCheckCount() {
+        return splitCheckCount;
+    }
+
     /** How many cells the last split check visited (CORE-025). */
     public int lastSplitVisits() {
         return lastSplitVisits;
+    }
+
+    /**
+     * How many groups of zones joined through zone boundaries have been equalized since the graph
+     * was created (CORE-067).
+     */
+    public long equalizeCount() {
+        return equalizeCount;
     }
 
     /** The moles of each gas held in all zones, summed in zone id order, into {@code out}. */
@@ -620,6 +642,7 @@ public final class ZoneGraph {
      * the zone and its id. Every remnant inherits the zone's pin (D-64).
      */
     private void splitCheck(Zone zone) {
+        splitCheckCount++;
         int epoch = ++searchEpoch;
         int k = 0;
         long[] starts = new long[seedCount];
@@ -896,8 +919,11 @@ public final class ZoneGraph {
      *       refilled each time, so the ambient never changes (CORE-032,
      *       CORE-038).
      *   <li>Then, if its sides are equivalent: zones joined by a direct opening
-     *       merge (CORE-023), and other zone-to-zone edges sleep (CORE-033).
-     *       Sleeping edges cost no exchange work.
+     *       merge (CORE-023), and other zone-to-zone edges, which join their zones
+     *       only through zone boundaries, sleep (CORE-033) and never merge
+     *       (CORE-034). Sleeping edges cost no exchange work. When an edge falls
+     *       asleep, every zone reachable from it through sleeping edges takes one
+     *       combined mixture, shared by volume (CORE-067).
      *   <li>Last, in zone id order, every zone with an ambient edge that is
      *       nearly equivalent to the ambient dissolves into it (CORE-076, D-63):
      *       its gas goes to the ambient, recorded as {@link
@@ -999,7 +1025,59 @@ public final class ZoneGraph {
             mergeZones(a, b);
         } else {
             e.sleeping = true;
+            equalizeGroup(a);
         }
+    }
+
+    /**
+     * Gives every zone joined to {@code start} through sleeping zone edges one combined mixture,
+     * shared by volume (CORE-067). Only zones joined through zone boundaries alone have sleeping
+     * edges between them, since equivalent zones with a direct opening merge instead. The gas and
+     * its thermal energy are conserved; nothing is recorded in the ledger but pruning. Paused zones
+     * keep their mixture (GEO-035) and aren't crossed. Zones are combined and shared out in id
+     * order, so the result doesn't depend on how the group was reached.
+     */
+    private void equalizeGroup(Zone start) {
+        int epoch = ++groupEpoch;
+        groupBuffer.clear();
+        start.groupEpoch = epoch;
+        groupBuffer.add(start);
+        for (int i = 0; i < groupBuffer.size(); i++) {
+            for (Edge e : groupBuffer.get(i).edges) {
+                Zone other = e.other(groupBuffer.get(i));
+                if (other != null && e.sleeping && !other.paused && other.groupEpoch != epoch) {
+                    other.groupEpoch = epoch;
+                    groupBuffer.add(other);
+                }
+            }
+        }
+        if (groupBuffer.size() > 1) {
+            groupBuffer.sort((x, y) -> Long.compare(x.id(), y.id()));
+            double volume = 0;
+            for (Zone z : groupBuffer) {
+                volume += z.volume();
+            }
+            GasMixture combined =
+                    new GasMixture(registry, config, volume, start.mixture().temperature());
+            for (Zone z : groupBuffer) {
+                GasMixture all = z.mixture().removeFraction(1);
+                combined.merge(all);
+                drainPruned(all);
+            }
+            double remaining = volume;
+            for (int i = 0; i < groupBuffer.size(); i++) {
+                Zone z = groupBuffer.get(i);
+                double fraction = i == groupBuffer.size() - 1 ? 1 : z.volume() / remaining;
+                remaining -= z.volume();
+                GasMixture share = combined.removeFraction(fraction);
+                z.mixture().merge(share);
+                drainPruned(share);
+                z.changed = true;
+            }
+            drainPruned(combined);
+            equalizeCount++;
+        }
+        groupBuffer.clear();
     }
 
     /**
