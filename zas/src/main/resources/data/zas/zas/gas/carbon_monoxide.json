@@ -1,0 +1,16 @@
+{
+  "name": "gas.zas.carbon_monoxide",
+  "formula": "CO",
+  "molar_mass": 0.028010,
+  "molar_heat_capacity": 20.83,
+  "phase": {
+    "melting_point": 68.16,
+    "boiling_point": 81.638,
+    "latent_heat_vaporization": 6013
+  },
+  "sources": {
+    "molar_mass": "C 12.011 + O 15.999 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 29.142 − 8.314 J/(mol·K). C_p of CO(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table C-093, https://janaf.nist.gov/tables/C-093.html. R: CODATA 2018, 8.314462618 J/(mol·K)",
+    "phase": "NIST Chemistry WebBook (SRD 69), Thermophysical Properties of Fluid Systems, carbon monoxide: boiling_point is the saturation temperature at 101.325 kPa, and latent_heat_vaporization the vapour minus liquid enthalpy there, 6.01329 kJ/mol, https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C630080&Type=SatT&Digits=6&PLow=0.101325&PHigh=0.101325&PInc=0&RefState=DEF&TUnit=K&PUnit=MPa&DUnit=mol%2Fl&HUnit=kJ%2Fmol&WUnit=m%2Fs&VisUnit=uPa*s&STUnit=N%2Fm. melting_point is the triple-point temperature, the lowest saturation temperature in the same data, which the melting point at 101.325 kPa differs from by under 0.1 K. No latent_heat_fusion: no reference value was checked"
+  }
+}
