@@ -2,5 +2,14 @@
   "name": "gas.zas.carbon_dioxide",
   "formula": "CO₂",
   "molar_mass": 0.044009,
-  "molar_heat_capacity": 28.81
+  "molar_heat_capacity": 28.81,
+  "phase": {
+    "sublimation_point": 194.686,
+    "latent_heat_sublimation": 25200
+  },
+  "sources": {
+    "molar_mass": "C 12.011 + 2 × O 15.999 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 37.129 − 8.314 J/(mol·K). C_p of CO2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table C-095, https://janaf.nist.gov/tables/C-095.html. R: CODATA 2018, 8.314462618 J/(mol·K)",
+    "phase": "CO2 has no liquid phase at 101.325 kPa: its triple point is 216.58 K at 518.5 kPa (NIST Chemistry WebBook phase change data, https://webbook.nist.gov/cgi/cbook.cgi?ID=C124389&Mask=4), so it has no melting or boiling point there. sublimation_point: -78.464 °C, CRC Handbook of Chemistry and Physics, 95th ed. (2014), p. 4-56, as given by PubChem, https://pubchem.ncbi.nlm.nih.gov/compound/280. latent_heat_sublimation: 25.2 kJ/mol at 195 K, Giauque and Egan (1937), NIST Chemistry WebBook phase change data, same page"
+  }
 }

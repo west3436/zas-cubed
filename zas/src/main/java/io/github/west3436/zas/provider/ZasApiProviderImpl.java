@@ -9,6 +9,7 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
@@ -19,11 +20,17 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.gas.ClientGasRegistry;
+import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,6 +71,8 @@ import net.neoforged.bus.api.IEventBus;
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
     private final Map<Ambient, AtmosphereSample> ambientSamples = new ConcurrentHashMap<>();
+    /** The tags of the gas set last asked about. */
+    private volatile TagSets tagSets = TagSets.of(GasRegistry.EMPTY);
 
     private ZasApiProviderImpl() {}
 
@@ -150,6 +159,35 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         }
         PointResolver.Cell cell = PointResolver.resolve(level, point);
         return service.remove(level, cell.pos(), cell.sub(), moles, source);
+    }
+
+    /**
+     * The tag's gases in the gas set of the server running in this JVM, or else in the set the
+     * client received from its server (CORE-012). In a singleplayer game they are the same set.
+     */
+    @Override
+    public Set<ResourceLocation> gasesInTag(GasTag tag) {
+        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        TagSets sets = tagSets;
+        if (sets.registry() != registry) {
+            sets = TagSets.of(registry);
+            tagSets = sets;
+        }
+        return sets.gases().getOrDefault(tag.id(), Set.of());
+    }
+
+    /** A registry's tags as the API's id sets, built once per registry. */
+    private record TagSets(GasRegistry registry, Map<ResourceLocation, Set<ResourceLocation>> gases) {
+        static TagSets of(GasRegistry registry) {
+            Map<ResourceLocation, Set<ResourceLocation>> gases = new HashMap<>();
+            registry.tags().forEach((tag, ids) -> {
+                // In id order, so iterating a set is deterministic.
+                Set<ResourceLocation> set = new LinkedHashSet<>();
+                ids.forEach(id -> set.add(ResourceLocation.parse(id)));
+                gases.put(ResourceLocation.parse(tag), Collections.unmodifiableSet(set));
+            });
+            return new TagSets(registry, Map.copyOf(gases));
+        }
     }
 
     /**

@@ -9,11 +9,14 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -78,6 +81,24 @@ class GasValuesTest {
         assertSame(MutationResult.ABSENT, add.join());
         assertSame(MutationResult.ABSENT, remove.join());
         assertTrue(add.join().moved().isEmpty());
+    }
+
+    /** Without ZAS³, oxygen is the only gas in a shipped tag (CORE-012, API-009). */
+    @Test
+    void core_012_fallback_tags_hold_standard_air() {
+        assertEquals(Set.of(O2), GasTags.gases(GasTags.OXIDIZER));
+        assertTrue(GasTags.contains(GasTags.OXIDIZER, O2));
+        assertFalse(GasTags.contains(GasTags.OXIDIZER, N2));
+        assertEquals(Set.of(), GasTags.gases(GasTags.FLAMMABLE));
+        assertEquals(Set.of(), GasTags.gases(GasTags.TOXIC));
+        assertEquals(Set.of(), GasTags.gases(GasTag.of("other", "tag")));
+    }
+
+    @Test
+    void core_012_gas_tag_ids() {
+        assertEquals("#zas:toxic", GasTags.TOXIC.toString());
+        assertEquals(ResourceLocation.fromNamespaceAndPath("zas", "flammable"), GasTags.FLAMMABLE.id());
+        assertEquals(GasTags.OXIDIZER, new GasTag(ResourceLocation.parse("zas:oxidizer")));
     }
 
     @Test

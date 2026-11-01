@@ -15,6 +15,8 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.gas.GasDefinition;
+import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
@@ -25,11 +27,13 @@ import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryOverride;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -48,7 +52,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Chunk-aligned persistence in a real level (DATA-001 to DATA-004, DATA-008 to DATA-011, DATA-013).
+ * Chunk-aligned persistence in a real level (DATA-001 to DATA-004, DATA-008 to DATA-011, DATA-013),
+ * and loading gas of a gas that was removed (CORE-013, CORE-016).
  *
  * <p>A GameTest can neither unload chunks on demand nor restart the server, so two stand-ins are
  * used, both going through the real save code and byte format:
@@ -399,6 +404,100 @@ public final class PersistenceTests {
     }
 
     /**
+     * A world saved while a datapack defined a gas, loaded after that datapack was removed, still
+     * loads: the zone comes back under its id with its other gases, the removed gas's moles are
+     * dropped, and each chunk that held some logs a warning naming the gas, the amount and where it
+     * was (CORE-013, CORE-016). The next save holds no trace of it, and the checker finds nothing
+     * else lost.
+     *
+     * <p>A GameTest can't take a datapack away from a running server, so the test writes what a
+     * server that also had the gas would have saved: the zone's own records, re-encoded with a gas
+     * set that adds {@code zas_gametest:removed_gas}, 5 mol of it in each chunk's share. The real
+     * load path then reads them against the running set, which doesn't define it.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
+    public static void core_013_removed_gas_is_dropped_on_load(GameTestHelper h) {
+        ServerLevel nether = restartLevel(h);
+        Rooms r = fourChunks(h, nether, 27, 50);
+        ZoneInfo before = r.zone(12, 2, 12);
+        GasRegistry running = r.dimension().registry();
+        Map<Long, byte[]> saved = service().stopForTest(nether, keys(r));
+        h.assertValueEqual(saved.size(), 4, "chunks saved at shutdown");
+
+        GasDefinition removed = new GasDefinition(
+                "zas_gametest:removed_gas", "gas.zas_gametest.removed_gas", "Rg", 0.04, 12.5, Optional.empty());
+        h.assertTrue(running.find(removed.id()).isEmpty(), "the running gas set defines " + removed.id());
+        List<GasDefinition> wider = new ArrayList<>(running.definitions());
+        wider.add(removed);
+        GasRegistry withRemoved = GasRegistry.of(wider, running.tags());
+        Map<Long, byte[]> withGas = new HashMap<>();
+        saved.forEach((key, bytes) -> {
+            ChunkRecord record = decode(h, running, bytes, new ChunkPos(key));
+            h.assertTrue(record.queuedAdditions().isEmpty(), "a queued addition was saved");
+            List<ZoneShare> shares = record.zones().stream()
+                    .map(s -> new ZoneShare(
+                            s.zoneId(),
+                            s.cells(),
+                            widen(s.moles(), running, withRemoved, removed.id(), 5),
+                            s.temperature(),
+                            s.zoneChunks(),
+                            s.pinned()))
+                    .toList();
+            withGas.put(
+                    key,
+                    ChunkRecordCodec.encode(new ChunkRecord(key, shares, record.heldBlocks(), List.of()), withRemoved));
+        });
+
+        int warned = AtmosPersistence.droppedGasWarnings().size();
+        service().startForTest(nether, withGas);
+        r.ticks(2);
+        ZoneInfo after = Atmospheres.zone(nether, before.id())
+                .orElseThrow(() -> new GameTestAssertException("the zone didn't survive the load"));
+        h.assertFalse(after.paused(), "paused after the load");
+        r.same(before, after, "after the load");
+
+        List<String> logged = AtmosPersistence.droppedGasWarnings();
+        List<String> warnings = logged.subList(warned, logged.size());
+        h.assertValueEqual(warnings.size(), 4, "dropped-gas warnings, one per chunk: " + warnings);
+        for (ChunkPos c : chunks(r)) {
+            String prefix = "[" + nether.dimension().location() + "] Dropped 5 mol of zas_gametest:removed_gas "
+                    + "saved in chunk [" + c.x + ", " + c.z + "]";
+            h.assertTrue(
+                    warnings.stream()
+                            .anyMatch(w -> w.startsWith(prefix)
+                                    && w.contains("in zone " + before.id().value())),
+                    "no warning names the dimension, gas, amount, chunk " + c + " and zone: " + warnings);
+        }
+
+        DimensionAtmos d = r.dimension();
+        for (ChunkPos c : chunks(r)) {
+            byte[] next = d.simulateSave(c);
+            try {
+                ChunkRecordCodec.decode(next, c.toLong(), withRemoved, m -> {
+                    throw new GameTestAssertException("the next save of " + c + " still holds the gas: " + m);
+                });
+            } catch (ChunkRecordCodec.CorruptRecordException e) {
+                throw new GameTestAssertException("unreadable save of " + c + ": " + e.getMessage());
+            }
+        }
+        CompletableFuture<ConservationReport> check = d.checkConservation();
+        r.tick();
+        ConservationReport report = check.getNow(null);
+        h.assertTrue(report != null && report.conserved(), "the checker reported " + report);
+        h.succeed();
+    }
+
+    /** Moles in one gas set's order, moved to a wider set's, with an amount of the extra gas. */
+    private static double[] widen(double[] moles, GasRegistry from, GasRegistry to, String extra, double amount) {
+        double[] out = new double[to.size()];
+        for (int i = 0; i < moles.length; i++) {
+            out[to.indexOf(from.definition(i).id())] = moles[i];
+        }
+        out[to.indexOf(extra)] = amount;
+        return out;
+    }
+
+    /**
      * A geometry palette change rebuilds the zones from the loaded chunks' records, as after a
      * restart (DATA-008, DATA-009, GEO-040, architecture §4.5): zones in loaded chunks come back
      * under their ids with their gas, a block whose geometry changed is classified again, a queued
@@ -505,8 +604,12 @@ public final class PersistenceTests {
     }
 
     private static ChunkRecord decode(GameTestHelper h, DimensionAtmos d, byte[] bytes, ChunkPos pos) {
+        return decode(h, d.registry(), bytes, pos);
+    }
+
+    private static ChunkRecord decode(GameTestHelper h, GasRegistry registry, byte[] bytes, ChunkPos pos) {
         try {
-            return ChunkRecordCodec.decode(bytes, pos.toLong(), d.registry(), m -> {});
+            return ChunkRecordCodec.decode(bytes, pos.toLong(), registry, m -> {});
         } catch (ChunkRecordCodec.CorruptRecordException e) {
             throw new GameTestAssertException("unreadable save of " + pos + ": " + e.getMessage());
         }

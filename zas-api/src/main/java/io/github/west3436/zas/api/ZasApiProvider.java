@@ -4,12 +4,14 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -30,8 +32,9 @@ import net.minecraft.world.phys.Vec3;
  * and threads before delegating here, so implementations may assume non-null
  * arguments and, for mutations, the server thread.
  *
- * <p>Methods added after the first ones have a default, so that a provider
- * built against an older API keeps working with a newer one.
+ * <p>A method added in a later API version needs a default, so that a provider
+ * built against an older API keeps working when a newer one is loaded
+ * (architecture §6.2).
  */
 public interface ZasApiProvider {
     /**
@@ -112,6 +115,18 @@ public interface ZasApiProvider {
     @ServerThread
     CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source);
+
+    /**
+     * The gases in a gas tag (CORE-012), for
+     * {@link io.github.west3436.zas.api.gas.GasTags}.
+     *
+     * <p>Thread: any.
+     *
+     * @param tag the tag
+     * @return the ids of its gases, immutable; empty if there is no such tag
+     */
+    @AnyThread
+    Set<ResourceLocation> gasesInTag(GasTag tag);
 
     /**
      * Whether an entity can breathe where it is, and whether it is protected (API-014).

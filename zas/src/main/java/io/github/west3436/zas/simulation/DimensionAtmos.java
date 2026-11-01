@@ -318,13 +318,23 @@ public final class DimensionAtmos {
         }
     }
 
+    /**
+     * Decodes a chunk's saved record. Gas of gases the registry no longer defines is dropped, with a
+     * warning naming the gas, the amount and where it was (CORE-013, CORE-016), and the chunk is
+     * marked for saving, so the next save writes it without that gas and the warning isn't repeated
+     * at every load.
+     */
     private ChunkRecord decode(byte[] saved, long chunk) {
         try {
-            return ChunkRecordCodec.decode(
-                    saved,
-                    chunk,
-                    registry,
-                    message -> LOGGER.warn("[{}] {}", dimension().location(), message));
+            boolean[] dropped = {false};
+            ChunkRecord record = ChunkRecordCodec.decode(saved, chunk, registry, message -> {
+                dropped[0] = true;
+                AtmosPersistence.warnDroppedGas(dimension(), message);
+            });
+            if (dropped[0]) {
+                markUnsaved(chunk);
+            }
+            return record;
         } catch (ChunkRecordCodec.CorruptRecordException | RuntimeException e) {
             AtmosPersistence.warnCorrupt(dimension(), chunk, e.getMessage());
             return null;
