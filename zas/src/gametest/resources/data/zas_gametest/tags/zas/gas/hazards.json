@@ -1,0 +1,10 @@
+{
+  "values": [
+    "#zas:toxic",
+    "#zas:flammable",
+    {
+      "id": "zas_gametest:no_such_gas",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "gas.zas.water_vapor",
+  "formula": "H₂O",
+  "molar_mass": 0.018015,
+  "molar_heat_capacity": 25.28,
+  "phase": {
+    "melting_point": 273.16,
+    "boiling_point": 373.124,
+    "latent_heat_vaporization": 40651
+  },
+  "sources": {
+    "molar_mass": "2 × H 1.0080 + O 15.999 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 33.590 − 8.314 J/(mol·K). C_p of H2O(g), the ideal gas, at 298.15 K: NIST-JANAF Thermochemical Tables, table H-064, https://janaf.nist.gov/tables/H-064.html. R: CODATA 2018, 8.314462618 J/(mol·K)",
+    "phase": "NIST Chemistry WebBook (SRD 69), Thermophysical Properties of Fluid Systems, water: boiling_point is the saturation temperature at 101.325 kPa, and latent_heat_vaporization the vapour minus liquid enthalpy there, 40.65096 kJ/mol, https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C7732185&Type=SatT&Digits=6&PLow=0.101325&PHigh=0.101325&PInc=0&RefState=DEF&TUnit=K&PUnit=MPa&DUnit=mol%2Fl&HUnit=kJ%2Fmol&WUnit=m%2Fs&VisUnit=uPa*s&STUnit=N%2Fm. melting_point is the triple-point temperature, the lowest saturation temperature in the same data; ice melts at 101.325 kPa about 0.01 K below it. No latent_heat_fusion: no reference value was checked"
+  }
+}

@@ -196,7 +196,7 @@ Gas definitions shall be synced to clients.
   registry holds it with the same fields.
 
 #### CORE-011 · Built-in real gases
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-08, D-42
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-08, D-42
 
 ZAS³ shall ship built-in definitions for exactly these gases: O₂, N₂, CO₂,
 N₂O, H₂O (vapor), H₂, CO and CH₄. Compat modules, addons and datapacks may add
@@ -205,8 +205,14 @@ more.
 - **Rationale:** Decision: D-08 and D-42.
 - **Verify:** Inspect the shipped data: exactly these eight gas definitions.
 
+*2026-11-01: Implemented. `zas/src/main/resources/data/zas/zas/gas/` holds
+`oxygen`, `nitrogen`, `carbon_dioxide`, `nitrous_oxide`, `water_vapor`,
+`hydrogen`, `carbon_monoxide` and `methane`, with English names. The
+`core_011_built_in_gas_set` GameTest checks the loaded `zas:` gases are
+exactly these, with their formulas and translated names.*
+
 #### CORE-015 · Cited gas constants
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-08 · [zas-core §2.2](../research/zas-core.md#22-gas-registry-xgmdm-xgm_gasesdm)
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-08 · [zas-core §2.2](../research/zas-core.md#22-gas-registry-xgmdm-xgm_gasesdm)
 
 Each built-in gas's molar mass and molar heat capacity shall cite a reference
 source, not vgstation13's values.
@@ -217,8 +223,19 @@ source, not vgstation13's values.
 - **Verify:** Inspect each built-in gas definition for a cited source whose
   values match.
 
+*2026-11-01: Implemented. Each built-in definition has a `sources` field
+citing its molar mass (CIAAW 2024 abridged standard atomic weights) and its
+molar heat capacity: C_v at 298.15 K, the quantity the engine uses (E = C·T
+at fixed volume), as C_p − R with C_p from the NIST-JANAF tables and R from
+CODATA 2018. [datapacks.md](../datapacks.md#built-in-gas-constants) collects
+them in a table. N₂O comes to 30.30 J/(mol·K). The
+`core_015_built_in_gases_cite_sources` GameTest reads each shipped file and
+checks the citations are there and the values match them: the molar mass is
+the cited atomic weights summed over the formula, and C_v is the cited C_p
+less R.*
+
 #### CORE-012 · Gas classification tags
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
 
 Gases shall be groupable by tags (for example breathable/oxidizer, toxic,
 flammable, inert, visible) that hazard, fire, and device logic consume.
@@ -230,8 +247,21 @@ flammable, inert, visible) that hazard, fire, and device logic consume.
 - **Verify:** Inspect the shipped tags; the LIFE, FIRE and CONT tests exercise
   the logic that reads them.
 
+*2026-11-01: Implemented. Gas tags use Minecraft's tag format and loader, at
+`data/<namespace>/tags/zas/gas/` ([datapacks.md](../datapacks.md#gas-tags)),
+and are fixed and synced with the gas definitions. `zas` ships the tags its
+planned consumers read: `#zas:oxidizer` (O₂, N₂O; FIRE-003, CONT-103),
+`#zas:flammable` (H₂, CH₄, CO; FIRE-003) and `#zas:toxic` (CO, N₂O; CONT-015,
+CONT-088). There is no breathable tag, since breathing reads O₂ by id, and no
+inert or visible tag, since nothing would read them or visibility is already a
+field. Addons read them through `GasTags` in the API. The
+`core_012_gas_tags` GameTest checks the shipped membership, a datapack tag
+built from other tags, a broken tag reported and left out, and that the API
+agrees. No LIFE, FIRE or CONT logic exists yet; their tests will exercise the
+tags when it does.*
+
 #### CORE-013 · Safe gas set changes
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 Removing a gas definition that saved zones still contain shall not corrupt the
 world. That gas's moles are dropped.
@@ -242,8 +272,19 @@ world. That gas's moles are dropped.
   datapack and reloads, then checks the world loads and the zone keeps its
   other gases.
 
+*2026-11-01: Implemented. Saved records list their gas ids, so a gas the
+running set doesn't define is dropped when its chunk loads, from every zone
+share and queued addition, and the chunk is saved again without it. A
+GameTest can't remove a datapack from a running server, so
+`core_013_removed_gas_is_dropped_on_load` restarts a level from records saved
+as a server that also defined `zas_gametest:removed_gas` would have saved
+them, and checks the zone comes back under its id with its O₂ and N₂, the
+next save holds none of the gas, and the checker finds nothing else lost.
+`core_016_removed_gas_is_dropped_with_a_warning` and
+`core_013_removed_gas_with_no_moles_is_silent` (Unit) cover the codec.*
+
 #### CORE-017 · Optional phase data
-`Should` · `R1` · `Accepted` · Verify: Inspect, Unit · Trace: D-58, CORE-015
+`Should` · `R1` · `Implemented` · Verify: Inspect, Unit · Trace: D-58, CORE-015
 
 Gas definitions shall accept optional phase data: melting and boiling points
 at 101.325 kPa (K), and latent heats of fusion and vaporization (J/mol). The
@@ -254,8 +295,23 @@ later update can add phase changes (HEAT-018) without a format break.
 - **Verify:** Inspect the built-in definitions for cited phase data; a Unit
   test loads definitions with and without it.
 
+*2026-11-01: Implemented. A definition's optional `phase` object takes
+`melting_point`, `boiling_point`, `latent_heat_fusion` and
+`latent_heat_vaporization`, and, for a substance with no liquid at
+101.325 kPa, `sublimation_point` and `latent_heat_sublimation` in place of
+the melting and boiling points ([datapacks.md](../datapacks.md#gases)). CO₂
+ships that way: it sublimes at 194.686 K. Each value is optional. The
+built-in gases cite theirs in `sources.phase`: boiling points and heats of
+vaporization from NIST's fluid data at 101.325 kPa, melting points as the
+triple-point temperatures, within 0.1 K of the melting point there, and heats
+of fusion for N₂O and CH₄. O₂, N₂, H₂O, H₂ and CO ship no heat of fusion
+until a checked reference value is found. The `core_017_*` Unit tests build
+definitions with and without phase data and check its rules; the
+`core_017_phase_data_is_optional` GameTest loads a datapack gas with it, one
+without it, and one whose phase data contradicts itself, which is skipped.*
+
 #### CORE-016 · Dropped-gas warning
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 When gas is dropped under CORE-013, a warning shall name the gas, the amount
 and the location.
@@ -264,6 +320,14 @@ and the location.
   conservation bug, so admins are told.
 - **Verify:** The CORE-013 GameTest checks the log names the gas, the amount
   and the location.
+
+*2026-11-01: Implemented. One warning per gas per chunk, for example
+`[minecraft:the_nether] Dropped 5 mol of zas_gametest:removed_gas saved in
+chunk [688, 512], which the gas registry no longer defines: 5 mol in zone 5
+at 11019 101 8203`, listing each zone or queued addition that held some. A
+gas the chunk held none of is dropped without a warning. The
+`core_013_removed_gas_is_dropped_on_load` GameTest checks a warning for each
+of the zone's four chunks names the dimension, gas, amount, chunk and zone.*
 
 ## Zones
 
@@ -713,6 +777,10 @@ affects it.
 - **Rationale:** Decision: D-13 and D-14.
 - **Verify:** A GameTest checks a sealed Overworld room and a natural cave
   stay unzoned until a vent adds gas to the room, which then forms a zone.
+
+*2026-11-01: D-68 adds one trigger that modifies no air: pinning an enclosed,
+unzoned point through the API (API-050), which the area air controller does
+when placed (CONT-110).*
 
 #### CORE-054 · No world scanning
 `Must` · `R0` · `Implemented` · Verify: Inspect, Bench · Trace: D-13

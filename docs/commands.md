@@ -1,8 +1,8 @@
 # Commands
 
 ZAS³'s operator commands live under `/zas`. They inspect the atmosphere,
-edit gas, audit the simulation against the world and profile it. They are for
-operators and testers, not players.
+edit gas, audit the simulation against the world, profile it and set the
+atmosphere preset. They are for operators and testers, not players.
 
 ## Permission
 
@@ -184,3 +184,42 @@ Labels use the units in `zas-client.toml` ([config.md](config.md)). Only players
 `/zas datapacks` lists the problems of the last datapack load: every entry
 skipped, with its file and the field at fault. See
 [datapacks.md](datapacks.md#invalid-files).
+
+## Preset (OPS-007, OPS-014, OPS-015)
+
+The atmosphere preset, Normal or Hardcore, sets the defaults of a list of
+options. Any option can be overridden on its own, and an override stays when
+the preset changes. The options and their config keys are in
+[config.md](config.md#the-preset-and-its-options).
+
+| Command | What it does |
+|---|---|
+| `/zas preset` | Shows the preset, the config file it was read from, and each option's value, marked `[preset]` or `[override]`, with its Normal and Hardcore defaults. An option whose feature hasn't landed yet names the requirement it waits for |
+| `/zas preset normal` / `hardcore` | Switches the preset. Overrides keep their values |
+| `/zas preset override <option> <value>` | Overrides an option under either preset. Option names and values complete with Tab |
+| `/zas preset clear <option>` | Removes an option's override, so it follows the preset again |
+
+Changes are written to the config file `/zas preset` names, so they last, and
+apply from the next time the option is read: a new ambient variant reaches the
+simulation with the next atmos tick. Editing the file by hand works too;
+NeoForge reloads it within a few seconds. Switching the preset and changing an
+override are reported to the other operators, as vanilla reports
+game-changing commands.
+
+```
+> /zas preset override ambient_variant HARDCORE
+Overrode ambient_variant with HARDCORE under either preset
+  ambient_variant = HARDCORE [override] (Normal NORMAL, Hardcore HARDCORE)
+  Server config: saves/New World/serverconfig/zas-server.toml
+> /zas preset
+Atmosphere preset: Normal, 1 of 7 options overridden
+  Server config: saves/New World/serverconfig/zas-server.toml
+  ambient_variant = HARDCORE [override] (Normal NORMAL, Hardcore HARDCORE)
+  combustion_forms_zones = false [preset] (Normal false, Hardcore true), not used yet: waits for FIRE-024
+  planting_forms_zones = false [preset] (Normal false, Hardcore true), not used yet: waits for CORE-056
+  block_pressure_damage = false [preset] (Normal false, Hardcore true), not used yet: waits for FLOW-007
+  crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625), not used yet: waits for CONT-057
+  leaf_photosynthesis_rate = 0.0625 [preset] (Normal 0.0625, Hardcore 0.03125), not used yet: waits for CONT-057
+  container_explosions_break_blocks = false [preset] (Normal false, Hardcore true), not used yet: waits for CONT-107
+  Zone triggers under both presets (CORE-055): API calls, which include devices, leaks and /zas gas, and breaches of zones
+```

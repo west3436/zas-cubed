@@ -713,6 +713,15 @@ the lever if the per-cell cost ever matters.
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
   zone is rebuilt from its other chunks. Nothing is decoded while a chunk
   loads, so a bad tag can never stop it loading.
+- **Removed gases.** A record lists the gas ids it was saved with and is
+  remapped to the running gas set when decoded. Moles of a gas the set no
+  longer defines (its datapack or mod was removed) are dropped from every
+  share and queued addition; the rest of the record loads as it was
+  (CORE-013). One warning per gas names the dimension, the gas, the amount,
+  the chunk and each zone or queued addition that held it (CORE-016), and
+  the chunk is marked for saving, so the next save writes it without the gas.
+  The ledger never sees the dropped moles: they leave before the record
+  reaches the engine.
 - **Derived state is rebuilt on load:** edges, the geometry palette,
   sub-cells and hotspots (DATA-009).
 - **A geometry palette change rebuilds from the loaded chunks' records**, as a
@@ -893,6 +902,21 @@ renderer is in `io.github.west3436.zas.client`, loaded through a
 `@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
 Hotspots are a FIRE concept (R1), so their list stays empty for now.
 
+*Implemented (#37):* the atmosphere preset (OPS-007, OPS-014, OPS-015). Every
+service above reads its preset-controlled settings from one registry,
+`PresetOptions` in `io.github.west3436.zas.config`: each `PresetOption` has a
+Normal and a Hardcore default and an entry under `[preset_options]` in the
+server config that is `"preset"` or an override. `PresetOption.get()` gives the
+effective value on any thread and `source()` says whether it is the preset's or
+an override; services read it when they need it rather than keeping it, so a
+preset change or a reloaded config applies from the next read. A value the
+worker needs should travel in the batch, as the ambient does, so one atmos
+tick sees one value. Zone triggers are viewed through `ZoneTrigger`: Normal's
+(CORE-055) are on under both presets, and the platform passes
+`ZoneTrigger.<kind>.active()` as an operation's `triggersZone`. Options whose
+feature hasn't landed are declared with the requirement they wait for.
+`/zas preset` shows and changes them (commands.md).
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
@@ -905,7 +929,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 | Package | Contents |
 |---|---|
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread` and `@ServerThread`, and the `ServerThreads` check |
-| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011); later `GasType` (registry key, properties) and `GasTags` |
+| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
@@ -1070,5 +1094,5 @@ The test names include requirement IDs (README rule 5).
 | CONT | §5 (devices through the API, D-50) |
 | DATA | §4.5 |
 | SPACE | §2.1 (`compat-adastra`), §7; open item O-1 |
-| OPS | §3.4 (profiler), §5 (commands, audit) |
+| OPS | §3.4 (profiler), §5 (commands, audit, preset) |
 | NFR | §2 (packaging, licensing untouched), §3.4 (budgets), §3.6 (fault isolation), §7 (mixins), §8 (tests) |

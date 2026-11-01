@@ -72,6 +72,7 @@ public final class AtmosPersistence {
     private static final Map<ServerLevel, Store> STORES = new IdentityHashMap<>();
     private static final Map<ResourceKey<Level>, Set<Long>> LOADED = new ConcurrentHashMap<>();
     private static final List<String> WARNINGS = new CopyOnWriteArrayList<>();
+    private static final List<String> DROPPED = new CopyOnWriteArrayList<>();
 
     private AtmosPersistence() {}
 
@@ -148,6 +149,23 @@ public final class AtmosPersistence {
     /** Every corruption warning logged since the server started, oldest first. For GameTests. */
     public static List<String> corruptionWarnings() {
         return List.copyOf(WARNINGS);
+    }
+
+    /**
+     * Logs that gas saved in a chunk was dropped because the gas registry no longer defines it
+     * (CORE-013, CORE-016). The message, from {@link
+     * io.github.west3436.zas.engine.persist.ChunkRecordCodec}, names the gas, the amount, the chunk
+     * and the zones that held it; the dimension is added in front.
+     */
+    public static void warnDroppedGas(ResourceKey<Level> dimension, String message) {
+        String line = "[" + dimension.location() + "] " + message;
+        LOGGER.warn(line);
+        DROPPED.add(line);
+    }
+
+    /** Every dropped-gas warning logged since the server started, oldest first. For GameTests. */
+    public static List<String> droppedGasWarnings() {
+        return List.copyOf(DROPPED);
     }
 
     private static Set<Long> loaded(ResourceKey<Level> dimension) {
@@ -251,5 +269,6 @@ public final class AtmosPersistence {
         }
         LOADED.clear();
         WARNINGS.clear();
+        DROPPED.clear();
     }
 }
