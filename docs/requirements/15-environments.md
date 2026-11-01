@@ -234,6 +234,10 @@ that no zones exist there.
 - **Verify:** A GameTest vents gas in a sealed room in an excluded dimension
   and checks no zone forms.
 
+*2026-10-31: D-65: when a dimension becomes excluded, its existing zones are
+purged and its chunks save without them. An unloaded dimension is different:
+its zones persist and pause.*
+
 #### ENV-018 · Excluded dimensions keep their ambient
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
