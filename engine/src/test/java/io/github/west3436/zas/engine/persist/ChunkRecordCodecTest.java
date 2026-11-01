@@ -110,6 +110,54 @@ class ChunkRecordCodecTest {
         assertTrue(warnings.get(0).contains("zas:nitrogen"));
     }
 
+    /**
+     * A gas the registry no longer defines is dropped from every zone and queued operation, with
+     * one warning that names the gas, the total amount, the chunk and each place it was; the other
+     * gases read back unchanged (CORE-013, CORE-016).
+     */
+    @Test
+    void core_016_removed_gas_is_dropped_with_a_warning() throws Exception {
+        byte[] bytes = ChunkRecordCodec.encode(sample(), GASES);
+        GasRegistry oxygenOnly = GasRegistry.of(List.of(gas("zas:oxygen", 0.032, 21.0)));
+        List<String> warnings = new ArrayList<>();
+        ChunkRecord back = ChunkRecordCodec.decode(bytes, CHUNK, oxygenOnly, warnings::add);
+
+        assertEquals(1, warnings.size(), warnings.toString());
+        String warning = warnings.get(0);
+        assertTrue(warning.startsWith("Dropped 3.25 mol of zas:nitrogen saved in chunk [-3, 7]"), warning);
+        assertTrue(warning.contains("1.25 mol in zone 4 at "), warning);
+        assertTrue(warning.contains("2 mol in a queued addition at -40 64 120"), warning);
+        // Zone 11 held none of it, so it isn't named.
+        assertFalse(warning.contains("zone 11"), warning);
+
+        assertEquals(2, back.zones().size());
+        assertEquals(1, back.zones().get(0).moles().length);
+        assertEquals(0.5, back.zones().get(0).moles(0));
+        assertEquals(1e-7, back.zones().get(1).moles(0));
+        assertEquals(293.15, back.zones().get(0).temperature());
+        assertEquals(1, back.queuedAdditions().size());
+        assertEquals(0, back.queuedAdditions().get(0).moles()[0]);
+
+        // Saved again with the registry it now has, the record holds no trace of the gas.
+        byte[] resaved = ChunkRecordCodec.encode(back, oxygenOnly);
+        List<String> again = new ArrayList<>();
+        assertEquals(back, ChunkRecordCodec.decode(resaved, CHUNK, oxygenOnly, again::add));
+        assertEquals(List.of(), again);
+    }
+
+    /** A removed gas that no zone held any of is dropped without a warning (CORE-013). */
+    @Test
+    void core_013_removed_gas_with_no_moles_is_silent() throws Exception {
+        ZoneShare zone = new ZoneShare(4, new long[] {5}, new double[] {0, 0.5}, 293.15, new long[] {CHUNK});
+        ChunkRecord record = new ChunkRecord(CHUNK, List.of(zone), new long[0], List.of());
+        GasRegistry oxygenOnly = GasRegistry.of(List.of(gas("zas:oxygen", 0.032, 21.0)));
+        List<String> warnings = new ArrayList<>();
+        ChunkRecord back =
+                ChunkRecordCodec.decode(ChunkRecordCodec.encode(record, GASES), CHUNK, oxygenOnly, warnings::add);
+        assertEquals(List.of(), warnings);
+        assertEquals(0.5, back.zones().get(0).moles(0));
+    }
+
     /** A zone's pin is saved and read back (D-64, API-018). */
     @Test
     void d_064_pin_is_saved() throws Exception {

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.persist;
 
 import io.github.west3436.zas.engine.EngineLog;
+import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -14,6 +15,8 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +49,8 @@ import java.util.zip.CRC32;
  * saved cell that is no longer a cell (architecture §4.5). Reading checks the
  * magic, the version, the checksum and every value; anything wrong
  * throws {@link CorruptRecordException}, and the caller resets the chunk to unzoned (DATA-004).
- * Gases the registry no longer has are dropped with a warning (CORE-013).
+ * Gases the registry no longer has are dropped (CORE-013), with one warning per gas a record held
+ * some of, naming the gas, the amount and where it was (CORE-016).
  */
 public final class ChunkRecordCodec {
     private static final int MAGIC = 0x5A415333; // "ZAS3"
@@ -132,7 +136,10 @@ public final class ChunkRecordCodec {
      * Decodes a record, mapping gas ids to {@code registry}'s indices.
      *
      * @param chunk the chunk the data was read from; it must match the saved one
-     * @param log receives a warning per gas the registry lacks, whose amounts are dropped
+     * @param log receives one warning per gas the registry lacks that the record held some of: its
+     *     amounts are dropped, and the warning names the gas, the moles, the chunk, and each zone
+     *     and queued addition that held it, at its first cell or its block (CORE-016). Nothing else
+     *     is reported here
      * @throws CorruptRecordException if the data is damaged, of another chunk, or of a version this
      *     code can't read
      */
@@ -166,13 +173,12 @@ public final class ChunkRecordCodec {
             }
             int gases = count(in);
             int[] index = new int[gases];
+            String[] savedIds = new String[gases];
             for (int i = 0; i < gases; i++) {
-                String id = in.readUTF();
-                index[i] = registry.indexOf(id);
-                if (index[i] < 0) {
-                    log.warn("Saved atmosphere holds " + id + ", which the gas registry lacks; it is dropped");
-                }
+                savedIds[i] = in.readUTF();
+                index[i] = registry.indexOf(savedIds[i]);
             }
+            Dropped dropped = new Dropped(savedIds, index);
             int zoneCount = count(in);
             List<ZoneShare> zones = new ArrayList<>(Math.min(zoneCount, 64));
             for (int z = 0; z < zoneCount; z++) {
@@ -181,11 +187,15 @@ public final class ChunkRecordCodec {
                 if (version <= VERSION_2) {
                     cells = fromFormat2(cells);
                 }
-                double[] moles = readMoles(in, gases, index, registry.size());
+                double[] saved = readSaved(in, gases);
                 double temperature = in.readDouble();
                 long[] chunks = readLongs(in);
                 boolean pinned = version != VERSION_1 && in.readBoolean();
-                zones.add(new ZoneShare(id, cells, moles, temperature, chunks, pinned));
+                zones.add(new ZoneShare(id, cells, remap(saved, index, registry.size()), temperature, chunks, pinned));
+                String where = cells.length == 0
+                        ? ""
+                        : " at " + CellIds.x(cells[0]) + " " + CellIds.y(cells[0]) + " " + CellIds.z(cells[0]);
+                dropped.add(saved, "in zone " + id + where);
             }
             long[] held = readLongs(in);
             int opCount = count(in);
@@ -193,16 +203,29 @@ public final class ChunkRecordCodec {
             for (int o = 0; o < opCount; o++) {
                 long seq = in.readLong();
                 long block = in.readLong();
-                double[] moles = readMoles(in, gases, index, registry.size());
+                double[] saved = readSaved(in, gases);
                 double temperature = in.readDouble();
                 LedgerCategory category = LedgerCategory.valueOf(in.readUTF());
                 boolean triggers = in.readBoolean();
                 String source = in.readUTF();
-                ops.add(new GasOp(seq, GasOp.Kind.ADD, block, moles, temperature, category, triggers, source));
+                ops.add(new GasOp(
+                        seq,
+                        GasOp.Kind.ADD,
+                        block,
+                        remap(saved, index, registry.size()),
+                        temperature,
+                        category,
+                        triggers,
+                        source));
+                dropped.add(
+                        saved,
+                        "in a queued addition at " + SectionKeys.blockX(block) + " " + SectionKeys.blockY(block) + " "
+                                + SectionKeys.blockZ(block));
             }
             if (in.available() != 0) {
                 throw new CorruptRecordException("trailing bytes");
             }
+            dropped.report(chunk, log);
             return new ChunkRecord(chunk, zones, held, ops);
         } catch (EOFException e) {
             throw new CorruptRecordException("truncated");
@@ -259,14 +282,75 @@ public final class ChunkRecordCodec {
         }
     }
 
-    private static double[] readMoles(DataInputStream in, int gases, int[] index, int size) throws IOException {
-        double[] out = new double[size];
+    /** The amounts as saved, one per entry of the saved gas table. */
+    private static double[] readSaved(DataInputStream in, int gases) throws IOException {
+        double[] out = new double[gases];
         for (int i = 0; i < gases; i++) {
-            double n = in.readDouble();
+            out[i] = in.readDouble();
+        }
+        return out;
+    }
+
+    /** Saved amounts indexed by the registry: those of gases it lacks are left out (CORE-013). */
+    private static double[] remap(double[] saved, int[] index, int size) {
+        double[] out = new double[size];
+        for (int i = 0; i < saved.length; i++) {
             if (index[i] >= 0) {
-                out[index[i]] = n;
+                out[index[i]] = saved[i];
             }
         }
         return out;
+    }
+
+    /**
+     * The gas a record held of gases the registry lacks, which is dropped (CORE-013), with where it
+     * was, for the warning (CORE-016).
+     */
+    private static final class Dropped {
+        private final String[] savedIds;
+        private final int[] index;
+        private final double[] total;
+        private final List<List<String>> where = new ArrayList<>();
+
+        Dropped(String[] savedIds, int[] index) {
+            this.savedIds = savedIds;
+            this.index = index;
+            this.total = new double[savedIds.length];
+            for (int i = 0; i < savedIds.length; i++) {
+                where.add(new ArrayList<>());
+            }
+        }
+
+        void add(double[] saved, String place) {
+            for (int i = 0; i < saved.length; i++) {
+                if (index[i] < 0 && saved[i] > 0) {
+                    total[i] += saved[i];
+                    where.get(i).add(amount(saved[i]) + " mol " + place);
+                }
+            }
+        }
+
+        /**
+         * One warning per gas the record held some of: the gas, the amount and where it was. Every
+         * record lists the whole registry it was saved with, so a gas it held none of is skipped
+         * without a word.
+         */
+        void report(long chunk, EngineLog log) {
+            for (int i = 0; i < savedIds.length; i++) {
+                if (total[i] > 0) {
+                    log.warn("Dropped " + amount(total[i]) + " mol of " + savedIds[i] + " saved in chunk ["
+                            + SectionKeys.chunkX(chunk) + ", " + SectionKeys.chunkZ(chunk)
+                            + "], which the gas registry no longer defines: " + String.join(", ", where.get(i)));
+                }
+            }
+        }
+
+        /** An amount to six significant figures, without trailing zeros. */
+        private static String amount(double moles) {
+            return new BigDecimal(moles)
+                    .round(new MathContext(6))
+                    .stripTrailingZeros()
+                    .toPlainString();
+        }
     }
 }
