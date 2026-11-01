@@ -388,7 +388,7 @@ temperature, with moles in proportion to its volume.
   composition and temperature and moles in a 1:3 ratio.
 
 #### CORE-025 · Local split detection
-`Must` · `R1` · `Accepted` · Verify: Unit, Bench · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
+`Must` · `R1` · `Implemented` · Verify: Unit, Bench · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
 
 A change inside a zone that leaves the zone connected shall be resolved
 without visiting every cell of the zone. The bound depends on the size of the
@@ -400,6 +400,15 @@ neighbourhood around the change, not on the zone's size.
 - **Verify:** A Unit test counts the cells visited when a block is placed
   inside zones of growing size and checks the count doesn't grow with the
   zone; Bench covers it in S-10.
+
+*2026-11-01: Implemented. `core_025_local_split_detection` (Unit) counts the
+cells visited; since [#106](https://github.com/west3436/zas-cubed/issues/106)
+zone membership follows each change in its section's palette instead of being
+rebuilt over every zoned cell, so the whole tick is local too
+(`core_025_local_edit_publishes_only_its_section`). The Bench's worker tick for
+a one-block edit is 0.046, 0.041 and 0.054 ms in zones of 1,000, 8,000 and
+50,000 cells, with 24 cells visited in each
+([benchmarks](../research/benchmarks.md#membership-palette-check-2026-11-01)).*
 
 #### CORE-026 · Zone identity
 `Must` · `R0` · `Implemented` · Verify: Unit
