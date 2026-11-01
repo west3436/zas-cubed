@@ -825,6 +825,21 @@ renderer is in `io.github.west3436.zas.client`, loaded through a
 `@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
 Hotspots are a FIRE concept (R1), so their list stays empty for now.
 
+*Implemented (#37):* the atmosphere preset (OPS-007, OPS-014, OPS-015). Every
+service above reads its preset-controlled settings from one registry,
+`PresetOptions` in `io.github.west3436.zas.config`: each `PresetOption` has a
+Normal and a Hardcore default and an entry under `[preset_options]` in the
+server config that is `"preset"` or an override. `PresetOption.get()` gives the
+effective value on any thread and `source()` says whether it is the preset's or
+an override; services read it when they need it rather than keeping it, so a
+preset change or a reloaded config applies from the next read. A value the
+worker needs should travel in the batch, as the ambient does, so one atmos
+tick sees one value. Zone triggers are viewed through `ZoneTrigger`: Normal's
+(CORE-055) are on under both presets, and the platform passes
+`ZoneTrigger.<kind>.active()` as an operation's `triggersZone`. Options whose
+feature hasn't landed are declared with the requirement they wait for.
+`/zas preset` shows and changes them (commands.md).
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
@@ -1038,5 +1053,5 @@ The test names include requirement IDs (README rule 5).
 | CONT | §5 (devices through the API, D-50) |
 | DATA | §4.5 |
 | SPACE | §2.1 (`compat-adastra`), §7; open item O-1 |
-| OPS | §3.4 (profiler), §5 (commands, audit) |
+| OPS | §3.4 (profiler), §5 (commands, audit, preset) |
 | NFR | §2 (packaging, licensing untouched), §3.4 (budgets), §3.6 (fault isolation), §7 (mixins), §8 (tests) |
