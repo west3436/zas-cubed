@@ -1,7 +1,8 @@
 # ZAS³ (zas-cubed): plan to begin work
 
 **Status:** proposed, 2026-10-30. Updated after the open-questions
-walkthroughs (decisions D-11 to D-40).
+walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0
+and the move of the Ad Astra work to the end of R1 (D-66).
 
 **Inputs:**
 - decisions in [requirements/00-overview](requirements/00-overview.md#decision-log)
@@ -26,6 +27,7 @@ walkthroughs (decisions D-11 to D-40).
   - **Parked with Mekanism:** Q-19 and Q-20.
 - **Scope changes from the walkthrough:**
   - Mekanism is cut from R1 (D-11), and space compat is Ad Astra only (D-29).
+    The Ad Astra work comes last in R1 (D-66).
   - Added to R1: power, with FE, a generator, alarm-powered zones and a cable
     that shares a block with pipes (D-25); photosynthesis (D-33); and the
     Normal/Hardcore preset (D-14).
@@ -61,9 +63,12 @@ Requirements first, then risk-driven work:
 Spikes S0–S5 are done ([results](research/spikes.md)), including S0's check on
 a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77),
 [follow-up](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)).
-Still open:
+Still open: accepting the architecture doc
+([#2](https://github.com/west3436/zas-cubed/issues/2)).
 
-- S6 (Ad Astra) is not started ([#9](https://github.com/west3436/zas-cubed/issues/9)).
+- *2026-11-01:* S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9))
+  moved out of Phase B to the start of track E7, which now comes last in R1
+  (D-66). Phase B no longer waits for it.
 
 - **Architecture doc** (`docs/architecture.md`):
   - module layout and the engine/platform boundary
@@ -83,11 +88,11 @@ Still open:
   | S3 | What is the throughput of bounded fills at 65,536 cells on snapshot data, and what is the latency from trigger to zone? | GEO-020/022, D-23 |
   | S4 | How do merge, split and local-split detection perform on 50k-cell zones? | CORE-024/025 |
   | S5 | **Off-thread engine pipeline.** Cost of snapshotting sections on the server thread; handing off to a worker; applying results with generation checks under concurrent block changes; whether results stay deterministic. | CORE-044/045/047/070/071, D-30 |
-  | S6 | End-to-end proof of the Ad Astra adapter (`EntityOxygenEvent`, the oxygen and temperature tick vetoes, `EnvironmentTickEvent`) with no mixins. Also confirm: suit item ids and temperature-immunity tags, whether suit oxygen is reachable through the fluid item capability, whether Ad Astra asks `EntityOxygenEvent` client-side, and the 1.16.26 floor | SPACE-010, SPACE-013, SPACE-016, SPACE-022, SPACE-023, D-29, D-51 |
+  | S6 | *Moved to track E7 (D-66).* End-to-end proof of the Ad Astra adapter (`EntityOxygenEvent`, the oxygen and temperature tick vetoes, `EnvironmentTickEvent`) with no mixins. Also confirm: suit item ids and temperature-immunity tags, whether suit oxygen is reachable through the fluid item capability, whether Ad Astra asks `EntityOxygenEvent` client-side, and the 1.16.26 floor | SPACE-010, SPACE-013, SPACE-016, SPACE-022, SPACE-023, D-29, D-51 |
 - **Exit:** the architecture doc is accepted, the NFR numbers are set, and the
   mixin list is known.
 
-### Phase C: scaffold (unblocked: content mod ID decided in D-38)
+### Phase C: scaffold (done 2026-10-31)
 
 - **Build:** a ModDevGradle multi-project. Versions, all verified on
   2026-10-30 ([neoforge-1.21.1 §1](research/neoforge-1.21.1.md#1-toolchain)):
@@ -167,17 +172,21 @@ The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
 the worker's tick still grows with zone size
 ([benchmarks](research/benchmarks.md#merge-and-split-core-023-core-024-and-core-025)).
 
-**R0 issues still open:**
+**R0 issues still open** (2026-11-01; #20 to #23, #25, #26 and #28 are
+closed):
 
 | Issue | Why |
 |---|---|
-| [#20](https://github.com/west3436/zas-cubed/issues/20) CORE: zones, [#21](https://github.com/west3436/zas-cubed/issues/21) edges and exchange, [#26](https://github.com/west3436/zas-cubed/issues/26) enclosure detection | Every listed requirement is *Implemented*: CORE-075, CORE-036, GEO-020 and GEO-022, the last, came with the scenario tests. Ready to close. |
-| [#22](https://github.com/west3436/zas-cubed/issues/22) ambient and sparse zoning, [#23](https://github.com/west3436/zas-cubed/issues/23) scheduler, [#25](https://github.com/west3436/zas-cubed/issues/25) change tracking, [#28](https://github.com/west3436/zas-cubed/issues/28) ambients | Every listed requirement is *Implemented*. They stayed open because the PRs that finished them said "Part of" (#97, #100, #92). Ready to close. |
+| [#32](https://github.com/west3436/zas-cubed/issues/32) API skeleton | Every requirement but API-015 is *Implemented*. Left: sub-cell point resolution ([#108](https://github.com/west3436/zas-cubed/issues/108)) and held breaches reporting UNRESOLVED ([#109](https://github.com/west3436/zas-cubed/issues/109)). In progress. |
+| [#106](https://github.com/west3436/zas-cubed/issues/106) incremental membership, [#78](https://github.com/west3436/zas-cubed/issues/78) NFR-004 memory | Found by the R0 benchmarks: every geometry change rebuilds membership over every zoned cell, which fails CORE-025's Bench, and the rough heap per zoned cell is over NFR-004. The fix is the per-section palette of architecture §4.4, then a proper memory measurement. In progress. |
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
 | [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
+
+E1 to E6 and E8 run in parallel. E7 (Ad Astra) starts once they're done,
+just before the release (D-66).
 
 | Track | Area | Notes |
 |---|---|---|
@@ -187,7 +196,7 @@ the worker's tick still grows with zone size
 | E4 | FLOW | Volume-aware airflow, player-motion sync, Hardcore glass shattering |
 | E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; air alarm, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the alarm as an APC-style hub with priority (D-34), and our own multipart block for cable plus pipe (D-36, spike it early) |
 | E6 | Art pipeline | 3D models from vg sprites with the Blender MCP; `CREDITS` and provenance for each asset (NFR-045) |
-| E7 | SPACE | Ad Astra adapter, plus seeding ambients from Ad Astra planet data |
+| E7 | SPACE | **Last, after the other tracks (D-66).** Spike S6 first, then the Ad Astra adapter, plus seeding ambients from Ad Astra planet data |
 | E8 | CLIENT, DATA, docs | Sync, visuals, player and developer docs, example addon, API 1.0.0 on Maven Central |
 
 - **Exit:** S-01 to S-12 pass (except the deferred S-07), the NFR budgets are
@@ -254,8 +263,28 @@ the worker's tick still grows with zone size
 
 ## Immediate next steps
 
-1. **Review the [architecture](architecture.md)** and the
-   [spike results](research/spikes.md), then accept the doc or send changes.
-2. **Close the Phase B gap:** run S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9)).
-3. **Then Phase C:** scaffold the multi-project build, following the
-   packaging rules in [architecture §2](architecture.md#2-modules-and-packaging).
+_Updated 2026-11-01._
+
+1. **Finish R0** (in progress):
+   - the API: sub-cell point resolution
+     ([#108](https://github.com/west3436/zas-cubed/issues/108)) and held
+     breaches reporting UNRESOLVED
+     ([#109](https://github.com/west3436/zas-cubed/issues/109)), which close
+     [#32](https://github.com/west3436/zas-cubed/issues/32)
+   - incremental zone membership with per-section palettes
+     ([#106](https://github.com/west3436/zas-cubed/issues/106)) and a proper
+     NFR-004 memory measurement
+     ([#78](https://github.com/west3436/zas-cubed/issues/78))
+2. **Review the [architecture](architecture.md)**
+   ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
+   send changes. That closes Phase B now that S6 has moved (D-66).
+3. **Start Phase E** with the risk item first: the multipart pipe-and-cable
+   spike ([#46](https://github.com/west3436/zas-cubed/issues/46)). Then E1
+   LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34) to
+   [#36](https://github.com/west3436/zas-cubed/issues/36)) and E5's pipe
+   networks ([#47](https://github.com/west3436/zas-cubed/issues/47)), which
+   also unblock the R0 issues waiting on R1 (#27, #29, #31).
+4. **Last in R1:** E7, Ad Astra: spike S6
+   ([#9](https://github.com/west3436/zas-cubed/issues/9)), then
+   [#54](https://github.com/west3436/zas-cubed/issues/54) to
+   [#56](https://github.com/west3436/zas-cubed/issues/56) (D-66).
