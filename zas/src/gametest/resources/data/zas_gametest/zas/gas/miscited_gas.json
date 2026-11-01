@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas_gametest.miscited_gas",
+  "formula": "Mg",
+  "molar_mass": 0.03,
+  "molar_heat_capacity": 20,
+  "sources": {
+    "molar_mass": "Invented for the GameTests",
+    "boiling_point": "A citation for a field the definition doesn't have at the top level"
+  }
+}

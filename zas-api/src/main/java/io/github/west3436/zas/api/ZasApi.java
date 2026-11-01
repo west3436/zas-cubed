@@ -15,8 +15,9 @@ import java.util.Objects;
  * common setup or later; to use it during your own mod's construction, declare
  * an optional dependency on {@code zas} with {@code ordering = "AFTER"}.
  *
- * <p>The queries are in {@link io.github.west3436.zas.api.atmosphere.Atmospheres}
- * and the mutations in {@link io.github.west3436.zas.api.mutation.GasMutations}.
+ * <p>The queries are in {@link io.github.west3436.zas.api.atmosphere.Atmospheres},
+ * the mutations in {@link io.github.west3436.zas.api.mutation.GasMutations}, and
+ * the breathability helper in {@link io.github.west3436.zas.api.life.Breathing}.
  */
 public final class ZasApi {
     private static volatile ZasApiProvider provider = FallbackProvider.INSTANCE;

@@ -739,6 +739,15 @@ the lever if the per-cell cost ever matters.
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
   zone is rebuilt from its other chunks. Nothing is decoded while a chunk
   loads, so a bad tag can never stop it loading.
+- **Removed gases.** A record lists the gas ids it was saved with and is
+  remapped to the running gas set when decoded. Moles of a gas the set no
+  longer defines (its datapack or mod was removed) are dropped from every
+  share and queued addition; the rest of the record loads as it was
+  (CORE-013). One warning per gas names the dimension, the gas, the amount,
+  the chunk and each zone or queued addition that held it (CORE-016), and
+  the chunk is marked for saving, so the next save writes it without the gas.
+  The ledger never sees the dropped moles: they leave before the record
+  reaches the engine.
 - **Derived state is rebuilt on load:** edges, the geometry palette,
   sub-cells and hotspots (DATA-009).
 - **A geometry palette change rebuilds from the loaded chunks' records**, as a
@@ -880,14 +889,14 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 
 | Package | Contents |
 |---|---|
-| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread` and `@ServerThread`, and the `ServerThreads` check |
-| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011); later `GasType` (registry key, properties) and `GasTags` |
+| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, and the `ServerThreads` check |
+| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
-| `.api.life` | `Breathability` (API-014): breathable, protected, reasons; `HazardHandler` (LIFE-032) |
+| `.api.life` | `Breathing` (API-014: `of(entity)`, and `vanilla(entity)`, vanilla's verdict alone), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -899,7 +908,9 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 - **The fallback** gives a vanilla, breathable world:
   - queries return standard air
   - mutations complete immediately with outcome `ABSENT`
-  - `Breathability` follows vanilla rules (underwater still counts)
+  - `Breathing.of` gives vanilla's verdict, `Breathing.vanilla`: breathable
+    in air, and underwater still counts
+    (see [Breathability](#breathability-api-014) below)
   - capabilities still exist, because capability objects are created by name
     in the API jar
   - no events fire
@@ -916,6 +927,39 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
   release (API-043), and the example addon run without `zas` (API-048, S-12).
   The policy and the consumer snippet are in
   [api-consumers.md](api-consumers.md).
+- **Provider methods added later get a default.** FML may load a newer API
+  than the one `zas` was built with, and `zas`'s provider must still
+  implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict.
+
+#### Breathability (API-014)
+
+*Implemented in part ([#59](https://github.com/west3436/zas-cubed/issues/59)):
+the API and the fallback.* `Breathing.of(entity)` returns an immutable
+`Breathability`. It is a final class with a builder rather than a record, so
+LIFE and API-022 can add parts without a binary-incompatible change:
+
+| Part | Meaning |
+|---|---|
+| `reason()`, `canBreathe()` | Why it can or can't breathe: `BREATHABLE`, `FLUID_BREATHING`, `EXEMPT`, `DOES_NOT_BREATHE`, `DROWNING`, `LOW_OXYGEN`. The reason decides `canBreathe()`. |
+| `source()`, `breath()` | What it breathes from (`ATMOSPHERE`, `INTERNALS`, `FLUID`, `NONE`), and the gas, when the verdict looked at one |
+| `hazards()`, `isProtected()` | The hazards its protection doesn't cover (`TOXIC_GAS`, `LOW_PRESSURE`, `HIGH_PRESSURE`, `COLD`, `HEAT`); protected means none |
+| `protection()` | What protects it: `PRESSURE`, `THERMAL`, `SEALED_BREATHING`, `GAS_FILTERING`, `IMMUNE`, `EXEMPT` |
+
+`Breathing.vanilla(entity)` is the verdict NeoForge's breathing hook starts
+`LivingBreatheEvent` with. Eyes in air or a bubble column give `BREATHABLE`.
+Eyes in a fluid the entity can't drown in give `FLUID_BREATHING`: that covers
+Water Breathing, Conduit Power, `#minecraft:can_breathe_under_water`, and
+fluids nothing drowns in. An invulnerable player gets `EXEMPT`. Anything else
+in a fluid gives `DROWNING`. The verdict has no breath gas, hazards or
+protection. The fallback answers with it.
+
+**Interim:** until LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34)
+to [#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022 are
+built, `zas` answers with vanilla's verdict too, so it ignores the atmosphere.
+LIFE replaces `ZasApiProviderImpl.breathability` with the full verdict. That
+verdict covers who breathes, the breath source, the O₂ minimum, gas hazards
+and protection, and keeps vanilla's rule while the eyes are in water
+(LIFE-022).
 
 ### 6.3 Threading contract (API-004, API-045, API-046)
 
@@ -923,6 +967,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 |---|---|
 | Queries (`Atmospheres`, `ZoneInfo`) | Any thread. They read the published immutable snapshot of the last applied atmos tick. |
 | Mutations, pins, `markDirty` | Server thread only. They throw `IllegalStateException` otherwise. |
+| Breathability (`Breathing`) | The main thread of the entity's logical side (`@LevelThread`), because it reads live entity state. On the server side, it throws `IllegalStateException` from any other thread. On the client, it gives a display-only answer. The verdict itself may be used anywhere. |
 | Futures | Complete on the server thread at the apply tick |
 | Events | Fired on the server thread when results are applied (API-032), on `NeoForge.EVENT_BUS` |
 | Providers (seal, ambient), hazard handlers | Called on the server thread |

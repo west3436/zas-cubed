@@ -11,8 +11,10 @@ import java.util.regex.Pattern;
  * @param nameKey the translation key of the display name
  * @param formula the formula label, such as {@code O₂}
  * @param molarMass molar mass, in kg/mol
- * @param molarHeatCapacity molar heat capacity, in J/(mol·K)
+ * @param molarHeatCapacity molar heat capacity at constant volume, in J/(mol·K): the engine's
+ *     thermal energy is this times moles times temperature, at the fixed volume of a mixture
  * @param visibility how the gas shows in the world, if it does
+ * @param phase the gas's phase data, if it has any (CORE-017); nothing in R1 reads it
  */
 public record GasDefinition(
         String id,
@@ -20,7 +22,8 @@ public record GasDefinition(
         String formula,
         double molarMass,
         double molarHeatCapacity,
-        Optional<GasVisibility> visibility) {
+        Optional<GasVisibility> visibility,
+        Optional<GasPhaseData> phase) {
 
     private static final Pattern ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
 
@@ -29,7 +32,8 @@ public record GasDefinition(
         Objects.requireNonNull(nameKey, "nameKey");
         Objects.requireNonNull(formula, "formula");
         Objects.requireNonNull(visibility, "visibility");
-        if (!ID.matcher(id).matches()) {
+        Objects.requireNonNull(phase, "phase");
+        if (!isValidId(id)) {
             throw new IllegalArgumentException("gas id must be namespace:path, got '" + id + "'");
         }
         if (nameKey.isBlank()) {
@@ -45,5 +49,21 @@ public record GasDefinition(
             throw new IllegalArgumentException(
                     id + ": molarHeatCapacity must be finite and positive, got " + molarHeatCapacity);
         }
+    }
+
+    /** A definition without phase data. */
+    public GasDefinition(
+            String id,
+            String nameKey,
+            String formula,
+            double molarMass,
+            double molarHeatCapacity,
+            Optional<GasVisibility> visibility) {
+        this(id, nameKey, formula, molarMass, molarHeatCapacity, visibility, Optional.empty());
+    }
+
+    /** Whether a string is a valid gas or gas tag id, {@code namespace:path}. */
+    static boolean isValidId(String id) {
+        return ID.matcher(id).matches();
     }
 }

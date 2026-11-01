@@ -9,6 +9,9 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -17,17 +20,24 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.gas.ClientGasRegistry;
+import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -53,10 +63,16 @@ import net.neoforged.bus.api.IEventBus;
  *
  * <p>Mutations resolve their point the same way and act on that cell. They are queued for the next
  * atmos tick and their futures complete on the server thread when that tick is applied (API-016).
+ *
+ * <p><b>Interim:</b> the breathability helper (API-014) answers with vanilla's verdict, as the
+ * fallback does, until LIFE's breathing, hazard and protection rules (#34 to #36) and the
+ * life-support capability (API-022, #60) are built.
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
     private final Map<Ambient, AtmosphereSample> ambientSamples = new ConcurrentHashMap<>();
+    /** The tags of the gas set last asked about. */
+    private volatile TagSets tagSets = TagSets.of(GasRegistry.EMPTY);
 
     private ZasApiProviderImpl() {}
 
@@ -143,6 +159,46 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         }
         PointResolver.Cell cell = PointResolver.resolve(level, point);
         return service.remove(level, cell.pos(), cell.sub(), moles, source);
+    }
+
+    /**
+     * The tag's gases in the gas set of the server running in this JVM, or else in the set the
+     * client received from its server (CORE-012). In a singleplayer game they are the same set.
+     */
+    @Override
+    public Set<ResourceLocation> gasesInTag(GasTag tag) {
+        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        TagSets sets = tagSets;
+        if (sets.registry() != registry) {
+            sets = TagSets.of(registry);
+            tagSets = sets;
+        }
+        return sets.gases().getOrDefault(tag.id(), Set.of());
+    }
+
+    /** A registry's tags as the API's id sets, built once per registry. */
+    private record TagSets(GasRegistry registry, Map<ResourceLocation, Set<ResourceLocation>> gases) {
+        static TagSets of(GasRegistry registry) {
+            Map<ResourceLocation, Set<ResourceLocation>> gases = new HashMap<>();
+            registry.tags().forEach((tag, ids) -> {
+                // In id order, so iterating a set is deterministic.
+                Set<ResourceLocation> set = new LinkedHashSet<>();
+                ids.forEach(id -> set.add(ResourceLocation.parse(id)));
+                gases.put(ResourceLocation.parse(tag), Collections.unmodifiableSet(set));
+            });
+            return new TagSets(registry, Map.copyOf(gases));
+        }
+    }
+
+    /**
+     * INTERIM until LIFE (#34 to #36) and API-022 (#60): vanilla's verdict, the same as the
+     * fallback's. It ignores the atmosphere, so an entity in a vacuum zone is told it can breathe.
+     * LIFE replaces this with ZAS³'s own verdict: who breathes, the breath source, the O₂ minimum,
+     * gas hazards and protection, keeping vanilla's rule while the eyes are in water (LIFE-022).
+     */
+    @Override
+    public Breathability breathability(LivingEntity entity) {
+        return Breathing.vanilla(entity);
     }
 
     private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {

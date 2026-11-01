@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas_gametest.invalid_phase",
+  "formula": "Ip",
+  "molar_mass": 0.03,
+  "molar_heat_capacity": 20,
+  "phase": {
+    "sublimation_point": 190,
+    "boiling_point": 200
+  }
+}
