@@ -20,7 +20,7 @@ GameTest servers started by ModDevGradle 2.0.148.
 | S3 | Bounded fills | A 65,536-cell fill takes **5.5 ms**, about 12 M cells/s. With zone creation, 5.6 ms. | Done (headless) |
 | S4 | Merge, split, local split | A connected edit costs **2 µs** (6 visits). A real 50k split takes 6.7 ms and a merge 0.15 ms. The worst-case detour is 4.9 ms. | Done (headless) |
 | S5 | Off-thread pipeline | The protocol works. Threaded and inline runs are **bit-identical**, and conservation is exact (3e-14), but **only with** reject-on-unload (1.7e-3 drift without it). Server-thread cost is µs per atmos tick. | Done (headless, plus the in-game snapshot cost) |
-| S6 | Ad Astra adapter | Not started | Moved to the start of track E7, at the end of R1 (D-66, [#9](https://github.com/west3436/zas-cubed/issues/9)). It needs Ad Astra jars downloaded and run. |
+| S6 | Ad Astra adapter | Not started | Deferred to R2 with the Ad Astra adapter (D-66, [#9](https://github.com/west3436/zas-cubed/issues/9)). It needs Ad Astra jars downloaded and run. |
 
 ## S0 · Packaging
 
@@ -413,8 +413,7 @@ This session's permission rules blocked running downloaded third-party
 installers, and running third-party mod jars falls in the same category. The
 questions in [#9](https://github.com/west3436/zas-cubed/issues/9) stand unchanged.
 
-*2026-11-01: moved out of Phase B to the start of track E7, which now comes
-last in R1 (D-66).*
+*2026-11-01: deferred to R2 with the Ad Astra adapter (D-66).*
 
 ## Proposed NFR numbers
 

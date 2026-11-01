@@ -2,7 +2,7 @@
 
 **Status:** proposed, 2026-10-30. Updated after the open-questions
 walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0
-and the move of the Ad Astra work to the end of R1 (D-66).
+and the move of Ad Astra to R2 with Mekanism (D-66).
 
 **Inputs:**
 - decisions in [requirements/00-overview](requirements/00-overview.md#decision-log)
@@ -27,7 +27,8 @@ and the move of the Ad Astra work to the end of R1 (D-66).
   - **Parked with Mekanism:** Q-19 and Q-20.
 - **Scope changes from the walkthrough:**
   - Mekanism is cut from R1 (D-11), and space compat is Ad Astra only (D-29).
-    The Ad Astra work comes last in R1 (D-66).
+    D-66 then moved Ad Astra to R2 alongside Mekanism, so R1 ships no
+    mod-compat adapter.
   - Added to R1: power, with FE, a generator, alarm-powered zones and a cable
     that shares a block with pipes (D-25); photosynthesis (D-33); and the
     Normal/Hardcore preset (D-14).
@@ -67,8 +68,8 @@ Still open: accepting the architecture doc
 ([#2](https://github.com/west3436/zas-cubed/issues/2)).
 
 - *2026-11-01:* S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9))
-  moved out of Phase B to the start of track E7, which now comes last in R1
-  (D-66). Phase B no longer waits for it.
+  moved out of Phase B to R2 with the Ad Astra adapter (D-66). Nothing in
+  R0 or R1 depends on it.
 
 - **Architecture doc** (`docs/architecture.md`):
   - module layout and the engine/platform boundary
@@ -88,7 +89,7 @@ Still open: accepting the architecture doc
   | S3 | What is the throughput of bounded fills at 65,536 cells on snapshot data, and what is the latency from trigger to zone? | GEO-020/022, D-23 |
   | S4 | How do merge, split and local-split detection perform on 50k-cell zones? | CORE-024/025 |
   | S5 | **Off-thread engine pipeline.** Cost of snapshotting sections on the server thread; handing off to a worker; applying results with generation checks under concurrent block changes; whether results stay deterministic. | CORE-044/045/047/070/071, D-30 |
-  | S6 | *Moved to track E7 (D-66).* End-to-end proof of the Ad Astra adapter (`EntityOxygenEvent`, the oxygen and temperature tick vetoes, `EnvironmentTickEvent`) with no mixins. Also confirm: suit item ids and temperature-immunity tags, whether suit oxygen is reachable through the fluid item capability, whether Ad Astra asks `EntityOxygenEvent` client-side, and the 1.16.26 floor | SPACE-010, SPACE-013, SPACE-016, SPACE-022, SPACE-023, D-29, D-51 |
+  | S6 | *Moved to R2 with the Ad Astra adapter (D-66).* End-to-end proof of the Ad Astra adapter (`EntityOxygenEvent`, the oxygen and temperature tick vetoes, `EnvironmentTickEvent`) with no mixins. Also confirm: suit item ids and temperature-immunity tags, whether suit oxygen is reachable through the fluid item capability, whether Ad Astra asks `EntityOxygenEvent` client-side, and the 1.16.26 floor | SPACE-010, SPACE-013, SPACE-016, SPACE-022, SPACE-023, D-29, D-51 |
 - **Exit:** the architecture doc is accepted, the NFR numbers are set, and the
   mixin list is known.
 
@@ -185,8 +186,7 @@ closed):
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
-E1 to E6 and E8 run in parallel. E7 (Ad Astra) starts once they're done,
-just before the release (D-66).
+The tracks run in parallel. E7 (Ad Astra) moved to R2 with Mekanism (D-66).
 
 | Track | Area | Notes |
 |---|---|---|
@@ -196,10 +196,10 @@ just before the release (D-66).
 | E4 | FLOW | Volume-aware airflow, player-motion sync, Hardcore glass shattering |
 | E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; air alarm, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the alarm as an APC-style hub with priority (D-34), and our own multipart block for cable plus pipe (D-36, spike it early) |
 | E6 | Art pipeline | 3D models from vg sprites with the Blender MCP; `CREDITS` and provenance for each asset (NFR-045) |
-| E7 | SPACE | **Last, after the other tracks (D-66).** Spike S6 first, then the Ad Astra adapter, plus seeding ambients from Ad Astra planet data |
+| ~~E7~~ | ~~SPACE~~ | **Moved to R2 (D-66).** R1 keeps the generic pieces space mods build on: ambient providers (ENV-004), the breathability helper (API-014), the life-support capability (API-022), and the NeoForge breathing event (SPACE-002, now with E1) |
 | E8 | CLIENT, DATA, docs | Sync, visuals, player and developer docs, example addon, API 1.0.0 on Maven Central |
 
-- **Exit:** S-01 to S-12 pass (except the deferred S-07), the NFR budgets are
+- **Exit:** S-01 to S-13 pass (except S-06 and S-07, deferred to R2), the NFR budgets are
   met, and the API is frozen at 1.0.0.
 
 ### Phase F: release
@@ -212,8 +212,12 @@ just before the release (D-66).
 1. **Mekanism reference integration** (D-11). It uses only the public API and
    starts from the [MEK candidates](requirements/50-compat-mekanism.md) and
    the research note.
-2. **Northstar Redux and Create Cosmonautics adapters** (SPACE-011/012).
-3. **The rest of the SS13 device set** (CONT R2 column), and biome/altitude
+2. **Ad Astra reference integration** (D-66). Spike S6
+   ([#9](https://github.com/west3436/zas-cubed/issues/9)), then the adapter
+   and planet ambients ([SPACE](requirements/51-compat-space.md), #54 to
+   #56). Like Mekanism, it uses only the public API.
+3. **Northstar Redux and Create Cosmonautics adapters** (SPACE-011/012).
+4. **The rest of the SS13 device set** (CONT R2 column), and biome/altitude
    ambients.
 
 ## Proposed module layout (to be validated in Phase B)
@@ -224,7 +228,7 @@ just before the release (D-66).
 | `api` (standalone module jar, published to Maven Central) | Minecraft and NeoForge types only | Public interfaces, records, events, capability definitions, and the fallback when ZAS³ is absent (API-001/006) |
 | `zas` (framework mod) | api (jar-in-jar), engine | Geometry, hooks and mixins, persistence, sync, environments, life support, heat, fire, airflow, presets, commands, client |
 | `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power and cables, the multipart block (D-36), GUIs, CC BY-SA 4.0 assets (D-39) |
-| `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023) |
+| `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023), R2 (D-66) |
 | `example-addon` | api | Usage examples for consumers (API-005) |
 
 **Constraints from the platform research:**
@@ -253,7 +257,7 @@ just before the release (D-66).
 | R3 | Zone rebuilds of O(zone size) on edits inside large zones | Latency when building inside stations | Local split detection (CORE-025); spike S4. **Mostly retired by S4:** 2 µs per ordinary edit; 5 ms worst-case detour; 6.7 ms for a real 50k split, all on the worker. |
 | R4 | Zones that cross unloaded chunks | Inconsistent state | Freeze, never force-load (D-24) |
 | R5 | ~~Mekanism venting needs fragile mixins~~ | — | **Retired for R1:** Mekanism deferred (D-11). It comes back as an API-only reference integration. |
-| R6 | Ad Astra's API changes, or Ad Astra stops updating on 1.21.1 | The adapter breaks | Public `api` package; pinned version range; adapter isolated in its own module (SPACE-003) |
+| R6 | ~~Ad Astra's API changes, or Ad Astra stops updating on 1.21.1~~ | — | **Retired for R1:** Ad Astra moved to R2 (D-66). When it resumes: public `api` package; pinned version range; adapter isolated in its own module (SPACE-003). |
 | R7 | Scope creep. Full SS13 content now also includes power, a generator, alarm power distribution and a multipart pipe-and-cable block. | R1 slips | A strict R1 content subset; power scoped by D-34 to D-37 (one generator, one cable tier); spike the multipart block early in E5 |
 | R8 | Clean-room drift: vg code leaks in | License violation | NFR-040; review checklist; research notes in prose only |
 | R9 | Hazard checks on every entity cost too much | Tick cost | Per-entity cadence, cached zone lookups, spatial bucketing |
@@ -284,7 +288,5 @@ _Updated 2026-11-01._
    [#36](https://github.com/west3436/zas-cubed/issues/36)) and E5's pipe
    networks ([#47](https://github.com/west3436/zas-cubed/issues/47)), which
    also unblock the R0 issues waiting on R1 (#27, #29, #31).
-4. **Last in R1:** E7, Ad Astra: spike S6
-   ([#9](https://github.com/west3436/zas-cubed/issues/9)), then
-   [#54](https://github.com/west3436/zas-cubed/issues/54) to
-   [#56](https://github.com/west3436/zas-cubed/issues/56) (D-66).
+4. **After R1:** the reference integrations, Mekanism and Ad Astra
+   (D-11, D-66; see [After R1](#after-r1-already-queued)).
