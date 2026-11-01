@@ -167,8 +167,23 @@ face.
 |---|---|---|---|
 | `zas_atmos:area_air_controller` | `icons/obj/monitors.dmi` | `alarm0`, `alarm2`, `alarm1`, `alarmp` | vg's air alarm: normal, danger 1, danger 2 and unpowered, in that order. vg's `alarm2` is yellow and `alarm1` red. |
 | `zas_atmos:fire_alarm` | `icons/obj/monitors.dmi` | `fire0e`, `fire1e`, `firep` | Normal, alarm and unpowered. |
-| `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi` | `door_closed`, `door_open` | vg's external airlock. Waits on the door size. |
-| `zas_atmos:firelock` | `icons/obj/doors/DoorHazard.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames) | vg's firelock. `palert` is its flashing warning, for lockdown. Waits on the door size. |
+| `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi`; for the 2×2 layout, `icons/obj/doors/Door2x1glassfull.dmi` | `door_closed`, `door_open` | vg's external airlock, in two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. vg's doors are one tile, so both are redrawn taller. The 2×2 follows how vg's two-tile glass airlock splits into two leaves. |
+| `zas_atmos:firelock` | `icons/obj/doors/Doorfire.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames), `alert_hot`, `alert_cold` | vg's old full-tile firelock, red with "FIRE" and hazard stripes, from vg's first commit in 2010. It was replaced in 2012 by today's yellow `DoorHazard.dmi`, ported from Baystation 12. `palert` flashes for lockdown. The temperature lights `alert_hot` and `alert_cold` are optional. See [Firelocks on doors](#firelocks-on-doors). |
+
+#### Firelocks on doors
+
+A firelock can be placed on a door, either a vanilla door or an airlock (the
+owner's choice, 2026-11-01). The door is then drawn with the firelock as an
+overlay, so the firelock's textures must work over any door:
+
+- **Open,** it's vg's empty frame around the doorway, transparent in the
+  middle so the door shows through.
+- **Closed and locked down,** its panel covers the door.
+- **It comes in the doors' sizes:** 1 by 2 for vanilla doors and the small
+  airlock, and 2 by 2 for the large airlock. On its own, a firelock is 1 by 2
+  (proposed).
+- **Its model sits just outside the door's faces,** so the two don't flicker
+  where they meet.
 
 ### 6.3 Content mod (`zas_atmos`): items
 
@@ -272,10 +287,10 @@ assets.
 |---|---|---|
 | 0. Set-up | The DMI extractor, the palette, the history check of each vg file ([§3](#3-sources)), and a pilot to settle the style: the pipe, the canister and the wrench, one of each kind of texture, reviewed in game | – |
 | 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer | 12 |
-| 2. S-02 and S-08 | Firelock, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit | 12 |
+| 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit | 12 |
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber | 17 |
-| 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock, airlock controller, air sensor, tank holder, passive vent | 8 |
+| 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent | 8 |
 
 The batches cover all 63 rows. The pilot's three textures count in batch 1.
 The pipe cap has no priority yet, but it's in batch 1 because an open pipe end
@@ -304,10 +319,13 @@ The owner settled these on 2026-11-01:
 3. **The hardsuit is vg's,** from its base hardsuit sprite
    (`rig-engineering`).
 4. **The firelock tool is a crowbar,** not a halligan bar.
+5. **Airlocks come in two sizes:** 1 by 2 like a standard door, and 2 by 2.
+6. **Firelocks follow vg's old full-tile firelock,** and can be placed on
+   doors, where they're drawn as an overlay
+   ([Firelocks on doors](#firelocks-on-doors)).
 
 Still open:
 
-- **Door sizes** for the airlock and the firelock, as in
-  [textures.md](textures.md). Their textures wait on it.
 - **The colours proposed in [§6.4](#64-canister-colours):** which dye gives
   which colour, and the creative canisters for H₂, water vapor, CO and CH₄.
+- **A firelock on its own** is proposed at 1 by 2, like a door.

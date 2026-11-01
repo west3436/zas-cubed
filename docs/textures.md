@@ -92,8 +92,11 @@ scrubbing and filtering, so CONT-050 and CONT-054 need updating.
 |---|---|---|---|---|---|
 | `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
 | `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal and alarm. |
-| `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Its size isn't decided, as with the firelock. |
-| `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Its size isn't decided: one block, or two tall like a door. |
+| `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. |
+| `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's proposed at 1 by 2. |
+
+Both door sizes and firelocks on doors are the owner's choices of 2026-11-01.
+The requirements don't cover them yet.
 
 The wall-mounted blocks and the doors get flat sprites, as vanilla's torches
 and doors do. Any of them could use its block model instead.
