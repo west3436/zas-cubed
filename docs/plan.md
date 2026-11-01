@@ -167,7 +167,7 @@ their own and with the invariant checker on (CORE-036).
 | S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
 | S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
 | S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
-| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B and back in Draft for the owner's decision.* | `./gradlew :engine:bench` |
+| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B, which the owner accepted on 2026-11-01.* | `./gradlew :engine:bench` |
 
 The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
 *Implemented*. CORE-025 (R1) stays *Accepted*: its split search is local, but
@@ -296,8 +296,8 @@ S-11, S-13).
 _Updated 2026-11-01._
 
 1. **Owner decisions:**
-   - NFR-004: accept or reject the per-cell memory budget revised to 256 B in
-     #117 (now *Draft*; [check](research/benchmarks.md#membership-palette-check-2026-11-01))
+   - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
+     #117~~ *Accepted 2026-11-01.*
    - review the [architecture](architecture.md)
      ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
      send changes. That closes Phase B.
