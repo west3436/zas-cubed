@@ -40,6 +40,15 @@ In the PR template's "Human testing" section, say:
 - the steps you took and what happened
 - evidence: screenshots, a short video or log excerpts
 
+**Ship a test world.** A PR that needs a manual test includes a fixture in
+[`scripts/testworld/fixtures/`](scripts/testworld/) that builds the world for
+it: every structure the test plan uses, with signs, gas already added, and the
+plan itself. `python -I scripts/testworld/testworld.py <fixture>` generates
+the world into the dev client's saves folder, after checking headless that it
+is in the state the plan describes. The "Human testing" section names the
+fixture, so the tester only has to open the world and follow the plan. See the
+[test world README](scripts/testworld/README.md).
+
 Passing GameTests and unit tests don't replace this for player-facing
 changes, though they're still expected. AI-written code follows the same
 rules as any other code, the clean-room rule included.

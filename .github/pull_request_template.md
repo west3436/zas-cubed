@@ -12,7 +12,9 @@ Closes #
      (CONTRIBUTING.md, "Using AI"); otherwise write "n/a".
      - Where: dev client, dedicated server, or both
      - Steps taken and what happened
-     - Evidence: screenshots, a short video or log excerpts -->
+     - Evidence: screenshots, a short video or log excerpts
+     - Test world: the fixture in scripts/testworld/fixtures/ and the command
+       that generates it (CONTRIBUTING.md, "Ship a test world") -->
 
 ## Checklist
 
