@@ -383,7 +383,9 @@ context (GEO-041).
    vanilla.
 4. **Overrides and flags.** Datapack overrides (GEO-005, GEO-009), fluids
    (GEO-006) and zone-boundary tags (GEO-007) are applied over the derived
-   geometry. Each produces a new palette entry, a single cell. Overrides are
+   geometry. Each produces a new palette entry: an override is a single cell,
+   and a zone boundary is the block's geometry with a flag per boundary face
+   (§4.7). Overrides are
    JSON files at `data/<namespace>/zas/geometry_overrides/<path>.json`:
    `blocks` (block ids, or tags prefixed with `#`; unknown ones are skipped),
    `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
@@ -513,7 +515,8 @@ drives it.
   a `HashMap` lookup.
 - `EnclosureZones` turns an enclosed region into zones, one per set of cells
   joined by direct openings, so a room behind an open door becomes its own
-  zone rather than an ambient edge.
+  zone rather than an ambient edge. The door's own cells go with the room on
+  the side away from its panel (§4.7).
 - `BreachResolver` finds the unzoned cells a refreshed change opened onto a
   zone and classifies each region, with zoned cells as walls: `Pocket` joins
   the zones (GEO-023), `Vent` needs nothing because the graph already counts
@@ -772,6 +775,70 @@ GameTest changes the palette with `Geometries.overrideForTest`.
   it was unloaded are found.
 - **Never force-load.** The engine never adds chunk tickets (GEO-034): the
   platform only ever reads chunks with `getChunkNow`.
+
+### 4.7 Zone-boundary blocks (GEO-007, GEO-044, CORE-034, CORE-067)
+
+*Implemented 2026-11-01 ([#64](https://github.com/west3436/zas-cubed/issues/64),
+[#65](https://github.com/west3436/zas-cubed/issues/65),
+[#107](https://github.com/west3436/zas-cubed/issues/107)).* An open door
+passes gas but keeps the rooms on either side separate zones, and opening or
+closing it is a cheap edge update.
+
+- **Which blocks.** Those tagged `zas:zone_boundary`. The mod's tag holds
+  `#minecraft:doors` and `#minecraft:trapdoors`; a datapack can add blocks, or
+  replace the tag to take some out ([datapacks](datapacks.md#zone-boundaries)).
+- **Boundaries are per face.** A geometry has six boundary flags, one per face
+  (`Geometry.boundaryFlag`). An opening between two positions is a zone
+  boundary, not a direct opening (CORE-037), when either block flags its side
+  of the shared face. Gas crosses it like any opening: the fill and the
+  exchange treat it so. Zones never span it: `EnclosureZones` makes one zone
+  per set of cells joined by direct openings, and an equivalent edge with no
+  direct connection sleeps rather than merging (CORE-033, CORE-034). A direct
+  opening elsewhere, such as a broken wall beside the door, still merges the
+  rooms (CORE-023).
+- **Which faces.** Once tags are bound, `Geometries` marks each tagged state,
+  after overrides. For a block with an `open` property, its boundary faces are
+  those it seals in one of the two states but not the other: for a door, the
+  face its panel closes against and the face it swings to; for a trapdoor, its
+  bottom or top face and the side it swings to. A tagged block that doesn't
+  open, or seals the same faces either way, is a boundary on every face, so
+  each of its cells is a zone of its own.
+- **The door's own cell.** Its other faces are direct, so the cell joins the
+  space on the side away from its panel (a door joins the room it faces; a
+  bottom trapdoor in a floor joins the room above), and a door's two halves
+  join each other. A toggle changes only the boundary faces: closing seals the
+  panel's face, which removes the non-direct connection to the other room, and
+  opening adds it back. The cell never gains or loses a direct opening, so the
+  graph never runs a split check (CORE-024 checks only when a cell loses a
+  direct opening to its own zone), no zone is created or rebuilt, and the
+  edge's connection count is all that changes (GEO-044). Closing the last open
+  door between two rooms removes their edge; opening it adds one.
+- **Why per face.** Until #107 a boundary block was a boundary on every face,
+  so each open door's cell was a one-cell zone with an edge to each room: the
+  S-10 station had 278 zones and 356 edges for 100 rooms, and every toggle
+  removed that zone's cell or made a new one. ZAS keeps a door cell's removal
+  cheap ([zas-core §3.1](research/zas-core.md#31-cell-update-algorithm-turfdm59-206));
+  here the cell never leaves its zone at all. Choosing the faces from the two
+  states, rather than from a block's `facing`, keeps it right for any block
+  that opens, whatever its shape, and for overridden geometry.
+- **Equalization (CORE-067).** When a zone-to-zone edge falls asleep in the
+  exchange, the zones reachable from it through sleeping edges are combined:
+  their gas is summed into one mixture, at the temperature that conserves
+  their thermal energy, and shared back by volume. Zones are taken in id order,
+  so the result doesn't depend on the order they were reached in (§3.5).
+  Paused zones keep their last-known mixture (GEO-035) and aren't crossed.
+  Only zones joined through boundaries alone have sleeping edges between them,
+  since equivalent zones with a direct opening merge instead. It costs one
+  pass over the group, once per edge falling asleep, and records nothing in
+  the ledger but pruning. The group's edges stay asleep, since equal mixtures
+  are equivalent; a change to any member wakes its edges (CORE-066), and the
+  group is equalized again once they sleep. It follows only edges that existed
+  at the undo point, so the exchange components of §3.3 still hold every chain
+  of exchange.
+- **Known cost.** A door that opens onto unzoned air, such as the open air
+  outside, is a breach each time it opens: `BreachResolver` runs a bounded fill
+  from the newly opened cell (GEO-023, GEO-025). Open-column classification
+  and the classification cache (GEO-021, GEO-027) will make that cheap.
 
 ## 5. Services around the engine (server thread)
 

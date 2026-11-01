@@ -162,7 +162,7 @@ shall hold no gas and be gas-tight on all faces, unless overridden.
   fluid doesn't.
 
 #### GEO-007 · Zone-boundary blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [zas-core §2.3](../research/zas-core.md#23-cells-turfdm-atomdm)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §2.3](../research/zas-core.md#23-cells-turfdm-atomdm)
 
 When open, these blocks shall pass gas but keep the zones on either side
 separate:
@@ -175,6 +175,18 @@ separate:
 - **Verify:** A GameTest opens a door and a trapdoor between rooms and checks
   gas passes while the zones stay separate.
 
+*2026-11-01: Implemented ([#64](https://github.com/west3436/zas-cubed/issues/64),
+fixing [#107](https://github.com/west3436/zas-cubed/issues/107)). The tag
+`zas:zone_boundary` holds every door and trapdoor by default. Each tagged
+state keeps zones apart only across the faces its panel lies against, closed
+and open, so the door's own cell joins the room on the side away from its panel
+rather than becoming a zone of its own ([architecture
+§4.7](../architecture.md#47-zone-boundary-blocks-geo-007-geo-044-core-034-core-067)).
+`geo_007_open_door_passes_gas_and_keeps_zones_apart` and
+`geo_007_open_trapdoor_passes_gas_and_keeps_zones_apart` (GameTest) open each
+between two zoned rooms; `geo_007_doors_and_trapdoors_are_boundaries_on_their_panel_faces`
+checks the faces of every vanilla door and trapdoor state.*
+
 #### GEO-044 · Cheap boundary toggles
 `Must` · `R1` · `Accepted` · Verify: Unit, Bench · Depends: GEO-007
 
@@ -186,6 +198,13 @@ rebuild.
   §3.1](../research/zas-core.md#31-cell-update-algorithm-turfdm59-206)).
 - **Verify:** A Unit test checks a toggle causes no split or rebuild; Bench
   checks the cost per toggle is constant.
+
+*2026-11-01: the Unit part passes. A toggle opens or closes only a door's
+boundary faces, so it changes an edge's connection count and nothing else:
+`geo_044_toggling_a_door_never_splits` (Unit) and
+`geo_044_toggling_a_door_never_splits_or_rebuilds` (Unit, whole pipeline) count
+no split check, split, merge or new zone over 20 toggles. The Bench case
+(`-Pbench.args=toggle`) is written but not yet run, so this stays Accepted.*
 
 #### GEO-008 · Dynamic sealing API
 `Must` · `R1` · `Rejected` — duplicate of API-023 (Seal provider), 2026-10-30.

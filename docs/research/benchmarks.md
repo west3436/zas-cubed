@@ -33,6 +33,13 @@ measured here (see [Not measured](#not-measured)).
 | CORE-045: server-thread versus worker time | 31 µs versus 0.94 ms per atmos tick in S-10 | Recorded |
 | CORE-046: cost at each period | 0.5 s: 1.29 ms of worker time per game second; 1 s: 0.94 ms; 2 s: 0.67 ms | Recorded |
 
+*2026-11-01: since GEO-007 ([#107](https://github.com/west3436/zas-cubed/issues/107)),
+the station's door cells join a room each, so it has 100 zones and 178 edges
+rather than 278 and 356 ([S-10](#s-10-engine-load)). The figures above that
+use the station (S-10, NFR-001 to NFR-005, GEO-011, CORE-045 and CORE-046)
+were measured with 278 zones and are pending re-measurement. GEO-044's door
+toggle case is new and not yet run ([door toggles](#geo-044-door-toggles)).*
+
 **Requirements moved to `Implemented`:** GEO-011, CORE-054, CORE-047 and
 NFR-003 (each with a dated note), and API-048, since S-12 now runs in CI (see
 [S-12](#s-12-api-fallback-check)). CORE-045 and CORE-046 were already
@@ -62,8 +69,8 @@ followed, with a dated note, once its Bench passed
 `./gradlew :engine:bench` runs a plain Java program in the engine's `bench`
 source set: no Minecraft, no JMH. It isn't part of `build`, but `check`
 compiles it. `-Pbench.args="s10 fill"` picks cases (`fill`, `zones`, `s10`,
-`scaling`, `changes`); `-Pbench.args=--quick` makes every run short, to check
-that the harness works.
+`scaling`, `changes`, `toggle`); `-Pbench.args=--quick` makes every run short,
+to check that the harness works.
 
 - **The world** is a `BenchWorld`: geometry ids per section, a square of
   loaded chunks, and the platform's real change tracking (`DirtySections` and
@@ -95,11 +102,18 @@ that the harness works.
   and one of 8 × 10 × 8 (640), so 40,000 zoned cells in 100 rooms
 - an open door in each of the 178 shared walls
 
-The engine makes each open door's cell a zone of its own (GEO-007), so there
-are 278 zones and 356 edges. That is more than S-10's 100 zones and spike S5's
-180 edges, which makes the load heavier, not lighter. Rooms start between 85 %
-and 110 % of standard pressure, so the doors are busy at first and then fall
+Each door's far face is a zone boundary, so its cell joins the room west or
+north of it, as an open door's cell joins the room it faces in game (GEO-007,
+[architecture §4.7](../architecture.md#47-zone-boundary-blocks-geo-007-geo-044-core-034-core-067)):
+100 zones and 178 door edges, S-10's 100 zones. Rooms start between 85 % and
+110 % of standard pressure, so the doors are busy at first and then fall
 asleep.
+
+*2026-11-01: the numbers in this section were measured before GEO-007, when
+the engine made each open door's cell a zone of its own: 278 zones and 356
+edges, more than S-10's 100 zones and spike S5's 180 edges
+([#107](https://github.com/west3436/zas-cubed/issues/107)). They are pending
+re-measurement with `-Pbench.args=s10`.*
 
 **The script:** 2 minutes of warm-up, then 10 minutes of game time.
 
@@ -225,6 +239,18 @@ The split search is local, as CORE-025 requires: 24 visits at every size
 the zone, because the engine rebuilds the membership table over every zoned
 cell on any tick with a geometry change. *2026-11-01: it is now, after #106
 (see the [membership palette check](#membership-palette-check-2026-11-01)).*
+
+## GEO-044: door toggles
+
+*Added 2026-11-01; not yet run.* Two rooms side by side, joined by one door in
+their shared wall, each of 1,000, 8,000 or 50,000 cells; the door is opened
+and closed again 50 times after 10 warm-up times, with one atmos tick after
+each change (`-Pbench.args=toggle`). Each pair is alone in its engine, so the
+worker tick shows everything a toggle costs. The case checks every toggle
+leaves the zones, their ids and their cells as they were, and reports the
+split checks the toggles caused, which should be none. GEO-044 passes if the
+worker tick per toggle is about the same at every size and close to the idle
+tick, unlike the placed block of [local edits](#merge-and-split-core-023-core-024-and-core-025).
 
 ## NFR-003 and CORE-054: cost follows activity
 
