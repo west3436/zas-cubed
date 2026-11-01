@@ -1030,7 +1030,7 @@ public final class ZoneGraph {
         Zone a = e.first();
         Zone b = e.second();
         if (!a.mixture().isEquivalent(b.mixture())) {
-            share(a, b, settings.ratio(e.connections));
+            share(a, b, settings.zoneRatio(e.connections, a.volume(), b.volume()));
             if (!a.mixture().isEquivalent(b.mixture())) {
                 return;
             }
@@ -1098,7 +1098,8 @@ public final class ZoneGraph {
 
     /**
      * A gives up r·V_B/(V_A+V_B) of its gas and B gives up r·V_A/(V_A+V_B); each
-     * merges the other's parcel, moving both toward the volume-weighted mean.
+     * merges the other's parcel, moving both a fraction r of the way to the
+     * volume-weighted mean.
      */
     private void share(Zone a, Zone b, double r) {
         double va = a.volume();
@@ -1116,18 +1117,18 @@ public final class ZoneGraph {
 
     /**
      * One exchange with the ambient, unless the zone is about to dissolve into it (CORE-076). A
-     * pinned zone never dissolves, so it always exchanges (D-64).
+     * pinned zone never dissolves, so it always exchanges (D-64). The zone moves a fraction r of
+     * the way to the ambient, which the venting model sets ({@link ExchangeSettings#ambientRatio}):
+     * it gives up r of its gas and takes in r of its volume's worth of ambient gas, so the ambient
+     * never changes (CORE-038).
      */
     private void exchangeWithAmbient(Edge e) {
         Zone z = e.first();
         if (z.pinned || !nearlyAmbient(z.mixture())) {
             double vz = z.volume();
-            double vs =
-                    settings.ambientSharerVolume() + (settings.venting() == ExchangeSettings.Venting.FAITHFUL ? vz : 0);
-            double r = settings.ratio(e.connections);
-            GasMixture sharer = ambientFor(vs);
-            GasMixture out = z.mixture().removeFraction(r * vs / (vz + vs));
-            GasMixture in = sharer.removeFraction(r * vz / (vz + vs));
+            double r = settings.ambientRatio(e.connections, vz);
+            GasMixture out = z.mixture().removeFraction(r);
+            GasMixture in = ambientFor(r * vz);
             if (z.mixture().merge(in)) {
                 ledger.record(LedgerCategory.AMBIENT, in, 1);
             }
@@ -1149,7 +1150,7 @@ public final class ZoneGraph {
         }
         double va = active.volume();
         double vp = paused.volume();
-        double r = settings.ratio(e.connections);
+        double r = settings.zoneRatio(e.connections, va, vp);
         GasMixture out = active.mixture().removeFraction(r * vp / (va + vp));
         GasMixture in = paused.mixture().copy().removeFraction(r * va / (va + vp));
         if (active.mixture().merge(in)) {

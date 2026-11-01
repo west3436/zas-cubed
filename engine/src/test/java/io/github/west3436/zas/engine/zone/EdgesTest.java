@@ -115,12 +115,16 @@ class EdgesTest {
         }
         assertEquals(ExchangeSettings.DEFAULT.ratio(6), ExchangeSettings.DEFAULT.ratio(9), 0);
 
-        for (int k = 1; k <= 7; k++) {
+        for (int run = 0; run < 14; run++) {
+            // Each connection count under each venting model (CORE-035, CORE-068).
+            ExchangeSettings settings =
+                    ExchangeSettings.DEFAULT.withVenting(ExchangeSettings.Venting.values()[run / 7]);
+            int k = run % 7 + 1;
             Grid grid = rows(7, k);
             // Unequal volumes, so the weighting shows: B's cells are half cells.
             grid.box(0, 0, 1, 6, 0, 1, 500);
             int openings = k;
-            ZoneGraph graph = graph(grid, vacuum());
+            ZoneGraph graph = graph(grid, vacuum(), settings);
             Zone a = graph.createZone(Grid.cells(0, 0, 0, 6, 0, 0));
             Zone b = graph.createZone(Grid.cells(0, 0, 1, 6, 0, 1));
             fillWith(graph, a, air(150, CELL, 350));
@@ -130,6 +134,11 @@ class EdgesTest {
             double va = a.volume();
             double vb = b.volume();
             double r = ExchangeSettings.DEFAULT.ratio(openings);
+            if (settings.venting() == ExchangeSettings.Venting.VOLUME_AWARE) {
+                // By default the opening's sharer weights the ratio too (CORE-035).
+                double vs = settings.sharerVolume();
+                r *= vs / (vs + va * vb / (va + vb));
+            }
             double[] na = {a.mixture().moles(0), a.mixture().moles(1)};
             double[] nb = {b.mixture().moles(0), b.mixture().moles(1)};
             double ea = a.mixture().thermalEnergy();
@@ -140,8 +149,9 @@ class EdgesTest {
             double fa = r * vb / (va + vb);
             double fb = r * va / (va + vb);
             for (int i = 0; i < 2; i++) {
-                assertEquals(na[i] * (1 - fa) + nb[i] * fb, a.mixture().moles(i), EPS, "A, k = " + k);
-                assertEquals(nb[i] * (1 - fb) + na[i] * fa, b.mixture().moles(i), EPS, "B, k = " + k);
+                String what = settings.venting() + ", k = " + k;
+                assertEquals(na[i] * (1 - fa) + nb[i] * fb, a.mixture().moles(i), EPS, "A, " + what);
+                assertEquals(nb[i] * (1 - fb) + na[i] * fa, b.mixture().moles(i), EPS, "B, " + what);
             }
             assertEquals(ea * (1 - fa) + eb * fb, a.mixture().thermalEnergy(), 1e-9 * ea);
         }
@@ -150,15 +160,18 @@ class EdgesTest {
     @Test
     void core_031_two_one_second_ticks_match_one_zas_tick() {
         for (int k = 1; k <= 6; k++) {
-            GasMixture[] perSecond = runTicks(k, ExchangeSettings.DEFAULT, 2);
-            GasMixture[] zas = runTicks(k, ExchangeSettings.DEFAULT.withPeriod(2), 1);
             double zasRatio = new double[] {0.30, 0.40, 0.48, 0.54, 0.60, 0.66}[k - 1];
             assertEquals(zasRatio, ExchangeSettings.DEFAULT.withPeriod(2).ratio(k), 1e-12);
-            for (int side = 0; side < 2; side++) {
-                for (int i = 0; i < REGISTRY.size(); i++) {
-                    assertEquals(zas[side].moles(i), perSecond[side].moles(i), 1e-9, "k = " + k);
+            for (ExchangeSettings.Venting venting : ExchangeSettings.Venting.values()) {
+                ExchangeSettings settings = ExchangeSettings.DEFAULT.withVenting(venting);
+                GasMixture[] perSecond = runTicks(k, settings, 2);
+                GasMixture[] zas = runTicks(k, settings.withPeriod(2), 1);
+                for (int side = 0; side < 2; side++) {
+                    for (int i = 0; i < REGISTRY.size(); i++) {
+                        assertEquals(zas[side].moles(i), perSecond[side].moles(i), 1e-9, venting + ", k = " + k);
+                    }
+                    assertEquals(zas[side].temperature(), perSecond[side].temperature(), 1e-9, venting + ", k = " + k);
                 }
-                assertEquals(zas[side].temperature(), perSecond[side].temperature(), 1e-9, "k = " + k);
             }
         }
     }

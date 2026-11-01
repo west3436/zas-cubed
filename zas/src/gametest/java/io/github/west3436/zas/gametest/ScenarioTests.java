@@ -25,6 +25,7 @@ import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
+import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.math.BigDecimal;
@@ -54,7 +55,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The R0 reference scenarios (Phase D exit, issue #33): S-01 by commands, S-02 without hazards and
- * S-09 without pipes, plus the requirements they cover (CORE-036, CORE-075, GEO-020, GEO-022).
+ * S-09 without pipes, plus the requirements they cover (CORE-036, CORE-075, GEO-020, GEO-022) and
+ * the venting option S-02's breach depends on (CORE-035, CORE-068).
  *
  * <p><b>The vacuum dimension.</b> The GameTest server creates only the vanilla dimensions and
  * ignores datapack ones, so these tests borrow the End and give it the vacuum ambient of the test
@@ -509,6 +511,92 @@ public final class ScenarioTests {
             h.assertTrue(merged.enclosed(), "the station is breached");
             close(h, merged.mixture().totalMoles(), before, 1e-9 * before, "moles conserved by the merge");
         });
+    }
+
+    /**
+     * The venting model in the server config reaches the engine from the next atmos tick (CORE-035,
+     * CORE-068, D-21). A 27-cell and a 1,000-cell room in vacuum, each breached through one window,
+     * lose r·V_s/(V + V_s) of their gas per second by default, ZAS's r·(V + V_s)/(2V + V_s) once
+     * {@code [atmos] venting} is {@code FAITHFUL}, and the volume-aware fraction again once it is set
+     * back.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
+    public static void core_068_venting_option_reaches_the_engine(GameTestHelper h) {
+        inVacuum(h, end -> {
+            ExchangeSettings.Venting configured = ZasServerConfig.VENTING.get();
+            h.assertValueEqual(configured, ExchangeSettings.Venting.VOLUME_AWARE, "the default venting model");
+            Station s = new Station(h, end, 50);
+            Rooms r = s.r;
+            s.fill(-1, -1, -1, 23, 13, 13, AIR);
+            s.hollow(0, 0, 0, 4, 4, 4); // small: 3 × 3 × 3, 27 cells
+            s.hollow(10, 0, 0, 21, 11, 11); // large: 10 × 10 × 10, 1,000 cells
+            BlockPos smallWindow = r.abs(2, 4, 2);
+            BlockPos largeWindow = r.abs(15, 11, 5);
+            end.setBlockAndUpdate(smallWindow, GLASS);
+            end.setBlockAndUpdate(largeWindow, GLASS);
+            s.pressurise(2, 2, 2, 27);
+            s.pressurise(15, 5, 5, 1000);
+            end.destroyBlock(smallWindow, false);
+            end.destroyBlock(largeWindow, false);
+            s.tick();
+            for (ZoneInfo z : List.of(r.zone(2, 2, 2), r.zone(15, 5, 5))) {
+                h.assertValueEqual(z.edges().ambientEdges(), 1, "zone " + z.id() + " ambient edges");
+            }
+            try {
+                double[] aware = vent(s, ExchangeSettings.Venting.VOLUME_AWARE);
+                h.assertTrue(
+                        aware[0] > 20 * aware[1],
+                        "volume-aware: the small room lost " + aware[0] + " per tick, the large one " + aware[1]);
+                ZasServerConfig.VENTING.set(ExchangeSettings.Venting.FAITHFUL);
+                double[] faithful = vent(s, ExchangeSettings.Venting.FAITHFUL);
+                h.assertTrue(
+                        faithful[0] < 1.2 * faithful[1],
+                        "faithful: the small room lost " + faithful[0] + " per tick, the large one " + faithful[1]);
+                ZasServerConfig.VENTING.set(ExchangeSettings.Venting.VOLUME_AWARE);
+                vent(s, ExchangeSettings.Venting.VOLUME_AWARE);
+            } finally {
+                ZasServerConfig.VENTING.set(configured);
+            }
+
+            // Reseal both rooms, so nothing vents after the test.
+            end.setBlockAndUpdate(smallWindow, GLASS);
+            end.setBlockAndUpdate(largeWindow, GLASS);
+            s.tick();
+            h.assertTrue(r.zone(2, 2, 2).enclosed() && r.zone(15, 5, 5).enclosed(), "a resealed room is breached");
+        });
+    }
+
+    /**
+     * One atmos tick of the two breached rooms of {@code core_068}, checked against a model's
+     * fraction lost through one opening; returns the fractions the small and the large room lost.
+     */
+    private static double[] vent(Station s, ExchangeSettings.Venting model) {
+        Rooms r = s.r;
+        ZoneInfo small = r.zone(2, 2, 2);
+        ZoneInfo large = r.zone(15, 5, 5);
+        s.tick();
+        double[] lost = new double[2];
+        ZoneInfo[] before = {small, large};
+        ZoneInfo[] after = {r.zone(2, 2, 2), r.zone(15, 5, 5)};
+        double perSecond = ExchangeSettings.DEFAULT.sharingPerSecond()[0];
+        double sharer = ExchangeSettings.DEFAULT.sharerVolume();
+        double period = ZasServerConfig.scheduler().periodSeconds();
+        for (int i = 0; i < 2; i++) {
+            r.h.assertValueEqual(after[i].id(), before[i].id(), "the venting zone");
+            double v = before[i].volume();
+            double w = model == ExchangeSettings.Venting.FAITHFUL
+                    ? (v + sharer) / (2 * v + sharer)
+                    : sharer / (v + sharer);
+            double expected = 1 - Math.pow(1 - perSecond * w, period);
+            lost[i] = 1 - after[i].mixture().totalMoles() / before[i].mixture().totalMoles();
+            close(
+                    r.h,
+                    lost[i],
+                    expected,
+                    1e-6 * expected,
+                    model + ", the " + (i == 0 ? "small" : "large") + " room's fraction lost per tick");
+        }
+        return lost;
     }
 
     // ---- S-09 -----------------------------------------------------------------------------

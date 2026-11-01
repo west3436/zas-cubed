@@ -27,6 +27,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] server_budget_ms` | `10` | Server-thread time per game tick for atmos work, in ms (CORE-047, NFR-002) |
 | `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
+| `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
@@ -34,10 +35,28 @@ The sharing table, thresholds and hazard toggles join the server config as
 their features land in R1. NeoForge reloads the file when it changes on disk,
 so an edit made while the server runs applies without a restart: the preset,
 its options and the excluded dimensions from the next lookup (for the
-simulation, its next atmos tick), the `[atmos]` timing from the next atmos
-tick, the thread mode when a dimension's simulation starts, and `[commands]`
-and `[profiling]` at once. OPS-016's guarantee that every server setting
-applies without a restart is R1.
+simulation, its next atmos tick), the `[atmos]` timing and venting model from
+the next atmos tick, the thread mode when a dimension's simulation starts, and
+`[commands]` and `[profiling]` at once. OPS-016's guarantee that every server
+setting applies without a restart is R1.
+
+### Venting
+
+`[atmos] venting` picks how the volumes on each side of an opening weight the
+exchange through it (D-21). It is a plain option, not one the preset sets.
+
+- **`VOLUME_AWARE`** (the default, CORE-035): the same openings drain a large
+  room proportionally slower than a small one, whether into the open or into a
+  much larger room. Through one opening into vacuum, a 27-cell room loses
+  2.1 % of its air per second and a 1,000-cell room 0.065 %. A room drains
+  into another room no faster than into the open, so two large rooms joined by
+  one opening also take longer to even out: two 27-cell rooms halve their
+  difference in about 18 s.
+- **`FAITHFUL`** (CORE-068): ZAS's model, in which a room loses about the same
+  fraction of its air per second whatever its size: 8.7 % for the 27-cell room
+  and 8.2 % for the 1,000-cell one through one opening into vacuum, and 16 %
+  into a much larger room. Two rooms joined by one opening halve their
+  difference in about 4 s, whatever their size.
 
 ### The preset and its options
 
