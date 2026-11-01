@@ -115,8 +115,9 @@ atmosphere for at least one preset or exclude the dimension:
 | `presets` | object | `"normal"` and/or `"hardcore"` → an atmosphere for that preset only (ENV-010) |
 | `excluded` | boolean | `true` excludes the dimension from simulation: no zones form there, but it keeps its ambient for queries and hazards (ENV-007, ENV-018). Default `false` |
 
-- **Which ambient applies:** the variant for the active preset (see [Server
-  config](#server-config)), else the file's top-level atmosphere. A
+- **Which ambient applies:** the variant for the active preset, or the one
+  `ambient_variant` overrides it with (see [Server config](#server-config)),
+  else the file's top-level atmosphere. A
   dimension with no ambient for the active preset, or no file at all, gets
   standard Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 % O₂ (ENV-011).
 - **Gases** must exist in the running server's gas definitions; a file
@@ -141,12 +142,13 @@ Standard air is N₂ 80.04675 kPa and O₂ 21.27825 kPa.
 
 ### Server config
 
-Two settings in the server config, `zas-server.toml` (OPS-001, see
+Three settings in the server config, `zas-server.toml` (OPS-001, see
 [config.md](config.md)), go with ambients:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `preset` | `NORMAL` | The atmosphere difficulty preset, `NORMAL` or `HARDCORE` (D-14). For now it selects only the ambient variant; the full preset (OPS-007) arrives in R1 |
+| `preset` | `NORMAL` | The atmosphere difficulty preset, `NORMAL` or `HARDCORE` (D-14, OPS-007) |
+| `[preset_options] ambient_variant` | `"preset"` | Which variant applies: the active preset's, or `NORMAL` or `HARDCORE` to override it under either preset ([config.md](config.md#the-preset-and-its-options)) |
 | `excluded_dimensions` | `[]` | Dimension ids excluded from simulation, in addition to files with `"excluded": true` (ENV-007) |
 
 A change applies from the next lookup, without a restart.

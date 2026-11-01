@@ -190,8 +190,19 @@ A per-world server setting shall select the **Normal** (default) or
 
 *2026-11-01: SPACE-004 moved to R2 with the Ad Astra adapter (D-66); the preset covers it from R2.*
 
+*2026-11-01: the preset's option registry is in (#37); the options are listed
+in [config.md](../config.md#the-preset-and-its-options). Wired: the ambient
+variant (ENV-002, ENV-012) and the zone triggers, whose Normal set (CORE-055)
+holds under both presets. GameTests check each option's default under each
+preset, and the ambient and the Normal triggers in the world. Declared, with
+their defaults checked, but waiting for their features: combustion and
+planting as zone triggers (CORE-056, FIRE-024), block pressure damage
+(FLOW-007, FLOW-016), photosynthesis rates (CONT-057) and container explosions
+breaking blocks (CONT-107). It stays Accepted until those features read their
+options and their GameTests check the behaviour under each preset.*
+
 #### OPS-014 · Overrides survive a preset change
-`Must` · `R1` · `Accepted` · Verify: GameTest · Depends: OPS-007
+`Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
 
 Each preset-controlled option shall be overridable individually, and an
 override survives a change of preset.
@@ -199,6 +210,11 @@ override survives a change of preset.
 - **Rationale:** Decision: D-14.
 - **Verify:** A GameTest overrides an option, changes the preset, and checks
   the override remains.
+
+*2026-11-01: Implemented (#37). Each option's entry in `[preset_options]` is
+`"preset"` or an override; `ops_014_overrides_survive_a_preset_change`
+overrides every option and switches the preset both ways, and
+`ops_014_preset_command_keeps_overrides` does the same with `/zas preset`.*
 
 #### OPS-015 · Value sources shown
 `Should` · `R1` · `Accepted` · Verify: Manual · Depends: OPS-007
@@ -209,3 +225,7 @@ overridden.
 - **Rationale:** Inferred: with preset defaults and overrides mixed, operators
   need to see where each value comes from.
 - **Verify:** Manual check of the command and config output.
+
+*2026-11-01: `/zas preset` marks each option `[preset]` or `[override]`, and
+the config file holds `"preset"` or the override, with each option's Normal and
+Hardcore defaults in its comment (#37). Awaiting the manual check.*

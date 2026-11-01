@@ -39,6 +39,10 @@ presets. The variant for the active preset applies.
 - **Verify:** A GameTest switches the preset and checks the ambient changes to
   the matching variant.
 
+*2026-11-01: the variant is the preset option `ambient_variant` (OPS-007),
+which follows the active preset unless an operator overrides it (OPS-014,
+D-14), #37.*
+
 #### ENV-011 · Fallback for undefined dimensions
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-45
 
