@@ -188,7 +188,7 @@ between two zoned rooms; `geo_007_doors_and_trapdoors_are_boundaries_on_their_pa
 checks the faces of every vanilla door and trapdoor state.*
 
 #### GEO-044 · Cheap boundary toggles
-`Must` · `R1` · `Accepted` · Verify: Unit, Bench · Depends: GEO-007
+`Must` · `R1` · `Implemented` · Verify: Unit, Bench · Depends: GEO-007
 
 Opening or closing a zone-boundary block shall never trigger a zone split or
 rebuild.
@@ -205,6 +205,11 @@ boundary faces, so it changes an edge's connection count and nothing else:
 `geo_044_toggling_a_door_never_splits_or_rebuilds` (Unit, whole pipeline) count
 no split check, split, merge or new zone over 20 toggles. The Bench case
 (`-Pbench.args=toggle`) is written but not yet run, so this stays Accepted.*
+
+*2026-11-01: Implemented. The Bench case ran: a toggle costs 4 to 5 µs of
+worker time above the idle tick with rooms of 1,000, 8,000 and 50,000 cells,
+and causes no split check ([benchmarks · door
+toggles](../research/benchmarks.md#geo-044-door-toggles)).*
 
 #### GEO-008 · Dynamic sealing API
 `Must` · `R1` · `Rejected` — duplicate of API-023 (Seal provider), 2026-10-30.
