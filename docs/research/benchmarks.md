@@ -315,9 +315,12 @@ the change and on the branch after it._ Medians:
 | S-10 with ops: worker tick, mean / worst | 0.823 / 13.34 ms | 0.839 / 11.97 ms |
 | S-10 heap per zoned cell | 373 B | 373 B |
 
-Every difference is within run-to-run noise (the pipeline row moves by a
-few percent between runs of the same code). Decoding is still a shift per
-field, so nothing was expected to change. The split, merge and edit rows run
+The fill, which decodes ids on every step, is unchanged: decoding is still a
+shift per field. The one steady difference is the pipeline's worker tick for
+the 65,536-cell hall, about 2.5 % slower (83.2 ms in a second run after the
+change); the extra time is outside the fill, most likely in how the new bit
+layout spreads in the graph's hash maps. It is well inside NFR-005. The
+other rows differ by run-to-run noise. The split, merge and edit rows run
 slower than the table above in both columns; they are the same code in both,
 so that is this run's machine state, not the change.
 

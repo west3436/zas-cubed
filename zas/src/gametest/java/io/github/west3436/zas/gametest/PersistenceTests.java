@@ -139,10 +139,17 @@ public final class PersistenceTests {
         double sealed = after.mixture().pressure();
         r.set(21, 2, 15, AIR);
         r.tick();
-        h.assertTrue(r.zoned(12, 2, 12), "the breached zone is gone after one tick");
-        ZoneInfo open = r.zone(12, 2, 12);
-        h.assertTrue(open.breached(), "the zone isn't breached");
-        h.assertTrue(open.mixture().pressure() < sealed, "the zone didn't vent");
+        // A small excess over the ambient can vent away within the tick, which dissolves the zone.
+        if (r.zoned(12, 2, 12)) {
+            ZoneInfo open = r.zone(12, 2, 12);
+            h.assertTrue(open.breached(), "the zone isn't breached");
+            h.assertTrue(open.mixture().pressure() < sealed, "the zone didn't vent");
+        } else {
+            h.assertValueEqual(
+                    Atmospheres.at(r.level, r.abs(12, 2, 12)).state(),
+                    AtmosphereState.AMBIENT,
+                    "the vented room's atmosphere");
+        }
         h.succeed();
     }
 
