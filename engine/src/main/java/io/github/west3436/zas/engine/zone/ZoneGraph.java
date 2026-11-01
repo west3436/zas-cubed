@@ -65,6 +65,8 @@ public final class ZoneGraph {
     private final double[] pruneScratch;
     private final ArrayList<Edge> edgeBuffer = new ArrayList<>();
     private final ArrayList<Zone> dissolveBuffer = new ArrayList<>();
+    /** Zones on edges that fell asleep this exchange, whose groups are equalized after it (CORE-067). */
+    private final ArrayList<Zone> sleptBuffer = new ArrayList<>();
     private final ArrayList<Zone> groupBuffer = new ArrayList<>();
     private int groupEpoch;
     /** CORE-006's tolerances without the temperature test, for near-empty zones (CORE-076). */
@@ -921,9 +923,10 @@ public final class ZoneGraph {
      *   <li>Then, if its sides are equivalent: zones joined by a direct opening
      *       merge (CORE-023), and other zone-to-zone edges, which join their zones
      *       only through zone boundaries, sleep (CORE-033) and never merge
-     *       (CORE-034). Sleeping edges cost no exchange work. When an edge falls
-     *       asleep, every zone reachable from it through sleeping edges takes one
-     *       combined mixture, shared by volume (CORE-067).
+     *       (CORE-034). Sleeping edges cost no exchange work.
+     *   <li>Then every zone reachable through sleeping edges from an edge that fell
+     *       asleep takes one combined mixture, shared by volume (CORE-067): once per
+     *       group, however many of its edges fell asleep.
      *   <li>Last, in zone id order, every zone with an ambient edge that is
      *       nearly equivalent to the ambient dissolves into it (CORE-076, D-63):
      *       its gas goes to the ambient, recorded as {@link
@@ -980,6 +983,16 @@ public final class ZoneGraph {
             }
         }
         edgeBuffer.clear();
+        if (!sleptBuffer.isEmpty()) {
+            int epoch = ++groupEpoch;
+            for (int i = 0; i < sleptBuffer.size(); i++) {
+                Zone z = sleptBuffer.get(i);
+                if (z.isAlive() && z.groupEpoch != epoch) {
+                    equalizeGroup(z, epoch);
+                }
+            }
+            sleptBuffer.clear();
+        }
         for (Zone z : zones.values()) {
             if (!z.paused && !z.pinned && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
                 dissolveBuffer.add(z);
@@ -1025,7 +1038,9 @@ public final class ZoneGraph {
             mergeZones(a, b);
         } else {
             e.sleeping = true;
-            equalizeGroup(a);
+            // Both sides: either may be merged away later in this exchange.
+            sleptBuffer.add(a);
+            sleptBuffer.add(b);
         }
     }
 
@@ -1035,10 +1050,10 @@ public final class ZoneGraph {
      * edges between them, since equivalent zones with a direct opening merge instead. The gas and
      * its thermal energy are conserved; nothing is recorded in the ledger but pruning. Paused zones
      * keep their mixture (GEO-035) and aren't crossed. Zones are combined and shared out in id
-     * order, so the result doesn't depend on how the group was reached.
+     * order, so the result doesn't depend on how the group was reached. Marks every zone it
+     * reaches with {@code epoch}; groups are disjoint, so one epoch serves a whole exchange.
      */
-    private void equalizeGroup(Zone start) {
-        int epoch = ++groupEpoch;
+    private void equalizeGroup(Zone start, int epoch) {
         groupBuffer.clear();
         start.groupEpoch = epoch;
         groupBuffer.add(start);

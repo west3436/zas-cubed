@@ -71,8 +71,8 @@ class ConservationTest {
         assertTrue(created > 50, "the fuzz should create many zones, created " + created);
         assertTrue(graph.mergeCount() > 20, "merges: " + graph.mergeCount());
         assertTrue(graph.dissolveCount() > 20, "dissolves: " + graph.dissolveCount());
-        // Equalized door groups (CORE-067) merge sooner once a direct opening joins them, so fewer
-        // zones are left to split than before CORE-067.
+        // Equalizing door groups (CORE-067) changes which zones exist when; these seeds now see
+        // fewer splits than before it, but still plenty.
         assertTrue(graph.splitCount() > 10, "splits: " + graph.splitCount());
         assertTrue(graph.equalizeCount() > 20, "equalized groups: " + graph.equalizeCount());
         StringBuilder state = new StringBuilder();

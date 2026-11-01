@@ -821,20 +821,21 @@ closing it is a cheap edge update.
   here the cell never leaves its zone at all. Choosing the faces from the two
   states, rather than from a block's `facing`, keeps it right for any block
   that opens, whatever its shape, and for overridden geometry.
-- **Equalization (CORE-067).** When a zone-to-zone edge falls asleep in the
-  exchange, the zones reachable from it through sleeping edges are combined:
-  their gas is summed into one mixture, at the temperature that conserves
-  their thermal energy, and shared back by volume. Zones are taken in id order,
-  so the result doesn't depend on the order they were reached in (§3.5).
-  Paused zones keep their last-known mixture (GEO-035) and aren't crossed.
-  Only zones joined through boundaries alone have sleeping edges between them,
-  since equivalent zones with a direct opening merge instead. It costs one
-  pass over the group, once per edge falling asleep, and records nothing in
-  the ledger but pruning. The group's edges stay asleep, since equal mixtures
-  are equivalent; a change to any member wakes its edges (CORE-066), and the
-  group is equalized again once they sleep. It follows only edges that existed
-  at the undo point, so the exchange components of §3.3 still hold every chain
-  of exchange.
+- **Equalization (CORE-067).** After the exchange's edges have run, the zones
+  reachable through sleeping edges from each edge that fell asleep are
+  combined: their gas is summed into one mixture, at the temperature that
+  conserves their thermal energy, and shared back by volume. Zones are taken
+  in id order, so the result doesn't depend on the order they were reached in
+  (§3.5). Paused zones keep their last-known mixture (GEO-035) and aren't
+  crossed. Only zones joined through boundaries alone have sleeping edges
+  between them, since equivalent zones with a direct opening merge instead. It
+  costs one pass over a group in a tick when any of its edges falls asleep,
+  however many do (S-10's 99 small rooms are one group of 178 door edges), and
+  records nothing in the ledger but pruning. The group's edges stay asleep,
+  since equal mixtures are equivalent; a change to any member wakes its edges
+  (CORE-066), and the group is equalized again once they sleep. It follows
+  only edges that existed at the undo point, so the exchange components of
+  §3.3 still hold every chain of exchange.
 - **Known cost.** A door that opens onto unzoned air, such as the open air
   outside, is a breach each time it opens: `BreachResolver` runs a bounded fill
   from the newly opened cell (GEO-023, GEO-025). Open-column classification
