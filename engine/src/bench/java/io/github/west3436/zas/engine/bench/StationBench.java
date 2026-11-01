@@ -103,13 +103,14 @@ final class StationBench {
 
         Station probe = new Station(20, true);
         System.out.printf(
-                "Station: %d rooms, %,d zoned cells, the largest %,d; %d open doors, each a one-cell zone, so"
-                        + " %d zones in all. Vacuum ambient.%n",
+                "Station: %d rooms, %,d zoned cells, the largest %,d; %d open doors between them, each"
+                        + " joining the room on one side, so %d zones and %d door edges. Vacuum ambient.%n",
                 probe.points.size(),
                 probe.zonedCells(),
                 Station.BIG_SIZE * Station.BIG_SIZE * Station.BIG_SIZE,
                 probe.doors,
-                probe.points.size() + probe.doors);
+                probe.points.size(),
+                probe.doors);
         probe.h.close();
         System.out.println("Script: " + minutes + " minutes of game time measured after " + warmMinutes
                 + " minutes of warm-up; a breach of the big room every 60 s, resealed and topped up 10 s later; an"

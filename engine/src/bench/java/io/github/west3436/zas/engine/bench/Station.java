@@ -14,9 +14,9 @@ import java.util.List;
  *   <li>The big room is 20 × 20 × 20 (8,000 cells), on its own, with no doors.
  *   <li>99 small rooms sit in a 10 × 10 grid sharing walls: 98 of 8 × 5 × 8 (320 cells) and one
  *       of 8 × 10 × 8 (640). Each shared wall holds an open door, so neighbours are separate zones
- *       joined through it. The engine makes each open door's cell a zone of its own (GEO-007), so
- *       the 178 doors add 178 one-cell zones and 356 edges: more zones and edges than S-10's 100
- *       and spike S5's 180, which makes the load heavier, not lighter.
+ *       joined through it (GEO-007): 100 zones and 178 door edges. A door's own cell joins the
+ *       room west or north of it, its far face being the zone boundary, as an open door's cell
+ *       joins the room it opens from in game.
  *   <li>Rooms start at different pressures, so the edges are active at first and fall asleep.
  * </ul>
  *
@@ -79,12 +79,12 @@ final class Station {
         for (int s = 0; s < ROOMS; s++) {
             int east = s + 1;
             if (s % 10 != 9 && east < ROOMS) {
-                w.set(slotX(s) + 8, GRID_Y0 + 1, slotZ(s) + 3, BenchWorld.DOOR);
+                w.set(slotX(s) + 8, GRID_Y0 + 1, slotZ(s) + 3, BenchWorld.DOOR_EAST);
                 doors++;
             }
             int south = s + 10;
             if (south < ROOMS) {
-                w.set(slotX(s) + 3, GRID_Y0 + 1, slotZ(s) + 8, BenchWorld.DOOR);
+                w.set(slotX(s) + 3, GRID_Y0 + 1, slotZ(s) + 8, BenchWorld.DOOR_SOUTH);
                 doors++;
             }
         }
