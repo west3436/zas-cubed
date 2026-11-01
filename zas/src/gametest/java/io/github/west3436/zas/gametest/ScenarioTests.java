@@ -282,7 +282,7 @@ public final class ScenarioTests {
     /**
      * S-01 by commands: in a vacuum dimension, a sealed room is filled with {@code /zas gas} to
      * 101.325 kPa of breathable air at 21 % O₂, forms one zone and holds the pressure. The
-     * scenario's air alarm, canisters, vent and helmet check need R1 content and LIFE.
+     * scenario's area air controller, canisters, vent and helmet check need R1 content and LIFE.
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
     public static void s_01_pressurise_sealed_room_by_commands(GameTestHelper h) {

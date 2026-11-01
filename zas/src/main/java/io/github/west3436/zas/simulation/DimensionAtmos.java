@@ -9,6 +9,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.SectionCapture;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.GeometryPalette;
@@ -278,9 +279,11 @@ public final class DimensionAtmos {
         });
         long block = p.pos().asLong();
         String source = p.source().toString();
+        // CORE-055: an API call may form a zone in an enclosed, unzoned area, under either preset.
+        boolean triggers = ZoneTrigger.API_CALLS.active();
         long seq = p.add()
-                ? pl.add(block, p.sub(), amounts, temperature, LedgerCategory.API, true, source)
-                : pl.remove(block, p.sub(), amounts, LedgerCategory.API, true, source);
+                ? pl.add(block, p.sub(), amounts, temperature, LedgerCategory.API, triggers, source)
+                : pl.remove(block, p.sub(), amounts, LedgerCategory.API, triggers, source);
         pending.put(seq, p);
     }
 

@@ -5,9 +5,10 @@ below are proposals.
 
 This lists every block and item ZAS³ will add that needs a texture, with one
 row for each. It comes from the requirements and from the owner's changes of
-2026-11-01, made in #127 and in the review of #125, which the requirements
-don't have yet. Rows from
-those changes have no requirement of their own, and their priority isn't set.
+2026-11-01 in the review of #125, which the requirements don't have yet. Rows
+from those changes have no requirement of their own, and their priority isn't
+set. The changes made in #127, the area air controller and batteries, are in
+the requirements (D-68, D-69).
 
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
 pixels per block, flat sprites for handheld items, and the standard armor
@@ -77,16 +78,17 @@ Portables connect to and disconnect from connector ports with the wrench.
 |---|---|---|---|---|---|
 | `zas_atmos:electrolyzer` | Water electrolyzer | Must | CONT-055, CONT-056 | Block model | On and off. It could also show its water level. |
 | `zas_atmos:generator` | Generator | Must | CONT-061, CONT-067 | Block model | Lit and unlit. In the style of SS13's P.A.C.M.A.N. |
+| `zas_atmos:recharger` | Recharger | Should | CONT-113 | Block model | Empty, charging and full. Charges one battery (below) for the portables. It could show the charge in steps, as vg's cell charger does. |
 
-The air compressor is gone, and the power cable with the multipart block
-(#127). Without the compressor, R1 gets gas from the electrolyzer and from
+The air compressor is gone, and so are the power cable and the multipart block
+(D-68). Without the compressor, R1 gets gas from the electrolyzer and from
 scrubbing and filtering, so CONT-050 and CONT-054 need updating.
 
 **Area air controllers, airlocks and firelocks**
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (#127). |
+| `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
 | `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal and alarm. |
 | `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Its size isn't decided, as with the firelock. |
 | `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Its size isn't decided: one block, or two tall like a door. |
@@ -150,16 +152,26 @@ one suit share their layer files.
 | `zas_atmos:atmos_analyzer` | Atmos analyzer | Must | CONT-034 | Flat sprite. Was the gas analyzer. |
 | `zas_atmos:wrench` | Wrench | Should | CONT-035 | Flat sprite. Quickly takes pipes apart, and connects portables to connector ports and disconnects them. CONT-035 and CONT-083 need updating to match. |
 | `zas_atmos:crowbar` | Crowbar or halligan bar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. Which of the two it is isn't settled. |
-| `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (#127). |
+| `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (D-68). |
+
+**Batteries.** Portables run on these (D-69), and so can other mods' batteries
+in the `zas_atmos:batteries` tag (CONT-112). The three tiers follow vg's power
+cell, high-capacity and super-capacity cells.
+
+| Proposed id | Name | Priority | Requirement | States and notes |
+|---|---|---|---|---|
+| `zas_atmos:battery` | Battery | Should | CONT-111 | Flat sprite. It could show its charge, as vg's cells do. |
+| `zas_atmos:high_capacity_battery` | High-capacity battery | Should | CONT-111 | Flat sprite. The three tiers must be easy to tell apart. |
+| `zas_atmos:super_capacity_battery` | Super-capacity battery | Should | CONT-111 | Flat sprite. |
 
 ### Totals for R1
 
 | | Must | Should | Could | Not set | Total |
 |---|---|---|---|---|---|
 | Blocks (`zas`) | 1 | – | – | – | 1 |
-| Blocks (`zas_atmos`) | 13 | 8 | 1 | 8 | 30 |
+| Blocks (`zas_atmos`) | 13 | 9 | 1 | 8 | 31 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
-| Items (`zas_atmos`) | 18 | 2 | – | – | 20 |
+| Items (`zas_atmos`) | 18 | 5 | – | – | 23 |
 
 R1 needs no crafting ingredients of its own: all its recipes use vanilla
 materials (CONT-051).
@@ -191,7 +203,7 @@ moved to R1 (above).
 | Dual-port vent | Block | CONT R2 column | |
 | Injector | Block | CONT-082 | |
 | Meter | Block | CONT R2 column | |
-| Pipe layer manifold | Block | CONT R2 column | vg joins pipe layers with manifolds and adapters ([vg §1](research/vg-atmos-content.md#1-pipe-networks)). R2 may need one or both. Pipe layers were to reuse the multipart block, so they need another design (#127). |
+| Pipe layer manifold | Block | CONT R2 column | vg joins pipe layers with manifolds and adapters ([vg §1](research/vg-atmos-content.md#1-pipe-networks)). R2 may need one or both. Pipe layers were to reuse the multipart block, so they need another design (D-68). |
 | Pipe layer adapter | Block | CONT R2 column | See the manifold. |
 | Gas miner | Block | CONT R2 column | Creative only. |
 | Fire extinguisher | Item | CONT-037 | |
