@@ -629,6 +629,35 @@ scheduler's membership, which the published snapshot reads.
   pausing and storage, and which sections hold zoned cells for the mirror's
   retention) comes out in a fixed order.
 
+**Exchange** (CORE-031, CORE-032, CORE-035, CORE-068). Each atmos tick, every
+awake edge closes a fraction of the difference between its two sides. The
+fraction is the same for each gas and for thermal energy, and the exchange
+keeps the sides' volume-weighted mean, so it conserves moles. A zone shares
+with the ambient through a temporary mixture of ambient gas that is refilled
+each time, so the ambient never changes. Per second, an edge with k
+connections closes r_k·w of the difference: r_k comes from the sharing table,
+and w ≤ 1 is a weight set by the venting model (`ExchangeSettings.Venting`,
+the server config's `[atmos] venting`). A tick of T seconds closes
+1 − (1 − r_k·w)^T (CORE-046).
+
+- **Volume-aware** (the default, D-21). Exchange passes through a sharer of
+  V_s = 4,000 L at the openings, so w = V_s/(V_s + μ), where μ is the zones'
+  reduced volume V_A·V_B/(V_A + V_B), or the zone's volume for the ambient.
+  The same openings drain a large zone proportionally slower than a small one,
+  into the ambient or into a much larger zone. The ambient is the limit of an
+  infinitely large zone, so a zone never drains into another zone faster than
+  into the ambient.
+- **Faithful** (ZAS, [zas-core §3.2](research/zas-core.md#32-edge-exchange-math)).
+  Between zones w = 1, so both move toward their volume-weighted mean at the
+  full ratio. With the ambient, w = (V + V_s)/(2V + V_s), ZAS's sharer of the
+  zone's volume plus four cells.
+- **Why zones too.** With only the ambient volume-aware, a room draining into
+  a much larger zone lost the full ratio per tick, as fast as a closet.
+  Removing that means slowing exchange between two large zones of similar
+  size as well: otherwise a zone would drain slower into a larger neighbour
+  than into a smaller one. Two 27-cell rooms joined by one opening take about
+  18 s to halve their difference, against about 4 s under ZAS's model.
+
 **Memory** (NFR-004). Estimated before R0:
 
 - 8 KiB per section that holds any zoned cell, about 2 B per position

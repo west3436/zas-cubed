@@ -477,6 +477,11 @@ r_T = 1 − (1 − r_ZAS)^(T / 2 s).
 - **Verify:** Unit tests check one tick's exchange against the formula for
   each connection count, and that two 1 s ticks match one ZAS 2 s tick.
 
+*2026-11-01: by default the volumes weight the ratio through the opening's
+sharer too (CORE-035): two zones close r·V_s/(V_s + V_A·V_B/(V_A + V_B)) of
+their difference per second. ZAS's weighting is the faithful option
+(CORE-068). The Unit tests check both.*
+
 #### CORE-032 · Ambient edges
 `Must` · `R0` · `Implemented` · Verify: Unit · Trace: D-03, D-07
 
@@ -588,7 +593,7 @@ mixture.
   check that once equivalent they hold one combined mixture.
 
 #### CORE-035 · Volume-aware venting
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-21
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-21
 
 By default, the rate at which a zone exchanges gas with the ambient or with a
 much larger zone shall be volume-aware: larger zones drain proportionally
@@ -599,8 +604,21 @@ slower through the same openings.
   opening and checks the larger loses a proportionally smaller fraction per
   tick.
 
+*2026-11-01: Implemented. Exchange passes through a 4,000 L sharer at the
+openings ([architecture §4.4](../architecture.md#44-zone-membership-and-the-zone-graph-core-020-to-core-039)):
+per second a zone closes r·V_s/(V_s + V) of its difference from the ambient,
+and two zones r·V_s/(V_s + V_A·V_B/(V_A + V_B)) of theirs, which tends to the
+ambient's as the other zone grows. Zone edges used ZAS's sharing until now.
+Through one opening, `core_035_larger_room_vents_proportionally_slower_into_the_ambient`
+measures 4.67 % per second lost by the 10-cell room and 0.065 % by the
+1,000-cell room, in proportion to V + V_s, and
+`core_035_larger_room_vents_proportionally_slower_into_a_much_larger_zone` the
+same into a 10⁸ L zone. Two rooms of similar size also equalize slower through
+the same openings than under ZAS's model: two 27-cell rooms halve their
+difference in about 18 s through one opening, against 4 s.*
+
 #### CORE-068 · Faithful venting option
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-21
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-21
 
 The faithful ZAS venting model, where the fraction lost per tick doesn't
 depend on volume, shall be selectable in config.
@@ -609,6 +627,19 @@ depend on volume, shall be selectable in config.
   §3.2](../research/zas-core.md#32-edge-exchange-math)) as an option.
 - **Verify:** A Unit test with the option on checks both rooms lose the same
   fraction per tick.
+
+*2026-11-01: Implemented. The server config's `[atmos] venting = "FAITHFUL"`
+selects ZAS's model from the next atmos tick ([config](../config.md#venting)):
+zones share at the full ratio, and the ambient through ZAS's sharer of the
+zone's volume plus 4,000 L. Into a much larger zone,
+`core_068_faithful_rooms_lose_the_same_fraction_into_a_much_larger_zone`
+measures 16.33 % per second lost by the 10-cell room and 16.17 % by the
+1,000-cell room. Into the ambient, ZAS's four-cell term leaves a small
+dependence on volume: `core_068_faithful_rooms_lose_the_same_fraction_into_the_ambient`
+measures 9.53 % and 8.18 %, against 4.67 % and 0.065 % volume-aware. The
+GameTest `core_068_venting_option_reaches_the_engine` switches the option
+while two breached rooms vent and checks each tick's fraction against the
+model in force.*
 
 #### CORE-036 · Conservation invariant
 `Must` · `R0` · `Implemented` · Verify: Unit (fuzz), GameTest
@@ -850,6 +881,11 @@ changing the period changes smoothness and cost but not real-time behaviour.
 - **Rationale:** Decision: D-20.
 - **Verify:** A Unit test runs one scenario at 0.5, 1 and 2 s periods and
   checks the state after 10 s agrees; Bench records the cost at each period.
+
+*2026-11-01: venting is now per second exactly too, under both venting models
+(CORE-035, CORE-068): a tick of T seconds closes 1 − (1 − g)^T of a difference
+that one second closes g of. `core_046_venting_is_per_second` vents a room at
+the three periods.*
 
 #### CORE-047 · Server-thread budget
 `Must` · `R0` · `Implemented` · Verify: Bench · Trace: D-30 · Depends: NFR-001
