@@ -5,12 +5,14 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryDerivation;
 import io.github.west3436.zas.geometry.GeometryTable;
 import java.util.stream.StreamSupport;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Block;
@@ -207,6 +209,38 @@ public final class GeometryTests {
                 .setValue(WallBlock.NORTH_WALL, WallSide.LOW)
                 .setValue(WallBlock.SOUTH_WALL, WallSide.LOW);
         check(h, geometry(wall).cellCount() == 2, "a straight wall should have two cells");
+        h.succeed();
+    }
+
+    /**
+     * No vanilla state has more cells than a cell id can name ({@link CellIds#MAX_SUB_CELLS}, #105):
+     * crossed panes, fences and walls have four, the most of any.
+     */
+    @GameTest(template = "empty")
+    public static void geo_004_vanilla_cells_fit_cell_ids(GameTestHelper h) {
+        GeometryTable t = Geometries.table();
+        int most = 0;
+        BlockState mostState = null;
+        int states = 0;
+        for (BlockState s : Block.BLOCK_STATE_REGISTRY) {
+            if (!BuiltInRegistries.BLOCK.getKey(s.getBlock()).getNamespace().equals("minecraft")) {
+                continue;
+            }
+            states++;
+            int cells = t.geometry(s).cellCount();
+            if (cells > most) {
+                most = cells;
+                mostState = s;
+            }
+        }
+        LogUtils.getLogger()
+                .info(
+                        "geo_004: at most {} cells per block over {} vanilla states, first at {}",
+                        most,
+                        states,
+                        mostState);
+        check(h, most <= CellIds.MAX_SUB_CELLS, mostState + " has " + most + " cells, more than a cell id can name");
+        check(h, most == 4, "crossed panes have four cells, the most of any vanilla state; got " + most);
         h.succeed();
     }
 

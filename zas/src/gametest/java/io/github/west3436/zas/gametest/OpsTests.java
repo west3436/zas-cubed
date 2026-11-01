@@ -49,8 +49,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * The {@code /zas} commands, run through the server's command dispatcher with a source of a given
  * permission level (OPS-003, OPS-004, OPS-008 to OPS-011, GEO-032).
  *
- * <p>Like {@code AtmosTests}, each test builds in its own area near the origin (cell ids cover only
- * about ±8.4M blocks) without forcing chunks, and finishes within one game tick: it drives atmos
+ * <p>Like {@code AtmosTests}, each test builds in its own area at a fixed place, independent of
+ * where its structure lands, without forcing chunks, and finishes within one game tick: it drives atmos
  * ticks itself with {@link AtmosService#tickNow}, and waits for results the atmos worker hands
  * back with a bounded {@link MinecraftServer#managedBlock}, which runs the server's queued tasks.
  */

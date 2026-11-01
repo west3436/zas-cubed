@@ -22,12 +22,13 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Building and ticking for the paused-zone and persistence GameTests: each test gets a
- * chunk-aligned area of its own near the origin of a level (cell ids only reach about 8 million
- * blocks out, see {@code AtmosTests}), so rooms can be placed across chunk borders, and drives
+ * chunk-aligned area of its own in a level, so rooms can be placed across chunk borders, and drives
  * atmos ticks itself. Nothing forces a chunk (GEO-034): building loads the area, and each test runs
  * within one game tick.
  *
- * <p>Areas are at z = 8192, apart from the {@code AtmosTests} areas.
+ * <p>Numbered areas are at z = 8192, apart from the {@code AtmosTests} areas and from each other,
+ * which keeps the tests independent of where their structures land. A test can also name its own
+ * area anywhere in the world, out to the world border.
  */
 final class Rooms {
     static final double REL = 1e-9;
@@ -47,6 +48,15 @@ final class Rooms {
         this.h = h;
         this.level = level;
         this.origin = new BlockPos(4096 + 256 * index, 100, 8192);
+    }
+
+    /**
+     * @param origin the area's corner; keep it chunk-aligned so area x 0 and 16 are chunk borders
+     */
+    Rooms(GameTestHelper h, ServerLevel level, BlockPos origin) {
+        this.h = h;
+        this.level = level;
+        this.origin = origin;
     }
 
     Rooms(GameTestHelper h, int index) {
