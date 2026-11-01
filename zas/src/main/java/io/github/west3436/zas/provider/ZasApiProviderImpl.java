@@ -10,6 +10,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -35,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -60,6 +63,10 @@ import net.neoforged.bus.api.IEventBus;
  *
  * <p>Mutations resolve their point the same way and act on that cell. They are queued for the next
  * atmos tick and their futures complete on the server thread when that tick is applied (API-016).
+ *
+ * <p><b>Interim:</b> the breathability helper (API-014) answers with vanilla's verdict, as the
+ * fallback does, until LIFE's breathing, hazard and protection rules (#34 to #36) and the
+ * life-support capability (API-022, #60) are built.
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -181,6 +188,17 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             });
             return new TagSets(registry, Map.copyOf(gases));
         }
+    }
+
+    /**
+     * INTERIM until LIFE (#34 to #36) and API-022 (#60): vanilla's verdict, the same as the
+     * fallback's. It ignores the atmosphere, so an entity in a vacuum zone is told it can breathe.
+     * LIFE replaces this with ZAS³'s own verdict: who breathes, the breath source, the O₂ minimum,
+     * gas hazards and protection, keeping vanilla's rule while the eyes are in water (LIFE-022).
+     */
+    @Override
+    public Breathability breathability(LivingEntity entity) {
+        return Breathing.vanilla(entity);
     }
 
     private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {
