@@ -217,7 +217,7 @@ overrides every option and switches the preset both ways, and
 `ops_014_preset_command_keeps_overrides` does the same with `/zas preset`.*
 
 #### OPS-015 · Value sources shown
-`Should` · `R1` · `Accepted` · Verify: Manual · Depends: OPS-007
+`Should` · `R1` · `Implemented` · Verify: Manual · Depends: OPS-007
 
 Commands and config shall show which values come from the preset and which are
 overridden.
@@ -229,3 +229,8 @@ overridden.
 *2026-11-01: `/zas preset` marks each option `[preset]` or `[override]`, and
 the config file holds `"preset"` or the override, with each option's Normal and
 Hardcore defaults in its comment (#37). Awaiting the manual check.*
+
+*2026-11-01: Implemented. The manual check passed on a dedicated server,
+through its console, at the owner's request: the report and the file show
+each option's source under both presets, after overrides, after a hand edit
+of the file and after a restart (#128).*
