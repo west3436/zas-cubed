@@ -22,8 +22,8 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
   per-dimension atmospheres, and life support. Mods can bundle the API and
   still run when ZAS³ isn't installed.
 - **SS13-style atmospherics content,** shipped as a separate companion mod:
-  pipes, pumps, vents, scrubbers, canisters, air alarms, firelocks, suits and
-  power.
+  pipes, pumps, vents, scrubbers, canisters, area air controllers, firelocks,
+  suits and power.
 - **Integrations, after R1.** Mekanism and Ad Astra, as reference
   integrations built only on the public API.
 
