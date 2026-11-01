@@ -3,6 +3,7 @@ package io.github.west3436.zas.environment;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.config.AtmospherePreset;
+import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.Ambient;
@@ -27,15 +28,17 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * Each dimension's ambient atmosphere on the running server (ENV-001, ENV-010, ENV-011,
  * ENV-003, ENV-007).
  *
- * <p>A dimension's ambient is its datapack definition's variant for the active preset, or
+ * <p>A dimension's ambient is its datapack definition's variant for the active preset (or the
+ * variant the {@code ambient_variant} preset option overrides it with), or
  * {@link Ambient#STANDARD_AIR} if it has none (ENV-011). Providers (ENV-004) and seeded
  * ambients (SPACE-020) slot in between in R1 (ENV-014). The atmos scheduler puts {@link
  * #ambient(ResourceKey)} into each dimension's {@code Batch} (architecture §2.3) and skips
  * dimensions where {@link #isExcluded(ResourceKey)} holds.
  *
  * <p>Definitions reload with {@code /reload}. A definition naming a gas the running server
- * doesn't have is logged and skipped. Lookups may be called from any thread; the preset is read
- * from {@link ZasServerConfig} on each call, so a preset change applies to the next lookup.
+ * doesn't have is logged and skipped. Lookups may be called from any thread; the variant is read
+ * from the server config on each call, so a preset change applies to the next lookup, and to the
+ * simulation from its next atmos tick, whose batch carries the ambient.
  */
 public final class Ambients {
 
@@ -65,13 +68,16 @@ public final class Ambients {
         gameBus.addListener((ServerStoppedEvent e) -> serverStopped());
     }
 
-    /** The ambient of a dimension under the active preset. */
+    /**
+     * The ambient of a dimension in its variant that applies: the active preset's, unless {@code
+     * ambient_variant} overrides it ({@link PresetOptions#AMBIENT_VARIANT}, OPS-007, OPS-014).
+     */
     public static Ambient ambient(ResourceKey<Level> dimension) {
-        return ambient(dimension, ZasServerConfig.preset());
+        return ambient(dimension, PresetOptions.AMBIENT_VARIANT.get());
     }
 
-    /** The ambient of a dimension under a preset. */
-    public static Ambient ambient(ResourceKey<Level> dimension, AtmospherePreset preset) {
+    /** The ambient of a dimension in a preset's variant (ENV-010). */
+    public static Ambient ambient(ResourceKey<Level> dimension, AtmospherePreset variant) {
         Ambient override = testOverrides.get(dimension.location());
         if (override != null) {
             return override;
@@ -79,7 +85,7 @@ public final class Ambients {
         DimensionAmbient definition = active.get(dimension.location());
         return definition == null
                 ? Ambient.STANDARD_AIR
-                : definition.ambient(preset).orElse(Ambient.STANDARD_AIR);
+                : definition.ambient(variant).orElse(Ambient.STANDARD_AIR);
     }
 
     /** The datapack definition of a dimension, if it has a valid one. */
