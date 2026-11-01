@@ -104,7 +104,7 @@ in vacuum. Sound from the player's own suit is exempt.
 ## Debug rendering
 
 #### CLIENT-005 · Debug zone overlay
-`Must` · `R0` · `Accepted` · Verify: Manual · Trace: D-43, GEO-030, GEO-024
+`Must` · `R0` · `Implemented` · Verify: Manual · Trace: D-43, GEO-030, GEO-024
 
 An overlay, for players with permission level 2, shall colour each zone's
 cells within 2 chunks of the player. Paused zones and unresolved regions are
@@ -115,6 +115,10 @@ shown distinctly.
   invisible, so developers and operators need to see it.
 - **Verify:** Manual check of the overlay on a station with active, paused and
   unresolved regions.
+
+*2026-10-31: Implemented. The owner ran the #98 test plan in a dev client and
+it passed: zones tinted per zone with labels, a paused zone (a tunnel past a
+chunk border at render distance 2) in grey, and a held breach in magenta.*
 
 #### CLIENT-011 · Debug edges
 `Must` · `R0` · `Accepted` · Verify: Manual · Depends: CLIENT-005
@@ -127,8 +131,13 @@ boundary), each labelled with its pressure difference.
 - **Verify:** Manual check of edge colours and labels around a door and a
   breach.
 
+*2026-10-31: The overlay draws all four edge types and their labels (#98). The
+owner's test passed for the zone/direct and ambient/direct edges at a door and
+a breach. Boundary edges can't occur until a block carries the zone-boundary
+flag (GEO-007, R1), so this stays Accepted until they can be checked.*
+
 #### CLIENT-012 · Debug seal masks and sub-cells
-`Must` · `R0` · `Accepted` · Verify: Manual · Trace: D-44 · Depends: CLIENT-005
+`Must` · `R0` · `Implemented` · Verify: Manual · Trace: D-44 · Depends: CLIENT-005
 
 The overlay shall show the seal mask and sub-cell boundaries of the block the
 player is looking at.
@@ -136,6 +145,9 @@ player is looking at.
 - **Rationale:** Decision: D-44. Sub-cells are invisible otherwise and hard to
   debug.
 - **Verify:** Manual check on a pane, a slab and a chest.
+
+*2026-10-31: Implemented. The owner's test of #98 passed on a pane, a slab and
+a chest, plus stairs, a wall, a door, a trapdoor and scaffolding.*
 
 #### CLIENT-013 · Debug hotspots
 `Must` · `R0` · `Accepted` · Verify: Manual · Depends: CLIENT-005
@@ -145,6 +157,10 @@ The overlay shall mark hotspots.
 - **Rationale:** Inferred: hotspots aren't always visible blocks, and fire
   bugs are hard to debug without them.
 - **Verify:** Manual check during a gas fire.
+
+*2026-10-31: The overlay has a hotspot layer (#98), but nothing produces
+hotspots before FIRE (R1), so this stays Accepted until it can be checked
+during a gas fire.*
 
 ## Units and language
 

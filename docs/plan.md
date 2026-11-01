@@ -175,7 +175,7 @@ the worker's tick still grows with zone size
 | [#22](https://github.com/west3436/zas-cubed/issues/22) ambient and sparse zoning, [#23](https://github.com/west3436/zas-cubed/issues/23) scheduler, [#25](https://github.com/west3436/zas-cubed/issues/25) change tracking, [#28](https://github.com/west3436/zas-cubed/issues/28) ambients | Every listed requirement is *Implemented*. They stayed open because the PRs that finished them said "Part of" (#97, #100, #92). Ready to close. |
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
-| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay is in review in [#98](https://github.com/west3436/zas-cubed/pull/98). CLIENT-013 shows hotspots, which arrive with FIRE (R1). |
+| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
