@@ -167,27 +167,52 @@ their own and with the invariant checker on (CORE-036).
 | S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
 | S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
 | S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
-| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). | `./gradlew :engine:bench` |
+| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B and back in Draft for the owner's decision.* | `./gradlew :engine:bench` |
 
 The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
 *Implemented*. CORE-025 (R1) stays *Accepted*: its split search is local, but
 the worker's tick still grows with zone size
 ([benchmarks](research/benchmarks.md#merge-and-split-core-023-core-024-and-core-025)).
+*2026-11-01: CORE-025 is now Implemented. Per-section membership palettes
+(#117) make a local edit cost about 0.05 ms at 1,000, 8,000 and 50,000 cells
+([check](research/benchmarks.md#membership-palette-check-2026-11-01)).*
 
-**R0 issues still open** (2026-11-01; #20 to #23, #25, #26 and #28 are
-closed):
+**R0 issues still open** (2026-11-01; #20 to #23, #25, #26, #28 and #32
+are closed, and so are #106, #108 and #109 from the R0 benchmarks and tests).
+Each remaining one waits on R1 work:
 
 | Issue | Why |
 |---|---|
-| [#32](https://github.com/west3436/zas-cubed/issues/32) API skeleton | Every requirement but API-015 is *Implemented*. Left: sub-cell point resolution ([#108](https://github.com/west3436/zas-cubed/issues/108)) and held breaches reporting UNRESOLVED ([#109](https://github.com/west3436/zas-cubed/issues/109)). In progress. |
-| [#106](https://github.com/west3436/zas-cubed/issues/106) incremental membership, [#78](https://github.com/west3436/zas-cubed/issues/78) NFR-004 memory | Found by the R0 benchmarks: every geometry change rebuilds membership over every zoned cell, which fails CORE-025's Bench, and the rough heap per zoned cell is over NFR-004. The fix is the per-section palette of architecture §4.4, then a proper memory measurement. In progress. |
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
 | [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
-The tracks run in parallel. E7 (Ad Astra) moved to R2 with Mekanism (D-66).
+E7 (Ad Astra) moved to R2 with Mekanism (D-66).
+
+**Order (2026-11-01).** The tracks share a foundation that has to come first,
+because nearly every one of them depends on it:
+
+| Foundation | Issue | Needed by |
+|---|---|---|
+| The real gas set and gas classification tags (CORE-011, CORE-012) | [#64](https://github.com/west3436/zas-cubed/issues/64) | LIFE's toxicity and hazards, FIRE's fuels and oxidisers, CONT's canisters and filters |
+| Doors and other zone-boundary blocks (GEO-007, GEO-044, CORE-034, CORE-067) | [#64](https://github.com/west3436/zas-cubed/issues/64), [#65](https://github.com/west3436/zas-cubed/issues/65) | Firelocks and airlocks (CONT), S-02, the debug overlay's boundary edges (#31). It also fixes [#107](https://github.com/west3436/zas-cubed/issues/107) and brings the S-10 bench station from 278 zones down to 100 |
+| The Normal/Hardcore preset (OPS-007) | [#37](https://github.com/west3436/zas-cubed/issues/37) | Hardcore zone triggers (CORE-056), FIRE, FLOW's block damage, planting (CONT) |
+| The breathability helper (API-014) | [#59](https://github.com/west3436/zas-cubed/issues/59) | LIFE, the HUD, and anything else that asks whether a point is breathable |
+
+The multipart pipe-and-cable spike ([#46](https://github.com/west3436/zas-cubed/issues/46))
+runs alongside, since it is independent and retires risk R7.
+
+Then the first target is **S-01 end to end**, a vertical slice through most
+tracks: breathing ([#34](https://github.com/west3436/zas-cubed/issues/34)),
+pipe networks ([#47](https://github.com/west3436/zas-cubed/issues/47)), the
+canister, connector and vent from the device set
+([#48](https://github.com/west3436/zas-cubed/issues/48)), the powered air
+alarm ([#50](https://github.com/west3436/zas-cubed/issues/50)) and the power
+it needs ([#52](https://github.com/west3436/zas-cubed/issues/52)). After that
+the tracks widen out in parallel, one scenario at a time (S-02 to S-05, S-08,
+S-11, S-13).
 
 | Track | Area | Notes |
 |---|---|---|
@@ -270,24 +295,29 @@ The tracks run in parallel. E7 (Ad Astra) moved to R2 with Mekanism (D-66).
 
 _Updated 2026-11-01._
 
-1. **Finish R0** (in progress):
-   - the API: sub-cell point resolution
-     ([#108](https://github.com/west3436/zas-cubed/issues/108)) and held
-     breaches reporting UNRESOLVED
-     ([#109](https://github.com/west3436/zas-cubed/issues/109)), which close
-     [#32](https://github.com/west3436/zas-cubed/issues/32)
-   - incremental zone membership with per-section palettes
-     ([#106](https://github.com/west3436/zas-cubed/issues/106)) and a proper
-     NFR-004 memory measurement
-     ([#78](https://github.com/west3436/zas-cubed/issues/78))
-2. **Review the [architecture](architecture.md)**
-   ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
-   send changes. That closes Phase B now that S6 has moved (D-66).
-3. **Start Phase E** with the risk item first: the multipart pipe-and-cable
-   spike ([#46](https://github.com/west3436/zas-cubed/issues/46)). Then E1
-   LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34) to
-   [#36](https://github.com/west3436/zas-cubed/issues/36)) and E5's pipe
-   networks ([#47](https://github.com/west3436/zas-cubed/issues/47)), which
-   also unblock the R0 issues waiting on R1 (#27, #29, #31).
+1. **Owner decisions:**
+   - NFR-004: accept or reject the per-cell memory budget revised to 256 B in
+     #117 (now *Draft*; [check](research/benchmarks.md#membership-palette-check-2026-11-01))
+   - review the [architecture](architecture.md)
+     ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
+     send changes. That closes Phase B.
+2. **The R1 foundation** (see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)):
+   the gas set and zone-boundary blocks
+   ([#64](https://github.com/west3436/zas-cubed/issues/64),
+   [#65](https://github.com/west3436/zas-cubed/issues/65)), the preset
+   ([#37](https://github.com/west3436/zas-cubed/issues/37)) and the
+   breathability helper ([#59](https://github.com/west3436/zas-cubed/issues/59)),
+   with the multipart spike ([#46](https://github.com/west3436/zas-cubed/issues/46))
+   alongside.
+3. **S-01 end to end:** breathing, pipe networks, canister, connector and
+   vent, the powered air alarm and the power it needs (#34, #47, #48, #50,
+   #52). Then widen out scenario by scenario.
+   - Follow-ups from R0 to fold in along the way: zone-creation speed
+     ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
+     ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved
+     operations keeping their sub-cell
+     ([#122](https://github.com/west3436/zas-cubed/issues/122)), and sub-cells
+     of position-dependent shapes, with GEO-043
+     ([#123](https://github.com/west3436/zas-cubed/issues/123)).
 4. **After R1:** the reference integrations, Mekanism and Ad Astra
    (D-11, D-66; see [After R1](#after-r1-already-queued)).
