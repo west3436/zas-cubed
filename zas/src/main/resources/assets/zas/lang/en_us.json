@@ -111,5 +111,22 @@
   "zas.phase.zone_updates": "Zone updates (reactions)",
   "zas.phase.garbage_collection": "Garbage collection, checker and result",
 
-  "commands.zas.datapacks.header": "%s problems in the last datapack load"
+  "commands.zas.datapacks.header": "%s problems in the last datapack load",
+
+  "zas.preset.normal": "Normal",
+  "zas.preset.hardcore": "Hardcore",
+  "commands.zas.error.unknown_option": "Unknown preset option: %s",
+  "commands.zas.error.invalid_value": "Not a value for %s: %s; use %s",
+  "commands.zas.error.no_config": "No server config is loaded",
+  "commands.zas.preset.header": "Atmosphere preset: %s, %s of %s options overridden",
+  "commands.zas.preset.file": "  Server config: %s",
+  "commands.zas.preset.no_file": "  Server config: synced from the server, not from a file",
+  "commands.zas.preset.option": "  %s = %s [%s] (Normal %s, Hardcore %s)",
+  "commands.zas.preset.option_waiting": "%s, not used yet: waits for %s",
+  "commands.zas.preset.fixed_triggers": "  Zone triggers under both presets (CORE-055): API calls, which include devices, leaks and /zas gas, and breaches of zones",
+  "commands.zas.preset.unchanged": "The atmosphere preset is already %s",
+  "commands.zas.preset.switched": "Switched the atmosphere preset to %s; overrides kept: %s",
+  "commands.zas.preset.overridden": "Overrode %s with %s under either preset",
+  "commands.zas.preset.cleared": "%s follows the preset again, now %s",
+  "commands.zas.preset.not_overridden": "%s isn't overridden; it follows the preset"
 }

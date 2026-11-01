@@ -1,10 +1,14 @@
 package io.github.west3436.zas.config;
 
+import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -12,13 +16,17 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * serverconfig/zas-server.toml} overrides: the server tier of
  * OPS-001's three (with {@link ZasCommonConfig} and {@link ZasClientConfig}).
  *
- * <p>For now it holds what R0 needs: the atmosphere preset, which selects ambient variants
- * (ENV-010), the dimensions excluded from simulation (ENV-007), the atmos scheduler's timing and
- * debug switches (CORE-041, CORE-047, CORE-071, CORE-073) under {@code [atmos]}, the permission
- * level of the {@code /zas} commands (OPS-011) under {@code [commands]}, and the periodic profiling
- * log (OPS-012) under {@code [profiling]}. The full preset system, with every preset-controlled
- * option and per-option overrides, is OPS-007 and OPS-014 in R1; the sharing table, thresholds and
+ * <p>It holds the atmosphere preset (D-14, OPS-007) and, under {@code [preset_options]}, an entry
+ * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
+ * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
+ * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) under {@code [atmos]}; the
+ * permission level of the {@code /zas} commands (OPS-011) under {@code [commands]}; and the
+ * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table, thresholds and
  * hazard toggles join this file as their features land.
+ *
+ * <p>Values are read from the loaded config on each call. NeoForge reloads the file when it
+ * changes on disk, so an edit applies from the next read; commands that change a value write the
+ * file with {@link #save()}.
  */
 public final class ZasServerConfig {
     public static final ModConfigSpec SPEC;
@@ -53,11 +61,16 @@ public final class ZasServerConfig {
     /** {@code /zas checker on|off} until the server stops; null follows the config (OPS-010). */
     private static volatile Boolean checkerOverride;
 
+    /** Whether {@link #save()} leaves the file alone, for GameTests. */
+    private static volatile boolean savesHeldForTest;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         PRESET = builder.comment(
                         "Atmosphere difficulty preset: NORMAL or HARDCORE.",
-                        "It selects the preset variant of each dimension's ambient atmosphere.")
+                        "It sets the default of every option under [preset_options]. Options overridden there",
+                        "keep their values when the preset changes. /zas preset shows each option's value and",
+                        "whether it comes from the preset or an override.")
                 .defineEnum("preset", AtmospherePreset.NORMAL);
         EXCLUDED_DIMENSIONS = builder.comment(
                         "Dimension ids excluded from simulation, such as \"minecraft:the_end\".",
@@ -67,6 +80,14 @@ public final class ZasServerConfig {
                         List.of(),
                         () -> "",
                         o -> o instanceof String s && ResourceLocation.tryParse(s) != null);
+        builder.comment(
+                        "Options the preset sets. Each is \"" + PresetOption.FOLLOW_PRESET
+                                + "\" to take the active preset's default, or a value,",
+                        "which overrides the preset: it applies under either preset and stays when the preset",
+                        "changes. The comment on each gives its Normal and Hardcore defaults.")
+                .push("preset_options");
+        PresetOptions.define(builder);
+        builder.pop();
         builder.push("atmos");
         PERIOD_TICKS = builder.comment(
                         "The atmos tick period in game ticks (20 = 1 s). Rates are per second, so a",
@@ -114,6 +135,55 @@ public final class ZasServerConfig {
     /** The active preset; {@link AtmospherePreset#NORMAL} while no world's config is loaded. */
     public static AtmospherePreset preset() {
         return SPEC.isLoaded() ? PRESET.get() : AtmospherePreset.NORMAL;
+    }
+
+    /**
+     * Switches the preset in the loaded config. Overrides stay (OPS-014). Not written to the file:
+     * {@link #save()} does that.
+     *
+     * @throws IllegalStateException if no world's config is loaded
+     */
+    public static void setPreset(AtmospherePreset preset) {
+        if (!SPEC.isLoaded()) {
+            throw new IllegalStateException("no world's server config is loaded");
+        }
+        PRESET.set(preset);
+    }
+
+    /**
+     * Writes the loaded config to the file it came from, so a change made by command lasts; NeoForge
+     * then fires its reload event. Does nothing while no world's config is loaded. Server thread.
+     */
+    public static void save() {
+        if (SPEC.isLoaded() && !savesHeldForTest) {
+            SPEC.save();
+        }
+    }
+
+    /**
+     * For GameTests: makes {@link #save()} leave the file alone, so commands under test don't write
+     * the config, whose reload would drop other tests' unsaved values.
+     */
+    public static void holdSavesForTest(boolean hold) {
+        savesHeldForTest = hold;
+    }
+
+    /**
+     * The file the loaded server config came from: the world's {@code serverconfig/zas-server.toml}
+     * if it has one, else {@code config/zas-server.toml}. Empty while none is loaded, or for a
+     * config a server synced to this client.
+     */
+    public static Optional<Path> file() {
+        for (ModConfig config : ModConfigs.getModConfigs(ZasMod.MOD_ID)) {
+            if (config.getType() == ModConfig.Type.SERVER && config.getSpec() == SPEC) {
+                try {
+                    return Optional.of(config.getFullPath());
+                } catch (IllegalStateException notFromAFile) {
+                    return Optional.empty();
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /** Whether the config excludes a dimension; false while no world's config is loaded. */
