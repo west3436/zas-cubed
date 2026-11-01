@@ -235,5 +235,10 @@ public final class EnclosureClassifier implements Classifier {
         public long position(long cell) {
             return SectionKeys.block(CellIds.x(cell), CellIds.y(cell), CellIds.z(cell));
         }
+
+        @Override
+        public CellNaming naming() {
+            return CellNaming.CELL_IDS;
+        }
     }
 }

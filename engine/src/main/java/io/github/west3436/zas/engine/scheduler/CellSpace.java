@@ -30,6 +30,12 @@ public interface CellSpace extends CellTopology {
     long position(long cell);
 
     /**
+     * How this space's cell ids name positions and sub-cells, consistent with {@link #position}
+     * and {@link #forEachCellAt}'s order. Pure, so published tables may keep it.
+     */
+    CellNaming naming();
+
+    /**
      * The cell at a block position that an operation there acts on: its largest cell (API-015),
      * or {@link #NO_CELL} if it has none. The default picks the largest by {@link #volume}, the
      * first on a tie.

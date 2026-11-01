@@ -267,12 +267,13 @@ They are checked differently:
   linked when they shared a zone edge at the undo point. A zone that absorbs
   another inherits its edges, so every chain of exchange stays inside one
   component. Unchanged zones are in no component and need no check.
-- The worker keeps the last tick's undo point: membership per zone and a copy
-  of each mixture. Restoring a component recreates its destroyed zones under
-  their old ids (`ZoneGraph.restoreZone`, which moves cells back out of the
-  zone that absorbed them) and copies the mixtures back
-  (`ZoneGraph.restoreMixture`), before the ledger period begins, so the ledger
-  needs no entry for it.
+- The worker keeps the last tick's undo point: the membership table published
+  at that point (an immutable `Membership`, §4.4, which later changes never
+  touch) and a copy of each mixture. Restoring a component recreates its
+  destroyed zones under their old ids from that table's cells
+  (`ZoneGraph.restoreZone`, which moves cells back out of the zone that
+  absorbed them) and copies the mixtures back (`ZoneGraph.restoreMixture`),
+  before the ledger period begins, so the ledger needs no entry for it.
 - The server thread publishes `AtmosSnapshot.withRejected(previous, zones)`:
   the new table, with the rejected zones and their positions answered from
   the previous one.
@@ -580,23 +581,73 @@ table keyed by packed position.
 `io.github.west3436.zas.engine.zone.ZoneGraph`. It runs on an abstract
 `CellTopology` (cell volumes and open neighbours, each flagged direct or zone
 boundary), so its tests need no geometry. Cells are `long` ids (in the world, `CellIds`;
-see §4.3 for the layout and its range), membership is
+see §4.3 for the layout and its range), the graph's own membership is
 a primitive map from cell to zone, and every open pair of cells with at least
 one zoned cell is stored on both cells, so edge counts follow joins, leaves,
-merges and geometry changes without rescanning. The section palette above is
-the layout the platform's topology moves to when sections arrive. Every change
-to zoned gas is recorded in
+merges and geometry changes without rescanning. A merge moves the absorbed
+zone's edges onto the surviving zone as wholes, rather than recounting its
+cells' pairs one by one. Every change to zoned gas is recorded in
 `io.github.west3436.zas.engine.conservation.ConservationLedger` by category
 (CORE-036, CORE-073).
 
-**Memory** (NFR-004, to be measured in R0):
+*Implemented (#106, 2026-11-01):* the section palettes above are the
+scheduler's membership, which the published snapshot reads.
+
+- **Following the graph.** The graph reports every change of a cell's zone to
+  a `MembershipListener`: a cell added, removed or resized, and a merge as a
+  whole. `MembershipTracker` keeps one `SectionMembers` per section holding
+  zoned cells: a `short[4096]` of local values, a palette of (zone id, cell
+  count, volume) entries, and a side table, sorted by position, for positions
+  whose zoned cells aren't just their first cell. A local value is 0
+  (unzoned), a palette entry (only sub-cell 0 is zoned), or −1 (see the side
+  table). A join, leave, fill or split changes one position and one entry; a
+  merge renames the absorbed zone's entries in its sections, so it costs
+  O(its sections), not O(its cells). Two entries may name one zone after a
+  merge; an entry is freed when its last cell leaves.
+- **Publishing.** `MembershipTracker.publish` returns an immutable
+  `Membership`: the sections, ascending, and per zone its sections and the
+  chunks they're in. Sections are copy-on-write: a published section is never
+  changed again, and the tracker copies it (sharing the 8 KiB position array
+  until a position changes) before its next change. So a table shares every
+  unchanged section and zone record with the one before; publishing costs the
+  changed sections plus copying two arrays of references, and a tick with no
+  zone change publishes the same table again. The undo point and the snapshot
+  each take a table (§3.3); `AtmosSnapshot` keeps it for lookups by position
+  (`zoneAt`, the position's largest zoned cell, API-015), by cell
+  (`zoneOfCell`, through the side table for sub-cells) and by chunk (saved
+  shares, DATA-002).
+- **Why this design.** The published table must be safe to read from the
+  server thread while the worker moves on (API-046). Copy-on-write sections
+  give that without locks and without copying what didn't change. The
+  alternative of rebuilding a sorted table of every zoned cell at each change,
+  as R0 first did, made a one-block edit in a 50,000-cell zone cost 3.6 ms on
+  the worker and kept CORE-025's Bench from passing
+  ([benchmarks](research/benchmarks.md#membership-palette-check-2026-11-01)).
+- **Determinism.** Tables list sections and zones in ascending order, side
+  tables are sorted, and hash maps are used for lookups only (§3.5). What the
+  simulation reads back (the undo point's cells, each zone's chunks for
+  pausing and storage, and which sections hold zoned cells for the mirror's
+  retention) comes out in a fixed order.
+
+**Memory** (NFR-004). Estimated before R0:
 
 - 8 KiB per section that holds any zoned cell, about 2 B per position
 - about 1–4 KiB per zone with its edges
 - for S-10: about 100–300 sections × 8 KiB plus 100 zones × 4 KiB, which is
   about 1–3 MiB
 
-That is well under the 64 MiB total budget.
+*Measured 2026-11-01 ([#78](https://github.com/west3436/zas-cubed/issues/78),
+closing O-4),* by retained size in the headless S-10 station
+([benchmarks](research/benchmarks.md#membership-palette-check-2026-11-01)):
+10.85 MiB in all. The palettes take 0.41 MiB (11 B per zoned cell; 37 B in
+sparse 27-cell rooms), the section mirror 0.84 MiB (22 B; 69 B sparse), and
+zones about 1 KiB each, as estimated. The estimate left out the zone graph's
+cells: each cell's object, its stored connections and the cell map come to
+189 B per zoned cell, 7.25 MiB, two thirds of the total. That is over NFR-004's
+original 64 B per cell, which NFR-004 now revises to 256 B; the total is well
+under its 64 MiB. Storing fewer pairs per cell (for example, none for a cell
+whose six faces all open into its own zone) is the lever if the per-cell cost
+ever matters.
 
 ### 4.5 Persistence (DATA-001 to DATA-016, D-54)
 
@@ -898,7 +949,7 @@ The test names include requirement IDs (README rule 5).
 | O-1 | **S6 (Ad Astra) not run.** The adapter design (events only, no mixins) is unproven. | [#9](https://github.com/west3436/zas-cubed/issues/9). Deferred to R2 with the Ad Astra adapter (D-66); nothing in R0 or R1 depends on it. |
 | O-2 | ~~**S0 on a real dedicated server.**~~ **Done** 2026-10-31. | [#77](https://github.com/west3436/zas-cubed/issues/77). On an installer-built 21.1.265 server, one API copy loads and the newest wins (0.1.1 over 0.1.0), the addon starts without `zas`, and no client classes load ([spikes · S0](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)). The fallback and provider are rechecked once the API has content (API-048). |
 | O-3 | ~~**Piston coverage in S1** not exercised~~ **Done.** | [#25](https://github.com/west3436/zas-cubed/issues/25). The `geo_010_piston` GameTest sees both the pushed-into and the vacated position. |
-| O-4 | **Memory** (NFR-004) estimated, not measured | [#78](https://github.com/west3436/zas-cubed/issues/78). Measure the palette membership layout in the R0 benchmark. |
+| O-4 | ~~**Memory** (NFR-004) estimated, not measured~~ **Done** 2026-11-01. | [#78](https://github.com/west3436/zas-cubed/issues/78). The R0 bench counts retained heap part by part: 10.85 MiB for S-10, about 1 KiB per zone, 222 B per zoned cell in the parts that scale with cells, of which the palettes are 11 B, the section mirror 22 B and the zone graph's cells 189 B (§4.4). NFR-004's per-cell budget is revised from 64 to 256 B, back to Draft for review. |
 | O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
 | O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |

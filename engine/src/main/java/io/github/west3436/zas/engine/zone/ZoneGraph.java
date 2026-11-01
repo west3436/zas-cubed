@@ -58,6 +58,7 @@ public final class ZoneGraph {
     private final TreeMap<Long, Zone> zones = new TreeMap<>();
     private final Collection<Zone> zonesView = Collections.unmodifiableCollection(zones.values());
     private long nextZoneId = 1;
+    private MembershipListener membership = MembershipListener.NONE;
 
     private final Linker linker = new Linker();
     private final double[] pruneScratch;
@@ -147,6 +148,21 @@ public final class ZoneGraph {
         if (next > nextZoneId) {
             nextZoneId = next;
         }
+    }
+
+    /**
+     * Sets what hears each change of a cell's zone (architecture §4.4); {@link
+     * MembershipListener#NONE} by default. Set it while the graph has no zones, so it hears every
+     * cell.
+     */
+    public void setMembershipListener(MembershipListener listener) {
+        membership = Objects.requireNonNull(listener, "listener");
+    }
+
+    /** The volume the graph holds for a cell, in L: as of its last join or refresh; 0 if it holds none. */
+    public double cellVolume(long cell) {
+        Cell c = cells.get(cell);
+        return c == null ? 0 : c.volume;
     }
 
     /**
@@ -400,7 +416,7 @@ public final class ZoneGraph {
         }
         unlinkAll(c);
         c.volume = topology.volume(id);
-        zone.addCell(c);
+        addCell(zone, c);
         linkFromTopology(c);
         GasMixture added = gas != null ? gas : ambientFor(c.volume);
         if (zone.mixture().merge(added)) {
@@ -430,7 +446,7 @@ public final class ZoneGraph {
         drainPruned(share);
         collectZoneNeighbours(c);
         unlinkAll(c);
-        zone.removeCell(c);
+        removeCell(c);
         c.volume = topology.volume(cell);
         if (c.volume > 0) {
             linkFromTopology(c);
@@ -499,6 +515,7 @@ public final class ZoneGraph {
             c.volume = volume;
             zone.setVolume(zone.volume() - old + volume);
             zone.changed = true;
+            membership.cellResized(c.id, zone, old, volume);
         }
         linkFromTopology(c);
         // Keep only the neighbours this cell lost a direct opening to.
@@ -528,7 +545,7 @@ public final class ZoneGraph {
         if (zone.cellCount() == 1) {
             List<Zone> neighbours = neighbourZones(c);
             unlinkAll(c);
-            zone.removeCell(c);
+            removeCell(c);
             cells.remove(c.id);
             GasMixture gas = zone.mixture();
             if (neighbours.isEmpty()) {
@@ -554,7 +571,7 @@ public final class ZoneGraph {
         }
         collectZoneNeighbours(c);
         unlinkAll(c);
-        zone.removeCell(c);
+        removeCell(c);
         cells.remove(c.id);
         zone.changed = true;
         splitCheck(zone);
@@ -752,8 +769,25 @@ public final class ZoneGraph {
         boolean aKeeps = a.cellCount() > b.cellCount() || (a.cellCount() == b.cellCount() && a.id() < b.id());
         Zone big = aKeeps ? a : b;
         Zone small = aKeeps ? b : a;
+        membership.zoneMerged(small, big);
+        // Edges move as wholes rather than pair by pair: the pairs between the two zones become
+        // internal, and every other connection of the small zone becomes the big zone's, on the edge
+        // to the same zone or the ambient, which wakes as counting its pairs one by one would wake it.
+        for (Edge e : new ArrayList<>(small.edges)) {
+            removeEdge(e);
+            Zone other = e.other(small);
+            if (other == big) {
+                continue;
+            }
+            Edge to = edgeFor(big, other);
+            to.connections += e.connections;
+            to.direct += e.direct;
+            to.sleeping = false;
+        }
         while (small.cellCount() > 0) {
-            relabel(small.cellAt(small.cellCount() - 1), big);
+            Cell c = small.cellAt(small.cellCount() - 1);
+            small.removeCell(c);
+            big.addCell(c);
         }
         big.mixture().merge(small.mixture());
         big.pinned |= small.pinned;
@@ -769,8 +803,8 @@ public final class ZoneGraph {
         for (int i = 0; i < c.degree; i++) {
             countPair(c, cells.get(c.neighbours[i]), c.direct[i], -1);
         }
-        c.zone.removeCell(c);
-        to.addCell(c);
+        removeCell(c);
+        addCell(to, c);
         for (int i = 0; i < c.degree; i++) {
             countPair(c, cells.get(c.neighbours[i]), c.direct[i], 1);
         }
@@ -1064,7 +1098,7 @@ public final class ZoneGraph {
                     dropIfIdle(n);
                 }
             }
-            z.removeCell(c);
+            removeCell(c);
             dropIfIdle(c);
         }
         drainPruned(z.mixture());
@@ -1225,6 +1259,21 @@ public final class ZoneGraph {
         }
     }
 
+    // ---- Membership (architecture §4.4) ----------------------------------------
+
+    /** Adds a cell to a zone, telling the membership listener. */
+    private void addCell(Zone zone, Cell c) {
+        zone.addCell(c);
+        membership.cellAdded(c.id, zone, c.volume);
+    }
+
+    /** Removes a cell from its zone, telling the membership listener. */
+    private void removeCell(Cell c) {
+        Zone zone = c.zone;
+        membership.cellRemoved(c.id, zone, c.volume);
+        zone.removeCell(c);
+    }
+
     // ---- Zone lifecycle (CORE-026, CORE-065) ---------------------------------
 
     private Zone newZone(GasMixture mixture) {
@@ -1296,7 +1345,7 @@ public final class ZoneGraph {
             }
             unlinkAll(c);
             c.volume = topology.volume(usable[i]);
-            zone.addCell(c);
+            addCell(zone, c);
             linkFromTopology(c);
         }
         if (zone.mixture().merge(gas)) {
@@ -1336,7 +1385,7 @@ public final class ZoneGraph {
                 n.removeLinkAt(n.indexOf(c.id));
                 dropIfIdle(n);
             }
-            zone.removeCell(c);
+            removeCell(c);
             cells.remove(c.id);
         }
         drainPruned(zone.mixture());
@@ -1393,7 +1442,7 @@ public final class ZoneGraph {
                 }
                 unlinkAll(c);
                 c.volume = topology.volume(cellId);
-                zone.addCell(c);
+                addCell(zone, c);
                 linkFromTopology(c);
             }
         }

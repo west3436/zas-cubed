@@ -1,6 +1,9 @@
 package io.github.west3436.zas.engine.bench;
 
+import io.github.west3436.zas.engine.bench.HeapAccounting.Part;
+import io.github.west3436.zas.engine.bench.HeapAccounting.Scale;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
 
 /**
@@ -64,6 +67,35 @@ final class StationBench {
         }
     }
 
+    /** NFR-004's readings: rough GC'd differences, and the retained-size accounting. */
+    static final class Heap {
+        long baseline;
+        long world;
+        long running;
+        HeapAccounting station;
+        int zones;
+        long cells;
+        int positions;
+        HeapAccounting sparse;
+        int sparseZones;
+        long sparseCells;
+
+        void count(AtmosSnapshot s, boolean sparseCase) {
+            long n = 0;
+            for (ZoneView z : s.zones()) {
+                n += z.cellCount();
+            }
+            if (sparseCase) {
+                sparseZones = s.zoneCount();
+                sparseCells = n;
+            } else {
+                zones = s.zoneCount();
+                cells = n;
+                positions = s.zonedPositions();
+            }
+        }
+    }
+
     static void run(boolean quick) {
         EngineBench.section("S-10 engine load (CORE-045, CORE-046, CORE-047; NFR-001, NFR-002, NFR-005)");
         int minutes = quick ? 2 : 10;
@@ -85,7 +117,7 @@ final class StationBench {
                 + " spike S5's 408 engine gas operations per second (300 device and 108 breather stand-ins).");
         System.out.println();
 
-        long[] heap = new long[3];
+        Heap heap = new Heap();
         Run noOps = script(20, false, minutes, warmMinutes, null);
         Run ops = script(20, true, minutes, warmMinutes, heap);
 
@@ -123,11 +155,7 @@ final class StationBench {
                     r.zonesMax);
         }
         System.out.println();
-        System.out.printf(
-                "Heap (NFR-004, rough): the world alone %.1f MiB; with the station zoned and running, %.1f MiB more,"
-                        + " or %.0f bytes per zoned cell (all atmos structures: graph, section mirror, snapshots).%n",
-                heap[1] / 1048576.0, (heap[2] - heap[1]) / 1048576.0, (heap[2] - heap[1]) / 40_000.0);
-        System.out.println();
+        printHeap(heap);
 
         if (!quick) {
             System.out.println("**Cost by period (CORE-046), with ops, same game time:**");
@@ -151,15 +179,18 @@ final class StationBench {
         }
     }
 
-    /** Builds a station, pressurizes it, warms up and scripts it; heap, if given, gets three readings. */
-    static Run script(int periodTicks, boolean withOps, int minutes, int warmMinutes, long[] heap) {
+    /**
+     * Builds a station, pressurizes it, warms up and scripts it. With {@code heap}, the heap is
+     * measured after the warm-up, and once more after the run with 1,000 sparse idle zones added.
+     */
+    static Run script(int periodTicks, boolean withOps, int minutes, int warmMinutes, Heap heap) {
         if (heap != null) {
-            heap[0] = EngineBench.usedHeap();
+            heap.baseline = EngineBench.usedHeap();
         }
         Station st = new Station(periodTicks, withOps);
         st.h.world.clearDirty();
         if (heap != null) {
-            heap[1] = EngineBench.usedHeap() - heap[0];
+            heap.world = EngineBench.usedHeap() - heap.baseline;
         }
         Run run = new Run(periodTicks);
         try (Harness h = st.h) {
@@ -170,7 +201,9 @@ final class StationBench {
                 st.scriptedStep(t);
             }
             if (heap != null) {
-                heap[2] = EngineBench.usedHeap() - heap[0];
+                heap.running = EngineBench.usedHeap() - heap.baseline;
+                heap.station = HeapAccounting.of(h);
+                heap.count(h.snapshot(), false);
             }
             int explodeAt = t + (minutes / 2) * perMinute + perMinute / 3;
             int repairAt = explodeAt + perMinute / 6;
@@ -192,8 +225,86 @@ final class StationBench {
                 run.record(h);
             }
             run.warnings = h.warnings.get();
+            if (heap != null) {
+                // Sparse zones: 1,000 sealed 27-cell rooms, about 10 to a section.
+                ScalingBench.addIdleZones(st, Harness.BUDGET_NANOS);
+                h.steps(3);
+                heap.sparse = HeapAccounting.of(h);
+                heap.count(h.snapshot(), true);
+            }
         }
         return run;
+    }
+
+    private static void printHeap(Heap heap) {
+        HeapAccounting a = heap.station;
+        HeapAccounting b = heap.sparse;
+        int addedZones = heap.sparseZones - heap.zones;
+        long addedCells = heap.sparseCells - heap.cells;
+        System.out.printf(
+                "**Heap (NFR-004).** Retained-size accounting (`HeapAccounting`) of one dimension's atmos"
+                        + " structures after the warm-up: %,d zones, %,d zoned cells at %,d positions. \"Sparse\""
+                        + " adds 1,000 sealed 27-cell rooms after the run (%,d zones and %,d cells more).%n%n",
+                heap.zones, heap.cells, heap.positions, addedZones, addedCells);
+        System.out.println("| Part | Scales with | S-10 | Per zoned cell | Per zone | Sparse: per added cell |"
+                + " per added zone |");
+        System.out.println("|---|---|---|---|---|---|---|");
+        for (Part p : Part.values()) {
+            long delta = b.bytes(p) - a.bytes(p);
+            System.out.printf(
+                    "| %s | %s | %s | %.1f B | %.0f B | %.1f B | %.0f B |%n",
+                    p.label,
+                    p.scale.name().toLowerCase(java.util.Locale.ROOT),
+                    mib(a.bytes(p)),
+                    a.bytes(p) / (double) heap.cells,
+                    a.bytes(p) / (double) heap.zones,
+                    delta / (double) addedCells,
+                    delta / (double) addedZones);
+        }
+        System.out.printf(
+                "| **Total** | | %s | %.1f B | %.0f B | %.1f B | %.0f B |%n%n",
+                mib(a.total()),
+                a.total() / (double) heap.cells,
+                a.total() / (double) heap.zones,
+                (b.total() - a.total()) / (double) addedCells,
+                (b.total() - a.total()) / (double) addedZones);
+        System.out.println("Largest classes in each part, S-10:");
+        System.out.println();
+        for (Part p : Part.values()) {
+            System.out.println("- " + p.label + ": " + String.join("; ", a.topClasses(p, 4)));
+        }
+        System.out.println();
+        long perCell = a.total(Scale.CELL);
+        long mirror = a.bytes(Part.MIRROR);
+        long perZone = a.total(Scale.ZONE);
+        long sparsePerCell = b.total(Scale.CELL) - perCell;
+        long sparseMirror = b.bytes(Part.MIRROR) - mirror;
+        long sparsePerZone = b.total(Scale.ZONE) - perZone;
+        System.out.printf(
+                "Against NFR-004 (S-10 / sparse rooms): per zoned cell, the parts that scale with cells come to"
+                        + " %.1f B / %.1f B, of which the section mirror is %.1f B / %.1f B (%.1f B / %.1f B"
+                        + " without it); per zone, the parts that scale with zones come to %.0f B / %.0f B; in all,"
+                        + " %s.%n",
+                perCell / (double) heap.cells,
+                sparsePerCell / (double) addedCells,
+                mirror / (double) heap.cells,
+                sparseMirror / (double) addedCells,
+                (perCell - mirror) / (double) heap.cells,
+                (sparsePerCell - sparseMirror) / (double) addedCells,
+                perZone / (double) heap.zones,
+                sparsePerZone / (double) addedZones,
+                mib(a.total()));
+        System.out.printf(
+                "Cross-check, GC'd `Runtime` difference: the world alone %s; the world and the zoned, running"
+                        + " station %s, so %s for atmos, %.0f B per zoned cell.%n%n",
+                mib(heap.world),
+                mib(heap.running),
+                mib(heap.running - heap.world),
+                (heap.running - heap.world) / (double) heap.cells);
+    }
+
+    private static String mib(long bytes) {
+        return String.format("%.2f MiB", bytes / 1048576.0);
     }
 
     private static void topUp(Station st) {

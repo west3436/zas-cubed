@@ -78,15 +78,33 @@ zones aren't quite free: each atmos tick still copies every zone's mixture and
 rebuilds the published table, about 0.4 µs per zone.*
 
 #### NFR-004 · Memory
-`Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
+`Should` · `R1` · `Draft` · Verify: Bench · Trace: S-10
 
-Atmos heap use shall average at most 64 bytes per zoned cell and 4 KiB per zone
-(excluding its cells), and at most 64 MiB in total in S-10. Spikes S3 and S5
-may revise these by dated note.
+Atmos heap use shall average at most 256 bytes per zoned cell and 4 KiB per
+zone (excluding its cells), and at most 64 MiB in total in S-10. Spikes S3 and
+S5 may revise these by dated note.
 
 - **Rationale:** Inferred: starting budgets that fit a 4 GB heap (D-40);
   spikes S3 and S5 may revise them.
 - **Verify:** Bench measures heap use in S-10.
+
+*2026-11-01: per-cell budget revised from 64 to 256 bytes after measuring it
+([#78](https://github.com/west3436/zas-cubed/issues/78)); back to Draft for
+review, as a material change. The R0 bench now counts the retained size of
+every atmos structure in the headless S-10 station, part by part
+([benchmarks](../research/benchmarks.md#membership-palette-check-2026-11-01)):
+10.85 MiB in all, about 1 KiB per zone, and 222 bytes per zoned cell in the
+parts that scale with cells. Of those 222 bytes, the zone graph's cells take
+189 (each cell's object, its stored connections and the cell map), the section
+mirror 22 and the membership palettes 11. The 64-byte figure assumed
+membership was the per-cell cost; the palette layout meets it with room to
+spare, but the graph's per-cell connections, which the R0 design keeps so
+edge counts follow every change without rescanning (architecture §4.4), can't
+fit it. 256 bytes keeps a margin over S-10's 222. The binding limit is the
+total: at 256 bytes per cell, 64 MiB holds about 260,000 zoned cells, six
+times S-10. Sparse zones cost more per cell (313 bytes in 27-cell rooms about
+ten to a section), mostly the mirror's 8 KiB per mirrored section; S-10 is
+what this budget is set against.*
 
 ## Reliability
 

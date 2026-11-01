@@ -100,8 +100,11 @@ public final class DimensionEngine {
     /** Zones the classifier holds at unresolved breaches (GEO-026), from the last boundaries phase. */
     private long[] heldZoneIds = new long[0];
 
-    /** Membership as of the end of the last tick, for the snapshot; null when it must be rebuilt. */
-    private Membership membership = Membership.EMPTY;
+    /**
+     * Which zone each cell is in, by section palette (architecture §4.4): kept up to date by the
+     * graph change by change, and published as immutable tables for the undo point and the snapshot.
+     */
+    private final MembershipTracker membership;
 
     private AtmosSnapshot lastSnapshot;
 
@@ -149,6 +152,8 @@ public final class DimensionEngine {
                 ambientMixture(ambient),
                 settings.exchange(),
                 ConservationLedger.of(registry, config));
+        this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
+        graph.setMembershipListener(membership);
         this.lastSnapshot = AtmosSnapshot.empty(registry);
     }
 
@@ -304,15 +309,19 @@ public final class DimensionEngine {
                 lastUnresolved.add(t.cell());
             }
         }
-        if (membership == null || toClassify.length > 0 || !membership.sameZones(graph)) {
-            membership = Membership.of(graph, space);
+        Membership undo = membership.publish();
+        if (undo.size() != graph.zoneCount()) {
+            throw new IllegalStateException(
+                    "zone membership lists " + undo.size() + " zones; the graph has " + graph.zoneCount());
         }
-        Membership undo = membership;
         GasMixture[] undoCopies = new GasMixture[undo.zoneIds.length];
         long[][] undoPartners = new long[undo.zoneIds.length][];
         boolean[] undoPins = new boolean[undo.zoneIds.length];
         int zi = 0;
         for (Zone z : graph.zones()) {
+            if (undo.zoneIds[zi] != z.id()) {
+                throw new IllegalStateException("zone membership lists zone " + undo.zoneIds[zi] + " for " + z);
+            }
             undoCopies[zi] = z.mixture().copy();
             undoPins[zi] = z.isPinned();
             undoPartners[zi] = partners(z);
@@ -356,9 +365,6 @@ public final class DimensionEngine {
                 }
             }
             finished.add(o);
-        }
-        if (!undo.sameZones(graph)) {
-            membership = Membership.of(graph, space);
         }
         AtmosSnapshot snapshot = snapshot(tick);
         retain();
@@ -426,7 +432,6 @@ public final class DimensionEngine {
                 requeued.add(lastZoneOps.get(seq));
             }
         }
-        membership = null;
         return requeued;
     }
 
@@ -451,8 +456,7 @@ public final class DimensionEngine {
             evictUnloaded();
         }
         dropUnloadedSections(toRefresh);
-        Set<Long> zonedSections = zonedSections();
-        Set<Long> pausedNow = pausedZones(membership);
+        Set<Long> pausedNow = pausedZones();
         // This batch's captures, and the latest capture of every section with held changes.
         TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
         heldTruth.clear();
@@ -469,7 +473,7 @@ public final class DimensionEngine {
             SectionSnapshot old = mirror.section(s.key());
             if (old == null) {
                 mirror.put(s);
-                addBorderCells(s.key(), zonedSections, toRefresh);
+                addBorderCells(s.key(), toRefresh);
                 continue;
             }
             if (old.isUniform() && s.isUniform() && old.geometryId(0) == s.geometryId(0)) {
@@ -523,9 +527,6 @@ public final class DimensionEngine {
                 graph.refresh(cell);
             }
         }
-        if (cells.length > 0) {
-            membership = null;
-        }
         ingest(batch);
         resumeRebuilt(surfaces, resuming);
         return cells;
@@ -553,12 +554,14 @@ public final class DimensionEngine {
      * zone that has a loaded chunk (architecture §4.5). Its state is in the chunks' saved shares.
      */
     private void evictUnloaded() {
-        Membership m = zonedMembership();
-        int n = m.size();
+        Zone[] zs = graph.zones().toArray(Zone[]::new);
+        int n = zs.length;
+        long[] ids = new long[n];
         boolean[] evict = new boolean[n];
         boolean any = false;
         for (int i = 0; i < n; i++) {
-            long[] chunks = m.chunks(i);
+            ids[i] = zs[i].id();
+            long[] chunks = membership.chunks(ids[i]);
             boolean all = chunks.length > 0;
             for (long c : chunks) {
                 if (!mirror.isChunkUnloaded(c)) {
@@ -581,9 +584,9 @@ public final class DimensionEngine {
                 if (!evict[i]) {
                     continue;
                 }
-                for (Edge e : graph.zone(m.zoneIds[i]).edges()) {
-                    Zone other = e.other(graph.zone(m.zoneIds[i]));
-                    if (other != null && !evict[m.indexOf(other.id())]) {
+                for (Edge e : zs[i].edges()) {
+                    Zone other = e.other(zs[i]);
+                    if (other != null && !evict[Arrays.binarySearch(ids, other.id())]) {
                         evict[i] = false;
                         changed = true;
                         break;
@@ -593,11 +596,9 @@ public final class DimensionEngine {
         }
         for (int i = 0; i < n; i++) {
             if (evict[i]) {
-                long id = m.zoneIds[i];
-                graph.evict(graph.zone(id));
-                missingChunks.remove(id);
-                rebuilt.remove(id);
-                membership = null;
+                graph.evict(zs[i]);
+                missingChunks.remove(ids[i]);
+                rebuilt.remove(ids[i]);
             }
         }
     }
@@ -611,12 +612,11 @@ public final class DimensionEngine {
         if (!mirror.hasUnloadedChunks()) {
             return;
         }
-        Set<Long> zoned = zonedSections();
         for (long key : mirror.keys()) {
-            if (mirror.isChunkUnloaded(SectionKeys.chunkOf(key)) && !zoned.contains(key)) {
+            if (mirror.isChunkUnloaded(SectionKeys.chunkOf(key)) && !membership.hasSection(key)) {
                 mirror.remove(key);
                 heldTruth.remove(key);
-                addBorderCells(key, zoned, toRefresh);
+                addBorderCells(key, toRefresh);
             }
         }
     }
@@ -645,14 +645,14 @@ public final class DimensionEngine {
         return found[0];
     }
 
-    /** The zones paused by an unloaded chunk, a missing share or a held breach, as of {@code m}. */
-    private Set<Long> pausedZones(Membership m) {
+    /** The zones paused by an unloaded chunk, a missing share or a held breach. */
+    private Set<Long> pausedZones() {
         Set<Long> out = new HashSet<>();
         if (mirror.hasUnloadedChunks()) {
-            for (int i = 0; i < m.size(); i++) {
-                for (long c : m.chunks(i)) {
+            for (Zone z : graph.zones()) {
+                for (long c : membership.chunks(z.id())) {
                     if (mirror.isChunkUnloaded(c)) {
-                        out.add(m.zoneIds[i]);
+                        out.add(z.id());
                         break;
                     }
                 }
@@ -669,20 +669,11 @@ public final class DimensionEngine {
     private void updatePaused(Set<Long> extra) {
         missingChunks.keySet().removeIf(id -> graph.zone(id) == null);
         rebuilt.keySet().removeIf(id -> graph.zone(id) == null);
-        Membership m = zonedMembership();
-        Set<Long> paused = pausedZones(m);
+        Set<Long> paused = pausedZones();
         paused.addAll(extra);
         for (Zone z : graph.zones()) {
             graph.setPaused(z, paused.contains(z.id()));
         }
-    }
-
-    /** The membership as of now, rebuilt if the zones changed since it was taken. */
-    private Membership zonedMembership() {
-        if (membership == null || !membership.sameZones(graph)) {
-            membership = Membership.of(graph, space);
-        }
-        return membership;
     }
 
     /**
@@ -695,16 +686,12 @@ public final class DimensionEngine {
         if (batch.records().isEmpty()) {
             return;
         }
-        Membership m = zonedMembership();
         long[] unloadedListed = batch.unloadedListedChunks();
         for (ChunkRecord r : batch.records()) {
             for (ZoneShare share : r.zones()) {
                 Zone z = graph.zone(share.zoneId());
-                if (z != null) {
-                    int idx = m.indexOf(z.id());
-                    if (idx >= 0 && Arrays.binarySearch(m.chunks(idx), r.chunk()) >= 0) {
-                        continue;
-                    }
+                if (z != null && Arrays.binarySearch(membership.chunks(z.id()), r.chunk()) >= 0) {
+                    continue;
                 }
                 Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share), share.pinned());
                 if (loaded == null) {
@@ -731,7 +718,6 @@ public final class DimensionEngine {
                 rebuilt.put(loaded.id(), Membership.sortedDistinct(concat(held, r.heldBlocks())));
             }
         }
-        membership = null;
     }
 
     private GasMixture shareMixture(ZoneShare share) {
@@ -756,7 +742,6 @@ public final class DimensionEngine {
         if (rebuilt.isEmpty()) {
             return;
         }
-        Membership m = zonedMembership();
         for (java.util.Iterator<Map.Entry<Long, long[]>> it = rebuilt.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Long, long[]> e = it.next();
             Zone z = graph.zone(e.getKey());
@@ -767,9 +752,8 @@ public final class DimensionEngine {
             if (missingChunks.containsKey(z.id())) {
                 continue;
             }
-            int idx = m.indexOf(z.id());
             boolean unloaded = false;
-            for (long c : m.chunks(idx)) {
+            for (long c : membership.chunks(z.id())) {
                 unloaded |= mirror.isChunkUnloaded(c);
             }
             if (unloaded) {
@@ -816,18 +800,14 @@ public final class DimensionEngine {
         return Membership.sortedDistinct(concat(a, b));
     }
 
-    private Set<Long> zonedSections() {
-        return zonedMembership().sections;
-    }
-
     /** For a newly mirrored section, the cells on each face that borders a zoned section, both sides. */
-    private void addBorderCells(long key, Set<Long> zonedSections, CellSet out) {
+    private void addBorderCells(long key, CellSet out) {
         int sx = SectionKeys.x(key);
         int sy = SectionKeys.y(key);
         int sz = SectionKeys.z(key);
         for (Face f : Face.values()) {
             long neighbour = SectionKeys.section(sx + f.dx(), sy + f.dy(), sz + f.dz());
-            if (!zonedSections.contains(neighbour)) {
+            if (!membership.hasSection(neighbour)) {
                 continue;
             }
             for (int a = 0; a < 16; a++) {
@@ -1201,6 +1181,7 @@ public final class DimensionEngine {
     // ---- Snapshot and mirror retention ---------------------------------------------------
 
     private AtmosSnapshot snapshot(long tick) {
+        Membership table = membership.publish();
         List<ZoneView> views = new ArrayList<>(graph.zoneCount());
         for (Zone z : graph.zones()) {
             GasMixture m = z.mixture();
@@ -1231,12 +1212,12 @@ public final class DimensionEngine {
                     z.isPaused(),
                     z.isPinned()));
         }
-        long[][] chunks = new long[membership.size()][];
+        long[][] chunks = new long[table.size()][];
         for (int i = 0; i < chunks.length; i++) {
-            long[] waiting = missingChunks.get(membership.zoneIds[i]);
-            chunks[i] = waiting == null ? membership.chunks(i) : union(membership.chunks(i), waiting);
+            long[] waiting = missingChunks.get(table.zoneIds[i]);
+            chunks[i] = waiting == null ? table.chunks(i) : union(table.chunks(i), waiting);
         }
-        return AtmosSnapshot.of(tick, registry, views, membership, chunks);
+        return AtmosSnapshot.of(tick, registry, views, table, chunks);
     }
 
     /**
@@ -1248,20 +1229,19 @@ public final class DimensionEngine {
         if (!buffered.isEmpty() || classifier.hasPending()) {
             return;
         }
-        Set<Long> zoned = membership.sections;
         for (long key : mirror.keys()) {
-            if (!zoned.contains(key) && !bordersZoned(key, zoned) && !heldTruth.containsKey(key)) {
+            if (!membership.hasSection(key) && !bordersZoned(key) && !heldTruth.containsKey(key)) {
                 mirror.remove(key);
             }
         }
     }
 
-    private static boolean bordersZoned(long key, Set<Long> zoned) {
+    private boolean bordersZoned(long key) {
         int x = SectionKeys.x(key);
         int y = SectionKeys.y(key);
         int z = SectionKeys.z(key);
         for (Face f : Face.values()) {
-            if (zoned.contains(SectionKeys.section(x + f.dx(), y + f.dy(), z + f.dz()))) {
+            if (membership.hasSection(SectionKeys.section(x + f.dx(), y + f.dy(), z + f.dz()))) {
                 return true;
             }
         }
