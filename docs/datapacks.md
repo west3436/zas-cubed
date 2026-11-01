@@ -4,10 +4,10 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 `data/` folder; servers can add them with an ordinary datapack.
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
-[geometry overrides](#geometry-overrides). The rest of OPS-002's list
-(reactions, thermal properties, fuel, protection and hazard profiles, entity
-and block tags) arrives with its features in R1. Every format reports invalid
-files the same way ([Invalid files](#invalid-files)).
+[geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags).
+The rest of OPS-002's list (reactions, thermal properties, fuel, protection and
+hazard profiles, entity tags) arrives with its features in R1. Every format
+reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
 
@@ -303,6 +303,24 @@ data/<namespace>/zas/geometry_overrides/<path>.json
 - **When it applies:** overrides load when the server starts and reload with
   `/reload`, which rebuilds the geometry table; zones are rebuilt if the
   geometry changed.
+
+## Block tags
+
+ZAS³ reads these Minecraft block tags, at
+`data/zas/tags/block/<name>.json`. Packs and mods add to them as to any tag:
+a file at the same path adds its entries, unless it says `"replace": true`.
+
+| Tag | Holds by default | Used for |
+|---|---|---|
+| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns |
+| `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
+
+A trigger counts when it starts: a fire appears, a block is lit or a plant is
+placed. A crop growing or a lit furnace turning doesn't count. The tags apply
+from the next block change after `/reload`. Whether each trigger is on is the
+preset's (`combustion_forms_zones`, `planting_forms_zones`,
+[config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
+`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property.
 
 ## Invalid files
 

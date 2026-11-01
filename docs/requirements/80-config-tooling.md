@@ -201,6 +201,14 @@ planting as zone triggers (CORE-056, FIRE-024), block pressure damage
 breaking blocks (CONT-107). It stays Accepted until those features read their
 options and their GameTests check the behaviour under each preset.*
 
+*2026-11-01: combustion and planting as zone triggers are wired (CORE-056,
+[#64](https://github.com/west3436/zas-cubed/issues/64)). The change hook reads
+`combustion_forms_zones` and `planting_forms_zones` when a fire starts, a fuel
+block is lit or a plant is placed, so neither waits any more, and the
+`core_056_` GameTests check each under both presets and with overrides either
+way. Still waiting: block pressure damage, photosynthesis rates and container
+explosions.*
+
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
 

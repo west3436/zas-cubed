@@ -429,6 +429,19 @@ uncovered part of the face (GEO-003, GEO-004).
   *Implemented (#23):* the interest set is the sections the worker mirrors,
   from the last applied `Result`; as §4.3 says, those are exactly the sections
   holding or bordering zoned cells or a pending classification.
+- **Hardcore zone triggers (CORE-056).** *Implemented (#64):* the hook also
+  reads a flag per block state (`TriggerStates`, rebuilt from
+  `#zas:combustion` and `#zas:plants` whenever the server binds tags). A write
+  whose new state has a flag the old one lacked starts a trigger: a fire
+  starting, a fuel block being lit, a plant being placed. If the trigger's
+  preset option is on, the position goes into that trigger's per-section bitset,
+  which coalesces like the dirty bits and is dropped when its chunk unloads.
+  Any other write costs two more array reads, and the preset is read only for a
+  write that starts a trigger. At batch close `DimensionAtmos` drains the
+  triggers. It queues one operation per trigger that moves no gas and may form
+  a zone, at the cell a mutation at the block's centre resolves to (§6.5), and
+  skips cells the published table already zones. From there it is like any
+  zone-forming operation (§4.3).
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
   saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
@@ -845,8 +858,10 @@ preset change or a reloaded config applies from the next read. A value the
 worker needs should travel in the batch, as the ambient does, so one atmos
 tick sees one value. Zone triggers are viewed through `ZoneTrigger`: Normal's
 (CORE-055) are on under both presets, and the platform passes
-`ZoneTrigger.<kind>.active()` as an operation's `triggersZone`. Options whose
-feature hasn't landed are declared with the requirement they wait for.
+`ZoneTrigger.<kind>.active()` as an operation's `triggersZone`. Hardcore's
+combustion and planting are read by the change hook when a trigger starts
+(§4.2, #64). Options whose feature hasn't landed are declared with the
+requirement they wait for.
 `/zas preset` shows and changes them (commands.md).
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
@@ -999,7 +1014,7 @@ because STARTUP config is too late for block classes.
 
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
-| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation and mark the position dirty if its geometry changed | GEO-010, GEO-011, GEO-012 | **S1**, GameTests |
+| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, and record a Hardcore zone trigger the write starts | GEO-010, GEO-011, GEO-012, CORE-056 | **S1**, GameTests |
 | M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable | Fire inside a zone without enough O₂ goes out; burning consumes O₂ | FIRE-020, FIRE-022, FIRE-023, FIRE-030 | research only |
 | M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` | No ignition without enough O₂ | FIRE-020, FIRE-014 | research only |
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` and `FireBlock#canCatchFire(BlockGetter, BlockPos, Direction)` | `@WrapMethod` / `@ModifyReturnValue` | Fire spread depends on O₂ | FIRE-016, FIRE-020 | research only |

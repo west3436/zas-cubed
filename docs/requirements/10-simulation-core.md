@@ -809,6 +809,32 @@ to the Normal triggers (CORE-055):
 - **Verify:** GameTests under Hardcore check a lit furnace, the generator and
   planting in a sealed room each form a zone.
 
+*2026-11-01: Built except for the generator, which doesn't exist yet, so this
+stays Accepted ([#64](https://github.com/west3436/zas-cubed/issues/64)).
+Combustion is the burning states of the blocks in `#zas:combustion`: fire and
+soul fire, and furnaces, smokers, blast furnaces, campfires and soul campfires
+while `lit=true`. Planting is placing a block of `#zas:plants`, CONT-053's
+crops, saplings and leaves. Candles aren't combustion: FIRE-025 gives them no
+fuel profile, so a zone they formed would hold air that nothing changes. The
+change hook (GEO-010) reads a flag per block state, and a write that gives a
+position a flag its old state didn't have is a trigger, under the trigger's
+option (OPS-007): a fire starting, a block being lit, a plant being placed.
+Growing, ageing, turning and going out aren't triggers, and trigger blocks
+already in place when the preset changes stay unzoned, since zones never come
+from a scan (CORE-054). At the next batch close each trigger becomes an
+operation that moves no gas and may form a zone. It acts on the cell a mutation
+at the block would act on (API-015), so a furnace acts on its open neighbour,
+and is dropped if that cell is already zoned. The `core_056_` GameTests check,
+under Hardcore, that each combustion block and a sapling, wheat and leaves in a
+sealed room form a zone holding the room's ambient air. They also check that
+the same triggers in the open form none, that none form under Normal, that each
+option's override switches its trigger, that only a starting trigger counts,
+and that a trigger in a zone changes nothing. The generator joins through data,
+not the API: it lists itself in `#zas:combustion` and has a boolean `lit`
+property (CONT-067). `core_056_a_tagged_fuel_block_forms_a_zone_like_the_generator`
+checks that path with a redstone lamp standing in. CONT-067's GameTest with the
+real generator completes this Verify.*
+
 #### CORE-052 · Zone garbage collection
 `Should` · `R1` · `Accepted` · Verify: GameTest
 
