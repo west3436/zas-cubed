@@ -235,7 +235,7 @@ the cited atomic weights summed over the formula, and C_v is the cited C_p
 less R.*
 
 #### CORE-012 · Gas classification tags
-`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
 
 Gases shall be groupable by tags (for example breathable/oxidizer, toxic,
 flammable, inert, visible) that hazard, fire, and device logic consume.
@@ -259,6 +259,11 @@ field. Addons read them through `GasTags` in the API. The
 built from other tags, a broken tag reported and left out, and that the API
 agrees. No LIFE, FIRE or CONT logic exists yet; their tests will exercise the
 tags when it does.*
+
+*2026-11-01: back to Accepted, by the owner's decision. The tags, their loader
+and the API are done, but the Verify also needs the LIFE, FIRE or CONT logic
+that reads them. CORE-012 moves to Implemented with the first of those whose
+tests exercise a tag.*
 
 #### CORE-013 · Safe gas set changes
 `Should` · `R1` · `Implemented` · Verify: GameTest
@@ -305,7 +310,8 @@ built-in gases cite theirs in `sources.phase`: boiling points and heats of
 vaporization from NIST's fluid data at 101.325 kPa, melting points as the
 triple-point temperatures, within 0.1 K of the melting point there, and heats
 of fusion for N₂O and CH₄. O₂, N₂, H₂O, H₂ and CO ship no heat of fusion
-until a checked reference value is found. The `core_017_*` Unit tests build
+until a checked reference value is found. *(2026-11-01: the owner chose to
+leave them out until a track, such as HEAT's phase changes, needs them.)* The `core_017_*` Unit tests build
 definitions with and without phase data and check its rules; the
 `core_017_phase_data_is_optional` GameTest loads a datapack gas with it, one
 without it, and one whose phase data contradicts itself, which is skipped.*
