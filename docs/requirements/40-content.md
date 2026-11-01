@@ -4,11 +4,15 @@
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). CONT-100 to CONT-107 were added and
 accepted on 2026-10-31 (container reactions, TTV and igniter, D-57), and
-CONT-108 and CONT-109 from the gap-check answers (D-59).
+CONT-108 and CONT-109 from the gap-check answers (D-59). On 2026-11-01 the air
+alarm became the area air controller and the power cable and multipart block
+were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
+CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
+CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
-portable atmospherics, tanks and suits, alarms and firelocks, tools, how gas is
-obtained, and progression. Background:
+portable atmospherics, tanks and suits, area air controllers and firelocks,
+tools, how gas is obtained, power, and progression. Background:
 [vg-atmos-content](../research/vg-atmos-content.md).
 
 R1 ships a playable subset. The rest of vg's device set is R2 (see the table
@@ -437,17 +441,20 @@ Survival canisters are crafted empty.
 - **Verify:** Inspect the creative tab and recipes.
 
 #### CONT-018 · Portable pump and scrubber
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
 
-A portable pump and a portable scrubber, as blocks with an FE buffer, shall
-work on the room or on a held tank.
+A portable pump and a portable scrubber, as blocks that run on a battery in a
+slot (CONT-112), shall work on the room or on a held tank.
 
 - **Rationale:** vg: vg's portable pump and scrubber, which act on the room or
   a held tank ([vg
-  §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)); the FE
-  buffer follows D-25.
+  §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)); the
+  battery follows D-69.
 - **Verify:** A GameTest checks each works on a room and on a held tank, and
-  stops without power.
+  stops when its battery is empty.
+
+*2026-11-01: the portables run on a battery instead of their own FE buffer,
+whose charging was left open by D-68 (D-69).*
 
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, S-05
@@ -689,25 +696,30 @@ until it has been vented.
 
 A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 
-## Alarms and firelocks
+## Area air controllers and firelocks
 
-#### CONT-040 · Air alarm
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+The area air controller takes the place of vg's air alarm (D-68). It also
+powers the parts around it (see [Power](#power)).
 
-An air alarm shall sample its zone each atmos tick and rate each reading
-against its preset's (min2, min1, max1, max2): at or beyond min2 or max2 is
-danger 2, at or beyond min1 or max1 is danger 1. Readings are pressure,
+#### CONT-040 · Area air controller
+`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, D-68 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+
+An area air controller shall sample its zone each atmos tick and rate each
+reading against its preset's (min2, min1, max1, max2): at or beyond min2 or
+max2 is danger 2, at or beyond min1 or max1 is danger 1. Readings are pressure,
 temperature, each listed gas, and all other gases combined.
 
-- **Rationale:** vg: vg's alarm sampling and thresholds ([vg
+- **Rationale:** vg: vg's air alarm sampling and thresholds ([vg
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
 - **Verify:** A GameTest steps a zone's readings through each band and checks
   the danger level.
 
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
 #### CONT-046 · Danger hysteresis
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
 
-An alarm's danger level shall rise immediately and fall only after 10 s of
+A controller's danger level shall rise immediately and fall only after 10 s of
 lower readings.
 
 - **Rationale:** vg: vg needs 5 lower readings (10 s) before danger falls ([vg
@@ -715,11 +727,13 @@ lower readings.
 - **Verify:** A Unit test checks danger rises at once and falls only after 10
   s.
 
-#### CONT-047 · Alarm presets
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+#### CONT-047 · Controller presets
 `Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), LIFE-041, FIRE-003
 
-Alarms shall ship an editable Human preset and a Vacuum preset. Human
-(min2 / min1 / max1 / max2):
+Area air controllers shall ship an editable Human preset and a Vacuum preset.
+Human (min2 / min1 / max1 / max2):
 
 | Reading | Thresholds |
 |---|---|
@@ -740,12 +754,14 @@ Vacuum sets pressure max1 / max2 to 1 / 5 kPa.
   the CO, H₂ and CH₄ rows are inferred from LIFE-041 and half the lower
   flammable limits (FIRE-003).
 - **Verify:** Inspect the presets; a GameTest checks an edited preset changes
-  the alarm's ratings.
+  the controller's ratings.
 
-#### CONT-041 · Alarm modes
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+#### CONT-041 · Controller modes
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
-The air alarm shall command its vents and scrubbers in these modes:
+The area air controller shall command its vents and scrubbers in these modes:
 
 | Mode | Scrubbers | Vents |
 |---|---|---|
@@ -761,60 +777,91 @@ The air alarm shall command its vents and scrubbers in these modes:
 - **Verify:** GameTests set each mode and check the vents and scrubbers follow
   it.
 
-#### CONT-048 · Alarm redstone
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+#### CONT-048 · Controller redstone
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
-An air alarm shall emit a redstone signal of 7 at danger 1 and 15 at danger 2.
+An area air controller shall emit a redstone signal of 7 at danger 1 and 15 at
+danger 2.
 
 - **Rationale:** Inferred: redstone lets players build their own responses to
-  alarms, at two strengths for the two danger levels.
+  danger, at two strengths for the two danger levels.
 - **Verify:** A GameTest checks signal strengths 0, 7 and 15 at each danger
   level.
 
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
 #### CONT-042 · Room model
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32
+`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-68
 
-By default, an air alarm shall control the devices in its zone. A tool can
-also link devices explicitly, for example across a firelock.
+By default, an area air controller shall control the devices in its zone. The
+multitool can also link parts to it by hand, for example across a firelock.
 
-- **Rationale:** Decision: D-32.
-- **Verify:** A GameTest checks an alarm controls the devices in its zone and
-  a linked device across a firelock.
+- **Rationale:** Decision: D-32 and D-68.
+- **Verify:** A GameTest checks a controller controls the devices in its zone
+  and a device linked with the multitool across a firelock.
 
-#### CONT-049 · Alarm device list
+*2026-11-01: the air alarm is renamed the area air controller, and the linking
+tool is the multitool (D-68). A link also powers the part (CONT-068).*
+
+#### CONT-110 · Controller forms its zone
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
+
+When placed, an area air controller shall pin the zone at the cell it samples
+(API-050), forming one there if that cell's region is enclosed and has no zone,
+and it shall unpin the zone when removed. In an open region no zone forms.
+
+- **Rationale:** Decision: D-68. A sealed room has no zone until its air
+  changes (D-13, CORE-051), so without this a vent in a new room would have no
+  power to start filling it (CONT-068, S-01). The pin stops a zone that holds
+  only ambient air from being dissolved (CORE-052).
+- **Verify:** GameTests place a controller in a sealed vacuum room and in a
+  sealed Overworld room and check a zone forms and outlasts CORE-052's delay,
+  that none forms in the open, and that removing the controller unpins the
+  zone.
+
+#### CONT-049 · Controller device list
 `Must` · `R1` · `Accepted` · Verify: Manual
 
-The alarm's GUI shall list every device it controls and show whether each
+The controller's GUI shall list every device it controls and show whether each
 came from the zone or from a link.
 
-- **Rationale:** Inferred: players need to see what an alarm controls to debug
-  their station.
+- **Rationale:** Inferred: players need to see what a controller controls to
+  debug their station.
 - **Verify:** Manual check of the list against the devices in the zone and the
   links.
+
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
 #### CONT-043 · Firelock
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, GEO-007
 
 A firelock shall be a zone-boundary door (tagged `zas:zone_boundary`) that
-closes when any alarm covering either side reaches danger 2. An alarm covers
-a side if its zone or its links include the cell on that side.
+closes when any area air controller covering either side reaches danger 2. A
+controller covers a side if its zone or its links include the cell on that
+side.
 
 - **Rationale:** vg: vg firedoors close when an alarm on either side reaches
   danger 2 ([vg
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
-- **Verify:** A GameTest raises an alarm to danger 2 on each side and checks
-  the firelock closes.
+- **Verify:** A GameTest raises a controller to danger 2 on each side and
+  checks the firelock closes.
+
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
 #### CONT-092 · Firelock reopening
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
-A firelock closed by an alarm shall reopen once no alarm covering either side
-is at danger 2.
+A firelock closed by a controller shall reopen once no controller covering
+either side is at danger 2.
 
 - **Rationale:** vg: vg firedoors reopen when the alarm drops ([vg
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
 - **Verify:** A GameTest checks the firelock reopens once both sides fall
   below danger 2.
+
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
 #### CONT-093 · Firelock lockdown
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
@@ -851,7 +898,10 @@ or the zone exceeds 473 K.
 #### CONT-045 · Thermostat
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and freezer cover it), 2026-10-30. · Verify: GameTest
 
-An air alarm may move its zone's temperature toward a target, using power.
+An area air controller may move its zone's temperature toward a target, using
+power.
+
+*2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
 ## Obtaining gas and progression
 
@@ -993,8 +1043,9 @@ The framework mod shall be fully usable without the content mod.
 
 ## Power
 
-Decided in D-34 to D-37. All FE values below are configurable starting
-points, tuned in playtesting.
+Decided in D-34, D-35, D-37, D-68 and D-69. The area air controller is the
+only power source for atmospherics parts, and portables run on batteries. All
+FE values below are configurable starting points, tuned in playtesting.
 
 #### CONT-060 · FE-powered devices
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-37
@@ -1017,8 +1068,9 @@ Devices shall draw these amounts by default:
 | Compressor | 40 |
 | Heater, freezer | 60 |
 | Igniter (while active) | 20 |
+| Recharger (while charging) | 40 |
 | Electrolyzer | 80 |
-| Air alarm (base) | 5 |
+| Area air controller (base) | 5 |
 | Fire alarm | 1 |
 | Firelock | 0 |
 
@@ -1028,6 +1080,9 @@ Devices shall draw these amounts by default:
 *2026-10-31: added the igniter (CONT-105, D-57).*
 
 *2026-10-31: igniter raised from 10 to 20 FE/t (D-59).*
+
+*2026-11-01: the air alarm is renamed the area air controller (D-68), and the
+recharger is added (CONT-113, D-69).*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -1057,90 +1112,132 @@ FIRE-025 and HEAT-007.
 - **Verify:** A GameTest checks a running generator in a zone uses O₂, emits
   CO₂ and heat, and forms a zone under Hardcore.
 
-#### CONT-062 · Alarm power buffer
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-34
+#### CONT-062 · Controller power buffer
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-34, D-68
 
-An air alarm shall take FE from a cable or an adjacent source into an internal
-10,000 FE buffer.
+An area air controller shall take FE from any block next to it that exposes
+the FE capability, such as the generator (CONT-061) or another mod's cable,
+into an internal 10,000 FE buffer.
 
-- **Rationale:** Decision: D-25 and D-34; the 10,000 FE buffer is an inferred
-  starting value for playtesting.
-- **Verify:** A GameTest checks the alarm fills from a cable and an adjacent
-  source up to 10,000 FE.
+- **Rationale:** Decision: D-25, D-34 and D-68; the 10,000 FE buffer is an
+  inferred starting value for playtesting. Other mods' generators, batteries
+  and cables can power ZAS³.
+- **Verify:** A GameTest checks the controller fills from an adjacent
+  generator and from an adjacent test FE block up to 10,000 FE.
 
-#### CONT-068 · Wireless device feed
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34
+*2026-11-01: the air alarm is renamed the area air controller, and its buffer
+fills only from a block next to it, since there is no cable (D-68).*
 
-An air alarm shall feed every device it controls (CONT-042) wirelessly from its
-buffer.
+#### CONT-068 · Wireless feed to parts
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34, D-68
 
-- **Rationale:** Decision: D-32 and D-34.
-- **Verify:** A GameTest checks devices in an alarm's zone run with no cable.
+An area air controller shall power, from its buffer, every atmospherics part
+that draws FE (CONT-065) in its zone or linked to it with the multitool
+(CONT-042). Portables run on their battery instead (CONT-018).
 
-#### CONT-069 · Devices without an alarm need cable
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25
+- **Rationale:** Decision: D-32, D-34 and D-68.
+- **Verify:** A GameTest checks parts in a controller's zone, and a part
+  linked to it across a firelock, run from its buffer with no other power.
 
-A device with no powered alarm shall need its own cable connection.
+*2026-11-01: the air alarm is renamed the area air controller, and it powers
+every part in its zone or linked to it, not only the devices it controls
+(D-68).*
 
-- **Rationale:** Decision: D-25.
-- **Verify:** A GameTest checks a device with no alarm runs only when cabled.
+#### CONT-069 · Parts without a controller have no power
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-68
 
-#### CONT-064 · Alarm power priority
+An atmospherics part that no area air controller powers (CONT-068) shall have
+no power, even beside an FE source. Portables run on their battery instead
+(CONT-018).
+
+- **Rationale:** Decision: D-68.
+- **Verify:** A GameTest places a vent beside a generator with no controller
+  and checks it stays off, then links it to a controller and checks it runs.
+
+*2026-11-01: a part with no controller now has no power; it used to need its
+own cable (D-68).*
+
+#### CONT-064 · Controller power priority
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
 
-When an alarm's buffer can't meet demand, it shall power devices in priority
-order: life support (vents, scrubbers) first, then pumps, filters and mixers,
-then heaters, freezers, igniters and gas production. Devices that miss out stop
-until power returns.
+When a controller's buffer can't meet demand, it shall power devices in
+priority order: life support (vents, scrubbers) first, then pumps, filters and
+mixers, then heaters, freezers, igniters, rechargers and gas production.
+Devices that miss out stop until power returns.
 
 - **Rationale:** Decision: D-34.
-- **Verify:** A GameTest starves an alarm's buffer and checks vents and
+- **Verify:** A GameTest starves a controller's buffer and checks vents and
   scrubbers keep running while lower priorities stop.
 
 *2026-10-31: added igniters to the last group (CONT-105, D-57).*
 
+*2026-11-01: the air alarm is renamed the area air controller (D-68), and
+rechargers join the last group (CONT-113, D-69).*
+
+#### CONT-111 · Batteries
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
+
+There shall be three batteries, holding 100,000 FE (battery), 1,000,000 FE
+(high-capacity battery) and 2,000,000 FE (super-capacity battery) through the
+FE item capability, so other mods' chargers and machines can use them.
+
+- **Rationale:** vg: vg's power cell, high-capacity and super-capacity cells
+  hold 1,000, 10,000 and 20,000 units ([vg
+  §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)). The
+  100 FE per vg unit is inferred: the smallest battery runs a 20 FE/t pump for
+  about 4 minutes and the largest for about 80, and one generator (CONT-061)
+  fills the smallest in about 2 minutes.
+- **Verify:** A GameTest fills each battery through the FE item capability and
+  checks it stops at its capacity.
+
+#### CONT-112 · Battery tag
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69 · Depends: CONT-111
+
+A portable's battery slot and the recharger (CONT-113) shall accept any item
+in the `zas_atmos:batteries` item tag that exposes the FE item capability, and
+no other item. The tag holds the three batteries (CONT-111), and packs can add
+other mods' batteries and energy tablets to it.
+
+- **Rationale:** Decision: D-69. A tag lets packs choose which of other mods'
+  FE items count as batteries, with no compile-time dependency.
+- **Verify:** A GameTest adds a test FE item to the tag and checks a portable
+  runs from it and the recharger charges it, and that an FE item outside the
+  tag is refused.
+
+#### CONT-113 · Recharger
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers) · Depends: CONT-068, CONT-112
+
+A recharger shall hold one battery (CONT-112) and charge it at 28 FE/t,
+drawing 40 FE/t from its controller (CONT-068): 70 % of what it draws reaches
+the battery.
+
+- **Rationale:** vg: vg's cell charger holds one cell and puts 70 % of what it
+  draws into it ([vg
+  §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)). The
+  40 FE/t draw is inferred, one generator's output (CONT-061); at that rate the
+  smallest battery fills in about 3 minutes and the largest in about an hour.
+- **Verify:** A GameTest checks a recharger charges a battery at 28 FE/t while
+  drawing 40 FE/t, and stops when the battery is full or its power is cut.
+
 #### CONT-063 · Cable sharing a block with pipes
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-36
-
-A ZAS³ power cable shall be able to occupy the same block as a pipe, for
-compact builds.
-
-- **Rationale:** Decision: D-25 and D-36.
-- **Verify:** A GameTest places a cable and a pipe in one block and checks
-  both networks work.
+`Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable, 2026-11-01.
 
 #### CONT-097 · Multipart block
-`Should` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-36
-
-Sharing shall use our own generic multipart block: one block entity holding
-typed parts (pipe, cable; R2 pipe layers), each with its own shape,
-hit-testing, model and network. No external multipart library is used.
-
-- **Rationale:** Decision: D-36.
-- **Verify:** Inspect the dependencies; a GameTest checks each part's shape,
-  hit-testing and removal.
+`Should` · `R1` · `Rejected` — superseded by D-68: there is no multipart block, 2026-11-01.
 
 #### CONT-098 · Cable capacity
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-37
-
-R1 shall have one cable tier, carrying 1,000 FE/t.
-
-- **Rationale:** Decision: D-37.
-- **Verify:** A GameTest checks a cable carries 1,000 FE/t and no more.
+`Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable, 2026-11-01.
 
 #### CONT-099 · Cables connect to FE blocks
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25
-
-Cables shall connect to any block that exposes the FE capability.
-
-- **Rationale:** Decision: D-25. Other mods' generators and batteries can
-  power ZAS³.
-- **Verify:** A GameTest connects a cable to a test FE block and checks power
-  flows.
+`Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable; the area air controller takes FE from any block next to it (CONT-062), 2026-11-01.
 
 ## R1 / R2 split
 
 | R1 | R2 |
 |---|---|
-| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, air alarm, firelock, analyzer, gas acquisition (compressor, electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, alarm-powered zones, cable sharing a block with pipes), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
-| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, heater and freezer, magnetic boots, fire alarm, passive vent | |
+| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (compressor, electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
+| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent | |
+
+*2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's
+pipe layers reuse the multipart block, so they need another design. Batteries
+and the recharger are added (D-69).*
