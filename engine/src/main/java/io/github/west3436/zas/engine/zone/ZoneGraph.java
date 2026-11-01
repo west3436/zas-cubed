@@ -67,6 +67,7 @@ public final class ZoneGraph {
     private final ArrayList<Zone> dissolveBuffer = new ArrayList<>();
     /** Zones on edges that fell asleep this exchange, whose groups are equalized after it (CORE-067). */
     private final ArrayList<Zone> sleptBuffer = new ArrayList<>();
+
     private final ArrayList<Zone> groupBuffer = new ArrayList<>();
     private int groupEpoch;
     /** CORE-006's tolerances without the temperature test, for near-empty zones (CORE-076). */
