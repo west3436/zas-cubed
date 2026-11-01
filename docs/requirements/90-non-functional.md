@@ -21,7 +21,7 @@ together:
 - devices (D-50) and capability transfers (API-026)
 - ambient providers (ENV-015) and seal providers (API-028)
 - hazard evaluation (LIFE-033) and airflow (FLOW-013)
-- Ad Astra event answers (SPACE-018)
+- Ad Astra event answers (SPACE-018, from R2 with D-66)
 - client sync (DATA-005)
 
 Worker-thread time is NFR-005. This is measured on reference hardware before
@@ -31,6 +31,8 @@ each release; CI tracks regressions (NFR-034).
   inferred: 4 % of a 50 ms tick, leaving room for other mods.
 - **Verify:** Bench runs S-10 on reference hardware before each release; CI
   tracks regressions (NFR-034).
+
+*2026-11-01: SPACE-018 moved to R2 with the Ad Astra adapter (D-66); its line applies from R2.*
 
 #### NFR-005 · Worker keeps up
 `Must` · `R1` · `Accepted` · Verify: Bench · Trace: S-10, D-30, CORE-045
@@ -192,13 +194,14 @@ Each mixin shall be documented with its purpose and the requirement it serves.
 `Must` · `R1` · `Accepted` · Verify: Manual, GameTest
 
 Before each release, with ModernFix, FerriteCore, Lithium and Sodium (NeoForge
-builds) and Ad Astra installed, the game shall launch and the S-01 to S-04
+builds) installed, the game shall launch and the S-01 to S-04
 smoke tests shall pass.
 
-- **Rationale:** Inferred: these performance mods are in most modpacks, and Ad
-  Astra is the R1 compat target (D-29).
+- **Rationale:** Inferred: these performance mods are in most modpacks.
 - **Verify:** Manual and GameTest smoke tests with the matrix installed before
   each release.
+
+*2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
 #### NFR-022 · Optional compat isolation
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: A-01

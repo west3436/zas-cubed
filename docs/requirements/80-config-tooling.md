@@ -178,7 +178,7 @@ A per-world server setting shall select the **Normal** (default) or
 - block pressure damage (FLOW-007, FLOW-016)
 - planting as a zone trigger (CONT-053)
 - photosynthesis rates (CONT-057)
-- space-mod compat modes (SPACE-004)
+- space-mod compat modes (SPACE-004, from R2 with D-66)
 - container explosions breaking blocks (CONT-107)
 
 - **Rationale:** Decision: D-14.
@@ -187,6 +187,8 @@ A per-world server setting shall select the **Normal** (default) or
 *2026-10-31: added container explosions (CONT-107, D-57).*
 
 *2026-10-31: added photosynthesis rates (CONT-057, D-61).*
+
+*2026-11-01: SPACE-004 moved to R2 with the Ad Astra adapter (D-66); the preset covers it from R2.*
 
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Accepted` · Verify: GameTest · Depends: OPS-007

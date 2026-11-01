@@ -1,7 +1,7 @@
 # 00 · Overview
 
 **Status:** Accepted 2026-10-31, baselined as `req-r1-baseline`. Decisions D-11 to D-40 were added on 2026-10-30 from the
-open-questions walkthrough, D-41 and D-42 from the CORE review, D-43 and D-44 from the GEO review, and D-45 from the ENV review, D-46 from the API review, D-47 from the LIFE review, D-48 and D-49 from the HEAT/FIRE/FLOW review, D-50 from the CONT review, D-51 and D-52 from the SPACE review, D-53 and D-54 from the CLIENT/DATA/OPS review, D-55 and D-56 from the NFR review, D-57 and D-58 from the post-review gap check, D-59 from the gap-check answers, D-60 on the full form, D-61 before the baseline, D-62 and D-63 during Phase C, D-64 on pinned zones, and D-65 on excluded dimensions.
+open-questions walkthrough, D-41 and D-42 from the CORE review, D-43 and D-44 from the GEO review, and D-45 from the ENV review, D-46 from the API review, D-47 from the LIFE review, D-48 and D-49 from the HEAT/FIRE/FLOW review, D-50 from the CONT review, D-51 and D-52 from the SPACE review, D-53 and D-54 from the CLIENT/DATA/OPS review, D-55 and D-56 from the NFR review, D-57 and D-58 from the post-review gap check, D-59 from the gap-check answers, D-60 on the full form, D-61 before the baseline, D-62 and D-63 during Phase C, D-64 on pinned zones, D-65 on excluded dimensions, and D-66 on moving Ad Astra to R2.
 
 ## Vision
 
@@ -33,8 +33,8 @@ NeoForge 1.21.1** (D-12):
 | Release | Purpose | Content (summary) |
 |---|---|---|
 | **R0 Foundation** | Internal milestone that retires the architectural risks | Off-thread simulation engine, world geometry and enclosure detection, ambient environments, persistence, debug and admin tooling, standalone API module skeleton. No survival content. |
-| **R1 First playable** | First public release | D-05 features (breathing and hazards, airflow, fire and reactions, heat conduction); the Normal/Hardcore preset; the life-support API; the R1 content subset, including power (scoped in [CONT](40-content.md)); the Ad Astra adapter |
-| **R2 Post-launch** | Breadth | The rest of the SS13 device set; Mekanism as the first reference integration (D-11); Northstar Redux and Create Cosmonautics adapters; biome/altitude ambients |
+| **R1 First playable** | First public release | D-05 features (breathing and hazards, airflow, fire and reactions, heat conduction); the Normal/Hardcore preset; the life-support API; the R1 content subset, including power (scoped in [CONT](40-content.md)) |
+| **R2 Post-launch** | Breadth | The rest of the SS13 device set; the reference integrations, Mekanism (D-11) and the Ad Astra adapter (D-66); Northstar Redux and Create Cosmonautics adapters; biome/altitude ambients |
 | **Later** | Explicitly parked | Moving structures (Valkyrien Skies, Create contraptions), an SS13 fictional-gas addon, anything marked `Won't` |
 
 ## Decision log
@@ -50,7 +50,7 @@ decision that supersedes it.
 | D-04 | 2026-10-30 | **Audience: companion mods and third parties equally.** The API meets public-library standards from the start. | Strengthened by D-12 |
 | D-05 | 2026-10-30 | **R1 simulation features:** breathing and hazards, airflow forces, fire and reactions, heat conduction | vg has no heat conduction to port ([zas-core §6](../research/zas-core.md#6-heat)) |
 | ~~D-06~~ | 2026-10-30 | ~~R1 Mekanism integrations~~ | **Superseded by D-11** |
-| D-07 | 2026-10-30 | **R1 space scope:** per-dimension ambients (core), life-support API, space-mod compat. **Not in R1:** biome/altitude ambients, moving structures. | Compat scope narrowed by D-29 |
+| D-07 | 2026-10-30 | **R1 space scope:** per-dimension ambients (core), life-support API, space-mod compat. **Not in R1:** biome/altitude ambients, moving structures. | Compat scope narrowed by D-29, then moved to R2 by D-66 |
 | D-08 | 2026-10-30 | **Built-in gases are real-world gases only.** SS13 fictional gases go in an optional addon or datapack. | |
 | D-09 | 2026-10-30 | **Platform:** Minecraft 1.21.1, NeoForge, Java 21 | Minimum NeoForge 21.1.264 (NFR-020) |
 | D-10 | 2026-10-30 | **Repository:** public at `github.com/west3436/zas-cubed`. Docs live in `docs/` as Markdown. | |
@@ -72,7 +72,7 @@ decision that supersedes it.
 | D-26 | 2026-10-30 | **Art: 3D models built (with a Blender MCP workflow) from vgstation13's 2D sprites.** vg's assets are CC BY-SA 3.0 US, not NonCommercial (verified). Derived assets are licensed CC BY-SA with attribution. Goonstation-ported `goon/` assets (CC BY-NC-SA) are excluded. RE:SS3D (assets CC BY-NC-SA 4.0) and Stationeers (proprietary) are reference and inspiration only. | Q-10. Supersedes D-01's asset clause; code stays MIT and clean-room. License version in D-39. |
 | D-27 | 2026-10-30 | **Breathers and respiration.** Players and air-breathing mobs (a data-driven tag) breathe. Breathing uses O₂ and emits CO₂ at the realistic rate in both presets, and only inside existing zones. | Q-11 |
 | D-28 | 2026-10-30 | **Pressure damage to blocks happens in Hardcore only:** glass and panes shatter above a threshold | Q-12. Default threshold 150 kPa, so windows hold 1 atm against vacuum (FLOW-015). Container explosions follow the same rule (D-57, CONT-107). |
-| D-29 | 2026-10-30 | **Space-mod compat in R1 is Ad Astra only.** Northstar Redux and Create Cosmonautics come later. | Q-13. The adapter model is D-51. |
+| D-29 | 2026-10-30 | **Space-mod compat in R1 is Ad Astra only.** Northstar Redux and Create Cosmonautics come later. | Q-13. The adapter model is D-51. Moved to R2 by D-66. |
 | D-30 | 2026-10-30 | **The simulation runs off the main thread from day one.** It works on snapshots, and results are applied on the server thread. | Q-15 |
 | D-31 | 2026-10-30 | **Pipes and devices update on the atmos tick** | Q-16 |
 | D-32 | 2026-10-30 | **An air alarm controls the devices in its zone,** plus any it is explicitly linked to with a tool | Q-17 |
@@ -109,6 +109,7 @@ decision that supersedes it.
 | D-63 | 2026-10-31 | **Zones dissolve into the ambient.** A zone is destroyed when it is nearly equivalent to its ambient and has at least one edge exposed to the ambient. Nearly equivalent means CORE-006's tolerances on pressure and on each gas's molar density, but temperature is not compared once the zone's pressure is within the absolute pressure tolerance (default 0.1 kPa) of the ambient's, because near-empty gas carries negligible heat; otherwise the full CORE-006 test applies. Its cells become ambient again and its gas goes to the ambient. *Implementation note: "near-empty" is read as the zone's pressure also being within that tolerance of vacuum, so at ordinary pressures temperature is always compared.* | CORE-076. Takes the place of CORE-039's snap for zones with an ambient edge; relaxes CORE-006's temperature test for this check only. A zone venting to a vacuum (2.7 K) kept its own temperature, never became equivalent, and its ambient edge never slept. |
 | D-64 | 2026-10-31 | **Pinned zones never dissolve into the ambient** (CORE-076); they keep exchanging through their ambient edges. *Implementation note: the pin follows the zone's cells and gas: a zone that merges with a pinned zone is pinned, every part of a pinned zone that splits is pinned, and the pin is saved with the zone's chunk shares.* | CORE-076, CORE-052, API-018. Exempts pinned zones from D-63's dissolution. |
 | D-65 | 2026-10-31 | **Excluding a dimension purges its zones.** When a dimension becomes excluded, its zones are dropped and its chunks save without them; un-excluding it does not bring them back. This is unlike a dimension that is merely unloaded, whose zones persist in their chunks and pause until they load again. | ENV-007, DATA-001. Settles #112. |
+| D-66 | 2026-11-01 | **Ad Astra moves to R2 with Mekanism.** The Ad Astra adapter (SPACE-001, SPACE-003, SPACE-004 and SPACE-010 to SPACE-023), spike S6 and scenario S-06 leave R1. Like Mekanism (D-11), Ad Astra comes back after R1 as a reference integration built only on the public API. R1 keeps the generic pieces space mods build on: per-dimension ambients and ambient providers (ENV-004), the breathability helper (API-014), the life-support capability (API-022) and the NeoForge breathing event (SPACE-002). | Owner's call: modded support is grouped together after R1. Supersedes D-29's R1 scope; nothing in R0 or R1 depends on Ad Astra. Retires plan risk R6 for R1. [#9](https://github.com/west3436/zas-cubed/issues/9), #54 to #56. |
 
 ## Assumptions (confirmed 2026-10-31)
 
@@ -165,7 +166,7 @@ least one.
 | S-03 | **Overworld gas leak.** A leaking hydrogen canister in a sealed workshop forms a zone. A torch or fire ignites the mix and it burns, consuming O₂, producing water vapor and heat, and raising the pressure. |
 | S-04 | **Room fire.** In a zone, or in any sealed room under Hardcore, a fire uses up O₂, makes CO₂ and heats the air, then goes out when O₂ drops too low. Opening a door to fresh air rekindles it. In Normal, an ordinary sealed Overworld room stays ambient and fire behaves as in vanilla. |
 | S-05 | **Heat.** A room next to lava warms up. A room in a cold vacuum dimension loses heat through its walls unless it's heated. A ZAS³ heater warms the room air. |
-| S-06 | **Space mod (Ad Astra).** On an Ad Astra planet, Ad Astra's oxygen checks agree with ZAS³: a sealed, pressurized ZAS³ room is breathable without Ad Astra's distributor, and Ad Astra suits count as life support. Other space mods can do the same through the API. |
+| ~~S-06~~ | **Space mod (Ad Astra).** *Deferred to R2 with D-66; it returns with the Ad Astra integration.* On an Ad Astra planet, Ad Astra's oxygen checks agree with ZAS³: a sealed, pressurized ZAS³ room is breathable without Ad Astra's distributor, and Ad Astra suits count as life support. Other space mods can do the same through the API. |
 | ~~S-07~~ | ~~**Mekanism bridge.**~~ Deferred with D-11. It returns when the Mekanism reference integration is scheduled. |
 | S-08 | **Breathing gear.** A player in a ZAS³ softsuit with an O₂ tank survives in vacuum and toxic zones while the supply lasts. The suit's pressure and thermal ratings protect them. |
 | S-09 | **Persistence.** Saving and reloading keeps zone compositions, temperatures and pipe contents. Zones frozen by unloaded chunks resume correctly. |
@@ -197,7 +198,7 @@ R1 end-to-end test plan (NFR-032).
 - **S-05:** GameTests check a room beside lava warms, a room in a 2.7 K
   vacuum dimension cools through its walls, and a heater on its network holds
   it at its setpoint.
-- **S-06:** A GameTest with Ad Astra installed checks that on the Moon a
+- **S-06** (R2, D-66): A GameTest with Ad Astra installed checks that on the Moon a
   sealed, pressurized zone is breathable with no distributor, `hasOxygen`
   agrees, an Ad Astra space suit protects in vacuum, and only ZAS³ damage
   applies; a Manual playtest repeats it by hand.
