@@ -26,8 +26,15 @@ public record Geometry(List<FaceMask> coverage, List<Cell> cells, int flags) {
     /** The geometry comes from a datapack override, not the collision shape (GEO-005). */
     public static final int FLAG_OVERRIDE = 1;
 
-    /** The block keeps zones apart while passing gas (GEO-007). */
-    public static final int FLAG_ZONE_BOUNDARY = 1 << 1;
+    /** The bit of the first {@link #boundaryFlag}; the six follow in {@link Face} order. */
+    private static final int BOUNDARY_SHIFT = 8;
+
+    /**
+     * Every face is a zone boundary (GEO-007): all six {@link #boundaryFlag} bits, so the block's
+     * cells are zones of their own. A block that keeps zones apart across some faces only, such as
+     * a door, has only those faces' bits.
+     */
+    public static final int FLAG_ZONE_BOUNDARY = 0x3F << BOUNDARY_SHIFT;
 
     /** The position holds a fluid (GEO-006). */
     public static final int FLAG_FLUID = 1 << 2;
@@ -109,6 +116,20 @@ public record Geometry(List<FaceMask> coverage, List<Cell> cells, int flags) {
 
     public boolean hasFlag(int flag) {
         return (flags & flag) != 0;
+    }
+
+    /**
+     * The flag that makes {@code face} a zone boundary (GEO-007): gas crosses an opening there, but
+     * the zones on either side stay apart (CORE-034). An opening between two positions is a zone
+     * boundary when either block flags its side of the shared face.
+     */
+    public static int boundaryFlag(Face face) {
+        return 1 << (BOUNDARY_SHIFT + face.ordinal());
+    }
+
+    /** Whether openings across {@code face} are zone boundaries (GEO-007). */
+    public boolean isBoundary(Face face) {
+        return (flags & boundaryFlag(face)) != 0;
     }
 
     /** This geometry with {@code flag} bits added. */

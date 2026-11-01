@@ -10,7 +10,7 @@ import java.util.Locale;
  * Markdown, the tables recorded in {@code docs/research/benchmarks.md}.
  *
  * <p>Arguments: case names to run ({@code fill}, {@code zones}, {@code s10}, {@code scaling},
- * {@code changes}; all by default), and {@code --quick} for short runs that only check the
+ * {@code changes}, {@code toggle}; all by default), and {@code --quick} for short runs that only check the
  * harness works. Every number is wall-clock time from {@link System#nanoTime()} on one JVM, after
  * warm-up; there is no JMH, so treat differences under about 10 % as noise.
  */
@@ -29,7 +29,7 @@ public final class EngineBench {
             }
         }
         if (cases.isEmpty()) {
-            cases = List.of("fill", "zones", "s10", "scaling", "changes");
+            cases = List.of("fill", "zones", "s10", "scaling", "changes", "toggle");
         }
         environment(quick);
         long start = System.nanoTime();
@@ -40,9 +40,10 @@ public final class EngineBench {
                 case "s10" -> StationBench.run(quick);
                 case "scaling" -> ScalingBench.run(quick);
                 case "changes" -> ChangeBench.run(quick);
+                case "toggle" -> DoorBench.run(quick);
                 default ->
                     throw new IllegalArgumentException(
-                            "unknown case " + c + "; expected fill, zones, s10, scaling or changes");
+                            "unknown case " + c + "; expected fill, zones, s10, scaling, changes or toggle");
             }
         }
         System.out.printf("_All cases took %.0f s._%n", (System.nanoTime() - start) / 1e9);

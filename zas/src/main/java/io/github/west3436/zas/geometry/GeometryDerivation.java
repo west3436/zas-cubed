@@ -130,7 +130,7 @@ public final class GeometryDerivation {
         if (failures > 1) {
             LOGGER.warn("Couldn't derive the geometry of {} block states; treated them as solid", failures);
         }
-        GeometryTable table = new GeometryTable(palette.build(), byStateId, byShape.size(), 0);
+        GeometryTable table = new GeometryTable(palette.build(), byStateId, byShape.size(), 0, 0);
         LOGGER.info(
                 "Derived gas geometry for {} block states from {} distinct shapes: {} geometries in {} ms",
                 byStateId.length,

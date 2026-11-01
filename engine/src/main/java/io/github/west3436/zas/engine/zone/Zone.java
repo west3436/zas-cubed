@@ -29,6 +29,8 @@ public final class Zone {
     boolean paused;
     /** Whether the zone is pinned (D-64): it never dissolves into the ambient. */
     boolean pinned;
+    /** Scratch for {@link ZoneGraph}'s search of a group joined through zone boundaries (CORE-067). */
+    int groupEpoch;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 

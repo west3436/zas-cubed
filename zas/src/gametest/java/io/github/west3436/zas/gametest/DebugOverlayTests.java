@@ -26,14 +26,17 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -390,6 +393,44 @@ public final class DebugOverlayTests {
             h.assertValueEqual(List.of(f.dx(), f.dy(), f.dz()), List.of(1, 0, 0), "face position");
             h.assertValueEqual(f.face(), Face.EAST.ordinal(), "face");
             h.assertValueEqual(f.edge(), 0, "face's edge");
+            h.assertValueEqual(roundTrip(p), p, "after the network codec");
+        } finally {
+            unwatch(h);
+        }
+        h.succeed();
+    }
+
+    /**
+     * An open door between two rooms: the overlay shows their edge as a zone boundary, not a direct
+     * opening (CLIENT-011, GEO-007).
+     */
+    @GameTest(template = "empty")
+    public static void client_011_door_edge_is_a_zone_boundary(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        BlockPos o = area(6);
+        shell(level, o, o.offset(4, 4, 4));
+        shell(level, o.offset(4, 0, 0), o.offset(8, 4, 4));
+        BlockState door = Blocks.OAK_DOOR
+                .defaultBlockState()
+                .setValue(DoorBlock.FACING, Direction.EAST)
+                .setValue(DoorBlock.OPEN, true);
+        level.setBlockAndUpdate(o.offset(4, 1, 2), door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(o.offset(4, 2, 2), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+        BlockPos center = o.offset(2, 2, 2);
+        watch(h, center);
+        try {
+            ZoneInfo west = zoneWith(h, center, 500, "client_011");
+            tick(h);
+            ZoneInfo east = Atmospheres.zoneAt(level, o.offset(6, 2, 2))
+                    .orElseThrow(() -> new GameTestAssertException("the east room didn't zone"));
+            h.assertFalse(west.id().equals(east.id()), "the door joined the rooms into one zone");
+            DebugOverlayPayload p = DebugOverlay.build(level, center, center, ALL);
+            h.assertFalse(p.edges().isEmpty(), "no edges");
+            for (DebugOverlayPayload.Edge e : p.edges()) {
+                h.assertFalse(e.ambient(), "an edge to the ambient");
+                h.assertFalse(e.direct(), "the door edge is shown as a direct opening");
+            }
+            h.assertValueEqual(p.faces().size(), 2, "faces: one per door half");
             h.assertValueEqual(roundTrip(p), p, "after the network codec");
         } finally {
             unwatch(h);

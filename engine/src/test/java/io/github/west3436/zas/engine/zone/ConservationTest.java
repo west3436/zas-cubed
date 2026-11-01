@@ -33,8 +33,9 @@ class ConservationTest {
 
     /**
      * Random sequences of geometry changes, zone creation, joins, leaves, gas
-     * operations, ambient changes and exchange, with the ledger checked every
-     * tick and the graph checked against a brute-force recomputation.
+     * operations, ambient changes and exchange (door groups' equalization,
+     * CORE-067, included), with the ledger checked every tick and the graph
+     * checked against a brute-force recomputation.
      */
     @Test
     void core_036_conservation_invariant() {
@@ -73,8 +74,10 @@ class ConservationTest {
         assertTrue(created > 50, "the fuzz should create many zones, created " + created);
         assertTrue(graph.mergeCount() > 20, "merges: " + graph.mergeCount());
         assertTrue(graph.dissolveCount() > 20, "dissolves: " + graph.dissolveCount());
-        // Splits are rarer, and how rare depends on how fast zones exchange: 6 to 21 in these runs.
-        assertTrue(graph.splitCount() > 5, "splits: " + graph.splitCount());
+        // Equalizing door groups (CORE-067) changes which zones exist when; these seeds now see
+        // fewer splits than before it, but still plenty: 12 to 17 under either venting model.
+        assertTrue(graph.splitCount() > 10, "splits: " + graph.splitCount());
+        assertTrue(graph.equalizeCount() > 20, "equalized groups: " + graph.equalizeCount());
         StringBuilder state = new StringBuilder();
         for (Zone z : graph.zones()) {
             state.append(z.id())

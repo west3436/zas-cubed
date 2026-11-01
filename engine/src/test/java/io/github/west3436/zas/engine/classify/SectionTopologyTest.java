@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.classify;
 import static io.github.west3436.zas.engine.classify.TestWorld.AIR;
 import static io.github.west3436.zas.engine.classify.TestWorld.DIVIDER;
 import static io.github.west3436.zas.engine.classify.TestWorld.DOOR;
+import static io.github.west3436.zas.engine.classify.TestWorld.DOOR_EAST;
 import static io.github.west3436.zas.engine.classify.TestWorld.cell;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -73,6 +74,33 @@ class SectionTopologyTest {
             assertEquals(!door, direct);
         }));
         assertFalse(open.get(CellIds.of(14, 1, 1, 0)).containsKey(CellIds.of(14, 1, 1, 1)), "no self-links");
+    }
+
+    /**
+     * An opening is a zone boundary when either block flags its side of the shared face: a door
+     * whose east face is a boundary opens directly every other way, seen from either side, and two
+     * such doors side by side meet across the west one's boundary (GEO-007).
+     */
+    @Test
+    void geo_007_only_boundary_faces_are_not_direct() {
+        TestWorld world = new TestWorld().box(0, 0, 0, 2, 2, 2, AIR).set(1, 1, 1, DOOR_EAST);
+        SectionTopology t = world.topology();
+        Map<Long, Boolean> seen = new HashMap<>();
+        t.forEachOpenNeighbour(cell(1, 1, 1), seen::put);
+        assertEquals(6, seen.size(), "the door opens on every face");
+        seen.forEach((n, direct) -> {
+            assertEquals(n != cell(2, 1, 1), direct, "only the east face is a boundary: " + CellIds.toString(n));
+            Map<Long, Boolean> back = new HashMap<>();
+            t.forEachOpenNeighbour(n, back::put);
+            assertEquals(direct, back.get(cell(1, 1, 1)), "symmetric: " + CellIds.toString(n));
+        });
+
+        world.set(0, 1, 1, DOOR_EAST);
+        Map<Long, Boolean> pair = new HashMap<>();
+        world.topology().forEachOpenNeighbour(cell(1, 1, 1), pair::put);
+        assertFalse(pair.get(cell(0, 1, 1)), "the west door's boundary face, seen from the east door");
+        assertFalse(pair.get(cell(2, 1, 1)), "the east door's own boundary face");
+        assertTrue(pair.get(cell(1, 0, 1)), "below");
     }
 
     @Test

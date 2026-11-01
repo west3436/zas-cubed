@@ -17,9 +17,10 @@ import java.util.function.LongFunction;
  * no cell at the id's sub-cell index, or whose section is not in the view, is not a cell.
  *
  * <p><b>Openings.</b> Two cells of adjacent positions are open to each other when {@link
- * GeometryPalette#connects} says so. The opening is direct unless either block is a zone boundary
- * ({@link io.github.west3436.zas.engine.Geometry#FLAG_ZONE_BOUNDARY}, GEO-007). Neighbours are
- * visited face by face in {@link Face} order, and each face's cells in sub-cell order.
+ * GeometryPalette#connects} says so. The opening is direct unless either block makes its side of
+ * the shared face a zone boundary ({@link io.github.west3436.zas.engine.Geometry#isBoundary},
+ * GEO-007), as an open door does across the face it closes against. Neighbours are visited face by
+ * face in {@link Face} order, and each face's cells in sub-cell order.
  *
  * <p><b>Limits.</b> Sections the lookup returns null for are unknown: {@link
  * #forEachNeighbour} reports the faces that reach them, so a fill can leave the region unresolved
@@ -159,7 +160,7 @@ public final class SectionTopology implements ResolvableTopology {
                 continue;
             }
             long[] bits = table.connections(id, face, nid);
-            boolean direct = !table.boundary(id, nid);
+            boolean direct = !table.boundary(id, face, nid);
             for (int c = 0; c < count; c++) {
                 if (ConnectionTable.connected(bits, sub, c)) {
                     open.accept(CellIds.pack(nx, ny, nz, c), direct);
