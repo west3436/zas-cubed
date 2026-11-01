@@ -12,8 +12,10 @@ public enum AtmosphereState {
      */
     PAUSED,
     /**
-     * The point has not been classified yet (its chunk is not loaded or not
-     * yet resolved); the sample is the ambient, as a stand-in.
+     * The point has not been classified yet: its chunk is not loaded, or it
+     * lies in a region that reaches an unloaded chunk where a breach of zones
+     * is held until that chunk loads (GEO-024, GEO-026). The sample is the
+     * ambient, as a stand-in.
      */
     UNRESOLVED
 }

@@ -133,15 +133,33 @@ public final class AtmosService {
 
     // ---- Mutations (server thread) ---------------------------------------------------
 
-    /** Queues an addition for the next atmos tick (API-012, API-016). */
+    /** Queues an addition to a position's largest cell for the next atmos tick (API-012, API-016). */
     public CompletableFuture<MutationResult> add(ServerLevel level, BlockPos pos, GasParcel gas, SourceId source) {
-        return dimensionFor(level).add(pos, gas, source);
+        return add(level, pos, -1, gas, source);
     }
 
-    /** Queues a removal for the next atmos tick (API-012, API-016). */
+    /**
+     * Queues an addition to sub-cell {@code sub} of a position, or with -1 its largest cell, for
+     * the next atmos tick (API-012, API-015, API-016).
+     */
+    public CompletableFuture<MutationResult> add(
+            ServerLevel level, BlockPos pos, int sub, GasParcel gas, SourceId source) {
+        return dimensionFor(level).add(pos, sub, gas, source);
+    }
+
+    /** Queues a removal from a position's largest cell for the next atmos tick (API-012, API-016). */
     public CompletableFuture<MutationResult> remove(
             ServerLevel level, BlockPos pos, Map<ResourceLocation, Double> moles, SourceId source) {
-        return dimensionFor(level).remove(pos, moles, source);
+        return remove(level, pos, -1, moles, source);
+    }
+
+    /**
+     * Queues a removal from sub-cell {@code sub} of a position, or with -1 its largest cell, for
+     * the next atmos tick (API-012, API-015, API-016).
+     */
+    public CompletableFuture<MutationResult> remove(
+            ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
+        return dimensionFor(level).remove(pos, sub, moles, source);
     }
 
     // ---- Ticking ------------------------------------------------------------------------

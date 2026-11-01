@@ -32,10 +32,21 @@ loads a chunk.
 
 | Command | What it reports |
 |---|---|
-| `/zas at [<pos>]` | The atmosphere at a point (API-010): zoned, ambient, paused or unresolved, the zone id, pressure, temperature, and each gas's moles and partial pressure |
+| `/zas at [<pos>]` | The atmosphere at a block position's largest cell (API-010, API-015): zoned, ambient, paused or unresolved, the zone id, pressure, temperature, and each gas's moles and partial pressure. With no position, at your eyes, as an exact point. At a block with several cells (a glass pane), it names the sub-cell |
+| `/zas at point <x> <y> <z>` | The same at an exact point: the cell holding it, or the nearest cell if the point is inside a block (API-015) |
 | `/zas zone <id>` | A zone's details (API-011): cells, volume, breached or enclosed, paused, pressure, temperature, total moles, edges to zones and to the ambient, open faces, and each gas |
-| `/zas zone at [<pos>]` | The details of the zone at a point |
+| `/zas zone at [<pos>]` | The details of the zone at a block position, or with no position at your eyes |
 | `/zas zones` | The dimension's zone and cell counts, the atmos tick of the table, and the first 10 zones by id |
+
+At a glass pane in the wall of a zoned room, each half of the pane is its own
+cell:
+
+```
+> /zas at point 3.2 65.5 1.5
+Atmosphere at 3.2 65.5 1.5 (3 65 1, sub-cell 0 of 2) in minecraft:overworld: zoned, zone 8
+> /zas at point 3.8 65.5 1.5
+Atmosphere at 3.8 65.5 1.5 (3 65 1, sub-cell 1 of 2) in minecraft:overworld: ambient, zone -
+```
 
 Example (`zas:oxygen` added to a sealed 3 × 3 × 3 room):
 

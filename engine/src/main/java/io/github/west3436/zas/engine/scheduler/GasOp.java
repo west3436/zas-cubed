@@ -21,6 +21,10 @@ import java.util.Objects;
  * @param triggersZone whether the operation may create a zone when its target is enclosed and
  *     unzoned (CORE-051, CORE-055); breathing, for one, doesn't (LIFE-005)
  * @param source who queued it, for logs
+ * @param sub the sub-cell of the position the operation acts on, as resolved from an exact point
+ *     (API-015, GEO-004), or -1 for the position's largest cell. If the position no longer has
+ *     that many cells when the operation applies, it acts on the largest. Not saved: an operation
+ *     restored from a chunk acts on the largest cell.
  */
 public record GasOp(
         long seq,
@@ -30,12 +34,26 @@ public record GasOp(
         double temperature,
         LedgerCategory category,
         boolean triggersZone,
-        String source) {
+        String source,
+        int sub) {
 
     /** What an operation does. */
     public enum Kind {
         ADD,
         REMOVE
+    }
+
+    /** An operation on a position's largest cell. */
+    public GasOp(
+            long seq,
+            Kind kind,
+            long block,
+            double[] moles,
+            double temperature,
+            LedgerCategory category,
+            boolean triggersZone,
+            String source) {
+        this(seq, kind, block, moles, temperature, category, triggersZone, source, -1);
     }
 
     /**
@@ -55,6 +73,9 @@ public record GasOp(
         }
         if (!Double.isFinite(temperature) || temperature < 0) {
             throw new IllegalArgumentException("temperature must be finite and >= 0 K: " + temperature);
+        }
+        if (sub < -1) {
+            throw new IllegalArgumentException("sub-cell must be -1 or >= 0: " + sub);
         }
     }
 
@@ -93,7 +114,8 @@ public record GasOp(
                 && Double.compare(temperature, g.temperature) == 0
                 && category == g.category
                 && triggersZone == g.triggersZone
-                && source.equals(g.source);
+                && source.equals(g.source)
+                && sub == g.sub;
     }
 
     @Override
@@ -104,6 +126,7 @@ public record GasOp(
     @Override
     public String toString() {
         return "GasOp#" + seq + "[" + kind + " at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block) + ","
-                + SectionKeys.blockZ(block) + ", " + java.util.Arrays.toString(moles) + ", " + source + "]";
+                + SectionKeys.blockZ(block) + (sub >= 0 ? " sub-cell " + sub : "") + ", "
+                + java.util.Arrays.toString(moles) + ", " + source + "]";
     }
 }

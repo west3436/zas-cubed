@@ -71,6 +71,16 @@ public interface Classifier {
     }
 
     /**
+     * Seeds of the regions whose breaches pause the {@link #heldZones} (GEO-026), ascending: the
+     * unzoned cells next to those zones. The published table lists the unzoned cells reachable
+     * from them, so queries there read as unresolved (API-010). A region still waiting for loaded
+     * sections isn't held yet, and isn't listed. The default holds none.
+     */
+    default long[] heldSeeds() {
+        return new long[0];
+    }
+
+    /**
      * The section ({@link io.github.west3436.zas.engine.SectionKeys}) a cell id is in. A pure
      * function of the id, so the server thread may call it to know which sections to capture for
      * a chunk's saved shares (DATA-002). The default maps through {@link CellSpace#position}.

@@ -203,6 +203,87 @@ class GeometryTest {
         assertEquals(a, again.intern(bottomSlab()));
     }
 
+    /** The voxel counts of each cell in a {@link GeometryDeriver#cellOfVoxels} map, free voxels only. */
+    private static int[] freeVoxelsPerCell(BitSet solid, byte[] cellOf, int cells) {
+        int[] count = new int[cells];
+        for (int i = 0; i < GeometryDeriver.VOXELS; i++) {
+            if (!solid.get(i)) {
+                count[cellOf[i]]++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Each free voxel of a pane maps to the sub-cell holding it, in the order {@link
+     * GeometryDeriver#derive} lists cells (API-015, GEO-004).
+     */
+    @Test
+    void api_015_voxels_map_to_pane_sub_cells() {
+        BitSet pane = box(7, 0, 0, 9, 16, 16);
+        byte[] cellOf = GeometryDeriver.cellOfVoxels(pane);
+        assertEquals(0, cellOf[GeometryDeriver.index(0, 5, 5)], "the west half");
+        assertEquals(0, cellOf[GeometryDeriver.index(6, 15, 0)], "the west half's edge");
+        assertEquals(1, cellOf[GeometryDeriver.index(9, 5, 5)], "the east half");
+        assertEquals(1, cellOf[GeometryDeriver.index(15, 0, 15)], "the east half's corner");
+        Geometry g = GeometryDeriver.derive(pane);
+        int[] counts = freeVoxelsPerCell(pane, cellOf, g.cellCount());
+        for (int c = 0; c < g.cellCount(); c++) {
+            assertEquals(g.cell(c).volume(), counts[c] * Geometry.VOXEL_VOLUME, "cell " + c + "'s volume");
+        }
+    }
+
+    /** A cross pane's four quarters map to its four sub-cells, matching their volumes (API-015). */
+    @Test
+    void api_015_voxels_map_to_cross_pane_sub_cells() {
+        BitSet cross = box(7, 0, 0, 9, 16, 16);
+        GeometryDeriver.fill(cross, 0, 0, 7, 16, 16, 9);
+        byte[] cellOf = GeometryDeriver.cellOfVoxels(cross);
+        Geometry g = GeometryDeriver.derive(cross);
+        int[] counts = freeVoxelsPerCell(cross, cellOf, g.cellCount());
+        for (int c = 0; c < g.cellCount(); c++) {
+            assertEquals(g.cell(c).volume(), counts[c] * Geometry.VOXEL_VOLUME, "cell " + c + "'s volume");
+        }
+        java.util.Set<Byte> quarters = new java.util.HashSet<>();
+        quarters.add(cellOf[GeometryDeriver.index(1, 8, 1)]);
+        quarters.add(cellOf[GeometryDeriver.index(14, 8, 1)]);
+        quarters.add(cellOf[GeometryDeriver.index(1, 8, 14)]);
+        quarters.add(cellOf[GeometryDeriver.index(14, 8, 14)]);
+        assertEquals(4, quarters.size(), "the quarters share a sub-cell");
+    }
+
+    /**
+     * A voxel inside the shape maps to the nearest cell: the glass of a pane to the half on its
+     * side, a slab's solid half to its one cell, an enclosed pocket to a cell around it (API-015).
+     */
+    @Test
+    void api_015_voxels_inside_the_shape_map_to_the_nearest_cell() {
+        byte[] pane = GeometryDeriver.cellOfVoxels(box(7, 0, 0, 9, 16, 16));
+        assertEquals(0, pane[GeometryDeriver.index(7, 8, 8)], "the glass's west layer");
+        assertEquals(1, pane[GeometryDeriver.index(8, 8, 8)], "the glass's east layer");
+        byte[] slab = GeometryDeriver.cellOfVoxels(box(0, 0, 0, 16, 8, 16));
+        assertEquals(0, slab[GeometryDeriver.index(3, 0, 3)], "deep in a slab");
+        BitSet pocket = box(0, 0, 0, 16, 8, 16);
+        pocket.andNot(box(6, 2, 6, 10, 6, 10));
+        GeometryDeriver.fill(pocket, 7, 8, 0, 9, 16, 16);
+        byte[] cellOf = GeometryDeriver.cellOfVoxels(pocket);
+        assertEquals(2, GeometryDeriver.derive(pocket).cellCount(), "the pocket isn't a cell");
+        int inPocket = cellOf[GeometryDeriver.index(7, 3, 7)];
+        assertTrue(inPocket == 0 || inPocket == 1, "the pocket maps to a cell: " + inPocket);
+    }
+
+    /** A block with no cells has no map: a point inside it looks to its neighbours (API-015). */
+    @Test
+    void api_015_full_block_has_no_voxel_map() {
+        assertEquals(null, GeometryDeriver.cellOfVoxels(box(0, 0, 0, 16, 16, 16)));
+        BitSet hollow = box(0, 0, 0, 16, 16, 16);
+        hollow.andNot(box(4, 4, 4, 12, 12, 12));
+        assertEquals(null, GeometryDeriver.cellOfVoxels(hollow), "a sealed void is no cell");
+        for (byte b : GeometryDeriver.cellOfVoxels(new BitSet())) {
+            assertEquals(0, b);
+        }
+    }
+
     @Test
     void face_mask_and_face_basics() {
         for (Face f : Face.values()) {

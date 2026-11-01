@@ -210,8 +210,15 @@ Given a level and a point, the API shall return:
 - **Verify:** A GameTest queries a zoned, an ambient, a paused and an
   unresolved point and checks every field.
 
+*2026-11-01: A loaded, unzoned cell of a region left unresolved because it
+reaches an unloaded chunk, where a breach of zones is held (GEO-026), now reads
+as unresolved; it read as ambient before
+([#109](https://github.com/west3436/zas-cubed/issues/109)). The published table
+lists the cells of held regions. Checked by
+`api_010_held_breach_region_is_unresolved` (Unit and GameTest).*
+
 #### API-015 · Point resolution
-`Must` · `R0` · `Accepted` · Verify: Unit, GameTest · Trace: D-44
+`Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-44
 
 A call at an exact point (`Vec3`) shall use the cell that contains it, or the
 nearest cell if the point is inside the block's collision shape. A call at a
@@ -222,6 +229,17 @@ its eye position.
   must resolve to one.
 - **Verify:** Unit tests and a GameTest resolve points in each sub-cell of a
   pane, inside a block's shape, at a block position and at an entity's eyes.
+
+*2026-11-01: Implemented
+([#108](https://github.com/west3436/zas-cubed/issues/108)). Each voxel of a
+block's 16³ rasterization maps to its cell, or to the nearest cell if the voxel
+is inside the shape, so a point resolves to its block's sub-cell. A point inside
+a block with no cells (a full block) uses the nearest cell in an adjacent
+block, by the distance to their shared face; with none, it reads as the
+ambient, since it holds no gas. The published table answers per cell at
+positions holding less than a full block of gas, and mutations at a point act
+on the cell it resolves to. Checked by the `api_015_` Unit tests and
+GameTests.*
 
 #### API-011 · Zone query
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43

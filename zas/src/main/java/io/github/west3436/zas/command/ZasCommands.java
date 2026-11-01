@@ -29,6 +29,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import io.github.west3436.zas.simulation.ProfileReport;
@@ -49,6 +50,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -133,15 +135,15 @@ public final class ZasCommands {
 
         // OPS-003: inspection.
         root.then(Commands.literal("at")
-                .executes(ctx ->
-                        at(ctx.getSource(), BlockPos.containing(ctx.getSource().getPosition())))
+                .executes(ctx -> at(ctx.getSource(), eyes(ctx.getSource())))
+                .then(Commands.literal("point")
+                        .then(Commands.argument("point", Vec3Argument.vec3(false))
+                                .executes(ctx -> at(ctx.getSource(), Vec3Argument.getVec3(ctx, "point")))))
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .executes(ctx -> at(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))));
         root.then(Commands.literal("zone")
                 .then(Commands.literal("at")
-                        .executes(ctx -> zoneAt(
-                                ctx.getSource(),
-                                BlockPos.containing(ctx.getSource().getPosition())))
+                        .executes(ctx -> zoneAt(ctx.getSource(), eyes(ctx.getSource())))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> zoneAt(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
                 .then(Commands.argument("id", LongArgumentType.longArg(1))
@@ -294,13 +296,40 @@ public final class ZasCommands {
 
     // ---- Inspection (OPS-003) -----------------------------------------------------------
 
+    /** Where {@code /zas at} with no position looks: the eyes of the entity running it (API-015). */
+    private static Vec3 eyes(CommandSourceStack source) {
+        return source.getEntity() != null ? source.getEntity().getEyePosition() : source.getPosition();
+    }
+
+    /** {@code /zas at <pos>}: a block position's largest cell (API-015). */
     private static int at(CommandSourceStack source, BlockPos pos) {
-        AtmosphereSample s = Atmospheres.at(source.getLevel(), pos);
+        Component where = cell(PointResolver.resolve(source.getLevel(), pos));
+        return at(source, Atmospheres.at(source.getLevel(), pos), where);
+    }
+
+    /** {@code /zas at} and {@code /zas at point <point>}: the cell holding an exact point (API-015). */
+    private static int at(CommandSourceStack source, Vec3 point) {
+        Component where = Component.translatable(
+                "commands.zas.at.point",
+                num(point.x) + " " + num(point.y) + " " + num(point.z),
+                cell(PointResolver.resolve(source.getLevel(), point)));
+        return at(source, Atmospheres.at(source.getLevel(), point), where);
+    }
+
+    /** A resolved cell: its block, and which of the block's cells it is when there are several. */
+    private static Component cell(PointResolver.Cell cell) {
+        if (cell.cells() > 1 && cell.sub() >= 0) {
+            return Component.translatable("commands.zas.at.sub_cell", pos(cell.pos()), cell.sub(), cell.cells());
+        }
+        return Component.literal(pos(cell.pos()));
+    }
+
+    private static int at(CommandSourceStack source, AtmosphereSample s, Component where) {
         reply(
                 source,
                 Component.translatable(
                         "commands.zas.at.header",
-                        pos(pos),
+                        where,
                         source.getLevel().dimension().location().toString(),
                         Component.translatable(
                                 "commands.zas.state." + s.state().name().toLowerCase(Locale.ROOT)),
@@ -312,6 +341,12 @@ public final class ZasCommands {
 
     private static int zoneAt(CommandSourceStack source, BlockPos pos) throws CommandSyntaxException {
         ZoneInfo zone = Atmospheres.zoneAt(source.getLevel(), pos).orElseThrow(NO_ZONE_HERE::create);
+        replyAll(source, zoneLines(zone));
+        return 1;
+    }
+
+    private static int zoneAt(CommandSourceStack source, Vec3 point) throws CommandSyntaxException {
+        ZoneInfo zone = Atmospheres.zoneAt(source.getLevel(), point).orElseThrow(NO_ZONE_HERE::create);
         replyAll(source, zoneLines(zone));
         return 1;
     }
@@ -384,7 +419,7 @@ public final class ZasCommands {
         double t = temperature >= 0 ? temperature : Atmospheres.at(level, pos).temperature();
         SourceId by = sourceOf(source);
         CompletableFuture<MutationResult> f =
-                GasMutations.add(level, Vec3.atCenterOf(pos), new GasParcel(Map.of(gas, moles), t), by);
+                GasMutations.add(level, PointResolver.pointIn(level, pos), new GasParcel(Map.of(gas, moles), t), by);
         reply(source, Component.translatable("commands.zas.gas.queued", by.toString()));
         whenDone(
                 source,
@@ -409,7 +444,8 @@ public final class ZasCommands {
         ResourceLocation gas = gas(ctx);
         double moles = DoubleArgumentType.getDouble(ctx, "moles");
         SourceId by = sourceOf(source);
-        CompletableFuture<MutationResult> f = GasMutations.remove(level, Vec3.atCenterOf(pos), Map.of(gas, moles), by);
+        CompletableFuture<MutationResult> f =
+                GasMutations.remove(level, PointResolver.pointIn(level, pos), Map.of(gas, moles), by);
         reply(source, Component.translatable("commands.zas.gas.queued", by.toString()));
         whenDone(
                 source,
@@ -442,7 +478,7 @@ public final class ZasCommands {
         double now = zone.mixture().moles(gas);
         double delta = target - now;
         SourceId by = sourceOf(source);
-        Vec3 point = Vec3.atCenterOf(pos);
+        Vec3 point = PointResolver.pointIn(level, pos);
         if (delta == 0) {
             reply(source, Component.translatable("commands.zas.gas.unchanged", gasName(gas), num(target)));
             return 1;
@@ -492,7 +528,8 @@ public final class ZasCommands {
                 continue;
             }
             double t = Atmospheres.at(level, p).temperature();
-            futures.add(GasMutations.add(level, Vec3.atCenterOf(p), new GasParcel(Map.of(gas, moles), t), by));
+            futures.add(
+                    GasMutations.add(level, PointResolver.pointIn(level, p), new GasParcel(Map.of(gas, moles), t), by));
         }
         int count = futures.size();
         reply(source, Component.translatable("commands.zas.gas.fill_queued", count, by.toString()));
@@ -527,7 +564,9 @@ public final class ZasCommands {
         Map<Long, BlockPos> zones = new LinkedHashMap<>();
         if (snapshot != null) {
             for (BlockPos p : BlockPos.betweenClosed(from, to)) {
-                ZoneView z = snapshot.zoneAt(p.asLong());
+                // The zone of the cell a removal at this position acts on: its largest (API-015).
+                ZoneView z = snapshot.zoneAt(
+                        p.asLong(), PointResolver.resolve(level, p).sub());
                 if (z != null && !zones.containsKey(z.id())) {
                     zones.put(z.id(), p.immutable());
                 }
@@ -546,7 +585,7 @@ public final class ZasCommands {
                 }
             }
             if (!moles.isEmpty()) {
-                futures.add(GasMutations.remove(level, Vec3.atCenterOf(e.getValue()), moles, by));
+                futures.add(GasMutations.remove(level, PointResolver.pointIn(level, e.getValue()), moles, by));
             }
         }
         int count = futures.size();

@@ -30,6 +30,42 @@ public interface CellSpace extends CellTopology {
     long position(long cell);
 
     /**
+     * A cell's index among the cells of its block, in {@link #forEachCellAt} order: its sub-cell
+     * index (GEO-004), or -1 if its block doesn't hold it. The default searches {@link
+     * #forEachCellAt}.
+     */
+    default int subIndex(long cell) {
+        int[] found = {-1};
+        int[] n = {0};
+        forEachCellAt(position(cell), c -> {
+            if (c == cell) {
+                found[0] = n[0];
+            }
+            n[0]++;
+        });
+        return found[0];
+    }
+
+    /**
+     * Cell {@code sub} of a block position, the cell an operation resolved to a sub-cell acts on
+     * (API-015); if the position doesn't have that many cells any more, its {@linkplain #cellAt
+     * largest cell}. A negative {@code sub} means the largest cell.
+     */
+    default long cellAt(long block, int sub) {
+        if (sub < 0) {
+            return cellAt(block);
+        }
+        long[] found = {NO_CELL};
+        int[] n = {0};
+        forEachCellAt(block, c -> {
+            if (n[0]++ == sub) {
+                found[0] = c;
+            }
+        });
+        return found[0] != NO_CELL ? found[0] : cellAt(block);
+    }
+
+    /**
      * The cell at a block position that an operation there acts on: its largest cell (API-015),
      * or {@link #NO_CELL} if it has none. The default picks the largest by {@link #volume}, the
      * first on a tie.
