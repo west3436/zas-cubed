@@ -4,11 +4,14 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -19,7 +22,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The provider used while ZAS³ is absent: a vanilla, breathable world (D-17,
  * API-009). Every point is ambient standard air, no zone exists, and
- * mutations complete at once with nothing moved.
+ * mutations complete at once with nothing moved. Standard air's gases are
+ * the only gases, grouped as ZAS³'s shipped tags group them.
  */
 final class FallbackProvider implements ZasApiProvider {
     static final FallbackProvider INSTANCE = new FallbackProvider();
@@ -27,6 +31,7 @@ final class FallbackProvider implements ZasApiProvider {
     private static final AtmosphereSample AIR = AtmosphereSample.ambient(StandardAir.mixture(StandardAir.CELL_VOLUME));
     private static final CompletableFuture<MutationResult> ABSENT =
             CompletableFuture.completedFuture(MutationResult.ABSENT);
+    private static final Set<ResourceLocation> OXIDIZERS = Set.of(StandardAir.OXYGEN);
 
     private FallbackProvider() {}
 
@@ -61,5 +66,11 @@ final class FallbackProvider implements ZasApiProvider {
     public CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source) {
         return ABSENT.copy();
+    }
+
+    /** Standard air's gases, as ZAS³'s tags group them: only oxygen is in a shipped tag. */
+    @Override
+    public Set<ResourceLocation> gasesInTag(GasTag tag) {
+        return tag.equals(GasTags.OXIDIZER) ? OXIDIZERS : Set.of();
     }
 }

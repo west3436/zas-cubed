@@ -22,7 +22,8 @@ public final class GasRegistryEvents {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1")
+        // Version 2 added gas tags and phase data to the payload.
+        event.registrar("2")
                 .playToClient(
                         GasDefinitionsPayload.TYPE, GasDefinitionsPayload.STREAM_CODEC, ClientGasRegistry::handle);
     }

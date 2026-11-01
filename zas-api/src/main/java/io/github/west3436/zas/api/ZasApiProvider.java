@@ -4,10 +4,12 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -105,4 +107,16 @@ public interface ZasApiProvider {
     @ServerThread
     CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source);
+
+    /**
+     * The gases in a gas tag (CORE-012), for
+     * {@link io.github.west3436.zas.api.gas.GasTags}.
+     *
+     * <p>Thread: any.
+     *
+     * @param tag the tag
+     * @return the ids of its gases, immutable; empty if there is no such tag
+     */
+    @AnyThread
+    Set<ResourceLocation> gasesInTag(GasTag tag);
 }
