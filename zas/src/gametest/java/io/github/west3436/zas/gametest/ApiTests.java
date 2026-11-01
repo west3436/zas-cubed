@@ -260,7 +260,15 @@ public final class ApiTests {
         }
     }
 
+    /**
+     * Checks an entity's eyes are in water. A test force-loads only its structure's chunks, so an
+     * entity standing in the next chunk isn't ticked and never sees the water at its eyes; it is
+     * ticked once here if it hasn't yet.
+     */
     private static void assertEyesInWater(GameTestHelper h, LivingEntity e) {
+        if (e.getEyeInFluidType() != NeoForgeMod.WATER_TYPE.value()) {
+            e.baseTick();
+        }
         h.assertTrue(
                 e.getEyeInFluidType() == NeoForgeMod.WATER_TYPE.value(),
                 e.getName().getString() + "'s eyes aren't in water yet");
