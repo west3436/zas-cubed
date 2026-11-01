@@ -1,6 +1,7 @@
 package io.github.west3436.zas;
 
 import io.github.west3436.zas.change.ChangeTracker;
+import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.command.ZasCommands;
 import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
@@ -27,6 +28,7 @@ public final class ZasMod {
         ZasApiProviderImpl.install(NeoForge.EVENT_BUS);
         Geometries.register(NeoForge.EVENT_BUS);
         ChangeTracker.register(NeoForge.EVENT_BUS);
+        TriggerStates.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);

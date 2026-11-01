@@ -37,31 +37,35 @@ public final class PresetOptions {
 
     /**
      * Whether combustion in an enclosed, unzoned area forms a zone: fire, lit furnaces and
-     * campfires, and the fuel generator (CORE-056, FIRE-024, D-13). Read it through {@link
-     * ZoneTrigger#COMBUSTION}.
+     * campfires, and the fuel generator (CORE-056, FIRE-024, D-13), the burning states of the
+     * blocks in {@code #zas:combustion}. Read it through {@link ZoneTrigger#COMBUSTION}; the change
+     * hook does, when a block catches fire or is lit ({@link
+     * io.github.west3436.zas.change.TriggerStates}).
      */
     public static final PresetOption<Boolean> COMBUSTION_FORMS_ZONES = new PresetOption<>(
             "combustion_forms_zones",
             PresetOption.BOOLEAN,
             false,
             true,
-            "Whether combustion forms a zone in an enclosed, unzoned area: fire, lit furnaces and"
-                    + " campfires, and the fuel generator",
+            "Whether combustion forms a zone in an enclosed, unzoned area: a fire starting, or a"
+                    + " furnace, campfire or the fuel generator being lit (blocks in #zas:combustion)",
             "CORE-056, FIRE-024",
-            "FIRE-024");
+            null);
 
     /**
-     * Whether planting in an enclosed, unzoned area forms a zone (CORE-056, CONT-053, D-33). Read it
-     * through {@link ZoneTrigger#PLANTING}.
+     * Whether planting in an enclosed, unzoned area forms a zone (CORE-056, CONT-053, D-33): placing
+     * a block of {@code #zas:plants}. Read it through {@link ZoneTrigger#PLANTING}; the change hook
+     * does ({@link io.github.west3436.zas.change.TriggerStates}).
      */
     public static final PresetOption<Boolean> PLANTING_FORMS_ZONES = new PresetOption<>(
             "planting_forms_zones",
             PresetOption.BOOLEAN,
             false,
             true,
-            "Whether planting forms a zone in an enclosed, unzoned area",
+            "Whether planting forms a zone in an enclosed, unzoned area: placing a crop, sapling or"
+                    + " leaves (blocks in #zas:plants)",
             "CORE-056, CONT-053",
-            "CORE-056");
+            null);
 
     /**
      * Whether a pressure difference breaks blocks in the {@code zas:pressure_fragile} tag, such as

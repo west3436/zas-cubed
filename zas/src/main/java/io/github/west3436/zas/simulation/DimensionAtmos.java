@@ -39,6 +39,7 @@ import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
+import io.github.west3436.zas.provider.PointResolver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -60,6 +61,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
@@ -70,6 +72,15 @@ import org.slf4j.Logger;
  * <p>An excluded dimension (ENV-007) has no engine: its mutations act on the open air, with the
  * same latency. A dimension whose engine threw is faulted (D-55): its last table stays readable
  * and new mutations fail.
+ *
+ * <p><b>Hardcore zone triggers</b> (CORE-056). At each batch close, the combustion and planting
+ * the change hook saw start since the last ({@link ChangeTracker#drainTriggers}) become operations
+ * that may form a zone and move no gas: one per trigger, at the cell a mutation at the block's
+ * centre would act on (API-015), so a full block such as a furnace acts on its nearest open
+ * neighbour. A trigger whose cell is already zoned in the published table, or that has no cell
+ * next to it, is dropped: it would change nothing. The engine then treats the operation as any
+ * other zone-forming one: in an enclosed, unzoned region it forms a zone holding the region's
+ * ambient gas (CORE-051), and in the open it does nothing.
  *
  * <p><b>Persistence</b> (architecture §4.5). The dimension is the {@link AtmosPersistence.Store}
  * of its level: a chunk saves {@link DimensionPipeline#recordFor its record}, built from the
@@ -778,11 +789,14 @@ public final class DimensionAtmos {
         ensureEngine();
         DimensionPipeline p = pipeline;
         closedAtGameTick = gameTick;
+        // Taken every batch, so triggers in an excluded or faulted dimension don't pile up.
+        List<ChangeTracker.Trigger> triggers = ChangeTracker.drainTriggers(level);
         if (p == null) {
             excludedInFlight = List.copyOf(excludedQueue);
             excludedQueue.clear();
             excludedClosed = true;
         } else if (!p.scheduler().isFaulted()) {
+            queueTriggers(p, triggers);
             EngineSettings settings = settings(timing);
             if (!checkRequests.isEmpty()) {
                 settings = settings.withConservationCheck(true);
@@ -793,6 +807,35 @@ public final class DimensionAtmos {
         }
         lastCloseNanos = System.nanoTime() - start;
         profiler.closed(lastCloseNanos);
+    }
+
+    /**
+     * Queues an operation for each trigger that may form a zone (CORE-056): no gas, the ambient's
+     * temperature, and nobody waiting on its outcome. See the class comment.
+     */
+    private void queueTriggers(DimensionPipeline p, List<ChangeTracker.Trigger> triggers) {
+        if (triggers.isEmpty()) {
+            return;
+        }
+        AtmosSnapshot table = p.published();
+        double[] none = new double[registry.size()];
+        double temperature = Ambients.ambient(level.dimension()).temperature();
+        for (ChangeTracker.Trigger t : triggers) {
+            PointResolver.Cell cell = PointResolver.resolve(level, Vec3.atCenterOf(t.pos()));
+            long block = cell.pos().asLong();
+            if (cell.cells() == 0 || table.zoneAt(block, cell.sub()) != null) {
+                continue;
+            }
+            boolean combustion = t.trigger() == ZoneTrigger.COMBUSTION;
+            p.add(
+                    block,
+                    cell.sub(),
+                    none,
+                    temperature,
+                    combustion ? LedgerCategory.REACTION : LedgerCategory.LIFE,
+                    true,
+                    combustion ? "zas:combustion" : "zas:planting");
+        }
     }
 
     /** Whether the in-flight batch is due at {@code gameTick}. */
