@@ -2,6 +2,7 @@ package io.github.west3436.zas.engine.classify;
 
 import static io.github.west3436.zas.engine.classify.TestWorld.AIR;
 import static io.github.west3436.zas.engine.classify.TestWorld.DOOR;
+import static io.github.west3436.zas.engine.classify.TestWorld.DOOR_EAST;
 import static io.github.west3436.zas.engine.classify.TestWorld.air;
 import static io.github.west3436.zas.engine.classify.TestWorld.cell;
 import static io.github.west3436.zas.engine.classify.TestWorld.perLitre;
@@ -119,6 +120,63 @@ class BreachTest {
         assertNull(a.ambientEdge(), "nothing exchanges with the ambient");
         assertNull(door.ambientEdge());
         assertNull(c.ambientEdge());
+    }
+
+    /**
+     * An open door joins the room it opens from, west of its boundary face: a region of two rooms
+     * and a door becomes two zones meeting only across the door, and the door's cell is no zone of
+     * its own (GEO-007, CORE-034, #107).
+     */
+    @Test
+    void geo_007_door_cell_joins_the_room_it_opens_from() {
+        TestWorld world = new TestWorld()
+                .box(0, 0, 0, 2, 2, 2, AIR)
+                .box(4, 0, 0, 6, 2, 2, AIR)
+                .set(3, 1, 1, DOOR_EAST);
+        SectionTopology t = world.topology();
+        ZoneGraph graph = TestWorld.graph(t, AMBIENT);
+        FillResult.Enclosed region = (FillResult.Enclosed) new EnclosureFill().fill(t, cell(6, 2, 2));
+        assertEquals(27 + 1 + 27, region.cells().length, "gas crosses the open door, so the fill does");
+
+        List<Zone> zones = EnclosureZones.create(graph, t, region.cells());
+        assertEquals(2, zones.size(), "two rooms, and no zone for the door");
+        Zone a = graph.zoneOf(cell(0, 0, 0));
+        Zone b = graph.zoneOf(cell(6, 2, 2));
+        assertSame(a, graph.zoneOf(cell(3, 1, 1)), "the door joins the room west of its boundary face");
+        assertEquals(28, a.cellCount());
+        assertEquals(27, b.cellCount());
+        Edge door = a.edgeTo(b);
+        assertEquals(1, door.connections());
+        assertEquals(0, door.directConnections(), "the rooms meet across the door only");
+    }
+
+    /** A breach reaching a room behind a door: the door goes with the room it opens from (GEO-007). */
+    @Test
+    void geo_007_breach_takes_the_door_with_its_room() {
+        // As geo_023_pocket_behind_a_door_forms_its_own_zone, with a door that joins room B.
+        TestWorld world = new TestWorld()
+                .box(0, 0, 0, 2, 2, 2, AIR)
+                .box(4, 0, 0, 6, 2, 2, AIR)
+                .box(8, 0, 0, 9, 2, 2, AIR)
+                .set(7, 1, 1, DOOR_EAST);
+        SectionTopology t = world.topology();
+        ZoneGraph graph = TestWorld.graph(t, AMBIENT);
+        Zone a = zoneAt(graph, t, cell(0, 0, 0));
+
+        long[] seeds = BreachResolver.breachSeeds(graph, t, breakWall(world, graph, 3, 1, 1));
+        Breach.Pocket pocket = assertInstanceOf(
+                Breach.Pocket.class,
+                new BreachResolver(new EnclosureFill())
+                        .classify(graph, t, seeds)
+                        .get(0));
+        List<Zone> zones = BreachResolver.apply(graph, t, pocket);
+        Zone c = graph.zoneOf(cell(9, 2, 2));
+        assertEquals(List.of(a, c), zones, "A takes the wall block, B and the door; C becomes a zone");
+        assertEquals(27 + 1 + 27 + 1, a.cellCount());
+        assertSame(a, graph.zoneOf(cell(7, 1, 1)));
+        assertEquals(18, c.cellCount());
+        assertEquals(0, a.edgeTo(c).directConnections(), "zones meet across the door");
+        assertEquals(2, graph.zoneCount());
     }
 
     @Test

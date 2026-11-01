@@ -104,6 +104,11 @@ public final class GeometryPalette {
             return entries.size();
         }
 
+        /** The geometry with this id, of those added so far. */
+        public Geometry geometry(int id) {
+            return entries.get(id);
+        }
+
         public GeometryPalette build() {
             return new GeometryPalette(entries.toArray(Geometry[]::new));
         }

@@ -425,8 +425,9 @@ public final class ScenarioTests {
      * S-02 on a two-room station: closing the door between the rooms splits the zone; a breach in
      * one room vents only that room; resealing it and topping it up by command lets it be
      * pressurised again; opening the door merges the rooms back into one zone (CORE-023, CORE-024,
-     * CORE-064). In R0 the "door" is a block of the shared wall: doors as zone boundaries are R1
-     * (GEO-007).
+     * CORE-064). The "door" is a block of the shared wall, as in R0, so that it splits and merges
+     * the zone: a real door keeps the rooms separate zones instead (GEO-007, {@link
+     * ZoneBoundaryTests}).
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
     public static void s_02_station_breach_split_and_merge(GameTestHelper h) {

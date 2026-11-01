@@ -32,8 +32,13 @@ final class TestWorld {
     static final int SOLID = GeometryPalette.SOLID_ID;
     /** A thin wall down the middle of x: two cells, west (0) and east (1). */
     static final int DIVIDER;
-    /** An open door: air that keeps zones apart (GEO-007). */
+    /** An open door that is a zone boundary on every face, so its cell is a zone of its own (GEO-007). */
     static final int DOOR;
+    /**
+     * An open door whose east face is its zone boundary, as a door is across the face it closes
+     * against (GEO-007): it joins the room west of it, and gas crosses east without the zones meeting.
+     */
+    static final int DOOR_EAST;
 
     static final GeometryPalette PALETTE;
 
@@ -43,6 +48,7 @@ final class TestWorld {
         GeometryDeriver.fill(wall, 7, 0, 0, 9, 16, 16);
         DIVIDER = b.intern(GeometryDeriver.derive(wall));
         DOOR = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, Geometry.FLAG_ZONE_BOUNDARY));
+        DOOR_EAST = b.intern(Geometry.AIR.withFlags(Geometry.boundaryFlag(Face.EAST)));
         PALETTE = b.build();
     }
 

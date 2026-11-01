@@ -33,6 +33,26 @@ measured here (see [Not measured](#not-measured)).
 | CORE-045: server-thread versus worker time | 31 µs versus 0.94 ms per atmos tick in S-10 | Recorded |
 | CORE-046: cost at each period | 0.5 s: 1.29 ms of worker time per game second; 1 s: 0.94 ms; 2 s: 0.67 ms | Recorded |
 
+*2026-11-01: since GEO-007 ([#107](https://github.com/west3436/zas-cubed/issues/107)),
+the station's door cells join a room each, so it has 100 zones and 178 edges
+rather than 278 and 356 ([S-10](#s-10-engine-load)). The figures above were
+measured with 278 zones. Re-measured with 100
+([S-10 after GEO-007](#s-10-after-geo-007-2026-11-01)), every verdict holds:*
+
+| Target | 100 zones, 178 door edges (2026-11-01) | Result |
+|---|---|---|
+| NFR-001: mean ≤ 2 ms per server tick | 3.8 µs with ops (2.3 µs without) | Pass (engine share) |
+| NFR-001: p99 ≤ 5 ms | 0.061 ms | Pass (engine share) |
+| NFR-002 and CORE-047: no server tick over 10 ms | Worst close or apply 1.36 ms in S-10, 0.087 ms on the explosion tick, 1.11 ms for the burst of 1,000 zone-creating adds | Pass |
+| NFR-005: worker tick ≤ 250 ms | Worst 10.8 ms; mean 0.391 ms with ops (0.939 ms at 278 zones) | Pass |
+| NFR-003: 1,000 idle zones add ≤ 0.1 ms per server tick | +0.026 ms (8.8 µs server, 0.017 ms worker) | Pass |
+| NFR-003: doubling loaded chunks without zones changes cost < 5 % | +0.2 % | Pass |
+| NFR-004: ≤ 256 B per zoned cell, ≤ 4 KiB per zone, ≤ 64 MiB | 221 B per zoned cell, 1.7 KiB per zone, 10.70 MiB | Pass |
+| GEO-011: constant cost per change away from zones | 5.4 to 5.8 ns, with 100 or 1,100 zones | Pass |
+| GEO-044: constant cost per door toggle | 4 to 5 µs above the idle tick at 1,000, 8,000 and 50,000 cells; no split checks | Pass ([door toggles](#geo-044-door-toggles)) |
+| CORE-045: server-thread versus worker time | 77 µs versus 0.391 ms per atmos tick, with ops | Recorded |
+| CORE-046: cost at each period | 0.5 s: 0.478 ms of worker time per game second; 1 s: 0.391 ms; 2 s: 0.315 ms | Recorded |
+
 **Requirements moved to `Implemented`:** GEO-011, CORE-054, CORE-047 and
 NFR-003 (each with a dated note), and API-048, since S-12 now runs in CI (see
 [S-12](#s-12-api-fallback-check)). CORE-045 and CORE-046 were already
@@ -62,8 +82,8 @@ followed, with a dated note, once its Bench passed
 `./gradlew :engine:bench` runs a plain Java program in the engine's `bench`
 source set: no Minecraft, no JMH. It isn't part of `build`, but `check`
 compiles it. `-Pbench.args="s10 fill"` picks cases (`fill`, `zones`, `s10`,
-`scaling`, `changes`); `-Pbench.args=--quick` makes every run short, to check
-that the harness works.
+`scaling`, `changes`, `toggle`); `-Pbench.args=--quick` makes every run short,
+to check that the harness works.
 
 - **The world** is a `BenchWorld`: geometry ids per section, a square of
   loaded chunks, and the platform's real change tracking (`DirtySections` and
@@ -95,11 +115,18 @@ that the harness works.
   and one of 8 × 10 × 8 (640), so 40,000 zoned cells in 100 rooms
 - an open door in each of the 178 shared walls
 
-The engine makes each open door's cell a zone of its own (GEO-007), so there
-are 278 zones and 356 edges. That is more than S-10's 100 zones and spike S5's
-180 edges, which makes the load heavier, not lighter. Rooms start between 85 %
-and 110 % of standard pressure, so the doors are busy at first and then fall
+Each door's far face is a zone boundary, so its cell joins the room west or
+north of it, as an open door's cell joins the room it faces in game (GEO-007,
+[architecture §4.7](../architecture.md#47-zone-boundary-blocks-geo-007-geo-044-core-034-core-067)):
+100 zones and 178 door edges, S-10's 100 zones. Rooms start between 85 % and
+110 % of standard pressure, so the doors are busy at first and then fall
 asleep.
+
+*2026-11-01: the numbers in this section were measured before GEO-007, when
+the engine made each open door's cell a zone of its own: 278 zones and 356
+edges, more than S-10's 100 zones and spike S5's 180 edges
+([#107](https://github.com/west3436/zas-cubed/issues/107)). They are
+re-measured with 100 zones in [S-10 after GEO-007](#s-10-after-geo-007-2026-11-01).*
 
 **The script:** 2 minutes of warm-up, then 10 minutes of game time.
 
@@ -164,6 +191,73 @@ in [#78](https://github.com/west3436/zas-cubed/issues/78) before acting on it.
 *2026-11-01: measured by retained size, part by part, in the
 [membership palette check](#membership-palette-check-2026-11-01).*
 
+## S-10 after GEO-007 (2026-11-01)
+
+_Run 2026-11-01 on the same machine, with nothing else running
+(`-Pbench.args="s10 scaling changes toggle"`), on
+[#133](https://github.com/west3436/zas-cubed/pull/133)._ The station and script
+are as [above](#s-10-engine-load), but each open door's cell now joins one of
+its rooms (GEO-007): 100 zones and 178 door edges, instead of 278 zones and
+356 edges.
+
+Per atmos tick at the default 1 s period:
+
+| Run | Thread | Measure | Mean | Median | p99 | Max |
+|---|---|---|---|---|---|---|
+| No ops | Server | Batch close | 0.028 ms | 0.023 ms | 0.099 ms | 0.161 ms |
+| No ops | Server | Apply | 0.017 ms | 0.013 ms | 0.073 ms | 0.257 ms |
+| No ops | Worker | Engine tick | 0.295 ms | 0.124 ms | 8.36 ms | 10.83 ms |
+| Ops | Server | Batch close | 0.022 ms | 0.018 ms | 0.062 ms | 0.142 ms |
+| Ops | Server | Apply | 0.055 ms | 0.046 ms | 0.175 ms | 1.36 ms |
+| Ops | Worker | Engine tick | 0.391 ms | 0.231 ms | 8.10 ms | 9.42 ms |
+
+Against the budgets:
+
+| Run | Server per server tick: mean (NFR-001 ≤ 2 ms) | p99 (≤ 5 ms) | Worst server tick (CORE-047 ≤ 10 ms) | Worst worker tick (NFR-005 ≤ 250 ms) | Explosion tick: close / apply / worker |
+|---|---|---|---|---|---|
+| No ops | 2.3 µs | 0.040 ms | 0.257 ms | 10.83 ms | 0.036 / 0.050 / 10.10 ms |
+| Ops | 3.8 µs | 0.061 ms | 1.36 ms | 9.42 ms | 0.023 / 0.087 / 8.41 ms |
+
+Cost by period (CORE-046), with ops:
+
+| Period | Atmos ticks | Worker per tick: mean | max | Worker per game second | Server per server tick: mean | Worst server tick |
+|---|---|---|---|---|---|---|
+| 0.5 s | 1,200 | 0.239 ms | 8.61 ms | 0.478 ms | 4.6 µs | 0.936 ms |
+| 1 s | 600 | 0.391 ms | 9.42 ms | 0.391 ms | 3.8 µs | 1.36 ms |
+| 2 s | 300 | 0.629 ms | 9.35 ms | 0.315 ms | 2.0 µs | 0.094 ms |
+
+**Heap (NFR-004):** 10.70 MiB in all, 40,178 zoned cells (the 178 door cells
+are zoned now). The parts that scale with cells come to 221 B per zoned cell
+(189 B of it the zone graph's cells), and those that scale with zones to
+1.7 KiB per zone. A GC'd `Runtime` difference gives 12.64 MiB, 330 B per
+zoned cell. All three limits pass.
+
+**NFR-003, GEO-011 and CORE-054:**
+
+| Case | Result |
+|---|---|
+| 1,000 idle zones (27 cells, all edges asleep) | Server 0.045 → 0.220 ms per atmos tick, worker 0.317 → 0.653 ms: +8.8 µs and +0.017 ms per server tick, 0.026 ms in all |
+| Twice the loaded chunks with no zones | +0.2 % |
+| Burst of 1,000 zone-creating adds (CORE-047) | All zoned in 1 atmos tick; worst close 1.11 ms, apply 0.327 ms, worker 43.7 ms |
+| World generation and exploration (CORE-054) | 0 sections captured, 0 fills, 100 zones before and after, over 3,992,160 block writes |
+| Changes away from zones (GEO-011) | 5.4 to 5.8 ns per change, from 16 k to 1 M changes, with 100 or 1,100 zones |
+
+**What changed, against 278 zones:**
+
+- **The worker is faster:** 0.391 ms per atmos tick with ops, against 0.939 ms,
+  and 0.295 ms against 0.535 ms without. There are 178 fewer zones to copy,
+  publish and exchange.
+- **The server thread does more,** though it stays far inside its budgets:
+  with ops, close plus apply is 77 µs per atmos tick against 31 µs, and the
+  worst apply is 1.36 ms. Two causes. First, all 99 small rooms are joined
+  through doors, so whenever an edge falls asleep CORE-067 equalizes the whole
+  group and all 99 zones change, which the apply then publishes; under ops
+  the edges wake and sleep often. Second, idle zones cost more on the server
+  thread than in the R0 run, on main too: the same `scaling` case on main
+  without GEO-007 (7f58656) gave +9.2 µs per server tick for 1,000 idle zones,
+  against +8.8 µs here and +0.8 µs in the R0 run. That rise predates GEO-007
+  and belongs with [#121](https://github.com/west3436/zas-cubed/issues/121).
+
 ## Bounded fill: GEO-020 and GEO-022
 
 **The fill alone** (`EnclosureFill` on a `SectionTopology`, the worker's view
@@ -225,6 +319,30 @@ The split search is local, as CORE-025 requires: 24 visits at every size
 the zone, because the engine rebuilds the membership table over every zoned
 cell on any tick with a geometry change. *2026-11-01: it is now, after #106
 (see the [membership palette check](#membership-palette-check-2026-11-01)).*
+
+## GEO-044: door toggles
+
+*Added and run 2026-11-01.* Two rooms side by side, joined by one door in
+their shared wall, each of 1,000, 8,000 or 50,000 cells; the door is opened
+and closed again 50 times after 10 warm-up times, with one atmos tick after
+each change (`-Pbench.args=toggle`). Each pair is alone in its engine, so the
+worker tick shows everything a toggle costs. The case checks every toggle
+leaves the zones, their ids and their cells as they were, and reports the
+split checks the toggles caused, which should be none. GEO-044 passes if the
+worker tick per toggle is about the same at every size and close to the idle
+tick, unlike the placed block of [local edits](#merge-and-split-core-023-core-024-and-core-025).
+
+| Each room | Split checks | Worker: idle tick, median | Worker tick per toggle: mean | median | p99 | max | Server: close plus apply, median |
+|---|---|---|---|---|---|---|---|
+| 1,000 cells | 0 | 4.0 µs | 0.011 ms | 9.3 µs | 0.027 ms | 0.039 ms | 5.3 µs |
+| 8,000 cells | 0 | 8.8 µs | 0.017 ms | 0.013 ms | 0.030 ms | 0.333 ms | 5.1 µs |
+| 50,000 cells | 0 | 0.022 ms | 0.029 ms | 0.026 ms | 0.051 ms | 0.064 ms | 6.8 µs |
+
+**Against GEO-044:** a toggle costs 4 to 5 µs of worker time above the idle
+tick at every size (medians 9.3 against 4.0, 13 against 8.8, and 26 against
+22 µs) and causes no split check, so it passes. The idle tick itself grows
+with the zone's cells; that is the idle-zone cost of
+[#121](https://github.com/west3436/zas-cubed/issues/121), not the toggle.
 
 ## NFR-003 and CORE-054: cost follows activity
 

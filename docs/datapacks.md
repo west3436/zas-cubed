@@ -304,6 +304,39 @@ data/<namespace>/zas/geometry_overrides/<path>.json
   `/reload`, which rebuilds the geometry table; zones are rebuilt if the
   geometry changed.
 
+## Zone boundaries
+
+Blocks in the block tag `zas:zone_boundary` pass gas but keep the zones on
+either side apart, like doors (GEO-007):
+
+```
+data/zas/tags/block/zone_boundary.json
+```
+
+```json
+{
+  "values": ["#minecraft:doors", "#minecraft:trapdoors"]
+}
+```
+
+That is the mod's own tag. A pack adds blocks to it the usual way, with a file
+at the same path listing them; to take blocks out, it replaces the tag with
+`"replace": true` and lists what should stay.
+
+- **Which faces.** A block that opens and closes keeps zones apart across the
+  faces it seals in one state but not the other: a door across the face its
+  panel closes against and the face it swings to, a trapdoor across its bottom
+  or top face and the side it swings to. Its own cells join the space on its
+  other sides, so a door belongs to the room it faces. Opening and closing it
+  never splits or rebuilds a zone (GEO-044).
+- **Other blocks.** A tagged block that doesn't open, or seals the same faces
+  either way, keeps zones apart across every face: each of its cells is a zone
+  of its own.
+- **With overrides.** The faces come from the block's geometry after any
+  override (above).
+- **When it applies:** the tag is read when the server starts and on
+  `/reload`, with the overrides.
+
 ## Block tags
 
 ZAS³ reads these Minecraft block tags, at
@@ -314,6 +347,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 |---|---|---|
 | `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
+| `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
 A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
