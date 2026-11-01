@@ -2,6 +2,7 @@ package io.github.west3436.zas.config;
 
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
+import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +20,8 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * <p>It holds the atmosphere preset (D-14, OPS-007) and, under {@code [preset_options]}, an entry
  * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
  * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
- * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) under {@code [atmos]}; the
+ * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
+ * (CORE-035, CORE-068) under {@code [atmos]}; the
  * permission level of the {@code /zas} commands (OPS-011) under {@code [commands]}; and the
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table, thresholds and
  * hazard toggles join this file as their features land.
@@ -51,6 +53,9 @@ public final class ZasServerConfig {
 
     /** Run the conservation checker every atmos tick (CORE-073; debug). */
     public static final ModConfigSpec.BooleanValue CONSERVATION_CHECKER;
+
+    /** The venting model: volume-aware (CORE-035) or ZAS's (CORE-068), D-21. */
+    public static final ModConfigSpec.EnumValue<ExchangeSettings.Venting> VENTING;
 
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
@@ -109,6 +114,12 @@ public final class ZasServerConfig {
                         "Debug: check every atmos tick that gas changed only through known sources",
                         "and sinks, and log any discrepancy.")
                 .define("conservation_checker", false);
+        VENTING = builder.comment(
+                        "How fast zones exchange gas through openings: VOLUME_AWARE or FAITHFUL.",
+                        "VOLUME_AWARE: the same openings drain a large room proportionally slower than a small",
+                        "one, into the open or into a much larger room. FAITHFUL: ZAS's model, where a room loses",
+                        "about the same fraction of its air per second whatever its size.")
+                .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
         builder.pop();
         builder.push("commands");
         PERMISSION_LEVEL = builder.comment(
@@ -199,6 +210,11 @@ public final class ZasServerConfig {
         int period = PERIOD_TICKS.get();
         int delay = APPLY_DELAY_TICKS.get();
         return delay < period ? new SchedulerSettings(period, delay) : SchedulerSettings.DEFAULT;
+    }
+
+    /** The venting model (D-21); volume-aware while no world's config is loaded. */
+    public static ExchangeSettings.Venting venting() {
+        return SPEC.isLoaded() ? VENTING.get() : ExchangeSettings.Venting.VOLUME_AWARE;
     }
 
     /** The server-thread budget in nanoseconds. */

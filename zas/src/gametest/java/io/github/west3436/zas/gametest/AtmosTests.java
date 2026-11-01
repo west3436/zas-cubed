@@ -413,7 +413,10 @@ public final class AtmosTests {
         set(h, new BlockPos(3, 2, 2), AIR);
         tick(h);
         h.assertFalse(zone(h, 1, 2, 2).id().equals(zone(h, 5, 2, 2).id()), "merged before equalizing");
-        for (int i = 0; i < 40 && !zone(h, 1, 2, 2).id().equals(zone(h, 5, 2, 2).id()); i++) {
+        // About 55 s through the one opening with volume-aware sharing (CORE-035).
+        for (int i = 0;
+                i < 120 && !zone(h, 1, 2, 2).id().equals(zone(h, 5, 2, 2).id());
+                i++) {
             tick(h);
         }
         ZoneInfo merged = zone(h, 1, 2, 2);
