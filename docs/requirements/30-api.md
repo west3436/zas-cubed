@@ -3,7 +3,7 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). API-019 was added and accepted on
-2026-10-31 (D-57).
+2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68).
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -355,6 +355,21 @@ Zone pins shall be saved and restored with their zone.
 (CORE-076), so losing it on reload would dissolve a zone with an ambient edge.
 The R0 chunk record (format version 2) already saves whether each zone is
 pinned; the owner ids remain to be added with API-017.*
+
+#### API-050 · Pinning a point forms a zone
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-68, D-13 · Depends: API-016, API-017
+
+The API shall let a mod pin the zone at a point under an owner id. If the
+point's region is enclosed and has no zone, a zone forms there holding its
+cells' ambient gas, with no gas added or removed. The result, delivered as in
+API-016, gives the zone, or says the region is open or unresolved.
+
+- **Rationale:** Decision: D-68. The area air controller needs a zone for its
+  room before any gas is added (CONT-110), and a zone that holds only ambient
+  air must be pinned to last (CORE-052).
+- **Verify:** A GameTest pins a point in a sealed, unzoned room and checks a
+  pinned zone forms holding the ambient's gas, and that pinning a point in the
+  open forms nothing and says so.
 
 ## Extension points
 

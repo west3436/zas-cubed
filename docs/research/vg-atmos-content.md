@@ -102,6 +102,14 @@ All portables can act on a held tank instead of the room, need no power, and run
 
 **Turbine.** The compressor draws in a tenth of a tile of air per tick; output ∝ rpm^0.8 (`code/modules/power/turbine.dm:59-133`).
 
+### 2.5 Power cells and chargers
+
+**Cells.** A power cell is an item that holds a charge. The standard line holds 1000 units (power cell), 10000 (high-capacity), 20000 (super-capacity) and 30000 (hyper-capacity), each unlocked at a higher research level (`code/game/objects/items/weapons/power_cells.dm:1-15,96-134`). Borg, mech and novelty cells fall between them.
+
+**Cell charger.** An anchored machine that holds one cell, and accepts one only in an area with power. Each tick it draws 1500 from the area's power and puts 70 % of it, 1050 units, into the cell, so a power cell fills in one tick and a super-capacity cell in about 20. Better capacitors multiply the rate by up to 3, and a better scanning module raises the efficiency to 80 or 90 % (`MCH/cell_charger.dm:13-16,45-53,145-151`). It shows the charge in five steps and beeps when the cell is full (`:57-67,154-156`). vg's "recharger" is a different machine, for weapons and batons.
+
+**Cell-powered portables.** The space heater and the chiller each carry a 1000-unit cell and use 2 units per tick while running at 40 kW, so a full cell lasts about 1000 s (`ATM/hvac/spaceheater.dm:11,86-87,349`; `ATM/hvac/chiller.dm:10,22,115`). The portable pump and scrubber use no power (§2.3).
+
 ## 3. Air alarms, fire alarms and firedoors
 
 **Sampling.** Each tick, an alarm reads its turf's zone mixture (`MCH/alarm.dm:456-469`). Its danger level is the worst of: total pressure, temperature, each "noteworthy" gas's partial pressure, and the summed partial pressure of all other gases (`:592-611`).
