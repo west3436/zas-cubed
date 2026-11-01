@@ -4,6 +4,7 @@ import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.ChunkGenerations;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.DirtySections;
+import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
@@ -27,8 +28,16 @@ import java.util.function.LongPredicate;
 final class BenchWorld implements DimensionPipeline.World {
     static final int AIR = GeometryPalette.AIR_ID;
     static final int SOLID = GeometryPalette.SOLID_ID;
-    /** An open door: gas passes, zones stay apart and share an edge (GEO-007). */
-    static final int DOOR;
+    /**
+     * An open door in a wall running north to south: gas passes, and its east face is a zone
+     * boundary, so it joins the room west of it and the rooms stay separate zones sharing an edge
+     * (GEO-007).
+     */
+    static final int DOOR_EAST;
+    /** {@link #DOOR_EAST} closed: its east face sealed, the same faces a boundary (GEO-044). */
+    static final int DOOR_EAST_CLOSED;
+    /** An open door in a wall running east to west, joining the room north of it. */
+    static final int DOOR_SOUTH;
 
     static final GeometryPalette PALETTE;
     static final int MIN_SECTION_Y = -4;
@@ -36,7 +45,10 @@ final class BenchWorld implements DimensionPipeline.World {
 
     static {
         GeometryPalette.Builder b = GeometryPalette.builder();
-        DOOR = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, Geometry.FLAG_ZONE_BOUNDARY));
+        int east = Geometry.boundaryFlag(Face.EAST);
+        DOOR_EAST = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, east));
+        DOOR_EAST_CLOSED = b.intern(Geometry.declared(Set.of(Face.EAST), Geometry.FULL_VOLUME, east));
+        DOOR_SOUTH = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, Geometry.boundaryFlag(Face.SOUTH)));
         PALETTE = b.build();
     }
 

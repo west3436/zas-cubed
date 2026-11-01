@@ -136,6 +136,11 @@ owner's test passed for the zone/direct and ambient/direct edges at a door and
 a breach. Boundary edges can't occur until a block carries the zone-boundary
 flag (GEO-007, R1), so this stays Accepted until they can be checked.*
 
+*2026-11-01: they can now: an open door's edge is a zone boundary (GEO-007),
+and `client_011_door_edge_is_a_zone_boundary` (GameTest) checks the payload
+marks it so. It stays Accepted until the owner checks the boundary colour by
+hand.*
+
 #### CLIENT-012 · Debug seal masks and sub-cells
 `Must` · `R0` · `Implemented` · Verify: Manual · Trace: D-44 · Depends: CLIENT-005
 

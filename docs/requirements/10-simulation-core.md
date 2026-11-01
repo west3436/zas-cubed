@@ -628,7 +628,7 @@ tick.
 once it breaks equivalence (ENV-017), added during the ENV review.*
 
 #### CORE-034 · Door-separated zones never merge
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 
 Zones connected only through zone-boundary openings shall never merge.
 
@@ -637,8 +637,14 @@ Zones connected only through zone-boundary openings shall never merge.
 - **Verify:** A Unit test and a GameTest open a door between two rooms and
   check gas passes but they stay two zones.
 
+*2026-11-01: Implemented ([#64](https://github.com/west3436/zas-cubed/issues/64)).
+An equivalent edge with no direct connection sleeps instead of merging, and an
+explicit merge needs a direct opening. `core_034_door_separated_zones_never_merge`
+(Unit) runs two door-joined rooms for 200 ticks; its GameTest namesake runs two
+rooms zoned through an open door for a minute.*
+
 #### CORE-067 · Door-separated group equalization
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 
 Once zones connected only through zone-boundary openings are equivalent, every
 zone reachable through those sleeping edges shall be equalized to one combined
@@ -650,6 +656,15 @@ mixture.
   §9](../research/zas-core.md#9-quirks-dont-replicate-blindly), quirk 6).
 - **Verify:** A Unit test and a GameTest link three rooms by open doors and
   check that once equivalent they hold one combined mixture.
+
+*2026-11-01: Implemented ([#65](https://github.com/west3436/zas-cubed/issues/65)).
+When an edge falls asleep, the zones reachable through sleeping edges take one
+combined mixture, shared by volume; paused zones are left out ([architecture
+§4.7](../architecture.md#47-zone-boundary-blocks-geo-007-geo-044-core-034-core-067)).
+`core_067_door_group_equalizes_to_one_mixture` and its siblings (Unit) and
+`core_067_three_rooms_equalize` (Unit and GameTest) check three rooms end with
+one mixture, with gas and thermal energy conserved; the conservation fuzz test
+covers it under the ledger.*
 
 #### CORE-035 · Volume-aware venting
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-21

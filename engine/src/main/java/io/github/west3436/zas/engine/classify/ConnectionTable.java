@@ -16,7 +16,8 @@ final class ConnectionTable {
     private final GeometryPalette palette;
     private final int[] cellCounts;
     private final double[][] volumes;
-    private final boolean[] boundary;
+    /** Per geometry: bit {@code face.ordinal()} is set when that face is a zone boundary. */
+    private final int[] boundary;
 
     private long[] keys = new long[256];
     private long[][] values = new long[256][];
@@ -27,7 +28,7 @@ final class ConnectionTable {
         int n = palette.size();
         cellCounts = new int[n];
         volumes = new double[n][];
-        boundary = new boolean[n];
+        boundary = new int[n];
         for (int id = 0; id < n; id++) {
             Geometry g = palette.geometry(id);
             int count = Math.min(g.cellCount(), CellIds.MAX_SUB_CELLS);
@@ -36,7 +37,11 @@ final class ConnectionTable {
             for (int c = 0; c < count; c++) {
                 volumes[id][c] = g.cell(c).volume();
             }
-            boundary[id] = g.hasFlag(Geometry.FLAG_ZONE_BOUNDARY);
+            for (Face f : Face.values()) {
+                if (g.isBoundary(f)) {
+                    boundary[id] |= 1 << f.ordinal();
+                }
+            }
         }
     }
 
@@ -55,9 +60,13 @@ final class ConnectionTable {
         return sub < v.length ? v[sub] : 0;
     }
 
-    /** Whether openings between these two geometries are zone boundaries (GEO-007). */
-    boolean boundary(int a, int b) {
-        return boundary[a] || boundary[b];
+    /**
+     * Whether openings from {@code a} across {@code face} to its neighbour {@code b} are zone
+     * boundaries (GEO-007): either block flags its side of the shared face.
+     */
+    boolean boundary(int a, Face face, int b) {
+        return (boundary[a] & (1 << face.ordinal())) != 0
+                || (boundary[b] & (1 << face.opposite().ordinal())) != 0;
     }
 
     /**
