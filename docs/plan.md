@@ -213,10 +213,10 @@ ready: Hardcore zone triggers and volume-aware venting.*
 
 | Item | PR | Requirements | Left |
 |---|---|---|---|
-| Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011 to CORE-013 and CORE-015 to CORE-017 *Implemented* | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives (the field is optional). The owner may prefer CORE-012 to stay *Accepted* until LIFE, FIRE or CONT reads the tags |
+| Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011, CORE-013 and CORE-015 to CORE-017 *Implemented*; CORE-012 back to *Accepted* by the owner, until LIFE, FIRE or CONT reads the tags | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives: left out until a track needs them (owner). `gasesInTag` got a default, like `breathability` ([#138](https://github.com/west3436/zas-cubed/pull/138)) |
 | Zone-boundary blocks | [#133](https://github.com/west3436/zas-cubed/pull/133) | GEO-007, GEO-044, CORE-034 and CORE-067 *Implemented*; [#107](https://github.com/west3436/zas-cubed/issues/107) fixed | CLIENT-011's overlay check (#31). A door opening onto open air still costs a bounded breach fill each time, until GEO-021 and GEO-027 |
-| The preset | [#128](https://github.com/west3436/zas-cubed/pull/128) | OPS-015 *Implemented*; OPS-007 stays *Accepted* until the options it lists have users | Per-world presets: NeoForge shares `config/zas-server.toml` between singleplayer worlds that have no `serverconfig` copy, so the owner decides whether `/zas preset` should write one |
-| Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stays *Accepted* | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. Open to the owner: the new `@LevelThread` marker, and the `Hazard` and `Protection` values, which LIFE may change |
+| The preset | [#128](https://github.com/west3436/zas-cubed/pull/128) | OPS-015 *Implemented*; OPS-007 stays *Accepted* until the options it lists have users | Per-world presets: NeoForge shares `config/zas-server.toml` between singleplayer worlds that have no `serverconfig` copy. The owner chose to have `/zas preset` write the world's own copy ([#139](https://github.com/west3436/zas-cubed/issues/139)) |
+| Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stays *Accepted* | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. The owner kept `@LevelThread` and the `Hazard` and `Protection` values; LIFE confirms or trims the values before 1.0.0 |
 | Hardcore zone triggers | [#136](https://github.com/west3436/zas-cubed/pull/136) | CORE-056 stays *Accepted* | The fuel generator (CONT) joins `#zas:combustion` when it exists. Fire spreading in the open under Hardcore runs a bounded fill per new fire block, a cost like a door opening to air, with the same mitigation |
 | Volume-aware venting | [#134](https://github.com/west3436/zas-cubed/pull/134) | CORE-035 and CORE-068 *Implemented* | Zone-to-zone sharing is now volume-aware by default too: two 27-cell rooms halve their difference in about 18 s rather than 4 s, two 1,000-cell rooms in about 9 minutes. `[atmos] venting = FAITHFUL` gives ZAS's rates, about 4 s at any size |
 
@@ -320,15 +320,14 @@ _Updated 2026-11-01._
      send changes. That closes Phase B.
    - from the R1 foundation ([Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)):
      look at the boundary colours in the debug overlay (CLIENT-011,
-     [#133](https://github.com/west3436/zas-cubed/pull/133)); per-world presets
-     ([#128](https://github.com/west3436/zas-cubed/pull/128)); `@LevelThread` and the `Hazard` and
-     `Protection` values ([#131](https://github.com/west3436/zas-cubed/pull/131)); and whether CORE-012 waits
-     for a consumer ([#130](https://github.com/west3436/zas-cubed/pull/130)).
+     [#133](https://github.com/west3436/zas-cubed/pull/133)). *The other foundation questions were decided
+     on 2026-11-01: see the table in Phase E.*
 2. ~~**The R1 foundation**~~ *Done 2026-11-01* (#128, #130, #131, #133, plus
    #134 and #136 from #64; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
 3. **S-01 end to end:** breathing, pipe networks, canister, connector and
    vent, the area air controller and the power it gives the vent (#34, #47,
    #48, #50, #52). Then widen out scenario by scenario.
+   - Per-world preset copies ([#139](https://github.com/west3436/zas-cubed/issues/139)) can go in at any time.
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
      ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved

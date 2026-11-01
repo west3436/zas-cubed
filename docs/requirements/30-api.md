@@ -317,6 +317,16 @@ unless vanilla lets it breathe there. Until LIFE lands, ZAS³ gives the same
 vanilla verdict, even in a vacuum zone. Checked by the `api_014_` Unit tests
 and GameTests, with and without ZAS³.*
 
+*2026-11-01: the owner kept both open points as shipped. The call stays
+`@LevelThread`, since it reads live entity state. The `Hazard` values
+(`TOXIC_GAS`, `LOW_PRESSURE`, `HIGH_PRESSURE`, `COLD`, `HEAT`) and the
+`Protection` values (`PRESSURE`, `THERMAL`, `SEALED_BREATHING`,
+`GAS_FILTERING`, `IMMUNE`, `EXEMPT`) stay as they are. LIFE's work
+([#34](https://github.com/west3436/zas-cubed/issues/34) to
+[#36](https://github.com/west3436/zas-cubed/issues/36)) confirms or trims each
+before the API freezes at 1.0.0. After that, values can be added but not
+removed.*
+
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 
