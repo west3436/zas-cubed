@@ -74,22 +74,31 @@ warning in the log.
 | Option | Normal | Hardcore | Meaning |
 |---|---|---|---|
 | `ambient_variant` | `NORMAL` | `HARDCORE` | Which variant of each dimension's ambient applies (ENV-010): Hardcore's Nether is hot and CO₂-rich and its End thin (ENV-002, ENV-012) |
-| `combustion_forms_zones` | `false` | `true` | Whether fire, lit furnaces and campfires and the fuel generator form a zone in an enclosed, unzoned area (CORE-056, FIRE-024) |
-| `planting_forms_zones` | `false` | `true` | Whether planting forms a zone in an enclosed, unzoned area (CORE-056) |
+| `combustion_forms_zones` | `false` | `true` | Whether a fire starting, or a furnace, campfire or the fuel generator being lit, forms a zone in an enclosed, unzoned area: the blocks in `#zas:combustion` (CORE-056, FIRE-024) |
+| `planting_forms_zones` | `false` | `true` | Whether placing a crop, sapling or leaves forms a zone in an enclosed, unzoned area: the blocks in `#zas:plants` (CORE-056, CONT-053) |
 | `block_pressure_damage` | `false` | `true` | Whether a pressure difference breaks blocks in `zas:pressure_fragile`, such as glass (FLOW-007, FLOW-016) |
 | `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a lit crop or sapling in a zone makes from CO₂ at light 15, in mol/h (CONT-057) |
 | `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a lit leaf block (CONT-057) |
 | `container_explosions_break_blocks` | `false` | `true` | Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107) |
 
-Only `ambient_variant` acts today. The others are in the file and in
-`/zas preset` already, marked "not used yet" with the requirement they wait
-for, and take effect when that feature lands. The space-mod compat mode
-(SPACE-004) joins in R2 with the Ad Astra adapter (D-66).
+`ambient_variant`, `combustion_forms_zones` and `planting_forms_zones` act
+today. The others are in the file and in `/zas preset` already, marked "not
+used yet" with the requirement they wait for, and take effect when that
+feature lands. The space-mod compat mode (SPACE-004) joins in R2 with the Ad
+Astra adapter (D-66).
 
 Zone triggers that aren't options: Normal's triggers (CORE-055), API calls
 (which include devices, leaks and `/zas gas`) and breaches of zones, form
 zones under both presets. Hardcore adds combustion and planting; it doesn't
-replace them.
+replace them. They are events, read when they happen. A block is a trigger when
+it starts burning or is planted: fire appearing, a furnace, smoker, blast
+furnace or campfire being lit, a crop, sapling or leaves being placed. It forms
+a zone if its area is enclosed and unzoned and its option is on at that moment.
+Growing, ageing, turning and going out don't count, and switching the preset
+doesn't zone the fires and plants already in place: relight or replant them.
+Candles and torches aren't combustion. Which blocks count is data, the block
+tags `#zas:combustion` and `#zas:plants`
+([datapacks.md](datapacks.md#block-tags)).
 
 `/zas preset` can also switch the preset and set or clear an override. It
 writes the file the server read, which is the world's

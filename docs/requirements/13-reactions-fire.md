@@ -307,5 +307,13 @@ so a sealed room's fire can suffocate itself.
 - **Verify:** A GameTest under Hardcore checks a fire in a sealed room forms a
   zone and goes out once O₂ is low.
 
+*2026-11-01: The trigger is built (CORE-056,
+[#64](https://github.com/west3436/zas-cubed/issues/64)). Under Hardcore, a fire
+starting or a furnace, smoker, blast furnace, campfire or soul campfire being
+lit in an enclosed, unzoned area forms a zone. These are the blocks in
+`#zas:combustion`, fire and soul fire included, and the generator joins the tag
+(CONT-067). The `core_056_` GameTests check it. This stays Accepted because its
+Verify also needs the fire to go out once O₂ is low (FIRE-017, FIRE-020).*
+
 #### FIRE-023 · Extinguishing
 `Should` · `R1` · `Rejected` — covered by FIRE-017, FIRE-020 and FIRE-030 plus vanilla water; the extinguisher is CONT-037 (R2), 2026-10-30.

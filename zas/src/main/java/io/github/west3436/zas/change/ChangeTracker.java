@@ -1,11 +1,13 @@
 package io.github.west3436.zas.change;
 
+import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.ChunkGenerations;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.DirtySections;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.function.LongPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -33,13 +36,18 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  *   <li>bumps the chunk's block generation ({@link ChunkGenerations}), on every write;
  *   <li>if the geometry id changed, marks the position in the dimension's {@link DirtySections};
  *       a write that keeps the geometry id (stone to cobblestone, air to a torch) stops there
- *       (GEO-011).
+ *       (GEO-011);
+ *   <li>if the write starts a Hardcore zone trigger that is active, a fire or a lit furnace
+ *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
+ *       position in that trigger's set (CORE-056). Which states start one is a table read per
+ *       state ({@link TriggerStates}); the preset is read only for a write that starts one.
  * </ul>
  *
  * <p>Repeated changes to a position coalesce into one dirty bit until the scheduler drains them
- * with {@link #drain(ServerLevel, LongPredicate)} at batch close (GEO-012). Writes made off the
- * server thread are queued and folded in, in arrival order, on the server thread before any query
- * and at the end of every server tick.
+ * with {@link #drain(ServerLevel, LongPredicate)} at batch close (GEO-012); so do triggers, which
+ * the scheduler takes with {@link #drainTriggers(ServerLevel)} and turns into zone-forming
+ * operations. Writes made off the server thread are queued and folded in, in arrival order, on the
+ * server thread before any query and at the end of every server tick.
  *
  * <p>Everything except {@link #onBlockWrite} must be called on the server thread.
  */
@@ -57,16 +65,34 @@ public final class ChangeTracker {
     private static final class Dimension {
         final DirtySections dirty = new DirtySections();
         final ChunkGenerations generations = new ChunkGenerations();
+        /** Positions where combustion started since the last drain (CORE-056). */
+        final DirtySections combustion = new DirtySections();
+        /** Positions where planting happened since the last drain (CORE-056). */
+        final DirtySections planting = new DirtySections();
 
-        void record(int x, int y, int z, boolean geometryChanged) {
+        void record(int x, int y, int z, boolean geometryChanged, int triggers) {
             generations.bumpBlock(SectionKeys.chunk(x >> 4, z >> 4));
             if (geometryChanged) {
                 dirty.mark(x, y, z);
             }
+            if (triggers != 0) {
+                if ((triggers & TriggerStates.COMBUSTION_FLAG) != 0) {
+                    combustion.mark(x, y, z);
+                }
+                if ((triggers & TriggerStates.PLANTING_FLAG) != 0) {
+                    planting.mark(x, y, z);
+                }
+            }
         }
     }
 
-    private record OffThreadWrite(ServerLevel level, long pos, boolean geometryChanged) {}
+    private record OffThreadWrite(ServerLevel level, long pos, boolean geometryChanged, int triggers) {}
+
+    /**
+     * A Hardcore zone trigger that started at a block position (CORE-056): combustion or planting
+     * there, under a preset or override that lets it form a zone.
+     */
+    public record Trigger(BlockPos pos, ZoneTrigger trigger) {}
 
     /** Registers the chunk and server lifecycle listeners on the game event bus. */
     public static void register(IEventBus gameBus) {
@@ -86,21 +112,25 @@ public final class ChangeTracker {
         if (!(chunk.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        boolean geometryChanged = geometryChanged(old, now);
+        int oldId = Block.getId(old);
+        int nowId = Block.getId(now);
+        boolean geometryChanged = geometryChanged(oldId, nowId);
+        int triggers = TriggerStates.started(oldId, nowId);
         if (level.getServer().isSameThread()) {
-            dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged);
+            dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers);
         } else {
-            OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged));
+            OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged, triggers));
         }
     }
 
     /**
-     * Whether a write from {@code old} to {@code now} can change gas geometry. While the geometry
-     * table is being rebuilt the answer is yes, so nothing is missed.
+     * Whether a write from state id {@code oldId} to {@code nowId} ({@link Block#getId}) can change
+     * gas geometry. While the geometry table is being rebuilt the answer is yes, so nothing is
+     * missed.
      */
-    static boolean geometryChanged(BlockState old, BlockState now) {
+    static boolean geometryChanged(int oldId, int nowId) {
         GeometryTable table = Geometries.tableIfReady();
-        return table == null || table.geometryId(old) != table.geometryId(now);
+        return table == null || table.geometryId(oldId) != table.geometryId(nowId);
     }
 
     // ---- queries and drains (server thread) ----
@@ -123,6 +153,34 @@ public final class ChangeTracker {
         flushOffThread();
         Dimension d = LEVELS.get(level);
         return d == null ? List.of() : d.dirty.drain(interest);
+    }
+
+    /**
+     * Removes the Hardcore zone triggers that started in {@code level} since the last drain
+     * (CORE-056) and returns them: combustion, then planting, each sorted by section as {@link
+     * #drain(ServerLevel)} sorts and by position within a section. Repeated triggers at a position
+     * come out once. Triggers in chunks that unloaded since are gone. Server thread.
+     */
+    public static List<Trigger> drainTriggers(ServerLevel level) {
+        flushOffThread();
+        Dimension d = LEVELS.get(level);
+        if (d == null || (d.combustion.isEmpty() && d.planting.isEmpty())) {
+            return List.of();
+        }
+        List<Trigger> out = new ArrayList<>();
+        addTriggers(d.combustion.drain(), ZoneTrigger.COMBUSTION, out);
+        addTriggers(d.planting.drain(), ZoneTrigger.PLANTING, out);
+        return out;
+    }
+
+    private static void addTriggers(List<DirtySection> sections, ZoneTrigger trigger, List<Trigger> out) {
+        for (DirtySection s : sections) {
+            int x0 = s.sectionX() << 4;
+            int y0 = s.sectionY() << 4;
+            int z0 = s.sectionZ() << 4;
+            s.forEachIndex(i ->
+                    out.add(new Trigger(new BlockPos(x0 + (i & 15), y0 + (i >> 8), z0 + ((i >> 4) & 15)), trigger)));
+        }
     }
 
     /**
@@ -206,7 +264,8 @@ public final class ChangeTracker {
                             BlockPos.getX(w.pos()),
                             BlockPos.getY(w.pos()),
                             BlockPos.getZ(w.pos()),
-                            w.geometryChanged());
+                            w.geometryChanged(),
+                            w.triggers());
         }
     }
 
@@ -223,6 +282,8 @@ public final class ChangeTracker {
             Dimension d = dimension(level);
             d.generations.unload(pos.toLong());
             d.dirty.removeChunk(pos.x, pos.z);
+            d.combustion.removeChunk(pos.x, pos.z);
+            d.planting.removeChunk(pos.x, pos.z);
         }
     }
 

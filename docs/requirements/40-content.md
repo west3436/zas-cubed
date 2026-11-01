@@ -963,6 +963,13 @@ Normal, plants only affect existing zones, per CORE-055.)
 - **Verify:** A GameTest checks lit crops in a zone turn CO₂ into equal moles
   of O₂ and stop when CO₂ runs out (S-11).
 
+*2026-11-01: the plants tag is `#zas:plants`, shipped with CORE-056
+([#64](https://github.com/west3436/zas-cubed/issues/64)). It holds
+`#minecraft:crops`, `#minecraft:saplings` and `#minecraft:leaves`, and under
+Hardcore placing one in an enclosed, unzoned area forms a zone. Photosynthesis
+reads the same tag. CONT-057's two rates can tell leaves apart by
+`#minecraft:leaves`, or split the tag into two that it includes.*
+
 #### CONT-057 · Photosynthesis rates
 `Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-33, S-11
 
@@ -1111,6 +1118,16 @@ FIRE-025 and HEAT-007.
 - **Rationale:** Decision: D-35.
 - **Verify:** A GameTest checks a running generator in a zone uses O₂, emits
   CO₂ and heat, and forms a zone under Hardcore.
+
+*2026-11-01: for CORE-056 and FIRE-024 the generator counts as combustion
+through data, with nothing added to the API
+([#64](https://github.com/west3436/zas-cubed/issues/64)). `zas_atmos` lists it
+in `#zas:combustion` (`data/zas/tags/block/combustion.json`), and the block has
+a boolean `lit` property that is true while it burns. The change hook then sees
+it being lit as it sees a furnace. Its O₂ and CO₂ exchange is FIRE-021's, from
+its FIRE-025 profile. If the generator made those changes itself through
+`GasMutations`, it would form zones under Normal too, because API calls are
+Normal triggers (CORE-055).*
 
 #### CONT-062 · Controller power buffer
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-34, D-68
