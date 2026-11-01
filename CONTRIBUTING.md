@@ -81,6 +81,15 @@ aren't allowed. CI runs it in "Build and test".
 No NonCommercial or NoDerivatives asset ships in any jar (NFR-046). RE:SS3D and Stationeers are
 reference and inspiration only.
 
+Models are Minecraft's own JSON block and item models: boxes on the
+1/16-block grid, with textures at 16 pixels per block (D-67). Make them in
+[Blockbench](https://www.blockbench.net/) or write them by hand. Handheld
+items are flat item sprites, and wearables use the standard armor texture
+layout. Don't use OBJ or other free-form meshes. vg's sprites are drawn in a
+three-quarter view, so block faces are redrawn from them, while item sprites
+carry over more directly. Model files are assets too, so each one needs its
+own `CREDITS` entry.
+
 ## Building and testing
 
 You need a JDK to run Gradle (17 or newer); the build fetches Java 21 for the
