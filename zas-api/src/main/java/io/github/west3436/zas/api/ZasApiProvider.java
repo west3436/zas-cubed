@@ -4,6 +4,8 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
@@ -12,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -21,10 +24,14 @@ import net.minecraft.world.phys.Vec3;
  * fallback answers with a vanilla, breathable world (D-17).
  *
  * <p><b>Consumers don't call or implement this.</b> They use
- * {@link io.github.west3436.zas.api.atmosphere.Atmospheres} and
- * {@link io.github.west3436.zas.api.mutation.GasMutations}, which check
- * arguments and threads before delegating here, so implementations may assume
- * non-null arguments and, for mutations, the server thread.
+ * {@link io.github.west3436.zas.api.atmosphere.Atmospheres},
+ * {@link io.github.west3436.zas.api.mutation.GasMutations} and
+ * {@link io.github.west3436.zas.api.life.Breathing}, which check arguments
+ * and threads before delegating here, so implementations may assume non-null
+ * arguments and, for mutations, the server thread.
+ *
+ * <p>Methods added after the first ones have a default, so that a provider
+ * built against an older API keeps working with a newer one.
  */
 public interface ZasApiProvider {
     /**
@@ -105,4 +112,22 @@ public interface ZasApiProvider {
     @ServerThread
     CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source);
+
+    /**
+     * Whether an entity can breathe where it is, and whether it is protected (API-014).
+     *
+     * <p>The default is vanilla's verdict ({@link Breathing#vanilla}). It is there so that a
+     * provider built against an API from before this method still answers when a consumer nests
+     * a newer API, which FML then loads instead (architecture §6.2).
+     *
+     * <p>Thread: the main thread of the entity's logical side; for a server-side entity the caller
+     * has checked.
+     *
+     * @param entity the entity, server or client side
+     * @return the verdict
+     */
+    @LevelThread
+    default Breathability breathability(LivingEntity entity) {
+        return Breathing.vanilla(entity);
+    }
 }

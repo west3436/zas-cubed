@@ -5,6 +5,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
@@ -13,13 +15,15 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * The provider used while ZAS³ is absent: a vanilla, breathable world (D-17,
- * API-009). Every point is ambient standard air, no zone exists, and
- * mutations complete at once with nothing moved.
+ * API-009). Every point is ambient standard air, no zone exists,
+ * mutations complete at once with nothing moved, and breathing follows
+ * vanilla's rules, so being underwater still counts (API-014).
  */
 final class FallbackProvider implements ZasApiProvider {
     static final FallbackProvider INSTANCE = new FallbackProvider();
@@ -61,5 +65,10 @@ final class FallbackProvider implements ZasApiProvider {
     public CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source) {
         return ABSENT.copy();
+    }
+
+    @Override
+    public Breathability breathability(LivingEntity entity) {
+        return Breathing.vanilla(entity);
     }
 }
