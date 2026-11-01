@@ -18,12 +18,15 @@ public final class GeometryTable {
     private final int[] byStateId;
     private final int distinctShapes;
     private final int overriddenStates;
+    private final int boundaryStates;
 
-    GeometryTable(GeometryPalette palette, int[] byStateId, int distinctShapes, int overriddenStates) {
+    GeometryTable(
+            GeometryPalette palette, int[] byStateId, int distinctShapes, int overriddenStates, int boundaryStates) {
         this.palette = palette;
         this.byStateId = byStateId;
         this.distinctShapes = distinctShapes;
         this.overriddenStates = overriddenStates;
+        this.boundaryStates = boundaryStates;
     }
 
     /**
@@ -61,6 +64,11 @@ public final class GeometryTable {
     /** The number of block states whose geometry comes from an override. */
     public int overriddenStates() {
         return overriddenStates;
+    }
+
+    /** The number of block states that are zone boundaries (GEO-007). */
+    public int boundaryStates() {
+        return boundaryStates;
     }
 
     int[] byStateIdCopy() {
