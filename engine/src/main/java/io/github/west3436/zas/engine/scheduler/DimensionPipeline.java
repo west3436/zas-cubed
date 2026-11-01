@@ -219,6 +219,19 @@ public final class DimensionPipeline {
                 saved.source());
     }
 
+    /**
+     * Queues an operation taken from another pipeline under a new sequence number, its kind,
+     * amounts and source kept: for carrying the outstanding operations of a retired engine over to
+     * the one that replaces it, so none is lost (architecture §4.5).
+     *
+     * @return its new sequence number
+     */
+    public long resubmit(GasOp op) {
+        return op.kind() == GasOp.Kind.ADD
+                ? add(op.block(), op.moles(), op.temperature(), op.category(), op.triggersZone(), op.source())
+                : remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
+    }
+
     private void enqueue(GasOp op) {
         queue.add(op);
         outstanding.put(op.seq(), op);
@@ -594,6 +607,22 @@ public final class DimensionPipeline {
         }
         ChunkRecord r = new ChunkRecord(chunk, zones, toArray(held), queued);
         return r.isEmpty() ? null : r;
+    }
+
+    /**
+     * Every chunk {@link #recordFor} may build a record for, ascending: those of published zones,
+     * of records the worker hasn't confirmed yet, and of held positions. For rebuilding the zones
+     * from the records of the loaded chunks, as after a restart (architecture §4.5).
+     */
+    public long[] recordChunks() {
+        TreeSet<Long> out = new TreeSet<>();
+        addAll(out, published.chunks());
+        out.addAll(loadedRecords.keySet());
+        out.addAll(unconfirmed.keySet());
+        for (long b : heldBlocks) {
+            out.add(SectionKeys.chunkOfBlockKey(b));
+        }
+        return toArray(out);
     }
 
     /** The queued additions whose outcomes haven't been applied, in sequence order (DATA-011). */

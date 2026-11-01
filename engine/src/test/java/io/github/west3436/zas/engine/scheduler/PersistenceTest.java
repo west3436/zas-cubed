@@ -288,4 +288,97 @@ class PersistenceTest {
         assertTrue(sim.snapshot().zone(pinnedId).pinned());
         close(10, sim.snapshot().zone(pinnedId).moles(N2), "N2 of the pinned zone");
     }
+
+    /**
+     * A new engine takes over from an old one, as after a geometry palette change: the loaded
+     * chunks' records go to it as chunk loads, and the outstanding operations are queued again.
+     * Zones in loaded chunks come back with their gas and pins, the queued operations apply once,
+     * a zone that spans an unloaded chunk waits for it, and nothing breaks conservation (DATA-008,
+     * DATA-009, architecture §4.5).
+     */
+    @Test
+    void data_009_new_engine_rebuilds_from_loaded_records() {
+        Sim old = new Sim(Ambient.VACUUM);
+        old.world.room(10, 64, 2, 21, 66, 5); // chunks (0, 0) and (1, 0)
+        old.world.room(42, 64, 2, 53, 66, 5); // chunks (2, 0) and (3, 0)
+        old.add(11, 65, 3, 30, 5);
+        old.add(43, 65, 3, 12, 0);
+        old.step();
+        long loadedId = old.zoneAt(11, 65, 3).id();
+        long pausedId = old.zoneAt(43, 65, 3).id();
+        old.engine.graph().setPinned(old.engine.graph().zone(pausedId), true);
+        old.step();
+        long far = SectionKeys.chunk(3, 0);
+        ChunkRecord farSaved = old.unload(far);
+        old.step();
+        assertTrue(old.snapshot().zone(pausedId).paused());
+        ZoneView loadedBefore = old.snapshot().zone(loadedId);
+        ZoneView pausedBefore = old.snapshot().zone(pausedId);
+        old.add(12, 65, 3, 0, 4); // queued, not yet in a batch
+        old.remove(12, 65, 3, 2, 0);
+
+        Sim fresh = new Sim(old.world, null, EnclosureClassifier.FACTORY);
+        fresh.engine.reserveZoneIds(old.pipeline.nextZoneId());
+        for (long chunk : old.pipeline.recordChunks()) {
+            if (old.world.isLoaded(chunk)) {
+                fresh.pipeline.chunkLoaded(chunk, old.pipeline.recordFor(chunk, false));
+            }
+        }
+        for (GasOp op : old.pipeline.outstanding()) {
+            fresh.pipeline.resubmit(op);
+        }
+        assertEquals(2, fresh.pipeline.outstanding().size());
+        fresh.steps(3);
+        ZoneView loaded = fresh.snapshot().zone(loadedId);
+        assertNotNull(loaded, "the loaded zone wasn't rebuilt under its id");
+        assertFalse(loaded.paused());
+        assertEquals(loadedBefore.cellCount(), loaded.cellCount());
+        close(loadedBefore.moles(N2) - 2, loaded.moles(N2), "N2: the removal, once");
+        close(loadedBefore.moles(O2) + 4, loaded.moles(O2), "O2: the addition, once");
+        assertTrue(fresh.pipeline.outstanding().isEmpty());
+        ZoneView waiting = fresh.snapshot().zone(pausedId);
+        assertNotNull(waiting);
+        assertTrue(waiting.paused(), "a zone across an unloaded chunk resumed");
+        assertTrue(waiting.pinned(), "the pin was lost");
+
+        fresh.load(far, farSaved);
+        fresh.steps(2);
+        ZoneView paused = fresh.snapshot().zone(pausedId);
+        assertFalse(paused.paused());
+        assertTrue(paused.pinned());
+        assertEquals(pausedBefore.cellCount(), paused.cellCount());
+        close(pausedBefore.moles(N2), paused.moles(N2), "N2 of the zone that waited");
+    }
+
+    /** {@link DimensionPipeline#resubmit} keeps an operation's kind, amounts and source. */
+    @Test
+    void resubmit_keeps_the_operation() {
+        Sim sim = new Sim(Ambient.VACUUM);
+        GasOp add = new GasOp(
+                7,
+                GasOp.Kind.ADD,
+                SectionKeys.block(1, 65, 1),
+                Sim.moles(3, 1),
+                300,
+                io.github.west3436.zas.engine.conservation.LedgerCategory.API,
+                false,
+                "a");
+        GasOp remove = new GasOp(
+                9,
+                GasOp.Kind.REMOVE,
+                SectionKeys.block(2, 65, 1),
+                Sim.moles(1, 0),
+                0,
+                io.github.west3436.zas.engine.conservation.LedgerCategory.API,
+                true,
+                "b");
+        long s1 = sim.pipeline.resubmit(add);
+        long s2 = sim.pipeline.resubmit(remove);
+        List<GasOp> out = sim.pipeline.outstanding();
+        assertEquals(List.of(s1, s2), List.of(out.get(0).seq(), out.get(1).seq()));
+        assertEquals(new GasOp(s1, add.kind(), add.block(), add.moles(), 300, add.category(), false, "a"), out.get(0));
+        assertEquals(
+                new GasOp(s2, remove.kind(), remove.block(), remove.moles(), 0, remove.category(), true, "b"),
+                out.get(1));
+    }
 }

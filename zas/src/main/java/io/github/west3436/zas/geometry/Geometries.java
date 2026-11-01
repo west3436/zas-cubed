@@ -35,6 +35,7 @@ public final class Geometries {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static volatile List<GeometryOverride> overrides = List.of();
+    private static volatile List<GeometryOverride> testOverrides = List.of();
     private static volatile CompletableFuture<GeometryTable> current;
 
     private Geometries() {}
@@ -76,6 +77,26 @@ public final class Geometries {
         overrides = List.copyOf(loaded);
     }
 
+    /**
+     * Rebuilds the table now with {@code extra} applied after the datapack overrides, as a {@code
+     * /reload} that added them would; an empty list goes back to the datapack overrides alone. For
+     * GameTests of a geometry palette change. Server thread, since tags are read here.
+     */
+    public static void overrideForTest(List<GeometryOverride> extra) {
+        testOverrides = List.copyOf(extra);
+        current = CompletableFuture.completedFuture(build(resolve(allOverrides())));
+    }
+
+    private static List<GeometryOverride> allOverrides() {
+        List<GeometryOverride> test = testOverrides;
+        if (test.isEmpty()) {
+            return overrides;
+        }
+        List<GeometryOverride> all = new java.util.ArrayList<>(overrides);
+        all.addAll(test);
+        return all;
+    }
+
     private static void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(new GeometryOverrideLoader());
     }
@@ -84,7 +105,7 @@ public final class Geometries {
         if (event.getUpdateCause() != TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
             return;
         }
-        Map<Block, GeometryOverride> byBlock = resolve(overrides);
+        Map<Block, GeometryOverride> byBlock = resolve(allOverrides());
         current = CompletableFuture.supplyAsync(() -> build(byBlock), Util.backgroundExecutor());
     }
 
