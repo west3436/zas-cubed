@@ -13,8 +13,13 @@
   "debug.zas.zone": "Zone #%s: %s, %s",
   "debug.zas.zone.paused": "Zone #%s (paused): %s, %s",
   "gas.zas.carbon_dioxide": "Carbon Dioxide",
+  "gas.zas.carbon_monoxide": "Carbon Monoxide",
+  "gas.zas.hydrogen": "Hydrogen",
+  "gas.zas.methane": "Methane",
   "gas.zas.nitrogen": "Nitrogen",
+  "gas.zas.nitrous_oxide": "Nitrous Oxide",
   "gas.zas.oxygen": "Oxygen",
+  "gas.zas.water_vapor": "Water Vapor",
 
   "commands.zas.error.unknown_gas": "Unknown gas: %s",
   "commands.zas.error.unknown_zone": "No zone %s in this dimension",

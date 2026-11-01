@@ -26,6 +26,17 @@ data/<namespace>/zas/gas/<path>.json   →   gas id <namespace>:<path>
   "visibility": {
     "color": "#B080FF",
     "density_threshold": 0.01
+  },
+  "phase": {
+    "melting_point": 83.8,
+    "boiling_point": 87.3,
+    "latent_heat_fusion": 1180,
+    "latent_heat_vaporization": 6430
+  },
+  "sources": {
+    "molar_mass": "CIAAW standard atomic weight of Ar",
+    "molar_heat_capacity": "C_v = 3/2 R for a monatomic ideal gas",
+    "phase": "Where the phase values come from"
   }
 }
 ```
@@ -35,10 +46,22 @@ data/<namespace>/zas/gas/<path>.json   →   gas id <namespace>:<path>
 | `name` | string | yes | Translation key of the display name |
 | `formula` | string | yes | Formula label shown in the HUD and analyzer, such as `O₂` |
 | `molar_mass` | number | yes | Molar mass in kg/mol; greater than 0 |
-| `molar_heat_capacity` | number | yes | Molar heat capacity in J/(mol·K); greater than 0 |
+| `molar_heat_capacity` | number | yes | Molar heat capacity at constant volume, C_v, in J/(mol·K); greater than 0. The engine holds a gas's energy as C_v·T at fixed volume, so give C_v, not C_p |
 | `visibility` | object | no | Leave out for an invisible gas |
 | `visibility.color` | string | yes, in `visibility` | Colour as `"#RRGGBB"` |
 | `visibility.density_threshold` | number | yes, in `visibility` | Molar density in mol/L above which the gas shows; greater than 0 |
+| `phase` | object | no | Phase data (CORE-017): when the substance melts, boils or sublimes. Leave out if unknown; give at least one value if present |
+| `phase.melting_point` | number | no | Melting point at 101.325 kPa, in K |
+| `phase.boiling_point` | number | no | Boiling point at 101.325 kPa, in K; above `melting_point` |
+| `phase.latent_heat_fusion` | number | no | Latent heat of fusion, in J/mol |
+| `phase.latent_heat_vaporization` | number | no | Latent heat of vaporization, in J/mol |
+| `phase.sublimation_point` | number | no | For a substance with no liquid at 101.325 kPa, such as CO₂: the temperature at which the solid sublimes there, in K. Excludes `melting_point` and `boiling_point` |
+| `phase.latent_heat_sublimation` | number | no | Latent heat of sublimation, in J/mol |
+| `sources` | object | no | Citations, by the name of the field they back, such as `"molar_mass"`. Not read by the game; they let a reader check the values. A key that names no field is warned about |
+
+All phase values are finite and greater than 0. R1 stores phase data but
+doesn't use it; it is there so that phase changes (HEAT-018) can come later
+without a format change.
 
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)). The other gases still load.
@@ -47,24 +70,118 @@ data/<namespace>/zas/gas/<path>.json   →   gas id <namespace>:<path>
   because zones store their gas by the loaded set.
 - **Clients** receive the server's definitions when they join and after each
   `/reload` (CORE-014), so a server-only datapack is enough.
-- **Built-in gases:** `zas` ships `zas:nitrogen` and `zas:oxygen`, the gases
-  of standard air, which the API's `StandardAir` names, and
-  `zas:carbon_dioxide`, which the Hardcore Nether ambient needs (ENV-012).
-  The rest of the built-in set (CORE-011) arrives in R1.
+- **Built-in gases:** `zas` ships the eight gases of CORE-011:
+  `zas:oxygen`, `zas:nitrogen`, `zas:carbon_dioxide`, `zas:nitrous_oxide`,
+  `zas:water_vapor`, `zas:hydrogen`, `zas:carbon_monoxide` and
+  `zas:methane`. Their constants and sources are in [Built-in gas
+  constants](#built-in-gas-constants).
+- **Removing a gas:** if a datapack or mod that defined a gas is removed,
+  worlds that hold some of it still load (CORE-013). When a chunk loads, its
+  moles of that gas are dropped, and a warning names the gas, the amount, the
+  chunk and the zones that held it (CORE-016), for example:
+
+  ```
+  [minecraft:overworld] Dropped 40 mol of mypack:argon saved in chunk [3, -2], which the gas registry no longer defines: 40 mol in zone 17 at 52 64 -30
+  ```
+
+  The zone keeps its other gases, at the temperature it had. The chunk is
+  saved without the gas, so the warning appears once per chunk.
+
+### Gas tags
+
+Gas tags group gases for hazard, fire and device logic (CORE-012), so that
+logic handles gases that datapacks and addons add, as long as they are
+tagged. They use Minecraft's tag format:
+
+```
+data/<namespace>/tags/zas/gas/<path>.json   →   gas tag #<namespace>:<path>
+```
+
+```json
+{
+  "values": [
+    "mypack:chlorine",
+    "#zas:flammable",
+    { "id": "othermod:phosgene", "required": false }
+  ]
+}
+```
+
+Tags behave as Minecraft's do: files for the same tag in several packs add
+up, `"replace": true` drops what lower packs added, `#tag` includes another
+gas tag, an entry with `"required": false` may name a gas that doesn't exist,
+and NeoForge's `"remove"` list takes gases out. A tag that names a required
+gas or tag that doesn't exist fails as a whole and is reported as a skipped
+`gas tag` ([Invalid files](#invalid-files)). Gas tags load with the gas
+definitions and follow the same rules: fixed when the server starts, a
+`/reload` that changes them applies at the next start, and clients receive
+them with the definitions.
+
+Addons read a tag through the API's `GasTags` (architecture §6.1).
+
+| Tag | Gases | Read by |
+|---|---|---|
+| `#zas:oxidizer` | `zas:oxygen`, `zas:nitrous_oxide` | Fire logic (FIRE-003) and warnings about a fuel mixed with an oxidizer (CONT-103) |
+| `#zas:flammable` | `zas:hydrogen`, `zas:methane`, `zas:carbon_monoxide` | Fire logic: the fuels (FIRE-003); the air alarm and devices that warn of flammable mixtures |
+| `#zas:toxic` | `zas:carbon_monoxide`, `zas:nitrous_oxide` | The gas mask, which filters them out of the breath (CONT-088), and the scrubber, which removes CO₂ and these by default (CONT-015) |
+
+CO₂ isn't in `#zas:toxic`: it harms only at high partial pressure, which its
+hazard profile covers. There is no breathable tag, because breathing reads
+O₂ by id (LIFE), no inert tag, because nothing would read it, and no visible
+tag, because visibility is a field of the gas definition.
 
 ### Built-in gas constants
 
-Molar heat capacity is at constant volume near 298 K: C_v = C_p − R, with
-C_p from the NIST Chemistry WebBook and R = 8.314 J/(mol·K). Molar mass is
-from the IUPAC standard atomic weights (N 14.007, O 15.999).
+Each built-in definition cites its sources in its `sources` field
+(CORE-015); this table collects them.
 
-| Gas | Molar mass (kg/mol) | C_p (J/(mol·K)) | C_v (J/(mol·K)) | Source |
+- **Molar mass** is the sum of the CIAAW abridged standard atomic weights
+  (2024): H 1.0080, C 12.011, N 14.007, O 15.999 g/mol
+  ([CIAAW](https://www.ciaaw.org/abridged-atomic-weights.htm)).
+- **Molar heat capacity** is C_v at 298.15 K, C_p − R, with C_p of the
+  ideal gas at 298.15 K from the NIST-JANAF Thermochemical Tables (Chase,
+  1998) and R = 8.314462618 J/(mol·K) (CODATA 2018). The engine treats it as
+  constant at every temperature.
+
+| Gas | Molar mass (kg/mol) | C_p at 298.15 K (J/(mol·K)) | C_v (J/(mol·K)) | JANAF table |
 |---|---|---|---|---|
-| `zas:nitrogen` (N₂) | 0.028014 | 29.12 | 20.81 | [NIST WebBook, N₂](https://webbook.nist.gov/cgi/cbook.cgi?ID=C7727379&Mask=1) |
-| `zas:oxygen` (O₂) | 0.031998 | 29.38 | 21.06 | [NIST WebBook, O₂](https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447&Mask=1) |
-| `zas:carbon_dioxide` (CO₂) | 0.044009 | 37.12 | 28.81 | [NIST WebBook, CO₂](https://webbook.nist.gov/cgi/cbook.cgi?ID=C124389&Mask=1) |
+| `zas:oxygen` (O₂) | 0.031998 | 29.376 | 21.06 | [O-029](https://janaf.nist.gov/tables/O-029.html) |
+| `zas:nitrogen` (N₂) | 0.028014 | 29.124 | 20.81 | [N-023](https://janaf.nist.gov/tables/N-023.html) |
+| `zas:carbon_dioxide` (CO₂) | 0.044009 | 37.129 | 28.81 | [C-095](https://janaf.nist.gov/tables/C-095.html) |
+| `zas:nitrous_oxide` (N₂O) | 0.044013 | 38.617 | 30.30 | [N-026](https://janaf.nist.gov/tables/N-026.html) |
+| `zas:water_vapor` (H₂O) | 0.018015 | 33.590 | 25.28 | [H-064](https://janaf.nist.gov/tables/H-064.html) |
+| `zas:hydrogen` (H₂) | 0.002016 | 28.836 | 20.52 | [H-050](https://janaf.nist.gov/tables/H-050.html) |
+| `zas:carbon_monoxide` (CO) | 0.028010 | 29.142 | 20.83 | [C-093](https://janaf.nist.gov/tables/C-093.html) |
+| `zas:methane` (CH₄) | 0.016043 | 35.639 | 27.32 | [C-067](https://janaf.nist.gov/tables/C-067.html) |
 
-CO₂'s molar mass uses C 12.011.
+**Phase data** (CORE-017), at 101.325 kPa:
+
+| Gas | Melting point (K) | Boiling point (K) | Latent heat of fusion (J/mol) | Latent heat of vaporization (J/mol) |
+|---|---|---|---|---|
+| O₂ | 54.361 | 90.188 | — | 6818 |
+| N₂ | 63.151 | 77.355 | — | 5580 |
+| N₂O | 182.33 | 184.684 | 6500 | 16473 |
+| H₂O | 273.16 | 373.124 | — | 40651 |
+| H₂ | 13.957 | 20.369 | — | 904.5 |
+| CO | 68.16 | 81.638 | — | 6013 |
+| CH₄ | 90.694 | 111.667 | 939.2 | 8195 |
+
+- Boiling points and latent heats of vaporization are from the NIST
+  Chemistry WebBook's fluid properties (SRD 69): the saturation temperature
+  at 101.325 kPa, and the vapour enthalpy less the liquid enthalpy there.
+  H₂ is normal hydrogen.
+- Melting points are the triple-point temperatures of the same data: the
+  melting point at 101.325 kPa differs from the triple point by under 0.1 K
+  for these substances (for water, ice melts at 273.15 K).
+- Latent heats of fusion: N₂O 6.5 kJ/mol at 182.4 K (Atake and Chihara,
+  1974) and CH₄ 0.9392 kJ/mol at 90.67 K (Vogt and Pitzer, 1976), both from
+  the WebBook's phase change data. The others are left out until a checked
+  reference value is found; the field is optional.
+- **CO₂ has no liquid at 101.325 kPa**: its triple point is 216.58 K at
+  518.5 kPa. It ships a sublimation point of 194.686 K (−78.464 °C, CRC
+  Handbook, 95th ed., p. 4-56) and a latent heat of sublimation of
+  25,200 J/mol at 195 K (Giauque and Egan, 1937, in the WebBook), and no
+  melting or boiling point.
 
 ## Ambients
 
@@ -195,6 +312,7 @@ crashes over it (OPS-008). For example:
 
 ```
 Skipping gas definition data/mypack/zas/gas/argon.json: molar_mass: Not a number: "heavy"
+Skipping gas tag data/mypack/tags/zas/gas/toxic.json: values: no such gas or gas tag: mypack:chlorine; an entry that may be missing needs "required": false
 Skipping geometry override data/mypack/zas/geometry_overrides/sponge.json: sealed_faces: Unknown face 'sideways'; expected down, up, north, south, west or east
 Skipping ambient definition data/mypack/zas/ambient/overworld.json: temperature is required
 ```

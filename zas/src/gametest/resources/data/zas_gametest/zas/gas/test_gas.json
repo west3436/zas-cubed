@@ -6,5 +6,15 @@
   "visibility": {
     "color": "#80FF20",
     "density_threshold": 0.01
+  },
+  "phase": {
+    "melting_point": 150,
+    "boiling_point": 250,
+    "latent_heat_fusion": 3000,
+    "latent_heat_vaporization": 12000
+  },
+  "sources": {
+    "molar_mass": "Invented for the GameTests",
+    "phase": "Invented for the GameTests"
   }
 }
