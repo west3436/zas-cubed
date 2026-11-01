@@ -238,7 +238,7 @@ S-11, S-13).
 | E3 | FIRE | Data-driven reactions, gas fire, vanilla fire needing O₂, combustion as a Hardcore zone trigger |
 | E4 | FLOW | Volume-aware airflow, player-motion sync, Hardcore glass shattering |
 | E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; area air controller, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the area air controller as an APC-style hub that powers every part in its zone or linked to it, with priority (D-34, D-68), and batteries and a recharger for portables (D-69) |
-| E6 | Art pipeline | Block and item models made in Blockbench from vg sprites, as vanilla JSON models with textures at 16 pixels per block (D-67); `CREDITS` and provenance for each asset (NFR-045) |
+| E6 | Art pipeline | Block and item models made in Blockbench from vg sprites, as vanilla JSON models with textures at 16 pixels per block (D-67); `CREDITS` and provenance for each asset (NFR-045). Sources and order in the [texture procurement plan](texture-procurement.md) |
 | ~~E7~~ | ~~SPACE~~ | **Moved to R2 (D-66).** R1 keeps the generic pieces space mods build on: ambient providers (ENV-004), the breathability helper (API-014), the life-support capability (API-022), and the NeoForge breathing event (SPACE-002, now with E1) |
 | E8 | CLIENT, DATA, docs | Sync, visuals, player and developer docs, example addon, API 1.0.0 on Maven Central |
 
