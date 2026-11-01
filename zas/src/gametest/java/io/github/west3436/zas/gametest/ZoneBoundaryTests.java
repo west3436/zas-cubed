@@ -52,7 +52,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * <p>Rooms are 3 × 3 × 3 inside, in a row along x, sharing walls at x = 14 and 18 ({@link
  * Rooms#box}). A door is an oak door two blocks high at z = 2 in a shared wall, facing east with its
  * hinge on the left: closed, its panel lies against its west face; open, against its north face.
- * Areas 80 to 84.
+ * Areas 84 to 87 (ApiTests has 80).
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -182,7 +182,7 @@ public final class ZoneBoundaryTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void geo_007_open_door_passes_gas_and_keeps_zones_apart(GameTestHelper h) throws Exception {
-        Rooms r = row(h, 80, 2, false);
+        Rooms r = row(h, 84, 2, false);
         r.settle(GasMutations.add(r.level, r.point(centre(0), 2, 2), oxygen(300), source("geo_007")));
         r.settle(GasMutations.add(r.level, r.point(centre(1), 2, 2), nitrogen(100), source("geo_007")));
         ZoneInfo west = r.zone(centre(0), 2, 2);
@@ -228,7 +228,7 @@ public final class ZoneBoundaryTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void geo_007_open_trapdoor_passes_gas_and_keeps_zones_apart(GameTestHelper h) {
-        Rooms r = new Rooms(h, 81);
+        Rooms r = new Rooms(h, 85);
         for (BlockPos p : BlockPos.betweenClosed(r.abs(8, 0, 0), r.abs(16, 10, 6))) {
             r.level.setBlockAndUpdate(p, AIR);
         }
@@ -271,7 +271,7 @@ public final class ZoneBoundaryTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void core_034_door_separated_zones_never_merge(GameTestHelper h) {
-        Rooms r = row(h, 82, 2, true);
+        Rooms r = row(h, 86, 2, true);
         h.assertValueEqual(
                 r.settle(GasMutations.add(r.level, r.point(centre(0), 2, 2), oxygen(300), source("core_034")))
                         .outcome(),
@@ -302,7 +302,7 @@ public final class ZoneBoundaryTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void core_067_three_rooms_equalize(GameTestHelper h) {
-        Rooms r = row(h, 83, 3, true);
+        Rooms r = row(h, 87, 3, true);
         r.settle(GasMutations.add(r.level, r.point(centre(0), 2, 2), oxygen(300), source("core_067")));
         ZoneInfo[] start = new ZoneInfo[3];
         double o2 = 0;
