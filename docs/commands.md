@@ -150,6 +150,24 @@ Phases that arrive in R1 (heat, hotspots, reactions) report 0 until then.
 Set `[profiling] log_interval_seconds` in the server config to log every
 dimension's report at that interval (OPS-012). It is 0, off, by default.
 
+## Debug overlay (CLIENT-005, CLIENT-011 to CLIENT-013)
+
+| Command | What it does |
+|---|---|
+| `/zas debug` | Lists the overlay layers you have on |
+| `/zas debug <zones\|edges\|cells\|hotspots>` | Switches one layer on or off for you |
+| `/zas debug all` | Switches every layer on |
+| `/zas debug off` | Switches the overlay off |
+
+The layers draw within 2 chunks of you, refreshed once per atmos tick:
+
+- `zones`: each zone's cells, tinted by zone id, with its pressure and temperature. Paused zones are grey, unresolved regions magenta.
+- `edges`: each open face out of a zone, coloured by kind (zone direct cyan, zone boundary blue, ambient direct red, ambient boundary orange), with each edge's pressure difference.
+- `cells`: the seal mask (red) and sub-cells (one colour each) of the block under your crosshair.
+- `hotspots`: hotspots. There are none until fire arrives in R1.
+
+Labels use the units in `zas-client.toml` ([config.md](config.md)). Only players who switched the overlay on are sent its data.
+
 ## Datapacks (OPS-008)
 
 `/zas datapacks` lists the problems of the last datapack load: every entry

@@ -53,6 +53,15 @@ public interface Classifier {
     }
 
     /**
+     * Unzoned cells known to lie in regions left unresolved because they reach unloaded chunks
+     * (GEO-024, GEO-026), such as the seeds of breaches held until those chunks load. For the
+     * debug overlay (CLIENT-005), which shows those regions; the default knows of none.
+     */
+    default long[] unresolvedSeeds() {
+        return new long[0];
+    }
+
+    /**
      * The zones that open onto a region the last {@link #afterGeometry} couldn't classify because
      * it reaches an unloaded chunk (GEO-026), ascending. The scheduler pauses them (GEO-030) until
      * the region classifies. The default holds none.

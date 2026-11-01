@@ -1,5 +1,6 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -38,6 +39,11 @@ public final class DimensionScheduler {
 
     private volatile boolean abandoned;
     private Throwable fault;
+    private List<DebugRegion> debugRegions = List.of();
+    /** Written by the tick that exports it, read once its future completes (happens-before). */
+    private volatile DebugView exported = DebugView.EMPTY;
+
+    private DebugView debugView = DebugView.EMPTY;
 
     /**
      * @param engine the engine; this scheduler becomes its only caller
@@ -87,6 +93,22 @@ public final class DimensionScheduler {
 
     public boolean isFaulted() {
         return fault != null;
+    }
+
+    /**
+     * Sets the regions the operator debug overlay wants exported after each tick submitted from now
+     * on (CLIENT-005, CLIENT-011); empty for none, which costs nothing.
+     */
+    public void setDebugRegions(List<DebugRegion> regions) {
+        debugRegions = List.copyOf(regions);
+    }
+
+    /**
+     * The debug export of the last collected tick: {@link DebugView#EMPTY} if it was submitted with
+     * no debug regions, or the engine threw.
+     */
+    public DebugView debugView() {
+        return debugView;
     }
 
     /**
@@ -155,22 +177,30 @@ public final class DimensionScheduler {
         if (fault != null) {
             throw new IllegalStateException("the dimension's engine is faulted", fault);
         }
+        List<DebugRegion> regions = debugRegions;
         if (executor == null) {
             CompletableFuture<Result> done = new CompletableFuture<>();
             try {
-                done.complete(engine.tick(batch));
+                done.complete(tick(batch, regions));
             } catch (RuntimeException | Error e) {
                 done.completeExceptionally(e);
             }
             inFlight = done;
         } else if (tail.isDone()) {
-            inFlight = CompletableFuture.supplyAsync(() -> engine.tick(batch), executor);
+            inFlight = CompletableFuture.supplyAsync(() -> tick(batch, regions), executor);
             tail = inFlight;
         } else {
             // An inspection is still running: the tick waits for it, so they never overlap.
-            inFlight = tail.handleAsync((ignored, error) -> engine.tick(batch), executor);
+            inFlight = tail.handleAsync((ignored, error) -> tick(batch, regions), executor);
             tail = inFlight;
         }
+    }
+
+    /** One tick, then the debug export if regions were asked for, on the thread that owns the engine. */
+    private Result tick(Batch batch, List<DebugRegion> regions) {
+        Result result = engine.tick(batch);
+        exported = regions.isEmpty() ? DebugView.EMPTY : engine.debugView(regions);
+        return result;
     }
 
     /**
@@ -186,8 +216,11 @@ public final class DimensionScheduler {
         }
         CompletableFuture<Result> f = inFlight;
         inFlight = null;
+        debugView = DebugView.EMPTY;
         try {
-            return f.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            Result result = f.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            debugView = exported;
+            return result;
         } catch (TimeoutException e) {
             f.cancel(true);
             fault = new TimeoutException("atmos tick didn't finish within " + timeoutMillis + " ms");

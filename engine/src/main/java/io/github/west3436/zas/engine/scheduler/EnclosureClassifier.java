@@ -186,6 +186,11 @@ public final class EnclosureClassifier implements Classifier {
     }
 
     @Override
+    public long[] unresolvedSeeds() {
+        return held.clone();
+    }
+
+    @Override
     public long[] heldZones() {
         return heldZones.clone();
     }

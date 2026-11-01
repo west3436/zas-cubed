@@ -696,6 +696,29 @@ a finished tick's row with one volatile write, and keeps a 100-tick window on
 the server thread; `AtmosService` keeps the server thread's per-game-tick time
 for 1,200 game ticks (average and p99, NFR-001).
 
+*Implemented (#31):* the operator debug overlay (CLIENT-005, CLIENT-011 to
+CLIENT-013). `/zas debug <zones|edges|cells|hotspots|all|off>` needs the
+`/zas` permission level (`ZasCommands::permitted`, OPS-011). Each server tick `DebugOverlay` (package
+`io.github.west3436.zas.debug`) hands the boxes within 32 blocks of operators
+with the overlay on to their dimension's `DimensionScheduler`
+(`setDebugRegions`). Right after the next tick, on the worker,
+`DimensionEngine.debugView` exports the zoned cells, the faces out of zones and
+the cells of unresolved regions inside those boxes, capped, as an immutable
+`DebugView`, so the server thread never reads the zone graph. A paused zone
+(GEO-030: part of it in an unloaded chunk, or held at a breach into an
+unresolved region) keeps its cells in memory, so they are exported like any
+other. The unresolved cells are flooded from the seeds of breaches the
+classifier holds (`Classifier.unresolvedSeeds`, GEO-026) and from gas
+operations that landed in an unresolved region that tick. When a dimension
+publishes a new atmos tick, each of its operators gets one
+`DebugOverlayPayload`. It carries that export with zone pressures and the
+paused flag from the published table (`ZoneView.paused`), and the block
+geometry within 6 blocks of their eyes for the crosshair. The client draws
+paused zones grey and unresolved cells magenta. Nothing is sent to anyone else (DATA-005). The
+renderer is in `io.github.west3436.zas.client`, loaded through a
+`@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
+Hotspots are a FIRE concept (R1), so their list stays empty for now.
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing

@@ -4,6 +4,7 @@ import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.command.ZasCommands;
 import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
+import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
@@ -33,5 +34,6 @@ public final class ZasMod {
         AtmosService.register(NeoForge.EVENT_BUS);
         AtmosPersistence.register(NeoForge.EVENT_BUS);
         ZasCommands.register(NeoForge.EVENT_BUS);
+        DebugOverlay.register(modBus);
     }
 }
