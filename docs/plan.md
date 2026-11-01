@@ -3,8 +3,8 @@
 **Status:** proposed, 2026-10-30. Updated after the open-questions
 walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0,
 the move of Ad Astra to R2 with Mekanism (D-66), Blockbench for art (D-67),
-and the area air controller and batteries in place of the cable and the
-multipart block (D-68, D-69).
+the area air controller and batteries in place of the cable and the
+multipart block (D-68, D-69), and the R1 foundation.
 
 **Inputs:**
 - decisions in [requirements/00-overview](requirements/00-overview.md#decision-log)
@@ -170,7 +170,7 @@ their own and with the invariant checker on (CORE-036).
 | S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
 | S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
 | S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
-| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B, which the owner accepted on 2026-11-01.* | `./gradlew :engine:bench` |
+| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B, which the owner accepted on 2026-11-01. Re-measured after GEO-007, with S-10's 100 zones and 178 door edges ([#133](https://github.com/west3436/zas-cubed/pull/133)): every verdict holds, NFR-004's included ([S-10 after GEO-007](research/benchmarks.md#s-10-after-geo-007-2026-11-01)).* | `./gradlew :engine:bench` |
 
 The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
 *Implemented*. CORE-025 (R1) stays *Accepted*: its split search is local, but
@@ -188,7 +188,7 @@ Each remaining one waits on R1 work:
 |---|---|
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
-| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. |
+| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. *2026-11-01: GEO-007 is in ([#133](https://github.com/west3436/zas-cubed/pull/133)), and the overlay needed no change; CLIENT-011 waits on the owner's look at the boundary colours.* |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
@@ -207,6 +207,18 @@ because nearly every one of them depends on it:
 *2026-11-01: the multipart pipe-and-cable spike
 ([#46](https://github.com/west3436/zas-cubed/issues/46)) that was to run
 alongside is dropped. D-68 removed the multipart block and the cable.*
+
+*2026-11-01: the foundation is in, with two more items from #64 that were
+ready: Hardcore zone triggers and volume-aware venting.*
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011 to CORE-013 and CORE-015 to CORE-017 *Implemented* | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives (the field is optional). The owner may prefer CORE-012 to stay *Accepted* until LIFE, FIRE or CONT reads the tags |
+| Zone-boundary blocks | [#133](https://github.com/west3436/zas-cubed/pull/133) | GEO-007, GEO-044, CORE-034 and CORE-067 *Implemented*; [#107](https://github.com/west3436/zas-cubed/issues/107) fixed | CLIENT-011's overlay check (#31). A door opening onto open air still costs a bounded breach fill each time, until GEO-021 and GEO-027 |
+| The preset | [#128](https://github.com/west3436/zas-cubed/pull/128) | OPS-015 *Implemented*; OPS-007 stays *Accepted* until the options it lists have users | Per-world presets: NeoForge shares `config/zas-server.toml` between singleplayer worlds that have no `serverconfig` copy, so the owner decides whether `/zas preset` should write one |
+| Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stays *Accepted* | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. Open to the owner: the new `@LevelThread` marker, and the `Hazard` and `Protection` values, which LIFE may change |
+| Hardcore zone triggers | [#136](https://github.com/west3436/zas-cubed/pull/136) | CORE-056 stays *Accepted* | The fuel generator (CONT) joins `#zas:combustion` when it exists. Fire spreading in the open under Hardcore runs a bounded fill per new fire block, a cost like a door opening to air, with the same mitigation |
+| Volume-aware venting | [#134](https://github.com/west3436/zas-cubed/pull/134) | CORE-035 and CORE-068 *Implemented* | Zone-to-zone sharing is now volume-aware by default too: two 27-cell rooms halve their difference in about 18 s rather than 4 s, two 1,000-cell rooms in about 9 minutes. `[atmos] venting = FAITHFUL` gives ZAS's rates, about 4 s at any size |
 
 Then the first target is **S-01 end to end**, a vertical slice through most
 tracks: breathing ([#34](https://github.com/west3436/zas-cubed/issues/34)),
@@ -306,12 +318,14 @@ _Updated 2026-11-01._
    - review the [architecture](architecture.md)
      ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
      send changes. That closes Phase B.
-2. **The R1 foundation** (see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)):
-   the gas set and zone-boundary blocks
-   ([#64](https://github.com/west3436/zas-cubed/issues/64),
-   [#65](https://github.com/west3436/zas-cubed/issues/65)), the preset
-   ([#37](https://github.com/west3436/zas-cubed/issues/37)) and the
-   breathability helper ([#59](https://github.com/west3436/zas-cubed/issues/59)).
+   - from the R1 foundation ([Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)):
+     look at the boundary colours in the debug overlay (CLIENT-011,
+     [#133](https://github.com/west3436/zas-cubed/pull/133)); per-world presets
+     ([#128](https://github.com/west3436/zas-cubed/pull/128)); `@LevelThread` and the `Hazard` and
+     `Protection` values ([#131](https://github.com/west3436/zas-cubed/pull/131)); and whether CORE-012 waits
+     for a consumer ([#130](https://github.com/west3436/zas-cubed/pull/130)).
+2. ~~**The R1 foundation**~~ *Done 2026-11-01* (#128, #130, #131, #133, plus
+   #134 and #136 from #64; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
 3. **S-01 end to end:** breathing, pipe networks, canister, connector and
    vent, the area air controller and the power it gives the vent (#34, #47,
    #48, #50, #52). Then widen out scenario by scenario.
