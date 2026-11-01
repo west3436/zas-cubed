@@ -2,8 +2,9 @@
 
 **Status:** proposed, 2026-10-30. Updated after the open-questions
 walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0,
-the move of Ad Astra to R2 with Mekanism (D-66) and Blockbench for art
-(D-67).
+the move of Ad Astra to R2 with Mekanism (D-66), Blockbench for art (D-67),
+and the area air controller and batteries in place of the cable and the
+multipart block (D-68, D-69).
 
 **Inputs:**
 - decisions in [requirements/00-overview](requirements/00-overview.md#decision-log)
@@ -30,9 +31,11 @@ the move of Ad Astra to R2 with Mekanism (D-66) and Blockbench for art
   - Mekanism is cut from R1 (D-11), and space compat is Ad Astra only (D-29).
     D-66 then moved Ad Astra to R2 alongside Mekanism, so R1 ships no
     mod-compat adapter.
-  - Added to R1: power, with FE, a generator, alarm-powered zones and a cable
-    that shares a block with pipes (D-25); photosynthesis (D-33); and the
-    Normal/Hardcore preset (D-14).
+  - Added to R1: power, with FE, a generator and alarm-powered zones (D-25);
+    photosynthesis (D-33); and the Normal/Hardcore preset (D-14). D-68 later
+    dropped the cable that shared a block with pipes and made the air alarm
+    the area air controller, the only power source for atmospherics parts;
+    portables run on batteries (D-69).
   - The engine runs **off the main thread from day one** (D-30).
 
 ## Approach
@@ -163,7 +166,7 @@ their own and with the invariant checker on (CORE-036).
 
 | Item | Result | Tests |
 |---|---|---|
-| S-01 by commands | Pass. A sealed 27-cell room in vacuum is filled with `/zas gas add` and `/zas gas fill` to 101.325 kPa at 21 % O₂ and 293.15 K, forms one zone and holds it for 60 s. No air alarm, canisters, vent or helmet check: those are R1 (CONT, LIFE). | `s_01_pressurise_sealed_room_by_commands` |
+| S-01 by commands | Pass. A sealed 27-cell room in vacuum is filled with `/zas gas add` and `/zas gas fill` to 101.325 kPa at 21 % O₂ and 293.15 K, forms one zone and holds it for 60 s. No area air controller, canisters, vent or helmet check: those are R1 (CONT, LIFE). | `s_01_pressurise_sealed_room_by_commands` |
 | S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
 | S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
 | S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
@@ -201,16 +204,18 @@ because nearly every one of them depends on it:
 | The Normal/Hardcore preset (OPS-007) | [#37](https://github.com/west3436/zas-cubed/issues/37) | Hardcore zone triggers (CORE-056), FIRE, FLOW's block damage, planting (CONT) |
 | The breathability helper (API-014) | [#59](https://github.com/west3436/zas-cubed/issues/59) | LIFE, the HUD, and anything else that asks whether a point is breathable |
 
-The multipart pipe-and-cable spike ([#46](https://github.com/west3436/zas-cubed/issues/46))
-runs alongside, since it is independent and retires risk R7.
+*2026-11-01: the multipart pipe-and-cable spike
+([#46](https://github.com/west3436/zas-cubed/issues/46)) that was to run
+alongside is dropped. D-68 removed the multipart block and the cable.*
 
 Then the first target is **S-01 end to end**, a vertical slice through most
 tracks: breathing ([#34](https://github.com/west3436/zas-cubed/issues/34)),
 pipe networks ([#47](https://github.com/west3436/zas-cubed/issues/47)), the
 canister, connector and vent from the device set
-([#48](https://github.com/west3436/zas-cubed/issues/48)), the powered air
-alarm ([#50](https://github.com/west3436/zas-cubed/issues/50)) and the power
-it needs ([#52](https://github.com/west3436/zas-cubed/issues/52)). After that
+([#48](https://github.com/west3436/zas-cubed/issues/48)), the area air
+controller, which forms the room's zone
+([#50](https://github.com/west3436/zas-cubed/issues/50)), and the power it
+gives the vent ([#52](https://github.com/west3436/zas-cubed/issues/52)). After that
 the tracks widen out in parallel, one scenario at a time (S-02 to S-05, S-08,
 S-11, S-13).
 
@@ -220,7 +225,7 @@ S-11, S-13).
 | E2 | HEAT | Original design. vg has no precedent. |
 | E3 | FIRE | Data-driven reactions, gas fire, vanilla fire needing O₂, combustion as a Hardcore zone trigger |
 | E4 | FLOW | Volume-aware airflow, player-motion sync, Hardcore glass shattering |
-| E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; air alarm, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the alarm as an APC-style hub with priority (D-34), and our own multipart block for cable plus pipe (D-36, spike it early) |
+| E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; area air controller, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the area air controller as an APC-style hub that powers every part in its zone or linked to it, with priority (D-34, D-68), and batteries and a recharger for portables (D-69) |
 | E6 | Art pipeline | Block and item models made in Blockbench from vg sprites, as vanilla JSON models with textures at 16 pixels per block (D-67); `CREDITS` and provenance for each asset (NFR-045) |
 | ~~E7~~ | ~~SPACE~~ | **Moved to R2 (D-66).** R1 keeps the generic pieces space mods build on: ambient providers (ENV-004), the breathability helper (API-014), the life-support capability (API-022), and the NeoForge breathing event (SPACE-002, now with E1) |
 | E8 | CLIENT, DATA, docs | Sync, visuals, player and developer docs, example addon, API 1.0.0 on Maven Central |
@@ -253,7 +258,7 @@ S-11, S-13).
 | `engine` | nothing Minecraft-specific | Gas math, zone graph, edges, scheduler, reactions runtime. Thread-safe, snapshot-based (CORE-043/045). |
 | `api` (standalone module jar, published to Maven Central) | Minecraft and NeoForge types only | Public interfaces, records, events, capability definitions, and the fallback when ZAS³ is absent (API-001/006) |
 | `zas` (framework mod) | api (jar-in-jar), engine | Geometry, hooks and mixins, persistence, sync, environments, life support, heat, fire, airflow, presets, commands, client |
-| `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power and cables, the multipart block (D-36), GUIs, CC BY-SA 4.0 assets (D-39) |
+| `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power (D-68, D-69), GUIs, CC BY-SA 4.0 assets (D-39) |
 | `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023), R2 (D-66) |
 | `example-addon` | api | Usage examples for consumers (API-005) |
 
@@ -284,7 +289,7 @@ S-11, S-13).
 | R4 | Zones that cross unloaded chunks | Inconsistent state | Freeze, never force-load (D-24) |
 | R5 | ~~Mekanism venting needs fragile mixins~~ | — | **Retired for R1:** Mekanism deferred (D-11). It comes back as an API-only reference integration. |
 | R6 | ~~Ad Astra's API changes, or Ad Astra stops updating on 1.21.1~~ | — | **Retired for R1:** Ad Astra moved to R2 (D-66). When it resumes: public `api` package; pinned version range; adapter isolated in its own module (SPACE-003). |
-| R7 | Scope creep. Full SS13 content now also includes power, a generator, alarm power distribution and a multipart pipe-and-cable block. | R1 slips | A strict R1 content subset; power scoped by D-34 to D-37 (one generator, one cable tier); spike the multipart block early in E5 |
+| R7 | Scope creep. Full SS13 content now also includes power, a generator and power distribution by the area air controller. | R1 slips | A strict R1 content subset; power scoped by D-34, D-35, D-37 and D-68 (one generator, no cable: the area air controller powers its parts). **Reduced by D-68,** which dropped the multipart pipe-and-cable block. |
 | R8 | Clean-room drift: vg code leaks in | License violation | NFR-040; review checklist; research notes in prose only |
 | R9 | Hazard checks on every entity cost too much | Tick cost | Per-entity cadence, cached zone lookups, spatial bucketing |
 | R10 | Gameplay feel at Minecraft scale | Balance | Volume-aware venting (D-21); per-second rates (D-20); the preset (D-14); playtest scenarios |
@@ -306,12 +311,10 @@ _Updated 2026-11-01._
    ([#64](https://github.com/west3436/zas-cubed/issues/64),
    [#65](https://github.com/west3436/zas-cubed/issues/65)), the preset
    ([#37](https://github.com/west3436/zas-cubed/issues/37)) and the
-   breathability helper ([#59](https://github.com/west3436/zas-cubed/issues/59)),
-   with the multipart spike ([#46](https://github.com/west3436/zas-cubed/issues/46))
-   alongside.
+   breathability helper ([#59](https://github.com/west3436/zas-cubed/issues/59)).
 3. **S-01 end to end:** breathing, pipe networks, canister, connector and
-   vent, the powered air alarm and the power it needs (#34, #47, #48, #50,
-   #52). Then widen out scenario by scenario.
+   vent, the area air controller and the power it gives the vent (#34, #47,
+   #48, #50, #52). Then widen out scenario by scenario.
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
      ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved

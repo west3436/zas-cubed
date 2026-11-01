@@ -699,6 +699,10 @@ affects it.
 - **Verify:** A GameTest checks a sealed Overworld room and a natural cave
   stay unzoned until a vent adds gas to the room, which then forms a zone.
 
+*2026-11-01: D-68 adds one trigger that modifies no air: pinning an enclosed,
+unzoned point through the API (API-050), which the area air controller does
+when placed (CONT-110).*
+
 #### CORE-054 · No world scanning
 `Must` · `R0` · `Implemented` · Verify: Inspect, Bench · Trace: D-13
 
