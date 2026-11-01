@@ -1,8 +1,9 @@
 # ZAS³ (zas-cubed): plan to begin work
 
 **Status:** proposed, 2026-10-30. Updated after the open-questions
-walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0
-and the move of Ad Astra to R2 with Mekanism (D-66).
+walkthroughs (decisions D-11 to D-40), and on 2026-11-01 for the end of R0,
+the move of Ad Astra to R2 with Mekanism (D-66) and Blockbench for art
+(D-67).
 
 **Inputs:**
 - decisions in [requirements/00-overview](requirements/00-overview.md#decision-log)
@@ -12,7 +13,7 @@ and the move of Ad Astra to R2 with Mekanism (D-66).
 
 - **Repository:** public at `github.com/west3436/zas-cubed`. Code is MIT and
   clean-room (D-01). Assets are derived from vgstation13's CC BY-SA sprites
-  (D-26).
+  (D-26) and made in Blockbench as Minecraft's own JSON models (D-67).
 - **Research:**
   - vgstation13 ZAS core: [zas-core](research/zas-core.md)
   - vg atmospherics content and mob effects: [vg-atmos-content](research/vg-atmos-content.md)
@@ -195,7 +196,7 @@ The tracks run in parallel. E7 (Ad Astra) moved to R2 with Mekanism (D-66).
 | E3 | FIRE | Data-driven reactions, gas fire, vanilla fire needing O₂, combustion as a Hardcore zone trigger |
 | E4 | FLOW | Volume-aware airflow, player-motion sync, Hardcore glass shattering |
 | E5 | CONT (R1 subset) | Pipe networks and devices; canisters, tanks, suit; air alarm, firelock, analyzer; gas sources and photosynthesis; **power**: FE on an early-game scale (D-37), a P.A.C.M.A.N.-style fuel generator (D-35), the alarm as an APC-style hub with priority (D-34), and our own multipart block for cable plus pipe (D-36, spike it early) |
-| E6 | Art pipeline | 3D models from vg sprites with the Blender MCP; `CREDITS` and provenance for each asset (NFR-045) |
+| E6 | Art pipeline | Block and item models made in Blockbench from vg sprites, as vanilla JSON models with textures at 16 pixels per block (D-67); `CREDITS` and provenance for each asset (NFR-045) |
 | ~~E7~~ | ~~SPACE~~ | **Moved to R2 (D-66).** R1 keeps the generic pieces space mods build on: ambient providers (ENV-004), the breathability helper (API-014), the life-support capability (API-022), and the NeoForge breathing event (SPACE-002, now with E1) |
 | E8 | CLIENT, DATA, docs | Sync, visuals, player and developer docs, example addon, API 1.0.0 on Maven Central |
 
