@@ -5,9 +5,7 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -15,15 +13,15 @@ import java.util.Objects;
  * publishes and any thread reads (architecture §3.1, API-046). The worker builds it; nothing in
  * it changes afterwards.
  *
- * <p>Lookups by zone id and by block position are binary searches over sorted arrays. A block
- * position holding several cells (GEO-004) reports the zone of its largest zoned cell; {@link
- * #zoneAt(long, int)} answers for one sub-cell (API-015), from a side table of the zoned cells
- * at positions that hold less than a full block of gas, the only positions that can hold more
- * than one cell.
+ * <p>Lookups by zone id are binary searches over the zones. A table built by the engine looks up
+ * positions and cells in its {@link Membership}: the section's palette (architecture §4.4), so
+ * the table shares every section that didn't change with the table before it. A block position
+ * holding several cells (GEO-004) reports the zone of its largest zoned cell (API-015); {@link
+ * #zoneOfCell} and {@link #zoneAt(long, int)} answer for one cell.
  *
- * <p>The table also lists the unzoned cells of regions a held breach left unresolved because they
- * reach unloaded chunks ({@link #heldAt}, GEO-026), so a query there reads as unresolved rather
- * than as the ambient (API-010).
+ * <p>The table also lists the unzoned cells of regions whose breach is held because they reach
+ * unloaded chunks ({@link #heldAt}, GEO-026), so a query there reads as unresolved rather than as
+ * the ambient (API-010).
  *
  * <p>When the server thread rejects components of a result (CORE-070), it publishes {@link
  * #withRejected}: the result's table, with the rejected zones answered from the previous table.
@@ -40,21 +38,17 @@ public final class AtmosSnapshot {
     private final long tick;
     private final GasRegistry registry;
     private final ZoneView[] zones; // by id
+    // Positions of a table made by of(..., positions, zoneOfPosition); empty in the engine's tables.
     private final long[] positions; // sorted block keys
     private final int[] zoneOfPosition; // index into zones
-    private final CellTable partialCells; // zoned cells of less than a full block; value: index into zones
-    private final CellTable heldCells; // unzoned cells of held breach regions
     // Overlay for rejected components.
     private final long[] rejected; // sorted zone ids
     private final AtmosSnapshot previous;
-    // Persistence: each zone's cells, aligned with zones, and the chunks each zone spans.
+    // The engine's membership (aligned with zones) and the chunks each zone spans.
     private final Membership membership; // null when the table has no cell lists
     private final long[][] zoneChunks;
+    private final CellTable heldCells; // unzoned cells of held breach regions
     private volatile List<ZoneView> zoneList;
-    private volatile Map<Long, List<ChunkPart>> chunkIndex;
-
-    /** One zone's cells in one chunk. */
-    private record ChunkPart(int zone, long[] cells, double volume) {}
 
     private AtmosSnapshot(
             long tick,
@@ -62,39 +56,27 @@ public final class AtmosSnapshot {
             ZoneView[] zones,
             long[] positions,
             int[] zoneOfPosition,
-            CellTable partialCells,
-            CellTable heldCells,
             long[] rejected,
             AtmosSnapshot previous,
             Membership membership,
-            long[][] zoneChunks) {
+            long[][] zoneChunks,
+            CellTable heldCells) {
         this.tick = tick;
         this.registry = registry;
         this.zones = zones;
         this.positions = positions;
         this.zoneOfPosition = zoneOfPosition;
-        this.partialCells = partialCells;
-        this.heldCells = heldCells;
         this.rejected = rejected;
         this.previous = previous;
         this.membership = membership;
         this.zoneChunks = zoneChunks;
+        this.heldCells = heldCells;
     }
 
     /** A table with no zones, before the first atmos tick. */
     public static AtmosSnapshot empty(GasRegistry registry) {
         return new AtmosSnapshot(
-                -1,
-                registry,
-                new ZoneView[0],
-                NO_LONGS,
-                NO_INTS,
-                CellTable.EMPTY,
-                CellTable.EMPTY,
-                NO_LONGS,
-                null,
-                null,
-                NO_CHUNKS);
+                -1, registry, new ZoneView[0], NO_LONGS, NO_INTS, NO_LONGS, null, null, NO_CHUNKS, CellTable.EMPTY);
     }
 
     /**
@@ -131,12 +113,11 @@ public final class AtmosSnapshot {
                 z,
                 positions.clone(),
                 zoneOfPosition.clone(),
-                CellTable.EMPTY,
-                CellTable.EMPTY,
                 NO_LONGS,
                 null,
                 null,
-                new long[z.length][]);
+                new long[z.length][],
+                CellTable.EMPTY);
     }
 
     /**
@@ -145,13 +126,12 @@ public final class AtmosSnapshot {
      */
     static AtmosSnapshot of(
             long tick, GasRegistry registry, List<ZoneView> zones, Membership membership, long[][] zoneChunks) {
-        return of(tick, registry, zones, membership, zoneChunks, CellTable.EMPTY, CellTable.EMPTY);
+        return of(tick, registry, zones, membership, zoneChunks, CellTable.EMPTY);
     }
 
     /**
-     * The engine's table, with the zoned cells of positions holding less than a full block of gas
-     * ({@code partialCells}, valued by index in {@code zones}) and the unzoned cells of held breach
-     * regions ({@code heldCells}).
+     * The engine's table, with the unzoned cells of regions whose breach is held at unloaded chunks
+     * ({@code heldCells}, GEO-026).
      */
     static AtmosSnapshot of(
             long tick,
@@ -159,29 +139,20 @@ public final class AtmosSnapshot {
             List<ZoneView> zones,
             Membership membership,
             long[][] zoneChunks,
-            CellTable partialCells,
             CellTable heldCells) {
-        AtmosSnapshot t = of(tick, registry, zones, membership.positions, membership.zoneOfPosition);
-        if (membership.size() != t.zones.length || zoneChunks.length != t.zones.length) {
+        Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(heldCells, "heldCells");
+        ZoneView[] z = zones.toArray(ZoneView[]::new);
+        if (membership.size() != z.length || zoneChunks.length != z.length) {
             throw new IllegalArgumentException("membership doesn't match the zones");
         }
-        for (int i = 0; i < t.zones.length; i++) {
-            if (membership.zoneIds[i] != t.zones[i].id()) {
+        for (int i = 0; i < z.length; i++) {
+            if (membership.zoneIds[i] != z[i].id()) {
                 throw new IllegalArgumentException("membership doesn't match the zones");
             }
         }
         return new AtmosSnapshot(
-                tick,
-                registry,
-                t.zones,
-                t.positions,
-                t.zoneOfPosition,
-                partialCells,
-                heldCells,
-                NO_LONGS,
-                null,
-                membership,
-                zoneChunks);
+                tick, registry, z, NO_LONGS, NO_INTS, NO_LONGS, null, membership, zoneChunks, heldCells);
     }
 
     /**
@@ -197,17 +168,7 @@ public final class AtmosSnapshot {
         long[] sorted = rejectedZones.clone();
         Arrays.sort(sorted);
         return new AtmosSnapshot(
-                tick,
-                registry,
-                zones,
-                positions,
-                zoneOfPosition,
-                partialCells,
-                heldCells,
-                sorted,
-                previous,
-                membership,
-                zoneChunks);
+                tick, registry, zones, positions, zoneOfPosition, sorted, previous, membership, zoneChunks, heldCells);
     }
 
     /** The atmos tick this table is from; -1 before the first. */
@@ -246,14 +207,44 @@ public final class AtmosSnapshot {
         return before != null && isRejected(before.id()) ? before : null;
     }
 
+    /** The zone at block {@code (x, y, z)}, or null. */
+    public ZoneView zoneAt(int x, int y, int z) {
+        return zoneAt(SectionKeys.block(x, y, z));
+    }
+
     /**
-     * The zone holding one cell, sub-cell {@code sub} of a block position ({@link
-     * SectionKeys#block}), or null if that cell is unzoned (API-015). At a position whose zoned
-     * cells all fill the whole block, or with a negative {@code sub}, this is {@link
-     * #zoneAt(long)}: such a position holds one cell only.
+     * The zone holding a cell (a {@link io.github.west3436.zas.engine.classify.CellIds} id), or
+     * null if it is unzoned or the table has no cell lists. A palette lookup in the cell's section
+     * (architecture §4.4), with the side table for positions holding several cells.
+     */
+    public ZoneView zoneOfCell(long cell) {
+        ZoneView own = membership == null ? null : ownZone(membership.zoneOfCell(cell));
+        if (rejected.length == 0) {
+            return own;
+        }
+        if (own != null && !isRejected(own.id())) {
+            return own;
+        }
+        ZoneView before = previous.zoneOfCell(cell);
+        return before != null && isRejected(before.id()) ? before : null;
+    }
+
+    /**
+     * The zone holding sub-cell {@code sub} of a block position ({@link SectionKeys#block}), or
+     * null if that cell is unzoned (API-015): {@link #zoneOfCell} for the cell's id. A negative
+     * {@code sub} asks for the position's largest zoned cell, as {@link #zoneAt(long)}.
+     *
+     * <p>The table holds no geometry, so it can't tell an unzoned sub-cell from one the position
+     * doesn't have: a {@code sub} of 1 or more at a position whose only zoned cell is its first
+     * reads as unzoned. Callers resolve a point against the block's geometry first, so a block with
+     * one cell always asks for sub-cell 0 (or the largest).
      */
     public ZoneView zoneAt(long block, int sub) {
-        ZoneView own = ownZoneAt(block, sub);
+        if (sub < 0) {
+            return zoneAt(block);
+        }
+        ZoneView own =
+                membership != null ? ownZone(membership.zoneOfCell(block, sub)) : sub == 0 ? ownZoneAt(block) : null;
         if (rejected.length == 0) {
             return own;
         }
@@ -276,11 +267,6 @@ public final class AtmosSnapshot {
     /** The number of unzoned cells listed as held ({@link #heldAt}). */
     public int heldCells() {
         return heldCells.size();
-    }
-
-    /** The zone at block {@code (x, y, z)}, or null. */
-    public ZoneView zoneAt(int x, int y, int z) {
-        return zoneAt(SectionKeys.block(x, y, z));
     }
 
     /** Every zone, in ascending id order. */
@@ -317,7 +303,7 @@ public final class AtmosSnapshot {
 
     /** The number of block positions holding zoned cells in this tick's own table. */
     public int zonedPositions() {
-        return positions.length;
+        return membership != null ? membership.positions() : positions.length;
     }
 
     // ---- Persistence (DATA-002) ----------------------------------------------------
@@ -343,7 +329,7 @@ public final class AtmosSnapshot {
     public List<ZoneShare> shares(long chunk) {
         List<ZoneShare> out = new ArrayList<>();
         if (membership != null) {
-            for (ChunkPart part : index().getOrDefault(chunk, List.of())) {
+            for (Membership.Part part : membership.parts(chunk)) {
                 ZoneView v = zones[part.zone()];
                 if (!isRejected(v.id())) {
                     out.add(share(v, part));
@@ -377,52 +363,14 @@ public final class AtmosSnapshot {
         return out;
     }
 
-    private ZoneShare share(ZoneView v, ChunkPart part) {
-        double total = zoneVolume(part.zone());
+    private ZoneShare share(ZoneView v, Membership.Part part) {
+        double total = membership.zoneVolume(part.zone());
         double f = part.volume() >= total ? 1 : part.volume() / total;
         double[] moles = new double[v.gasCount()];
         for (int g = 0; g < moles.length; g++) {
             moles[g] = f == 1 ? v.moles(g) : v.moles(g) * f;
         }
         return new ZoneShare(v.id(), part.cells(), moles, v.temperature(), zoneChunks[part.zone()], v.pinned());
-    }
-
-    private double zoneVolume(int zone) {
-        double total = 0;
-        for (int i = membership.from(zone); i < membership.to(zone); i++) {
-            total += membership.volume(i);
-        }
-        return total;
-    }
-
-    private Map<Long, List<ChunkPart>> index() {
-        Map<Long, List<ChunkPart>> index = chunkIndex;
-        if (index == null) {
-            index = new HashMap<>();
-            for (int z = 0; z < zones.length; z++) {
-                Map<Long, List<Integer>> byChunk = new java.util.TreeMap<>();
-                for (int i = membership.from(z); i < membership.to(z); i++) {
-                    byChunk.computeIfAbsent(chunkOfCell(i), k -> new ArrayList<>())
-                            .add(i);
-                }
-                for (Map.Entry<Long, List<Integer>> e : byChunk.entrySet()) {
-                    List<Integer> flat = e.getValue();
-                    long[] cells = new long[flat.size()];
-                    double volume = 0;
-                    for (int k = 0; k < cells.length; k++) {
-                        cells[k] = membership.cell(flat.get(k));
-                        volume += membership.volume(flat.get(k));
-                    }
-                    index.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(new ChunkPart(z, cells, volume));
-                }
-            }
-            chunkIndex = index;
-        }
-        return index;
-    }
-
-    private long chunkOfCell(int flat) {
-        return SectionKeys.chunkOfBlockKey(membership.position(flat));
     }
 
     private int ownIndex(long id) {
@@ -464,16 +412,11 @@ public final class AtmosSnapshot {
     }
 
     private ZoneView ownZoneAt(long block) {
+        if (membership != null) {
+            return ownZone(membership.zoneAt(block));
+        }
         int i = Arrays.binarySearch(positions, block);
         return i >= 0 ? zones[zoneOfPosition[i]] : null;
-    }
-
-    private ZoneView ownZoneAt(long block, int sub) {
-        if (sub < 0 || !partialCells.hasBlock(block)) {
-            return ownZoneAt(block);
-        }
-        int z = partialCells.get(block, sub);
-        return z >= 0 ? zones[z] : null;
     }
 
     @Override

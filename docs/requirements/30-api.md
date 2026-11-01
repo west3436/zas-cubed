@@ -236,9 +236,9 @@ block's 16³ rasterization maps to its cell, or to the nearest cell if the voxel
 is inside the shape, so a point resolves to its block's sub-cell. A point inside
 a block with no cells (a full block) uses the nearest cell in an adjacent
 block, by the distance to their shared face; with none, it reads as the
-ambient, since it holds no gas. The published table answers per cell at
-positions holding less than a full block of gas, and mutations at a point act
-on the cell it resolves to. Checked by the `api_015_` Unit tests and
+ambient, since it holds no gas. The published table answers per cell from
+its membership palettes, and mutations at a point act on the cell it resolves
+to. Checked by the `api_015_` Unit tests and
 GameTests.*
 
 #### API-011 · Zone query

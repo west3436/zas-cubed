@@ -254,8 +254,8 @@ public final class EnclosureClassifier implements Classifier {
         }
 
         @Override
-        public int subIndex(long cell) {
-            return CellIds.sub(cell);
+        public CellNaming naming() {
+            return CellNaming.CELL_IDS;
         }
     }
 }

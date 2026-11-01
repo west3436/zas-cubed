@@ -27,6 +27,9 @@ Background:
   - **Create Cosmonautics.** A `LivingBreatheEvent` listener.
 - **Decided (D-29): R1 ships the Ad Astra adapter only.** Northstar Redux and
   Create Cosmonautics are deferred to R2.
+- **Decided (D-66, 2026-11-01): the Ad Astra adapter moves to R2 too,** grouped
+  with Mekanism. R1 ships no space-mod adapter. SPACE-002 is generic NeoForge
+  behaviour and stays in R1.
 
 **For spike S6 to confirm:** Ad Astra's suit item ids and temperature-immunity
 tags; whether suit oxygen is reachable through a capability (SPACE-023);
@@ -36,7 +39,7 @@ whether Ad Astra asks `EntityOxygenEvent` on the client for its HUD; and the
 ## Interop model
 
 #### SPACE-001 · Compat modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-07, D-51, S-06
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-07, D-51, S-06
 
 Each adapter shall have two modes, set per mod:
 - **Cooperative:** the other mod's own breathable areas also count as
@@ -50,7 +53,7 @@ In both modes ZAS³ is the only source of atmospheric harm (SPACE-013).
   breathable only in Cooperative, and that ZAS³ alone deals harm in both.
 
 #### SPACE-004 · Default mode follows the preset
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-14, D-51 · Depends: SPACE-001, OPS-007
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-14, D-51 · Depends: SPACE-001, OPS-007
 
 The default mode shall be Cooperative under the Normal preset and
 Authoritative under the Hardcore preset (OPS-007). A per-mod setting overrides
@@ -77,7 +80,7 @@ local player's verdict comes from the synced state in LIFE-023.)
   that another mod's "can't breathe" survives.
 
 #### SPACE-003 · Adapter version check
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: NFR-022, D-29
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: NFR-022, D-29
 
 Each adapter shall check its target mod's version at runtime against a
 supported range; for Ad Astra, `[1.16.26,1.17)`. Out of range, the adapter
@@ -95,7 +98,7 @@ is NFR-022.
 ## Tier-1 adapters
 
 #### SPACE-010 · Ad Astra oxygen checks agree
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-06, D-51 · Depends: API-014
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: S-06, D-51 · Depends: API-014
 
 Ad Astra's entity oxygen check (`OxygenApi.hasOxygen(Entity)`) shall return
 ZAS³'s breathability verdict (API-014) for every entity in every dimension.
@@ -107,7 +110,7 @@ ZAS³'s breathability verdict (API-014) for every entity in every dimension.
   sealed zone, in vacuum and on the Overworld.
 
 #### SPACE-013 · Ad Astra applies no atmospheric harm
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-51, S-06
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-51, S-06
 
 While the adapter is active, Ad Astra shall apply no oxygen damage, temperature
 damage or suit oxygen drain to any entity. ZAS³'s hazards (LIFE) apply instead.
@@ -120,7 +123,7 @@ damage or suit oxygen drain to any entity. ZAS³'s hazards (LIFE) apply instead.
   apply and suit oxygen doesn't drain.
 
 #### SPACE-014 · Ad Astra environment effects inside zones
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-51, D-49
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-51, D-49
 
 Ad Astra's per-block environment effects (putting out fire, freezing water,
 killing plants) shall not run at positions inside zones. ZAS³'s fire rules
@@ -134,7 +137,7 @@ killing plants) shall not run at positions inside zones. ZAS³'s fire rules
   zone on the Moon behave per ZAS³, and outside per Ad Astra.
 
 #### SPACE-015 · Torches inside zones
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-49, S-06
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-49, S-06
 
 Blocks in Ad Astra's `#ad_astra:destroyed_in_space` tag, such as torches,
 shall be placeable inside zones whose atmosphere meets D-49's fire thresholds:
@@ -153,7 +156,7 @@ it.*
   Moon and not in vacuum.
 
 #### SPACE-017 · Distributor areas in Cooperative mode
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-51, API-014 · Depends: SPACE-001
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-51, API-014 · Depends: SPACE-001
 
 In Cooperative mode, at positions outside zones that an Ad Astra oxygen
 distributor oxygenates, ZAS³'s hazards and breathability helper (API-014)
@@ -171,7 +174,7 @@ queries (API-010) still report ZAS³'s own state.
   area breathes and takes no harm, while queries report ZAS³'s own state.
 
 #### SPACE-019 · Ad Astra's space-native mobs
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-51, LIFE-015, LIFE-016
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: Inspect, GameTest · Trace: D-51, LIFE-015, LIFE-016
 
 The adapter shall add Ad Astra's `#ad_astra:lives_without_oxygen` and
 `#ad_astra:can_survive_in_space` entity tags to `zas:atmosphere_immune` as
@@ -183,7 +186,7 @@ optional entries, so Ad Astra's mobs survive on their own planets.
   takes no harm in vacuum.
 
 #### SPACE-016 · Public API only
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-29, plan R6
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: Inspect · Trace: D-29, plan R6
 
 The Ad Astra adapter shall use only Ad Astra's public API package
 (`earth.terrarium.adastra.api`), with no mixins.
@@ -194,7 +197,7 @@ The Ad Astra adapter shall use only Ad Astra's public API package
 - **Verify:** Inspect the adapter's imports and mixin configuration.
 
 #### SPACE-018 · Constant-time event answers
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: NFR-001, API-046
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: Bench · Trace: NFR-001, API-046
 
 Each answer to an Ad Astra event shall be an O(1) lookup in the last applied
 snapshot (API-046). Ad Astra's environment event fires per block, so it is a
@@ -225,7 +228,7 @@ shall grant breathing. This needs no compile-time dependency.
 ## Data interop
 
 #### SPACE-020 · Ambient seeding from Ad Astra planets
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: ENV-014, D-45, D-52, S-06
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: ENV-014, D-45, D-52, S-06
 
 When neither a datapack nor a provider defines the ambient of a dimension
 listed in Ad Astra's `planets` data (ENV-014), ZAS³ shall seed it:
@@ -245,7 +248,7 @@ adapters in R2.
   an airless one vacuum, each at its converted temperature.
 
 #### SPACE-022 · Ad Astra suit protection
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: S-06, D-51, LIFE-026, D-47
+`Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: Inspect, GameTest · Trace: S-06, D-51, LIFE-026, D-47
 
 The adapter shall ship protection data (LIFE-026) for Ad Astra's suits:
 
@@ -263,7 +266,7 @@ confirmed in spike S6.
   vacuum, at 600 kPa and at 737 K (Venus).
 
 #### SPACE-023 · Ad Astra suit oxygen as internals
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-51, LIFE-028, LIFE-043, CONT-030 · Depends: SPACE-022
+`Should` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: D-51, LIFE-028, LIFE-043, CONT-030 · Depends: SPACE-022
 
 If spike S6 shows Ad Astra's suit oxygen store is reachable through NeoForge's
 fluid item capability, internals shall draw from it as the suit's tank

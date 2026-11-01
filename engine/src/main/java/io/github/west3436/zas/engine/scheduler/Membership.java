@@ -1,138 +1,92 @@
 package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.SectionKeys;
-import io.github.west3436.zas.engine.zone.Zone;
-import io.github.west3436.zas.engine.zone.ZoneGraph;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
- * Which cells each zone holds, as of one point in an atmos tick: zone by zone for restoring
- * rejected components (architecture §3.3), and by block position for the published lookup.
- * Immutable once built. Hash sets are used for membership tests only.
+ * Which zone each cell is in, as of one point in an atmos tick (architecture §4.4): the
+ * per-section palettes ({@link SectionMembers}) of every section holding zoned cells, and per zone
+ * the sections it has cells in. Immutable, so a published {@link AtmosSnapshot} can read it from
+ * any thread while the worker moves on (API-046).
+ *
+ * <p>A {@link MembershipTracker} builds each table from the last: sections and zones that didn't
+ * change are the same objects in both, so publishing costs the changed sections plus a copy of
+ * two arrays of references, not a pass over the cells.
+ *
+ * <p>Zone by zone it answers the cells for restoring rejected components (architecture §3.3) and
+ * the chunks a zone spans; by position it answers the published lookup; by chunk, the cells and
+ * volume of each zone's saved share (DATA-002).
  */
 final class Membership {
-    final long[] zoneIds; // ascending
-    private final int[] offsets; // zone i's cells are cells[offsets[i] .. offsets[i + 1])
-    private final long[] cells;
-    /** The volume of each entry of {@code cells}. */
-    private final double[] volumes;
-    /** The block position of each entry of {@code cells}. */
-    private final long[] cellPositions;
-    /** Per zone, the chunks its cells are in, ascending. */
-    private final long[][] chunks;
-    /** Block keys, ascending, without duplicates; the zone index of each position's largest cell. */
-    final long[] positions;
+    /** The sections a zone has cells in, ascending, and the chunks they are in. Immutable. */
+    record ZoneSections(long[] sections, long[] chunks) {
+        static ZoneSections of(long[] sections) {
+            long[] c = new long[sections.length];
+            for (int i = 0; i < c.length; i++) {
+                c[i] = SectionKeys.chunkOf(sections[i]);
+            }
+            return new ZoneSections(sections, sortedDistinct(c));
+        }
 
-    final int[] zoneOfPosition;
-    /** Sections holding zoned cells. */
-    final Set<Long> sections;
+        ZoneSections with(long section) {
+            int i = Arrays.binarySearch(sections, section);
+            if (i >= 0) {
+                return this;
+            }
+            int at = -i - 1;
+            long[] out = new long[sections.length + 1];
+            System.arraycopy(sections, 0, out, 0, at);
+            out[at] = section;
+            System.arraycopy(sections, at, out, at + 1, sections.length - at);
+            return of(out);
+        }
 
-    private Membership(
-            long[] zoneIds,
-            int[] offsets,
-            long[] cells,
-            double[] volumes,
-            long[] cellPositions,
-            long[][] chunks,
-            long[] positions,
-            int[] zoneOfPosition,
-            Set<Long> sections) {
-        this.zoneIds = zoneIds;
-        this.offsets = offsets;
-        this.cells = cells;
-        this.volumes = volumes;
-        this.cellPositions = cellPositions;
-        this.chunks = chunks;
-        this.positions = positions;
-        this.zoneOfPosition = zoneOfPosition;
-        this.sections = sections;
+        ZoneSections without(long section) {
+            int i = Arrays.binarySearch(sections, section);
+            if (i < 0) {
+                return this;
+            }
+            long[] out = new long[sections.length - 1];
+            System.arraycopy(sections, 0, out, 0, i);
+            System.arraycopy(sections, i + 1, out, i, out.length - i);
+            return of(out);
+        }
+
+        ZoneSections union(ZoneSections other) {
+            long[] all = Arrays.copyOf(sections, sections.length + other.sections.length);
+            System.arraycopy(other.sections, 0, all, sections.length, other.sections.length);
+            return of(sortedDistinct(all));
+        }
     }
 
-    static final Membership EMPTY = new Membership(
-            new long[0],
-            new int[] {0},
-            new long[0],
-            new double[0],
-            new long[0],
-            new long[0][],
-            new long[0],
-            new int[0],
-            Set.of());
+    /** One zone's cells in one chunk, and their volume. */
+    record Part(int zone, long[] cells, double volume) {}
 
-    static Membership of(ZoneGraph graph, CellSpace space) {
-        int zoneCount = graph.zoneCount();
-        long[] ids = new long[zoneCount];
-        int[] offsets = new int[zoneCount + 1];
-        int total = 0;
-        for (Zone z : graph.zones()) {
-            total += z.cellCount();
-        }
-        long[] cells = new long[total];
-        long[] pos = new long[total];
-        double[] vol = new double[total];
-        int[] zoneOf = new int[total];
-        int zi = 0;
-        int n = 0;
-        for (Zone z : graph.zones()) {
-            ids[zi] = z.id();
-            offsets[zi] = n;
-            for (long cell : z.cells()) {
-                cells[n] = cell;
-                pos[n] = space.position(cell);
-                vol[n] = space.volume(cell);
-                zoneOf[n] = zi;
-                n++;
-            }
-            zi++;
-        }
-        offsets[zoneCount] = n;
-        long[][] chunks = new long[zoneCount][];
-        for (int z = 0; z < zoneCount; z++) {
-            long[] c = new long[offsets[z + 1] - offsets[z]];
-            for (int i = 0; i < c.length; i++) {
-                c[i] = SectionKeys.chunkOfBlockKey(pos[offsets[z] + i]);
-            }
-            chunks[z] = sortedDistinct(c);
-        }
+    private static final ZoneSections[] NO_ZONES = new ZoneSections[0];
+    private static final SectionMembers[] NO_SECTIONS = new SectionMembers[0];
 
-        // Sort by position, then volume descending, then cell id: the first of each position wins.
-        Integer[] order = new Integer[total];
-        for (int i = 0; i < total; i++) {
-            order[i] = i;
-        }
-        Arrays.sort(order, (a, b) -> {
-            int c = Long.compare(pos[a], pos[b]);
-            if (c == 0) {
-                c = Double.compare(vol[b], vol[a]);
-            }
-            return c != 0 ? c : Long.compare(cells[a], cells[b]);
-        });
-        long[] positions = new long[total];
-        int[] zoneOfPosition = new int[total];
-        Set<Long> sections = new HashSet<>();
-        int p = 0;
-        for (int k = 0; k < total; k++) {
-            int i = order[k];
-            if (p > 0 && positions[p - 1] == pos[i]) {
-                continue;
-            }
-            positions[p] = pos[i];
-            zoneOfPosition[p] = zoneOf[i];
-            sections.add(SectionKeys.sectionOfBlockKey(pos[i]));
-            p++;
-        }
-        return new Membership(
-                ids,
-                offsets,
-                cells,
-                vol,
-                pos,
-                chunks,
-                Arrays.copyOf(positions, p),
-                Arrays.copyOf(zoneOfPosition, p),
-                sections);
+    static final Membership EMPTY =
+            new Membership(CellNaming.CELL_IDS, new long[0], NO_SECTIONS, new long[0], NO_ZONES);
+
+    private final CellNaming naming;
+    /** Ascending, each holding at least one zoned cell. */
+    final long[] sectionKeys;
+
+    final SectionMembers[] sections;
+    /** Ascending. */
+    final long[] zoneIds;
+
+    final ZoneSections[] zones;
+
+    Membership(CellNaming naming, long[] sectionKeys, SectionMembers[] sections, long[] zoneIds, ZoneSections[] zones) {
+        this.naming = naming;
+        this.sectionKeys = sectionKeys;
+        this.sections = sections;
+        this.zoneIds = zoneIds;
+        this.zones = zones;
     }
 
     static long[] sortedDistinct(long[] values) {
@@ -147,39 +101,11 @@ final class Membership {
         return n == out.length ? out : Arrays.copyOf(out, n);
     }
 
+    // ---- By zone ------------------------------------------------------------------------
+
     /** The number of zones. */
     int size() {
         return zoneIds.length;
-    }
-
-    /** The chunks the zone at an index has cells in, ascending. Not a copy. */
-    long[] chunks(int index) {
-        return chunks[index];
-    }
-
-    /** The first cell of the zone at an index in {@link #cell} order. */
-    int from(int index) {
-        return offsets[index];
-    }
-
-    /** One past the last cell of the zone at an index. */
-    int to(int index) {
-        return offsets[index + 1];
-    }
-
-    /** The cell at a flat position, as {@link #from} and {@link #to} count. */
-    long cell(int i) {
-        return cells[i];
-    }
-
-    /** The volume of the cell at a flat position. */
-    double volume(int i) {
-        return volumes[i];
-    }
-
-    /** The block position of the cell at a flat position. */
-    long position(int i) {
-        return cellPositions[i];
     }
 
     /** The index of a zone id, or -1. */
@@ -187,34 +113,209 @@ final class Membership {
         return Math.max(-1, Arrays.binarySearch(zoneIds, zoneId));
     }
 
-    /** The cells of the zone at an index. */
-    long[] cells(int index) {
-        return Arrays.copyOfRange(cells, offsets[index], offsets[index + 1]);
+    /** The chunks the zone at an index has cells in, ascending. Not a copy. */
+    long[] chunks(int index) {
+        return zones[index].chunks();
     }
 
     /** The chunks the zone at an index spans, into {@code out}. */
     void addChunks(int index, Set<Long> out) {
-        for (long c : chunks[index]) {
+        for (long c : zones[index].chunks()) {
             out.add(c);
         }
     }
 
     /**
-     * Whether the graph still has the same zones with the same cell counts. Cells change zone only
-     * through refreshes (which the engine tracks itself), joins, merges, splits and dissolution,
-     * and each of those changes a zone's cell count or the set of zones.
+     * The cells of the zone at an index, by section, then position, then sub-cell. Costs a pass over
+     * the zone's sections.
      */
-    boolean sameZones(ZoneGraph graph) {
-        if (graph.zoneCount() != zoneIds.length) {
-            return false;
-        }
-        int i = 0;
-        for (Zone z : graph.zones()) {
-            if (z.id() != zoneIds[i] || z.cellCount() != offsets[i + 1] - offsets[i]) {
-                return false;
+    long[] cells(int index) {
+        long id = zoneIds[index];
+        long[] out = new long[64];
+        int n = 0;
+        for (long key : zones[index].sections()) {
+            SectionMembers s = section(key);
+            boolean[] mine = entriesOf(s, id);
+            for (int i = 0; i < SectionMembers.SIZE; i++) {
+                int l = s.local(i);
+                if (l > 0 && mine[l]) {
+                    if (n == out.length) {
+                        out = Arrays.copyOf(out, n * 2);
+                    }
+                    out[n++] = naming.cell(s.block(i), 0);
+                }
             }
-            i++;
+            for (int i = 0; i < s.sideSize(); i++) {
+                if (mine[s.sideEntry(i)]) {
+                    if (n == out.length) {
+                        out = Arrays.copyOf(out, n * 2);
+                    }
+                    out[n++] = s.sideCell(i);
+                }
+            }
         }
-        return true;
+        return Arrays.copyOf(out, n);
+    }
+
+    /** The summed volume of the zone at an index, in the order {@link #parts} sums it. */
+    double zoneVolume(int index) {
+        long id = zoneIds[index];
+        double total = 0;
+        for (long key : zones[index].sections()) {
+            SectionMembers s = section(key);
+            for (int e = 1; e < s.paletteSize(); e++) {
+                if (s.zoneOfEntry(e) == id) {
+                    total += s.volumeOfEntry(e);
+                }
+            }
+        }
+        return total;
+    }
+
+    // ---- By position and cell ------------------------------------------------------------
+
+    /** Whether a section holds zoned cells. */
+    boolean hasSection(long key) {
+        return Arrays.binarySearch(sectionKeys, key) >= 0;
+    }
+
+    /** The zone of a position's largest zoned cell (API-015), or 0 if it holds none. */
+    long zoneAt(long block) {
+        SectionMembers s = section(SectionKeys.sectionOfBlockKey(block));
+        if (s == null) {
+            return 0;
+        }
+        int e = s.largestEntry(index(block));
+        return e == 0 ? 0 : s.zoneOfEntry(e);
+    }
+
+    /** The zone of a cell, or 0 if it is unzoned (or isn't a cell). */
+    long zoneOfCell(long cell) {
+        if (sections.length == 0) {
+            return 0;
+        }
+        long block = naming.position(cell);
+        SectionMembers s = section(SectionKeys.sectionOfBlockKey(block));
+        if (s == null) {
+            return 0;
+        }
+        int e = s.entryOf(index(block), cell, naming.subIndex(cell));
+        return e == 0 ? 0 : s.zoneOfEntry(e);
+    }
+
+    /**
+     * The zone of sub-cell {@code sub} of a block position (API-015), or 0 if that cell is unzoned
+     * or can't be named. A palette lookup, as {@link #zoneOfCell}.
+     */
+    long zoneOfCell(long block, int sub) {
+        if (sections.length == 0 || section(SectionKeys.sectionOfBlockKey(block)) == null) {
+            return 0;
+        }
+        long cell;
+        try {
+            cell = naming.cell(block, sub);
+        } catch (IllegalArgumentException e) {
+            return 0; // no such sub-cell index
+        }
+        return zoneOfCell(cell);
+    }
+
+    /** The number of positions holding a zoned cell. */
+    int positions() {
+        int n = 0;
+        for (SectionMembers s : sections) {
+            n += s.positions();
+        }
+        return n;
+    }
+
+    // ---- By chunk (persistence) ------------------------------------------------------------
+
+    /**
+     * Each zone's cells in a chunk and their volume, in ascending zone order; empty if no zone has
+     * cells there. Costs a pass over the chunk's zoned sections.
+     */
+    List<Part> parts(long chunk) {
+        int x = SectionKeys.chunkX(chunk);
+        int z = SectionKeys.chunkZ(chunk);
+        long prefix = SectionKeys.section(x, 0, z) >> 20;
+        int from = Arrays.binarySearch(sectionKeys, prefix << 20);
+        if (from < 0) {
+            from = -from - 1;
+        }
+        int[] zoneOfEntry = new int[8];
+        long[][] cells = new long[zoneIds.length][];
+        int[] counts = new int[zoneIds.length];
+        double[] volumes = new double[zoneIds.length];
+        boolean any = false;
+        for (int k = from; k < sectionKeys.length && (sectionKeys[k] >> 20) == prefix; k++) {
+            SectionMembers s = sections[k];
+            if (zoneOfEntry.length < s.paletteSize()) {
+                zoneOfEntry = new int[s.paletteSize()];
+            }
+            for (int e = 1; e < s.paletteSize(); e++) {
+                long id = s.zoneOfEntry(e);
+                int zi = id == 0 ? -1 : indexOf(id);
+                zoneOfEntry[e] = zi;
+                if (zi >= 0) {
+                    volumes[zi] += s.volumeOfEntry(e);
+                    if (cells[zi] == null) {
+                        cells[zi] = new long[Math.max(8, s.countOfEntry(e))];
+                    }
+                }
+            }
+            for (int i = 0; i < SectionMembers.SIZE; i++) {
+                int l = s.local(i);
+                if (l > 0) {
+                    int zi = zoneOfEntry[l];
+                    cells[zi] = append(cells[zi], counts[zi]++, naming.cell(s.block(i), 0));
+                    any = true;
+                }
+            }
+            for (int i = 0; i < s.sideSize(); i++) {
+                int zi = zoneOfEntry[s.sideEntry(i)];
+                cells[zi] = append(cells[zi], counts[zi]++, s.sideCell(i));
+                any = true;
+            }
+        }
+        if (!any) {
+            return List.of();
+        }
+        List<Part> out = new ArrayList<>();
+        for (int zi = 0; zi < zoneIds.length; zi++) {
+            if (counts[zi] > 0) {
+                out.add(new Part(zi, Arrays.copyOf(cells[zi], counts[zi]), volumes[zi]));
+            }
+        }
+        return out;
+    }
+
+    private static long[] append(long[] a, int at, long v) {
+        if (at == a.length) {
+            a = Arrays.copyOf(a, a.length * 2);
+        }
+        a[at] = v;
+        return a;
+    }
+
+    // ---- Helpers ------------------------------------------------------------------------
+
+    private SectionMembers section(long key) {
+        int i = Arrays.binarySearch(sectionKeys, key);
+        return i >= 0 ? sections[i] : null;
+    }
+
+    /** Per palette entry, whether it names a zone. */
+    private static boolean[] entriesOf(SectionMembers s, long zoneId) {
+        boolean[] out = new boolean[s.paletteSize()];
+        for (int e = 1; e < out.length; e++) {
+            out[e] = s.zoneOfEntry(e) == zoneId;
+        }
+        return out;
+    }
+
+    private static int index(long block) {
+        return SectionKeys.index(
+                SectionKeys.blockX(block) & 15, SectionKeys.blockY(block) & 15, SectionKeys.blockZ(block) & 15);
     }
 }

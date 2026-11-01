@@ -30,21 +30,10 @@ public interface CellSpace extends CellTopology {
     long position(long cell);
 
     /**
-     * A cell's index among the cells of its block, in {@link #forEachCellAt} order: its sub-cell
-     * index (GEO-004), or -1 if its block doesn't hold it. The default searches {@link
-     * #forEachCellAt}.
+     * How this space's cell ids name positions and sub-cells, consistent with {@link #position}
+     * and {@link #forEachCellAt}'s order. Pure, so published tables may keep it.
      */
-    default int subIndex(long cell) {
-        int[] found = {-1};
-        int[] n = {0};
-        forEachCellAt(position(cell), c -> {
-            if (c == cell) {
-                found[0] = n[0];
-            }
-            n[0]++;
-        });
-        return found[0];
-    }
+    CellNaming naming();
 
     /**
      * Cell {@code sub} of a block position, the cell an operation resolved to a sub-cell acts on

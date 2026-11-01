@@ -24,19 +24,21 @@ measured here (see [Not measured](#not-measured)).
 | NFR-005: worker tick ≤ 250 ms, S-10 | Worst 10.8 ms. The slowest tick anywhere: 88 ms, zoning a 65,536-cell hall | Pass |
 | NFR-003: 1,000 idle zones add ≤ 0.1 ms per server tick | +0.022 ms (0.8 µs server, 0.021 ms worker) | Pass |
 | NFR-003: doubling loaded chunks without zones changes cost < 5 % | +0.2 % | Pass |
-| NFR-004: ≤ 64 B per zoned cell and ≤ 64 MiB in S-10 | Rough: 13.6 MiB in all, 356 B per zoned cell | Total passes; per cell fails ([#78](https://github.com/west3436/zas-cubed/issues/78)) |
+| NFR-004: ≤ 64 B per zoned cell and ≤ 64 MiB in S-10 | Rough: 13.6 MiB in all, 356 B per zoned cell. *2026-11-01, retained size: 10.85 MiB; 222 B per zoned cell in parts that scale with cells, about 1 KiB per zone* | Total and per zone pass; per cell fails, and is revised to 256 B by dated note ([check](#membership-palette-check-2026-11-01)) |
 | GEO-011: constant cost per change away from zones | 5.3 to 5.8 ns, from 16 k to 1 M changes and with 278 or 1,278 zones | Pass |
 | CORE-054: world generation creates no zone and no fill | 0 captures, 0 fills, 0 new zones over 320 generated chunks | Pass |
 | GEO-022: a 65,536-cell fill doesn't stall the server thread | Server ≤ 0.71 ms per round; the fill runs on the worker | Pass |
 | GEO-020: fill cost (no number set) | 7.5 ms median at the 65,536-cell cap | Recorded |
-| CORE-025: a connected edit costs the same at any zone size | Split search: 24 visits at 1,000, 8,000 and 50,000 cells. Worker tick: 0.06, 0.23 and 1.4 ms | Partial: the search is local, the tick isn't |
+| CORE-025: a connected edit costs the same at any zone size | Split search: 24 visits at 1,000, 8,000 and 50,000 cells. Worker tick: 0.06, 0.23 and 1.4 ms. *2026-11-01: 0.046, 0.041 and 0.054 ms* | Pass since [#106](https://github.com/west3436/zas-cubed/issues/106) ([check](#membership-palette-check-2026-11-01)) |
 | CORE-045: server-thread versus worker time | 31 µs versus 0.94 ms per atmos tick in S-10 | Recorded |
 | CORE-046: cost at each period | 0.5 s: 1.29 ms of worker time per game second; 1 s: 0.94 ms; 2 s: 0.67 ms | Recorded |
 
 **Requirements moved to `Implemented`:** GEO-011, CORE-054, CORE-047 and
 NFR-003 (each with a dated note), and API-048, since S-12 now runs in CI (see
 [S-12](#s-12-api-fallback-check)). CORE-045 and CORE-046 were already
-`Implemented`; their Bench parts are recorded here.
+`Implemented`; their Bench parts are recorded here. *2026-11-01: CORE-025
+followed, with a dated note, once its Bench passed
+([membership palette check](#membership-palette-check-2026-11-01)).*
 
 **Left as they are:**
 
@@ -47,6 +49,9 @@ NFR-003 (each with a dated note), and API-048, since S-12 now runs in CI (see
 - **CORE-025** (R1): the split search is local, but the tick that holds the
   edit rebuilds the zone-membership table over every zoned cell, so the
   worker's cost still grows with zone size. See [Findings](#findings).
+  *2026-11-01: fixed by
+  [#106](https://github.com/west3436/zas-cubed/issues/106); CORE-025 is now
+  `Implemented` ([check](#membership-palette-check-2026-11-01)).*
 - **NFR-001, NFR-002, NFR-004 and NFR-005** are R1. They need the full S-10
   with devices, players, mobs and hotspots on reference hardware. The engine's
   share is recorded here as a baseline.
@@ -156,6 +161,8 @@ published snapshot, membership and undo copies). That is well inside the
 64 MiB total but over the 64 B per cell budget. This figure is a rough
 difference of `Runtime` readings after `System.gc()`, so measure it properly
 in [#78](https://github.com/west3436/zas-cubed/issues/78) before acting on it.
+*2026-11-01: measured by retained size, part by part, in the
+[membership palette check](#membership-palette-check-2026-11-01).*
 
 ## Bounded fill: GEO-020 and GEO-022
 
@@ -216,7 +223,8 @@ again, 50 times. Each zone is alone in its engine:
 The split search is local, as CORE-025 requires: 24 visits at every size
 (spike S4 had 6, with a simpler neighbourhood). The tick isn't: it grows with
 the zone, because the engine rebuilds the membership table over every zoned
-cell on any tick with a geometry change.
+cell on any tick with a geometry change. *2026-11-01: it is now, after #106
+(see the [membership palette check](#membership-palette-check-2026-11-01)).*
 
 ## NFR-003 and CORE-054: cost follows activity
 
@@ -324,6 +332,115 @@ other rows differ by run-to-run noise. The split, merge and edit rows run
 slower than the table above in both columns; they are the same code in both,
 so that is this run's machine state, not the change.
 
+## Membership palette check (2026-11-01)
+
+_[#106](https://github.com/west3436/zas-cubed/issues/106) replaced the
+membership table the engine rebuilt over every zoned cell on any tick with a
+geometry change by the per-section palettes of architecture §4.4, kept up to
+date change by change and published copy-on-write;
+[#78](https://github.com/west3436/zas-cubed/issues/78) replaced the rough heap
+figure with retained-size accounting. Same machine and settings;
+`./gradlew :engine:bench` on `main` just before the change (with the new heap
+accounting, which reads the engine's fields by name and runs on both) and on
+the branch after it. Both columns come from one session; this session ran
+slower than the tables above, so compare a row across, not with the tables
+above._ Medians unless noted:
+
+| Measure | Before | After |
+|---|---|---|
+| Local edit, worker tick: 1,000 / 8,000 / 50,000-cell zone | 0.109 / 0.529 / 3.55 ms | 0.046 / 0.041 / 0.054 ms |
+| Local edit, split-search visits | 24 / 24 / 24 | 24 / 24 / 24 |
+| Idle tick, 49,001-cell zone | 0.151 ms | 0.070 ms |
+| Split tick, 49,001 cells into 25,000 + 24,000 | 14.36 ms | 8.52 ms |
+| Merge tick, the same halves | 14.92 ms | 0.551 ms |
+| Pipeline: worker tick zoning the 65,536-cell hall | 84.04 ms | 80.43 ms |
+| Pipeline: server close plus apply for the hall | 0.544 ms | 0.566 ms |
+| Fill alone: sealed hall, 65,536 cells | 7.58 ms | 7.71 ms |
+| S-10 with ops: worker tick, mean / worst | 0.837 / 17.08 ms | 0.594 / 9.29 ms |
+| S-10 without ops: worker tick, mean / worst | 0.494 / 12.36 ms | 0.412 / 11.93 ms |
+| S-10 with ops: explosion tick, worker | 11.45 ms | 7.77 ms |
+| S-10 with ops: server per server tick, mean / worst server tick | 4.7 µs / 0.346 ms | 4.8 µs / 0.363 ms |
+| NFR-003: 1,000 idle zones, Δ worker per server tick | +0.027 ms | +0.018 ms |
+| Burst of 1,000 zone-creating adds: worst worker tick | 46.74 ms | 42.52 ms |
+| S-10 atmos heap, retained (see below) | 12.27 MiB | 10.85 MiB |
+| S-10 atmos heap per zoned cell, all parts | 320 B | 283 B |
+| Of which zone membership and position lookups | 48.4 B | 10.7 B |
+| GC'd `Runtime` difference per zoned cell (the old method) | 371 B | 334 B |
+
+- **CORE-025's Bench passes.** A one-block edit now costs the same at every
+  zone size (0.04 to 0.05 ms, inside run-to-run noise of each other), where it
+  grew 33-fold from 1,000 to 50,000 cells before. The split search was already
+  local; the rest of the tick now is too.
+- **Merges** rename palette entries in the absorbed zone's sections, and the
+  graph moves the absorbed zone's edges as wholes instead of recounting every
+  stored pair of its cells: 27 times faster. 0.55 ms is above spike S4's
+  0.15 ms because the graph still moves each cell's zone reference (24,000 of
+  them) and the tick runs exchange and publishes; the membership part is
+  O(sections).
+- **Splits** must move every cell of the split-off part, so the tick follows
+  the remnant (24,000 cells here): 8.5 ms against spike S4's 6.7 ms. That is
+  proportional to the change, as CORE-024 and CORE-025 allow.
+- **Publishing** is O(changed sections): a table shares every unchanged
+  section and zone record with the one before, so a tick with no zone change
+  publishes the same table again.
+- **Zone creation (Finding 1) didn't change:** the 65,536-cell hall still
+  takes 80 ms. A profile puts the time in building the zone (the connectivity
+  check in `ZoneGraph.createZone`, `EnclosureZones` splitting the region by
+  direct openings, both binary searches per neighbour, and linking each cell's
+  stored pairs); the palettes are about 1.5 % of it. Not in scope for #106.
+- **Idle zones (Finding 3)** cost a third less: membership no longer adds
+  anything per zone per tick, but the undo copies and zone views remain.
+
+**Heap (NFR-004), method.** `HeapAccounting` (in the bench) walks the object
+graph from the engine and the pipeline, after the warm-up, with the worker
+idle, and adds up each object's shallow size, counting every object once. Sizes
+are HotSpot's own layout read through `sun.misc.Unsafe` (field offsets, array
+base offsets and element sizes, rounded to 8 bytes; compressed oops, as with
+any heap under 32 GB); records and lambdas, which Unsafe won't give offsets
+for, are estimated from their fields. Each object is charged to the first part
+that reaches it, walked in a fixed order: section mirror, zone membership, zone
+graph, published snapshots, undo point, then the rest. Within a part, the
+graph's cells (with their stored connections and the cell map) are split from
+its zones, mixtures and edges, and each zone's section list from the
+palettes. Left out: the bench's stand-in world, threads and executors, and what
+every dimension shares (gas registry, mixture settings, geometry palette).
+"Sparse" adds 1,000 sealed 27-cell rooms (about 10 to a section) after the
+timed run, and reports what they add.
+
+**Heap after the change** (278 zones, 40,178 zoned cells at 40,178 positions):
+
+| Part | Scales with | S-10 | Per zoned cell | Per zone | Sparse: per added cell | Sparse: per added zone |
+|---|---|---|---|---|---|---|
+| Section mirror (geometry ids of mirrored sections) | cells | 0.84 MiB | 21.9 B | | 68.8 B | |
+| Zone membership: per-section palettes and lookups | cells | 0.41 MiB | 10.7 B | | 36.9 B | |
+| Zone graph: cells, their stored connections, the cell map | cells | 7.25 MiB | 189.3 B | | 207.6 B | |
+| Zone graph: zones, mixtures and edges | zones | 0.10 MiB | | 384 B | | 344 B |
+| Zone membership: each zone's sections and chunks | zones | 0.02 MiB | | 79 B | | 76 B |
+| Published snapshots: zone views | zones | 0.03 MiB | | 117 B | | 116 B |
+| Undo point: mixture copies, components | zones | 0.13 MiB | | 483 B | | 59 B |
+| Classifier and fill scratch, queues, outcomes | neither | 2.06 MiB | | | | |
+| **Total** | | **10.85 MiB** | **221.9 B** | **1,063 B** | **313.4 B** | **596 B** |
+
+- **The graph's cells are four fifths of it,** 189 B per zoned cell: a 56-byte
+  `Cell`, a `long[6]` and a `boolean[6]` of stored connections (88 B), about
+  39 B of open-addressing cell map at its 0.5 load factor, and the zone's cell
+  array. That is the R0 graph's design (every open pair stored on both
+  cells, §4.4), not the membership.
+- **The section mirror's share** is 22 B per zoned cell in S-10, where rooms
+  fill their sections well, and 69 B in the sparse rooms, since a mirrored
+  section costs 8 KiB whatever it holds (uniform sections cost almost nothing).
+- **The palettes** cost 11 B per zoned cell in S-10 and 37 B in the sparse
+  rooms, against 48 to 50 B for the old table, which kept every cell in sorted
+  arrays twice over (the table and the snapshot's copy of its positions).
+- **The classifier's scratch** (2 MiB, its fill's tables sized for the
+  65,536-cell cap) is fixed per dimension.
+
+**Against NFR-004:** the total, 10.85 MiB, passes 64 MiB with a sixfold
+margin, and zones cost about 1 KiB each against 4 KiB. The parts that scale
+with cells come to 222 B per zoned cell, over the 64 B budget; without the
+graph's cells they would be 33 B. NFR-004 is revised by a dated note (see the
+requirement).
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall
@@ -332,17 +449,27 @@ so that is this run's machine state, not the change.
    cells and edges in the graph and rebuilding the membership table and
    snapshot. It's inside NFR-005 (250 ms), but it's the largest single cost
    seen, and an R1 station that zones several large rooms in one tick could
-   approach the budget.
-2. **Any geometry change rebuilds the membership table over every zoned
-   cell.** That makes a one-block edit in a 50,000-cell zone cost 1.4 ms
+   approach the budget. *2026-11-01: still 80 ms after #106; the membership
+   rebuild was a small part of it. The time is in building the zone (see the
+   [membership palette check](#membership-palette-check-2026-11-01)).*
+2. ~~**Any geometry change rebuilds the membership table over every zoned
+   cell.**~~ That made a one-block edit in a 50,000-cell zone cost 1.4 ms
    instead of 0.06 ms, and a merge cost 10 ms instead of spike S4's 0.15 ms.
-   Merges also still relabel cells rather than section palettes (architecture
-   §4). Fixing this is what CORE-025 needs.
+   Merges also still relabelled cells rather than section palettes
+   (architecture §4). *2026-11-01: fixed by
+   [#106](https://github.com/west3436/zas-cubed/issues/106): a local edit
+   costs the same at any zone size and a merge renames palette entries
+   ([check](#membership-palette-check-2026-11-01)).*
 3. **Idle zones cost about 0.4 µs each per atmos tick** (undo copies and the
-   snapshot). NFR-003's number holds with a wide margin.
-4. **Rough heap use is about 356 B per zoned cell,** against NFR-004's 64 B.
-   [#78](https://github.com/west3436/zas-cubed/issues/78) should measure the
-   parts properly.
+   snapshot). NFR-003's number holds with a wide margin. *2026-11-01: a third
+   less after #106; the undo copies and zone views remain.*
+4. ~~**Rough heap use is about 356 B per zoned cell,** against NFR-004's
+   64 B.~~ *2026-11-01: measured by retained size
+   ([#78](https://github.com/west3436/zas-cubed/issues/78)): 283 B per zoned
+   cell in all, 222 B of it in parts that scale with cells, four fifths of
+   that the zone graph's stored connections; 10.85 MiB for S-10. NFR-004's
+   per-cell budget is revised
+   ([check](#membership-palette-check-2026-11-01)).*
 
 ## Not measured
 

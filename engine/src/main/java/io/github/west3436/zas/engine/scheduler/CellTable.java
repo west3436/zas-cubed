@@ -5,9 +5,9 @@ import java.util.Arrays;
 
 /**
  * An immutable table of cells named by block position ({@link SectionKeys#block}) and sub-cell
- * index (GEO-004), each with a non-negative int value. The published zone table uses it for what a block-keyed
- * lookup can't say: the zones of the cells at positions holding part-volume cells (API-015), and
- * the cells of regions a held breach left unresolved (GEO-026). Lookups are binary searches.
+ * index (GEO-004), each with a non-negative int value. The published zone table uses it to list
+ * the unzoned cells of regions a held breach left unresolved (GEO-026), which its membership
+ * palettes don't hold. Its size is that of the held regions; lookups are binary searches.
  */
 final class CellTable {
     static final CellTable EMPTY = new CellTable(new long[0], new byte[0], new int[0]);
