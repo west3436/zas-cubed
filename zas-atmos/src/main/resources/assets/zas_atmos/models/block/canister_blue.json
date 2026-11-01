@@ -1,0 +1,7 @@
+{
+  "parent": "zas_atmos:block/canister",
+  "textures": {
+    "body": "zas_atmos:block/canister_blue",
+    "particle": "zas_atmos:block/canister_blue"
+  }
+}

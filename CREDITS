@@ -54,3 +54,90 @@
 
 path: zas/src/main/resources/assets/zas/lang/en_us.json
 origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block as a round 4 px tube with 6 px flanges, in greys the dye colour tints.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_arm.json
+origin: original
+notes: One connected side of a pipe: a flange at the block edge and a tube into the joint.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_core.json
+origin: original
+notes: The rounded joint at a pipe's bends, tees and crosses.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_straight.json
+origin: original
+notes: A straight pipe run, with a flange at each block edge.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pipe.json
+origin: original
+notes: The pipe item: the straight pipe model, scaled up in the inventory.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_yellow.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_blue.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: blue
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_red.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: red
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_valve.png
+origin: original
+notes: The canister's port and ball valve, in vg's pipe greys.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister.json
+origin: original
+notes: Shaped after vg's yellow canister (icons/obj/atmos.dmi): a narrower head on a round body, a handle and three pressure lights. Valve shut.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_open.json
+origin: original
+notes: As canister.json, with the valve open.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_blue.json
+origin: original
+notes: canister.json with the blue texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_blue_open.json
+origin: original
+notes: canister_open.json with the blue texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_red.json
+origin: original
+notes: canister.json with the red texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_red_open.json
+origin: original
+notes: canister_open.json with the red texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/canister.json
+origin: original
+notes: The canister item: the canister model, scaled down in the inventory.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/wrench.png
+origin: vgstation13
+source: icons/obj/items.dmi
+state: wrench
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, at 32x32 (D-70).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
+origin: original
+notes: A handheld item model for the wrench sprite.
