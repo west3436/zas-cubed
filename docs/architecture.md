@@ -710,6 +710,15 @@ the lever if the per-cell cost ever matters.
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
   zone is rebuilt from its other chunks. Nothing is decoded while a chunk
   loads, so a bad tag can never stop it loading.
+- **Removed gases.** A record lists the gas ids it was saved with and is
+  remapped to the running gas set when decoded. Moles of a gas the set no
+  longer defines (its datapack or mod was removed) are dropped from every
+  share and queued addition; the rest of the record loads as it was
+  (CORE-013). One warning per gas names the dimension, the gas, the amount,
+  the chunk and each zone or queued addition that held it (CORE-016), and
+  the chunk is marked for saving, so the next save writes it without the gas.
+  The ledger never sees the dropped moles: they leave before the record
+  reaches the engine.
 - **Derived state is rebuilt on load:** edges, the geometry palette,
   sub-cells and hotspots (DATA-009).
 - **A geometry palette change rebuilds from the loaded chunks' records**, as a
@@ -837,7 +846,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 | Package | Contents |
 |---|---|
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread` and `@ServerThread`, and the `ServerThreads` check |
-| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011); later `GasType` (registry key, properties) and `GasTags` |
+| `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
