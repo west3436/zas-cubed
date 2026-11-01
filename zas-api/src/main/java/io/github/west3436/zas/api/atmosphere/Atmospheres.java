@@ -20,9 +20,15 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p><b>Point resolution</b> (API-015, D-44): a position can hold several
  * cells (a glass pane divides its block into two). A query at an exact point
- * uses the cell that contains it, or the nearest cell if the point is inside
- * the block's collision shape. A query at a block position uses that
- * position's largest cell. A query about an entity uses its eye position.
+ * uses the cell that contains it, or the block's nearest cell if the point is
+ * inside the block's collision shape. A point inside a block with no cells, a
+ * full block such as stone, which holds no gas, uses the nearest cell next to
+ * it: of the six adjacent blocks, the one whose shared face is closest to the
+ * point that has a cell. A point buried with no cell next to it is reported as
+ * {@link AtmosphereState#AMBIENT} (or {@link AtmosphereState#UNRESOLVED}, in
+ * an unloaded chunk), with no zone. A query at a block position uses that
+ * position's largest cell, the first of equals. A query about an entity uses
+ * its eye position. Mutations at a point resolve it in the same way.
  *
  * <p>Without ZAS³ installed, every point is {@link AtmosphereState#AMBIENT}
  * standard air and no zone exists (D-17).

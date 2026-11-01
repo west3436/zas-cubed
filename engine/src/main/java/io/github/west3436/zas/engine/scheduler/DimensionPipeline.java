@@ -184,8 +184,25 @@ public final class DimensionPipeline {
             LedgerCategory category,
             boolean triggersZone,
             String source) {
+        return add(block, -1, moles, temperature, category, triggersZone, source);
+    }
+
+    /**
+     * Queues an addition to one sub-cell of a position for the next batch (API-015): {@code sub}
+     * as in {@link GasOp#sub()}, -1 for the largest cell.
+     *
+     * @return its sequence number
+     */
+    public long add(
+            long block,
+            int sub,
+            double[] moles,
+            double temperature,
+            LedgerCategory category,
+            boolean triggersZone,
+            String source) {
         long seq = nextSeq++;
-        enqueue(new GasOp(seq, GasOp.Kind.ADD, block, moles, temperature, category, triggersZone, source));
+        enqueue(new GasOp(seq, GasOp.Kind.ADD, block, moles, temperature, category, triggersZone, source, sub));
         return seq;
     }
 
@@ -195,8 +212,19 @@ public final class DimensionPipeline {
      * @return its sequence number
      */
     public long remove(long block, double[] moles, LedgerCategory category, boolean triggersZone, String source) {
+        return remove(block, -1, moles, category, triggersZone, source);
+    }
+
+    /**
+     * Queues a removal from one sub-cell of a position for the next batch (API-015): {@code sub}
+     * as in {@link GasOp#sub()}, -1 for the largest cell.
+     *
+     * @return its sequence number
+     */
+    public long remove(
+            long block, int sub, double[] moles, LedgerCategory category, boolean triggersZone, String source) {
         long seq = nextSeq++;
-        enqueue(new GasOp(seq, GasOp.Kind.REMOVE, block, moles, 0, category, triggersZone, source));
+        enqueue(new GasOp(seq, GasOp.Kind.REMOVE, block, moles, 0, category, triggersZone, source, sub));
         return seq;
     }
 

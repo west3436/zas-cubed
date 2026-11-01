@@ -29,6 +29,8 @@
   "commands.zas.state.paused": "paused",
   "commands.zas.state.unresolved": "unresolved",
   "commands.zas.at.header": "Atmosphere at %s in %s: %s, zone %s",
+  "commands.zas.at.point": "%s (%s)",
+  "commands.zas.at.sub_cell": "%s, sub-cell %s of %s",
   "commands.zas.at.values": "  %s kPa, %s K",
 
   "commands.zas.zone.header": "Zone %s: %s cells, %s L, %s, %s",

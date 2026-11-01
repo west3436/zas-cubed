@@ -37,9 +37,22 @@ import net.neoforged.bus.api.IEventBus;
  * ZAS³'s implementation of the API (architecture §6.2).
  *
  * <p>Queries read the zone table the atmos scheduler last published for the level's dimension
- * ({@link AtmosService}, API-046): a zoned position answers with its zone, any other with the
- * dimension's ambient (CORE-050, ENV-001). Mutations are queued for the next atmos tick and their
- * futures complete on the server thread when that tick is applied (API-016).
+ * ({@link AtmosService}, API-046). A point or position first resolves to one cell ({@link
+ * PointResolver}, API-015): the sub-cell holding an exact point, the nearest cell to a point inside
+ * a block's shape, a position's largest cell. Then (API-010):
+ *
+ * <ul>
+ *   <li>a zoned cell answers with its zone: {@code ZONED}, or {@code PAUSED} with its last-known
+ *       state (GEO-035);
+ *   <li>an unzoned cell in an unloaded chunk, or in a region a held breach left unresolved because
+ *       it reaches unloaded chunks (GEO-024, GEO-026), is {@code UNRESOLVED}, with the ambient as
+ *       its last-known state;
+ *   <li>any other point is {@code AMBIENT}: the dimension's ambient (CORE-050, ENV-001). That
+ *       includes a point inside a full block with no cell next to it, which holds no gas.
+ * </ul>
+ *
+ * <p>Mutations resolve their point the same way and act on that cell. They are queued for the next
+ * atmos tick and their futures complete on the server thread when that tick is applied (API-016).
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -61,20 +74,34 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return true;
     }
 
-    // TODO(API-015): resolve an exact point to the sub-cell that contains it.
     @Override
     public AtmosphereSample sample(Level level, Vec3 point) {
-        return sample(level, BlockPos.containing(point));
+        DimensionAtmos d = dimension(level);
+        if (d == null || !(level instanceof ServerLevel server)) {
+            return sample(level, d, PointResolver.Cell.largestOf(BlockPos.containing(point)));
+        }
+        return sample(level, d, PointResolver.resolve(server, point));
     }
 
     @Override
     public AtmosphereSample sample(Level level, BlockPos pos) {
         DimensionAtmos d = dimension(level);
+        if (d == null || !(level instanceof ServerLevel server)) {
+            return sample(level, d, PointResolver.Cell.largestOf(pos));
+        }
+        return sample(level, d, PointResolver.resolve(server, pos));
+    }
+
+    /** The sample at one resolved cell. */
+    private AtmosphereSample sample(Level level, DimensionAtmos d, PointResolver.Cell cell) {
         AtmosSnapshot table = d == null ? null : d.published();
-        ZoneView zone = table == null ? null : table.zoneAt(pos.asLong());
+        long block = cell.pos().asLong();
+        ZoneView zone = table == null ? null : table.zoneAt(block, cell.sub());
         if (zone == null) {
-            if (level instanceof ServerLevel server && !isLoaded(server, d, pos)) {
-                // An unloaded chunk is unresolved; its last-known state is the ambient (GEO-035).
+            if (level instanceof ServerLevel server
+                    && (!isLoaded(server, d, cell.pos()) || (table != null && table.heldAt(block, cell.sub())))) {
+                // An unloaded chunk, or a region held at a breach because it reaches one, is
+                // unresolved; its last-known state is the ambient (GEO-026, GEO-035).
                 return new AtmosphereSample(
                         AtmosphereState.UNRESOLVED,
                         Optional.empty(),
@@ -103,7 +130,8 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             // No server running the scheduler yet: the open air takes everything offered.
             return CompletableFuture.completedFuture(new MutationResult(MutationOutcome.AMBIENT, gas));
         }
-        return service.add(level, BlockPos.containing(point), gas, source);
+        PointResolver.Cell cell = PointResolver.resolve(level, point);
+        return service.add(level, cell.pos(), cell.sub(), gas, source);
     }
 
     @Override
@@ -113,7 +141,8 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         if (service == null) {
             return CompletableFuture.completedFuture(new MutationResult(MutationOutcome.AMBIENT, GasParcel.EMPTY));
         }
-        return service.remove(level, BlockPos.containing(point), moles, source);
+        PointResolver.Cell cell = PointResolver.resolve(level, point);
+        return service.remove(level, cell.pos(), cell.sub(), moles, source);
     }
 
     private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {

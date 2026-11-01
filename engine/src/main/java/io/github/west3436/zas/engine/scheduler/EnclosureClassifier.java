@@ -58,6 +58,8 @@ public final class EnclosureClassifier implements Classifier {
     private boolean fetching;
     /** Zones of breaches held at unloaded chunks, ascending. */
     private long[] heldZones = new long[0];
+    /** Seeds of the breaches that pause those zones, ascending. */
+    private long[] pausingSeeds = new long[0];
 
     public EnclosureClassifier(SectionLookup sections, GeometryPalette palette) {
         this(sections, palette, EnclosureFill.DEFAULT_MAX_CELLS);
@@ -135,11 +137,13 @@ public final class EnclosureClassifier implements Classifier {
         fetching = false;
         long[] previouslyHeld = heldZones;
         heldZones = new long[0];
+        pausingSeeds = new long[0];
         if (seeds.length == 0) {
             held = new long[0];
             return;
         }
         List<Long> stillHeld = new ArrayList<>();
+        java.util.TreeSet<Long> pausedBy = new java.util.TreeSet<>();
         java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
         for (Breach b : breaches.classify(graph, topology, seeds)) {
             if (b instanceof Breach.Hold hold) {
@@ -164,6 +168,9 @@ public final class EnclosureClassifier implements Classifier {
                     for (long z : hold.zones()) {
                         pausing.add(z);
                     }
+                    for (long s : hold.seeds()) {
+                        pausedBy.add(s);
+                    }
                 }
             } else {
                 BreachResolver.apply(graph, topology, b);
@@ -177,6 +184,11 @@ public final class EnclosureClassifier implements Classifier {
         int i = 0;
         for (long z : pausing) {
             heldZones[i++] = z;
+        }
+        pausingSeeds = new long[pausedBy.size()];
+        i = 0;
+        for (long s : pausedBy) {
+            pausingSeeds[i++] = s;
         }
     }
 
@@ -193,6 +205,11 @@ public final class EnclosureClassifier implements Classifier {
     @Override
     public long[] heldZones() {
         return heldZones.clone();
+    }
+
+    @Override
+    public long[] heldSeeds() {
+        return pausingSeeds.clone();
     }
 
     @Override

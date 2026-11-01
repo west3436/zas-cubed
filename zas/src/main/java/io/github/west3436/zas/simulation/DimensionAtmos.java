@@ -143,6 +143,7 @@ public final class DimensionAtmos {
             CompletableFuture<MutationResult> future,
             boolean add,
             BlockPos pos,
+            int sub,
             GasParcel offered,
             Map<ResourceLocation, Double> wanted,
             SourceId source) {}
@@ -238,16 +239,17 @@ public final class DimensionAtmos {
 
     // ---- Mutations ----------------------------------------------------------------
 
-    CompletableFuture<MutationResult> add(BlockPos pos, GasParcel gas, SourceId source) {
+    CompletableFuture<MutationResult> add(BlockPos pos, int sub, GasParcel gas, SourceId source) {
         CompletableFuture<MutationResult> future = new CompletableFuture<>();
-        Pending p = new Pending(future, true, pos.immutable(), gas, Map.of(), source);
+        Pending p = new Pending(future, true, pos.immutable(), sub, gas, Map.of(), source);
         queue(p, gas.moles(), gas.temperature());
         return future;
     }
 
-    CompletableFuture<MutationResult> remove(BlockPos pos, Map<ResourceLocation, Double> moles, SourceId source) {
+    CompletableFuture<MutationResult> remove(
+            BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
         CompletableFuture<MutationResult> future = new CompletableFuture<>();
-        Pending p = new Pending(future, false, pos.immutable(), GasParcel.EMPTY, moles, source);
+        Pending p = new Pending(future, false, pos.immutable(), sub, GasParcel.EMPTY, moles, source);
         queue(p, moles, 0);
         return future;
     }
@@ -277,8 +279,8 @@ public final class DimensionAtmos {
         long block = p.pos().asLong();
         String source = p.source().toString();
         long seq = p.add()
-                ? pl.add(block, amounts, temperature, LedgerCategory.API, true, source)
-                : pl.remove(block, amounts, LedgerCategory.API, true, source);
+                ? pl.add(block, p.sub(), amounts, temperature, LedgerCategory.API, true, source)
+                : pl.remove(block, p.sub(), amounts, LedgerCategory.API, true, source);
         pending.put(seq, p);
     }
 
@@ -566,7 +568,8 @@ public final class DimensionAtmos {
                 op.temperature(),
                 op.category(),
                 op.triggersZone(),
-                op.source());
+                op.source(),
+                op.sub());
     }
 
     private void create(GeometryTable table) {

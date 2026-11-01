@@ -118,6 +118,13 @@ public final class DimensionEngine {
     /** The cells operations found unresolved in the last tick, for the debug overlay (CLIENT-005). */
     private final List<Long> lastUnresolved = new ArrayList<>();
 
+    // The held-breach table of the published snapshot (GEO-026), kept until what it is built from
+    // changes.
+    private long[] heldFor = new long[0];
+    private Membership heldMembership;
+    private boolean geometryChanged;
+    private CellTable heldCells = CellTable.EMPTY;
+
     /**
      * @param registry the gases; fixed for the engine's lifetime
      * @param config mixture settings
@@ -285,6 +292,7 @@ public final class DimensionEngine {
         TreeSet<Long> requested = new TreeSet<>();
         long[] extra = surfaces.sorted();
         long[] toClassify = extra.length == 0 ? refreshed : union(refreshed, extra);
+        geometryChanged = toClassify.length > 0;
         classifier.afterGeometry(graph, toClassify, requested::add);
         heldZoneIds = classifier.heldZones();
         // A rebuilt zone stays paused until what its surface opens onto is classified.
@@ -864,7 +872,7 @@ public final class DimensionEngine {
         Target[] targets = new Target[ops.size()];
         for (int i = 0; i < ops.size(); i++) {
             GasOp op = ops.get(i);
-            long cell = space.cellAt(op.block());
+            long cell = space.cellAt(op.block(), op.sub());
             Route route;
             long section = SectionKeys.sectionOfBlockKey(op.block());
             int sy = SectionKeys.y(section);
@@ -882,7 +890,9 @@ public final class DimensionEngine {
                     route = Route.AMBIENT;
                 }
             } else if (cell == CellSpace.NO_CELL) {
-                // TODO(API-015): a point inside a block's shape should use the nearest cell.
+                // A position with no cells: the platform resolves a point inside a full block to a
+                // neighbour's cell (API-015), so this is a block with no cell next to it, or one
+                // that filled in since the call. It holds no gas of its own.
                 route = Route.AMBIENT;
             } else if (graph.zoneOf(cell) == null && mirror.isChunkUnloaded(SectionKeys.chunkOf(section))) {
                 route = Route.UNRESOLVED; // an unzoned cell in an unloaded chunk (GEO-024)
@@ -1217,7 +1227,58 @@ public final class DimensionEngine {
             long[] waiting = missingChunks.get(table.zoneIds[i]);
             chunks[i] = waiting == null ? table.chunks(i) : union(table.chunks(i), waiting);
         }
-        return AtmosSnapshot.of(tick, registry, views, table, chunks);
+        return AtmosSnapshot.of(tick, registry, views, table, chunks, heldCells(table));
+    }
+
+    /** The most cells {@link #heldCells} lists. */
+    static final int HELD_MAX_CELLS = 65_536;
+
+    /**
+     * The unzoned cells of the regions whose breaches pause zones because they reach unloaded
+     * chunks (GEO-026): those reachable from the classifier's {@linkplain Classifier#heldSeeds held
+     * seeds} through open faces without crossing a zoned cell, as far as the mirror holds them, up
+     * to {@link #HELD_MAX_CELLS}. Rebuilt when the seeds, the zones or the geometry change.
+     */
+    private CellTable heldCells(Membership table) {
+        long[] seeds = classifier.heldSeeds();
+        if (seeds.length == 0) {
+            heldFor = seeds;
+            heldCells = CellTable.EMPTY;
+            return heldCells;
+        }
+        if (!geometryChanged && heldMembership == table && Arrays.equals(seeds, heldFor)) {
+            return heldCells;
+        }
+        CellTable.Builder b = new CellTable.Builder();
+        Set<Long> seen = new HashSet<>();
+        java.util.ArrayDeque<Long> queue = new java.util.ArrayDeque<>();
+        for (long s : seeds) {
+            if (seen.add(s)) {
+                queue.add(s);
+            }
+        }
+        int listed = 0;
+        while (!queue.isEmpty() && listed < HELD_MAX_CELLS) {
+            long cell = queue.poll();
+            if (graph.zoneOf(cell) != null || space.volume(cell) <= 0) {
+                continue;
+            }
+            int sub = space.naming().subIndex(cell);
+            if (sub < 0) {
+                continue;
+            }
+            b.add(space.position(cell), sub, 0);
+            listed++;
+            space.forEachOpenNeighbour(cell, (neighbour, direct) -> {
+                if (seen.add(neighbour)) {
+                    queue.add(neighbour);
+                }
+            });
+        }
+        heldCells = b.build();
+        heldFor = seeds;
+        heldMembership = table;
+        return heldCells;
     }
 
     /**

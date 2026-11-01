@@ -241,6 +241,51 @@ public final class PausedZoneTests {
         h.succeed();
     }
 
+    /**
+     * The unzoned cells of a region held at a breach because it reaches an unloaded chunk read as
+     * unresolved, not ambient, though their own chunk is loaded; they zone once the chunk loads
+     * (API-010, GEO-026).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_010_held_breach_region_is_unresolved(GameTestHelper h) {
+        Rooms r = new Rooms(h, 72);
+        r.clear(0, 23);
+        r.shell(2, 9); // A, in the west chunk
+        r.shell(9, 21); // B, unzoned, across both, sharing the wall at x = 9
+        r.settle(GasMutations.add(r.level, r.point(5, 2, 2), oxygen(50), source("api_010")));
+        ZoneInfo a = r.zone(5, 2, 2);
+        h.assertValueEqual(
+                Atmospheres.at(r.level, r.abs(12, 2, 2)).state(), AtmosphereState.AMBIENT, "B before the breach");
+        byte[] saved = r.dimension().simulateUnload(r.chunk(EAST));
+        r.tick();
+        r.set(9, 2, 2, AIR);
+        r.tick();
+        h.assertTrue(r.zone(5, 2, 2).paused(), "the zone didn't pause at the held breach");
+        AtmosphereSample ambient = Atmospheres.at(r.level, r.abs(5, 6, 6));
+        h.assertValueEqual(ambient.state(), AtmosphereState.AMBIENT, "the open air");
+        for (int[] p : new int[][] {{9, 2, 2}, {12, 2, 2}, {15, 3, 1}}) {
+            String what = "B's loaded part at " + p[0] + ", " + p[1] + ", " + p[2];
+            AtmosphereSample s = Atmospheres.at(r.level, r.abs(p[0], p[1], p[2]));
+            h.assertValueEqual(s.state(), AtmosphereState.UNRESOLVED, what);
+            h.assertTrue(s.zone().isEmpty(), what + ": a zone id");
+            h.assertValueEqual(s.mixture(), ambient.mixture(), what + ": the last-known state is the ambient");
+            h.assertValueEqual(
+                    Atmospheres.at(r.level, r.point(p[0], p[1], p[2])).state(),
+                    AtmosphereState.UNRESOLVED,
+                    what + ", as a point");
+        }
+        h.assertValueEqual(
+                Atmospheres.at(r.level, r.abs(19, 2, 2)).state(), AtmosphereState.UNRESOLVED, "the unloaded part");
+        h.assertValueEqual(Atmospheres.at(r.level, r.abs(5, 2, 2)).state(), AtmosphereState.PAUSED, "A");
+        h.assertValueEqual(Atmospheres.at(r.level, r.abs(5, 2, 2)).zone(), Optional.of(a.id()), "A's zone");
+        r.dimension().simulateLoad(r.chunk(EAST), saved);
+        r.ticks(3);
+        AtmosphereSample joined = Atmospheres.at(r.level, r.abs(12, 2, 2));
+        h.assertValueEqual(joined.state(), AtmosphereState.ZONED, "B once the region classifies");
+        h.assertValueEqual(joined.zone(), Optional.of(a.id()), "B joined A's zone");
+        h.succeed();
+    }
+
     /** The API reports a zoned, an ambient, a paused and an unresolved point, every field (API-010). */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void api_010_paused_and_unresolved_points(GameTestHelper h) {

@@ -334,6 +334,68 @@ public final class OpsTests {
         h.succeed();
     }
 
+    /**
+     * {@code /zas at point} reports the sub-cell an exact point resolves to, and {@code /zas at}
+     * with no position looks from the eyes of the entity running it (OPS-003, API-015).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void ops_003_at_resolves_points_to_sub_cells(GameTestHelper h) {
+        Rooms r = PointResolutionTests.roomWithPane(h, 73);
+        long id = r.zone(4, 2, 2).id().value();
+        Capture c = new Capture();
+        CommandSourceStack op = stack(h, c, 2);
+        String pane = coords(r.abs(6, 2, 2));
+
+        Vec3 west = PointResolutionTests.at(r, 6, 2, 2, 0.25, 0.5, 0.5);
+        run(op, "zas at point " + west.x + " " + west.y + " " + west.z);
+        h.assertTrue(c.text().contains("(" + pane + ", sub-cell 0 of 2)"), "west half: " + c.text());
+        h.assertTrue(c.text().contains("zoned, zone " + id), "west half: " + c.text());
+
+        c.clear();
+        Vec3 east = PointResolutionTests.at(r, 6, 2, 2, 0.75, 0.5, 0.5);
+        run(op, "zas at point " + east.x + " " + east.y + " " + east.z);
+        h.assertTrue(c.text().contains("(" + pane + ", sub-cell 1 of 2)"), "east half: " + c.text());
+        h.assertTrue(c.text().contains("ambient, zone -"), "east half: " + c.text());
+
+        c.clear();
+        run(op, "zas at " + pane);
+        h.assertTrue(c.text().contains("Atmosphere at " + pane + ", sub-cell 0 of 2 in"), "position: " + c.text());
+
+        c.clear();
+        CommandSourceStack inside = op.withPosition(r.point(4, 1, 2));
+        run(inside, "zas at");
+        h.assertTrue(c.text().contains("zoned, zone " + id), "no position: " + c.text());
+        h.succeed();
+    }
+
+    /**
+     * {@code /zas at} reports a loaded, unzoned cell of a region held at a breach because it
+     * reaches an unloaded chunk as unresolved (OPS-003, API-010, GEO-026).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void ops_003_at_reports_held_breach_unresolved(GameTestHelper h) {
+        Rooms r = new Rooms(h, 74);
+        r.clear(0, 23);
+        r.shell(2, 9); // A, in the west chunk
+        r.shell(9, 21); // B, unzoned, across both chunks
+        r.settle(GasMutations.add(r.level, r.point(5, 2, 2), Rooms.oxygen(50), Rooms.source("ops_003")));
+        Capture c = new Capture();
+        CommandSourceStack op = stack(h, c, 2);
+        byte[] saved = r.dimension().simulateUnload(r.chunk(16));
+        try {
+            r.tick();
+            r.set(9, 2, 2, AIR);
+            r.tick();
+            h.assertTrue(r.zone(5, 2, 2).paused(), "the zone didn't pause at the held breach");
+            run(op, "zas at " + coords(r.abs(12, 2, 2)));
+            h.assertTrue(c.text().contains("unresolved, zone -"), "B's loaded part: " + c.text());
+        } finally {
+            r.dimension().simulateLoad(r.chunk(16), saved);
+            r.tick();
+        }
+        h.succeed();
+    }
+
     // ---- OPS-009 ------------------------------------------------------------------------
 
     /**

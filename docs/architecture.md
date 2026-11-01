@@ -897,6 +897,38 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 - Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
   objects.
 
+### 6.5 Point resolution (API-015, D-44)
+
+*Implemented ([#108](https://github.com/west3436/zas-cubed/issues/108),
+[#109](https://github.com/west3436/zas-cubed/issues/109)).* A query or a
+mutation first resolves its point to one cell (`PointResolver` in
+`io.github.west3436.zas.provider`), then reads or acts on that cell.
+
+- **Voxel to cell.** `GeometryDeriver.cellOfVoxels` labels each voxel of a
+  block's 16³ rasterization (§4.1) with its cell, and each voxel inside the
+  shape with the nearest cell by a breadth-first search from every cell at
+  once. `SubCells` builds this 4 KiB map the first time a block state with
+  more than one cell is asked about, and keeps it.
+- **Resolving.** An exact point uses its block's cell at the point's voxel. A
+  point inside a block with no cells uses the nearest adjacent block with a
+  cell, by the distance to their shared face, and that block's cell nearest
+  the point; with none, it stays at its block, which reads as the ambient. A
+  block position uses its largest cell. Only loaded chunks are read, from any
+  thread; an unreadable block resolves to its largest cell.
+- **The published table.** `AtmosSnapshot.zoneAt(block, sub)` names the
+  cell and looks it up in the section palettes and their sub-cell side table
+  (§4.4), the same lookup as `zoneOfCell`, with no pass over the cells. The
+  table holds no geometry, so a sub-cell index the position doesn't have reads
+  as unzoned; the resolver always asks a one-cell block for sub-cell 0. The
+  snapshot also carries the unzoned cells of regions whose breach is held at
+  unloaded chunks (GEO-026, a `CellTable`), flooded from the classifier's held
+  seeds, which read as unresolved (API-010). Building it costs the held
+  regions only, and it is rebuilt only when the seeds, the zones or the
+  geometry change.
+- **Mutations.** A `GasOp` carries the sub-cell index (−1 for the largest
+  cell), and the engine acts on that cell, or on the largest if the block no
+  longer has that many cells. Saved operations don't keep the index.
+
 ## 7. Mixin inventory
 
 All mixins are injection-only, with no `@Overwrite` (NFR-021). Each class's

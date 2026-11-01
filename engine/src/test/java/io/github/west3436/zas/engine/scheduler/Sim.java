@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasConfig;
@@ -51,12 +52,21 @@ final class Sim {
     }
 
     Sim(TestWorld world, Executor executor, Classifier.Factory classifier) {
+        this(world, executor, classifier, TestWorld.PALETTE);
+    }
+
+    /** A world whose geometry ids index {@code palette}, beyond plain air and solid blocks. */
+    Sim(TestWorld world, GeometryPalette palette) {
+        this(world, null, EnclosureClassifier.FACTORY, palette);
+    }
+
+    Sim(TestWorld world, Executor executor, Classifier.Factory classifier, GeometryPalette palette) {
         this.world = world;
         this.engine = new DimensionEngine(
                 REGISTRY,
                 CONFIG,
                 classifier,
-                TestWorld.PALETTE,
+                palette,
                 TestWorld.MIN_SECTION_Y,
                 TestWorld.MAX_SECTION_Y,
                 world.ambient,
@@ -79,6 +89,14 @@ final class Sim {
 
     long add(int x, int y, int z, double n2, double o2) {
         long seq = pipeline.add(SectionKeys.block(x, y, z), moles(n2, o2), ROOM_T, LedgerCategory.API, true, "test");
+        addSeqs.add(seq);
+        return seq;
+    }
+
+    /** An addition to one sub-cell of a position (API-015). */
+    long add(int x, int y, int z, int sub, double n2, double o2) {
+        long seq =
+                pipeline.add(SectionKeys.block(x, y, z), sub, moles(n2, o2), ROOM_T, LedgerCategory.API, true, "test");
         addSeqs.add(seq);
         return seq;
     }

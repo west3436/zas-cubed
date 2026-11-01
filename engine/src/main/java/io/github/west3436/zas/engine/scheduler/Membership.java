@@ -203,6 +203,23 @@ final class Membership {
         return e == 0 ? 0 : s.zoneOfEntry(e);
     }
 
+    /**
+     * The zone of sub-cell {@code sub} of a block position (API-015), or 0 if that cell is unzoned
+     * or can't be named. A palette lookup, as {@link #zoneOfCell}.
+     */
+    long zoneOfCell(long block, int sub) {
+        if (sections.length == 0 || section(SectionKeys.sectionOfBlockKey(block)) == null) {
+            return 0;
+        }
+        long cell;
+        try {
+            cell = naming.cell(block, sub);
+        } catch (IllegalArgumentException e) {
+            return 0; // no such sub-cell index
+        }
+        return zoneOfCell(cell);
+    }
+
     /** The number of positions holding a zoned cell. */
     int positions() {
         int n = 0;

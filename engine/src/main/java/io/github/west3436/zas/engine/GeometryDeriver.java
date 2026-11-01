@@ -97,6 +97,84 @@ public final class GeometryDeriver {
         return new Geometry(coverage, cells, 0);
     }
 
+    /**
+     * Which cell of {@link #derive}'s result each voxel belongs to, for resolving a point to a
+     * sub-cell (API-015, D-44). A free voxel of a cell gets that cell's index. Every other voxel,
+     * solid or in an enclosed pocket, gets the index of the nearest cell: the first reached by a
+     * breadth-first search over the 6-connected grid from every cell voxel at once, in voxel index
+     * order, so the result is deterministic.
+     *
+     * @param solid the solid voxels, as for {@link #derive}
+     * @return one cell index per voxel, by {@link #index}; null if the block has no cells
+     */
+    public static byte[] cellOfVoxels(BitSet solid) {
+        byte[] cellOf = new byte[VOXELS];
+        java.util.Arrays.fill(cellOf, (byte) -1);
+        BitSet visited = (BitSet) solid.clone();
+        int[] stack = new int[VOXELS];
+        int[] component = new int[VOXELS];
+        int[] queue = new int[VOXELS];
+        int queued = 0;
+        int cells = 0;
+        for (int start = visited.nextClearBit(0); start < VOXELS; start = visited.nextClearBit(start + 1)) {
+            boolean touches = false;
+            int count = 0;
+            int top = 0;
+            stack[top++] = start;
+            visited.set(start);
+            while (top > 0) {
+                int i = stack[--top];
+                component[count++] = i;
+                int x = i & 15;
+                int z = (i >>> 4) & 15;
+                int y = i >>> 8;
+                touches |= x == 0 || x == N - 1 || y == 0 || y == N - 1 || z == 0 || z == N - 1;
+                if (x > 0) top = push(visited, stack, top, i - 1);
+                if (x < N - 1) top = push(visited, stack, top, i + 1);
+                if (z > 0) top = push(visited, stack, top, i - N);
+                if (z < N - 1) top = push(visited, stack, top, i + N);
+                if (y > 0) top = push(visited, stack, top, i - N * N);
+                if (y < N - 1) top = push(visited, stack, top, i + N * N);
+            }
+            if (touches) {
+                for (int k = 0; k < count; k++) {
+                    cellOf[component[k]] = (byte) cells;
+                }
+                cells++;
+            }
+        }
+        if (cells == 0) {
+            return null;
+        }
+        for (int i = 0; i < VOXELS; i++) {
+            if (cellOf[i] >= 0) {
+                queue[queued++] = i;
+            }
+        }
+        for (int head = 0; head < queued; head++) {
+            int i = queue[head];
+            int x = i & 15;
+            int z = (i >>> 4) & 15;
+            int y = i >>> 8;
+            byte c = cellOf[i];
+            if (x > 0) queued = spread(cellOf, queue, queued, i - 1, c);
+            if (x < N - 1) queued = spread(cellOf, queue, queued, i + 1, c);
+            if (z > 0) queued = spread(cellOf, queue, queued, i - N, c);
+            if (z < N - 1) queued = spread(cellOf, queue, queued, i + N, c);
+            if (y > 0) queued = spread(cellOf, queue, queued, i - N * N, c);
+            if (y < N - 1) queued = spread(cellOf, queue, queued, i + N * N, c);
+        }
+        return cellOf;
+    }
+
+    private static int spread(byte[] cellOf, int[] queue, int queued, int i, byte cell) {
+        if (cellOf[i] < 0) {
+            cellOf[i] = cell;
+            queue[queued++] = i;
+        }
+        return queued;
+    }
+
     private static int push(BitSet visited, int[] stack, int top, int i) {
         if (!visited.get(i)) {
             visited.set(i);
