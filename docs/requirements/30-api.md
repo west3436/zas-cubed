@@ -558,6 +558,24 @@ Items in armor slots, and entities, shall be able to provide:
 *2026-10-30: added sealed breathing and gas filtering during the LIFE review
 (LIFE-021, LIFE-026, D-47).*
 
+*2026-11-02: Built in part ([#36](https://github.com/west3436/zas-cubed/issues/36)).
+The capability is `ILifeSupport` in `io.github.west3436.zas.api.capability`,
+with `ILifeSupport.ITEM` for worn items and `ILifeSupport.ENTITY` for
+entities. Every part defaults to giving nothing. The parts are `minPressure`,
+`maxPressure`, `minTemperature`, `maxTemperature`, `sealedBreathing`,
+`gasFiltering` and `airflowResistance`. Pressure and thermal protection are
+honoured (LIFE-020, LIFE-025). Sealed breathing is read
+(`WornProtection.sealedBreathing`) for the internals still to come. An
+entity's airflow resistance, the highest of its pieces' and its own, can be
+read (`WornProtection.airflowResistance`), but FLOW-012 doesn't apply it yet.
+Gas filtering is carried for the gas mask but not applied. Breathable gas from
+an internal supply comes with internals. It stays Accepted until those are
+honoured. `life_020_suited_and_helmetless_players_in_vacuum`,
+`life_025_partial_suits_at_450_k` and
+`life_026_capability_and_data_items_protect` check the test item and test
+entity, and `api_022_airflow_resistance_is_the_highest_worn` checks the
+resistance.*
+
 #### API-027 · Accessory slots
 `Could` · `R2` · `Deferred` — moved to R2: an accessory mod is an optional dependency outside the API (API-003), 2026-10-30. · Verify: GameTest
 
