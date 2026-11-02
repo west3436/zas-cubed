@@ -1,6 +1,10 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.zas.airflow.Airflow;
+import io.github.west3436.zas.airflow.AirflowImpulsePayload;
+import io.github.west3436.zas.airflow.AirflowReceiver;
+import io.github.west3436.zas.airflow.AirflowSyncPayload;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -23,6 +27,8 @@ import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
@@ -37,17 +43,27 @@ import io.github.west3436.zas.atmos.vent.VentSettings;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.life.Breathers;
+import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.EnvironmentHazards;
+import io.github.west3436.zas.life.LifeDamage;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -55,7 +71,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -65,8 +83,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * The real parts together: a generator powers an area air controller, which powers and commands a
  * vent fed by pipes, a connector port and canisters (CONT-041, CONT-060, CONT-064, CONT-065,
- * CONT-069), and S-01 end to end. Each test builds in its own {@link Site}. Each test has a batch
- * of its own: S-01 because it borrows the End as a vacuum dimension, and the power test because it
+ * CONT-069), and S-01 and S-02 end to end. Each test builds in its own {@link Site}. Each test has a batch
+ * of its own: S-01 and S-02 because they borrow the End as a vacuum dimension, and the power test because it
  * waits in real time for a lease to run out.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -452,6 +470,244 @@ public final class StationTests {
             h.succeed();
         } finally {
             s.clear();
+            Ambients.overrideForTest(Level.END, null);
+        }
+    }
+
+    // ---- S-02 -----------------------------------------------------------------------------
+
+    /**
+     * A survival player that can be hurt. NeoForge's fake players are invulnerable, and a new
+     * player is spared most damage for its first 60 ticks, which a fake player, whose tick does
+     * nothing, never counts down; this one is neither.
+     */
+    private static FakePlayer vulnerable(ServerLevel level, String name) {
+        FakePlayer p = new FakePlayer(level, new GameProfile(UUID.randomUUID(), name)) {
+            @Override
+            public boolean isInvulnerableTo(DamageSource source) {
+                return false;
+            }
+        };
+        try {
+            Field spawn = ServerPlayer.class.getDeclaredField("spawnInvulnerableTime");
+            spawn.setAccessible(true);
+            spawn.setInt(p, 0);
+        } catch (ReflectiveOperationException e) {
+            throw new GameTestAssertException("can't end the player's spawn protection: " + e);
+        }
+        return p;
+    }
+
+    /** Fills the zone at a point with standard air at {@code kpa}, in N₂ and O₂. */
+    private static void air(Site s, int x, int y, int z, double kpa) {
+        s.addKpa(x, y, z, N2, kpa * (1 - StandardAir.OXYGEN_FRACTION));
+        s.addKpa(x, y, z, O2, kpa * StandardAir.OXYGEN_FRACTION);
+    }
+
+    /** A hollow stone box with corners (x0, y0, z0) and (x1, y1, z1), after clearing around it. */
+    private static void hollow(Site s, int x0, int y0, int z0, int x1, int y1, int z1) {
+        for (BlockPos p : BlockPos.betweenClosed(s.abs(x0 - 1, y0 - 1, z0 - 1), s.abs(x1 + 1, y1 + 1, z1 + 1))) {
+            int x = p.getX() - s.origin.getX();
+            int y = p.getY() - s.origin.getY();
+            int z = p.getZ() - s.origin.getZ();
+            boolean inside = x >= x0 && x <= x1 && y >= y0 && y <= y1 && z >= z0 && z <= z1;
+            boolean wall = inside && (x == x0 || x == x1 || y == y0 || y == y1 || z == z0 || z == z1);
+            s.level.setBlockAndUpdate(p, wall ? Site.STONE : Site.AIR);
+        }
+    }
+
+    private static boolean firelockOpen(Site s) {
+        return s.level.getBlockState(s.abs(6, 1, 2)).getValue(FirelockBlock.OPEN);
+    }
+
+    /**
+     * S-02, hull breach. In a vacuum dimension the S-01 room (A, x 3–5) shares its east wall with
+     * a second room (B, x 7–9) through an open firelock, and has a glass window in its south wall
+     * and a powered Human controller on its north wall; both rooms hold standard air. Elsewhere, a
+     * 1,000-cell room has a window too. Breaking both windows:
+     *
+     * <ul>
+     *   <li>gives A an edge to the ambient, and A, 27 cells, keeps a smaller fraction of its
+     *       pressure each second than the 1,000-cell room (D-21);
+     *   <li>pushes an item and an unanchored player in A towards the window: the player through
+     *       the client's path, from the openings the server sends it, with the onset impulse
+     *       (FLOW-001, FLOW-009, FLOW-017);
+     *   <li>leaves A's controller alarming, which closes the firelock, and B then holds its air
+     *       (CONT-043);
+     *   <li>and an unsuited player in what's left of A takes decompression damage and, once its air
+     *       meter is empty, hypoxia damage (LIFE-003, LIFE-008, LIFE-010).
+     * </ul>
+     *
+     * <p>Like S-01 it borrows the End, with the test datapack's vacuum ambient, and runs within one
+     * game tick: each second steps the controller and the firelock, then runs one atmos tick.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_s02")
+    public static void s_02_hull_breach(GameTestHelper h) {
+        ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
+        if (end == null) {
+            throw new GameTestAssertException("no End");
+        }
+        Ambient vacuum = Ambients.ambient(VACUUM);
+        h.assertTrue(vacuum.isVacuum(), "zas_gametest:vacuum isn't a vacuum");
+        Site s = new Site(h, end, 30);
+        Site big = new Site(h, end, 31);
+        Ambients.overrideForTest(Level.END, vacuum);
+        List<CustomPacketPayload> sent = new ArrayList<>();
+        ItemEntity item = null;
+        try {
+            s.clear();
+            s.room(2, 6); // A: interior x 3–5, y 1–3, z 1–3, the S-01 room
+            s.room(6, 10); // B: interior x 7–9, sharing the wall at x = 6
+            BlockState lock = AtmosBlocks.FIRELOCK
+                    .get()
+                    .defaultBlockState()
+                    .setValue(FirelockBlock.FACING, Direction.WEST)
+                    .setValue(FirelockBlock.OPEN, true);
+            s.set(6, 1, 2, lock); // its panel seals its west face, towards A; its cells join B
+            s.set(6, 2, 2, lock.setValue(FirelockBlock.HALF, DoubleBlockHalf.UPPER));
+            FirelockBlockEntity firelock = s.entity(6, 1, 2, FirelockBlockEntity.class);
+            s.set(4, 2, 4, Blocks.GLASS.defaultBlockState()); // A's window
+            s.set(4, 2, 0, TestParts.battery().defaultBlockState());
+            AreaAirControllerBlockEntity c = s.controller(4);
+            FirelockTests.seed(s, 4);
+            FirelockTests.seed(s, 8);
+            air(s, 4, 2, 2, StandardAir.PRESSURE - s.zone(4, 2, 2).mixture().pressure());
+            air(s, 8, 2, 2, StandardAir.PRESSURE - s.zone(8, 2, 2).mixture().pressure());
+
+            hollow(big, 0, 0, 0, 11, 11, 11); // interior 1–10: 1,000 cells
+            big.set(11, 5, 5, Blocks.GLASS.defaultBlockState());
+            FirelockTests.seed(big, 5);
+            air(big, 5, 5, 5, StandardAir.PRESSURE - big.zone(5, 5, 5).mixture().pressure());
+
+            Runnable second = () -> s.cycle(c, firelock);
+            second.run();
+            second.run();
+            ZoneInfo a = s.zone(4, 2, 2);
+            ZoneInfo large = big.zone(5, 5, 5);
+            h.assertValueEqual(a.cellCount(), 27, "A's cells");
+            h.assertValueEqual(large.cellCount(), 1000, "the large room's cells");
+            // Filled one after the other, they share through the open firelock; near 1 atm either way.
+            s.close(a.mixture().pressure(), StandardAir.PRESSURE, 3, "A's pressure");
+            s.close(s.zone(8, 2, 2).mixture().pressure(), StandardAir.PRESSURE, 3, "B's pressure");
+            s.close(large.mixture().pressure(), StandardAir.PRESSURE, 1e-6, "the large room's pressure");
+            h.assertTrue(c.powered(), "the controller is unpowered");
+            h.assertValueEqual(c.status(), ControllerStatus.SAFE, "the controller's rating of A");
+            h.assertTrue(firelockOpen(s), "the firelock closed before the breach");
+
+            // A drifting item and an unanchored player in A.
+            Vec3 at = s.point(3, 2, 2);
+            item = new ItemEntity(end, at.x, at.y - 0.125, at.z, new ItemStack(Items.STONE), 0, 0, 0);
+            item.setNoGravity(true);
+            item.setPickUpDelay(32767);
+            end.addFreshEntity(item);
+            FakePlayer drifting = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_02_drift"));
+            drifting.moveTo(Vec3.atBottomCenterOf(s.abs(5, 1, 2)));
+            drifting.setDeltaMovement(Vec3.ZERO);
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == drifting) {
+                    sent.add(p);
+                }
+            });
+
+            // The breach.
+            end.destroyBlock(s.abs(4, 2, 4), false);
+            end.destroyBlock(big.abs(11, 5, 5), false);
+            s.tick();
+            ZoneInfo aOpen = s.zone(4, 2, 2);
+            ZoneInfo largeOpen = big.zone(5, 5, 5);
+            for (ZoneInfo z : List.of(aOpen, largeOpen)) {
+                h.assertTrue(z.breached(), "zone " + z.id() + " isn't breached");
+                h.assertValueEqual(z.edges().ambientEdges(), 1, "zone " + z.id() + "'s ambient edges");
+            }
+            double aLeft = aOpen.mixture().pressure() / a.mixture().pressure();
+            double largeLeft = largeOpen.mixture().pressure() / large.mixture().pressure();
+            h.assertTrue(
+                    aLeft < largeLeft && largeLeft < 1,
+                    "A kept " + aLeft + " of its pressure in 1 s, the large room " + largeLeft);
+
+            // Airflow: the item is carried to the window, and the player's client is sent the
+            // openings and the onset impulse, and pushes the player there too.
+            Airflow.step(end);
+            h.assertTrue(
+                    item.getDeltaMovement().z > 0.01, "the item didn't move to the breach: " + item.getDeltaMovement());
+            Airflow.syncForTest(end, drifting);
+            AirflowSyncPayload sync = null;
+            AirflowImpulsePayload impulse = null;
+            for (CustomPacketPayload p : sent) {
+                if (p instanceof AirflowSyncPayload x) {
+                    sync = x;
+                } else if (p instanceof AirflowImpulsePayload x) {
+                    impulse = x;
+                }
+            }
+            h.assertTrue(sync != null && !sync.openings().isEmpty(), "the player wasn't sent the breach: " + sent);
+            h.assertTrue(impulse != null && impulse.vz() > 0, "no impulse towards the breach: " + impulse);
+            AirflowReceiver client = new AirflowReceiver();
+            client.accept(sync);
+            h.assertTrue(
+                    client.tick(drifting) != null && drifting.getDeltaMovement().z > 0,
+                    "the player's client didn't push it to the breach: " + drifting.getDeltaMovement());
+
+            // The controller alarms and closes the firelock; B then holds its air.
+            for (int i = 0; i < 60 && firelockOpen(s); i++) {
+                second.run();
+            }
+            h.assertFalse(
+                    firelockOpen(s),
+                    "the controller didn't close the firelock: danger " + c.danger() + ", alarming " + c.alarming()
+                            + ", firelock alarm " + firelock.alarm() + ", A "
+                            + (s.zoned(4, 2, 2) ? s.zone(4, 2, 2) : "gone") + ", status " + c.status() + ", pin "
+                            + c.lastPin());
+            h.assertTrue(firelock.closedByAlarm(), "the firelock closed, but not by the alarm");
+            second.run();
+            double b = s.zone(8, 2, 2).mixture().pressure();
+            h.assertTrue(b > 50, "B lost too much before the firelock closed: " + b + " kPa");
+            for (int i = 0; i < 5; i++) {
+                second.run();
+                largeLeft = big.zone(5, 5, 5).mixture().pressure();
+            }
+            s.close(s.zone(8, 2, 2).mixture().pressure(), b, 1e-9, "B's pressure behind the closed firelock");
+            h.assertTrue(largeLeft > 0.5 * StandardAir.PRESSURE, "the large room emptied too fast: " + largeLeft);
+
+            // What's left of A is near vacuum: an unsuited player takes decompression damage, then
+            // hypoxia once its air runs out.
+            for (int i = 0;
+                    i < 300 && s.zoned(4, 2, 2) && s.zone(4, 2, 2).mixture().pressure() > 10;
+                    i++) {
+                second.run();
+            }
+            FakePlayer exposed = vulnerable(end, "zas_s_02");
+            exposed.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 3)));
+            long t0 = end.getGameTime();
+            Breathers.checkAt(exposed, t0);
+            Breathers.checkAt(exposed, t0 + 40);
+            EnvironmentHazards.Exposure x = BreathingRules.assess(exposed).exposure();
+            h.assertTrue(x != null, "no exposure for the player");
+            s.close(x.decompression(), EnvironmentHazards.DECOMPRESSION_RATE, 0, "decompression per second");
+            float lost = exposed.getMaxHealth() - exposed.getHealth();
+            s.close(lost, 2 * (x.decompression() + x.frostbite()), 1e-4, "the damage in 2 s");
+            h.assertTrue(Breathing.of(exposed).reason() != BreathReason.BREATHABLE, "the breached room is breathable");
+            exposed.setAirSupply(0);
+            exposed.invulnerableTime = 0; // a player's own tick counts it down; a fake player's doesn't
+            float before = exposed.getHealth();
+            for (int i = 0; i < 2 * AtmosTicks.PERIOD; i++) {
+                exposed.baseTick();
+            }
+            h.assertTrue(exposed.getHealth() < before, "no hypoxia damage with an empty air meter");
+            h.assertTrue(
+                    exposed.getLastDamageSource() != null
+                            && exposed.getLastDamageSource().is(LifeDamage.HYPOXIA),
+                    "the last damage wasn't hypoxia: " + exposed.getLastDamageSource());
+            h.succeed();
+        } finally {
+            Airflow.sendHookForTest(null);
+            if (item != null) {
+                item.discard();
+            }
+            s.clear();
+            for (BlockPos p : BlockPos.betweenClosed(big.abs(-1, -1, -1), big.abs(12, 12, 12))) {
+                end.setBlockAndUpdate(p, Site.AIR);
+            }
             Ambients.overrideForTest(Level.END, null);
         }
     }
