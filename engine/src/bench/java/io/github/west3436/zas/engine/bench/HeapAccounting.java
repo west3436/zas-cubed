@@ -24,10 +24,11 @@ import java.util.concurrent.Executor;
  *
  * <p><b>Parts</b> are walked in a fixed order, so an object shared between parts (a section of the
  * zone membership that both the worker and the published snapshot hold) is charged to the first:
- * the section mirror, the zone membership, the zone graph, the published snapshots, the undo point,
- * then everything else the engine and pipeline hold. Inside a part, some types are charged to a
- * finer part: the graph's cells (with their stored connections and the cell map) apart from its
- * zones, mixtures and edges, and each zone's list of sections apart from the section palettes.
+ * the section mirror, the zone membership, the heat links (architecture §4.8), the zone graph, the
+ * published snapshots, the undo point, then everything else the engine and pipeline hold. Inside a
+ * part, some types are charged to a finer part: the graph's cells (with their stored connections
+ * and the cell map) apart from its zones, mixtures and edges, and each zone's list of sections
+ * apart from the section palettes.
  *
  * <p><b>Left out:</b> what isn't atmos state or is shared by every dimension: the bench's
  * stand-in world, threads and executors, classes, enum constants, the gas registry, the mixture
@@ -50,6 +51,7 @@ final class HeapAccounting {
         ZONE_SECTIONS("Zone membership: each zone's sections and chunks", Scale.ZONE),
         SNAPSHOT("Published snapshots: zone views and tables", Scale.ZONE),
         UNDO("Undo point: mixture copies, components", Scale.ZONE),
+        HEAT("Heat: each zone's cached heat paths and the resolved reservoirs and pairs", Scale.CELL),
         OTHER("Other engine and pipeline state: classifier and fill scratch, queues, outcomes", Scale.NEITHER);
 
         final String label;
@@ -167,6 +169,9 @@ final class HeapAccounting {
         a.walk(h.engine.mirror(), Part.MIRROR);
         a.walkField(h.engine, "membership", Part.MEMBERSHIP);
         a.walkField(h.engine, "undoMembership", Part.MEMBERSHIP);
+        // The heat phase is charged to its own part however it is reached (see refine), as the
+        // membership's volume lookup reaches the graph and the graph's listener reaches it.
+        a.walkField(h.engine, "conduction", Part.HEAT);
         a.walk(h.engine.graph(), Part.ZONES);
         a.walk(h.pipeline.published(), Part.SNAPSHOT);
         a.walk(h.engine.lastSnapshot(), Part.SNAPSHOT);
@@ -226,6 +231,9 @@ final class HeapAccounting {
 
     private static Part refine(Object o, Part p) {
         String n = o.getClass().getName();
+        if (n.startsWith(ENGINE + "scheduler.Conduction")) {
+            return Part.HEAT; // the heat phase and its cached links, however reached (the graph's listener)
+        }
         if (n.equals(ENGINE + "zone.Cell")
                 || n.equals("[L" + ENGINE + "zone.Cell;")
                 || n.equals(ENGINE + "zone.LongObjectMap")) {

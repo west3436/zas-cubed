@@ -28,6 +28,7 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.environment.Ambients;
@@ -262,7 +263,8 @@ public final class ScenarioTests {
 
     /**
      * Runs a scenario in the End with the test datapack's vacuum ambient and the invariant checker
-     * on, then gives both back.
+     * on, then gives both back. Heat is off: these scenarios check gas, and a room in a vacuum
+     * radiates its heat away (HEAT-004), which would change its temperature and pressure.
      */
     private static void inVacuum(GameTestHelper h, Consumer<ServerLevel> scenario) {
         ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
@@ -275,9 +277,11 @@ public final class ScenarioTests {
         boolean checker = ZasServerConfig.CONSERVATION_CHECKER.get();
         Ambients.overrideForTest(Level.END, vacuum);
         ZasServerConfig.CONSERVATION_CHECKER.set(true);
+        ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
         try {
             scenario.accept(end);
         } finally {
+            ZasServerConfig.overrideHeatForTest(null);
             Ambients.overrideForTest(Level.END, null);
             ZasServerConfig.CONSERVATION_CHECKER.set(checker);
         }

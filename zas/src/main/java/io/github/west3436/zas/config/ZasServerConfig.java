@@ -1,6 +1,7 @@
 package io.github.west3436.zas.config;
 
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import java.nio.file.Path;
@@ -24,7 +25,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
  * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
  * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
- * (CORE-035, CORE-068) under {@code [atmos]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
+ * (CORE-035, CORE-068) under {@code [atmos]}; conduction and radiation (HEAT-008, HEAT-011,
+ * HEAT-015, HEAT-004) under {@code [heat]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
  * {@code [breathing]} ({@link BreathingConfig}); the
  * hazards' comfort band, switches, scales and per-dimension overrides (LIFE-011, LIFE-031,
  * LIFE-036) under {@code [hazards]} ({@link HazardConfig}); the
@@ -65,6 +67,12 @@ public final class ZasServerConfig {
 
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
+
+    public static final ModConfigSpec.BooleanValue HEAT_ENABLED;
+    public static final ModConfigSpec.DoubleValue FALLBACK_TRANSMITTANCE;
+    public static final ModConfigSpec.IntValue WALL_THICKNESS;
+    public static final ModConfigSpec.DoubleValue NEAR_VACUUM_PERCENT;
+    public static final ModConfigSpec.DoubleValue EMISSIVITY;
 
     /** Seconds between profiling reports in the log; 0 turns the log off (OPS-012). */
     public static final ModConfigSpec.IntValue PROFILING_LOG_INTERVAL;
@@ -126,6 +134,26 @@ public final class ZasServerConfig {
                         "one, into the open or into a much larger room. FAITHFUL: ZAS's model, where a room loses",
                         "about the same fraction of its air per second whatever its size.")
                 .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
+        builder.pop();
+        builder.push("heat");
+        HEAT_ENABLED = builder.comment(
+                        "Whether zones conduct heat through their walls, to and from heat sources, and",
+                        "radiate it to a vacuum.")
+                .define("enabled", true);
+        FALLBACK_TRANSMITTANCE = builder.comment(
+                        "The thermal transmittance U, in W/(m²·K) per block-thick layer, of a block with",
+                        "none defined in a datapack. 1.7 is stone's.")
+                .defineInRange("fallback_transmittance", HeatSettings.DEFAULT.fallbackTransmittance(), 0.001, 1e6);
+        WALL_THICKNESS = builder.comment(
+                        "How many blocks deep a wall is searched for the space on its far side. Past",
+                        "that, heat goes to the ground, at the ambient temperature.")
+                .defineInRange("wall_thickness", HeatSettings.DEFAULT.maxThickness(), 1, 16);
+        NEAR_VACUUM_PERCENT = builder.comment(
+                        "A zone thinner than this, in percent of standard air's density, neither",
+                        "conducts nor radiates heat.")
+                .defineInRange("near_vacuum_percent", 1.0, 0.0, 100.0);
+        EMISSIVITY = builder.comment("The emissivity of a wall's outer surface facing a vacuum, 0 to 1.")
+                .defineInRange("emissivity", HeatSettings.DEFAULT.emissivity(), 0.0, 1.0);
         builder.pop();
         BreathingConfig.define(builder);
         HazardConfig.define(builder);
@@ -237,6 +265,30 @@ public final class ZasServerConfig {
         int period = PERIOD_TICKS.get();
         int delay = APPLY_DELAY_TICKS.get();
         return delay < period ? new SchedulerSettings(period, delay) : SchedulerSettings.DEFAULT;
+    }
+
+    /** The heat settings from the config, or a GameTest's override; the defaults before it loads. */
+    public static HeatSettings heat() {
+        HeatSettings override = heatOverride;
+        if (override != null) {
+            return override;
+        }
+        if (!SPEC.isLoaded()) {
+            return HeatSettings.DEFAULT;
+        }
+        return new HeatSettings(
+                HEAT_ENABLED.get(),
+                FALLBACK_TRANSMITTANCE.get(),
+                WALL_THICKNESS.get(),
+                NEAR_VACUUM_PERCENT.get() / 100 * HeatSettings.STANDARD_AIR_DENSITY,
+                EMISSIVITY.get());
+    }
+
+    private static volatile HeatSettings heatOverride;
+
+    /** Uses {@code settings} instead of the config until called with null. For GameTests. */
+    public static void overrideHeatForTest(HeatSettings settings) {
+        heatOverride = settings;
     }
 
     /** The venting model (D-21); volume-aware while no world's config is loaded. */

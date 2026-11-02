@@ -310,8 +310,9 @@ public final class GeometryTests {
         check(h, GeometryDerivation.derived() == GeometryDerivation.derived(), "derivation should run once");
         check(h, t.geometryId(BOTTOM_SLAB) == t.geometryId(BOTTOM_SLAB), "a state's id should be stable");
         check(h, t.geometry(BOTTOM_SLAB) == t.geometry(BOTTOM_SLAB), "a state's geometry should be shared");
-        BlockState oakSlab = Blocks.OAK_SLAB.defaultBlockState();
-        check(h, t.geometryId(oakSlab) == t.geometryId(BOTTOM_SLAB), "equal shapes should share one geometry");
+        // Not a wooden slab: wood's heat data makes its geometry differ (HEAT-014).
+        BlockState brickSlab = Blocks.BRICK_SLAB.defaultBlockState();
+        check(h, t.geometryId(brickSlab) == t.geometryId(BOTTOM_SLAB), "equal shapes should share one geometry");
         check(h, t.distinctShapes() < t.stateCount(), "geometry should be derived per shape, not per state");
         check(h, t.palette().size() < t.distinctShapes(), "geometries should be deduplicated");
         h.succeed();
