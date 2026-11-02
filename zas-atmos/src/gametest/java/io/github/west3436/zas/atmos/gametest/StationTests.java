@@ -3,11 +3,14 @@ package io.github.west3436.zas.atmos.gametest;
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
@@ -23,6 +26,8 @@ import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
@@ -39,6 +44,8 @@ import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.life.Breathers;
+import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.Internals;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +57,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -67,8 +75,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * The real parts together: a generator powers an area air controller, which powers and commands a
  * vent fed by pipes, a connector port and canisters (CONT-041, CONT-060, CONT-064, CONT-065,
- * CONT-069), and S-01 end to end. Each test builds in its own {@link Site}. Each test has a batch
- * of its own: S-01 because it borrows the End as a vacuum dimension, and the power test because it
+ * CONT-069), and S-01 and S-08 end to end. Each test builds in its own {@link Site}. Each test has a batch
+ * of its own: S-01 and S-08 because they borrow the End as a vacuum dimension, and the power test because it
  * waits in real time for a lease to run out.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -76,6 +84,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class StationTests {
     private static final ResourceLocation N2 = StandardAir.NITROGEN;
     private static final ResourceLocation O2 = StandardAir.OXYGEN;
+    private static final ResourceLocation CO = ResourceLocation.fromNamespaceAndPath("zas", "carbon_monoxide");
+    private static final ResourceLocation CO2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
     private static final double T = 293.15;
     private static final ResourceKey<Level> VACUUM =
             ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("zas_gametest", "vacuum"));
@@ -462,5 +472,127 @@ public final class StationTests {
             Ambients.overrideForTest(Level.END, null);
             ZasServerConfig.overrideHeatForTest(null);
         }
+    }
+
+    // ---- S-08 -----------------------------------------------------------------------------
+
+    /**
+     * S-08, breathing gear. In a vacuum dimension, a player wears the softsuit with an O₂ tank in
+     * its chestplate's tank slot. With internals off, the vacuum is no air, though the suit keeps
+     * the vacuum's pressure off. With internals switched on, a minute in the vacuum does no harm,
+     * and the tank loses LIFE-043's draw. In a room of air with 1 kPa of CO, which harms a suited
+     * player off internals, it breathes the tank and takes no toxic gas, and its exhaled breath
+     * reaches the room. Then, with an emergency tank that holds only a few seconds above its
+     * distribution pressure, the tank runs dry within a few checks: the player breathes the vacuum,
+     * hypoxia begins and its air meter drains.
+     *
+     * <p>Like S-01, the End borrows the vacuum ambient, and heat is off. Checks are 2 s apart.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_s08")
+    public static void s_08_breathing_gear(GameTestHelper h) {
+        ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
+        if (end == null) {
+            throw new GameTestAssertException("no End");
+        }
+        Site s = new Site(h, end, 44);
+        Ambients.overrideForTest(Level.END, Ambients.ambient(VACUUM));
+        ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
+        try {
+            s.clear();
+            // The CO room: x 9–11, air at 1 atm with 1 kPa of CO.
+            s.room(8, 12);
+            double air = StandardAir.PRESSURE * 27_000 / (GasMixture.GAS_CONSTANT * T);
+            double co = 1.0 * 27_000 / (GasMixture.GAS_CONSTANT * T);
+            s.settle(GasMutations.add(
+                    end,
+                    s.point(10, 2, 2),
+                    new GasParcel(Map.of(N2, air * 0.79, O2, air * 0.21, CO, co), T),
+                    Site.SOURCE));
+            s.ticks(2);
+            s.close(s.zone(10, 2, 2).mixture().partialPressure(CO), 1.0, 1e-9, "the room's CO");
+
+            FakePlayer p = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_08"));
+            p.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 2))); // in the open vacuum
+            ItemStack chest = new ItemStack(AtmosItems.SOFTSUIT_CHESTPLATE.get());
+            SuitItem.setTank(chest, new ItemStack(AtmosItems.OXYGEN_TANK.get()));
+            p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(AtmosItems.SOFTSUIT_HELMET.get()));
+            p.setItemSlot(EquipmentSlot.CHEST, chest);
+            p.setItemSlot(EquipmentSlot.LEGS, new ItemStack(AtmosItems.SOFTSUIT_LEGGINGS.get()));
+            p.setItemSlot(EquipmentSlot.FEET, new ItemStack(AtmosItems.SOFTSUIT_BOOTS.get()));
+
+            // Internals off: the suit holds the vacuum off, but there's nothing to breathe.
+            long t0 = end.getGameTime();
+            Breathers.checkAt(p, t0);
+            Breathability off = Breathing.of(p);
+            h.assertValueEqual(off.reason(), BreathReason.LOW_OXYGEN, "the vacuum off internals");
+            h.assertFalse(off.hazards().contains(Hazard.LOW_PRESSURE), "the suit let the vacuum in");
+
+            // Internals on: a minute in the vacuum.
+            h.assertTrue(Internals.toggle(p), "the toggle didn't switch internals on");
+            double full = tankMoles(p);
+            int k = 0;
+            for (int i = 0; i < 30; i++) {
+                Breathers.checkAt(p, t0 + 40L * ++k);
+                Breathability b = Breathing.of(p);
+                h.assertValueEqual(b.source(), BreathSource.INTERNALS, "the breath in the vacuum, check " + k);
+                h.assertValueEqual(b.reason(), BreathReason.BREATHABLE, "the vacuum on internals, check " + k);
+                h.assertTrue(b.isProtected(), "exposed in the vacuum to " + b.hazards());
+            }
+            s.close(BreathingRules.assess(p).exposure().decompression(), 0, 0, "decompression in the suit");
+            double rate = Internals.drawRate(GasTankItem.OXYGEN_DISTRIBUTION_KPA, T);
+            s.close(full - tankMoles(p), rate * 60, 1e-12, "the tank's draw in 60 s");
+
+            // The CO room, on internals: no toxic gas, and the breath goes into the room.
+            FakePlayer bare = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_08_bare"));
+            bare.moveTo(Vec3.atBottomCenterOf(s.abs(10, 1, 3)));
+            bare.setItemSlot(EquipmentSlot.HEAD, new ItemStack(AtmosItems.SOFTSUIT_HELMET.get()));
+            h.assertTrue(
+                    BreathingRules.assess(bare).verdict().hazards().contains(Hazard.TOXIC_GAS),
+                    "the CO room doesn't harm a player off internals");
+            p.moveTo(Vec3.atBottomCenterOf(s.abs(10, 1, 2)));
+            for (int i = 0; i < 10; i++) {
+                Breathers.checkAt(p, t0 + 40L * ++k);
+                Breathability b = Breathing.of(p);
+                h.assertValueEqual(b.source(), BreathSource.INTERNALS, "the breath in the CO room, check " + k);
+                h.assertFalse(b.hazards().contains(Hazard.TOXIC_GAS), "the CO reached the tank's breath");
+            }
+            s.ticks(2);
+            h.assertTrue(s.zone(10, 2, 2).mixture().moles(CO2) > 0, "the exhaled breath didn't reach the room");
+
+            // An emergency tank a few seconds from its distribution pressure runs dry in the vacuum.
+            p.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 2)));
+            ItemStack small = new ItemStack(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
+            double floor = GasTankItem.OXYGEN_DISTRIBUTION_KPA * 2 / (GasMixture.GAS_CONSTANT * T);
+            GasTankItem.setGas(small, new GasParcel(Map.of(O2, floor + rate * 5), T));
+            SuitItem.setTank(p.getItemBySlot(EquipmentSlot.CHEST), small);
+            int dry = -1;
+            for (int i = 1; i <= 6 && dry < 0; i++) {
+                Breathers.checkAt(p, t0 + 40L * ++k);
+                if (Breathing.of(p).source() != BreathSource.INTERNALS) {
+                    dry = i;
+                }
+            }
+            // 5 s above the floor: after three 2 s draws the tank is below it, so the verdict falls back.
+            h.assertTrue(dry == 3, "the tank ran dry after check " + dry + ", not the 3rd");
+            Breathability gasping = Breathing.of(p);
+            h.assertValueEqual(gasping.source(), BreathSource.ATMOSPHERE, "the breath once the tank is dry");
+            h.assertValueEqual(gasping.reason(), BreathReason.LOW_OXYGEN, "hypoxia once the tank is dry");
+            int air0 = p.getAirSupply();
+            for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+                p.baseTick();
+            }
+            h.assertTrue(p.getAirSupply() < air0, "the air meter didn't drain: " + p.getAirSupply());
+            h.succeed();
+        } finally {
+            s.clear();
+            Ambients.overrideForTest(Level.END, null);
+            ZasServerConfig.overrideHeatForTest(null);
+        }
+    }
+
+    /** The moles in the tank in a player's chestplate slot. */
+    private static double tankMoles(Player p) {
+        return GasTankItem.contents(SuitItem.tank(p.getItemBySlot(EquipmentSlot.CHEST)))
+                .totalMoles();
     }
 }
