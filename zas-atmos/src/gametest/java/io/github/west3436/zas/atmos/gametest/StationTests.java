@@ -7,6 +7,7 @@ import io.github.west3436.zas.airflow.AirflowReceiver;
 import io.github.west3436.zas.airflow.AirflowSyncPayload;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
@@ -29,6 +30,7 @@ import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
+import io.github.west3436.zas.atmos.firelock.Lockdown;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
@@ -507,6 +509,14 @@ public final class StationTests {
     }
 
     /** Fills the zone at a point with standard air at {@code kpa}, in N₂ and O₂. */
+    /** 20 °C, at which {@link #at20} gives a zone's air. */
+    private static final double ROOM_K = 293.15;
+
+    /** The pressure a zone's gas would have at 20 °C: the air it holds, whatever it has cooled to. */
+    private static double at20(ZoneInfo zone) {
+        return zone.mixture().totalMoles() * GasMixture.GAS_CONSTANT * ROOM_K / zone.volume();
+    }
+
     private static void air(Site s, int x, int y, int z, double kpa) {
         s.addKpa(x, y, z, N2, kpa * (1 - StandardAir.OXYGEN_FRACTION));
         s.addKpa(x, y, z, O2, kpa * StandardAir.OXYGEN_FRACTION);
@@ -548,6 +558,12 @@ public final class StationTests {
      *
      * <p>Like S-01 it borrows the End, with the test datapack's vacuum ambient, and runs within one
      * game tick: each second steps the controller and the firelock, then runs one atmos tick.
+     *
+     * <p>Heat stays on (HEAT): with no heater, every room radiates to the vacuum and cools from the
+     * start, so the test checks the air the rooms hold, as its pressure at 20 °C, and B's moles
+     * behind the closed firelock, not their pressures. By the time A is near vacuum, A is below
+     * -30 °C and B below 0 °C. The firelock stays locked down, for the pressure difference, which
+     * it reports before the cold (CONT-093).
      */
     @GameTest(template = "empty", batch = "zas_atmos_s02")
     public static void s_02_hull_breach(GameTestHelper h) {
@@ -594,10 +610,14 @@ public final class StationTests {
             ZoneInfo large = big.zone(5, 5, 5);
             h.assertValueEqual(a.cellCount(), 27, "A's cells");
             h.assertValueEqual(large.cellCount(), 1000, "the large room's cells");
-            // Filled one after the other, they share through the open firelock; near 1 atm either way.
-            s.close(a.mixture().pressure(), StandardAir.PRESSURE, 3, "A's pressure");
-            s.close(s.zone(8, 2, 2).mixture().pressure(), StandardAir.PRESSURE, 3, "B's pressure");
-            s.close(large.mixture().pressure(), StandardAir.PRESSURE, 1e-6, "the large room's pressure");
+            // Filled one after the other, they share through the open firelock: together near 1 atm.
+            ZoneInfo b0 = s.zone(8, 2, 2);
+            double ab = (a.mixture().totalMoles() + b0.mixture().totalMoles())
+                    * GasMixture.GAS_CONSTANT
+                    * ROOM_K
+                    / (a.volume() + b0.volume());
+            s.close(ab, StandardAir.PRESSURE, 3, "A and B's air at 20 °C");
+            s.close(at20(large), StandardAir.PRESSURE, 1, "the large room's air at 20 °C");
             h.assertTrue(c.powered(), "the controller is unpowered");
             h.assertValueEqual(c.status(), ControllerStatus.SAFE, "the controller's rating of A");
             h.assertTrue(firelockOpen(s), "the firelock closed before the breach");
@@ -670,11 +690,12 @@ public final class StationTests {
             second.run();
             double b = s.zone(8, 2, 2).mixture().pressure();
             h.assertTrue(b > 50, "B lost too much before the firelock closed: " + b + " kPa");
+            double bMoles = s.zone(8, 2, 2).mixture().totalMoles();
             for (int i = 0; i < 5; i++) {
                 second.run();
                 largeLeft = big.zone(5, 5, 5).mixture().pressure();
             }
-            s.close(s.zone(8, 2, 2).mixture().pressure(), b, 1e-9, "B's pressure behind the closed firelock");
+            s.close(s.zone(8, 2, 2).mixture().totalMoles(), bMoles, 1e-9, "B's moles behind the closed firelock");
             h.assertTrue(largeLeft > 0.5 * StandardAir.PRESSURE, "the large room emptied too fast: " + largeLeft);
 
             // What's left of A is near vacuum: an unsuited player takes decompression damage, then
@@ -684,6 +705,10 @@ public final class StationTests {
                     i++) {
                 second.run();
             }
+            h.assertValueEqual(
+                    firelock.lockdown().map(Lockdown::reason).orElse(null),
+                    Lockdown.Reason.PRESSURE,
+                    "the firelock's lockdown with A near vacuum");
             FakePlayer exposed = vulnerable(end, "zas_s_02");
             exposed.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 3)));
             long t0 = end.getGameTime();
