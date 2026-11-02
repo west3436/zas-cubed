@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/airlock_lower",
+  "textures": {
+    "door": "zas_atmos:block/airlock_bolted"
+  }
+}

@@ -39,8 +39,8 @@ texture), or none (the block has no item).
 |---|---|---|---|---|---|
 | `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). |
 | `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). Dyed like the pipe. |
-| `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Flat sprite | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it. |
-| `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind. |
+| `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Block model | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it: a finned tube in vg's near-black, not dyed, with no flanges (the owner's choice of 2026-11-02). Its item is the 3D straight piece, like the pipe's. |
+| `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind: inline, an undyed pipe's flange and tube at one end and the finned tube at the other. |
 | `zas_atmos:manual_valve` | Manual valve | Must | CONT-010 | Block model | Open and closed. Inline on the pipe, with a straight lever across the pipe when closed and in line when open (the owner's choice of 2026-11-02). |
 | `zas_atmos:redstone_valve` | Redstone valve | Must | CONT-010 | Block model | Open and closed. It should look different from the manual valve: a redstone trace round its body, lit while powered. |
 
@@ -54,12 +54,12 @@ texture), or none (the block has no item).
 | `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. Inline on the pipe like the filter, the side input left or right, which the wrench swaps (the owner's choice of 2026-11-02); no requirement covers the swap yet. |
 | `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). Faces any of six ways; a pipe joins only its back. |
 | `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). Faces any of six ways, like the vent; a pipe joins only its back. |
-| `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. |
+| `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. Faces any of six ways, like the vent; a pipe joins only its back. |
 | `zas_atmos:connector_port` | Connector port | Must | CONT-083 | Block model | Free, and with a portable connected. Set in the floor, facing up; a pipe joins only its bottom. |
 | `zas_atmos:igniter` | Igniter | Must | CONT-105 | Block model | Idle and active. A floor plate, like vg's. |
-| `zas_atmos:heat_exchanger` | Heat exchanger | Not set | None yet | Block model | vg's works in linked pairs that share one temperature ([vg §2](research/vg-atmos-content.md#2-devices)). |
-| `zas_atmos:airlock_controller` | Airlock controller | Not set | None yet | Flat sprite | Wall-mounted. Cycles an airlock with its vents and an air sensor. Idle and cycling. |
-| `zas_atmos:air_sensor` | Air sensor | Not set | None yet | Block model | Reads the gas where it's placed, for an airlock controller. |
+| `zas_atmos:heat_exchanger` | Heat exchanger | Not set | None yet | Block model | vg's works in linked pairs that share one temperature ([vg §2](research/vg-atmos-content.md#2-devices)). Half a block deep against one face, with the pipe on the opposite face; it faces any of six ways, and a pair stands back to back 2 px apart. Its coil and pipe change colour with the temperature of the gas in that half: blue when cold, copper at room temperature, and red to yellow-white as it heats (the owner's choices of 2026-11-02). |
+| `zas_atmos:airlock_controller` | Airlock controller | Not set | None yet | Flat sprite | Wall-mounted. Cycles an airlock with its vents and an air sensor. Idle and cycling. A small wall panel, like the fire alarm. |
+| `zas_atmos:air_sensor` | Air sensor | Not set | None yet | Block model | Reads the gas where it's placed, for an airlock controller. A small wall panel: standby, cycling and alert. |
 
 The heater and freezer are now portables (below).
 
@@ -72,7 +72,7 @@ The heater and freezer are now portables (below).
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
 | `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. The heater's size, in white. |
-| `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It could show how many it holds. |
+| `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It shows the tanks it holds, standing on two shelves of five, each tinted by its kind (the owner's choices of 2026-11-02). |
 
 Portables connect to and disconnect from connector ports with the wrench.
 
@@ -94,11 +94,12 @@ scrubbing and filtering, so CONT-050 and CONT-054 need updating.
 |---|---|---|---|---|---|
 | `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
 | `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal, alarm and unpowered. vg's small red box, not the controller's panel (the owner's choice of 2026-11-02). |
-| `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. |
+| `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open, closed and bolted. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. The 1 by 2 is vg's red external airlock, its leaf sliding up; the 2 by 2 is vg's glass two-tile door, which you can see through, its leaves parting sideways (the owner's choices of 2026-11-02). The 2 by 2 is proposed as a block of its own, `zas_atmos:large_airlock`, with its own item. |
 | `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's 1 by 2, a frame the block's full depth with its panel in the middle (the owner's choice of 2026-11-01). |
 
 Both door sizes and firelocks on doors are the owner's choices of 2026-11-01.
-The requirements don't cover them yet.
+The requirements don't cover them yet, nor the airlock's bolted state, which
+the controller would set while it cycles.
 
 The wall-mounted blocks and the doors get flat sprites, as vanilla's torches
 and doors do. Any of them could use its block model instead.

@@ -1814,3 +1814,428 @@ notes: A flat item model for the magnetic boots, off.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots_on.json
 origin: original
 notes: A flat item model for the magnetic boots, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/radiator_pipe.png
+origin: vgstation13
+source: icons/obj/pipes/heat.dmi
+state: intact
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A finned tube in vg's near-black radiator-pipe colours: a 4 px round tube, an 8 px round fin's face and its rim, lit and dark, and the joint's face. vg's four thin tubes became one finned tube in review; the colours keep vg's coding (plan §5).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/radiator_pipe_core.json
+origin: original
+notes: The radiator pipe's joint where it turns or branches: the 4 px tube along each axis, so it reads round.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/radiator_pipe_arm.json
+origin: original
+notes: One arm of the radiator pipe, north: the tube from the block edge to the joint with fins 1 px thick every 2 px, half a pixel in from the edge so their spacing carries across blocks.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/radiator_pipe_straight.json
+origin: original
+notes: A straight radiator pipe, north to south, finned all along.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/radiator_pipe.json
+origin: original
+notes: The radiator pipe's item: the straight block model, turned and scaled for the slot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/radiator_adaptor.json
+origin: original
+notes: Inline from ordinary pipe to radiator pipe: an undyed pipe's flange and tube at the north end into a steel collar, then the finned tube to the south edge. It uses pipe_fitting.png and radiator_pipe.png, after vg's junction (icons/obj/pipes/junction.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/radiator_adaptor.json
+origin: original
+notes: The radiator adaptor's item: its block model, turned and scaled for the slot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heat_exchanger.png
+origin: vgstation13
+source: icons/obj/atmospherics/heat_exchanger.dmi
+state: main
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 32 x 32 at 1 texel a pixel. vg's three panels and the port on the pipe face, a plain plate for the face toward the partner, the sides and top in vg's greys with a window for the coil, and the coil itself in light greys for code to tint by temperature (the owner's pick in review).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/heat_exchanger.json
+origin: original
+notes: vg's half-block box, 14 x 12 x 8, 1 px short of the face toward its partner so a pair stands 2 px apart. The pipe's flange (pipe_fitting.png, undyed) and a tube from pipe.png (tinted) lead in from the north. The coil is an overlay just off a window in each of the four sides, cut out between its turns (render type cutout). The coil and the tube use tintindex 0 for the gas temperature.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/heat_exchanger.json
+origin: original
+notes: The heat exchanger's item: its block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/passive_vent_front.png
+origin: vgstation13
+source: icons/obj/atmospherics/pipe_vent.dmi
+state: base, bezel
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's passive vent grille, its square rings with the corners' diagonals and a cross through the middle, in vg's bezel, on the vent's casing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/passive_vent.json
+origin: original
+notes: The vent's cube facing north, with the passive grille; its sides and back are vent_side.png and vent_back.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/passive_vent_vertical.json
+origin: original
+notes: The passive vent facing up.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/passive_vent.json
+origin: original
+notes: The passive vent's item: its block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock_controller.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_control_standby
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's controller face at 1 texel a pixel, 10 x 11 with vg's first interior column dropped: the screen bar, the green status light, the display and the keypad. vg's black outline becomes the vanilla finish. Also the panel's edges.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock_controller_cycling.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_control_process
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Cycling: the status light blinks red and one key lights, over vg's 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock_controller_cycling.png.mcmeta
+origin: original
+notes: 6 ticks a frame, vg's 0.3 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/airlock_controller.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_control_standby
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, cropped to 11 x 12.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_controller.json
+origin: original
+notes: A wall panel 10 x 11 and 2 deep, facing north with its back on the wall to the south.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_controller_cycling.json
+origin: original
+notes: The controller while cycling: its model with the cycling texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/airlock_controller.json
+origin: original
+notes: A flat item model for the controller's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_sensor.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_sensor_standby
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sensor face, 10 x 6: a grey box with two orange dots and a green light. Also the panel's edges.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_sensor_cycling.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_sensor_cycle
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Cycling: the dots go yellow and the light red, then green, over 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_sensor_cycling.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_sensor_alert.png
+origin: vgstation13
+source: icons/obj/airlock_machines.dmi
+state: airlock_sensor_alert
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Alert: the light red, and vg's red glow pulsing on the panel's top edge, over 3 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_sensor_alert.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/air_sensor.json
+origin: original
+notes: A wall panel 10 x 6 and 2 deep, facing north with its back on the wall to the south.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/air_sensor_cycling.json
+origin: original
+notes: The sensor while cycling: its model with the cycling texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/air_sensor_alert.json
+origin: original
+notes: The sensor in an alert: its model with the alert texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/air_sensor.json
+origin: original
+notes: The air sensor's item: its block model, turned to face the viewer and scaled up.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_holder_front.png
+origin: vgstation13
+source: icons/obj/objects.dmi
+state: dispenser
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The front of vg's tank dispenser as a rack of two shelves: the grey cabinet, vg's blue panel and its red, yellow and green lights along the top, the shelf's lip, and a dark recess for each of the 10 slots.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_holder_side.png
+origin: vgstation13
+source: icons/obj/objects.dmi
+state: dispenser
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The cabinet's sides, top and back in vg's greys, with a panel line.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_holder_tank.png
+origin: original
+notes: An upright tank, 2 x 5, in light greys for code to tint by kind: its front, sides and top, and its valve. vg's dispenser shows its tanks lying down; they stand here (the owner's pick in review).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder.json
+origin: original
+notes: The empty tank holder: a full block with an open front, the rack's frame and two shelves.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_1.json
+origin: original
+notes: The tank holder with 1 tank, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 1), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_2.json
+origin: original
+notes: The tank holder with 2 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 2), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_3.json
+origin: original
+notes: The tank holder with 3 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 3), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_4.json
+origin: original
+notes: The tank holder with 4 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 4), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_5.json
+origin: original
+notes: The tank holder with 5 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 5), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_6.json
+origin: original
+notes: The tank holder with 6 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 6), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_7.json
+origin: original
+notes: The tank holder with 7 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 7), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_8.json
+origin: original
+notes: The tank holder with 8 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 8), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_9.json
+origin: original
+notes: The tank holder with 9 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 9), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_holder_10.json
+origin: original
+notes: The tank holder with 10 tanks, filling the lower shelf first, left to right. Each tank's body has tintindex equal to its slot (1 to 10), so code colours it by the kind of tank there.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_holder.json
+origin: original
+notes: The tank holder's item: the empty block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock.png
+origin: vgstation13
+source: icons/obj/doors/Doorext.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's external airlock at one block wide and two tall, as the firelock's sheet: the front (16 x 32) with the red leaf, its black dome window and the ledge across its middle, in a gold frame with hazard stripes along the header and a latch in each post; then the posts' grooved inner face and their outer face. vg's AIRLOCK lettering doesn't fit the 12 px leaf, so there's none.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock_bolted.png
+origin: vgstation13
+source: icons/obj/doors/Doorext.dmi
+state: door_locked
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Bolted: the latches lit orange and the leaf's edges glowing beside them.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/airlock.png
+origin: vgstation13
+source: icons/obj/doors/Doorext.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The closed airlock at half size with vg's outline, 8 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_lower.json
+origin: original
+notes: The airlock's bottom block, closed: gold posts the block's full depth and a 4 px leaf in the middle, after vg's external airlock (icons/obj/doors/Doorext.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_upper.json
+origin: original
+notes: The airlock's top block, closed, with the header.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_lower_open.json
+origin: original
+notes: The bottom block, open: the posts only.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_upper_open.json
+origin: original
+notes: The top block, open: the posts, the header and the leaf's foot showing under it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_lower_bolted.json
+origin: original
+notes: The bottom block, bolted: its closed model with the bolted texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/airlock_upper_bolted.json
+origin: original
+notes: The top block, bolted.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/airlock.json
+origin: original
+notes: A flat item model for the airlock's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_airlock.png
+origin: vgstation13
+source: icons/obj/doors/Door2x1glassfull.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's glass two-tile door at two blocks by two (the owner's pick in review), 64 x 64: the front (32 x 32) with a light grey frame and two grey leaves, each holding a tall pane of vg's blue-grey checker glass, and vg's green and red lamps where the leaves meet; then the posts' grooved inner face and their outer face. The glass is partly transparent; each texel has 1 - sqrt(1 - a) of vg's alpha a, since the leaf shows it on both faces.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_airlock_bolted.png
+origin: vgstation13
+source: icons/obj/doors/Door2x1glassfull.dmi
+state: door_locked
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Bolted: vg's warmer frame and glass, and orange lamps lit in the top corners.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/large_airlock.png
+origin: vgstation13
+source: icons/obj/doors/Door2x1glassfull.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The closed glass door at half size with vg's outline, 16 x 16, its glass partly transparent at vg's alpha.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_left.json
+origin: original
+notes: The 2 by 2 airlock's bottom west block, closed: a post the block's full depth, and one leaf, 4 deep, in the middle. Render type translucent, for the glass.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_left_open.json
+origin: original
+notes: The 2 by 2 airlock's bottom west block, open: the leaf parted into the post, its edge showing beside it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_left_bolted.json
+origin: original
+notes: The 2 by 2 airlock's bottom west block, bolted: its closed model with the bolted texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_right.json
+origin: original
+notes: The 2 by 2 airlock's bottom east block, closed: a post the block's full depth, and one leaf, 4 deep, in the middle. Render type translucent, for the glass.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_right_open.json
+origin: original
+notes: The 2 by 2 airlock's bottom east block, open: the leaf parted into the post, its edge showing beside it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_lower_right_bolted.json
+origin: original
+notes: The 2 by 2 airlock's bottom east block, bolted: its closed model with the bolted texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_left.json
+origin: original
+notes: The 2 by 2 airlock's top west block, closed: a post the block's full depth and the header, and one leaf, 4 deep, in the middle. Render type translucent, for the glass.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_left_open.json
+origin: original
+notes: The 2 by 2 airlock's top west block, open: the leaf parted into the post, its edge showing beside it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_left_bolted.json
+origin: original
+notes: The 2 by 2 airlock's top west block, bolted: its closed model with the bolted texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_right.json
+origin: original
+notes: The 2 by 2 airlock's top east block, closed: a post the block's full depth and the header, and one leaf, 4 deep, in the middle. Render type translucent, for the glass.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_right_open.json
+origin: original
+notes: The 2 by 2 airlock's top east block, open: the leaf parted into the post, its edge showing beside it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_airlock_upper_right_bolted.json
+origin: original
+notes: The 2 by 2 airlock's top east block, bolted: its closed model with the bolted texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/large_airlock.json
+origin: original
+notes: A flat item model for the 2 by 2 airlock's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_large.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The firelock's panel for a 2 by 2 airlock, 32 x 32: the 1 by 2 firelock's panel widened to both leaves, with FIRE at twice the size, the seam band, hazard stripes and kick plate.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_large_locked.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_closed, palert
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Locked down: vg's warning lights flashing on the panel's edges, over 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_large_locked.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_lower.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's bottom block, closed: the firelock's panel (firelock.png) just off each face of the leaf, 0.5 px out, inside the airlock's frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_lower_open.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's bottom block, open: nothing shows in the bottom block.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_lower_locked.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's bottom block, locked down (firelock_locked.png).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_left.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom west block, closed: its part of firelock_large.png just off each face of the leaf, 0.5 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_left_open.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom west block, open: nothing shows in the bottom block.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_left_locked.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom west block, locked down (firelock_large_locked.png).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_right.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom east block, closed: its part of firelock_large.png just off each face of the leaf, 0.5 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_right_open.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom east block, open: nothing shows in the bottom block.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_lower_right_locked.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's bottom east block, locked down (firelock_large_locked.png).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_upper.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's top block, closed: the firelock's panel (firelock.png) just off each face of the leaf, 0.5 px out, inside the airlock's frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_upper_open.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's top block, open: the panel's kick plate under the header on each side.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_airlock_upper_locked.json
+origin: original
+notes: A firelock on a 1 by 2 airlock's top block, locked down (firelock_locked.png).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_left.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top west block, closed: its part of firelock_large.png just off each face of the leaf, 0.5 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_left_open.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top west block, open: the kick plate under the header on each side.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_left_locked.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top west block, locked down (firelock_large_locked.png).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_right.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top east block, closed: its part of firelock_large.png just off each face of the leaf, 0.5 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_right_open.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top east block, open: the kick plate under the header on each side.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_right_locked.json
+origin: original
+notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).

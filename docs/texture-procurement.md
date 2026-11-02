@@ -34,11 +34,11 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
 | Crop | 2 | – | 12 | – |
-| Redraw | 28 | 17 | 16 | 8 files |
+| Redraw | 28 | 17 | 15 | 8 files |
 | As is | – | – | 1 | – |
 | Original | 2 | – | – | – |
 
-The item sprites include the 6 blocks whose item is a flat sprite. The
+The item sprites include the 5 blocks whose item is a flat sprite. The
 canister counts once under Blocks, and its 17 colours separately.
 
 ## 2. Routes
@@ -115,11 +115,20 @@ it isn't used.
   in light greys and tinted in code. Parts that should stand out, like the
   pipe's flanges, are drawn darker, so they come out a darker shade of the
   dye.
+- **Tints show state too.** A part that code colours by what it holds is
+  drawn in light greys with a tint index: the tanks in the tank transfer
+  valve and the tank holder, by kind, and the heat exchanger's coil and pipe,
+  by the temperature of its gas (batch 5).
+- **Glass is partly transparent,** as vg's is. The 2 by 2 airlock's panes
+  show on both faces of its leaf, so each face carries 1 − √(1 − a) of vg's
+  alpha a, and the two together look like vg's one pane. Its models use the
+  translucent render type.
 - **One port design.** Every device port uses the pipe's 6 px round flange,
   painted flush on the face in an undyed pipe's colours. Output ports carry an
   arrow, so a device's input and output are easy to tell apart. A device with
-  one pipe takes it on the face opposite its output: the vent's back, the
-  connector port's bottom.
+  one pipe takes it on the face opposite its output: the vent's, scrubber's
+  and passive vent's back, the connector port's bottom, and the heat
+  exchanger's face away from its partner.
 - **Ports for one gas or for water are coloured.** The electrolyzer's gas
   outlets are the pipe's flange in each gas's canister colour, and its water
   inlet is square and water blue, so it can't be taken for a gas port.
@@ -129,7 +138,8 @@ it isn't used.
   with arrows along its body, not on a port (the owner's pick in batch 3),
   and the volume pump with a lamp sweeping toward the output. The filter and
   mixer are boxes with a short third pipe to one side, which the wrench
-  swaps, and vg's arrow diagram on top (batch 4).
+  swaps, and vg's arrow diagram on top (batch 4). The radiator adaptor is
+  inline too, with the radiator pipe out of its other end (batch 5).
 - **Hand valves turn a straight lever,** like the canister's: the manual
   valve's lies across the pipe when shut and in line when open, and the tank
   transfer valve has the same one. Its grip is vg's handwheel red.
@@ -161,8 +171,8 @@ face.
 |---|---|---|---|
 | `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. |
 | `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | Done in batch 1: the pipe's flange and tube to the block's middle, closed by a rounded end. Dyed like the pipe. |
-| `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. |
-| `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. |
+| `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. Done in batch 5: a finned tube, the pipe's 4 px round tube with 8 px round fins every 2 px, in vg's near-black, not dyed, and with no flanges, since it joins only radiator pipe and the adaptor. The owner picked it over vg's four thin tubes. Its item is the 3D straight piece, like the pipe's. |
+| `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. Done in batch 5: inline, an undyed pipe's flange and tube into a steel collar, then the finned radiator pipe. It has no texture of its own. |
 | `zas_atmos:manual_valve` | `icons/obj/atmospherics/valve.dmi` | `valve0`, `valve1` | Done in batch 3: inline on the pipe, an 8 px box with vg's lamp each side, red shut and green open. vg's handwheel is a straight lever with a red grip (the owner's pick), across the pipe when shut and in line when open. |
 | `zas_atmos:redstone_valve` | `icons/obj/atmospherics/digital_valve.dmi` | `valve0`, `valve1` | Add redstone detail to set it apart from the manual valve. Done in batch 3: the manual valve's shape in vg's dark steel with vg's panel on top, and a redstone trace round the body, lit while powered. |
 
@@ -176,12 +186,12 @@ face.
 | `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: the filter's shape, with vg's box and its 5 frames as they are. |
 | `zas_atmos:vent` | `icons/obj/atmospherics/vent_pump.dmi` | `base`, `out`, `in` (8 frames each) | Done in batch 1: a cube that faces any of six ways, like a dispenser, with vg's grille on the front. A light runs round the grille, blue when blowing and red the other way round when siphoning (CONT-070). A pipe joins only the back (CONT-014). |
 | `zas_atmos:scrubber` | `icons/obj/atmospherics/vent_scrubber.dmi` | `off`, `on`, `in` (5 frames) | Done in batch 2: the vent's cube, facing any of six ways with a pipe only on its back, with vg's round grille. vg's rings show the mode: a steady blue ring when scrubbing, a shrinking green one when siphoning. vg has no panic state. Panic is new: the siphon's ring in red, twice as fast. vg's own red rings are its stalled states, which ZAS has no texture for. |
-| `zas_atmos:passive_vent` | `icons/obj/atmospherics/pipe_vent.dmi` | `base` | |
+| `zas_atmos:passive_vent` | `icons/obj/atmospherics/pipe_vent.dmi` | `base`, `bezel` | Done in batch 5: the vent's cube, facing any of six ways with a pipe only on its back (CONT-016), with vg's square grille in its bezel. |
 | `zas_atmos:connector_port` | `icons/obj/atmospherics/portables_connector.dmi` | `intact` | Done in batch 1: a cube set in the floor, socket up, that a canister stands on. Connected, a collar rises round the canister's foot, a new state. A pipe joins only the bottom (CONT-083). |
 | `zas_atmos:igniter` | `icons/obj/stationobjs.dmi` | `igniter0`, `igniter1` (3 frames) | Done in batch 3: a 14×14 floor plate 2 px thick, with nine lights that flicker orange when active. |
-| `zas_atmos:heat_exchanger` | `icons/obj/atmospherics/heat_exchanger.dmi` | `intact` | |
-| `zas_atmos:airlock_controller` | `icons/obj/airlock_machines.dmi` | `airlock_control_standby`, `airlock_control_process` (2 frames) | The panel is 11×12 px, so its item sprite is a Crop. |
-| `zas_atmos:air_sensor` | `icons/obj/airlock_machines.dmi` | `airlock_sensor_standby`, `airlock_sensor_alert` (3 frames) | A small wall sensor in vg, 10×6 px. |
+| `zas_atmos:heat_exchanger` | `icons/obj/atmospherics/heat_exchanger.dmi` | `main` | Done in batch 5: vg's box half a block deep, with vg's three panels on the face its pipe joins, facing any of six ways. A pair stands back to back 2 px apart. Its coil, seen through a window in each side, and its pipe are tinted by the gas temperature in that half: frost blue when cold, copper at room temperature, then red, orange and yellow-white, as vg's heat-exchange pipes glow (the owner's ask). |
+| `zas_atmos:airlock_controller` | `icons/obj/airlock_machines.dmi` | `airlock_control_standby`, `airlock_control_process` (2 frames) | The panel is 11×12 px, so its item sprite is a Crop. Done in batch 5: a 10×11 wall panel 2 deep, vg's face at 1 texel a pixel. Cycling, its light blinks red. |
+| `zas_atmos:air_sensor` | `icons/obj/airlock_machines.dmi` | `airlock_sensor_standby`, `airlock_sensor_cycle` (2 frames), `airlock_sensor_alert` (3 frames) | A small wall sensor in vg, 10×6 px. Done in batch 5: a 10×6 wall panel 2 deep, in standby, cycling and alert. Its item is its block model. |
 
 **Portable atmospherics**
 
@@ -192,7 +202,7 @@ face.
 | `zas_atmos:portable_scrubber` | `icons/obj/atmos.dmi` | `pscrubber:0`, `pscrubber:1` (2 frames) | Done in batch 4: 14 wide, 9 tall and 12 deep, a low white body with its corners cut back under vg's grey housing. The light between vg's green stripes blinks when on. |
 | `zas_atmos:heater` | `icons/obj/atmos.dmi` | `sheater0`, `sheater1` (7 frames) | vg's space heater. Done in batch 3: a box 14 px wide on four feet, with vg's own front. |
 | `zas_atmos:air_conditioner` | `icons/obj/atmos.dmi` | `aircond0`, `aircond1` (9 frames) | vg's chiller. It's white where the heater is black, so the two already differ. Done in batch 3, at the heater's size. |
-| `zas_atmos:tank_holder` | `icons/obj/objects.dmi` | `dispenser`, `oxygen-1` to `oxygen-4` | vg's tank storage unit. Its overlays show how many tanks it holds. |
+| `zas_atmos:tank_holder` | `icons/obj/objects.dmi` | `dispenser`, `oxygen-1` to `oxygen-4` | vg's tank storage unit. Its overlays show how many tanks it holds. Done in batch 5: a full block with an open front, vg's blue panel and lights along the top, and two shelves of five upright tanks, with a model for each count. vg's tanks lie down in two stacks; the owner picked upright ones. Each tank is light grey with its own tint index, so code colours it by kind. |
 
 **Gas sources and power**
 
@@ -208,8 +218,8 @@ face.
 |---|---|---|---|
 | `zas_atmos:area_air_controller` | `icons/obj/monitors.dmi` | `alarm0`, `alarm2`, `alarm1`, `alarmp` | vg's air alarm: normal, danger 1, danger 2 and unpowered, in that order. vg's `alarm2` is yellow and `alarm1` red. Done in batch 1: a 12×7 panel on a wall, without vg's "AIR". The danger lights flash with vg's "!". |
 | `zas_atmos:fire_alarm` | `icons/obj/monitors.dmi` | `fire0e`, `fire1e`, `firep` | Normal, alarm and unpowered. Done in batch 4: vg's red box as a 10×8 wall panel, 2 deep, its lamp flashing red in an alarm. Its item sprite is a Crop, vg's own with two repeated columns dropped. |
-| `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi`; for the 2×2 layout, `icons/obj/doors/Door2x1glassfull.dmi` | `door_closed`, `door_open` | vg's external airlock, in two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. vg's doors are one tile, so both are redrawn taller. The 2×2 follows how vg's two-tile glass airlock splits into two leaves. |
-| `zas_atmos:firelock` | `icons/obj/doors/Doorfire.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames), `alert_hot`, `alert_cold` | vg's old full-tile firelock, red with "FIRE" and hazard stripes, from vg's first commit in 2010. It was replaced in 2012 by today's yellow `DoorHazard.dmi`, ported from Baystation 12. `palert` flashes for lockdown. The temperature lights `alert_hot` and `alert_cold` are optional. See [Firelocks on doors](#firelocks-on-doors). Done in batch 2: 1 by 2, a gold frame the block's full depth with a 4 px panel in the middle, closed, open and locked down, on its own and over a vanilla door. The temperature lights aren't drawn. |
+| `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi`; for the 2×2 layout, `icons/obj/doors/Door2x1glassfull.dmi` | `door_closed`, `door_open`, `door_locked` | vg's external airlock, in two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. vg's doors are one tile, so both are redrawn taller. The 2×2 follows how vg's two-tile glass airlock splits into two leaves. Done in batch 5, in the firelock's form: a frame the block's full depth with the leaf in the middle, closed, open and bolted (vg's `door_locked`, which no requirement lists yet). The 1 by 2 is vg's red airlock, its leaf sliding up into the header; vg's lettering doesn't fit it. The 2 by 2 is vg's glass door itself (the owner's pick): grey leaves with see-through panes, parting sideways into the posts. It's proposed as a block of its own, `zas_atmos:large_airlock`. vg's glass door sprites came from Baystation 12, which licenses its icons CC BY-SA 3.0. |
+| `zas_atmos:firelock` | `icons/obj/doors/Doorfire.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames), `alert_hot`, `alert_cold` | vg's old full-tile firelock, red with "FIRE" and hazard stripes, from vg's first commit in 2010. It was replaced in 2012 by today's yellow `DoorHazard.dmi`, ported from Baystation 12. `palert` flashes for lockdown. The temperature lights `alert_hot` and `alert_cold` are optional. See [Firelocks on doors](#firelocks-on-doors). Done in batch 2: 1 by 2, a gold frame the block's full depth with a 4 px panel in the middle, closed, open and locked down, on its own and over a vanilla door. The temperature lights aren't drawn. Batch 5 put it on airlocks: its panel just off each face of the leaf, the 1 by 2's own, and for the 2 by 2 one panel the width of both leaves with FIRE at twice the size. |
 
 #### Firelocks on doors
 
@@ -352,7 +362,7 @@ changes.
 | 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit. Done (2026-11-02) | 12 |
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters. Done (2026-11-02) | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber. Done (2026-11-02) | 17 |
-| 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent | 8 |
+| 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent. Done (2026-11-02) | 8 |
 
 The batches cover all 63 rows. The pilot's three textures count in batch 1.
 The pipe cap has no priority yet, but it's in batch 1 because an open pipe end
@@ -438,3 +448,15 @@ The owner settled these on 2026-11-01:
     - The portable pump and scrubber each fit in one block.
     - The hardsuit's crest and headlamp stand out on the outer layer, and
       the magnetic boots show vg's ankle light.
+14. **Batch 5 settled** ([§5](#5-style), [§6](#6-sources-for-each-row)):
+    - The radiator pipe is a finned tube in vg's near-black, not dyed, and
+      the adaptor sits inline.
+    - The heat exchanger is vg's half-block pair, 2 px apart, its coil and
+      pipe coloured by the gas temperature.
+    - The passive vent is the vent's cube with a pipe only on its back
+      (CONT-016).
+    - Airlocks take the firelock's form and have a bolted state. The 1 by 2
+      is vg's red airlock; the 2 by 2 is vg's glass door, see-through.
+    - The airlock controller and air sensor are small wall panels.
+    - The tank holder shows its tanks upright on two shelves, each tinted by
+      its kind.

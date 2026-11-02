@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/air_sensor",
+  "textures": {
+    "panel": "zas_atmos:block/air_sensor_cycling"
+  }
+}
