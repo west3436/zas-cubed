@@ -47,6 +47,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class ChangeTrackingTests {
     private ChangeTrackingTests() {}
 
+    private static boolean DIAG_DONE;
     private static final String AREA = "geo_010_area";
     private static final BlockState STONE = Blocks.STONE.defaultBlockState();
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
@@ -247,6 +248,43 @@ public final class ChangeTrackingTests {
         h.setBlock(new BlockPos(5, 2, 2), Blocks.LAVA);
         reset(h);
         h.setBlock(new BlockPos(1, 2, 2), Blocks.WATER);
+        if (!DIAG_DONE) {
+            DIAG_DONE = true;
+            StringBuilder sb = new StringBuilder("ZASDIAG order:");
+            for (net.minecraft.gametest.framework.TestFunction f :
+                    net.minecraft.gametest.framework.GameTestRegistry.getAllTestFunctions()) {
+                sb.append(' ').append(f.batchName()).append('/').append(f.testName());
+            }
+            org.slf4j.LoggerFactory.getLogger("ZASDIAG").info(sb.toString());
+        }
+        h.onEachTick(() -> {
+            StringBuilder sb = new StringBuilder("ZASDIAG fluid t=" + h.getTick() + ":");
+            io.github.west3436.zas.simulation.AtmosService svc =
+                    io.github.west3436.zas.simulation.AtmosService.current();
+            var dim = svc == null ? null : svc.dimensionFor(h.getLevel());
+            var pl = dim == null ? null : dim.pipeline();
+            long[] m = pl == null ? new long[0] : pl.mirroredSections();
+            java.util.Arrays.sort(m);
+            sb.append(" mirrored=").append(m.length);
+            for (int x = 1; x <= 5; x++) {
+                for (int z = 1; z <= 3; z++) {
+                    BlockPos p = new BlockPos(x, 2, z);
+                    BlockState s = h.getBlockState(p);
+                    if (s.is(Blocks.OBSIDIAN) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.STONE)) {
+                        BlockPos a = h.absolutePos(p);
+                        sb.append(' ')
+                                .append(x)
+                                .append(',')
+                                .append(z)
+                                .append('=')
+                                .append(s.getBlock().getName().getString())
+                                .append(dirty(h, p) ? "/dirty" : "/clean")
+                                .append(java.util.Arrays.binarySearch(m, SectionPos.asLong(a)) >= 0 ? "/mirrored" : "");
+                    }
+                }
+            }
+            org.slf4j.LoggerFactory.getLogger("ZASDIAG").info(sb.toString());
+        });
         h.succeedWhen(() -> {
             boolean seen = false;
             for (int x = 1; x <= 5 && !seen; x++) {
