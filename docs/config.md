@@ -37,6 +37,16 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[hazards] dimension_overrides` | `[]` | Per-dimension overrides of the hazards' switches and scales (LIFE-036), [below](#hazards) |
 | `[hazards.<hazard>] enabled` | `true` | Whether the hazard harms anything (LIFE-031) |
 | `[hazards.<hazard>] scale` | `1.0` | Multiplies the hazard's damage, 0 to 1,000 (LIFE-031) |
+| `[airflow] enabled` | `true` | Whether pressure differences push entities (FLOW-014) |
+| `[airflow] disabled_dimensions` | `[]` | Dimension ids where airflow is off; gas still flows there (FLOW-014) |
+| `[airflow] range_blocks` | `9.0` | How far from an opening airflow reaches, 1 to 32 blocks; the push falls linearly to 0 there (FLOW-001, FLOW-010) |
+| `[airflow] speed_at_1_atm` | `1.0` | The flow's speed next to an opening at a difference of 101.325 kPa, in blocks per game tick; it scales with the difference (FLOW-010) |
+| `[airflow] max_speed` | `1.5` | The cap on the flow's speed, blocks per game tick (FLOW-002) |
+| `[airflow] response` | `0.5` | The share of the gap between an entity's speed along the flow and the flow's closed each game tick, 0 to 1 |
+| `[airflow] light_threshold_kpa` | `20.0` | The least difference that moves `#zas:airflow/light` (FLOW-011) |
+| `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
+| `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
+| `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
@@ -46,8 +56,9 @@ while the server runs applies without a restart: the preset, its options and
 the excluded dimensions from the next lookup (for the simulation, its next
 atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
 the thread mode when a dimension's simulation starts, `[breathing]` and
-`[hazards]` from each entity's next check, and `[commands]` and `[profiling]`
-at once. OPS-016's guarantee that every server
+`[hazards]` from each entity's next check, `[airflow]` from the next game tick
+(which differences the engine reports, from the next atmos tick), and
+`[commands]` and `[profiling]` at once. OPS-016's guarantee that every server
 setting applies without a restart is R1.
 
 ### Hazards

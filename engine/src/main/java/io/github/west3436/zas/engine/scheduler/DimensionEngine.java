@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
 import io.github.west3436.zas.engine.conservation.ConservationLedger;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -411,9 +412,44 @@ public final class DimensionEngine {
                 wanted,
                 buffered.size(),
                 heldBlocks(),
-                graph.nextZoneId());
+                graph.nextZoneId(),
+                flows(batch.settings().airflowKpa()));
         phases.finished();
         return result;
+    }
+
+    // ---- Airflow (FLOW-001, FLOW-006) --------------------------------------------------
+
+    /** The most openings exported for one edge. */
+    static final int MAX_OPENINGS_PER_EDGE = 256;
+
+    /**
+     * The active edges whose pressure difference is at least {@code minKpa}, with their openings.
+     * An edge's openings are searched once and kept until its connections or its zones' cells
+     * change ({@link ZoneGraph#openings}), so a steady breach costs nothing per tick beyond its
+     * edges (FLOW-006). Paused zones are left out.
+     */
+    private List<FlowEdge> flows(double minKpa) {
+        if (!(minKpa < Double.POSITIVE_INFINITY)) {
+            return List.of();
+        }
+        double ambient = graph.ambient().pressure();
+        List<FlowEdge> out = new ArrayList<>();
+        for (Edge e : graph.edges()) {
+            Zone a = e.first();
+            Zone b = e.second();
+            if (e.isSleeping() || a.isPaused() || (b != null && b.isPaused())) {
+                continue;
+            }
+            double pa = a.mixture().pressure();
+            double pb = b == null ? ambient : b.mixture().pressure();
+            if (Math.abs(pa - pb) < minKpa) {
+                continue;
+            }
+            long[][] open = graph.openings(e, MAX_OPENINGS_PER_EDGE);
+            out.add(new FlowEdge(a.id(), b == null ? FlowEdge.AMBIENT : b.id(), pa, pb, open[0], open[1]));
+        }
+        return out;
     }
 
     // ---- 0. Restore ---------------------------------------------------------------

@@ -1,5 +1,6 @@
 package io.github.west3436.zas;
 
+import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.command.ZasCommands;
@@ -39,5 +40,6 @@ public final class ZasMod {
         ZasCommands.register(NeoForge.EVENT_BUS);
         DebugOverlay.register(modBus);
         Breathers.register(modBus, NeoForge.EVENT_BUS);
+        Airflow.register(modBus, NeoForge.EVENT_BUS);
     }
 }

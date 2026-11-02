@@ -559,6 +559,31 @@ with cells come to 222 B per zoned cell, over the 64 B budget; without the
 graph's cells they would be 33 B. NFR-004 is revised by a dated note (see the
 requirement).
 
+## Airflow (FLOW-006, FLOW-013)
+
+_Run 2026-11-02 with `./gradlew :engine:bench -Pbench.args=airflow`, same
+machine._ A room breached to vacuum by one hole, with airflow exported at 0 kPa
+so every tick has the edge. Worker: the atmos tick's median with airflow off and
+on, over 40 ticks, and the first tick with airflow on, which searches the edge's
+openings in the zone. Field: building the field from the tick's flow edges,
+once per atmos tick. Push: one game tick's pushes of that many entities at
+random within 9 blocks of the hole, median.
+
+| Zone cells | Openings | Worker, airflow off | Worker, first tick on | Worker, airflow on | Field | Push, 50 entities | Push, 256 entities | Push, 5,000 entities |
+|---|---|---|---|---|---|---|---|---|
+| 1,000 | 1 | 0.070 ms | 0.942 ms | 0.085 ms | 3.8 µs | 0.013 ms | 0.061 ms | 1.18 ms |
+| 8,000 | 1 | 0.067 ms | 1.81 ms | 0.101 ms | 1.7 µs | 9.4 µs | 0.046 ms | 0.912 ms |
+| 50,000 | 1 | 0.090 ms | 6.22 ms | 0.132 ms | 1.7 µs | 9.2 µs | 0.045 ms | 0.885 ms |
+
+The push costs the same in every zone size for the same entities (FLOW-006),
+and the default cap of 256 entities per dimension per game tick bounds it at
+about 0.05 ms here (FLOW-013; the GameTest
+`flow_013_the_cap_bounds_entities_per_tick` checks the cap holds). The opening
+search does grow with the zone, but runs once when the breach opens or its
+zones change, on the worker; the 1,000-cell row's first tick includes the
+JIT's warm-up. Not measured: Minecraft's entity lookup by box, which costs the
+entities in the boxes around the openings' sections.
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall
