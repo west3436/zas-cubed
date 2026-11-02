@@ -1,0 +1,55 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "fl": "zas_atmos:block/firelock_large",
+    "particle": "zas_atmos:block/firelock"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        5.5
+      ],
+      "to": [
+        16,
+        16,
+        5.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            8.0,
+            8.0,
+            15.0,
+            16.0
+          ],
+          "texture": "#fl"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        0,
+        10.5
+      ],
+      "to": [
+        16,
+        16,
+        10.5
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            1.0,
+            8.0,
+            8.0,
+            16.0
+          ],
+          "texture": "#fl"
+        }
+      }
+    }
+  ]
+}

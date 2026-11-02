@@ -593,8 +593,18 @@ public final class BreathingTests {
                 CO2,
                 List.of(
                         new HazardProfile.Threshold(5, 0, Optional.empty(), List.of(), 0),
-                        new HazardProfile.Threshold(10, 12, Optional.of(EffectLevel.INCAPACITATED), List.of(), 0),
-                        new HazardProfile.Threshold(10, 60, Optional.of(EffectLevel.INCAPACITATED), List.of(), 1)));
+                        new HazardProfile.Threshold(10, true, 12, Optional.of(EffectLevel.INCAPACITATED), List.of(), 0),
+                        new HazardProfile.Threshold(
+                                10, true, 60, Optional.of(EffectLevel.INCAPACITATED), List.of(), 1)));
+        // "Above 10 kPa" is strict; the bare thresholds apply at their partial pressure.
+        HazardProfile co2 = HazardProfiles.of(CO2).orElseThrow();
+        h.assertFalse(co2.harmfulAt(10), "CO2 is harmful at exactly 10 kPa");
+        h.assertTrue(co2.harmfulAt(10.001), "CO2 isn't harmful just above 10 kPa");
+        HazardProfile n2o = HazardProfiles.of(N2O).orElseThrow();
+        h.assertTrue(n2o.harmfulAt(0.15), "N2O isn't harmful at exactly 0.15 kPa");
+        h.assertFalse(n2o.harmfulAt(0.1499), "N2O is harmful below 0.15 kPa");
+        HazardProfile co = HazardProfiles.of(CO).orElseThrow();
+        h.assertTrue(co.harmfulAt(0.12), "CO isn't harmful at exactly 0.12 kPa");
         checkProfile(
                 h,
                 N2O,

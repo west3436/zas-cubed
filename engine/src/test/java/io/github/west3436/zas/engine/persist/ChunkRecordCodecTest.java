@@ -14,6 +14,7 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.ZoneShare;
+import io.github.west3436.zas.engine.zone.Pins;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
@@ -38,7 +39,13 @@ class ChunkRecordCodecTest {
         ZoneShare a = new ZoneShare(
                 4, new long[] {5, 3, 9}, new double[] {1.25, 0.5}, 293.15, new long[] {CHUNK, SectionKeys.chunk(-2, 7)
                 });
-        ZoneShare b = new ZoneShare(11, new long[] {42}, new double[] {0, 1e-7}, 80, new long[] {CHUNK}, true);
+        ZoneShare b = new ZoneShare(
+                11,
+                new long[] {42},
+                new double[] {0, 1e-7},
+                80,
+                new long[] {CHUNK},
+                List.of("zas_atmos:area_air_controller/1_64_-3", "othermod:habitat"));
         GasOp op = new GasOp(
                 17,
                 GasOp.Kind.ADD,
@@ -168,7 +175,37 @@ class ChunkRecordCodecTest {
         assertTrue(back.zones().get(1).pinned());
     }
 
-    /** A record in format 1 or 2, by hand: one zone with these cells, in the old cell-id layout. */
+    /** A zone's pins are saved with their owners, sorted (API-018). */
+    @Test
+    void api_018_pin_owners_are_saved() throws Exception {
+        ChunkRecord back = ChunkRecordCodec.decode(ChunkRecordCodec.encode(sample(), GASES), CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        assertEquals(List.of(), back.zones().get(0).pins());
+        assertEquals(
+                List.of("othermod:habitat", "zas_atmos:area_air_controller/1_64_-3"),
+                back.zones().get(1).pins());
+    }
+
+    /** A pinned zone saved by format 3, which had no owners, reads back under the anonymous owner (API-018). */
+    @Test
+    void api_018_version_3_pin_reads_as_anonymous() throws Exception {
+        long cell = CellIds.of(-48, 70, 112, 0);
+        byte[] pinned = oldRecord(3, new long[] {cell}, true);
+        assertEquals(3, ChunkRecordCodec.version(pinned));
+        ChunkRecord back = ChunkRecordCodec.decode(pinned, CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        assertEquals(List.of(Pins.ANONYMOUS), back.zones().get(0).pins());
+        assertArrayEquals(new long[] {cell}, back.zones().get(0).cells());
+        ChunkRecord unpinned = ChunkRecordCodec.decode(oldRecord(3, new long[] {cell}, false), CHUNK, GASES, m -> {});
+        assertFalse(unpinned.zones().get(0).pinned());
+    }
+
+    /**
+     * A record in format 1, 2 or 3, by hand: one zone with these cells, in the cell-id layout of its
+     * format (the old one for 1 and 2).
+     */
     private static byte[] oldRecord(int version, long[] cells, boolean pinned) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         DataOutputStream out = new DataOutputStream(bytes);

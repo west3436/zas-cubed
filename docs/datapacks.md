@@ -374,8 +374,8 @@ makes the gas harmless.
 {
   "thresholds": [
     { "partial_pressure": 5 },
-    { "partial_pressure": 10, "duration": 12, "effect_level": "incapacitated" },
-    { "partial_pressure": 10, "duration": 60, "effect_level": "incapacitated", "damage": 1 },
+    { "partial_pressure": 10, "above": true, "duration": 12, "effect_level": "incapacitated" },
+    { "partial_pressure": 10, "above": true, "duration": 60, "effect_level": "incapacitated", "damage": 1 },
     { "partial_pressure": 20, "effects": [{ "id": "minecraft:poison", "amplifier": 1 }] }
   ]
 }
@@ -385,15 +385,17 @@ makes the gas harmless.
 |---|---|---|---|
 | `thresholds` | list | yes | The thresholds, in any order |
 | `thresholds[].partial_pressure` | number | yes | The gas's partial pressure in the breath at or above which the threshold applies, in kPa; greater than 0 |
-| `thresholds[].duration` | number | no | Seconds the partial pressure must stay at or above it before it applies; default 0, at once |
+| `thresholds[].above` | boolean | no | `true`: the threshold applies only strictly above `partial_pressure`, for a limit stated as "above"; default `false`, at or above |
+| `thresholds[].duration` | number | no | Seconds the partial pressure must stay at the threshold before it applies; default 0, at once |
 | `thresholds[].effect_level` | string | no | `impaired`, `incapacitated` or `unconscious` ([below](#effect-levels)) |
 | `thresholds[].effects` | list | no | Other status effects: objects with an `id`, such as `"minecraft:poison"`, and an `amplifier`, 0 (level I, the default) to 255 |
 | `thresholds[].damage` | number | no | Toxic gas damage while it applies, in HP per second; default 0 |
 
 - **How it applies.** At each breath check (every 2 s by default,
-  [config.md](config.md)), every threshold whose partial pressure the breath
-  is at or above, and has been for its duration, applies. The duration counts
-  from check to check and starts again once the partial pressure falls below.
+  [config.md](config.md)), every threshold the breath's partial pressure
+  reaches (at or above it, or strictly above with `above`), and has reached
+  for its duration, applies. The duration counts
+  from check to check and starts again once the partial pressure no longer reaches it.
   The effects of every threshold that applies add up; an effect named by
   several takes the highest amplifier. Effects last a second past the next
   check, so they hold while the exposure does and wear off soon after.
@@ -423,13 +425,14 @@ Minecraft has no paralysis or sleep, so each level is a set of vanilla effects
 ### Shipped profiles
 
 `zas` ships these, in `data/zas/zas/hazard_profile/` (LIFE-041). Partial
-pressures are in the breath.
+pressures are in the breath. A row that says "above" uses `"above": true`;
+the others apply at or above their partial pressure.
 
 | Gas | Threshold | Effect |
 |---|---|---|
 | CO₂ | 5 kPa | Warning |
-| CO₂ | 10 kPa for 12 s | Incapacitated |
-| CO₂ | 10 kPa for 60 s | Incapacitated, 1 HP/s |
+| CO₂ | above 10 kPa for 12 s | Incapacitated |
+| CO₂ | above 10 kPa for 60 s | Incapacitated, 1 HP/s |
 | N₂O | 0.15 kPa | Nausea |
 | N₂O | 1 kPa | Incapacitated |
 | N₂O | 5 kPa | Unconscious, no damage |

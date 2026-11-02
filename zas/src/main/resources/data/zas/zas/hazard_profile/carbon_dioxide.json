@@ -1,7 +1,7 @@
 {
   "thresholds": [
     { "partial_pressure": 5 },
-    { "partial_pressure": 10, "duration": 12, "effect_level": "incapacitated" },
-    { "partial_pressure": 10, "duration": 60, "effect_level": "incapacitated", "damage": 1 }
+    { "partial_pressure": 10, "above": true, "duration": 12, "effect_level": "incapacitated" },
+    { "partial_pressure": 10, "above": true, "duration": 60, "effect_level": "incapacitated", "damage": 1 }
   ]
 }

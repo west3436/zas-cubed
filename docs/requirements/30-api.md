@@ -352,7 +352,7 @@ world state and may be called from any thread.
   thread.
 
 #### API-017 · Zone pins
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-052
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-052
 
 The API shall let a mod pin and unpin a zone under an owner id. A pinned zone
 is never dissolved (CORE-052).
@@ -362,8 +362,23 @@ is never dissolved (CORE-052).
 - **Verify:** A GameTest checks a pinned zone isn't dissolved and dissolves
   once unpinned.
 
+*2026-11-02: Implemented ([#59](https://github.com/west3436/zas-cubed/issues/59)).
+`ZonePins.pin(level, point, owner)` pins the zone at a point (API-050) and
+`ZonePins.unpin(level, owner)` takes that owner's pins off every zone it pins;
+owners are `SourceId`s, so a mod gives each thing that holds a pin its own id.
+A zone stays pinned while any owner pins it, and pinning again under the same
+owner changes nothing. Pins follow D-64: a merged zone takes both zones'
+owners and every part of a split keeps them, which is why unpinning goes by
+owner rather than by zone. Zones stored in unloaded chunks lose an unpinned
+owner's pin when they load (API-018's note). Both calls are server-thread
+only, queue for the next atmos tick and complete when it is applied. They are
+provider methods with defaults, and the fallback pins nothing (`ABSENT`). The
+`api_017_` Unit tests and the `PinTests` GameTest check that a pinned room
+opened to the open air isn't dissolved while its unpinned twin is, that it
+dissolves once its last owner unpins, and per-owner pins, merges and splits.*
+
 #### API-018 · Pins persist
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-052, S-09
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-052, S-09
 
 Zone pins shall be saved and restored with their zone.
 
@@ -377,8 +392,19 @@ Zone pins shall be saved and restored with their zone.
 The R0 chunk record (format version 2) already saves whether each zone is
 pinned; the owner ids remain to be added with API-017.*
 
+*2026-11-02: Implemented. The chunk record's format version 4 saves each
+zone's pin owners with its share; a pin saved by versions 2 and 3, which had
+no owners, loads under the owner `zas:pinned`. An owner that unpins is kept in
+the dimension's `zas_atmos` saved data until it pins again, and its pins are
+taken off every chunk record that loads, so a zone that was out of memory at
+the unpin, or saved at shutdown before a queued unpin was applied, comes back
+without it. `api_018_pins_survive_a_restart` restarts the Nether's atmosphere
+with two pinned rooms, one owner's unpin still queued, and checks the zones,
+their gas and the remaining owners. Unit tests cover the byte format and
+unloading and loading a pinned zone.*
+
 #### API-050 · Pinning a point forms a zone
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-68, D-13 · Depends: API-016, API-017
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13 · Depends: API-016, API-017
 
 The API shall let a mod pin the zone at a point under an owner id. If the
 point's region is enclosed and has no zone, a zone forms there holding its
@@ -393,6 +419,20 @@ API-016, gives the zone, or says the region is open or unresolved.
   open forms nothing and says so.
 
 *2026-11-01: Accepted by the owner as written.*
+
+*2026-11-02: Implemented ([#59](https://github.com/west3436/zas-cubed/issues/59)).
+`ZonePins.pin` returns a `PinResult`: `ZONE` with the zone, `OPEN` (the point
+is in the open, or inside a block with no cell next to it), `UNRESOLVED` (the
+region reaches an unloaded chunk, or the server stopped first) or `ABSENT`
+(no ZAS³). The point resolves as for mutations (API-015). A pin forms a zone
+under either preset and whatever the API-call trigger option says (D-68). It
+is applied before the atmos tick's undo point, like the zones classification
+forms, so a stale component (CORE-070) never undoes it. The
+`api_050_pin_forms_a_zone_and_open_air_forms_none` GameTest pins a sealed,
+unzoned Overworld room and checks a pinned 27-cell zone forms holding exactly
+the ambient's gas, and that a room with a hole in its roof forms nothing and
+reports `OPEN`. The `api_050_` Unit tests also cover a vacuum room, a pin that
+waits for its section and a rejected tick.*
 
 ## Extension points
 

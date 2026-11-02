@@ -160,8 +160,8 @@ thresholds, optionally sustained for a duration, to effects: an effect level
 *2026-11-02: Implemented. Profiles are data at
 `data/<namespace>/zas/hazard_profile/<path>.json` for the gas
 `<namespace>:<path>` ([datapacks.md](../datapacks.md#hazard-profiles)). A
-threshold applies at or above its partial pressure once sustained for its
-duration; per gas the highest damage applies, and gases add up.
+threshold applies at or above its partial pressure, or strictly above it with
+`"above": true`, once sustained for its duration; per gas the highest damage applies, and gases add up.
 `life_004_profile_applies_at_its_threshold_after_its_duration` checks a test
 profile applies at its threshold, not below it, and only after its duration,
 and that invalid files are skipped (OPS-008).*
@@ -211,10 +211,11 @@ The other built-in gases are hazardous only by displacing O₂ (LIFE-003).
 - **Verify:** Inspect the shipped profiles; GameTests check each row's effect.
 
 *2026-11-02: Implemented in `data/zas/zas/hazard_profile/`
-([datapacks.md](../datapacks.md#shipped-profiles)). The format's thresholds
-apply at or above their partial pressure, so "above 10 kPa" reads as 10 kPa or
-more. `life_041_shipped_profiles_hold_the_table` reads the loaded profiles
-against the table, and `life_041_carbon_dioxide_rows`,
+([datapacks.md](../datapacks.md#shipped-profiles)). The rows that say "above"
+apply strictly above their partial pressure (`"above": true` in the profile),
+and the others at or above it. `life_041_shipped_profiles_hold_the_table` reads
+the loaded profiles against the table, including that CO₂ isn't harmful at
+exactly 10 kPa and N₂O and CO are at exactly 0.15 and 0.12 kPa, and `life_041_carbon_dioxide_rows`,
 `life_041_nitrous_oxide_rows` and `life_041_carbon_monoxide_rows` check each
 row's effect on a pig.*
 

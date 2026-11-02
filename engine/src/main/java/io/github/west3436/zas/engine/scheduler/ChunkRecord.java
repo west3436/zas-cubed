@@ -26,10 +26,11 @@ public record ChunkRecord(long chunk, List<ZoneShare> zones, long[] heldBlocks, 
     /**
      * The current format version (DATA-003), written by {@code ChunkRecordCodec}. Version 2 adds
      * each zone's pin (D-64); version 3 stores cells in the wider cell-id layout that reaches the
-     * world border (#105). Versions 1 and 2 are still read: version 1's zones unpinned, and both
-     * versions' cells converted.
+     * world border (#105); version 4 stores the owners of each zone's pins (API-017, API-018).
+     * Versions 1 to 3 are still read: version 1's zones unpinned, a pin of versions 2 and 3 under
+     * the anonymous owner, and the cells of versions 1 and 2 converted.
      */
-    public static final int FORMAT_VERSION = 3;
+    public static final int FORMAT_VERSION = 4;
 
     /**
      * Checks and copies the arguments.
@@ -68,6 +69,24 @@ public record ChunkRecord(long chunk, List<ZoneShare> zones, long[] heldBlocks, 
     /** This record without its queued additions. */
     public ChunkRecord withoutQueued() {
         return queuedAdditions.isEmpty() ? this : new ChunkRecord(chunk, zones, heldBlocks, List.of());
+    }
+
+    /**
+     * This record with the given owners' pins taken off every share (API-017): for zones stored
+     * while their owner unpinned them, which come back without that pin. Itself if no share has one.
+     */
+    public ChunkRecord withoutPins(java.util.Set<String> owners) {
+        if (owners.isEmpty()) {
+            return this;
+        }
+        List<ZoneShare> out = new ArrayList<>(zones.size());
+        boolean changed = false;
+        for (ZoneShare z : zones) {
+            ZoneShare kept = z.withoutPins(owners);
+            changed |= kept != z;
+            out.add(kept);
+        }
+        return changed ? new ChunkRecord(chunk, out, heldBlocks, queuedAdditions) : this;
     }
 
     /** The share of a zone, or null. */

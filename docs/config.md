@@ -122,6 +122,16 @@ preset = "NORMAL"
 	combustion_forms_zones = "preset"
 ```
 
+## Content mod: `zas_atmos-server.toml`
+
+`zas_atmos` has a server config of its own, per world like the framework's.
+Its FE values are starting points for playtesting (D-37). The design is in
+[architecture §11](architecture.md#11-the-content-mod-zas_atmos).
+
+| Key | Default | Meaning |
+|---|---|---|
+| `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
+
 ## Common: `zas-common.toml`
 
 | Key | Default | Meaning |

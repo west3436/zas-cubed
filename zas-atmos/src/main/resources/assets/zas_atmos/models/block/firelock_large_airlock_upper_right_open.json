@@ -1,0 +1,91 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "fl": "zas_atmos:block/firelock_large",
+    "particle": "zas_atmos:block/firelock"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        13,
+        5
+      ],
+      "to": [
+        14,
+        14,
+        6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1.0,
+            15.5,
+            8.0,
+            16.0
+          ],
+          "texture": "#fl"
+        },
+        "south": {
+          "uv": [
+            8.0,
+            15.5,
+            15.0,
+            16.0
+          ],
+          "texture": "#fl"
+        },
+        "down": {
+          "uv": [
+            8.0,
+            15.5,
+            15.0,
+            16.0
+          ],
+          "texture": "#fl"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        13,
+        10
+      ],
+      "to": [
+        14,
+        14,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1.0,
+            15.5,
+            8.0,
+            16.0
+          ],
+          "texture": "#fl"
+        },
+        "south": {
+          "uv": [
+            8.0,
+            15.5,
+            15.0,
+            16.0
+          ],
+          "texture": "#fl"
+        },
+        "down": {
+          "uv": [
+            8.0,
+            15.5,
+            15.0,
+            16.0
+          ],
+          "texture": "#fl"
+        }
+      }
+    }
+  ]
+}

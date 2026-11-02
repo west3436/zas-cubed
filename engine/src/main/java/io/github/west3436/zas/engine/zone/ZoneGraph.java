@@ -184,21 +184,57 @@ public final class ZoneGraph {
     }
 
     /**
-     * Pins or unpins a zone (D-64). A pinned zone never dissolves into the ambient (CORE-076): once
-     * nearly equivalent to it, its ambient edge keeps exchanging as usual instead.
+     * Pins a zone under an owner id (API-017, D-64). A pinned zone never dissolves into the ambient
+     * (CORE-076): once nearly equivalent to it, its ambient edge keeps exchanging as usual instead.
+     * It stays pinned while any owner holds a pin on it; pinning it again under the same owner
+     * changes nothing.
      *
-     * <p>The pin follows the zone's gas and cells, the way its identity does (CORE-026): when two
-     * zones merge, the surviving zone is pinned if either was, since the absorbed zone's cells and
+     * <p>The pins follow the zone's gas and cells, the way its identity does (CORE-026): when two
+     * zones merge, the surviving zone takes both zones' pins, since the absorbed zone's cells and
      * gas live on in it; when a zone splits, the part that keeps the id and every remnant split off
-     * under a new id are all pinned if it was, so no part of a pinned zone dissolves. Saving and
-     * loading keeps the pin (DATA-002), and so does the scheduler's undo of a rejected component.
+     * under a new id all keep its pins, so no part of a pinned zone dissolves. Saving and loading
+     * keeps them (DATA-002, API-018), and so does the scheduler's undo of a rejected component.
      *
-     * <p>Set by the zone pins of API-017, persisted by API-018, in R1; nothing sets it in R0 except
-     * tests.
+     * @return whether the owner didn't already pin it
+     */
+    public boolean pin(Zone zone, String owner) {
+        requireLive(zone);
+        List<String> before = zone.pins;
+        zone.pins = Pins.with(before, owner);
+        return zone.pins != before;
+    }
+
+    /**
+     * Removes an owner's pin from every live zone (API-017). A zone with no pin left can dissolve
+     * again.
+     *
+     * @return how many zones it pinned
+     */
+    public int unpinEverywhere(String owner) {
+        Objects.requireNonNull(owner, "owner");
+        int n = 0;
+        for (Zone z : zones.values()) {
+            List<String> before = z.pins;
+            z.pins = Pins.without(before, owner);
+            if (z.pins != before) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Sets a zone's pins outright, for the scheduler's undo (CORE-070). */
+    public void setPins(Zone zone, List<String> pins) {
+        requireLive(zone);
+        zone.pins = Pins.of(pins);
+    }
+
+    /**
+     * Pins a zone under the anonymous owner ({@link Pins#ANONYMOUS}), or removes every pin it has.
+     * For tests and for pins saved before owners were recorded.
      */
     public void setPinned(Zone zone, boolean pinned) {
-        requireLive(zone);
-        zone.pinned = pinned;
+        setPins(zone, pinned ? Pins.ANONYMOUS_ONLY : Pins.NONE);
     }
 
     /** The live zones, in id order. */
@@ -750,7 +786,7 @@ public final class ZoneGraph {
     /**
      * Moves a remnant into a new zone. It takes the zone's composition and
      * temperature, with moles in proportion to its volume (CORE-064), and the
-     * zone's pin (D-64).
+     * zone's pins (D-64).
      */
     private void splitOff(Zone zone, List<Cell> remnant) {
         double volume = 0;
@@ -759,7 +795,7 @@ public final class ZoneGraph {
         }
         GasMixture parcel = zone.mixture().removeFraction(volume / zone.volume());
         Zone created = newZone(parcel);
-        created.pinned = zone.pinned;
+        created.pins = zone.pins;
         for (Cell c : remnant) {
             relabel(c, created);
         }
@@ -773,7 +809,7 @@ public final class ZoneGraph {
     /**
      * Merges two zones into one: the one with more cells (on a tie, the lower id)
      * keeps its id and takes the other's cells and gas, which is conserved. The
-     * other is destroyed. The surviving zone is pinned if either was (D-64).
+     * other is destroyed. The surviving zone takes both zones' pins (D-64).
      * {@link #exchange()} calls this for equivalent zones joined by a direct
      * opening (CORE-023).
      *
@@ -816,7 +852,7 @@ public final class ZoneGraph {
             big.addCell(c);
         }
         big.mixture().merge(small.mixture());
-        big.pinned |= small.pinned;
+        big.pins = Pins.union(big.pins, small.pins);
         drainPruned(small.mixture());
         destroyZone(small);
         big.changed = true;
@@ -995,7 +1031,7 @@ public final class ZoneGraph {
             sleptBuffer.clear();
         }
         for (Zone z : zones.values()) {
-            if (!z.paused && !z.pinned && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
+            if (!z.paused && !z.isPinned() && z.ambientEdge() != null && nearlyAmbient(z.mixture())) {
                 dissolveBuffer.add(z);
             }
         }
@@ -1124,7 +1160,7 @@ public final class ZoneGraph {
      */
     private void exchangeWithAmbient(Edge e) {
         Zone z = e.first();
-        if (z.pinned || !nearlyAmbient(z.mixture())) {
+        if (z.isPinned() || !nearlyAmbient(z.mixture())) {
             double vz = z.volume();
             double r = settings.ambientRatio(e.connections, vz);
             GasMixture out = z.mixture().removeFraction(r);
@@ -1402,13 +1438,13 @@ public final class ZoneGraph {
      * @param id the zone's saved id; the counter is raised past it (CORE-026)
      * @param cellIds the share's cells
      * @param gas the share's gas; not changed
-     * @param pinned whether the share was saved pinned (D-64, API-018); a pinned share pins the
-     *     zone, and an unpinned one leaves its pin as it is
+     * @param pins the owners of the pins the share was saved with (D-64, API-018); the zone gains
+     *     them, keeping any it has
      * @return the zone, or null if it isn't live and none of the cells could join it, in which
      *     case nothing changes
      * @throws IllegalArgumentException if the id isn't positive
      */
-    public Zone loadShare(long id, long[] cellIds, GasMixture gas, boolean pinned) {
+    public Zone loadShare(long id, long[] cellIds, GasMixture gas, List<String> pins) {
         Objects.requireNonNull(gas, "gas");
         if (id <= 0) {
             throw new IllegalArgumentException("zone id must be positive, got " + id);
@@ -1446,9 +1482,14 @@ public final class ZoneGraph {
         if (zone.mixture().merge(gas)) {
             ledger.record(LedgerCategory.STORAGE, gas, 1);
         }
-        zone.pinned |= pinned;
+        zone.pins = Pins.union(zone.pins, Pins.of(pins));
         zone.changed = true;
         return zone;
+    }
+
+    /** {@link #loadShare(long, long[], GasMixture, List)} with the anonymous pin or none. */
+    public Zone loadShare(long id, long[] cellIds, GasMixture gas, boolean pinned) {
+        return loadShare(id, cellIds, gas, pinned ? Pins.ANONYMOUS_ONLY : Pins.NONE);
     }
 
     /**
@@ -1505,12 +1546,12 @@ public final class ZoneGraph {
      * @param id the destroyed zone's id
      * @param cellIds its cells at the undo point
      * @param mixture its mixture at the undo point; copied
-     * @param pinned whether it was pinned at the undo point (D-64)
+     * @param pins the owners of its pins at the undo point (D-64)
      * @return the recreated zone
      * @throws IllegalArgumentException if the id is live or was never issued, or
      *     the list is empty
      */
-    public Zone restoreZone(long id, long[] cellIds, GasMixture mixture, boolean pinned) {
+    public Zone restoreZone(long id, long[] cellIds, GasMixture mixture, List<String> pins) {
         Objects.requireNonNull(mixture, "mixture");
         if (id <= 0 || id >= nextZoneId || zones.containsKey(id)) {
             throw new IllegalArgumentException("zone id " + id + " is live or was never issued");
@@ -1519,7 +1560,7 @@ public final class ZoneGraph {
             throw new IllegalArgumentException("a zone needs at least one cell");
         }
         Zone zone = new Zone(id, mixture.copy());
-        zone.pinned = pinned;
+        zone.pins = Pins.of(pins);
         zones.put(id, zone);
         for (long cellId : cellIds) {
             Cell c = cells.get(cellId);

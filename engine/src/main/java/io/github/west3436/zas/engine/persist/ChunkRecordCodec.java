@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.ZoneShare;
+import io.github.west3436.zas.engine.zone.Pins;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -34,7 +35,8 @@ import java.util.zip.CRC32;
  *   <li>the gas table: a count, then each gas id; every amount below is listed in this order, so
  *       saves don't depend on the order of the gas registry;
  *   <li>the zones: a count, then per zone its id, its cells ({@link CellIds} ids), its moles per
- *       gas, its temperature, the chunks it spans and, from version 2, whether it is pinned (D-64);
+ *       gas, its temperature, the chunks it spans and its pins (D-64): in versions 2 and 3 whether
+ *       it is pinned, and from version 4 a count, then each pin's owner id (API-017, API-018);
  *   <li>the held block positions (DATA-010);
  *   <li>the queued additions (DATA-011): per operation its original sequence number, block,
  *       moles per gas, temperature, ledger category, whether it triggers a zone, and its source;
@@ -42,8 +44,9 @@ import java.util.zip.CRC32;
  * </ol>
  *
  * <p>Only what can't be rebuilt is written: no edges, seal masks, sub-cell shapes or hotspots
- * (DATA-009). Versions 1 and 2 are still read: version 1 has no pins, so its zones are unpinned,
- * and both store cells in the narrower layout {@link CellIds} used before version 3 (24 bits of x
+ * (DATA-009). Versions 1 to 3 are still read: version 1 has no pins, so its zones are unpinned,
+ * and a pinned zone of versions 2 and 3 is pinned under the anonymous owner ({@link
+ * io.github.west3436.zas.engine.zone.Pins#ANONYMOUS}). Versions 1 and 2 store cells in the narrower layout {@link CellIds} used before version 3 (24 bits of x
  * and z, 12 of y, 4 of sub-cell index), which are converted with {@link CellIds#fromFormat2}; a
  * saved cell the current layout can't name is left out, and its gas stays in the share, as for any
  * saved cell that is no longer a cell (architecture §4.5). Reading checks the
@@ -60,6 +63,9 @@ public final class ChunkRecordCodec {
 
     /** The second format version: pins, and still the cell ids of version 1. */
     private static final int VERSION_2 = 2;
+
+    /** The third format version: the wider cell ids, and pins without their owners. */
+    private static final int VERSION_3 = 3;
 
     /**
      * The chunk key of the level-wide record, which holds queued additions whose target chunk
@@ -97,7 +103,10 @@ public final class ChunkRecordCodec {
                 writeMoles(out, z.moles(), gases);
                 out.writeDouble(z.temperature());
                 writeLongs(out, z.zoneChunks());
-                out.writeBoolean(z.pinned());
+                out.writeInt(z.pins().size());
+                for (String owner : z.pins()) {
+                    out.writeUTF(owner);
+                }
             }
             writeLongs(out, record.heldBlocks());
             out.writeInt(record.queuedAdditions().size());
@@ -164,7 +173,10 @@ public final class ChunkRecordCodec {
                 throw new CorruptRecordException("not a zas atmos record");
             }
             int version = in.readInt();
-            if (version != ChunkRecord.FORMAT_VERSION && version != VERSION_2 && version != VERSION_1) {
+            if (version != ChunkRecord.FORMAT_VERSION
+                    && version != VERSION_3
+                    && version != VERSION_2
+                    && version != VERSION_1) {
                 throw new CorruptRecordException("unknown format version " + version);
             }
             long savedChunk = in.readLong();
@@ -190,8 +202,8 @@ public final class ChunkRecordCodec {
                 double[] saved = readSaved(in, gases);
                 double temperature = in.readDouble();
                 long[] chunks = readLongs(in);
-                boolean pinned = version != VERSION_1 && in.readBoolean();
-                zones.add(new ZoneShare(id, cells, remap(saved, index, registry.size()), temperature, chunks, pinned));
+                List<String> pins = readPins(in, version);
+                zones.add(new ZoneShare(id, cells, remap(saved, index, registry.size()), temperature, chunks, pins));
                 String where = cells.length == 0
                         ? ""
                         : " at " + CellIds.x(cells[0]) + " " + CellIds.y(cells[0]) + " " + CellIds.z(cells[0]);
@@ -234,6 +246,25 @@ public final class ChunkRecordCodec {
         } catch (IllegalArgumentException e) {
             throw new CorruptRecordException("invalid value: " + e.getMessage());
         }
+    }
+
+    /** A zone's pins as its version saved them. */
+    private static List<String> readPins(DataInputStream in, int version) throws IOException, CorruptRecordException {
+        if (version == VERSION_1) {
+            return Pins.NONE;
+        }
+        if (version == VERSION_2 || version == VERSION_3) {
+            return in.readBoolean() ? Pins.ANONYMOUS_ONLY : Pins.NONE;
+        }
+        int n = count(in);
+        if (n > in.available() / 2) {
+            throw new CorruptRecordException("truncated pins");
+        }
+        List<String> owners = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            owners.add(in.readUTF());
+        }
+        return Pins.of(owners);
     }
 
     /** Cell ids saved by versions 1 and 2, in the current layout, without those it can't name. */

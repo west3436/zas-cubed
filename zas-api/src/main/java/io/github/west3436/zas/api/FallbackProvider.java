@@ -10,6 +10,7 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
@@ -25,7 +26,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The provider used while ZAS³ is absent: a vanilla, breathable world (D-17,
  * API-009). Every point is ambient standard air, no zone exists,
- * mutations complete at once with nothing moved, and breathing follows
+ * mutations complete at once with nothing moved, pins complete at once with
+ * nothing pinned, and breathing follows
  * vanilla's rules, so being underwater still counts (API-014). Standard
  * air's gases are the only gases, grouped as ZAS³'s shipped tags group them.
  */
@@ -70,6 +72,16 @@ final class FallbackProvider implements ZasApiProvider {
     public CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source) {
         return ABSENT.copy();
+    }
+
+    @Override
+    public CompletableFuture<PinResult> pin(ServerLevel level, Vec3 point, SourceId owner) {
+        return CompletableFuture.completedFuture(PinResult.ABSENT);
+    }
+
+    @Override
+    public CompletableFuture<Void> unpin(ServerLevel level, SourceId owner) {
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

@@ -57,7 +57,7 @@ final class GasHazards {
             ResourceLocation gas = e.getKey();
             List<HazardProfile.Threshold> thresholds = e.getValue().thresholds();
             double p = breath.partialPressure(gas);
-            if ((thresholds.isEmpty() || p < thresholds.get(0).partialPressure()) && !state.exposed(gas)) {
+            if (thresholds.stream().noneMatch(t -> t.reachedAt(p)) && !state.exposed(gas)) {
                 continue; // below every threshold, and nothing to reset
             }
             double[] exposure = state.exposure(gas, thresholds.size());
@@ -65,7 +65,7 @@ final class GasHazards {
             boolean any = false;
             for (int i = 0; i < thresholds.size(); i++) {
                 HazardProfile.Threshold t = thresholds.get(i);
-                if (p < t.partialPressure()) {
+                if (!t.reachedAt(p)) {
                     exposure[i] = 0;
                     continue;
                 }
