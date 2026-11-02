@@ -128,7 +128,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             mode = mode.after(sample.pressure(), preset);
         }
 
-        boolean[] supplied = feed(covered);
+        // Orders first, then the bill: a part's draw follows its order (a vent draws nothing while
+        // off), so paying first would let the tick a part is switched on run free.
         VentOrder vent = mode.vent(preset);
         ScrubberOrder scrubber = mode.scrubber(preset);
         for (PoweredDevice d : covered) {
@@ -139,6 +140,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                 s.scrubberOrder(scrubber);
             }
         }
+        boolean[] supplied = feed(covered);
         parts = describe(covered, supplied);
         setStatus(level, ControllerStatus.of(danger.level()));
     }
