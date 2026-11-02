@@ -1535,10 +1535,11 @@ the cell in front of its grille).
     compared with, so a vent that animates but moves nothing says why.
   - **For the area air controller:** the vent is a `VentControl` (§11.6).
     `ventOrder` passes the order to `VentBlockEntity.control(controller,
-    VentSettings)`, naming the controller that last paid for the vent (its
-    `DevicePower.source()`). A controller orders its parts before it pays
-    them, so the first order names no controller, and the GUI shows it as
-    unknown until the next. That sets the vent, and an unchanged setting changes nothing, so a
+    VentSettings)`, naming the controller in the order's `sender`, so the GUI
+    shows the controller from the first order. An order with no sender falls
+    back to the controller that last paid for the vent (its
+    `DevicePower.source()`), and failing that the GUI shows the controller as
+    unknown. That sets the vent, and an unchanged setting changes nothing, so a
     controller can send the same order every atmos tick. Each order makes the
     vent *controlled* for `DevicePower.LEASE_TICKS` (two atmos ticks). While
     it is controlled, `setByHand`, which the GUI uses, refuses settings, and
@@ -1596,9 +1597,10 @@ tick, in order:
    target.
 7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
    whose air point is in its zone, and every part linked to it with the
-   multitool (CONT-042). It powers them (§11.7), then gives each `VentControl`
-   the mode's `VentOrder` and each `ScrubberControl` the mode's
-   `ScrubberOrder`, every tick.
+   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`,
+   with its own position as the order's `sender`, and each `ScrubberControl`
+   the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
+   come first because a part's draw follows its order.
 
 **Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
 Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the

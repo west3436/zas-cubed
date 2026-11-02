@@ -230,9 +230,14 @@ public final class StationTests {
             // CONT-041: Scrubbing orders the vent to blow to the target, and it does.
             h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the vent's settings in Scrubbing");
 
-            // CONT-014: the controller wins, and the GUI says so. The first order comes before the
-            // controller has paid the vent, so it names the controller from the second.
+            // CONT-014: the controller wins, and the GUI says so, naming the controller from its
+            // first order: the order carries the controller's position.
             h.assertTrue(vent.controlled(), "the ordered vent isn't controlled");
+            h.assertValueEqual(
+                    vent.controller(), java.util.Optional.of(c.getBlockPos()), "the vent's controller, first order");
+            h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 1, "the GUI's control flag, first order");
+            h.assertValueEqual(
+                    menu.controller(), java.util.Optional.of(c.getBlockPos()), "the GUI's controller, first order");
             seconds(s, g, 1, c, vent, pump);
             h.assertValueEqual(menu.controller(), java.util.Optional.of(c.getBlockPos()), "the GUI's controller");
             h.assertValueEqual(menu.mode(), VentMode.BLOW, "the GUI's order");

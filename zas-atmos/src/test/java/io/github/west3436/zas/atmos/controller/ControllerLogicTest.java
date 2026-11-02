@@ -10,6 +10,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
@@ -162,6 +163,19 @@ class ControllerLogicTest {
         assertEquals(ScrubberOrder.OFF, ControllerMode.FILL.scrubber(h));
         assertEquals(VentOrder.OFF, ControllerMode.OFF.vent(h));
         assertEquals(ScrubberOrder.OFF, ControllerMode.OFF.scrubber(h));
+
+        // A controller names itself on its orders; the mode's own orders have no sender.
+        assertEquals(null, ControllerMode.SCRUBBING.vent(h).sender());
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos(3, -58, 7);
+        VentOrder sent = ControllerMode.SCRUBBING.vent(h).from(at);
+        at.set(0, 0, 0);
+        assertEquals(new BlockPos(3, -58, 7), sent.sender(), "the sender is copied, not shared");
+        assertTrue(sent.on());
+        assertEquals(101, sent.targetKpa());
+        assertEquals(
+                new BlockPos(3, -58, 7),
+                VentOrder.OFF.from(new BlockPos(3, -58, 7)).sender());
+        assertFalse(VentOrder.OFF.from(new BlockPos(3, -58, 7)).on());
 
         assertEquals(ControllerMode.CYCLE, ControllerMode.CYCLE.after(5.1, h));
         assertEquals(ControllerMode.FILL, ControllerMode.CYCLE.after(5.0, h), "below 5 % of 1 atm");
