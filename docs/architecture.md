@@ -915,9 +915,10 @@ closing it is a cheap edge update.
   from the newly opened cell (GEO-023, GEO-025). Open-column classification
   and the classification cache (GEO-021, GEO-027) will make that cheap.
 
-### 4.8 Heat (HEAT-001 to HEAT-015)
+### 4.8 Heat (HEAT-001 to HEAT-016)
 
-*Implemented 2026-11-02 ([#39](https://github.com/west3436/zas-cubed/issues/39)).*
+*Implemented 2026-11-02 ([#39](https://github.com/west3436/zas-cubed/issues/39);
+sources and heat operations [#40](https://github.com/west3436/zas-cubed/issues/40)).*
 Zones conduct heat through their walls to the far side: another zone, a heat
 source, the ambient, or the ground. A face toward a vacuum radiates from the
 wall's outer surface. Conduction is steady-state: walls store no heat
@@ -1017,6 +1018,27 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   `enabled`, `fallback_transmittance` (1.7), `wall_thickness` (3),
   `near_vacuum_percent` (1) and `emissivity` (0.9). Batches carry them, so a
   change applies from a batch boundary.
+- **Shipped sources** (HEAT-016), in `data/zas/zas/thermal/sources/`: lava
+  1,450 K, magma block 1,000 K, ice 273 K, packed ice 263 K, blue ice 253 K
+  and snow block 268 K. Lava has no U of its own, so it conducts at the
+  fallback; the ice keeps its 2.2. Until fluids seal (GEO-006, #65), lava is
+  open space to the geometry, so it is a source only at the far end of a
+  wall: lava inside a zone, or beside a room with no wall between, isn't
+  seen.
+- **Heat operations** (API-013, HEAT-010). Adding or removing heat at a
+  point is a `GasOp` of kind `ADD_HEAT` or `REMOVE_HEAT` carrying joules and
+  no moles. It is queued, classified and run in phase 3 like a gas mutation,
+  and may form a zone in an enclosed, unzoned area (CORE-055). In a zone it
+  goes through the mixture's `addThermalEnergy` and `removeThermalEnergy`,
+  so removal stops at the temperature floor and reports what it delivered.
+  At an open point the ambient takes or supplies all of it and nothing
+  changes (HEAT-010). At a paused zone or an unresolved region, added heat is
+  voided and removed heat supplied, up to what a paused zone holds above the
+  floor. The zone it touched joins its exchange component, so a rejected
+  component undoes it and it runs again. The outcome carries the energy
+  moved and the zone's temperature after. Heat operations aren't saved at
+  shutdown; their futures complete `PAUSED` with nothing moved. Energy has no
+  ledger: the conservation checker counts moles (CORE-073).
 - **Cost.** With the default 3-block thickness, building one cell's links
   reads at most 6 × 3 blocks from the mirror. The cached links take about
   19 B per zoned cell in S-10, and 59 B in small rooms, which are all wall. In
@@ -1164,14 +1186,41 @@ runs none of it until LIFE-023.
   the breath, for every living entity but those in `#zas:atmosphere_immune`
   (`Protection.IMMUNE`) and exempt players, breathing or not, eyes in a fluid
   or not. An entity's `Shielding` gives the fraction of the difference from
-  1 atm that reaches it (LIFE-020) and of temperature damage dealt (LIFE-025);
-  until #36 every entity is unshielded. The effective pressure is
+  1 atm that reaches it (LIFE-020) and of temperature damage dealt (LIFE-025),
+  from its protection (below). The effective pressure is
   1 atm + (P − 1 atm) × that fraction: below 20 kPa it deals 1 HP/s of
   decompression, at or above 550 kPa min((P / 550 − 1) × 2, 2) HP/s of
   barotrauma. Outside `[hazards] comfort_min_k` to `comfort_max_k` (220–360 K),
   frostbite and burns deal their highest tier reached. Each rate is multiplied
   by its hazard's scale in the dimension, and a check deals rate × seconds,
   each as its own damage type.
+- **Protection** (LIFE-020, LIFE-024 to LIFE-027, API-022). `WornProtection`
+  is an entity's `Shielding`, read once a check. Its parts:
+  - **Sources.** The pieces in its four armor slots, each covering its slot's
+    share of the body (`[protection]`: head 0.3, chest 0.4, legs 0.2, feet
+    0.1), and its own life support, which covers all of it.
+  - **Lookup.** `Protections` finds a piece's life support. The item's
+    `ILifeSupport` capability (`ILifeSupport.ITEM`) comes first. Next is
+    protection data naming the item, then data naming a tag the item is in
+    (`zas/protection`; [datapacks.md](datapacks.md#protection)). An entity's
+    own comes from `ILifeSupport.ENTITY`.
+  - **Pressure.** A piece protects against P below 1 atm if its
+    `minPressure` is at most P, and above 1 atm if its `maxPressure` is at
+    least P. The shares of the pieces that do give c, and (1 − c⁵) of the
+    difference reaches the wearer.
+  - **Temperature.** Pieces whose `minTemperature`–`maxTemperature` range
+    holds the temperature give c, and temperature damage is scaled by (1 − c).
+  - **Edge cases.** At exactly 1 atm or 293.15 K nothing covers. A sum within
+    1e-9 of 1 counts as 1.
+  - **The verdict.** It lists `PRESSURE` and `THERMAL` wherever some
+    protection is rated for the conditions.
+  - **Vanilla armor** is data (`zas:vanilla_armor`): heat protection to
+    400 K only.
+  - **Sealed breathing** comes from the head slot or the entity itself
+    (`WornProtection.sealedBreathing`), for internals.
+  - **Airflow resistance** is the highest of the pieces' and the entity's own
+    (`WornProtection.airflowResistance`), for FLOW-012 to read.
+  - **Gas filtering** is carried but not yet applied.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -1208,8 +1257,8 @@ runs none of it until LIFE-023.
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, and the `ServerThreads` check |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
-| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
-| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
+| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
+| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
@@ -1282,8 +1331,11 @@ LIFE-023. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):
 the pressure and temperature hazards, listed as `LOW_PRESSURE`,
 `HIGH_PRESSURE`, `COLD` and `HEAT` for every living entity they harm,
 breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
-**Not yet built:** breathing from internals (LIFE-021, API-022) and worn
-protection (#36), so a verdict lists no protection but `EXEMPT` and `IMMUNE`.
+*Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
+and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
+for the conditions. **Not yet built:** breathing from internals (LIFE-021,
+API-022) and gas filtering, so no verdict lists `SEALED_BREATHING` or
+`GAS_FILTERING`.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
 
@@ -1455,7 +1507,7 @@ The test names include requirement IDs (README rule 5).
 | GEO | §4.1–§4.3, §4.6 |
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
-| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015) | §4.8 |
+| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
 | LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042; hazards: LIFE-010, LIFE-011, LIFE-014 to LIFE-016, LIFE-030, LIFE-031, LIFE-033, LIFE-035 to LIFE-038) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50), §11 (the content mod) |

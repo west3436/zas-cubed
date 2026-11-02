@@ -12,6 +12,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinOutcome;
@@ -74,8 +75,8 @@ import net.neoforged.bus.api.IEventBus;
  * (API-016, API-050).
  *
  * <p>The breathability helper (API-014) answers with LIFE's breathing rules ({@link
- * BreathingRules}), with the pressure and temperature hazards; protection and internals join it
- * with #36 and the life-support capability (API-022, #60).
+ * BreathingRules}), with the pressure and temperature hazards and the protection of worn items and
+ * the life-support capability (API-022); internals join it with #36.
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -172,6 +173,27 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     }
 
     @Override
+    public CompletableFuture<HeatResult> addHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return heat(level, point, true, joules, source);
+    }
+
+    @Override
+    public CompletableFuture<HeatResult> removeHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return heat(level, point, false, joules, source);
+    }
+
+    private static CompletableFuture<HeatResult> heat(
+            ServerLevel level, Vec3 point, boolean add, double joules, SourceId source) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            // No server running the scheduler yet: the open air takes or supplies it all.
+            return CompletableFuture.completedFuture(new HeatResult(MutationOutcome.AMBIENT, joules, Double.NaN));
+        }
+        PointResolver.Cell cell = PointResolver.resolve(level, point);
+        return service.heat(level, cell.pos(), cell.sub(), add, joules, source);
+    }
+
+    @Override
     public CompletableFuture<PinResult> pin(ServerLevel level, Vec3 point, SourceId owner) {
         AtmosService service = AtmosService.current();
         if (service == null) {
@@ -242,7 +264,8 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      * the eyes, the O₂ minimum and the gases' hazard profiles, keeping vanilla's rule while the
      * eyes are in a fluid (LIFE-022), and the verdict the breath checks hold while the atmosphere
      * at the eyes is unresolved (LIFE-048), and the pressure and temperature hazards (LIFE-010,
-     * LIFE-011, LIFE-014). Internals and protection join it with #36 and API-022 (#60). On the
+     * LIFE-011, LIFE-014) with worn and built-in protection (LIFE-020, LIFE-025). Internals join it
+     * with #36. On the
      * client, vanilla's verdict, until the client breathing sync (LIFE-023) gives it the server's.
      */
     @Override

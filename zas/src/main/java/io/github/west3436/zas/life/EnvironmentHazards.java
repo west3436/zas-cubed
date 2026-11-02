@@ -4,7 +4,9 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Hazard;
+import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.config.HazardConfig;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 import net.minecraft.core.registries.Registries;
@@ -69,6 +71,8 @@ public final class EnvironmentHazards {
      * @param pressure the pressure around it in kPa
      * @param temperature the exposure temperature in K
      * @param effectivePressure the pressure its protection lets reach it in kPa (LIFE-020)
+     * @param protection the protection rated for the pressure and temperature here: {@link
+     *     Protection#PRESSURE} and {@link Protection#THERMAL}, whether or not a hazard needs them
      */
     public record Exposure(
             double pressure,
@@ -77,7 +81,8 @@ public final class EnvironmentHazards {
             double decompression,
             double barotrauma,
             double frostbite,
-            double burns) {
+            double burns,
+            Set<Protection> protection) {
 
         /** A hazard's damage in HP/s; 0 for the hazards that aren't pressure or temperature. */
         public double rate(HazardType hazard) {
@@ -193,6 +198,13 @@ public final class EnvironmentHazards {
         double t = around.temperature();
         double effective = effectivePressure(p, clamp01(shielding.pressureFactor(p)));
         double thermal = clamp01(shielding.thermalFactor(t));
+        Set<Protection> protection = EnumSet.noneOf(Protection.class);
+        if (shielding.protectsAt(p)) {
+            protection.add(Protection.PRESSURE);
+        }
+        if (shielding.protectsFrom(t)) {
+            protection.add(Protection.THERMAL);
+        }
         return new Exposure(
                 p,
                 t,
@@ -200,7 +212,8 @@ public final class EnvironmentHazards {
                 decompression(effective) * HazardConfig.scale(dimension, HazardType.DECOMPRESSION),
                 barotrauma(effective) * HazardConfig.scale(dimension, HazardType.BAROTRAUMA),
                 frostbite(t, HazardConfig.comfortMin()) * thermal * HazardConfig.scale(dimension, HazardType.FROSTBITE),
-                burns(t, HazardConfig.comfortMax()) * thermal * HazardConfig.scale(dimension, HazardType.BURNS));
+                burns(t, HazardConfig.comfortMax()) * thermal * HazardConfig.scale(dimension, HazardType.BURNS),
+                Collections.unmodifiableSet(protection));
     }
 
     /** Deals an exposure's damage for {@code seconds}, each hazard as its own damage type. */

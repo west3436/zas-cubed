@@ -1,0 +1,5 @@
+{
+  "items": ["#zas_gametest:thermal_test"],
+  "min_temperature_k": 100,
+  "max_temperature_k": 500
+}

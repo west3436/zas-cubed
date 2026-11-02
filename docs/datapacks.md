@@ -345,6 +345,23 @@ data/<namespace>/zas/thermal/<path>.json
   | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
   | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
 
+  And the heat sources (HEAT-016), one file per block in
+  `data/zas/zas/thermal/sources/`:
+
+  | File | Block | Temperature |
+  |---|---|---|
+  | `lava.json` | lava | 1,450 K |
+  | `magma_block.json` | magma block | 1,000 K |
+  | `ice.json` | ice | 273 K |
+  | `packed_ice.json` | packed ice | 263 K |
+  | `blue_ice.json` | blue ice | 253 K |
+  | `snow_block.json` | snow block | 268 K |
+
+  These set no U, so lava, magma and snow conduct at the fallback, and the ice
+  at `ice.json`'s 2.2. A source acts only at the far end of a wall: until
+  fluids seal (GEO-006), lava is open space, so lava inside a room, or beside
+  one with nothing between, isn't a source to it.
+
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)).
 - **When it applies:** with geometry overrides, at server start and on
@@ -538,6 +555,63 @@ golems (the iron golem and the snow golem) (LIFE-016). An immune entity can
 still breathe if it is in `zas:breathers`: the tag spares it pressure and
 temperature only. Creative and spectator players are spared every hazard
 without a tag (LIFE-037). Packs change the tag as they do `zas:breathers`.
+
+## Protection
+
+Worn items protect against pressure and temperature (LIFE-020, LIFE-025), and
+can seal the breathing for internals or resist airflow. An item gets this from
+its own life-support capability (`ILifeSupport`, API-022) or, if it has none,
+from protection data (LIFE-026):
+
+```
+data/<namespace>/zas/protection/<name>.json
+```
+
+```json
+{
+  "items": ["mymod:pressure_helmet", "#mymod:pressure_suit"],
+  "min_pressure_kpa": 0,
+  "max_pressure_kpa": 101.325,
+  "min_temperature_k": 0,
+  "max_temperature_k": 500,
+  "sealed_breathing": true,
+  "gas_filtering": false,
+  "airflow_resistance": 0
+}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `items` | required | The items it applies to, by id, and item tags, with a leading `#` |
+| `min_pressure_kpa` | 101.325 | The lowest pressure it protects against, 0 to 101.325 kPa; the default protects against no low pressure |
+| `max_pressure_kpa` | 101.325 | The highest pressure it protects against, at least 101.325 kPa; the default protects against no high pressure |
+| `min_temperature_k` | 293.15 | The lowest temperature it protects against, 0 to 293.15 K; the default protects against no cold |
+| `max_temperature_k` | 293.15 | The highest temperature it protects against, at least 293.15 K; the default protects against no heat |
+| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021) |
+| `gas_filtering` | `false` | Whether it filters the breath, in the head slot. Carried for gas masks; not applied yet |
+| `airflow_resistance` | 0 | How much it resists being pushed by airflow, 0 to 1 (FLOW-012) |
+
+An item counts in the head, chest, legs and feet slots, each covering its
+share of the body (`[protection]` in the server config, LIFE-024: by default
+0.3, 0.4, 0.2 and 0.1). The pieces rated for the pressure or temperature
+around the wearer add up their shares to the coverage c. Then (1 − c⁵) of the
+pressure difference from 1 atm still reaches the wearer, and (1 − c) of
+temperature damage. Without a rated helmet, c is at most 0.7, so 83 % of the
+difference still gets through.
+
+**Which file wins:**
+- An item's own capability wins over data.
+- A file naming the item wins over one naming a tag it is in.
+- Between files of the same kind, the first in file id order wins (by path,
+  then namespace). The later file's claim on that item is logged as a warning.
+
+A file may name items of a mod that isn't installed. A datapack replaces a
+shipped file by providing the same path.
+
+**Shipped:** `data/zas/zas/protection/vanilla_armor.json` gives every vanilla
+armor piece, and the turtle shell, heat protection up to 400 K. They get no
+cold or pressure protection and no seal, so they can't be used with internals
+(LIFE-027).
 
 ## Damage types
 
