@@ -1,0 +1,59 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:electrolyzer"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:reinforced_glass"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GCG",
+    "PFP",
+    "WBW"
+  ],
+  "key": {
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    },
+    "P": {
+      "item": "zas_atmos:pipe"
+    },
+    "G": {
+      "item": "zas_atmos:reinforced_glass"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:electrolyzer"
+  }
+}

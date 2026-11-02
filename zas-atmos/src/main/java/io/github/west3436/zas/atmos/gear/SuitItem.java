@@ -66,8 +66,7 @@ public class SuitItem extends ArmorItem {
      * @param rating what it protects against
      * @param tankSlot whether it has a tank slot (CONT-090)
      */
-    public SuitItem(
-            Holder<ArmorMaterial> material, Type type, Properties properties, Rating rating, boolean tankSlot) {
+    public SuitItem(Holder<ArmorMaterial> material, Type type, Properties properties, Rating rating, boolean tankSlot) {
         super(material, type, properties.stacksTo(1));
         this.rating = rating;
         this.tankSlot = tankSlot;

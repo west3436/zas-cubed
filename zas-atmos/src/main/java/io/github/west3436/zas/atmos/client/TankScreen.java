@@ -50,10 +50,10 @@ final class TankScreen extends Screen {
                         Component.translatable("gui.zas_atmos.gas_tank.default"), b -> send(TankSettings.DEFAULT))
                 .bounds(left + 8, top + 96, 90, 18)
                 .build());
-        addRenderableWidget(Button.builder(
-                        Component.translatable("gui.zas_atmos.gas_tank.close"), b -> send(TankSettings.CLOSE))
-                .bounds(left + 102, top + 96, 90, 18)
-                .build());
+        addRenderableWidget(
+                Button.builder(Component.translatable("gui.zas_atmos.gas_tank.close"), b -> send(TankSettings.CLOSE))
+                        .bounds(left + 102, top + 96, 90, 18)
+                        .build());
     }
 
     private void button(int x, int y, int w, String label, int id) {

@@ -1,0 +1,36 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:electronics"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:fire_alarm"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:scanning_module"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:electronics"
+    },
+    {
+      "item": "zas_atmos:scanning_module"
+    },
+    {
+      "item": "minecraft:note_block"
+    },
+    {
+      "item": "minecraft:red_dye"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:fire_alarm"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:atmos_analyzer"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:scanning_module"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "zas_atmos:scanning_module"
+    },
+    {
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:atmos_analyzer"
+  }
+}

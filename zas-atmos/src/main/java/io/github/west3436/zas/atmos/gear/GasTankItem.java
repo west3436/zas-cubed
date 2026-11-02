@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import io.github.west3436.zas.atmos.registry.AtmosItems;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -84,6 +85,75 @@ public class GasTankItem extends Item {
         Map<ResourceLocation, Double> m = new TreeMap<>();
         fractions.forEach((gas, f) -> m.put(gas, total * f));
         return new GasParcel(m, FILL_K);
+    }
+
+    // ---- The kind of a 70 L tank ---------------------------------------------------------------
+
+    /** The O₂ share of the moles at or above which a filled 70 L tank is an O₂ tank. */
+    public static final double OXYGEN_TANK_SHARE = 0.95;
+
+    /** The O₂ shares between which a filled 70 L tank of N₂ and O₂ is an air tank. */
+    public static final double AIR_MIN_OXYGEN = 0.19;
+
+    public static final double AIR_MAX_OXYGEN = 0.23;
+
+    /** The share of the moles a filled air tank's N₂ and O₂ make up at least. */
+    public static final double AIR_MIN_N2_O2 = 0.98;
+
+    /**
+     * The kind a 70 L tank becomes when filled from a canister (CONT-039, docs/crafting.md: an
+     * empty tank filled from an O₂ canister is an O₂ tank, and from air an air tank): an O₂ tank if
+     * its gas is at least 95 % O₂, an air tank if it is N₂ and O₂ with 19–23 % O₂, else the plain
+     * tank, which is named a gas tank while it holds gas. The emergency tank stays what it is.
+     *
+     * @param tank the tank as filled
+     * @return the tank of its kind: the same stack if its kind hasn't changed, else a new one with
+     *     the same gas and settings
+     */
+    public static ItemStack ofItsKind(ItemStack tank) {
+        if (!(tank.getItem() instanceof GasTankItem item) || !item.followsContents()) {
+            return tank;
+        }
+        GasParcel gas = gas(tank);
+        Item kind = kindOf(gas);
+        if (kind == tank.getItem()) {
+            return tank;
+        }
+        ItemStack out = tank.transmuteCopy(kind, tank.getCount());
+        setGas(out, gas);
+        return out;
+    }
+
+    private static Item kindOf(GasParcel gas) {
+        double total = gas.totalMoles();
+        if (!(total > 0)) {
+            return AtmosItems.EMPTY_TANK.get();
+        }
+        double o2 = gas.moles(StandardAir.OXYGEN) / total;
+        double n2 = gas.moles(StandardAir.NITROGEN) / total;
+        if (o2 >= OXYGEN_TANK_SHARE) {
+            return AtmosItems.OXYGEN_TANK.get();
+        }
+        if (o2 >= AIR_MIN_OXYGEN && o2 <= AIR_MAX_OXYGEN && o2 + n2 >= AIR_MIN_N2_O2) {
+            return AtmosItems.AIR_TANK.get();
+        }
+        return AtmosItems.EMPTY_TANK.get();
+    }
+
+    /** Whether its kind follows its contents when filled: the 70 L tanks. */
+    private boolean followsContents() {
+        return this == AtmosItems.EMPTY_TANK.get()
+                || this == AtmosItems.OXYGEN_TANK.get()
+                || this == AtmosItems.AIR_TANK.get();
+    }
+
+    /** The plain tank is named a gas tank while it holds gas. */
+    @Override
+    public Component getName(ItemStack stack) {
+        if (this == AtmosItems.EMPTY_TANK.get() && !gas(stack).isEmpty()) {
+            return Component.translatable("item.zas_atmos.empty_tank.filled");
+        }
+        return super.getName(stack);
     }
 
     // ---- A tank stack's state --------------------------------------------------------------

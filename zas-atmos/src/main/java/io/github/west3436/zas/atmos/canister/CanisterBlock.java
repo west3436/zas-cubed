@@ -106,12 +106,21 @@ public class CanisterBlock extends BaseEntityBlock implements PipeConnector {
         if (stack.getItem() instanceof GasTankItem) {
             if (!level.isClientSide && level.getBlockEntity(pos) instanceof CanisterBlockEntity canister) {
                 double moved = canister.fillTank(stack);
+                if (moved > 0) {
+                    ItemStack kind = GasTankItem.ofItsKind(stack);
+                    if (kind != stack) {
+                        player.setItemInHand(hand, kind);
+                    }
+                }
                 player.displayClientMessage(
                         moved > 0
                                 ? Component.translatable(
                                         "item.zas_atmos.gas_tank.filled",
                                         String.format(Locale.ROOT, "%.2f", moved),
-                                        String.format(Locale.ROOT, "%.0f", GasTankItem.contents(stack).pressure()))
+                                        String.format(
+                                                Locale.ROOT,
+                                                "%.0f",
+                                                GasTankItem.contents(stack).pressure()))
                                 : Component.translatable("item.zas_atmos.gas_tank.not_filled"),
                         true);
             }

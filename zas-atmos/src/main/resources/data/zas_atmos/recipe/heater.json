@@ -1,0 +1,59 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:heater"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_laser"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "LLL",
+    "CFT",
+    "WBW"
+  ],
+  "key": {
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    },
+    "L": {
+      "item": "zas_atmos:micro_laser"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "T": {
+      "item": "zas_atmos:console_screen"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:heater"
+  }
+}

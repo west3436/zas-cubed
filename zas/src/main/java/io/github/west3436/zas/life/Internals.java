@@ -65,7 +65,8 @@ public final class Internals {
 
     /** Whether an entity's internals are on (LIFE-029): saved, and kept through death. */
     public static final Supplier<AttachmentType<Boolean>> ON = ATTACHMENTS.register(
-            "internals", () -> AttachmentType.builder(() -> false)
+            "internals",
+            () -> AttachmentType.builder(() -> false)
                     .serialize(Codec.BOOL)
                     .copyOnDeath()
                     .build());
@@ -83,8 +84,8 @@ public final class Internals {
     /** Registers the attachment and the toggle's payload. Called once, from the mod constructor. */
     public static void register(IEventBus modBus) {
         ATTACHMENTS.register(modBus);
-        modBus.addListener((RegisterPayloadHandlersEvent e) -> e.registrar("1")
-                .playToServer(TogglePayload.TYPE, TogglePayload.STREAM_CODEC, Internals::handleToggle));
+        modBus.addListener((RegisterPayloadHandlersEvent e) ->
+                e.registrar("1").playToServer(TogglePayload.TYPE, TogglePayload.STREAM_CODEC, Internals::handleToggle));
     }
 
     // ---- The switch ----------------------------------------------------------------------

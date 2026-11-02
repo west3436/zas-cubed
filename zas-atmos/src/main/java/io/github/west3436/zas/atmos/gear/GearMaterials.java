@@ -23,12 +23,12 @@ public final class GearMaterials {
             DeferredRegister.create(Registries.ARMOR_MATERIAL, ZasAtmosMod.MOD_ID);
 
     /** The softsuit (CONT-032): little armor, as leather's. */
-    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> SOFTSUIT = MATERIALS.register(
-            "softsuit", () -> material("softsuit", 1, 2, 3, 1));
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> SOFTSUIT =
+            MATERIALS.register("softsuit", () -> material("softsuit", 1, 2, 3, 1));
 
     /** The breath mask (CONT-031): no armor. */
-    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> BREATH_MASK = MATERIALS.register(
-            "breath_mask", () -> material("breath_mask", 0, 0, 0, 0));
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> BREATH_MASK =
+            MATERIALS.register("breath_mask", () -> material("breath_mask", 0, 0, 0, 0));
 
     private GearMaterials() {}
 

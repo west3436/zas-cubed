@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.registry;
 
+import com.mojang.serialization.Codec;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
-import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
