@@ -31,6 +31,7 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
 import io.github.west3436.zas.engine.Ambient;
@@ -47,6 +48,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
@@ -125,14 +127,16 @@ public final class StationTests {
         return zone.mixture().totalMoles();
     }
 
-    // ---- CONT-041, CONT-060, CONT-064, CONT-065, CONT-069 ---------------------------------
+    // ---- CONT-014, CONT-041, CONT-060, CONT-064, CONT-065, CONT-069 -----------------------
 
     /**
-     * A real vent beside a burning generator, with no controller, has no power and moves nothing;
-     * linked to a real controller that a real generator powers, it is powered before a pump when FE
-     * is short, the controller pays 5 + 10 FE/t for itself and the vent, and the vent blows. It
-     * follows each mode's order, and draws nothing while ordered off. When the generator goes, the
-     * vent's lease runs out and it stops (CONT-041, CONT-060, CONT-064, CONT-065, CONT-069).
+     * A real vent beside a burning generator, with no controller, has no power and moves nothing,
+     * and its GUI sets it. Linked to a real controller that a real generator powers, it is powered
+     * before a pump when FE is short, the controller pays 5 + 10 FE/t for itself and the vent, and
+     * the vent blows. Its GUI then shows the controller and refuses hand settings. It follows each
+     * mode's order, and draws nothing while ordered off. When the generator goes, the vent's lease
+     * runs out and it stops, and its GUI sets it again (CONT-014, CONT-041, CONT-060, CONT-064,
+     * CONT-065, CONT-069).
      */
     @GameTest(template = "empty", batch = "zas_atmos_station_power", timeoutTicks = 400)
     public static void cont_069_a_real_vent_runs_only_on_a_controller(GameTestHelper h) {
@@ -149,6 +153,8 @@ public final class StationTests {
         };
         AreaAirControllerBlockEntity c;
         VentBlockEntity vent;
+        VentMenu menu;
+        Player hand = h.makeMockPlayer(GameType.SURVIVAL);
         try {
             s.clear();
             // Room A, 7 × 3 × 3, with a vent on its floor facing east, its pipe and cap behind it, a
@@ -174,7 +180,11 @@ public final class StationTests {
             s.settle(GasMutations.add(s.level, s.point(5, 2, 2), new GasParcel(Map.of(N2, 1.0), T), Site.SOURCE));
             s.empty(5, 2, 2);
             vent.network().gas().add(new GasParcel(Map.of(N2, 1000.0), T));
-            vent.command(VentSettings.blow(StandardAir.PRESSURE)); // as its GUI sets it
+            // With no controller, the vent's GUI sets it (CONT-014): blowing to 101.325 kPa.
+            menu = (VentMenu) vent.createMenu(1, hand.getInventory(), hand);
+            h.assertTrue(menu.clickMenuButton(hand, VentMenu.CYCLE_MODE), "the free vent refused its GUI");
+            h.assertValueEqual(vent.settings(), VentSettings.blow(StandardAir.PRESSURE), "the hand-set vent");
+            h.assertFalse(menu.controlled(), "the GUI shows a free vent controlled");
 
             // CONT-069: no controller, no power, beside a burning generator.
             s.cycles(4, vent, pump);
@@ -219,6 +229,15 @@ public final class StationTests {
 
             // CONT-041: Scrubbing orders the vent to blow to the target, and it does.
             h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the vent's settings in Scrubbing");
+
+            // CONT-014: the controller wins, and the GUI says so.
+            h.assertTrue(vent.controlled(), "the ordered vent isn't controlled");
+            h.assertValueEqual(menu.controller(), java.util.Optional.of(c.getBlockPos()), "the GUI's controller");
+            h.assertValueEqual(menu.mode(), VentMode.BLOW, "the GUI's order");
+            for (int id = VentMenu.CYCLE_MODE; id <= VentMenu.LAST_BUTTON; id++) {
+                h.assertFalse(menu.clickMenuButton(hand, id), "the controlled vent took button " + id);
+            }
+            h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the controlled vent after its GUI");
             double before = vent.network().gas().totalMoles();
             seconds(s, g, 3, c, vent, pump);
             double moved = moles(s.zone(5, 2, 2));
@@ -261,6 +280,7 @@ public final class StationTests {
         }
         AreaAirControllerBlockEntity controller = c;
         VentBlockEntity v = vent;
+        VentMenu gui = menu;
         h.runAfterDelay(DevicePower.LEASE_TICKS + 2L * AtmosTicks.PERIOD, () -> {
             try {
                 h.assertFalse(controller.powered(), "the controller has power with no generator");
@@ -277,6 +297,10 @@ public final class StationTests {
                         s.level.getBlockState(v.getBlockPos()).getValue(VentMode.PROPERTY),
                         VentMode.OFF,
                         "the unpowered vent's block state");
+                // With no orders coming, the vent is the player's again.
+                h.assertFalse(v.controlled(), "the vent stayed controlled with its controller unpowered");
+                h.assertTrue(gui.clickMenuButton(hand, VentMenu.CYCLE_MODE), "the freed vent refused its GUI");
+                h.assertValueEqual(v.settings().mode(), VentMode.SIPHON, "the freed vent's mode");
             } finally {
                 cleanup.run();
             }
@@ -352,7 +376,7 @@ public final class StationTests {
             CanisterBlockEntity oxygen = canister(s, 5, 1, 3, "oxygen", CanisterColor.BLUE);
             CanisterMenu menu = new CanisterMenu(
                     1, new SimpleContainerData(CanisterMenu.DATA_COUNT), ContainerLevelAccess.NULL, oxygen);
-            net.minecraft.world.entity.player.Player hand = h.makeMockPlayer(GameType.SURVIVAL);
+            Player hand = h.makeMockPlayer(GameType.SURVIVAL);
             for (int i = 0; i < 8; i++) {
                 h.assertTrue(menu.clickMenuButton(hand, CanisterMenu.RELEASE_DOWN_10), "turning the release down");
             }
