@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
+import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
@@ -34,6 +35,10 @@ public final class AtmosMenus {
 
     public static final Supplier<MenuType<GeneratorMenu>> GENERATOR =
             MENUS.register("generator", () -> IMenuTypeExtension.create(GeneratorMenu::new));
+
+    /** A heater's switch and setpoint (CONT-019). */
+    public static final Supplier<MenuType<HeaterMenu>> HEATER =
+            MENUS.register("heater", () -> new MenuType<>(HeaterMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -49,6 +50,9 @@ public final class AtmosBlocks {
     /** A standalone firelock, one block wide and two high (CONT-043). As hard as an iron door. */
     public static final DeferredBlock<FirelockBlock> FIRELOCK = BLOCKS.registerBlock(
             "firelock", FirelockBlock::new, metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
+
+    /** The heater (CONT-019). */
+    public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
 
     private AtmosBlocks() {}
 

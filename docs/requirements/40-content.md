@@ -689,13 +689,35 @@ whose charging was left open by D-68 (D-69).*
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, S-05
 
-A heater (293–573 K) and a freezer (73–293 K) shall move their network gas
-toward a setpoint.
+A heater shall hold the zone its air point is in at a setpoint (293–573 K):
+it shall heat its network gas as hot as the zone needs, up to 573 K, and add
+no heat once the zone is at or above the setpoint. With no zone at its air
+point, it shall move its network gas toward the setpoint. A freezer
+(73–293 K) shall move its network gas toward a setpoint.
 
 - **Rationale:** vg: vg's heater and freezer ranges ([vg
   §2](../research/vg-atmos-content.md#2-devices)).
-- **Verify:** A GameTest checks a heater and a freezer bring their network gas
-  to a setpoint.
+- **Verify:** A GameTest checks a heater holds a room at its setpoint, within
+  0.5 K and never above it, and brings its network gas to the setpoint with no
+  zone at its air point; and that a freezer brings its network gas to a
+  setpoint.
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177)):** the heater
+  regulates the room. Its setpoint is the temperature of the zone its air
+  point is in. Each atmos tick it reads that zone's temperature and heats its
+  network gas as hot as needed, up to 573 K, until the room reaches the
+  setpoint, and adds nothing at or above it, so it doesn't overshoot or
+  oscillate. When its air point isn't zoned (open air, unresolved or
+  paused), it moves its own gas toward the setpoint. Its GUI shows the room's
+  temperature beside the setpoint. The freezer was not part of this change.
+
+*2026-11-02: Built for the heater only, so this stays Accepted; the freezer
+is out of this round's scope (S-05 needs only the heater). The heater heats
+its network's gas toward the temperature at which the room and the network,
+mixed, would be at the setpoint, up to 573 K (architecture §11.5). Checked by
+`cont_019_room_target` (Unit),
+`cont_019_heater_heats_its_network_to_the_setpoint` and
+`s_05_heater_holds_a_room_at_its_setpoint` (GameTest).*
 
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Accepted` · Verify: Unit
@@ -707,6 +729,20 @@ A heater or freezer shall move up to 5 kW toward its setpoint, drawing
   §2](../research/vg-atmos-content.md#2-devices)); 5 kW is a gameplay value
   that warms a 27-block room by about 20 K in under 2 minutes.
 - **Verify:** A Unit test checks the heat moved per second never exceeds 5 kW.
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177)):** 5 kW stays, as
+  the default of a setting, `[power] heater_watts`. For rooms that lose more
+  than a heater can make up, such as stone in vacuum, the owner asked for
+  insulating walls instead: station walls and reinforced station walls
+  ([#179](https://github.com/west3436/zas-cubed/issues/179)).
+
+*2026-11-02: Built for the heater only, so this stays Accepted until the
+freezer exists. The heater moves at most `[power] heater_watts`, 5,000 W, and
+draws `[power] heater`, 60 FE/t, while on, in the auxiliary power group.
+Checked by
+`cont_087_never_more_than_5_kw` and `cont_087_limited_or_exact` (Unit),
+`cont_019_heater_heats_its_network_to_the_setpoint` and
+`cont_087_a_controller_powers_a_heater_in_its_zone` (GameTest).*
 
 #### CONT-105 · Igniter
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016

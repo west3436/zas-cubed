@@ -201,6 +201,8 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | Key | Default | Meaning |
 |---|---|---|
 | `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] heater` | `60` | What a heater draws while it is on, in FE/t, 0 to 100,000 (CONT-087) |
+| `[power] heater_watts` | `5000` | The most heat a heater adds, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops heaters heating |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
 | `[power] generator_output` | `40` | What the generator makes while it burns, in FE/t, 0 to 100,000 (CONT-061) |

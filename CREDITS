@@ -86,6 +86,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/firelock.json
 origin: original
 notes: The firelock's four facings, two halves, and closed, locked-down and open models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/heater.json
+origin: original
+notes: The heater's four facings, heating and idle, with the existing heater and heater_on models.
+
 path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_vent.json
 origin: original
 notes: GameTest stand-in for a vent (dev runs only), shown with the existing vent model.
