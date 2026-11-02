@@ -1537,6 +1537,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `firelock` | The firelock and its lockdown (§11.8) |
+| `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1898,3 +1900,53 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   change hook treats lighting it as combustion (CORE-056, FIRE-024), with
   nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
+
+### 11.8 Firelocks
+
+*Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
+`.firelock`: the standalone firelock only. A firelock over a door or an
+airlock is not built.*
+
+- **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
+  placed and broken as a door is: the item places both halves, either half
+  going takes the other, and only the lower half drops the item. Its
+  properties are `facing` (the way its passage runs), `half`, `open` and
+  `locked`, which picks the existing closed, locked-down and open models.
+  Redstone doesn't move it. It is in `#zas:zone_boundary`
+  (`data/zas/tags/block/zone_boundary.json` in `zas_atmos`).
+- **Its geometry.** The model draws the panel in the middle of the block,
+  which would seal no face, and the framework picks a boundary's faces from
+  the faces a block seals in one state but not the other (§4.7). So the
+  closed collision shape fills the passage from the face in front of it up to
+  the far side of the visible panel. Closed, it seals that one face; open, the
+  frame and lintel seal only the side faces and the top. The front face is
+  the boundary, in both states: the firelock's cells join the room behind it,
+  and opening or closing it never splits a zone (GEO-044). The outline shape
+  is the model's.
+- **Its work** (`FirelockBlockEntity`, an `AtmosDevice` on the lower half),
+  each atmos tick. It reads the cells in front of the panel and behind it. A
+  side that reads as unresolved changes nothing that step.
+  - **Alarm** (CONT-043). It is alarmed while a loaded, powered area air
+    controller at danger 2 covers either side. A controller covers a cell in
+    its own zone, or in the zone of a part linked to it with the multitool,
+    or, where that part's air point is unzoned, that very cell. The
+    controller records what it covers at each step
+    (`AreaAirControllerBlockEntity.covers`, `alarming`).
+  - **Closing.** When the alarm starts, an open firelock closes and records
+    that the alarm closed it. While the alarm holds, an opening by hand or
+    with a crowbar lasts `RECLOSE_STEPS` (5) atmos ticks, then the alarm
+    closes it again.
+  - **Reopening** (CONT-092). Once no covering controller is at danger 2, a
+    firelock the alarm closed opens, unless it is locked down: it then opens
+    when the lockdown ends. One closed by hand stays closed.
+  - **Lockdown** (CONT-093, `Lockdown`). A closed firelock is locked down
+    while the pressure difference across it is at least 25 kPa, or either
+    side is at least 323.15 K or at most 273.15 K. Its `locked` state shows
+    the warning model. By hand it then refuses to open and tells the player
+    why on the action bar.
+- **The crowbar** (`tool.CrowbarItem`, CONT-094). Used on either half, it
+  opens a closed firelock, locked down or not, and closes an open one.
+- **Saved:** the alarm, whether the alarm closed it, the re-close countdown
+  and the lockdown.
+- **Cost.** Each firelock scans its level's loaded devices for controllers
+  once a second, as a controller scans for its parts (§11.6).
