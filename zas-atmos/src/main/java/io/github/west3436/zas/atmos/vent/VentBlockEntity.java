@@ -144,12 +144,13 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
      */
     @Override
     public void ventOrder(VentOrder order) {
-        // The order doesn't say who sent it. The vent's power source is the controller that paid
-        // for it last; a controller orders its parts before it pays them, so on the first order
-        // there is none yet, and the controller shows as unknown until the next.
-        BlockPos from = power.source() instanceof net.minecraft.world.level.block.entity.BlockEntity be
-                ? be.getBlockPos()
-                : controller().orElse(null);
+        // An area air controller names itself on every order, the first included. An order with
+        // no sender falls back to the controller that paid for the vent last, if any.
+        BlockPos from = order.sender() != null
+                ? order.sender()
+                : power.source() instanceof net.minecraft.world.level.block.entity.BlockEntity be
+                        ? be.getBlockPos()
+                        : controller().orElse(null);
         control(from, order.on() ? VentSettings.blow(order.targetKpa()) : VentSettings.OFF);
     }
 

@@ -318,7 +318,7 @@ public final class ControllerTests {
                     ControllerMode.SCRUBBING, ControllerMode.REPLACEMENT, ControllerMode.PANIC, ControllerMode.OFF)) {
                 c.setMode(m);
                 s.cycle(c);
-                h.assertValueEqual(vent.last(), m.vent(p), m + ": the vent's order");
+                h.assertValueEqual(vent.last(), m.vent(p).from(c.getBlockPos()), m + ": the vent's order");
                 h.assertValueEqual(scrubber.last(), m.scrubber(p), m + ": the scrubber's order");
             }
             h.assertValueEqual(ControllerMode.SCRUBBING.vent(p), VentOrder.blow(101), "Scrubbing blows to 101 kPa");
@@ -326,13 +326,13 @@ public final class ControllerTests {
             c.setMode(ControllerMode.CYCLE);
             s.cycle(c);
             h.assertValueEqual(c.mode(), ControllerMode.CYCLE, "Cycle at 101 kPa");
-            h.assertValueEqual(vent.last(), VentOrder.OFF, "Cycle: the vent");
+            h.assertValueEqual(vent.last(), VentOrder.OFF.from(c.getBlockPos()), "Cycle: the vent");
             h.assertValueEqual(scrubber.last(), ScrubberOrder.PANIC, "Cycle: the scrubber");
 
             s.empty(2, 2, 2);
             s.cycle(c);
             h.assertValueEqual(c.mode(), ControllerMode.FILL, "Cycle once the room is empty");
-            h.assertValueEqual(vent.last(), VentOrder.blow(101), "Fill: the vent");
+            h.assertValueEqual(vent.last(), VentOrder.blow(101).from(c.getBlockPos()), "Fill: the vent");
             h.assertValueEqual(scrubber.last(), ScrubberOrder.OFF, "Fill: the scrubber");
 
             s.addKpa(2, 2, 2, StandardAir.NITROGEN, 90);
@@ -433,7 +433,8 @@ public final class ControllerTests {
             for (int i = 0; i < 4 && vent.orders.isEmpty(); i++) {
                 s.cycle(c);
             }
-            h.assertValueEqual(vent.orders, List.of(VentOrder.blow(101)), "the vent's orders");
+            h.assertValueEqual(vent.orders, List.of(VentOrder.blow(101).from(c.getBlockPos())), "the vent's orders");
+            h.assertValueEqual(vent.last().sender(), c.getBlockPos(), "the first order's sender");
             h.assertValueEqual(vent.power().draw(), TestParts.Kind.VENT.draw, "the vent's draw once on");
             h.assertTrue(vent.power().source() == c, "the vent wasn't powered on the tick it was switched on");
             h.assertValueEqual(
