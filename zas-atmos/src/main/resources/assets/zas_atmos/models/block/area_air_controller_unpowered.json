@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/area_air_controller",
+  "textures": {
+    "panel": "zas_atmos:block/area_air_controller_unpowered"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "zas_atmos:block/generator",
+  "textures": {
+    "gen": "zas_atmos:block/generator_lit",
+    "particle": "zas_atmos:block/generator_lit"
+  }
+}

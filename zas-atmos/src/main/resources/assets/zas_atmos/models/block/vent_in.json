@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/vent",
+  "textures": {
+    "front": "zas_atmos:block/vent_front_in"
+  }
+}
