@@ -1,5 +1,7 @@
 {
   "values": [
-    "zas_atmos:pipe"
+    "zas_atmos:pipe",
+    "zas_atmos:area_air_controller",
+    "zas_atmos:generator"
   ]
 }

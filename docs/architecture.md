@@ -1324,10 +1324,135 @@ canister, connector port and vent, and their GUIs.*
 
 ### 11.6 The area air controller
 
-*Reserved for the area air controller: sampling, danger levels, modes and its
-zone pin (CONT-040 to CONT-049, CONT-110).*
+Package `controller`. The block (`AreaAirControllerBlock`) is a wall panel:
+`facing` points out of the wall into the room, it needs a sturdy face behind
+it and drops when that goes. Its `status` property (`unpowered`, `safe`,
+`danger1`, `danger2`) picks the panel's model. The work is in
+`AreaAirControllerBlockEntity`, an `AtmosDevice` that does this each atmos
+tick, in order:
+
+1. **Fills its buffer** from the blocks next to it (§11.7).
+2. **Keeps its zone pinned** (CONT-110, API-050). It samples one point, the
+   middle of its own block, which is in front of the wall (`airPoint()`). Its
+   pin owner is `zas_atmos:area_air_controller/<x>_<y>_<z>`. It calls
+   `ZonePins.pin` when it hasn't pinned the zone at that point: on its first
+   step after loading, and whenever the point's zone isn't the one its last
+   pin named. So an open room is pinned again every second (outcome `OPEN`,
+   nothing forms) until its last block goes in, and then the zone forms on the
+   next step. Pins are idempotent, so a repeat costs one queued operation.
+   Only one pin is outstanding at a time. The block's `onRemove` calls
+   `ZonePins.unpin`, but a chunk unloading doesn't, so the pin stays with the
+   saved zone.
+3. **Pays its own draw**, `[power] area_air_controller` × 20 FE. If the buffer
+   can't, it is unpowered for the tick: danger drops to 0, it gives no orders
+   and powers nothing, and its parts stop when their leases run out (§11.3).
+4. **Rates the air** (CONT-040). The readings are pressure, temperature, each
+   listed gas's partial pressure, and the summed partial pressure of the rest,
+   each against a `Thresholds` (min2, min1, max1, max2; −1 disables a bound).
+   At or beyond min2 or max2 is danger 2, at or beyond min1 or max1 danger 1.
+   An open cell's ambient air is rated as well, so a controller in a vacuum
+   reports it. An unresolved sample changes nothing. Nitrogen is listed with
+   no bounds, so the filler gas isn't one of "the rest".
+5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
+   reading at once, and falls after 10 readings in a row below it (10 s) to
+   the highest of those readings.
+6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
+   becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
+   target.
+7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
+   whose air point is in its zone, and every part linked to it with the
+   multitool (CONT-042). It powers them (§11.7), then gives each `VentControl`
+   the mode's `VentOrder` and each `ScrubberControl` the mode's
+   `ScrubberOrder`, every tick.
+
+**Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
+Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the
+O₂ minimum and the temperature bounds, which would always trip in a room meant
+to be empty. Each controller holds its own copy. Editing it changes only that
+controller, and loading a shipped preset discards the edits. The **target**
+that vents blow to in Scrubbing, Replacement and Fill is the middle of the
+pressure's safe band, min1 to max1 (101 kPa for Human).
+
+| Mode | Scrubbers | Vents |
+|---|---|---|
+| Scrubbing | `SCRUB` CO₂ and `#zas:toxic` | `blow(target)` |
+| Replacement | `PANIC` | `blow(target)` |
+| Panic | `PANIC` | `OFF` |
+| Cycle | `PANIC`, then Fill below 5.07 kPa | `OFF` |
+| Fill | `OFF` | `blow(target)`, then Scrubbing at 95 % of target |
+| Off | `OFF` | `OFF` |
+
+**Device control.** `VentControl` and `ScrubberControl` are the controller's
+side of the vent and scrubber. The vent (#48) implements `VentControl` by
+mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
+blowing with external bound `t`. No device implements them yet; the
+GameTests use stand-ins (`gametest.TestParts`).
+
+**Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
+at danger 2. It powers the wall behind it strongly, as a lever does.
+
+**The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
+that controller's position and dimension on the stack. Used on a powered
+part, it links the part to the stored controller, or unlinks it if it was
+linked. Sneak-use in the air clears the selection. Links are positions saved
+with the controller, and a link whose block is no longer a powered part is
+dropped when its chunk is loaded.
+
+**GUI** (`ControllerMenu`, `ControllerSync`, CONT-049, CONT-074). The menu has
+no slots. Twice a second the server sends the viewer a `ControllerSync`
+payload: status, buffer, the last pin outcome, mode, preset, each reading's
+value, rating and bounds, and the parts it covers, each marked as in its zone,
+linked, or both, and whether it is powered. The screen's buttons are vanilla
+menu button clicks. Vanilla checks that the player is still near the
+controller, and `clickMenuButton` refuses any unknown id. Edits go through
+`Thresholds.with`, which clamps each bound to 0–5,066 and between its
+enabled neighbours. Nudging a disabled bound is refused. The screen is drawn
+with flat panels until the GUI art exists.
+
+**Saved:** buffer, mode, preset, danger state and links. The pin isn't saved;
+the controller pins again on its first step after loading.
+
+**Cost.** Each controller scans its level's loaded devices once a second and
+samples each one's air point. That is fine at R1's scale. A per-zone index
+can replace the scan if profiling asks for one.
+
+**Tests.** The pure parts (thresholds, presets, danger, modes, the power feed)
+have unit tests. The GameTests (`ControllerTests`, `GeneratorTests`) run each
+test within one game tick, as the framework's own world tests do. They step
+the controller and the parts directly and drive atmos ticks with the
+framework's `AtmosService.tickNow`. For that, and for the preset, the
+borrowed vacuum ambient and the published zones' pins, the `gametest` source
+set compiles against `:zas` and `:engine`. `main` still compiles against
+`zas-api` alone (CONT-095). The stand-ins in `gametest.TestParts` are a test
+vent, scrubber, pump and heater, one per priority group, and a test FE block.
+Like `TestDevice`, they never reach the jar.
 
 ### 11.7 Controller power
 
-*Reserved for the controller as the provider of §11.3: its buffer, the parts
-it powers and its priorities (CONT-062, CONT-064, CONT-068).*
+The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
+
+- **Buffer.** An `EnergyStore` of `[power] area_air_controller_buffer`
+  (10,000 FE). Each atmos tick, before anything else, it pulls from each of
+  the six neighbours' `Capabilities.EnergyStorage.BLOCK`, as much as fits. It
+  also exposes a receive-only FE capability, for cables that push. It never
+  gives FE out, so two controllers side by side don't trade.
+- **Feeding.** Parts that another provider already paid for this atmos tick
+  (`suppliedThisAtmosTick()`) are skipped. The rest are shared out by
+  `power.PowerFeed`, which is pure and unit-tested. Groups are served in
+  `PowerPriority` order. Within a group, each part whose `drawPerAtmosTick()`
+  fits what is left is paid and supplied. If any part of a group misses out,
+  the later groups get nothing that tick, so a cheap heater never runs while
+  a vent starves. A part drawing nothing is always supplied.
+- **The generator** (`power.GeneratorBlock`, `GeneratorBlockEntity`,
+  CONT-061, CONT-066, CONT-067). It is a plain ticking block entity, not an
+  `AtmosDevice`. Each game tick while it burns it makes `[power]
+  generator_output` (40) FE into its own store (`generator_buffer`, 8,000 FE).
+  It starts the next coal or charcoal (`#minecraft:coals`), which burns for
+  `generator_seconds_per_fuel` (80) seconds, only while the store has room. It
+  offers the store through an extract-only FE capability, and its fuel slot
+  through an item handler, so hoppers can feed it. Its `lit` property is true
+  while it burns. The block is in `#zas:combustion`
+  (`data/zas/tags/block/combustion.json` in `zas_atmos`), so the framework's
+  change hook treats lighting it as combustion (CORE-056, FIRE-024), with
+  nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
+  takes only fuel, and shows the burn time and stored FE.

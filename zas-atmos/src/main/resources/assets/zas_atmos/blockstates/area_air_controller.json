@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=north,status=unpowered": {
+      "model": "zas_atmos:block/area_air_controller_unpowered"
+    },
+    "facing=north,status=safe": {
+      "model": "zas_atmos:block/area_air_controller"
+    },
+    "facing=north,status=danger1": {
+      "model": "zas_atmos:block/area_air_controller_danger1"
+    },
+    "facing=north,status=danger2": {
+      "model": "zas_atmos:block/area_air_controller_danger2"
+    },
+    "facing=east,status=unpowered": {
+      "model": "zas_atmos:block/area_air_controller_unpowered",
+      "y": 90
+    },
+    "facing=east,status=safe": {
+      "model": "zas_atmos:block/area_air_controller",
+      "y": 90
+    },
+    "facing=east,status=danger1": {
+      "model": "zas_atmos:block/area_air_controller_danger1",
+      "y": 90
+    },
+    "facing=east,status=danger2": {
+      "model": "zas_atmos:block/area_air_controller_danger2",
+      "y": 90
+    },
+    "facing=south,status=unpowered": {
+      "model": "zas_atmos:block/area_air_controller_unpowered",
+      "y": 180
+    },
+    "facing=south,status=safe": {
+      "model": "zas_atmos:block/area_air_controller",
+      "y": 180
+    },
+    "facing=south,status=danger1": {
+      "model": "zas_atmos:block/area_air_controller_danger1",
+      "y": 180
+    },
+    "facing=south,status=danger2": {
+      "model": "zas_atmos:block/area_air_controller_danger2",
+      "y": 180
+    },
+    "facing=west,status=unpowered": {
+      "model": "zas_atmos:block/area_air_controller_unpowered",
+      "y": 270
+    },
+    "facing=west,status=safe": {
+      "model": "zas_atmos:block/area_air_controller",
+      "y": 270
+    },
+    "facing=west,status=danger1": {
+      "model": "zas_atmos:block/area_air_controller_danger1",
+      "y": 270
+    },
+    "facing=west,status=danger2": {
+      "model": "zas_atmos:block/area_air_controller_danger2",
+      "y": 270
+    }
+  }
+}
