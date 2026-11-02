@@ -1138,8 +1138,11 @@ Players are never pushed by the server: at each atmos tick each player near
 airflow gets an `AirflowSyncPayload` of the openings beside its zone, and the
 client pushes its own player with the same `Airflow.apply` from
 `PlayerTickEvent.Pre`; an `AirflowImpulsePayload` brings the player up to the
-flow's speed when it first takes hold (FLOW-009). Resistance (FLOW-012) waits
-for API-022; impact damage (FLOW-005) and block damage (FLOW-007) aren't done.
+flow's speed when it first takes hold (FLOW-009). An entity's airflow
+resistance r (FLOW-012, `WornProtection.airflowResistance`) scales the flow's
+speed where it is by (1 − r); a player's is worked out on the server and sent
+with its openings, as protection data isn't on the client. Impact damage
+(FLOW-005) and block damage (FLOW-007) aren't done.
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
@@ -1244,7 +1247,8 @@ runs none of it until LIFE-023.
   - **Sealed breathing** comes from the head slot or the entity itself
     (`WornProtection.sealedBreathing`), for internals.
   - **Airflow resistance** is the highest of the pieces' and the entity's own
-    (`WornProtection.airflowResistance`), for FLOW-012 to read.
+    (`WornProtection.airflowResistance`), which scales airflow's push
+    (FLOW-012).
   - **Gas filtering** is carried but not yet applied.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard

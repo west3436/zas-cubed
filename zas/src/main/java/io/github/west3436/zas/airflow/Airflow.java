@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.flow.FlowSettings;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
+import io.github.west3436.zas.life.WornProtection;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
@@ -26,6 +27,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
@@ -40,7 +42,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
- * Airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009, FLOW-011, FLOW-013, FLOW-014, FLOW-017):
+ * Airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009, FLOW-011 to FLOW-014, FLOW-017):
  * pressure differences push entities towards the lower-pressure side of each opening between
  * zones, or between a zone and the open air.
  *
@@ -54,12 +56,14 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       are found with the level's entity lookup, so the cost follows the entities near openings,
  *       not the zones' size (FLOW-006). At most {@code max_entities_per_tick} of them are moved;
  *       beyond that they take turns (FLOW-013). Each is pushed by {@link FlowField#push} at its
- *       class's threshold ({@link AirflowClass}), unless it is anchored (FLOW-004) or the
- *       atmosphere where it is is unresolved.
+ *       class's threshold ({@link AirflowClass}), scaled by (1 − r) for its airflow resistance r
+ *       ({@link #resistance}, FLOW-012), unless it is anchored (FLOW-004) or the atmosphere where
+ *       it is is unresolved.
  *   <li><b>Players</b> move on their own client, so a server push would rubber-band. Instead, each
  *       atmos tick the server sends each player the openings within reach on edges beside the
- *       player's zone ({@link AirflowSyncPayload}), and the client pushes its own player every
- *       game tick with the same code ({@link #apply}, FLOW-017). When the flow first takes hold
+ *       player's zone ({@link AirflowSyncPayload}), with the player's resistance, and the client
+ *       pushes its own player every game tick with the same code ({@link #apply}, FLOW-017).
+ *       When the flow first takes hold
  *       of a player, the server also sends a one-off impulse ({@link AirflowImpulsePayload},
  *       FLOW-009).
  * </ul>
@@ -133,21 +137,37 @@ public final class Airflow {
     }
 
     /**
+     * An entity's airflow resistance, 0 to 1 (FLOW-012): from its worn pieces and its own life
+     * support ({@link WornProtection#airflowResistance}), 0 for an entity that isn't living. Server
+     * thread: protection data is only on the server, so a player's client is sent its resistance.
+     */
+    public static double resistance(Entity e) {
+        return e instanceof LivingEntity living ? WornProtection.airflowResistance(living) : 0;
+    }
+
+    /** {@link #apply(Entity, FlowField, long, double, FlowSettings, double)} with no resistance. */
+    public static Vec3 apply(Entity e, FlowField field, long zone, double threshold, FlowSettings settings) {
+        return apply(e, field, zone, threshold, settings, 0);
+    }
+
+    /**
      * Pushes an entity for one game tick: the change of velocity from {@link FlowField#push} at
      * its centre, unless it is anchored. The server calls it for entities, and the client for its
      * own player, with {@link FlowField#ANY_ZONE} (FLOW-017).
      *
      * @param zone the entity's zone, {@link FlowEdge#AMBIENT} or {@link FlowField#ANY_ZONE}
      * @param threshold the least difference that moves it, kPa
+     * @param resistance its airflow resistance, 0 to 1, which scales the push by (1 − r) (FLOW-012)
      * @return the change of velocity, or null for none
      */
-    public static Vec3 apply(Entity e, FlowField field, long zone, double threshold, FlowSettings settings) {
+    public static Vec3 apply(
+            Entity e, FlowField field, long zone, double threshold, FlowSettings settings, double resistance) {
         if (field.isEmpty() || anchored(e)) {
             return null;
         }
         Vec3 c = e.getBoundingBox().getCenter();
         Vec3 v = e.getDeltaMovement();
-        double[] d = field.push(c.x, c.y, c.z, v.x, v.y, v.z, zone, threshold, settings);
+        double[] d = field.push(c.x, c.y, c.z, v.x, v.y, v.z, zone, threshold, settings, resistance);
         if (d == null) {
             return null;
         }
@@ -267,7 +287,7 @@ public final class Airflow {
             }
             long zone = zoneOf(level, d, table, e.getBoundingBox().getCenter());
             if (zone != UNRESOLVED) {
-                apply(e, st.field, zone, cls.threshold(), s);
+                apply(e, st.field, zone, cls.threshold(), s, resistance(e));
             }
         }
     }
@@ -314,10 +334,12 @@ public final class Airflow {
             near = near.subList(0, AirflowSyncPayload.MAX_OPENINGS);
         }
         int valid = ZasServerConfig.scheduler().periodTicks() * 2 + 20;
-        send(player, new AirflowSyncPayload(level.dimension().location(), s, cls.threshold(), valid, near));
+        double r = resistance(player);
+        send(player, new AirflowSyncPayload(level.dimension().location(), s, cls.threshold(), r, valid, near));
         st.synced.add(id);
         FlowSettings onset = new FlowSettings(s.range(), s.speedAtOneAtm(), s.maxSpeed(), 1);
-        double[] flow = anchored(player) ? null : st.field.push(c.x, c.y, c.z, 0, 0, 0, zone, cls.threshold(), onset);
+        double[] flow =
+                anchored(player) ? null : st.field.push(c.x, c.y, c.z, 0, 0, 0, zone, cls.threshold(), onset, r);
         if (flow == null) {
             st.pushed.remove(id);
         } else if (st.pushed.add(id)) {

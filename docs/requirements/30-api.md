@@ -567,7 +567,7 @@ entities. Every part defaults to giving nothing. The parts are `minPressure`,
 honoured (LIFE-020, LIFE-025). Sealed breathing is read
 (`WornProtection.sealedBreathing`) for the internals still to come. An
 entity's airflow resistance, the highest of its pieces' and its own, can be
-read (`WornProtection.airflowResistance`), but FLOW-012 doesn't apply it yet.
+read (`WornProtection.airflowResistance`), and airflow applies it (FLOW-012).
 Gas filtering is carried for the gas mask but not applied. Breathable gas from
 an internal supply comes with internals. It stays Accepted until those are
 honoured. `life_020_suited_and_helmetless_players_in_vacuum`,

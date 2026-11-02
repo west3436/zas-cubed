@@ -640,6 +640,10 @@ such as a painting or a display entity, is never moved. The shipped tags:
 Packs add to them the usual way; the tags apply from the next game tick after
 `/reload`.
 
+A worn item's `airflow_resistance` r ([Protection](#protection)) scales the
+push on its wearer by (1 − r), whatever the class: at 1 the wearer isn't moved
+(FLOW-012).
+
 ## Damage types
 
 Each hazard deals its own damage type, data in `data/zas/damage_type/`

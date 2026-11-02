@@ -22,6 +22,7 @@ public final class AirflowReceiver {
     private FlowField field = FlowField.EMPTY;
     private FlowSettings settings = FlowSettings.DEFAULT;
     private double threshold = Double.POSITIVE_INFINITY;
+    private double resistance;
     private ResourceLocation dimension;
     private int ticksLeft;
 
@@ -30,6 +31,7 @@ public final class AirflowReceiver {
         field = FlowField.ofOpenings(p.openings());
         settings = p.settings();
         threshold = p.threshold();
+        resistance = p.resistance();
         dimension = p.dimension();
         ticksLeft = field.isEmpty() ? 0 : p.validTicks();
     }
@@ -59,7 +61,7 @@ public final class AirflowReceiver {
         if (!player.level().dimension().location().equals(dimension)) {
             return null;
         }
-        return Airflow.apply(player, field, FlowField.ANY_ZONE, threshold, settings);
+        return Airflow.apply(player, field, FlowField.ANY_ZONE, threshold, settings, resistance);
     }
 
     static void handleSync(AirflowSyncPayload payload, IPayloadContext context) {

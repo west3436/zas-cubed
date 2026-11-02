@@ -22,6 +22,8 @@ import net.minecraft.resources.ResourceLocation;
  * @param dimension the dimension they are in; the client ignores them in any other
  * @param settings the force model
  * @param threshold the least difference that moves this player, kPa
+ * @param resistance the player's airflow resistance, 0 to 1 (FLOW-012), from its worn pieces when
+ *     sent; the client can't work it out, as protection data is only on the server
  * @param validTicks game ticks the client keeps them if no newer payload comes
  * @param openings the openings within reach of the player
  */
@@ -29,6 +31,7 @@ public record AirflowSyncPayload(
         ResourceLocation dimension,
         FlowSettings settings,
         double threshold,
+        double resistance,
         int validTicks,
         List<FlowField.Opening> openings)
         implements CustomPacketPayload {
@@ -40,6 +43,9 @@ public record AirflowSyncPayload(
     public static final int MAX_OPENINGS = 512;
 
     public AirflowSyncPayload {
+        if (!(resistance >= 0 && resistance <= 1)) {
+            throw new IllegalArgumentException("resistance not in 0 to 1: " + resistance);
+        }
         openings = List.copyOf(openings);
         if (openings.size() > MAX_OPENINGS) {
             throw new IllegalArgumentException("too many openings: " + openings.size());
@@ -48,7 +54,7 @@ public record AirflowSyncPayload(
 
     /** The payload that ends airflow on the client. */
     public static AirflowSyncPayload none(ResourceLocation dimension) {
-        return new AirflowSyncPayload(dimension, FlowSettings.DEFAULT, Double.POSITIVE_INFINITY, 0, List.of());
+        return new AirflowSyncPayload(dimension, FlowSettings.DEFAULT, Double.POSITIVE_INFINITY, 0, 0, List.of());
     }
 
     @Override
@@ -65,6 +71,7 @@ public record AirflowSyncPayload(
                 buf.writeDouble(s.maxSpeed());
                 buf.writeDouble(s.response());
                 buf.writeDouble(p.threshold());
+                buf.writeDouble(p.resistance());
                 VarInt.write(buf, p.validTicks());
                 VarInt.write(buf, p.openings().size());
                 for (FlowField.Opening o : p.openings()) {
@@ -82,6 +89,7 @@ public record AirflowSyncPayload(
                 FlowSettings settings =
                         new FlowSettings(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble());
                 double threshold = buf.readDouble();
+                double resistance = buf.readDouble();
                 int valid = VarInt.read(buf);
                 int n = VarInt.read(buf);
                 if (n < 0 || n > MAX_OPENINGS) {
@@ -98,6 +106,6 @@ public record AirflowSyncPayload(
                     double difference = buf.readFloat();
                     openings.add(new FlowField.Opening(hx, hy, hz, lx, ly, lz, difference, 0, 0));
                 }
-                return new AirflowSyncPayload(dimension, settings, threshold, valid, openings);
+                return new AirflowSyncPayload(dimension, settings, threshold, resistance, valid, openings);
             });
 }

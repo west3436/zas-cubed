@@ -15,6 +15,7 @@ import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.flow.FlowField;
 import io.github.west3436.zas.engine.flow.FlowSettings;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,8 +26,10 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -37,7 +40,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-014, FLOW-017).
+ * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017).
  *
  * <p>Each test runs within one game tick, so nothing moves the entities between the push and the
  * check: it drives atmos ticks itself, then one game tick of airflow ({@link Airflow#step}), and
@@ -414,6 +417,77 @@ public final class AirflowTests {
             h.assertFalse(client.active(), "the client kept airflow after it ended");
         }
         h.succeed();
+    }
+
+    /**
+     * Worn airflow resistance r scales the push by (1 − r) (FLOW-012). The GameTest's suit piece
+     * (r = 0.5) halves it and an anvil, given r = 1 by the test pack's protection data, stops it.
+     * The test checks both for mobs the server pushes beside a breach, and for players: the sync
+     * carries the resistance, the client's push uses it, and it scales the onset impulse.
+     */
+    @GameTest(template = "empty")
+    public static void flow_012_resistance_scales_the_push(GameTestHelper h) {
+        try (Site s = new Site(h, 117)) {
+            s.breach();
+            h.assertTrue(s.difference() >= AirflowClass.MOB.threshold(), "the breach is too weak: " + s.difference());
+
+            // Mobs, pushed by the server.
+            Zombie bare = s.spawn(EntityType.ZOMBIE, HOLE_X - 3);
+            Zombie half = s.spawn(EntityType.ZOMBIE, HOLE_X - 3);
+            half.setItemSlot(EquipmentSlot.FEET, new ItemStack(TestLifeSupport.item()));
+            Zombie still = s.spawn(EntityType.ZOMBIE, HOLE_X - 3);
+            still.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.ANVIL));
+            close(h, Airflow.resistance(bare), 0, "the bare zombie's resistance");
+            close(h, Airflow.resistance(half), 0.5, "the suited zombie's resistance");
+            close(h, Airflow.resistance(still), 1, "the anvil-shod zombie's resistance");
+            Airflow.step(s.r.level);
+            h.assertTrue(vx(bare) < -0.01, "the bare zombie wasn't pushed: " + vx(bare));
+            close(h, vx(half), vx(bare) / 2, "the suited zombie's push");
+            h.assertValueEqual(still.getDeltaMovement(), Vec3.ZERO, "the anvil-shod zombie");
+
+            // Players, pushed by their clients.
+            FakePlayer plain = s.player(HOLE_X + 3);
+            FakePlayer suited = s.player(HOLE_X + 3);
+            suited.setItemSlot(EquipmentSlot.FEET, new ItemStack(TestLifeSupport.item()));
+            FakePlayer shod = s.player(HOLE_X + 3);
+            shod.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.ANVIL));
+            Map<ServerPlayer, List<CustomPacketPayload>> sent = new HashMap<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) ->
+                    sent.computeIfAbsent(to, k -> new ArrayList<>()).add(p));
+            Vec3[] pushed = new Vec3[3];
+            AirflowImpulsePayload[] impulses = new AirflowImpulsePayload[3];
+            List<FakePlayer> players = List.of(plain, suited, shod);
+            double[] r = {0, 0.5, 1};
+            for (int i = 0; i < 3; i++) {
+                FakePlayer p = players.get(i);
+                Airflow.syncForTest(s.r.level, p);
+                AirflowSyncPayload sync = null;
+                for (CustomPacketPayload payload : sent.getOrDefault(p, List.of())) {
+                    if (payload instanceof AirflowSyncPayload x) {
+                        sync = x;
+                    } else if (payload instanceof AirflowImpulsePayload x) {
+                        impulses[i] = x;
+                    }
+                }
+                h.assertTrue(sync != null && !sync.openings().isEmpty(), "player " + i + " wasn't sent the breach");
+                close(h, sync.resistance(), r[i], "player " + i + "'s resistance sent");
+                AirflowReceiver client = new AirflowReceiver();
+                client.accept(sync);
+                pushed[i] = client.tick(p);
+            }
+            h.assertTrue(pushed[0] != null && pushed[0].x < -0.01, "the plain player's client didn't push it");
+            close(h, pushed[1].x, pushed[0].x / 2, "the suited player's push");
+            h.assertTrue(pushed[2] == null, "the anvil-shod player's client pushed it: " + pushed[2]);
+            h.assertValueEqual(shod.getDeltaMovement(), Vec3.ZERO, "the anvil-shod player");
+            h.assertTrue(impulses[0] != null, "no impulse for the plain player");
+            close(h, impulses[1].vx(), impulses[0].vx() / 2, "the suited player's impulse");
+            h.assertTrue(impulses[2] == null, "the anvil-shod player got an impulse: " + impulses[2]);
+        }
+        h.succeed();
+    }
+
+    private static void close(GameTestHelper h, double actual, double expected, String what) {
+        h.assertTrue(Math.abs(actual - expected) <= 1e-9, what + ": expected " + expected + ", got " + actual);
     }
 
     /**
