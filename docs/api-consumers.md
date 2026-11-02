@@ -69,12 +69,45 @@ if (!breath.isProtected()) {
   entity breathes, and with its eyes in water it drowns unless vanilla lets it
   breathe there, through Water Breathing, Conduit Power or a type that
   breathes underwater. Nothing harms it otherwise, so it is always protected.
-- **For now ZAS³ answers the same way.** The full verdict, from ZAS³'s
-  breathing, hazard and protection rules and the life-support capability,
-  comes with LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34) to
-  [#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022. Until
-  then the answer ignores the atmosphere, even in a vacuum. The details are in
+- **With ZAS³** it comes from ZAS³'s breathing, hazard and protection rules
+  and the life-support capability (below). Internals are still to come
+  ([#36](https://github.com/west3436/zas-cubed/issues/36)). The details are in
   architecture [§6.2](architecture.md#breathability-api-014).
+
+## Suits and life support
+
+An item that protects its wearer provides `ILifeSupport` (API-022) for
+`ILifeSupport.ITEM`. An entity with its own protection, such as a robot,
+provides it for `ILifeSupport.ENTITY`. Override only what it gives; every part
+defaults to nothing:
+
+```java
+@SubscribeEvent // on the mod bus
+static void capabilities(RegisterCapabilitiesEvent event) {
+    ILifeSupport suit = new ILifeSupport() {
+        @Override public double minPressure() { return 0; }        // to vacuum, kPa
+        @Override public double maxTemperature() { return 500; }   // K
+        @Override public boolean sealedBreathing() { return true; } // internals work
+    };
+    event.registerItem(ILifeSupport.ITEM, (stack, ctx) -> suit, MyItems.PRESSURE_HELMET.get());
+}
+```
+
+- **Parts:**
+  - the pressure range (`minPressure`, `maxPressure`, in kPa);
+  - the temperature range (`minTemperature`, `maxTemperature`, in K);
+  - `sealedBreathing` and `gasFiltering`, which count in the head slot only;
+  - `airflowResistance`, 0 to 1.
+- **Coverage.** A worn piece covers its armor slot's share of the body: by
+  default 0.3 for the head, 0.4 for the chest, 0.2 for the legs and 0.1 for the
+  feet. An entity's own life support covers all of it. The pieces rated for the
+  conditions add up to a coverage c. Then (1 − c⁵) of the pressure difference
+  from 1 atm reaches the wearer, and (1 − c) of temperature damage.
+- **Items you can't change** can get the same parts from a datapack instead
+  ([datapacks.md](datapacks.md#protection)).
+- **Threads:** ZAS³ calls it on the server thread, at each check (every 2 s by
+  default), so keep it cheap. Without ZAS³ the capabilities still exist, but
+  nothing reads them.
 
 ## Keeping a zone: pins
 

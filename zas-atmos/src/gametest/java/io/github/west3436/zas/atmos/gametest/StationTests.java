@@ -34,7 +34,9 @@ import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.life.Breathers;
 import java.util.List;
@@ -330,6 +332,10 @@ public final class StationTests {
      * vacuum ambient for the test, as the framework's S-01 does. It runs within one game tick: each
      * second burns the generator for 20 game ticks, steps every device in the End, then runs one
      * atmos tick.
+     *
+     * <p>Heat is off for the test: with no heater, the room's walls radiate its heat to the vacuum
+     * (HEAT-004), and it would cool by about 0.2 K/s, losing pressure. S-05 checks a heater holds
+     * a room's temperature.
      */
     @GameTest(template = "empty", batch = "zas_atmos_s01")
     public static void s_01_pressurise_station(GameTestHelper h) {
@@ -341,6 +347,7 @@ public final class StationTests {
         h.assertTrue(vacuum.isVacuum(), "zas_gametest:vacuum isn't a vacuum");
         Site s = new Site(h, end, 12);
         Ambients.overrideForTest(Level.END, vacuum);
+        ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
         try {
             s.clear();
             s.room(2, 6); // interior x 3–5, y 1–3, z 1–3
@@ -453,6 +460,7 @@ public final class StationTests {
         } finally {
             s.clear();
             Ambients.overrideForTest(Level.END, null);
+            ZasServerConfig.overrideHeatForTest(null);
         }
     }
 }

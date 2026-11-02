@@ -2,6 +2,7 @@ package io.github.west3436.zas.simulation;
 
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -162,6 +163,15 @@ public final class AtmosService {
     public CompletableFuture<MutationResult> remove(
             ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
         return dimensionFor(level).remove(pos, sub, moles, source);
+    }
+
+    /**
+     * Queues an addition ({@code add}) or removal of heat at sub-cell {@code sub} of a position, or
+     * with -1 its largest cell, for the next atmos tick (API-013).
+     */
+    public CompletableFuture<HeatResult> heat(
+            ServerLevel level, BlockPos pos, int sub, boolean add, double joules, SourceId source) {
+        return dimensionFor(level).heat(pos, sub, add, joules, source);
     }
 
     /**

@@ -84,13 +84,14 @@ public final class Breathers {
     private Breathers() {}
 
     /**
-     * Registers the attachment, the breathing listeners, respiration's flush and the hazard
-     * profiles. Called once, from the mod constructor.
+     * Registers the attachment, the breathing listeners, respiration's flush, the hazard profiles
+     * and the protection data. Called once, from the mod constructor.
      */
     public static void register(IEventBus modBus, IEventBus gameBus) {
         ATTACHMENTS.register(modBus);
         modBus.addListener(Breathers::registerPayloads);
         HazardProfiles.register(gameBus);
+        Protections.register(gameBus);
         gameBus.addListener(EventPriority.NORMAL, LivingBreatheEvent.class, Breathers::onBreathe);
         gameBus.addListener(EventPriority.NORMAL, LivingDrownEvent.class, Breathers::onDrown);
         gameBus.addListener((ServerTickEvent.Post e) -> {

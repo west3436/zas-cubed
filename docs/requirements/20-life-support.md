@@ -393,7 +393,7 @@ bridge to temperature mods, is deferred (see SPACE and future compat).
 ## Protection and internals
 
 #### LIFE-020 · Pressure protection
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-47 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-47 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 The effective pressure difference shall be |P − 101.325 kPa| × (1 − c⁵), where
 c is the coverage (LIFE-024) of worn pieces rated for that difference on that
@@ -407,8 +407,20 @@ Without a helmet, 83 % of the difference still applies.
 - **Verify:** Unit tests check the formula for coverage combinations; a
   GameTest checks a suited and a helmetless player in vacuum.
 
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)). `WornProtection` is
+an entity's shielding. A piece is rated for P below 1 atm if its lowest
+pressure is at most P, and above 1 atm if its highest is at least P; at exactly
+1 atm nothing is. The shares of the rated pieces give c, and a sum within 1e-9
+of 1 counts as 1, so a full suit lets nothing through. The 83 % follows from
+the formula: c is at most 0.7 without a helmet. A verdict lists `PRESSURE`
+wherever a piece is rated for the pressure. zas has no unit-test source set, so
+the formula's checks are a GameTest that runs no world:
+`life_020_pressure_formula`. `life_020_suited_and_helmetless_players_in_vacuum`
+checks the players.*
+
 #### LIFE-024 · Coverage weights
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 Armor slots shall have these coverage weights by default (configurable):
 helmet 0.3, chestplate 0.4 (torso and arms), leggings 0.2, boots 0.1.
@@ -419,8 +431,15 @@ helmet 0.3, chestplate 0.4 (torso and arms), leggings 0.2, boots 0.1.
   into Minecraft's four slots.
 - **Verify:** Unit tests check the weights and that they sum to 1.
 
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)). The weights are
+`[protection] head_coverage`, `chest_coverage`, `legs_coverage` and
+`feet_coverage` in the server config, each 0 to 1 (`ProtectionConfig`).
+`life_024_coverage_weights` checks them and their sum, as a GameTest that runs
+no world.*
+
 #### LIFE-025 · Thermal protection
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-47
 
 Temperature damage shall be multiplied by (1 − c), where c is the coverage of
 worn pieces whose thermal range includes the exposure temperature.
@@ -430,8 +449,16 @@ worn pieces whose thermal range includes the exposure temperature.
 - **Verify:** Unit tests check the multiplier; a GameTest checks partial suits
   at 450 K.
 
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)). A piece's thermal
+range is its lowest to highest temperature, and at exactly 293.15 K no piece
+counts. A verdict lists `THERMAL` wherever a piece's range holds the
+temperature. `life_025_partial_suits_at_450_k` checks a full suit, chest and
+legs, a helmet alone, and no suit. The multiplier is checked there too, not in
+a separate unit test.*
+
 #### LIFE-026 · Protection sources
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: API-022
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-022
 
 An item's protection shall come from its life-support capability (API-022),
 or else from data by item or tag: low- and high-pressure ratings, thermal
@@ -442,8 +469,20 @@ range, sealed breathing, gas filtering and airflow resistance.
 - **Verify:** A GameTest checks a capability item and a data-defined item both
   protect.
 
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)). The capability is
+`ILifeSupport.ITEM`, and `ILifeSupport.ENTITY` for an entity's own, which
+covers its whole body. The data is `data/<namespace>/zas/protection/*.json`
+([datapacks.md](../datapacks.md#protection)). Precedence: an item's own
+capability, then a file naming the item, then one naming a tag it is in. Files
+of the same kind go in file id order, and a second claim on an item is logged.
+Gas filtering is carried but not applied until the gas mask.
+`life_026_capability_and_data_items_protect` checks the capability, data by
+item and by tag, the precedence, an entity's own, and the invalid and duplicate
+files.*
+
 #### LIFE-027 · Vanilla armor
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-47
 
 Vanilla armor shall protect against heat only, up to 400 K. It has no cold
 protection, no pressure rating and no seal, so it can't be used with
@@ -452,6 +491,14 @@ internals.
 - **Rationale:** Decision: D-47.
 - **Verify:** Inspect the data; a GameTest checks diamond armor reduces burns
   at 380 K, not at 450 K or in the cold, and can't be used with internals.
+
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)).
+`data/zas/zas/protection/vanilla_armor.json` lists the 24 vanilla armor pieces
+and the turtle shell with `max_temperature_k` 400, and nothing else.
+`life_027_vanilla_armor_protects_against_heat_only` checks full diamond armor:
+no burns at 380 K, full burns at 450 K, full frostbite at 150 K, no pressure
+protection and no seal. Internals themselves come later in #36.*
 
 #### LIFE-021 · Internals need a seal
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, S-08, D-47

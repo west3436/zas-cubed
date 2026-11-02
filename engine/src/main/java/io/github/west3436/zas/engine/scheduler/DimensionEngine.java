@@ -12,6 +12,7 @@ import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.zone.Edge;
+import io.github.west3436.zas.engine.zone.MembershipListener;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
@@ -53,7 +54,9 @@ import java.util.TreeSet;
  *       waiting for classification is applied to its zone, the open air (CORE-053, CORE-057) or an
  *       unresolved region.
  *   <li>Exchange (CORE-031 to CORE-038, CORE-023, CORE-076).
- *   <li>to 8. Heat, hotspots, zone updates and garbage collection: R1, empty for now.
+ *   <li>Heat: conduction through zone boundaries, heat sources and radiation to a vacuum
+ *       ({@link Conduction}, HEAT-001 to HEAT-015).
+ *   <li>to 8. Hotspots, zone updates and garbage collection: R1, empty for now.
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
@@ -105,6 +108,9 @@ public final class DimensionEngine {
      * graph change by change, and published as immutable tables for the undo point and the snapshot.
      */
     private final MembershipTracker membership;
+
+    /** The heat phase, with each zone's cached heat paths (architecture §4.8). */
+    private final Conduction conduction;
 
     private AtmosSnapshot lastSnapshot;
 
@@ -160,7 +166,8 @@ public final class DimensionEngine {
                 settings.exchange(),
                 ConservationLedger.of(registry, config));
         this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
-        graph.setMembershipListener(membership);
+        this.conduction = new Conduction(graph, mirror, palette, space.naming(), membership);
+        graph.setMembershipListener(MembershipListener.both(membership, conduction));
         this.lastSnapshot = AtmosSnapshot.empty(registry);
     }
 
@@ -355,8 +362,11 @@ public final class DimensionEngine {
         phases.enter(Phase.EXCHANGE);
         graph.exchange();
 
-        // 5-8. R1.
+        // 5. Heat (HEAT-001 to HEAT-015).
         phases.enter(Phase.HEAT);
+        conduction.tick(batch.settings().heat(), batch.settings().exchange().periodSeconds(), ambient);
+
+        // 6-8. R1.
         phases.enter(Phase.HOTSPOTS);
         phases.enter(Phase.ZONE_UPDATES);
         phases.enter(Phase.GARBAGE_COLLECTION);
@@ -376,7 +386,7 @@ public final class DimensionEngine {
             if (opZone[i] != 0) {
                 int idx = undo.indexOf(opZone[i]);
                 int component = idx >= 0 ? componentOf[idx] : -1;
-                o = new OpOutcome(o.seq(), o.outcome(), o.zoneId(), o.moved(), o.temperature(), component);
+                o = o.inComponent(component);
                 if (component >= 0) {
                     zoneOps.put(o.seq(), ops.get(i));
                 }
@@ -490,6 +500,7 @@ public final class DimensionEngine {
             SectionSnapshot old = mirror.section(s.key());
             if (old == null) {
                 mirror.put(s);
+                conduction.sectionArrived(s.key());
                 addBorderCells(s.key(), toRefresh);
                 continue;
             }
@@ -527,6 +538,7 @@ public final class DimensionEngine {
             mirror.put(s);
             for (int index : changed) {
                 long block = blockAt(base, index);
+                conduction.blockChanged(block);
                 space.forEachCellAt(block, changedCells::add);
                 for (Face f : Face.values()) {
                     space.forEachCellAt(offset(block, f), toRefresh::add);
@@ -976,6 +988,9 @@ public final class DimensionEngine {
     }
 
     private OpOutcome apply(GasOp op, Target target, List<OpenAirEvent> events, long[] opZone, int index) {
+        if (op.kind().isHeat()) {
+            return applyHeat(op, target, opZone, index);
+        }
         double[] moved = new double[registry.size()];
         int n = Math.min(op.gasCount(), moved.length);
         switch (target.route()) {
@@ -1047,6 +1062,60 @@ public final class DimensionEngine {
     }
 
     /**
+     * Adds or removes heat (API-013). In a zone, added heat raises its temperature by ΔE/C, and
+     * removed heat lowers it, never below the temperature floor, so less may be delivered; a
+     * request the mixture rejects (a temperature that would overflow) applies nothing. At an open
+     * point the ambient takes or supplies it all, unchanged (HEAT-010); at a paused zone or an
+     * unresolved region it is voided or supplied as gas is (GEO-036, GEO-038), up to what a paused
+     * zone holds above the floor. Energy has no ledger: only moles are conserved by the checker
+     * (CORE-073).
+     *
+     * @return the outcome, or null while the operation waits for classification
+     */
+    private OpOutcome applyHeat(GasOp op, Target target, long[] opZone, int index) {
+        double[] none = new double[registry.size()];
+        boolean add = op.kind() == GasOp.Kind.ADD_HEAT;
+        double joules = op.energy();
+        switch (target.route()) {
+            case WAIT:
+                return null;
+            case ZONE: {
+                Zone zone = graph.zoneOf(target.cell());
+                GasMixture m = zone.mixture();
+                if (zone.isPaused()) {
+                    double supplied = add ? joules : Math.min(joules, heatAboveFloor(m));
+                    return new OpOutcome(
+                            op.seq(), OpOutcome.Outcome.UNRESOLVED, zone.id(), none, m.temperature(), -1, supplied);
+                }
+                opZone[index] = zone.id();
+                double applied = add ? m.addThermalEnergy(joules) : m.removeThermalEnergy(joules);
+                if (applied > 0) {
+                    graph.markChanged(zone);
+                }
+                return new OpOutcome(op.seq(), OpOutcome.Outcome.ZONE, zone.id(), none, m.temperature(), -1, applied);
+            }
+            case UNRESOLVED:
+                return new OpOutcome(op.seq(), OpOutcome.Outcome.UNRESOLVED, 0, none, 0, -1, joules);
+            case AMBIENT:
+                return new OpOutcome(
+                        op.seq(),
+                        OpOutcome.Outcome.AMBIENT,
+                        0,
+                        none,
+                        graph.ambient().temperature(),
+                        -1,
+                        joules);
+            default:
+                throw new AssertionError(target.route());
+        }
+    }
+
+    /** The heat a mixture holds above the temperature floor, in J. */
+    private double heatAboveFloor(GasMixture m) {
+        return Math.max(0, (m.temperature() - config.temperatureFloor()) * m.heatCapacity());
+    }
+
+    /**
      * An operation on a paused zone (GEO-036, GEO-038): an addition is voided, and a removal is
      * supplied at the zone's last-known state, up to what it holds, without depleting it. Neither
      * changes the zone; both are kept by the ledger.
@@ -1114,7 +1183,8 @@ public final class DimensionEngine {
 
     /**
      * Groups the zones changed since the undo point: zones whose mixture differs, or that were
-     * destroyed (merged or dissolved), linked when they shared a zone edge at the undo point.
+     * destroyed (merged or dissolved), linked when they shared a zone edge at the undo point or
+     * exchanged heat through a wall this tick.
      * Merges need such an edge, and a zone that absorbs another inherits its edges, so every
      * chain of exchange stays inside one component.
      */
@@ -1144,6 +1214,15 @@ public final class DimensionEngine {
                 }
             }
         }
+        // Zones that exchanged heat through a wall are linked too, so a rejection restores both
+        // and energy stays conserved (HEAT-001, architecture §4.8).
+        for (long[] pair : conduction.exchanged()) {
+            int i = undo.indexOf(pair[0]);
+            int j = undo.indexOf(pair[1]);
+            if (i >= 0 && j >= 0 && changed[i] && changed[j]) {
+                union(parent, i, j);
+            }
+        }
         Arrays.fill(componentOf, -1);
         List<List<Integer>> groups = new ArrayList<>();
         int[] groupOfRoot = new int[n];
@@ -1160,6 +1239,20 @@ public final class DimensionEngine {
             groups.get(groupOfRoot[r]).add(i);
             componentOf[i] = groupOfRoot[r];
         }
+        // Each component's operations, in one pass over them: with heat, every zone in a vacuum
+        // changes each tick, so there can be as many components as zones.
+        List<List<Long>> seqsOf = new ArrayList<>(groups.size());
+        for (int g = 0; g < groups.size(); g++) {
+            seqsOf.add(new ArrayList<>());
+        }
+        for (int i = 0; i < ops.size(); i++) {
+            if (opZone[i] != 0) {
+                int idx = undo.indexOf(opZone[i]);
+                if (idx >= 0 && componentOf[idx] >= 0) {
+                    seqsOf.get(componentOf[idx]).add(ops.get(i).seq());
+                }
+            }
+        }
         List<Component> out = new ArrayList<>(groups.size());
         for (int g = 0; g < groups.size(); g++) {
             List<Integer> members = groups.get(g);
@@ -1170,16 +1263,7 @@ public final class DimensionEngine {
                 ids[k] = undo.zoneIds[i];
                 undo.addChunks(i, chunks);
             }
-            List<Long> seqs = new ArrayList<>();
-            for (int i = 0; i < ops.size(); i++) {
-                if (opZone[i] != 0) {
-                    int idx = undo.indexOf(opZone[i]);
-                    if (idx >= 0 && componentOf[idx] == g) {
-                        seqs.add(ops.get(i).seq());
-                    }
-                }
-            }
-            out.add(new Component(g, ids, sortedArray(chunks), toArray(seqs)));
+            out.add(new Component(g, ids, sortedArray(chunks), toArray(seqsOf.get(g))));
         }
         return out;
     }

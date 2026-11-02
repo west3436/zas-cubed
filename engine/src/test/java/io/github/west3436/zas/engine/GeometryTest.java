@@ -188,6 +188,87 @@ class GeometryTest {
         assertThrows(IllegalArgumentException.class, () -> Geometry.declared(EnumSet.noneOf(Face.class), 1001, 0));
     }
 
+    /** HEAT-011, HEAT-012: a full block is a wall layer on every line; air is none. */
+    @Test
+    void heat_011_through_lines_of_full_blocks_and_air() {
+        Geometry solid = GeometryDeriver.derive(box(0, 0, 0, 16, 16, 16));
+        Geometry air = GeometryDeriver.derive(new BitSet());
+        for (Face f : Face.values()) {
+            assertTrue(solid.through(f).isFull(), f.name());
+            assertTrue(air.through(f).isEmpty(), f.name());
+            assertTrue(air.cell(0).shield(f).isEmpty(), f.name());
+        }
+        assertEquals(Geometry.SOLID, solid);
+        assertEquals(Geometry.AIR, air);
+    }
+
+    /**
+     * HEAT-011: a bottom slab's lines from below cross its solid half before reaching its cell,
+     * and the lines along its solid half cross the whole block.
+     */
+    @Test
+    void heat_011_slab_shields_and_through_lines() {
+        Geometry slab = bottomSlab();
+        Geometry.Cell cell = slab.cell(0);
+        assertTrue(cell.shield(Face.DOWN).isFull(), "every line from below crosses the slab");
+        assertTrue(cell.shield(Face.UP).isEmpty(), "lines from above reach the cell at once");
+        assertTrue(slab.through(Face.DOWN).isEmpty());
+        for (Face f : new Face[] {Face.NORTH, Face.SOUTH, Face.WEST, Face.EAST}) {
+            assertEquals(128, slab.through(f).cardinality(), f.name() + ": the solid half");
+            assertTrue(cell.shield(f).isEmpty(), f.name());
+            assertFalse(slab.through(f).intersects(cell.footprint(f)), f.name());
+        }
+    }
+
+    /**
+     * HEAT-013: a pane's two halves face each other across its whole cross-section, and the lines
+     * along its post cross it without meeting a cell.
+     */
+    @Test
+    void heat_013_pane_partition_and_post() {
+        Geometry pane = straightPane();
+        assertEquals(1, pane.partitions().size());
+        Geometry.Partition p = pane.partitions().get(0);
+        assertEquals(0, p.first());
+        assertEquals(1, p.second());
+        assertEquals(256, p.lines());
+        assertEquals(1.0, p.area());
+        assertEquals(32, pane.through(Face.NORTH).cardinality(), "the post's lines along z");
+        assertEquals(32, pane.through(Face.UP).cardinality(), "the post's lines along y");
+        assertTrue(pane.through(Face.WEST).isEmpty(), "lines across the pane meet its cells");
+        assertTrue(pane.cell(1).shield(Face.WEST).isEmpty(), "lines from the west meet the west half first");
+        // The cross pane's four quarters: each faces two others across the post's arms.
+        Geometry cross = crossPane();
+        assertEquals(4, cross.cellCount());
+        assertEquals(4, cross.partitions().size());
+    }
+
+    /** A declared geometry's cell lies behind each sealed face (GEO-005, HEAT-011). */
+    @Test
+    void heat_011_declared_geometry_shields() {
+        Geometry g = Geometry.declared(EnumSet.of(Face.NORTH, Face.SOUTH), 250, 0);
+        assertTrue(g.cell(0).shield(Face.NORTH).isFull());
+        assertTrue(g.cell(0).shield(Face.EAST).isEmpty());
+        assertTrue(Geometry.declared(EnumSet.allOf(Face.class), 0, 0)
+                .through(Face.UP)
+                .isFull());
+    }
+
+    /** HEAT-002, HEAT-003: heat data and the heat-source flag. */
+    @Test
+    void heat_002_thermal_data() {
+        Geometry wool = Geometry.SOLID.withThermal(0.04, Double.NaN);
+        assertEquals(0.04, wool.transmittance());
+        assertFalse(wool.isHeatSource());
+        assertFalse(wool.equals(Geometry.SOLID), "heat data distinguishes palette entries");
+        Geometry lava = Geometry.AIR.withThermal(Double.NaN, 1450);
+        assertTrue(lava.isHeatSource());
+        assertTrue(lava.hasFlag(Geometry.FLAG_HEAT_SOURCE));
+        assertFalse(lava.withThermal(Double.NaN, Double.NaN).hasFlag(Geometry.FLAG_HEAT_SOURCE));
+        assertThrows(IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(0, Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(Double.NaN, -1));
+    }
+
     /** Zone-boundary flags are per face; {@link Geometry#FLAG_ZONE_BOUNDARY} is all six (GEO-007). */
     @Test
     void geo_007_boundary_faces() {

@@ -28,6 +28,11 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
+| `[heat] enabled` | `true` | Whether zones conduct heat through their walls, to and from heat sources, and radiate it to a vacuum (HEAT-001, HEAT-004) |
+| `[heat] fallback_transmittance` | `1.7` | U in W/(m²·K) per block-thick layer of a block with none in a datapack, 0.001 to 1,000,000 (HEAT-015). 1.7 is stone's |
+| `[heat] wall_thickness` | `3` | How many blocks deep a wall is searched for the space on its far side, 1 to 16 (HEAT-011). Past that, heat goes to the ground at the ambient temperature |
+| `[heat] near_vacuum_percent` | `1.0` | A zone thinner than this percentage of standard air's density neither conducts nor radiates (HEAT-008) |
+| `[heat] emissivity` | `0.9` | The emissivity of a wall's outer surface facing a vacuum, 0 to 1 (HEAT-004) |
 | `[breathing] check_interval_ticks` | `40` | Game ticks between each living entity's breath and hazard checks, 1 to 1,200 (LIFE-007). Rates are per second, so the interval changes smoothness and cost, not how fast anything happens |
 | `[breathing] max_checks_per_tick` | `100` | The most breath and hazard checks a server tick runs, over every dimension, 1 to 100,000 (LIFE-038). A check due beyond it waits for the next tick |
 | `[breathing] oxygen_minimum_kpa` | `16.0` | The O₂ partial pressure of the breath below which the air meter drains (LIFE-003) |
@@ -37,6 +42,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[hazards] dimension_overrides` | `[]` | Per-dimension overrides of the hazards' switches and scales (LIFE-036), [below](#hazards) |
 | `[hazards.<hazard>] enabled` | `true` | Whether the hazard harms anything (LIFE-031) |
 | `[hazards.<hazard>] scale` | `1.0` | Multiplies the hazard's damage, 0 to 1,000 (LIFE-031) |
+| `[protection] head_coverage`, `chest_coverage`, `legs_coverage`, `feet_coverage` | `0.3`, `0.4`, `0.2`, `0.1` | The share of the body each armor slot covers, 0 to 1 (LIFE-024). Worn pieces rated for the pressure or temperature add up their slots' shares to the coverage c: (1 − c⁵) of the pressure difference from 1 atm and (1 − c) of temperature damage still reach the wearer (LIFE-020, LIFE-025). The defaults add up to 1 |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
@@ -45,9 +51,11 @@ land in R1. NeoForge reloads the file when it changes on disk, so an edit made
 while the server runs applies without a restart: the preset, its options and
 the excluded dimensions from the next lookup (for the simulation, its next
 atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
-the thread mode when a dimension's simulation starts, `[breathing]` and
-`[hazards]` from each entity's next check, and `[commands]` and `[profiling]`
-at once. OPS-016's guarantee that every server
+`[heat]` from the next atmos tick (a change to the fallback or the thickness
+finds every wall's paths again), the thread mode when a dimension's simulation
+starts, `[breathing]`, `[hazards]` and `[protection]` from each entity's next
+check, and `[commands]` and `[profiling]` at once. OPS-016's guarantee that
+every server
 setting applies without a restart is R1.
 
 ### Hazards
