@@ -1516,7 +1516,10 @@ the cell in front of its grille).
     vent *controlled* for `DevicePower.LEASE_TICKS` (two atmos ticks). While
     it is controlled, `setByHand`, which the GUI uses, refuses settings, and
     the GUI shows the controller and its order with its buttons off (CONT-014).
-    When the orders stop, the vent is set by hand again. The menu syncs the
+    When the orders stop, the vent is set by hand again. While it is
+    controlled, its saved data, as `/data get block` shows it, has
+    `Controlled: 1b` and `Controller: [I; x, y, z]`. Neither is loaded
+    back, since the orders come again after a reload. The menu syncs the
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
