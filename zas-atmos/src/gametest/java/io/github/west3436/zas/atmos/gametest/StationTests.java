@@ -487,7 +487,8 @@ public final class StationTests {
      * player off internals, it breathes the tank and takes no toxic gas, and its exhaled breath
      * reaches the room. Then, with an emergency tank that holds only a few seconds above its
      * distribution pressure, the tank runs dry within a few checks: the player breathes the vacuum,
-     * hypoxia begins and its air meter drains.
+     * hypoxia begins, its air meter drains and then it takes hypoxia damage. The player is the
+     * shared hurtable test player, so the harm it takes, and doesn't, is real.
      *
      * <p>Like S-01, the End borrows the vacuum ambient, and heat is off. Checks are 2 s apart.
      */
@@ -514,7 +515,7 @@ public final class StationTests {
             s.ticks(2);
             s.close(s.zone(10, 2, 2).mixture().partialPressure(CO), 1.0, 1e-9, "the room's CO");
 
-            FakePlayer p = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_08"));
+            FakePlayer p = TestPlayers.hurtable(end, "zas_s_08");
             p.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 2))); // in the open vacuum
             ItemStack chest = new ItemStack(AtmosItems.SOFTSUIT_CHESTPLATE.get());
             SuitItem.setTank(chest, new ItemStack(AtmosItems.OXYGEN_TANK.get()));
@@ -561,6 +562,8 @@ public final class StationTests {
             }
             s.ticks(2);
             h.assertTrue(s.zone(10, 2, 2).mixture().moles(CO2) > 0, "the exhaled breath didn't reach the room");
+            h.assertValueEqual(p.getHealth(), p.getMaxHealth(), "the player's health on internals");
+            h.assertTrue(p.getActiveEffects().isEmpty(), "the player's effects on internals: " + p.getActiveEffects());
 
             // An emergency tank a few seconds from its distribution pressure runs dry in the vacuum.
             p.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 2)));
@@ -570,21 +573,30 @@ public final class StationTests {
             SuitItem.setTank(p.getItemBySlot(EquipmentSlot.CHEST), small);
             int dry = -1;
             for (int i = 1; i <= 6 && dry < 0; i++) {
-                Breathers.checkAt(p, t0 + 40L * ++k);
-                if (Breathing.of(p).source() != BreathSource.INTERNALS) {
+                Breathability v = Breathers.checkAt(p, t0 + 40L * ++k).verdict();
+                if (v == null || v.source() != BreathSource.INTERNALS) {
                     dry = i;
                 }
             }
-            // 5 s above the floor: after three 2 s draws the tank is below it, so the verdict falls back.
-            h.assertTrue(dry == 3, "the tank ran dry after check " + dry + ", not the 3rd");
-            Breathability gasping = Breathing.of(p);
+            // 5 s above the floor: three 2 s draws take it below, and the 4th check breathes the vacuum.
+            h.assertTrue(dry == 4, "the tank ran dry at check " + dry + ", not the 4th");
+            Breathability gasping = Breathers.checkAt(p, t0 + 40L * k).verdict();
             h.assertValueEqual(gasping.source(), BreathSource.ATMOSPHERE, "the breath once the tank is dry");
             h.assertValueEqual(gasping.reason(), BreathReason.LOW_OXYGEN, "hypoxia once the tank is dry");
+            // The air meter drains at the underwater rate, then hypoxia hurts (LIFE-003).
             int air0 = p.getAirSupply();
             for (int i = 0; i < AtmosTicks.PERIOD; i++) {
                 p.baseTick();
             }
             h.assertTrue(p.getAirSupply() < air0, "the air meter didn't drain: " + p.getAirSupply());
+            for (int i = 0; i < 400 && p.getHealth() >= p.getMaxHealth(); i++) {
+                p.baseTick();
+            }
+            h.assertTrue(p.getHealth() < p.getMaxHealth(), "the dry tank's hypoxia did no harm");
+            h.assertTrue(
+                    p.getLastDamageSource() != null
+                            && p.getLastDamageSource().type().msgId().contains("hypoxia"),
+                    "the harm wasn't hypoxia: " + p.getLastDamageSource());
             h.succeed();
         } finally {
             s.clear();
