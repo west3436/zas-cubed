@@ -1127,8 +1127,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 [#35](https://github.com/west3436/zas-cubed/issues/35)): who breathes, the
 breath at the eyes, the O₂ minimum, the air meter, gas hazard profiles,
 respiration, and the pressure and temperature hazards with their settings.
-Internals and protection are
-[#36](https://github.com/west3436/zas-cubed/issues/36).*
+*Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
+protection and internals.*
 The package is `io.github.west3436.zas.life`, server thread only; the client
 runs none of it until LIFE-023.
 
@@ -1234,6 +1234,21 @@ runs none of it until LIFE-023.
   hit, so invulnerability ticks from another source mustn't swallow it, and
   protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
   `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
+- **Internals** (LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046).
+  `Internals` holds the switch, a saved entity attachment kept through death,
+  which a player toggles with a keybind (`Internals.TogglePayload`, client to
+  server; the answer goes to the action bar). An entity breathes from its
+  internals while they are on, its breathing is sealed, and the first internal
+  supply found delivers: in an armor slot, the chestplate's first (a suit's
+  tank slot), then the offhand, then the hotbar or a mob's main hand, then its
+  own life support. An `IInternalSupply` (API-022) delivers while its pressure
+  is at least its distribution pressure, and the breath is its mixture scaled
+  to that pressure. `BreathingRules.assess` then judges the O₂ and toxic gases
+  of that breath, with source `INTERNALS` and `SEALED_BREATHING` listed, and
+  the pressure and temperature of the air around as before. Each check draws
+  P_dist × 0.0625 L / (R · T) mol per second charged, turns up to respiration's
+  O₂ for those seconds into CO₂, and adds the rest at the eyes through
+  `addForLife`, in place of respiration's draw from the zone.
 - **Respiration** (LIFE-005, LIFE-042). A check adds the O₂ the breather used
   since the last, `respiration_multiplier` × 1 mol per hour, to its zone's
   draw. Breathing outside a zone (the ambient, a paused zone, an unresolved
@@ -1333,8 +1348,8 @@ the pressure and temperature hazards, listed as `LOW_PRESSURE`,
 breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
 *Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
 and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
-for the conditions. **Not yet built:** breathing from internals (LIFE-021,
-API-022) and gas filtering, so no verdict lists `SEALED_BREATHING` or
+for the conditions, and breathing from internals, listed as `SEALED_BREATHING`
+with source `INTERNALS`. **Not yet built:** gas filtering, so no verdict lists
 `GAS_FILTERING`.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
@@ -1530,14 +1545,15 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister item's `zas_atmos:gas`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure` and a suit chestplate's `zas_atmos:suit_tank`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
+| `gear` | The breathing gear (§11.8): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -1898,3 +1914,30 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   change hook treats lighting it as combustion (CORE-056, FIRE-024), with
   nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
+
+### 11.8 Breathing gear (CONT-030 to CONT-032, CONT-039, CONT-090)
+
+The gear gives ZAS³ its life support through `ILifeSupport.ITEM` (API-022),
+registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
+([Life support](#life-support-breathing)).
+
+- **Tanks** (`GasTankItem`). One class for the O₂, emergency O₂, air and empty
+  tanks, each with its volume and default distribution pressure. The gas is the
+  stack's `zas_atmos:gas`, as a canister item's; the O₂ and air tanks come
+  filled by default, the empty and emergency tanks empty. A tank's life support
+  is only an internal supply, which reads and changes the stack it is asked of.
+  Using a held tank opens `TankScreen`, which sends `TankSettings` (hand and
+  button id) to the server; the server checks both and clamps the pressure to
+  0–304 kPa (LIFE-044).
+- **Filling** (CONT-039). `CanisterBlock.useItemOn` with a tank calls
+  `CanisterBlockEntity.fillTank`: `CanisterRelease.moles` against the tank's
+  volume and pressure, taken from the canister's network and mixed into the
+  tank through a `GasStore`. A 70 L tank then becomes the kind of its contents
+  (`GasTankItem.ofItsKind`), keeping its components.
+- **Mask and suit** (`SuitItem`). Armor items whose life support is a fixed
+  rating: the breath mask only seals; each softsuit piece protects from 0 to
+  1 atm and 0 to 500 K, and the helmet seals. They have no durability.
+- **Tank slot** (CONT-090). The chestplate keeps one tank in
+  `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
+  right-clicks in an inventory, as a bundle's contents are. Its life support's
+  internal supply is that tank, written back to the chestplate after each draw.

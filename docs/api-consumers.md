@@ -70,9 +70,9 @@ if (!breath.isProtected()) {
   breathe there, through Water Breathing, Conduit Power or a type that
   breathes underwater. Nothing harms it otherwise, so it is always protected.
 - **With ZAS³** it comes from ZAS³'s breathing, hazard and protection rules
-  and the life-support capability (below). Internals are still to come
-  ([#36](https://github.com/west3436/zas-cubed/issues/36)). The details are in
-  architecture [§6.2](architecture.md#breathability-api-014).
+  and the life-support capability (below), and while a player breathes from
+  its internals the breath is its tank's gas, with source `INTERNALS`. The
+  details are in architecture [§6.2](architecture.md#breathability-api-014).
 
 ## Suits and life support
 
@@ -97,7 +97,16 @@ static void capabilities(RegisterCapabilitiesEvent event) {
   - the pressure range (`minPressure`, `maxPressure`, in kPa);
   - the temperature range (`minTemperature`, `maxTemperature`, in K);
   - `sealedBreathing` and `gasFiltering`, which count in the head slot only;
-  - `airflowResistance`, 0 to 1.
+  - `airflowResistance`, 0 to 1;
+  - `internalSupply`, a tank's gas for internals (below).
+- **Tanks.** An item that holds breathable gas returns an `IInternalSupply`
+  from `internalSupply()`: its `contents()` (a `GasMixture` with its volume),
+  its `distributionPressure()` in kPa, and `draw(moles)`, which takes gas out
+  and must change what `contents()` answers next. Internals look for one in the
+  armor slots (chest first, for a suit that carries a tank), the offhand and the
+  hotbar, and on the entity itself, and breathe from the first one found while
+  it holds at least its distribution pressure. A suit with a tank slot returns
+  the tank in it, and saves the draw back to itself.
 - **Coverage.** A worn piece covers its armor slot's share of the body: by
   default 0.3 for the head, 0.4 for the chest, 0.2 for the legs and 0.1 for the
   feet. An entity's own life support covers all of it. The pieces rated for the

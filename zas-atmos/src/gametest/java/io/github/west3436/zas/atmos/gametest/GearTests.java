@@ -84,10 +84,8 @@ public final class GearTests {
     /**
      * Each tank holds a real mixture in its volume (CONT-030): the O2 tank 17.5 mol of O2 in 70 L,
      * about 6 atm; the air tank air at 6 atm in 70 L; the emergency tank 2 L, crafted empty, and in
-     * the creative tab O2 at 3 atm; the empty tank 70 L of nothing. The distribution pressure
-     * defaults to 21.3 kPa for O2 and 101.3 kPa for air, and the settings screen's buttons move it
-     * within 0–304 kPa; the server refuses an unknown button or hand, or a hand without a tank
-     * (LIFE-044). Each tank is an internal supply, and a draw comes out of the stack.
+     * the creative tab O2 at 3 atm; the empty tank 70 L of nothing. Each tank is an internal
+     * supply, and a draw comes out of the stack.
      */
     @GameTest(template = "empty")
     public static void cont_030_tanks(GameTestHelper h) {
@@ -119,7 +117,36 @@ public final class GearTests {
         close(h, GasTankItem.contents(empty).volume(), 70, 0, "the empty tank's volume");
         h.assertTrue(GasTankItem.contents(empty).isEmpty(), "the empty tank isn't empty");
 
-        // LIFE-044: the buttons, clamped and checked.
+        // Each tank is an internal supply; a draw comes out of the stack.
+        for (ItemStack tank : new ItemStack[] {air, emergency, empty}) {
+            h.assertTrue(support(h, tank).internalSupply().isPresent(), tank + " isn't an internal supply");
+        }
+        IInternalSupply supply = support(h, air).internalSupply().orElseThrow();
+        close(h, supply.distributionPressure(), 101.3, 0, "the air tank's supply pressure");
+        double before = supply.contents().totalMoles();
+        GasParcel taken = supply.draw(1);
+        close(h, taken.totalMoles(), 1, 1e-12, "the draw");
+        close(h, GasTankItem.contents(air).totalMoles(), before - 1, 1e-9, "the air tank after the draw");
+        close(h, taken.moles(O2), StandardAir.OXYGEN_FRACTION, 1e-12, "the draw's O2");
+        h.succeed();
+    }
+
+    /**
+     * The distribution pressure defaults to 21.3 kPa for O2 tanks and 101.3 kPa for air tanks, and
+     * the settings screen's buttons move it within 0–304 kPa; the server refuses an unknown button
+     * or hand, or a hand without a tank (LIFE-044).
+     */
+    @GameTest(template = "empty")
+    public static void life_044_distribution_pressure(GameTestHelper h) {
+        close(h, GasTankItem.distributionPressure(stack(AtmosItems.OXYGEN_TANK)), 21.3, 0, "the O2 tank's default");
+        close(h, GasTankItem.distributionPressure(stack(AtmosItems.AIR_TANK)), 101.3, 0, "the air tank's default");
+        close(
+                h,
+                GasTankItem.distributionPressure(stack(AtmosItems.EMERGENCY_OXYGEN_TANK)),
+                21.3,
+                0,
+                "the emergency tank's default");
+        ItemStack o2 = stack(AtmosItems.OXYGEN_TANK);
         int main = InteractionHand.MAIN_HAND.ordinal();
         for (int i = 0; i < 3; i++) {
             h.assertTrue(TankSettings.apply(o2, new TankSettings(main, TankSettings.DOWN_10)), "-10 refused");
@@ -144,18 +171,6 @@ public final class GearTests {
         close(h, GasTankItem.distributionPressure(o2), 22.3, 1e-9, "after the refused presses");
         TankSettings.apply(o2, new TankSettings(main, TankSettings.CLOSE));
         close(h, GasTankItem.distributionPressure(o2), 0, 0, "closed");
-
-        // Each tank is an internal supply; a draw comes out of the stack.
-        for (ItemStack tank : new ItemStack[] {air, emergency, empty}) {
-            h.assertTrue(support(h, tank).internalSupply().isPresent(), tank + " isn't an internal supply");
-        }
-        IInternalSupply supply = support(h, air).internalSupply().orElseThrow();
-        close(h, supply.distributionPressure(), 101.3, 0, "the air tank's supply pressure");
-        double before = supply.contents().totalMoles();
-        GasParcel taken = supply.draw(1);
-        close(h, taken.totalMoles(), 1, 1e-12, "the draw");
-        close(h, GasTankItem.contents(air).totalMoles(), before - 1, 1e-9, "the air tank after the draw");
-        close(h, taken.moles(O2), StandardAir.OXYGEN_FRACTION, 1e-12, "the draw's O2");
         h.succeed();
     }
 
@@ -277,14 +292,14 @@ public final class GearTests {
         return new GasMixture(Map.of(N2, moles), temperature, StandardAir.CELL_VOLUME);
     }
 
-    // ---- LIFE-021, CONT-031 ---------------------------------------------------------------------
+    // ---- CONT-031, LIFE-021 ---------------------------------------------------------------------
 
     /**
      * Internals work with the breath mask and with the softsuit helmet on the head, and not with
      * nothing there or with only the rest of the suit (LIFE-021, CONT-031).
      */
     @GameTest(template = "empty")
-    public static void life_021_internals_with_each_sealed_head(GameTestHelper h) {
+    public static void cont_031_internals_with_each_sealed_head(GameTestHelper h) {
         Site s = new Site(h, 42);
         FakePlayer p = player(s, "zas_sealed_heads");
         p.setItemInHand(InteractionHand.OFF_HAND, stack(AtmosItems.OXYGEN_TANK));

@@ -58,7 +58,7 @@ or damage from the Hardcore Nether's CO₂ while a pig beside it is incapacitate
 and then hurt.*
 
 #### LIFE-002 · Breath source
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: API-015
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-015
 
 A breathing entity shall breathe from its internals (LIFE-021) when they are on
 and supplied, and otherwise from the atmosphere at its eye position.
@@ -74,6 +74,12 @@ the cell at its eyes (API-015), checked by
 `life_002_breathes_the_atmosphere_at_its_eyes`. Internals come with LIFE-021
 ([#36](https://github.com/west3436/zas-cubed/issues/36)), so this stays
 Accepted.*
+
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). With its internals on, its breathing sealed
+and a tank that delivers (LIFE-021, LIFE-046), a breather breathes the tank's
+gas: the verdict's source is `INTERNALS` and its breath the tank's mixture at
+the distribution pressure. `s_08_breathing_gear` checks a suited player in
+vacuum breathes its tank with internals on, and the vacuum with them off.*
 
 #### LIFE-048 · Unresolved atmosphere
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-010, LIFE-002
@@ -501,7 +507,7 @@ no burns at 380 K, full burns at 450 K, full frostbite at 150 K, no pressure
 protection and no seal. Internals themselves come later in #36.*
 
 #### LIFE-021 · Internals need a seal
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, S-08, D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, S-08, D-47
 
 Internals shall work only with a worn head-slot item that provides sealed
 breathing: a breath mask, gas mask or suit helmet (CONT-031, CONT-088, CONT-032,
@@ -511,8 +517,16 @@ CONT-036).
 - **Verify:** A GameTest checks internals work with each sealed head item and
   not without one.
 
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). `Internals.active` needs
+`WornProtection.sealedBreathing`: the head slot's item, or the entity itself,
+seals the breathing. A verdict on internals lists `SEALED_BREATHING`.
+`life_021_internals_need_a_seal` checks the test item, and
+`cont_031_internals_with_each_sealed_head` the breath mask and the softsuit
+helmet, and not the rest of the suit. The gas mask and the hardsuit helmet will
+pass the same way once they are built (CONT-088, CONT-036).*
+
 #### LIFE-028 · Tank location
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Internals shall draw from the first tank found in: the suit's tank slot
 (CONT-032, CONT-036), the offhand, then the hotbar.
@@ -523,8 +537,16 @@ Internals shall draw from the first tank found in: the suit's tank slot
 - **Verify:** A GameTest places tanks in each location and checks the draw
   order.
 
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). `Internals.find` looks in the armor slots,
+chest first, so a suit's tank slot comes first, then the offhand, then the
+hotbar from left to right, and last the entity's own life support. A mob has no
+hotbar, so its main hand stands in. The first tank found is used even when it
+can't deliver, and then the entity breathes the air (LIFE-046): it doesn't pass
+over an empty tank to the next. `life_028_the_first_tank_found` checks the
+order with test tanks, and `cont_090_suit_tank_slot` with the softsuit's slot.*
+
 #### LIFE-029 · Internals toggle
-`Must` · `R1` · `Accepted` · Verify: GameTest, Manual
+`Must` · `R1` · `Implemented` · Verify: GameTest, Manual
 
 Internals shall be switched on and off with a keybind, and stay in that state
 until toggled.
@@ -534,8 +556,15 @@ until toggled.
 - **Verify:** A GameTest toggles the state and checks it persists; Manual
   checks the keybind.
 
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). Internals are a saved entity attachment,
+kept through death, off until toggled. The keybind, I by default under
+"Atmospherics", sends a toggle to the server, which answers in the action bar:
+on, or on but with no seal, no tank or a tank that can't deliver, or off.
+`life_029_internals_toggle_and_persist` checks the toggle and that the state is
+saved. Manual: the keybind.*
+
 #### LIFE-043 · Internals draw rate
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-20 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-20 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 Each second, internals shall draw n = P_dist × 0.0625 L / (R · T_tank) from
 the tank (vg's 0.5 L every 8 s), whatever the breath check cadence.
@@ -546,8 +575,14 @@ the tank (vg's 0.5 L every 8 s), whatever the breath check cadence.
 - **Verify:** A Unit test checks the formula; a GameTest checks an O₂ tank
   lasts about 9 hours at the default, as in vg.
 
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). Each check draws `Internals.drawRate` times
+the seconds it charges, the same seconds as respiration's. zas has no
+unit-test source set, so `life_043_draw_rate` checks the formula, an hour's
+draw at once against three checks' 4 s, and that a 17.5 mol O₂ tank lasts
+between 8.5 and 9.5 hours (about 8.6) before it falls below 21.3 kPa.*
+
 #### LIFE-044 · Distribution pressure
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 The distribution pressure shall be adjustable from 0 to 304 kPa, with a
 default per tank type: 21.3 kPa for O₂ tanks, 101.3 kPa for air tanks.
@@ -557,8 +592,17 @@ default per tank type: 21.3 kPa for O₂ tanks, 101.3 kPa for air tanks.
   default is inferred, so that it delivers about 21 kPa of O₂.
 - **Verify:** A GameTest checks the defaults and the adjustable range.
 
+*2026-11-02: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). A tank's distribution pressure is the
+`zas_atmos:distribution_pressure` component, or its kind's default. Using a
+held tank opens its settings screen, whose buttons (−10, −1, +1, +10, default,
+0) send only the hand and the button: the server refuses an unknown hand or
+button or a hand without a tank, and clamps to 0–304 kPa. The breath is the
+tank's mixture scaled to the distribution pressure.
+`life_044_distribution_pressure` checks the defaults, the range and the
+refusals.*
+
 #### LIFE-045 · Exhaled gas
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-036
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
 Gas drawn by internals shall be exhaled into the surrounding atmosphere, after
 respiration (LIFE-005).
@@ -568,8 +612,15 @@ respiration (LIFE-005).
 - **Verify:** A GameTest checks tank gas moves into the zone and the
   conservation ledger balances.
 
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). The gas drawn goes into the cell at the
+eyes, with up to LIFE-042's O₂ for the seconds charged turned into CO₂, through
+the same LIFE-ledger addition as respiration's (`addForLife`), which never
+forms a zone. A breather on internals draws no O₂ from its zone.
+`life_045_exhaled_gas` checks the O₂ and CO₂ reach the zone and that it gains
+exactly what the tank lost; it doesn't run the invariant checker.*
+
 #### LIFE-046 · Empty tank fallback
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 When the tank can't supply the distribution pressure, the wearer shall
 breathe the environment.
@@ -578,6 +629,13 @@ breathe the environment.
   around them rather than suffocate in breathable air.
 - **Verify:** A GameTest empties a tank in breathable air and checks the
   player keeps breathing.
+
+*2026-11-02: Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)). A tank delivers while its distribution
+pressure is above 0 and its own pressure is at least that.
+`life_046_empty_tank_fallback` checks a tank set above its pressure, a nearly
+empty, an empty and a closed tank each leave a sealed player breathing the air,
+and that a CO room's gas reaches it only once its tank is empty.
+`s_08_breathing_gear` checks a tank running dry in vacuum.*
 
 #### LIFE-023 · Client breathing sync
 `Must` · `R1` · `Accepted` · Verify: Manual, GameTest · Trace: [neoforge §9](../research/neoforge-1.21.1.md#9-entities)

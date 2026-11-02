@@ -726,7 +726,7 @@ active (CONT-065). (vg's igniter is a floor machine that exposes its tile to a
 ## Wearables and tools
 
 #### CONT-030 · Gas tanks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
 
 Gas tank items shall hold real mixtures, in these types:
 
@@ -741,6 +741,13 @@ Gas tank items shall hold real mixtures, in these types:
   §4](../research/vg-atmos-content.md#4-mob-interaction-humans)); the air and
   empty tanks are inferred.
 - **Verify:** A GameTest checks each tank's volume and filled contents.
+
+*2026-11-02: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). One item class, `GasTankItem`, with the gas
+in the `zas_atmos:gas` component. A new O₂ tank holds 17.5 mol (609 kPa) and an
+air tank air at 6 atm, both at 293.15 K. Following docs/crafting.md, the empty
+tank and the emergency O₂ tank are crafted empty, and the O₂ and air tanks are
+made by filling (CONT-039); the creative tab also has a filled emergency tank,
+O₂ at 3 atm. `cont_030_tanks` checks each tank's volume and contents.*
 
 #### CONT-038 · Tank failure
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
@@ -815,7 +822,7 @@ timer starts, as in vg. vg's signaler and proximity triggers are R2.
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
 
 #### CONT-039 · Tank filling
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 A tank shall be filled from a canister holding it (CONT-084).
 
@@ -823,6 +830,14 @@ A tank shall be filled from a canister holding it (CONT-084).
   canister is the natural one.
 - **Verify:** A GameTest checks a held tank fills from a canister to the
   release pressure.
+
+*2026-11-02: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). Using a tank on a canister fills it at once
+from the canister's network to the release pressure, as a release into a room
+(CONT-084) but against the tank's volume, mixing temperatures. A 70 L tank then
+takes the kind of what it holds: at least 95 % O₂ is an O₂ tank, N₂ and O₂ with
+19–23 % O₂ an air tank, anything else the plain tank, named "Gas Tank" while it
+holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
+canister's loss and the kinds.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021
@@ -832,6 +847,11 @@ A breath mask and suit helmets shall provide sealed breathing for internals.
 - **Rationale:** Decision: D-47.
 - **Verify:** A GameTest checks internals work with a breath mask and with
   each suit helmet.
+
+*2026-11-02: Built in part ([#49](https://github.com/west3436/zas-cubed/issues/49)). The breath mask and the softsuit helmet
+seal the breathing; the hardsuit helmet comes with CONT-036. The breath mask
+gives no other protection. `cont_031_internals_with_each_sealed_head` checks
+both.*
 
 #### CONT-088 · Gas mask
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021, LIFE-026
@@ -845,7 +865,7 @@ R1.
   harm but still suffers hypoxia without O₂.
 
 #### CONT-032 · Softsuit
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, S-02, D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, S-02, D-47
 
 A four-piece softsuit shall provide a full seal (its helmet supports
 internals), low-pressure protection down to vacuum, and thermal protection
@@ -854,6 +874,12 @@ from 0 to 500 K. It gives no high-pressure protection.
 - **Rationale:** Decision: D-47.
 - **Verify:** GameTests check a suited player in vacuum, at 450 K and at 600
   kPa: protected, protected, unprotected.
+
+*2026-11-02: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). Four `SuitItem` pieces of the `softsuit`
+armor material, with leather's armor points and no durability, so a worn suit
+never breaks and loses its tank. Each piece is rated from 0 to 1 atm and 0 to
+500 K, and the helmet seals. `cont_032_softsuit_and_mask_ratings` checks a
+suited player in vacuum, at 450 K and at 600 kPa.*
 
 #### CONT-036 · Hardsuit
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-47
@@ -882,6 +908,13 @@ Softsuit and hardsuit chestplates shall each have a tank slot.
   for vg's suit storage (LIFE-028).
 - **Verify:** A GameTest checks internals draw from a tank in each
   chestplate's slot.
+
+*2026-11-02: Built in part ([#49](https://github.com/west3436/zas-cubed/issues/49)): the softsuit chestplate's slot; the
+hardsuit's comes with CONT-036. The slot is the `zas_atmos:suit_tank`
+component. Right-clicking a tank onto the chestplate in an inventory puts it
+in, swapping out the one there, and right-clicking the chestplate with an empty
+cursor takes it out, as a bundle does. `cont_090_suit_tank_slot` checks the
+slot and that internals draw from it first.*
 
 #### CONT-033 · Magnetic boots
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FLOW-012
