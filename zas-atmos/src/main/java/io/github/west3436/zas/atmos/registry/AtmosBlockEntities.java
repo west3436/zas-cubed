@@ -2,9 +2,11 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
+import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
+import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -43,6 +45,18 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<VentBlockEntity>> VENT = BLOCK_ENTITIES.register(
             "vent",
             () -> BlockEntityType.Builder.of(VentBlockEntity::new, AtmosBlocks.VENT.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<AreaAirControllerBlockEntity>> AREA_AIR_CONTROLLER =
+            BLOCK_ENTITIES.register(
+                    "area_air_controller",
+                    () -> BlockEntityType.Builder.of(
+                                    AreaAirControllerBlockEntity::new, AtmosBlocks.AREA_AIR_CONTROLLER.get())
+                            .build(null));
+
+    public static final Supplier<BlockEntityType<GeneratorBlockEntity>> GENERATOR = BLOCK_ENTITIES.register(
+            "generator",
+            () -> BlockEntityType.Builder.of(GeneratorBlockEntity::new, AtmosBlocks.GENERATOR.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

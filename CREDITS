@@ -73,6 +73,13 @@ origin: original
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/vent.json
 origin: original
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/area_air_controller.json
+origin: original
+notes: The panel's four facings and four status models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/generator.json
+origin: original
+notes: The generator's four facings, lit and unlit.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe.png
 origin: vgstation13

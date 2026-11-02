@@ -278,6 +278,12 @@ menu-button packet; the server refuses unknown ids and clamps every setting
 `GasDeviceTests.cont_074_out_of_range_settings_are_clamped_or_refused`
 (GameTest). Later devices' GUIs follow the same pattern.*
 
+*2026-11-02: The controller's and the generator's GUIs are built ([#50](https://github.com/west3436/zas-cubed/issues/50),
+[#52](https://github.com/west3436/zas-cubed/issues/52)). The controller's buttons are menu button clicks: unknown ids are
+refused and edits are clamped (`cont_074_gui_settings_are_checked_and_an_edited_preset_rates`).
+The generator's only setting is its fuel slot, which takes only fuel. This
+stays Accepted until every device's GUI is built.*
+
 #### CONT-010 · Valves
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
@@ -862,7 +868,7 @@ The area air controller takes the place of vg's air alarm (D-68). It also
 powers the parts around it (see [Power](#power)).
 
 #### CONT-040 · Area air controller
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, D-68 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02, D-68 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 An area air controller shall sample its zone each atmos tick and rate each
 reading against its preset's (min2, min1, max1, max2): at or beyond min2 or
@@ -876,8 +882,16 @@ temperature, each listed gas, and all other gases combined.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The controller samples the middle of its own
+block each atmos tick and rates pressure, temperature, each listed gas and the
+other gases summed (architecture §11.6). Nitrogen is listed with no bounds, so
+the air's filler gas isn't counted among the other gases. An open cell's
+ambient air is rated too. `cont_040_danger_follows_the_readings` steps a
+zone's CO₂ through each band; `ControllerLogicTest` checks every reading and
+both bounds of each band.*
+
 #### CONT-046 · Danger hysteresis
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
 
 A controller's danger level shall rise immediately and fall only after 10 s of
 lower readings.
@@ -889,8 +903,12 @@ lower readings.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The level falls after 10 readings in a row
+below it, one per atmos tick, to the highest of those readings
+(`DangerLevel`; `cont_046_danger_rises_at_once_and_falls_after_10_s`).*
+
 #### CONT-047 · Controller presets
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), LIFE-041, FIRE-003
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), LIFE-041, FIRE-003
 
 Area air controllers shall ship an editable Human preset and a Vacuum preset.
 Human (min2 / min1 / max1 / max2):
@@ -918,6 +936,14 @@ Vacuum sets pressure max1 / max2 to 1 / 5 kPa.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). Each controller holds its own copy of a
+preset, edited from its GUI; loading a shipped preset discards the edits.
+Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa and has no O₂
+minimum and no temperature bounds, which would always trip in an empty room.
+`cont_047_presets_hold_the_table` checks the table, and
+`cont_074_gui_settings_are_checked_and_an_edited_preset_rates` checks an edit
+changes the rating.*
+
 #### CONT-041 · Controller modes
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
@@ -939,8 +965,14 @@ The area air controller shall command its vents and scrubbers in these modes:
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: The controller's side is built ([#50](https://github.com/west3436/zas-cubed/issues/50)): each mode's vent and
+scrubber orders, and Cycle's and Fill's switches (`ControllerMode`,
+`VentControl`, `ScrubberControl`). `cont_041_modes_command_vents_and_scrubbers`
+checks them with stand-in parts. This stays Accepted until the vent (#48) and
+scrubber follow the orders.*
+
 #### CONT-048 · Controller redstone
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 An area air controller shall emit a redstone signal of 7 at danger 1 and 15 at
 danger 2.
@@ -951,6 +983,10 @@ danger 2.
   level.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The signal goes to every side, and strongly
+into the wall behind the panel, as a lever's does
+(`cont_040_danger_follows_the_readings`).*
 
 #### CONT-042 · Room model
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-68
@@ -965,8 +1001,14 @@ multitool can also link parts to it by hand, for example across a firelock.
 *2026-11-01: the air alarm is renamed the area air controller, and the linking
 tool is the multitool (D-68). A link also powers the part (CONT-068).*
 
+*2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)): a controller covers the loaded parts whose air
+point is in its zone, and the parts linked to it with the multitool, which
+`cont_068_controller_powers_its_zone_and_its_links` checks with stand-in parts
+across a stone wall. This stays Accepted until it is checked across a
+firelock (CONT-043).*
+
 #### CONT-110 · Controller forms its zone
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
 
 When placed, an area air controller shall pin the zone at the cell it samples
 (API-050), forming one there if that cell's region is enclosed and has no zone,
@@ -989,6 +1031,16 @@ before its room is sealed forms the zone once the room is sealed, so a player
 needn't build the walls first or break and replace the controller. The Verify
 gains that case.*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The controller pins the zone at the middle
+of its own block under the owner `zas_atmos:area_air_controller/<x>_<y>_<z>`.
+It pins on its first step after loading and again whenever that point's zone
+isn't the one it last pinned, so an open room is tried once a second until it
+is sealed. Removing the block unpins; a chunk unloading doesn't. The
+`cont_110_` GameTests cover a sealed Overworld room, a vacuum room (the End
+with the test vacuum ambient), a room sealed after the controller went in, and
+removal. CORE-052's timed collection isn't built yet, so "outlasts" is checked
+against an opened room, which dissolves an unpinned zone at once.*
+
 #### CONT-049 · Controller device list
 `Must` · `R1` · `Accepted` · Verify: Manual
 
@@ -1001,6 +1053,10 @@ came from the zone or from a link.
   links.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+*2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)). The GUI lists each part with its position, whether
+it is in the zone, linked or both, and whether it has power. This stays
+Accepted until the manual check.*
 
 #### CONT-043 · Firelock
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, GEO-007
@@ -1242,6 +1298,11 @@ Active devices shall consume Forge Energy (FE). A device without power stops.
 `GasDeviceTests.cont_014_an_unpowered_vent_does_nothing` (GameTest). The
 GameTest that cuts a provider's power waits for the area air controller.*
 
+*2026-11-02: The controller is the first FE source ([#52](https://github.com/west3436/zas-cubed/issues/52)): it stops when it
+can't pay its own draw, and parts stop when it stops paying them
+(`cont_064_a_starved_controller_powers_life_support_first`). This stays
+Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1275,8 +1336,12 @@ recharger is added (CONT-113, D-69).*
 ([#48](https://github.com/west3436/zas-cubed/issues/48)); the other devices'
 draws come with them.*
 
+*2026-11-02: The controller's 5 FE/t is in the config (`[power]
+area_air_controller`, [config.md](../config.md)). This stays Accepted until
+every device's draw is.*
+
 #### CONT-061 · Built-in generator
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
 
 ZAS³ content shall include a portable solid-fuel generator in the style of
 SS13's P.A.C.M.A.N., making 40 FE/t, so the mod is playable without any other
@@ -1285,13 +1350,21 @@ power mod.
 - **Rationale:** Decision: D-25, D-35 and D-37.
 - **Verify:** A GameTest checks the generator makes 40 FE/t while burning.
 
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). The generator is a block with a fuel slot
+and an 8,000 FE store that it offers through the FE capability
+(`cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s`).*
+
 #### CONT-066 · Generator fuel
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
 
 The generator shall burn one coal or charcoal per 80 s.
 
 - **Rationale:** Decision: D-35; 80 s per coal matches a vanilla furnace.
 - **Verify:** A GameTest checks one coal lasts 80 s.
+
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). Coal and charcoal are `#minecraft:coals`. A
+generator whose store is full starts no new fuel
+(`cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s`).*
 
 #### CONT-067 · Generator is a lit fuel block
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
@@ -1313,8 +1386,13 @@ its FIRE-025 profile. If the generator made those changes itself through
 `GasMutations`, it would form zones under Normal too, because API calls are
 Normal triggers (CORE-055).*
 
+*2026-11-02: The generator is in `#zas:combustion` with a `lit` property
+([#52](https://github.com/west3436/zas-cubed/issues/52)), and `core_056_lit_generator_forms_a_zone_under_hardcore` checks it
+forms a zone under Hardcore and not under Normal. This stays Accepted until
+FIRE-021 and HEAT-007 make lit fuel blocks use O₂, emit CO₂ and heat.*
+
 #### CONT-062 · Controller power buffer
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-34, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-34, D-68
 
 An area air controller shall take FE from any block next to it that exposes
 the FE capability, such as the generator (CONT-061) or another mod's cable,
@@ -1328,6 +1406,11 @@ into an internal 10,000 FE buffer.
 
 *2026-11-01: the air alarm is renamed the area air controller, and its buffer
 fills only from a block next to it, since there is no cable (D-68).*
+
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). Each atmos tick the controller pulls from
+the FE capability of each of its six neighbours, and it also takes FE that
+cables push. It gives none out
+(`cont_062_buffer_fills_from_fe_blocks_next_to_it`).*
 
 #### CONT-068 · Wireless feed to parts
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34, D-68
@@ -1344,6 +1427,12 @@ that draws FE (CONT-065) in its zone or linked to it with the multitool
 every part in its zone or linked to it, not only the devices it controls
 (D-68).*
 
+*2026-11-02: Built ([#52](https://github.com/west3436/zas-cubed/issues/52)): the controller pays each part's draw for one
+atmos tick at a time (architecture §11.7).
+`cont_068_controller_powers_its_zone_and_its_links` checks it with stand-in
+parts in its zone and linked across a wall. This stays Accepted until it is
+checked with real parts across a firelock.*
+
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-68
 
@@ -1357,6 +1446,10 @@ no power, even beside an FE source. Portables run on their battery instead
 
 *2026-11-01: a part with no controller now has no power; it used to need its
 own cable (D-68).*
+
+*2026-11-02: `cont_068_controller_powers_its_zone_and_its_links` checks a
+stand-in part beside a burning generator has no power, then runs once linked.
+This stays Accepted until it is checked with the vent (#48).*
 
 #### CONT-064 · Controller power priority
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
@@ -1374,6 +1467,12 @@ Devices that miss out stop until power returns.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68), and
 rechargers join the last group (CONT-113, D-69).*
+
+*2026-11-02: Built ([#52](https://github.com/west3436/zas-cubed/issues/52)). Groups are served in order; within a group each
+part that fits is paid, and once a part of a group misses out, the later
+groups get nothing that atmos tick (`PowerFeedTest`,
+`cont_064_a_starved_controller_powers_life_support_first` with stand-in
+parts). This stays Accepted until it is checked with the vent and scrubber.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
