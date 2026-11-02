@@ -8,6 +8,7 @@ import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.service;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
@@ -17,6 +18,9 @@ import io.github.west3436.zas.api.atmosphere.EdgeSummary;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
@@ -27,10 +31,12 @@ import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -45,11 +51,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -341,6 +352,38 @@ public final class ScenarioTests {
             h.assertValueEqual(held.id(), full.id(), "the zone");
             h.assertValueEqual(held.mixture().moles(), full.mixture().moles(), "moles after 60 s");
             close(h, held.mixture().pressure(), full.mixture().pressure(), 1e-12, "pressure after 60 s");
+
+            // Without a helmet, a player breathes the room, and a minute of breathing harms
+            // neither them nor a pig beside them (LIFE). Pressure and temperature hazards (#35)
+            // aren't built yet.
+            FakePlayer player = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_01"));
+            player.moveTo(Vec3.atBottomCenterOf(r.abs(2, 1, 2)));
+            Pig pig = EntityType.PIG.create(end);
+            h.assertTrue(pig != null, "no pig");
+            pig.moveTo(Vec3.atBottomCenterOf(r.abs(2, 1, 2)));
+            end.addFreshEntity(pig);
+            try {
+                long t0 = end.getGameTime();
+                for (int k = 0; k <= 30; k++) {
+                    for (LivingEntity e : List.of(player, pig)) {
+                        Breathers.checkAt(e, t0 + 40L * k);
+                        for (int i = 0; i < 40; i++) {
+                            e.baseTick();
+                        }
+                    }
+                }
+                for (LivingEntity e : List.of(player, pig)) {
+                    Breathability b = Breathing.of(e);
+                    String who = e.getName().getString();
+                    h.assertValueEqual(b.reason(), BreathReason.BREATHABLE, who + "'s breath");
+                    h.assertTrue(b.isProtected(), who + " is exposed to " + b.hazards());
+                    h.assertValueEqual(e.getAirSupply(), e.getMaxAirSupply(), who + "'s air after 60 s");
+                    h.assertTrue(e.getActiveEffects().isEmpty(), who + "'s effects: " + e.getActiveEffects());
+                }
+                h.assertValueEqual(pig.getHealth(), pig.getMaxHealth(), "the pig's health after 60 s");
+            } finally {
+                pig.discard();
+            }
         });
     }
 

@@ -11,6 +11,7 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.life.Protection;
 import java.lang.reflect.Method;
@@ -155,6 +156,19 @@ class BreathabilityTest {
         assertThrows(NullPointerException.class, () -> b.breath(null));
         assertThrows(NullPointerException.class, () -> b.hazard(null));
         assertThrows(NullPointerException.class, () -> b.protection(null));
+    }
+
+    /**
+     * The O₂ minimum (LIFE-003) has a provider default, LIFE-003's 16 kPa, which the fallback
+     * keeps.
+     */
+    @Test
+    void api_014_oxygen_minimum_defaults_to_16_kpa() throws NoSuchMethodException {
+        Method method = ZasApiProvider.class.getMethod("oxygenMinimum");
+        assertTrue(method.isDefault(), "ZasApiProvider.oxygenMinimum has no default");
+        assertEquals(16.0, Breathing.DEFAULT_OXYGEN_MINIMUM);
+        assertEquals(16.0, FallbackProvider.INSTANCE.oxygenMinimum());
+        assertEquals(16.0, Breathing.oxygenMinimum(), "the API without ZAS³");
     }
 
     /**

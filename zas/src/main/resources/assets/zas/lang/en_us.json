@@ -21,6 +21,11 @@
   "gas.zas.oxygen": "Oxygen",
   "gas.zas.water_vapor": "Water Vapor",
 
+  "death.attack.zas.hypoxia": "%1$s ran out of oxygen",
+  "death.attack.zas.hypoxia.player": "%1$s ran out of oxygen while fighting %2$s",
+  "death.attack.zas.toxic_gas": "%1$s breathed toxic gas",
+  "death.attack.zas.toxic_gas.player": "%1$s breathed toxic gas while fighting %2$s",
+
   "commands.zas.error.unknown_gas": "Unknown gas: %s",
   "commands.zas.error.unknown_zone": "No zone %s in this dimension",
   "commands.zas.error.not_running": "The atmosphere simulation isn't running",

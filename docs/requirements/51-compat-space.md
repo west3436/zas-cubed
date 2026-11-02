@@ -64,7 +64,7 @@ it.
   per-mod setting overrides it.
 
 #### SPACE-002 · NeoForge breathing event
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: API-014, LIFE-003, LIFE-023
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-014, LIFE-003, LIFE-023
 
 ZAS³ shall express its breathing verdict (API-014) through NeoForge's
 `LivingBreatheEvent`. Its listener runs at `NORMAL` priority, sets
@@ -78,6 +78,15 @@ local player's verdict comes from the synced state in LIFE-023.)
   "can't breathe" at normal priority never overrides another mod's verdict.
 - **Verify:** GameTests check a LOW-priority listener sees ZAS³'s verdict and
   that another mod's "can't breathe" survives.
+
+*2026-11-02: Implemented on the server
+([#34](https://github.com/west3436/zas-cubed/issues/34)); the client's half is
+LIFE-023's ([#36](https://github.com/west3436/zas-cubed/issues/36)), and until
+then the client leaves the event alone. The listener is `Breathers`, at
+`NORMAL` priority. `space_002_low_priority_listener_sees_the_verdict` checks a
+`LOW` listener sees `canBreathe` false in a vacuum zone and true in air, and
+`space_002_another_mods_cant_breathe_survives` that a `HIGH` listener's false
+stands in breathable air.*
 
 #### SPACE-003 · Adapter version check
 `Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: NFR-022, D-29

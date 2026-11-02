@@ -1,5 +1,6 @@
 package io.github.west3436.zas.api.life;
 
+import io.github.west3436.zas.api.AnyThread;
 import io.github.west3436.zas.api.LevelThread;
 import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ZasApi;
@@ -32,10 +33,14 @@ import net.neoforged.neoforge.fluids.FluidType;
  *       exemption (LIFE-037).
  * </ul>
  *
- * <p><b>Interim.</b> Until ZAS³'s breathing, hazard and protection rules (LIFE) and the
- * life-support capability (API-022) are built, ZAS³ answers with {@link #vanilla vanilla's
- * verdict}, as the API does without it. That verdict doesn't look at the atmosphere: in a vacuum
- * zone it still says the entity can breathe.
+ * <p><b>Not yet built.</b> ZAS³ applies who breathes, the atmosphere at the eyes, the O₂ minimum,
+ * the gases' hazard profiles ({@link Hazard#TOXIC_GAS}), vanilla's rule in water and the creative
+ * and spectator exemption. Internals and the life-support capability (LIFE-021, API-022), the
+ * protection of worn items (LIFE-020, LIFE-025, LIFE-026), and the pressure and temperature
+ * hazards (LIFE-010, LIFE-011, LIFE-014) are still to come: until then no verdict breathes from
+ * {@link BreathSource#INTERNALS}, lists a pressure or temperature {@link Hazard}, or lists any
+ * {@link Protection} but {@link Protection#EXEMPT}. On the client, ZAS³ answers with {@link
+ * #vanilla vanilla's verdict} until the client breathing sync (LIFE-023) gives it the server's.
  *
  * <p><b>Without ZAS³</b> the answer is {@link #vanilla vanilla's verdict} (API-009, D-17): in air
  * an entity breathes, and with its eyes in water it drowns unless vanilla lets it breathe there.
@@ -49,6 +54,13 @@ import net.neoforged.neoforge.fluids.FluidType;
  * is an immutable value that may be passed to any thread.
  */
 public final class Breathing {
+    /**
+     * LIFE-003's default O₂ minimum, in kPa: the O₂ partial pressure of the breath below which a
+     * breathing entity runs out of air, as in vgstation13. A server may configure another ({@link
+     * #oxygenMinimum()}).
+     */
+    public static final double DEFAULT_OXYGEN_MINIMUM = 16.0;
+
     private static final Breathability IN_AIR = Breathability.of(BreathReason.BREATHABLE, BreathSource.ATMOSPHERE);
     private static final Breathability IN_SAFE_FLUID =
             Breathability.of(BreathReason.FLUID_BREATHING, BreathSource.FLUID);
@@ -117,6 +129,25 @@ public final class Breathing {
             return EXEMPT_IN_FLUID;
         }
         return DROWNING;
+    }
+
+    /**
+     * The O₂ partial pressure, in kPa, below which a breathing entity runs out of air (LIFE-003).
+     * Air whose O₂ partial pressure is at or above it is breathable as far as O₂ goes, so a device
+     * that wants to know whether a point's air is breathable compares the point's O₂ partial
+     * pressure ({@link io.github.west3436.zas.api.atmosphere.AtmosphereSample#partialPressures()})
+     * with it; a gas's hazard profile may still make that air harmful.
+     *
+     * <p>With ZAS³ it is the server's configured minimum, {@value #DEFAULT_OXYGEN_MINIMUM} kPa by
+     * default; without ZAS³ it is that default.
+     *
+     * <p>Thread: any. On a client, it is the default, not the server's setting.
+     *
+     * @return the minimum in kPa
+     */
+    @AnyThread
+    public static double oxygenMinimum() {
+        return ZasApi.provider().oxygenMinimum();
     }
 
     /** Whether the block at the entity's eyes is a bubble column, which vanilla counts as air. */

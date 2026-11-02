@@ -28,6 +28,9 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
+| `[breathing] check_interval_ticks` | `40` | Game ticks between each breathing entity's breath checks, 1 to 1,200 (LIFE-007). Rates are per second, so the interval changes smoothness and cost, not how fast anything happens |
+| `[breathing] oxygen_minimum_kpa` | `16.0` | The O₂ partial pressure of the breath below which the air meter drains (LIFE-003) |
+| `[breathing] respiration_multiplier` | `1.0` | Multiplies respiration inside zones, about 1 mol of O₂ per breather per hour turned into CO₂ (LIFE-042); 0 turns it off. The same under both presets (D-27) |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
@@ -36,8 +39,9 @@ their features land in R1. NeoForge reloads the file when it changes on disk,
 so an edit made while the server runs applies without a restart: the preset,
 its options and the excluded dimensions from the next lookup (for the
 simulation, its next atmos tick), the `[atmos]` timing and venting model from
-the next atmos tick, the thread mode when a dimension's simulation starts, and
-`[commands]` and `[profiling]` at once. OPS-016's guarantee that every server
+the next atmos tick, the thread mode when a dimension's simulation starts,
+`[breathing]` from each entity's next breath check, and `[commands]` and
+`[profiling]` at once. OPS-016's guarantee that every server
 setting applies without a restart is R1.
 
 ### Venting
