@@ -287,19 +287,38 @@ public record DebugOverlayPayload(
             (buf, c) -> {
                 buf.writeDouble(c.volume());
                 c.footprints().forEach(m -> MASK.encode(buf, m));
+                c.shields().forEach(m -> MASK.encode(buf, m));
             },
-            buf -> new Geometry.Cell(buf.readDouble(), masks(buf)));
+            buf -> new Geometry.Cell(buf.readDouble(), masks(buf), masks(buf)));
 
+    private static final StreamCodec<ByteBuf, Geometry.Partition> PARTITION = StreamCodec.of(
+            (buf, p) -> {
+                VarInt.write(buf, p.first());
+                VarInt.write(buf, p.second());
+                VarInt.write(buf, p.lines());
+            },
+            buf -> new Geometry.Partition(VarInt.read(buf), VarInt.read(buf), VarInt.read(buf)));
+
+    /** The whole geometry, heat data included (HEAT-011 to HEAT-013), so the probe shows it as is. */
     private static final StreamCodec<ByteBuf, Geometry> GEOMETRY = StreamCodec.of(
             (buf, g) -> {
                 VarInt.write(buf, g.flags());
                 g.coverage().forEach(m -> MASK.encode(buf, m));
                 list(GEOMETRY_CELL).encode(buf, g.cells());
+                g.through().forEach(m -> MASK.encode(buf, m));
+                list(PARTITION).encode(buf, g.partitions());
+                buf.writeDouble(g.transmittance());
+                buf.writeDouble(g.sourceTemperature());
             },
             buf -> {
                 int flags = VarInt.read(buf);
                 List<FaceMask> coverage = masks(buf);
-                return new Geometry(coverage, list(GEOMETRY_CELL).decode(buf), flags);
+                List<Geometry.Cell> cells = list(GEOMETRY_CELL).decode(buf);
+                List<FaceMask> through = masks(buf);
+                List<Geometry.Partition> partitions = list(PARTITION).decode(buf);
+                double u = buf.readDouble();
+                double source = buf.readDouble();
+                return new Geometry(coverage, cells, flags, through, partitions, u, source);
             });
 
     private static final StreamCodec<ByteBuf, Probe> PROBE = StreamCodec.of(

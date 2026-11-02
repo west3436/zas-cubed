@@ -305,6 +305,52 @@ data/<namespace>/zas/geometry_overrides/<path>.json
   `/reload`, which rebuilds the geometry table; zones are rebuilt if the
   geometry changed.
 
+## Heat data
+
+How well a block conducts heat, and whether it is a heat source, are set per
+block or tag (HEAT-002, HEAT-003):
+
+```
+data/<namespace>/zas/thermal/<path>.json
+```
+
+```json
+{
+  "blocks": ["#minecraft:wool", "#minecraft:wool_carpets"],
+  "transmittance": 0.04
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, above 0 and at most 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ |
+| `temperature` | number | no | Makes the blocks heat sources at this temperature in K, 0 to 1,000,000. A source ends any heat path that reaches it and conducts with its own U |
+
+- A file needs `transmittance`, `temperature` or both.
+- **Each field is resolved on its own.** For each block, a file naming it
+  directly beats one matching it through a tag; between equals, the file whose
+  id sorts last wins. So a tag's file can set a U and another file can make
+  one of its blocks a source.
+- A block with no `transmittance` uses the server's fallback,
+  `[heat] fallback_transmittance` (1.7, as stone; [config](config.md#server-zas-servertoml)).
+- **Shipped data** (HEAT-014), in `data/zas/zas/thermal/`:
+
+  | File | Blocks | U |
+  |---|---|---|
+  | `wool.json` | `#minecraft:wool`, `#minecraft:wool_carpets` | 0.04 |
+  | `wood.json` | `#minecraft:planks`, `#minecraft:logs`, and the wooden slabs, stairs, doors, trapdoors, fences and fence gates | 0.15 |
+  | `stone.json` | `#minecraft:base_stone_overworld`, `#minecraft:base_stone_nether`, `#minecraft:stone_bricks`, `#c:stones`, `#c:cobblestones`, smooth stone | 1.7 |
+  | `ice.json` | `#minecraft:ice` | 2.2 |
+  | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
+  | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
+
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** with geometry overrides, at server start and on
+  `/reload`. Heat data is part of a block's geometry, so a change rebuilds the
+  zones as a geometry change does.
+
 ## Zone boundaries
 
 Blocks in the block tag `zas:zone_boundary` pass gas but keep the zones on

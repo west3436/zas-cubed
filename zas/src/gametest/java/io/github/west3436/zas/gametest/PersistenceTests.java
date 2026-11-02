@@ -415,23 +415,25 @@ public final class PersistenceTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
     public static void data_001_restart_preserves_atmosphere(GameTestHelper h) {
-        ServerLevel end = restartLevel(h);
-        Rooms r = fourChunks(h, end, 24, 50);
-        ZoneInfo before = r.zone(12, 2, 12);
-        Map<Long, byte[]> saved = service().stopForTest(end, keys(r));
-        h.assertValueEqual(saved.size(), 4, "chunks saved at shutdown");
-        service().startForTest(end, saved);
-        r.ticks(2);
-        ZoneInfo after = Atmospheres.zone(end, before.id())
-                .orElseThrow(() -> new GameTestAssertException("the zone didn't survive the restart"));
-        h.assertFalse(after.paused(), "paused after the restart");
-        r.same(before, after, "after the restart");
-        // A new zone gets a new id.
-        r.clear(30, 50);
-        r.shell(32, 38);
-        r.settle(GasMutations.add(end, r.point(35, 2, 2), oxygen(1), source("data_001")));
-        h.assertTrue(r.zone(35, 2, 2).id().value() > before.id().value(), "a zone id was reissued");
-        h.succeed();
+        Rooms.withoutHeat(() -> {
+            ServerLevel end = restartLevel(h);
+            Rooms r = fourChunks(h, end, 24, 50);
+            ZoneInfo before = r.zone(12, 2, 12);
+            Map<Long, byte[]> saved = service().stopForTest(end, keys(r));
+            h.assertValueEqual(saved.size(), 4, "chunks saved at shutdown");
+            service().startForTest(end, saved);
+            r.ticks(2);
+            ZoneInfo after = Atmospheres.zone(end, before.id())
+                    .orElseThrow(() -> new GameTestAssertException("the zone didn't survive the restart"));
+            h.assertFalse(after.paused(), "paused after the restart");
+            r.same(before, after, "after the restart");
+            // A new zone gets a new id.
+            r.clear(30, 50);
+            r.shell(32, 38);
+            r.settle(GasMutations.add(end, r.point(35, 2, 2), oxygen(1), source("data_001")));
+            h.assertTrue(r.zone(35, 2, 2).id().value() > before.id().value(), "a zone id was reissued");
+            h.succeed();
+        });
     }
 
     /**
@@ -508,74 +510,77 @@ public final class PersistenceTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
     public static void core_013_removed_gas_is_dropped_on_load(GameTestHelper h) {
-        ServerLevel nether = restartLevel(h);
-        Rooms r = fourChunks(h, nether, 27, 50);
-        ZoneInfo before = r.zone(12, 2, 12);
-        GasRegistry running = r.dimension().registry();
-        Map<Long, byte[]> saved = service().stopForTest(nether, keys(r));
-        h.assertValueEqual(saved.size(), 4, "chunks saved at shutdown");
+        Rooms.withoutHeat(() -> {
+            ServerLevel nether = restartLevel(h);
+            Rooms r = fourChunks(h, nether, 27, 50);
+            ZoneInfo before = r.zone(12, 2, 12);
+            GasRegistry running = r.dimension().registry();
+            Map<Long, byte[]> saved = service().stopForTest(nether, keys(r));
+            h.assertValueEqual(saved.size(), 4, "chunks saved at shutdown");
 
-        GasDefinition removed = new GasDefinition(
-                "zas_gametest:removed_gas", "gas.zas_gametest.removed_gas", "Rg", 0.04, 12.5, Optional.empty());
-        h.assertTrue(running.find(removed.id()).isEmpty(), "the running gas set defines " + removed.id());
-        List<GasDefinition> wider = new ArrayList<>(running.definitions());
-        wider.add(removed);
-        GasRegistry withRemoved = GasRegistry.of(wider, running.tags());
-        Map<Long, byte[]> withGas = new HashMap<>();
-        saved.forEach((key, bytes) -> {
-            ChunkRecord record = decode(h, running, bytes, new ChunkPos(key));
-            h.assertTrue(record.queuedAdditions().isEmpty(), "a queued addition was saved");
-            List<ZoneShare> shares = record.zones().stream()
-                    .map(s -> new ZoneShare(
-                            s.zoneId(),
-                            s.cells(),
-                            widen(s.moles(), running, withRemoved, removed.id(), 5),
-                            s.temperature(),
-                            s.zoneChunks(),
-                            s.pinned()))
-                    .toList();
-            withGas.put(
-                    key,
-                    ChunkRecordCodec.encode(new ChunkRecord(key, shares, record.heldBlocks(), List.of()), withRemoved));
-        });
+            GasDefinition removed = new GasDefinition(
+                    "zas_gametest:removed_gas", "gas.zas_gametest.removed_gas", "Rg", 0.04, 12.5, Optional.empty());
+            h.assertTrue(running.find(removed.id()).isEmpty(), "the running gas set defines " + removed.id());
+            List<GasDefinition> wider = new ArrayList<>(running.definitions());
+            wider.add(removed);
+            GasRegistry withRemoved = GasRegistry.of(wider, running.tags());
+            Map<Long, byte[]> withGas = new HashMap<>();
+            saved.forEach((key, bytes) -> {
+                ChunkRecord record = decode(h, running, bytes, new ChunkPos(key));
+                h.assertTrue(record.queuedAdditions().isEmpty(), "a queued addition was saved");
+                List<ZoneShare> shares = record.zones().stream()
+                        .map(s -> new ZoneShare(
+                                s.zoneId(),
+                                s.cells(),
+                                widen(s.moles(), running, withRemoved, removed.id(), 5),
+                                s.temperature(),
+                                s.zoneChunks(),
+                                s.pinned()))
+                        .toList();
+                withGas.put(
+                        key,
+                        ChunkRecordCodec.encode(
+                                new ChunkRecord(key, shares, record.heldBlocks(), List.of()), withRemoved));
+            });
 
-        int warned = AtmosPersistence.droppedGasWarnings().size();
-        service().startForTest(nether, withGas);
-        r.ticks(2);
-        ZoneInfo after = Atmospheres.zone(nether, before.id())
-                .orElseThrow(() -> new GameTestAssertException("the zone didn't survive the load"));
-        h.assertFalse(after.paused(), "paused after the load");
-        r.same(before, after, "after the load");
+            int warned = AtmosPersistence.droppedGasWarnings().size();
+            service().startForTest(nether, withGas);
+            r.ticks(2);
+            ZoneInfo after = Atmospheres.zone(nether, before.id())
+                    .orElseThrow(() -> new GameTestAssertException("the zone didn't survive the load"));
+            h.assertFalse(after.paused(), "paused after the load");
+            r.same(before, after, "after the load");
 
-        List<String> logged = AtmosPersistence.droppedGasWarnings();
-        List<String> warnings = logged.subList(warned, logged.size());
-        h.assertValueEqual(warnings.size(), 4, "dropped-gas warnings, one per chunk: " + warnings);
-        for (ChunkPos c : chunks(r)) {
-            String prefix = "[" + nether.dimension().location() + "] Dropped 5 mol of zas_gametest:removed_gas "
-                    + "saved in chunk [" + c.x + ", " + c.z + "]";
-            h.assertTrue(
-                    warnings.stream()
-                            .anyMatch(w -> w.startsWith(prefix)
-                                    && w.contains("in zone " + before.id().value())),
-                    "no warning names the dimension, gas, amount, chunk " + c + " and zone: " + warnings);
-        }
-
-        DimensionAtmos d = r.dimension();
-        for (ChunkPos c : chunks(r)) {
-            byte[] next = d.simulateSave(c);
-            try {
-                ChunkRecordCodec.decode(next, c.toLong(), withRemoved, m -> {
-                    throw new GameTestAssertException("the next save of " + c + " still holds the gas: " + m);
-                });
-            } catch (ChunkRecordCodec.CorruptRecordException e) {
-                throw new GameTestAssertException("unreadable save of " + c + ": " + e.getMessage());
+            List<String> logged = AtmosPersistence.droppedGasWarnings();
+            List<String> warnings = logged.subList(warned, logged.size());
+            h.assertValueEqual(warnings.size(), 4, "dropped-gas warnings, one per chunk: " + warnings);
+            for (ChunkPos c : chunks(r)) {
+                String prefix = "[" + nether.dimension().location() + "] Dropped 5 mol of zas_gametest:removed_gas "
+                        + "saved in chunk [" + c.x + ", " + c.z + "]";
+                h.assertTrue(
+                        warnings.stream()
+                                .anyMatch(w -> w.startsWith(prefix)
+                                        && w.contains("in zone " + before.id().value())),
+                        "no warning names the dimension, gas, amount, chunk " + c + " and zone: " + warnings);
             }
-        }
-        CompletableFuture<ConservationReport> check = d.checkConservation();
-        r.tick();
-        ConservationReport report = check.getNow(null);
-        h.assertTrue(report != null && report.conserved(), "the checker reported " + report);
-        h.succeed();
+
+            DimensionAtmos d = r.dimension();
+            for (ChunkPos c : chunks(r)) {
+                byte[] next = d.simulateSave(c);
+                try {
+                    ChunkRecordCodec.decode(next, c.toLong(), withRemoved, m -> {
+                        throw new GameTestAssertException("the next save of " + c + " still holds the gas: " + m);
+                    });
+                } catch (ChunkRecordCodec.CorruptRecordException e) {
+                    throw new GameTestAssertException("unreadable save of " + c + ": " + e.getMessage());
+                }
+            }
+            CompletableFuture<ConservationReport> check = d.checkConservation();
+            r.tick();
+            ConservationReport report = check.getNow(null);
+            h.assertTrue(report != null && report.conserved(), "the checker reported " + report);
+            h.succeed();
+        });
     }
 
     /** Moles in one gas set's order, moved to a wider set's, with an amount of the extra gas. */

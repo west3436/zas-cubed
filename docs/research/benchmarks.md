@@ -22,7 +22,7 @@ measured here (see [Not measured](#not-measured)).
 | NFR-001: 99th percentile ≤ 5 ms | 0.023 ms | Pass (engine share) |
 | NFR-002 and CORE-047: no server tick over 10 ms | Worst close or apply: 0.097 ms in S-10, 0.026 ms on the explosion tick, 0.93 ms for a burst of 1,000 zone-creating adds | Pass |
 | NFR-005: worker tick ≤ 250 ms, S-10 | Worst 10.8 ms. The slowest tick anywhere: 88 ms, zoning a 65,536-cell hall | Pass |
-| NFR-003: 1,000 idle zones add ≤ 0.1 ms per server tick | +0.022 ms (0.8 µs server, 0.021 ms worker) | Pass |
+| NFR-003: 1,000 idle zones add ≤ 0.1 ms per server tick | +0.022 ms (0.8 µs server, 0.021 ms worker). *2026-11-02, with heat: +0.064 ms; the rooms radiate in the vacuum ([check](#heat-check-2026-11-02))* | Pass |
 | NFR-003: doubling loaded chunks without zones changes cost < 5 % | +0.2 % | Pass |
 | NFR-004: ≤ 64 B per zoned cell and ≤ 64 MiB in S-10 | Rough: 13.6 MiB in all, 356 B per zoned cell. *2026-11-01, retained size: 10.85 MiB; 222 B per zoned cell in parts that scale with cells, about 1 KiB per zone* | Total and per zone pass; per cell fails, and is revised to 256 B by dated note ([check](#membership-palette-check-2026-11-01)) |
 | GEO-011: constant cost per change away from zones | 5.3 to 5.8 ns, from 16 k to 1 M changes and with 278 or 1,278 zones | Pass |
@@ -558,6 +558,52 @@ margin, and zones cost about 1 KiB each against 4 KiB. The parts that scale
 with cells come to 222 B per zoned cell, over the 64 B budget; without the
 graph's cells they would be 33 B. NFR-004 is revised by a dated note (see the
 requirement).
+
+## Heat check (2026-11-02)
+
+_[#39](https://github.com/west3436/zas-cubed/issues/39) added conduction and
+radiation (architecture §4.8). The S-10 station is in a vacuum, so its outer
+walls radiate, and the 1,000 "idle" rooms of NFR-003 radiate too: in a vacuum
+no zone with gas is ever thermally settled. Both columns are the branch, one
+with `HeatSettings.DEFAULT` turned off for the run. They come from one session
+on the same machine while other builds were running, so single figures are
+noisy (the "off" column's ops apply, for one); compare a row across, not with
+the tables above._ `./gradlew :engine:bench`:
+
+| Measure | Heat off | Heat on |
+|---|---|---|
+| S-10 with ops: worker tick, mean / worst | 0.616 / 16.83 ms | 0.544 / 12.26 ms |
+| S-10 without ops: worker tick, mean / worst | 0.402 / 15.51 ms | 0.487 / 14.43 ms |
+| S-10 with ops: explosion tick, worker | 14.82 ms | 11.28 ms |
+| S-10 with ops: server per server tick, mean / p99 | 9.8 µs / 0.202 ms | 2.7 µs / 0.043 ms |
+| S-10 with ops: worst server tick | 0.388 ms | 0.468 ms |
+| Worker ms per game second at 0.5 / 1 / 2 s periods | 0.515 / 0.616 / 0.337 | 0.606 / 0.544 / 0.387 |
+| NFR-003: 1,000 idle zones, Δ server / Δ worker per server tick | +0.011 / +0.027 ms | +0.014 / +0.050 ms |
+| NFR-003: twice the loaded chunks without zones | −3.2 % | −0.8 % |
+| S-10 atmos heap, retained | 10.71 MiB | 11.45 MiB |
+| Of which heat links | | 0.74 MiB: 19.4 B per zoned cell; 59.2 B per cell in the sparse rooms |
+| S-10 heap per zoned cell, parts that scale with cells | 221.2 B | 240.7 B |
+
+- **NFR-003 holds:** with heat on, the 1,000 rooms add 0.064 ms per server
+  tick, inside 0.1 ms. They are not idle any more, since each loses heat every
+  tick. Before one fix they added 0.237 ms. `DimensionEngine.components` went
+  over every queued operation once per exchange component, so its cost grew
+  with operations × components. That was harmless while few zones changed in a
+  tick, but here all 1,000 rooms change and each is its own component. It now
+  makes one pass over the operations.
+- **NFR-004 holds for S-10:** the parts that scale with cells come to 241 B
+  per zoned cell, inside the revised 256 B. The heat links are each zone's
+  boundary paths: a cell id, a U and an area for every distinct far cell (24 B
+  each), so they grow with wall area, not volume.
+- **NFR-005:** the worst worker tick stays near 15 ms either way.
+- **Geometry palette:** the shipped heat data (HEAT-014) and the test pack take
+  the GameTest server's palette from 329 geometries to 461. Each
+  material's U makes its blocks' shapes distinct entries.
+- **Left for later:** `Conduction.resolve` reworks every zone's links whenever
+  membership changes anywhere in the dimension. With the station's breaches,
+  that is a few percent of worker time in the idle-zones run. Resolving only
+  the zones whose far cells changed would need a reverse index from cells to
+  the zones that link to them.
 
 ## Findings
 
