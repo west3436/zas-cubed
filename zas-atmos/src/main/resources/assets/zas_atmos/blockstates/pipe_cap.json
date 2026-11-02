@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "zas_atmos:block/pipe_cap" },
+    "facing=east": { "model": "zas_atmos:block/pipe_cap", "y": 90 },
+    "facing=south": { "model": "zas_atmos:block/pipe_cap", "y": 180 },
+    "facing=west": { "model": "zas_atmos:block/pipe_cap", "y": 270 },
+    "facing=up": { "model": "zas_atmos:block/pipe_cap", "x": 270 },
+    "facing=down": { "model": "zas_atmos:block/pipe_cap", "x": 90 }
+  }
+}

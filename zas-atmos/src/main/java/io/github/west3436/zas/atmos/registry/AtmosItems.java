@@ -11,6 +11,7 @@ public final class AtmosItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ZasAtmosMod.MOD_ID);
 
     public static final DeferredItem<BlockItem> PIPE = ITEMS.registerSimpleBlockItem(AtmosBlocks.PIPE);
+    public static final DeferredItem<BlockItem> PIPE_CAP = ITEMS.registerSimpleBlockItem(AtmosBlocks.PIPE_CAP);
 
     private AtmosItems() {}
 

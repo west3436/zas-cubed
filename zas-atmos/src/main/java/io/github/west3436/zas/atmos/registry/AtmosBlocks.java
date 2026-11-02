@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
+import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -15,6 +16,10 @@ public final class AtmosBlocks {
 
     /** A pipe segment (CONT-001, CONT-007). */
     public static final DeferredBlock<PipeBlock> PIPE = BLOCKS.registerBlock("pipe", PipeBlock::new, metal());
+
+    /** A pipe end cap, which closes a pipe's open end (CONT-004). */
+    public static final DeferredBlock<PipeCapBlock> PIPE_CAP =
+            BLOCKS.registerBlock("pipe_cap", PipeCapBlock::new, metal());
 
     private AtmosBlocks() {}
 

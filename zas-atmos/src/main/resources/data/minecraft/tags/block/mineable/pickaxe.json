@@ -1,5 +1,6 @@
 {
   "values": [
-    "zas_atmos:pipe"
+    "zas_atmos:pipe",
+    "zas_atmos:pipe_cap"
   ]
 }

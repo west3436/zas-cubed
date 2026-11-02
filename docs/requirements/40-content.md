@@ -9,6 +9,7 @@ alarm became the area air controller and the power cable and multipart block
 were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
 CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
+CONT-114 (dyed pipes) was added as Draft on 2026-11-02.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -21,7 +22,7 @@ at the end). vg's per-2 s device rates are converted to per second (D-20).
 ## Pipe networks
 
 #### CONT-001 · Network model
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 Connected pipes shall form a network. Each continuous pipe run holds one
 mixture whose volume is the sum of its segments' volumes.
@@ -30,6 +31,14 @@ mixture whose volume is the sum of its segments' volumes.
   its pipes ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
 - **Verify:** A Unit test builds runs of several lengths and checks their
   volumes; a GameTest checks connected pipes share one mixture.
+
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network is one `GasStore` whose volume is its members' sum ([architecture
+§11.4](../architecture.md#114-pipe-networks)). `PipeNetworkTest.cont_001_*`
+(Unit) checks runs of 1 to 50 pipes and a vent buffer;
+`PipeTests.cont_001_connected_pipes_share_one_mixture` (GameTest) checks a run,
+a branch and a cap share one mixture, and `cont_001_a_pipe_saves_its_share`
+that a segment saves its share by volume.*
 
 #### CONT-007 · Pipe and buffer volumes
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
@@ -43,7 +52,7 @@ Each pipe block shall hold 70 L, and each device port buffer 200 L (vents
 - **Verify:** A Unit test checks each part's volume.
 
 #### CONT-008 · Perfect mixing
-`Must` · `R1` · `Accepted` · Verify: Unit
+`Must` · `R1` · `Implemented` · Verify: Unit
 
 A pipe run's mixture shall be perfectly mixed after every change.
 
@@ -52,8 +61,14 @@ A pipe run's mixture shall be perfectly mixed after every change.
 - **Verify:** A Unit test adds gas at one end of a run and checks the whole
   run is uniform after the change.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network's gas is a single mixture, so every change mixes the whole run.
+`PipeNetworkTest.cont_008_gas_added_at_one_end_is_uniform_across_the_run`
+(Unit). The API gives no heat capacities, so gases at different temperatures
+mix at the mole-weighted mean; the Verify doesn't cover temperatures.*
+
 #### CONT-002 · Separate from zones
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: API-021
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: API-021
 
 Pipe gas shall never join zone gas directly. Only devices, open ends (CONT-004)
 and ruptures move gas between pipes and zones.
@@ -63,8 +78,12 @@ and ruptures move gas between pipes and zones.
 - **Verify:** Inspect the code: only devices, open ends and ruptures call zone
   mutations.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+Inspect: the content mod calls `GasMutations` only in `ZonePort` (devices and
+open ends) and `PipeNodeEntity` (a removed segment's share, CONT-009).*
+
 #### CONT-003 · Gas-conserving rebuilds
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: CORE-036
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-036
 
 Splitting or merging networks shall share gas out by volume.
 
@@ -74,8 +93,15 @@ Splitting or merging networks shall share gas out by volume.
 - **Verify:** A Unit test splits and merges networks and checks each part gets
   gas by volume; a GameTest breaks a pipe in a run and checks total moles.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network never changes its members: it dissolves, each member keeping its
+share by volume, and the next one built gathers the shares.
+`PipeNetworkTest.cont_003_*` (Unit) splits and merges networks;
+`PipeTests.cont_003_breaking_a_pipe_conserves_gas` (GameTest) breaks a pipe in
+a run and checks each part's share and the total.*
+
 #### CONT-009 · Removed segments release their gas
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-036
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
 A removed pipe segment's share of gas shall be released into its cell
 (CORE-053 if the cell is open).
@@ -85,8 +111,14 @@ A removed pipe segment's share of gas shall be released into its cell
 - **Verify:** A GameTest removes a segment from a filled run and checks its
   cell gains the segment's share.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A removed node adds its share at its position through the API.
+`PipeTests.cont_003_breaking_a_pipe_conserves_gas` (GameTest) checks the
+room gains the segment's share; `PipeNetworkTest.cont_009_*` (Unit) checks the
+share.*
+
 #### CONT-004 · Open ends leak
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: vg quirk 4, CORE-031
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: vg quirk 4, CORE-031
 
 A pipe end with no connection shall exchange gas with its cell's atmosphere as
 a one-connection edge does (sharing ratio 0.163 per second). vg disabled this.
@@ -96,6 +128,28 @@ a one-connection edge does (sharing ratio 0.163 per second). vg disabled this.
   §1](../research/vg-atmos-content.md#1-pipe-networks)).
 - **Verify:** A GameTest checks an open pipe end exchanges gas with its room
   at the one-connection ratio.
+
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A pipe with fewer than two connections has an open end; a pipe cap
+(`zas_atmos:pipe_cap`) closes one and never leaks. An open end exchanges each
+gas by ZAS's one-connection rule with its cell's zone, or with the ambient as
+an infinite reservoir, and skips flows under 10⁻⁴ mol. After it loads, it waits
+until its cell reads the same twice running ([architecture
+§11.4](../architecture.md#114-pipe-networks)). `OpenEndTest` (Unit)
+checks the formula; `PipeTests.cont_004_open_end_exchanges_at_the_one_connection_ratio`
+and `cont_004_capped_pipe_does_not_leak` (GameTest) check it in a room.*
+
+#### CONT-114 · Dyed pipes
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
+
+Using a dye on a pipe or pipe cap shall colour it, using up one dye outside
+creative. The colour is cosmetic: it doesn't change what the pipe connects to.
+
+*2026-11-02: added as Draft from the owner's choice of 2026-11-01 that players
+dye pipes, which had no requirement. Whether differently dyed pipes should
+stay apart, so parallel runs can share a wall, is left open. Built in
+[#47](https://github.com/west3436/zas-cubed/issues/47) and checked by
+`PipeTests.cont_114_a_dye_colours_a_pipe` (GameTest).*
 
 #### CONT-005 · Overpressure
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; off by default anyway), 2026-10-30. · Verify: GameTest
@@ -120,7 +174,7 @@ that never runs.)
   everything, with no explosion.
 
 #### CONT-006 · Network cadence
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-31, D-20, D-50
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50
 
 Pipe networks and devices shall step once per atmos tick, on the server
 thread.
@@ -128,6 +182,16 @@ thread.
 - **Rationale:** Decision: D-31, D-20 and D-50.
 - **Verify:** A Unit test checks networks and devices step exactly once per
   atmos tick, on the server thread.
+
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+Devices and pipe segments are `AtmosDevice` block entities, stepped every
+20 game ticks on the server thread, spread across ticks ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_*` (Unit) checks the timing;
+`DeviceTests.cont_006_devices_step_once_per_atmos_tick` (GameTest) checks it
+on the server thread. The API doesn't expose the framework's period, so the
+content mod always steps every second; rates are per second, so behaviour
+doesn't change with the period.*
 
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Accepted` · Verify: Manual

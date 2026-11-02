@@ -27,6 +27,7 @@ public final class AtmosCreativeTab {
     /** The tab's contents, in order: pipes first, then devices. */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
+        out.accept(AtmosItems.PIPE_CAP.get());
     }
 
     public static void register(IEventBus modBus) {
