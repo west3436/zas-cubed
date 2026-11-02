@@ -121,7 +121,7 @@ it passed: zones tinted per zone with labels, a paused zone (a tunnel past a
 chunk border at render distance 2) in grey, and a held breach in magenta.*
 
 #### CLIENT-011 · Debug edges
-`Must` · `R0` · `Accepted` · Verify: Manual · Depends: CLIENT-005
+`Must` · `R0` · `Implemented` · Verify: Manual · Depends: CLIENT-005
 
 The overlay shall show edges, coloured by type (zone or ambient, direct or
 boundary), each labelled with its pressure difference.
@@ -140,6 +140,11 @@ flag (GEO-007, R1), so this stays Accepted until they can be checked.*
 and `client_011_door_edge_is_a_zone_boundary` (GameTest) checks the payload
 marks it so. It stays Accepted until the owner checks the boundary colour by
 hand.*
+
+*2026-11-01: Implemented. The owner checked by hand, in the dev client on main,
+that the boundary edges around doors and trapdoors are coloured and labelled:
+blue for a zone boundary and orange for an ambient boundary
+([#31](https://github.com/west3436/zas-cubed/issues/31#issuecomment-6566381690)).*
 
 #### CLIENT-012 · Debug seal masks and sub-cells
 `Must` · `R0` · `Implemented` · Verify: Manual · Trace: D-44 · Depends: CLIENT-005
