@@ -258,6 +258,19 @@ public final class DimensionPipeline {
     }
 
     /**
+     * Queues an addition ({@code add}) or removal of {@code joules} of heat at one sub-cell of a
+     * position for the next batch (API-013): {@code sub} as in {@link GasOp#sub()}, -1 for the
+     * largest cell. Heat operations aren't saved with their chunk (DATA-011).
+     *
+     * @return its sequence number
+     */
+    public long heat(long block, int sub, boolean add, double joules, boolean triggersZone, String source) {
+        long seq = nextSeq++;
+        enqueue(GasOp.heat(seq, block, sub, add, joules, triggersZone, source));
+        return seq;
+    }
+
+    /**
      * Queues a pin of the zone at one sub-cell of a position for the next batch (API-017, API-050):
      * {@code sub} as in {@link GasOp#sub()}, -1 for the largest cell. If the cell is enclosed and
      * unzoned, a zone forms there holding the ambient's gas.
@@ -314,6 +327,14 @@ public final class DimensionPipeline {
             case REMOVE -> remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
             case PIN -> pin(op.block(), op.sub(), op.source());
             case UNPIN -> unpin(op.source());
+            case ADD_HEAT, REMOVE_HEAT ->
+                heat(
+                        op.block(),
+                        op.sub(),
+                        op.kind() == GasOp.Kind.ADD_HEAT,
+                        op.energy(),
+                        op.triggersZone(),
+                        op.source());
         };
     }
 
