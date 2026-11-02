@@ -1,0 +1,514 @@
+{
+  "variants": {
+    "color=yellow,facing=north,open=false": {
+      "model": "zas_atmos:block/canister"
+    },
+    "color=yellow,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_open"
+    },
+    "color=white,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_white"
+    },
+    "color=white,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_white_open"
+    },
+    "color=orange,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_orange"
+    },
+    "color=orange,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_orange_open"
+    },
+    "color=magenta,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_magenta"
+    },
+    "color=magenta,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_magenta_open"
+    },
+    "color=light_blue,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_light_blue"
+    },
+    "color=light_blue,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_light_blue_open"
+    },
+    "color=lime,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_lime"
+    },
+    "color=lime,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_lime_open"
+    },
+    "color=pink,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_pink"
+    },
+    "color=pink,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_pink_open"
+    },
+    "color=gray,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_gray"
+    },
+    "color=gray,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_gray_open"
+    },
+    "color=light_gray,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_light_gray"
+    },
+    "color=light_gray,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_light_gray_open"
+    },
+    "color=cyan,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_cyan"
+    },
+    "color=cyan,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_cyan_open"
+    },
+    "color=purple,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_purple"
+    },
+    "color=purple,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_purple_open"
+    },
+    "color=blue,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_blue"
+    },
+    "color=blue,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_blue_open"
+    },
+    "color=brown,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_brown"
+    },
+    "color=brown,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_brown_open"
+    },
+    "color=green,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_green"
+    },
+    "color=green,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_green_open"
+    },
+    "color=red,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_red"
+    },
+    "color=red,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_red_open"
+    },
+    "color=black,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_black"
+    },
+    "color=black,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_black_open"
+    },
+    "color=red_white,facing=north,open=false": {
+      "model": "zas_atmos:block/canister_red_white"
+    },
+    "color=red_white,facing=north,open=true": {
+      "model": "zas_atmos:block/canister_red_white_open"
+    },
+    "color=yellow,facing=east,open=false": {
+      "model": "zas_atmos:block/canister",
+      "y": 90
+    },
+    "color=yellow,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_open",
+      "y": 90
+    },
+    "color=white,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_white",
+      "y": 90
+    },
+    "color=white,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_white_open",
+      "y": 90
+    },
+    "color=orange,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_orange",
+      "y": 90
+    },
+    "color=orange,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_orange_open",
+      "y": 90
+    },
+    "color=magenta,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_magenta",
+      "y": 90
+    },
+    "color=magenta,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_magenta_open",
+      "y": 90
+    },
+    "color=light_blue,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_light_blue",
+      "y": 90
+    },
+    "color=light_blue,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_light_blue_open",
+      "y": 90
+    },
+    "color=lime,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_lime",
+      "y": 90
+    },
+    "color=lime,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_lime_open",
+      "y": 90
+    },
+    "color=pink,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_pink",
+      "y": 90
+    },
+    "color=pink,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_pink_open",
+      "y": 90
+    },
+    "color=gray,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_gray",
+      "y": 90
+    },
+    "color=gray,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_gray_open",
+      "y": 90
+    },
+    "color=light_gray,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_light_gray",
+      "y": 90
+    },
+    "color=light_gray,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_light_gray_open",
+      "y": 90
+    },
+    "color=cyan,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_cyan",
+      "y": 90
+    },
+    "color=cyan,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_cyan_open",
+      "y": 90
+    },
+    "color=purple,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_purple",
+      "y": 90
+    },
+    "color=purple,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_purple_open",
+      "y": 90
+    },
+    "color=blue,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_blue",
+      "y": 90
+    },
+    "color=blue,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_blue_open",
+      "y": 90
+    },
+    "color=brown,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_brown",
+      "y": 90
+    },
+    "color=brown,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_brown_open",
+      "y": 90
+    },
+    "color=green,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_green",
+      "y": 90
+    },
+    "color=green,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_green_open",
+      "y": 90
+    },
+    "color=red,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_red",
+      "y": 90
+    },
+    "color=red,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_red_open",
+      "y": 90
+    },
+    "color=black,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_black",
+      "y": 90
+    },
+    "color=black,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_black_open",
+      "y": 90
+    },
+    "color=red_white,facing=east,open=false": {
+      "model": "zas_atmos:block/canister_red_white",
+      "y": 90
+    },
+    "color=red_white,facing=east,open=true": {
+      "model": "zas_atmos:block/canister_red_white_open",
+      "y": 90
+    },
+    "color=yellow,facing=south,open=false": {
+      "model": "zas_atmos:block/canister",
+      "y": 180
+    },
+    "color=yellow,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_open",
+      "y": 180
+    },
+    "color=white,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_white",
+      "y": 180
+    },
+    "color=white,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_white_open",
+      "y": 180
+    },
+    "color=orange,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_orange",
+      "y": 180
+    },
+    "color=orange,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_orange_open",
+      "y": 180
+    },
+    "color=magenta,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_magenta",
+      "y": 180
+    },
+    "color=magenta,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_magenta_open",
+      "y": 180
+    },
+    "color=light_blue,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_light_blue",
+      "y": 180
+    },
+    "color=light_blue,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_light_blue_open",
+      "y": 180
+    },
+    "color=lime,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_lime",
+      "y": 180
+    },
+    "color=lime,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_lime_open",
+      "y": 180
+    },
+    "color=pink,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_pink",
+      "y": 180
+    },
+    "color=pink,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_pink_open",
+      "y": 180
+    },
+    "color=gray,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_gray",
+      "y": 180
+    },
+    "color=gray,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_gray_open",
+      "y": 180
+    },
+    "color=light_gray,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_light_gray",
+      "y": 180
+    },
+    "color=light_gray,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_light_gray_open",
+      "y": 180
+    },
+    "color=cyan,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_cyan",
+      "y": 180
+    },
+    "color=cyan,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_cyan_open",
+      "y": 180
+    },
+    "color=purple,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_purple",
+      "y": 180
+    },
+    "color=purple,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_purple_open",
+      "y": 180
+    },
+    "color=blue,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_blue",
+      "y": 180
+    },
+    "color=blue,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_blue_open",
+      "y": 180
+    },
+    "color=brown,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_brown",
+      "y": 180
+    },
+    "color=brown,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_brown_open",
+      "y": 180
+    },
+    "color=green,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_green",
+      "y": 180
+    },
+    "color=green,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_green_open",
+      "y": 180
+    },
+    "color=red,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_red",
+      "y": 180
+    },
+    "color=red,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_red_open",
+      "y": 180
+    },
+    "color=black,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_black",
+      "y": 180
+    },
+    "color=black,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_black_open",
+      "y": 180
+    },
+    "color=red_white,facing=south,open=false": {
+      "model": "zas_atmos:block/canister_red_white",
+      "y": 180
+    },
+    "color=red_white,facing=south,open=true": {
+      "model": "zas_atmos:block/canister_red_white_open",
+      "y": 180
+    },
+    "color=yellow,facing=west,open=false": {
+      "model": "zas_atmos:block/canister",
+      "y": 270
+    },
+    "color=yellow,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_open",
+      "y": 270
+    },
+    "color=white,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_white",
+      "y": 270
+    },
+    "color=white,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_white_open",
+      "y": 270
+    },
+    "color=orange,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_orange",
+      "y": 270
+    },
+    "color=orange,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_orange_open",
+      "y": 270
+    },
+    "color=magenta,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_magenta",
+      "y": 270
+    },
+    "color=magenta,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_magenta_open",
+      "y": 270
+    },
+    "color=light_blue,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_light_blue",
+      "y": 270
+    },
+    "color=light_blue,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_light_blue_open",
+      "y": 270
+    },
+    "color=lime,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_lime",
+      "y": 270
+    },
+    "color=lime,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_lime_open",
+      "y": 270
+    },
+    "color=pink,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_pink",
+      "y": 270
+    },
+    "color=pink,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_pink_open",
+      "y": 270
+    },
+    "color=gray,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_gray",
+      "y": 270
+    },
+    "color=gray,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_gray_open",
+      "y": 270
+    },
+    "color=light_gray,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_light_gray",
+      "y": 270
+    },
+    "color=light_gray,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_light_gray_open",
+      "y": 270
+    },
+    "color=cyan,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_cyan",
+      "y": 270
+    },
+    "color=cyan,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_cyan_open",
+      "y": 270
+    },
+    "color=purple,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_purple",
+      "y": 270
+    },
+    "color=purple,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_purple_open",
+      "y": 270
+    },
+    "color=blue,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_blue",
+      "y": 270
+    },
+    "color=blue,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_blue_open",
+      "y": 270
+    },
+    "color=brown,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_brown",
+      "y": 270
+    },
+    "color=brown,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_brown_open",
+      "y": 270
+    },
+    "color=green,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_green",
+      "y": 270
+    },
+    "color=green,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_green_open",
+      "y": 270
+    },
+    "color=red,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_red",
+      "y": 270
+    },
+    "color=red,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_red_open",
+      "y": 270
+    },
+    "color=black,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_black",
+      "y": 270
+    },
+    "color=black,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_black_open",
+      "y": 270
+    },
+    "color=red_white,facing=west,open=false": {
+      "model": "zas_atmos:block/canister_red_white",
+      "y": 270
+    },
+    "color=red_white,facing=west,open=true": {
+      "model": "zas_atmos:block/canister_red_white_open",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,206 @@
+package io.github.west3436.zas.atmos.canister;
+
+import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.gas.GasMixture;
+import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.ZonePort;
+import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
+import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
+import io.github.west3436.zas.atmos.pipe.PipeVolumes;
+import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * A canister's block entity (CONT-017, CONT-084): a 1,000 L network node, joined to a connector
+ * port's network when it stands on one (CONT-083). With its valve open, it releases its network's
+ * gas into its cell's zone, up to the release pressure.
+ *
+ * <p>Mined with the right tool, it keeps its gas: the item carries it as {@link
+ * AtmosComponents#GAS}, and placing the item puts it back. Removed any other way, it releases its
+ * gas into its cell, as a pipe does (CONT-009).
+ */
+public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider {
+    /** The pressure a canister is rated for, kPa (90 atm). Rupture isn't built yet (CONT-085). */
+    public static final double RATED_KPA = 9120.0;
+
+    /** Who a canister's releases are made by. */
+    public static final SourceId VALVE = SourceId.of(ZasAtmosMod.MOD_ID, "canister_valve");
+
+    private static final String RELEASE_KEY = "Release";
+
+    private final ZonePort port = new ZonePort(VALVE);
+    private double releasePressure = CanisterRelease.DEFAULT_KPA;
+    private boolean keepContents;
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case CanisterMenu.DATA_RELEASE -> (int) Math.round(releasePressure);
+                case CanisterMenu.DATA_OPEN -> valveOpen() ? 1 : 0;
+                case CanisterMenu.DATA_PRESSURE ->
+                    clampShort(GasMixture.GAS_CONSTANT * gasNow().temperature() * gasNow().totalMoles() / nodeVolume());
+                case CanisterMenu.DATA_MOLES -> clampShort(gasNow().totalMoles());
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {}
+
+        @Override
+        public int getCount() {
+            return CanisterMenu.DATA_COUNT;
+        }
+    };
+
+    public CanisterBlockEntity(BlockPos pos, BlockState state) {
+        super(AtmosBlockEntities.CANISTER.get(), pos, state, PipeVolumes.CANISTER);
+    }
+
+    private static int clampShort(double v) {
+        return (int) Math.max(0, Math.min(Short.MAX_VALUE, Math.round(v)));
+    }
+
+    /** The canister's own share of the gas, as its GUI shows it: of its network if it is in one. */
+    private GasParcel gasNow() {
+        return share();
+    }
+
+    /** Whether the valve is open: the block state's. */
+    public boolean valveOpen() {
+        BlockState state = getBlockState();
+        return state.hasProperty(CanisterBlock.OPEN) && state.getValue(CanisterBlock.OPEN);
+    }
+
+    /** Opens or closes the valve. */
+    public void setValveOpen(boolean open) {
+        if (level != null && valveOpen() != open) {
+            level.setBlock(worldPosition, getBlockState().setValue(CanisterBlock.OPEN, open), Block.UPDATE_ALL);
+        }
+    }
+
+    /** The release pressure, kPa. */
+    public double releasePressure() {
+        return releasePressure;
+    }
+
+    /** Sets the release pressure, clamped to 10–1,013 kPa (CONT-084). */
+    public void setReleasePressure(double kPa) {
+        releasePressure = CanisterRelease.clamp(kPa);
+        setChanged();
+    }
+
+    /** Called when the canister is about to drop as an item carrying its gas. */
+    void keepContents() {
+        keepContents = true;
+    }
+
+    @Override
+    protected boolean keepsShareWhenRemoved() {
+        return keepContents;
+    }
+
+    @Override
+    public boolean readyToStep() {
+        return !port.busy();
+    }
+
+    @Override
+    protected void atmosTick(ServerLevel level) {
+        cellWatch().step();
+        GasStore gas = network().gas();
+        if (!valveOpen() || gas.isEmpty()) {
+            return;
+        }
+        AtmosphereSample sample = Atmospheres.at(level, worldPosition);
+        if (!cellWatch().trust(sample)) {
+            return;
+        }
+        GasMixture zone = sample.mixture();
+        double n = CanisterRelease.moles(
+                gas.totalMoles(),
+                gas.volume(),
+                zone.totalMoles(),
+                zone.volume(),
+                zone.pressure(),
+                gas.temperature(),
+                releasePressure);
+        if (n < PipeBlockEntity.MIN_FLOW) {
+            return;
+        }
+        GasParcel out = gas.takeFraction(n / gas.totalMoles());
+        port.add(
+                level,
+                Vec3.atCenterOf(worldPosition),
+                out,
+                r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
+    }
+
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        GasParcel gas = share();
+        if (!gas.isEmpty()) {
+            components.set(AtmosComponents.GAS.get(), gas);
+        }
+    }
+
+    @Override
+    protected void applyImplicitComponents(DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        GasParcel gas = input.get(AtmosComponents.GAS.get());
+        if (gas != null) {
+            stored().set(gas);
+        }
+    }
+
+    @Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove("Gas");
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putDouble(RELEASE_KEY, releasePressure);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        if (tag.contains(RELEASE_KEY)) {
+            releasePressure = CanisterRelease.clamp(tag.getDouble(RELEASE_KEY));
+        }
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.zas_atmos.canister");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new CanisterMenu(id, data, ContainerLevelAccess.create(level, worldPosition), this);
+    }
+}

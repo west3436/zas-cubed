@@ -1241,11 +1241,14 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister item's `zas_atmos:gas`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
-| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks` |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
-| `pipe` | Pipes and pipe networks (§11.4) |
+| `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
+| `pipe` | Pipes, caps and pipe networks (§11.4) |
+| `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -1315,12 +1318,118 @@ the cell in front of its grille).
 
 ### 11.4 Pipe networks
 
-*To come with [#47](https://github.com/west3436/zas-cubed/issues/47).*
+*Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)), in
+`.pipe`.*
+
+- **Nodes.** Every network member is a `PipeNodeEntity`, a device block
+  entity with a gas volume (CONT-007): a pipe or a pipe cap holds 70 L, a
+  port buffer 200 L, a vent's buffer 400 L, a canister 1,000 L. Device
+  buffers are network members, so a device sees its network's conditions.
+- **Connections.** A block that pipes join implements `PipeConnector`, which
+  says on which faces it offers a connection; two neighbours are connected
+  when both offer one on their shared face. A pipe offers every face, a cap
+  only the face it points at, a vent only its back (CONT-014) and a
+  connector port only its bottom, plus its top for a canister (CONT-083).
+  A pipe's block state has a boolean per face, updated from its neighbours;
+  its blockstate is a multipart of the core and an arm per connected face.
+- **One mixture.** A `PipeNetwork` is its members and one `GasStore`, whose
+  volume is theirs summed (CONT-001), so every change mixes the whole network
+  (CONT-008). A `GasStore` is the content mod's mutable mixture. The API has
+  no heat capacities, so gas added to a store takes the mole-weighted mean
+  temperature, which is exact when temperatures are equal.
+- **Rebuilds.** A network never changes its members. It dissolves when a
+  member is added, removed or unloaded: each member keeps its share by volume
+  in its own store. The next network built, when a node needs its gas or at a
+  pipe's next atmos tick, gathers the shares of every loaded node it reaches, and dissolves any old
+  network it crosses, so splits share gas by volume, merges add it up, and no
+  gas is counted twice (CONT-003). A node that loads (in `onLoad`, which the
+  game calls at the start of the next tick) dissolves its neighbours'
+  networks, so they are rebuilt with it.
+- **Removal and unloading.** A node removed from the world gives its share to
+  its cell through `GasMutations.add` (CONT-009); the rest stays in the
+  remaining nodes. A node whose chunk unloads keeps its share, saved with it,
+  and the network dissolves; a network never reaches into an unloaded chunk.
+- **Saving.** Each node saves its share (`Gas`: temperature and moles per
+  gas), so a network's gas is saved across the chunks it spans.
+- **Open ends** (CONT-004). A pipe with fewer than two connections has an open
+  end. Once per atmos tick it exchanges each gas with the zone at its cell by
+  ZAS's one-connection rule (CORE-031): r·(n_p·V_z − n_z·V_p)/(V_p + V_z) moles
+  out, with r = 0.163 per second; the ambient is an infinite reservoir,
+  r·(n_p − c·V_p). Gases leaving and entering are one change on its port.
+  Flows under 10⁻⁴ mol are skipped, so a settled end goes quiet, and nothing
+  moves while the cell is paused or unresolved. An end also waits for its
+  first three atmos ticks after it loads, and moves gas only when its cell
+  reads the same state and zone twice running: a chunk's zones reach the
+  published state a little after the chunk loads, and until then an enclosed
+  cell reads as the ambient, which an open end would vent into
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)). A pipe cap
+  closes an end and never leaks.
+- **Dye** (CONT-114, Draft). A dye on a pipe or cap sets its `color` state; the
+  client tints the models' tint index 0 with the dye's colour. The colour
+  doesn't change connections.
+- **Deferred:** pipe bursts (CONT-108), reactions in pipes (CONT-100) and
+  client smoothing (CONT-070) are not built yet; S-01 needs none of them.
 
 ### 11.5 Devices
 
-*To come with [#48](https://github.com/west3436/zas-cubed/issues/48): the
-canister, connector port and vent, and their GUIs.*
+*Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)), in
+`.port`, `.canister` and `.vent`.*
+
+- **Devices are network nodes.** The connector port (200 L), canister
+  (1,000 L) and vent (400 L) are `PipeNodeEntity`s, so each device's buffer is
+  part of its network's one mixture (§11.4), and each changes zones only
+  through a `ZonePort` (CONT-071, CONT-072).
+- **Reading the cell.** A device that acts on a cell uses a `CellWatch`: it
+  waits three atmos ticks after it loads, and acts only on a cell that reads
+  the same state and zone twice running and is zoned or the ambient. This is
+  the open pipe end's guard of §11.4, shared
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)).
+- **Connector port** (CONT-083). Set in the floor, facing up. It connects to
+  a pipe below it and a canister on it; its `connected` state shows a collar
+  while a canister stands on it.
+- **Canister** (CONT-017, CONT-084).
+  - It connects only down, to a port, so a canister on a pipe stays apart.
+    Its block state has its valve's facing, its paint (`color`: yellow, the
+    16 dyes' colours and red-and-white) and its valve (`open`). A dye paints
+    it.
+  - An open valve releases its network's gas into its own cell (the canister
+    doesn't fill its cell): the least of (P_release − P_zone)·V_zone/(R·T),
+    which brings the zone to the release pressure, and what equalises the
+    canister and the zone. V_zone is the zone's real volume, or one cell's in
+    the ambient. The release pressure is clamped to 10–1,013 kPa.
+  - A player who mines it with the right tool gets an item carrying its gas as
+    the `zas_atmos:gas` data component, with its paint as block state;
+    placing the item puts the gas back. The game removes a mined block before
+    it makes the drops, so `playerWillDestroy` marks the canister to keep its
+    share; drops made before removal (`destroyBlock`, explosions) mark it in
+    `getDrops`. Removed any other way, it releases its share, as a pipe does.
+  - It is rated at 9,120 kPa; rupture (CONT-085) isn't built.
+  - The creative tab has a canister of each built-in gas at 45 atm and
+    293.15 K, painted in that gas's colour (CONT-086). The item model picks
+    the paint's model by the `zas_atmos:color` item property.
+- **Vent** (CONT-014, CONT-078).
+  - A full block whose grille faces any of six ways, facing the player who
+    places it. A pipe joins only its back. It acts on the cell in front of the
+    grille, which is also its `airPoint` (§11.3).
+  - Its `VentSettings` are a `VentMode` (off, blow, siphon) and two bounds,
+    each clamped to 0–5,066 kPa. Blowing, it moves the least of what brings the
+    zone up to the external bound, what brings the network down to the
+    internal bound, and half a 400 L buffer of the network a second. Siphoning
+    is the reverse, capped at half a 400 L slice of the zone a second. In an
+    open cell the zone is the ambient, one cell's volume.
+  - It runs only while powered (CONT-060), in the life-support group, drawing
+    `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
+    what it is doing: its mode while it runs, else off.
+  - **For the area air controller:** `VentBlockEntity.command(VentSettings)`
+    sets it, and an unchanged setting changes nothing, so a controller can
+    send the same order every atmos tick. `VentSettings.OFF`,
+    `VentSettings.blow(target)` and `VentSettings.siphon(target)` build the
+    usual settings.
+- **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
+  menu. Values reach the client as the menu's data slots (whole kPa); the
+  client sends only button ids, through the game's menu-button packet, and
+  the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
+  screens are plain panels with buttons and no textures.
 
 ### 11.6 The area air controller
 

@@ -152,7 +152,11 @@ public final class ZonePort {
         outstanding++;
         future.whenComplete((result, failure) -> {
             outstanding--;
-            if (failure != null) {
+            if (failure instanceof java.util.concurrent.CancellationException) {
+                // The server is stopping: ZAS³ saves a pending addition and adds it after the
+                // restart, so nothing is taken back.
+                LOGGER.debug("A zone mutation by {} was cancelled", source, failure);
+            } else if (failure != null) {
                 LOGGER.warn("A zone mutation by {} failed", source, failure);
             } else if (done != null) {
                 done.accept(result);
