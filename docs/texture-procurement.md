@@ -13,7 +13,7 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   state named here exists at the pinned commit ([§3](#3-sources)).
 - **Block faces are all redrawn.** vg draws machines in a three-quarter view
   at 32 px, so each face is redrawn at 16 px per block (D-67).
-- **11 of the 23 items' sprites can be cropped.** vg draws many items at
+- **10 of the 23 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
   ones are redrawn to fill the 16 px slot, not at half size (the owner's pick
   for the atmos analyzer). The wrench is the exception: it's vg's own sprite
@@ -31,8 +31,8 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
-| Crop | – | – | 12 | – |
-| Redraw | 30 | 17 | 16 | 8 files |
+| Crop | – | – | 11 | – |
+| Redraw | 30 | 17 | 17 | 8 files |
 | As is | – | – | 1 | – |
 | Original | 2 | – | – | – |
 
@@ -77,7 +77,8 @@ Minecraft's own textures are never used, not even as a base. The only one this
 plan suggests is Pixel Perfection by XSSheep, a 16 px resource pack, as a base
 for the gas fire's animation. It is CC BY-SA, but sources disagree on whether
 it's 3.0 or 4.0. Both are allowed; confirm the version from the author's own
-statement before using it.
+statement before using it. The gas fire was drawn from scratch in batch 3, so
+it isn't used.
 
 ## 4. Tools
 
@@ -113,9 +114,16 @@ statement before using it.
   dye.
 - **One port design.** Every device port uses the pipe's 6 px round flange,
   painted flush on the face in an undyed pipe's colours. Output ports carry an
-  arrow, so a pump's input and output are easy to tell apart. A device with
+  arrow, so a device's input and output are easy to tell apart. A device with
   one pipe takes it on the face opposite its output: the vent's back, the
   connector port's bottom.
+- **Inline devices sit on the pipe.** The pressure pump and the valves have
+  the pipe's flange at each block edge and a short tube into a body in the
+  middle, in an undyed pipe's greys. The pump shows its direction with arrows
+  along its body, not on a port (the owner's pick in batch 3).
+- **Hand valves turn a straight lever,** like the canister's: the manual
+  valve's lies across the pipe when shut and in line when open, and the tank
+  transfer valve has the same one. Its grip is vg's handwheel red.
 - **Worn helmets look round.** Their faces darken toward the edges, past the
   one light and one dark edge. Raised details, like the softsuit's antenna
   and ear plates, go on the armor's outer layer, which Minecraft draws 0.5 px
@@ -130,7 +138,7 @@ Paths are in the vg repository. A state with frames is animated in vg.
 
 | Proposed id | vg source | States | Route | Notes |
 |---|---|---|---|---|
-| `zas:gas_fire` | `icons/effects/fire.dmi` | `1`, `2`, `3` (6 to 14 frames) | Original | vg's fire lies flat on a floor tile, so it can't become Minecraft's crossed planes of flame. Drawn from scratch, or from a CC BY-SA base ([§3](#3-sources)). |
+| `zas:gas_fire` | `icons/effects/fire.dmi` | `1`, `2`, `3` (6 to 14 frames) | Original | vg's fire lies flat on a floor tile, so it can't become Minecraft's crossed planes of flame. Drawn from scratch, or from a CC BY-SA base ([§3](#3-sources)). Done in batch 3, from scratch in vg's fire colours: crossed planes of rising flame, two textures picked at random so cells don't flicker in step, and a see-through haze on every face. Faces between two fire blocks aren't culled, so a burning room fills with a glow that thickens with depth. |
 
 ### 6.2 Content mod (`zas_atmos`): blocks
 
@@ -146,14 +154,14 @@ face.
 | `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | Done in batch 1: the pipe's flange and tube to the block's middle, closed by a rounded end. Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. |
 | `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. |
-| `zas_atmos:manual_valve` | `icons/obj/atmospherics/valve.dmi` | `valve0`, `valve1` | |
-| `zas_atmos:redstone_valve` | `icons/obj/atmospherics/digital_valve.dmi` | `valve0`, `valve1` | Add redstone detail to set it apart from the manual valve. |
+| `zas_atmos:manual_valve` | `icons/obj/atmospherics/valve.dmi` | `valve0`, `valve1` | Done in batch 3: inline on the pipe, an 8 px box with vg's lamp each side, red shut and green open. vg's handwheel is a straight lever with a red grip (the owner's pick), across the pipe when shut and in line when open. |
+| `zas_atmos:redstone_valve` | `icons/obj/atmospherics/digital_valve.dmi` | `valve0`, `valve1` | Add redstone detail to set it apart from the manual valve. Done in batch 3: the manual valve's shape in vg's dark steel with vg's panel on top, and a redstone trace round the body, lit while powered. |
 
 **Devices**
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:pressure_pump` | `icons/obj/atmospherics/pump.dmi` | `intact_off`, `intact_on` (5 frames) | vg's pump is a small part on a pipe, 7×16 px. The block is mostly new, with its colours and markings. |
+| `zas_atmos:pressure_pump` | `icons/obj/atmospherics/pump.dmi` | `intact_off`, `intact_on` (5 frames) | vg's pump is a small part on a pipe, 7×16 px. The block is mostly new, with its colours and markings. Done in batch 3: inline on the pipe, an 8 px round body whose lamp bars are two chevrons pointing the way the gas goes, lit in vg's lamp colours when on. vg's red band at the output is left out. |
 | `zas_atmos:volume_pump` | `icons/obj/atmospherics/volume_pump.dmi` | `intact_off`, `intact_on` (11 frames) | |
 | `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | |
 | `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | |
@@ -161,7 +169,7 @@ face.
 | `zas_atmos:scrubber` | `icons/obj/atmospherics/vent_scrubber.dmi` | `off`, `on`, `in` (5 frames) | Done in batch 2: the vent's cube, facing any of six ways with a pipe only on its back, with vg's round grille. vg's rings show the mode: a steady blue ring when scrubbing, a shrinking green one when siphoning. vg has no panic state. Panic is new: the siphon's ring in red, twice as fast. vg's own red rings are its stalled states, which ZAS has no texture for. |
 | `zas_atmos:passive_vent` | `icons/obj/atmospherics/pipe_vent.dmi` | `base` | |
 | `zas_atmos:connector_port` | `icons/obj/atmospherics/portables_connector.dmi` | `intact` | Done in batch 1: a cube set in the floor, socket up, that a canister stands on. Connected, a collar rises round the canister's foot, a new state. A pipe joins only the bottom (CONT-083). |
-| `zas_atmos:igniter` | `icons/obj/stationobjs.dmi` | `igniter0`, `igniter1` (3 frames) | |
+| `zas_atmos:igniter` | `icons/obj/stationobjs.dmi` | `igniter0`, `igniter1` (3 frames) | Done in batch 3: a 14×14 floor plate 2 px thick, with nine lights that flicker orange when active. |
 | `zas_atmos:heat_exchanger` | `icons/obj/atmospherics/heat_exchanger.dmi` | `intact` | |
 | `zas_atmos:airlock_controller` | `icons/obj/airlock_machines.dmi` | `airlock_control_standby`, `airlock_control_process` (2 frames) | The panel is 11×12 px, so its item sprite is a Crop. |
 | `zas_atmos:air_sensor` | `icons/obj/airlock_machines.dmi` | `airlock_sensor_standby`, `airlock_sensor_alert` (3 frames) | A small wall sensor in vg, 10×6 px. |
@@ -173,8 +181,8 @@ face.
 | `zas_atmos:canister` | `icons/obj/atmos.dmi` | `yellow`, `can-open`, `can-connector`, `can-o0` to `can-o3` | vg's empty canister is yellow, so that's an undyed canister. Its other colours are in [§6.4](#64-canister-colours). The `can-o` lights show pressure; they're optional. |
 | `zas_atmos:portable_pump` | `icons/obj/atmos.dmi` | `psiphon:0`, `psiphon:1` (2 frames) | |
 | `zas_atmos:portable_scrubber` | `icons/obj/atmos.dmi` | `pscrubber:0`, `pscrubber:1` (2 frames) | |
-| `zas_atmos:heater` | `icons/obj/atmos.dmi` | `sheater0`, `sheater1` (7 frames) | vg's space heater. |
-| `zas_atmos:air_conditioner` | `icons/obj/atmos.dmi` | `aircond0`, `aircond1` (9 frames) | vg's chiller. It's white where the heater is black, so the two already differ. |
+| `zas_atmos:heater` | `icons/obj/atmos.dmi` | `sheater0`, `sheater1` (7 frames) | vg's space heater. Done in batch 3: a box 14 px wide on four feet, with vg's own front. |
+| `zas_atmos:air_conditioner` | `icons/obj/atmos.dmi` | `aircond0`, `aircond1` (9 frames) | vg's chiller. It's white where the heater is black, so the two already differ. Done in batch 3, at the heater's size. |
 | `zas_atmos:tank_holder` | `icons/obj/objects.dmi` | `dispenser`, `oxygen-1` to `oxygen-4` | vg's tank storage unit. Its overlays show how many tanks it holds. |
 
 **Gas sources and power**
@@ -220,7 +228,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:emergency_oxygen_tank` | `icons/obj/tank.dmi` | `emergency` | 8×18 | Crop | Already looks smaller than the others. Done in batch 2: cut to 16 px tall. |
 | `zas_atmos:air_tank` | `icons/obj/tank.dmi` | `oxygen_f` | 22×21 | Redraw | vg reuses the O₂ tank's sprite for air. Done in batch 2: the O₂ tank in the colours of vg's yellow variant, `oxygen_f` (the owner's choice, 2026-11-01). |
 | `zas_atmos:empty_tank` | `icons/obj/tank.dmi` | `oxygen` | 22×21 | Redraw | No vg sprite; a grey recolour of the O₂ tank. Done in batch 2. |
-| `zas_atmos:tank_transfer_valve` | `icons/obj/assemblies.dmi` | `valve`, `valve_1`, `oxygen` | 8×10 | Crop | vg draws each attached tank as an overlay, such as `oxygen`. The timer state is new. |
+| `zas_atmos:tank_transfer_valve` | `icons/obj/assemblies.dmi` | `valve`, `valve_1`, `oxygen` | 8×10 | Redraw | vg draws each attached tank as an overlay, such as `oxygen`. The timer is new. Done in batch 3: vg's sprites with the manual valve's lever for vg's handwheel, and upright tanks in greys that code tints by kind. Once primed it's an entity (CONT-104), with block models: an H from above, the valve between two tanks lying on the floor, its timer running or the valve open. vg's transfer valve sprites came from Baystation 12, which licenses its icons CC BY-SA 3.0. |
 | `zas_atmos:breath_mask` | `icons/obj/clothing/masks.dmi` | `breath` | 18×13 | Crop | Done in batch 2: cut to 16 px wide, with its worn mask. |
 | `zas_atmos:gas_mask` | `icons/obj/clothing/masks.dmi` | `gas_alt` | 21×17 | Crop | vg's standard gas mask (the owner's choice in the batch 2 review). vg's older `gas_mask` is only its plague doctor's. Done in batch 2: cut to 15×16, with its worn mask. |
 | `zas_atmos:softsuit_helmet` | `icons/obj/clothing/hats.dmi` | `space` | 16×16 | Crop | Done in batch 1, with its worn helmet. |
@@ -273,21 +281,25 @@ texture of its own, not a tint, because vg's red-and-white has a stripe.
 | Black | `black` | CO₂ |
 | No dye | `redws`, red with a white stripe | N₂O |
 | Light gray | `grey` | |
-| Orange | `orange` | H₂ (proposed) |
+| Orange | `orange` | H₂ |
 | Green | `green` | |
 | Cyan | `cyan` | |
-| White | None | H₂O vapor (proposed) |
+| White | None | H₂O vapor |
 | Gray | None | |
-| Brown | None | CH₄ (proposed) |
+| Brown | None | CH₄ |
 | Lime | None | |
 | Light blue | None | |
-| Purple | None | CO (proposed) |
+| Purple | None | CO |
 | Magenta | None | |
 | Pink | None | |
 
 - **All 17 are Redraws.** vg's nine are redrawn from their own states. The
   eight dyes vg has no colour for are recolours of the same design, credited
-  to the vg state they follow.
+  to the vg state they follow. Done in batch 3: the eight recolours follow
+  Minecraft's dye colours, shaded in the steps of vg's red.
+- **Only blue keeps vg's pale band,** as in vg. Red is plain, so it stands
+  apart from red-and-white, which has vg's white rings at the shoulder and
+  the foot (the owner's pick in batch 3).
 - **vg's gas symbols are left out.** vg marks some colours with a symbol for
   the gas it held, such as a "P" for plasma on orange and a radiation mark on
   green. A dyed canister can hold any gas, so a symbol would mislead. The
@@ -295,10 +307,11 @@ texture of its own, not a tint, because vg's red-and-white has a stripe.
 - **Red-and-white has no dye.** In R1 only the creative N₂O canister has it,
   and dyeing that canister changes it to the dye's colour.
 - **The creative canisters** use vg's colour for the gases vg has: O₂, N₂, CO₂
-  and N₂O. vg has no canister for the other four, so their colours are
-  proposals. H₂ is orange because it takes the place of vg's plasma, the main
-  fuel, whose canister is orange. Water vapor is white, like steam. CH₄ is
-  brown and CO purple, chosen only to stand apart from the rest.
+  and N₂O. vg has no canister for the other four, so their colours are new,
+  as the owner accepted them in batch 3. H₂ is orange because it takes the
+  place of vg's plasma, the main fuel, whose canister is orange. Water vapor is
+  white, like steam. CH₄ is brown and CO purple, chosen only to stand apart
+  from the rest.
 
 ## 7. Order of work
 
@@ -324,7 +337,7 @@ changes.
 | 0. Set-up | The DMI extractor, the palette, the history check of each vg file ([§3](#3-sources)), and a pilot to settle the style: the pipe, the canister and the wrench, one of each kind of texture. The pilot is done (2026-11-01) | – |
 | 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer. Done (2026-11-01) | 12 |
 | 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit. Done (2026-11-02) | 12 |
-| 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters | 14 |
+| 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters. Done (2026-11-02) | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber | 17 |
 | 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent | 8 |
 
@@ -387,8 +400,15 @@ The owner settled these on 2026-11-01:
     - The air tank is vg's yellow tank, and the empty tank grey.
     - The gas mask is vg's standard one, `gas_alt`.
     - The softsuit keeps vg's 13 on its back.
-
-Still open:
-
-- **The colours proposed in [§6.4](#64-canister-colours):** which dye gives
-  which colour, and the creative canisters for H₂, water vapor, CO and CH₄.
+12. **Batch 3 settled** ([§5](#5-style), [§6](#6-sources-for-each-row)):
+    - The canister colours are as [§6.4](#64-canister-colours) proposed,
+      with the pale band on blue only.
+    - The pump and valves sit inline on the pipe. The pump shows its
+      direction with arrows along its body, and the manual valve turns a
+      straight lever.
+    - The gas fire is crossed planes of flame with a see-through haze.
+    - The igniter is a floor plate, and the heater and air conditioner are
+      14 px wide.
+    - The redstone valve has a redstone trace.
+    - A primed tank transfer valve is an entity (CONT-104), with tanks lying
+      on the floor either side of the valve.

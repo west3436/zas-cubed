@@ -571,22 +571,30 @@ valve. Opening the valve moves all of the first tank's gas into the second;
 closing it shares the gas back by volume, as in vg. The merged mixture reacts
 in its tank (CONT-100), so a hot oxidizer mixed with fuel above its
 autoignition temperature (FIRE-010) burns, and the tank may fail (CONT-038).
+It's an item until its timer starts, and an entity once primed (CONT-104).
 
 - **Rationale:** Decision: D-57 (S-13).
 - **Verify:** A GameTest opens and closes a TTV and checks the gas moves and
   shares back by volume, and that a hot mixture burns in the tank.
+- **Changed 2026-11-02 (the owner, in the batch 3 art review):** a TTV is an
+  entity only once primed, like primed TNT (CONT-104).
 
 #### CONT-104 · TTV timer
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
 A TTV's valve shall open by hand, or when a timer set from 0 to 600 s
-(default 10 s) runs out. At 0 s the valve opens as soon as the timer starts,
-as in vg. The timer counts down in a player's inventory and as
-a dropped item. vg's signaler and proximity triggers are R2.
+(default 10 s) runs out. Starting the timer primes the TTV: it becomes an
+entity in the world, like primed TNT, that no one can pick up or use, and its
+valve opens when the timer runs out. At 0 s the valve opens as soon as the
+timer starts, as in vg. vg's signaler and proximity triggers are R2.
 
 - **Rationale:** Decision: D-57 and D-59.
 - **Verify:** GameTests check the valve opens by hand, at 0 s, and when a
-  timer runs out in an inventory and as a dropped item.
+  primed TTV's timer runs out, and that a primed TTV can't be picked up or
+  used.
+- **Changed 2026-11-02 (the owner, in the batch 3 art review):** a primed TTV
+  is an entity, like primed TNT, so the timer no longer counts down in an
+  inventory or as a dropped item.
 
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
 

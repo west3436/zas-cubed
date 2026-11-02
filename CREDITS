@@ -98,7 +98,7 @@ origin: vgstation13
 source: icons/obj/atmos.dmi
 state: red
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall.
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall. Plain: vg's pale band is on blue only, so red stands apart from red-and-white.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_valve.png
 origin: original
@@ -673,3 +673,541 @@ notes: A flat item model for the leggings' sprite.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_boots.json
 origin: original
 notes: A flat item model for the boots' sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_black.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: black
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's black canister's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_light_gray.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: grey
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's grey canister's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_orange.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: orange
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's orange canister's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_green.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: green
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's green canister's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_cyan.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: cyan
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's cyan canister's colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_red_white.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: redws
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 16 px per block on a 32x32 sheet, for a canister 26 px tall, in vg's redws canister's colours. With vg's white rings at the shoulder and the foot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_white.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #e8ecec, after Minecraft's white dye, in the steps of vg's red. vg has no white canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_gray.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #868a8c, after Minecraft's gray dye, in the steps of vg's red. vg has no gray canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_brown.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #8a5a34, after Minecraft's brown dye, in the steps of vg's red. vg has no brown canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_lime.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #80c71f, after Minecraft's lime dye, in the steps of vg's red. vg has no lime canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_light_blue.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #74bdf0, after Minecraft's light blue dye, in the steps of vg's red. vg has no light blue canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_purple.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #8a3cc0, after Minecraft's purple dye, in the steps of vg's red. vg has no purple canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_magenta.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #c74ebd, after Minecraft's magenta dye, in the steps of vg's red. vg has no magenta canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_pink.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: yellow
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The canister's texture recoloured #f390b0, after Minecraft's pink dye, in the steps of vg's red. vg has no pink canister.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_black.json
+origin: original
+notes: canister.json with the black texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_black_open.json
+origin: original
+notes: canister_open.json with the black texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_light_gray.json
+origin: original
+notes: canister.json with the light gray texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_light_gray_open.json
+origin: original
+notes: canister_open.json with the light gray texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_orange.json
+origin: original
+notes: canister.json with the orange texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_orange_open.json
+origin: original
+notes: canister_open.json with the orange texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_green.json
+origin: original
+notes: canister.json with the green texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_green_open.json
+origin: original
+notes: canister_open.json with the green texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_cyan.json
+origin: original
+notes: canister.json with the cyan texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_cyan_open.json
+origin: original
+notes: canister_open.json with the cyan texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_red_white.json
+origin: original
+notes: canister.json with the red white texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_red_white_open.json
+origin: original
+notes: canister_open.json with the red white texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_white.json
+origin: original
+notes: canister.json with the white texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_white_open.json
+origin: original
+notes: canister_open.json with the white texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_gray.json
+origin: original
+notes: canister.json with the gray texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_gray_open.json
+origin: original
+notes: canister_open.json with the gray texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_brown.json
+origin: original
+notes: canister.json with the brown texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_brown_open.json
+origin: original
+notes: canister_open.json with the brown texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_lime.json
+origin: original
+notes: canister.json with the lime texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_lime_open.json
+origin: original
+notes: canister_open.json with the lime texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_light_blue.json
+origin: original
+notes: canister.json with the light blue texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_light_blue_open.json
+origin: original
+notes: canister_open.json with the light blue texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_purple.json
+origin: original
+notes: canister.json with the purple texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_purple_open.json
+origin: original
+notes: canister_open.json with the purple texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_magenta.json
+origin: original
+notes: canister.json with the magenta texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_magenta_open.json
+origin: original
+notes: canister_open.json with the magenta texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_pink.json
+origin: original
+notes: canister.json with the pink texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/canister_pink_open.json
+origin: original
+notes: canister_open.json with the pink texture.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_0.png
+origin: original
+notes: Rising flame drawn from noise, 32 frames that loop seamlessly, in vg's fire colours (#ff9900 to #ffcc00, icons/effects/fire.dmi) with a deep red edge and a pale core.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_0.png.mcmeta
+origin: original
+notes: 1 tick a frame.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_1.png
+origin: original
+notes: As gas_fire_0.png from different noise, so neighbouring cells don't flicker in step.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_1.png.mcmeta
+origin: original
+notes: 1 tick a frame.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_haze.png
+origin: original
+notes: A see-through orange glow in wisps, clear between them, rising 1 px a frame over 16 frames and wrapping every 16 px, so it runs on across cells.
+
+path: zas/src/main/resources/assets/zas/textures/block/gas_fire_haze.png.mcmeta
+origin: original
+notes: 3 ticks a frame.
+
+path: zas/src/main/resources/assets/zas/models/block/gas_fire.json
+origin: original
+notes: Translucent and unshaded: the haze on all six faces, culled against solid blocks, and two crossed flame planes with gas_fire_0.png.
+
+path: zas/src/main/resources/assets/zas/models/block/gas_fire_1.json
+origin: original
+notes: As gas_fire.json, with gas_fire_1.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/igniter.png
+origin: vgstation13
+source: icons/obj/stationobjs.dmi
+state: igniter0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A 14x14 floor plate, 2 px thick: vg's dark steel round a window of nine lights, 2x2 px each where vg's are 1 px, so they centre.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/igniter_on.png
+origin: vgstation13
+source: icons/obj/stationobjs.dmi
+state: igniter1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Active: the lights flicker through vg's orange and a step either side, 3 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/igniter_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/igniter.json
+origin: original
+notes: A 14x14 plate 2 px thick, after vg's igniter (icons/obj/stationobjs.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/igniter_on.json
+origin: original
+notes: As igniter.json, active.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/igniter.json
+origin: original
+notes: The igniter item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_front.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: sheater0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's space heater's own front (x 7..20, y 14..26), its outline swapped for the vanilla finish and cropped to 14 px wide.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_front_on.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: sheater1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: the lights yellow and the grille glowing red, vg's 7 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_front_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_side.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: sheater0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's slanted side: a recessed panel.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_back.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: sheater0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's side: a recessed panel.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heater_top.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: sheater0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's slanted top: two vent slots.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/heater.json
+origin: original
+notes: A box 14 px wide, 13 tall and 12 deep on four 1 px feet, front north, after vg's space heater (icons/obj/atmos.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/heater_on.json
+origin: original
+notes: As heater.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/heater.json
+origin: original
+notes: The heater item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_front.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: aircond0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's chiller's own front (x 7..20, y 14..26), its outline swapped for the vanilla finish and cropped to 14 px wide.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_front_on.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: aircond1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: the grille frosting over in pale blues, vg's 9 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_front_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_side.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: aircond0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's slanted side: a recessed panel.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_back.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: aircond0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's side: a recessed panel.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/air_conditioner_top.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: aircond0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn flat from vg's slanted top, with its darker band from front to back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/air_conditioner.json
+origin: original
+notes: A box 14 px wide, 13 tall and 12 deep on four 1 px feet, front north, after vg's chiller (icons/obj/atmos.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/air_conditioner_on.json
+origin: original
+notes: As air_conditioner.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/air_conditioner.json
+origin: original
+notes: The air conditioner item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_fitting.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: pipe.png in an undyed pipe's greys (times #b4b4b4), for the pump's and valves' pipe ends, which aren't dyed.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pressure_pump.png
+origin: vgstation13
+source: icons/obj/atmospherics/pump.dmi
+state: intact_off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: An 8 px round body 10 long: vg's five lamp bars as two chevrons pointing the way the gas goes, vg's dark red while off; flat ends.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pressure_pump_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/pump.dmi
+state: intact_on
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: the chevrons light in vg's five lamp colours, running toward the output, 5 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pressure_pump_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pressure_pump.json
+origin: original
+notes: Inline, north-south: the pipe's flange at each block edge and a short tube (pipe_fitting.png), and an 8 px round body with the chevrons on every side. It pumps north. After vg's pump (icons/obj/atmospherics/pump.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pressure_pump_on.json
+origin: original
+notes: As pressure_pump.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pressure_pump.json
+origin: original
+notes: The pump item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/manual_valve.png
+origin: vgstation13
+source: icons/obj/atmospherics/valve.dmi
+state: valve0, valve1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's box in its warm greys, and vg's lamp, red shut and green open. vg's handwheel is now a straight lever, the owner's pick: the canister's steel arm (canister_valve.png) with a grip in the handwheel's red.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/manual_valve.json
+origin: original
+notes: Inline, north-south: pipe ends as the pump's, an 8 px box with a lamp each side, and a lever 8 px long on a stem on top, across the pipe while shut. After vg's manual valve (icons/obj/atmospherics/valve.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/manual_valve_open.json
+origin: original
+notes: Open: the lever in line with the pipe and the lamps green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/manual_valve.json
+origin: original
+notes: The manual valve item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/redstone_valve.png
+origin: vgstation13
+source: icons/obj/atmospherics/digital_valve.dmi
+state: valve0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's digital valve in dark steel, with vg's panel on top (a small blue light, a light strip and four dots), vg's red lamp, and a dark redstone trace round the sides.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/redstone_valve_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/digital_valve.dmi
+state: valve1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Powered: the trace lit and the lamps green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/redstone_valve.json
+origin: original
+notes: Inline, north-south: the manual valve's shape (manual_valve.json) without the lever, unpowered and shut. After vg's digital valve (icons/obj/atmospherics/digital_valve.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/redstone_valve_open.json
+origin: original
+notes: Powered and open.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/redstone_valve.json
+origin: original
+notes: The redstone valve item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_transfer_valve.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: valve_1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The primed valve's parts: a 6 px body in the manual valve's greys with its red-grip lever, vg's tank clips with their red mark, the timer box (new, its lamp dark), and a tank's side and end in greys that code tints by the tank's kind.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_transfer_valve_timer.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: valve_1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As tank_transfer_valve.png, with the timer's lamp blinking red, 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_transfer_valve_timer.png.mcmeta
+origin: original
+notes: 10 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_timer.json
+origin: original
+notes: The primed TTV with no tanks: an H from above, a 6 px valve with its lever across and the timer on its north face, and tanks lying north-south in the clips. The timer is running. After vg's valve_1 (icons/obj/assemblies.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_open.json
+origin: original
+notes: As tank_transfer_valve_timer.json once the timer has run out: the valve open, its lever in line toward tank one.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_one_timer.json
+origin: original
+notes: The primed TTV with tank one (west, tintindex 1): an H from above, a 6 px valve with its lever across and the timer on its north face, and tanks lying north-south in the clips. The timer is running. After vg's valve_1 (icons/obj/assemblies.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_one_open.json
+origin: original
+notes: As tank_transfer_valve_one_timer.json once the timer has run out: the valve open, its lever in line toward tank one.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_two_timer.json
+origin: original
+notes: The primed TTV with both tanks (tintindex 1 west, 2 east): an H from above, a 6 px valve with its lever across and the timer on its north face, and tanks lying north-south in the clips. The timer is running. After vg's valve_1 (icons/obj/assemblies.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_two_open.json
+origin: original
+notes: As tank_transfer_valve_two_timer.json once the timer has run out: the valve open, its lever in line toward tank one.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/tank_transfer_valve.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: valve_1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's valve_1 cut to 16 px tall, its handwheel replaced by the red-grip lever (the owner's pick), with the timer box (new) at the bottom right.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/tank_transfer_valve_body.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: valve
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's small valve, its red handle now the lever with a steel half, and the timer box (new) below it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/tank_transfer_valve_tank_right.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: oxygen
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's tank overlay redrawn upright in greys on the right, tinted in code by the tank's kind (layer 1).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/tank_transfer_valve_tank_left.png
+origin: vgstation13
+source: icons/obj/assemblies.dmi
+state: oxygen
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's tank overlay redrawn upright in greys on the left, tinted in code by the tank's kind (layer 2).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_transfer_valve.json
+origin: original
+notes: A flat item model for the empty valve's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_transfer_valve_one.json
+origin: original
+notes: The valve with one tank: the body and the right tank (layer 1, tinted).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_transfer_valve_two.json
+origin: original
+notes: The valve with two tanks: the body, the right tank and the left tank (layers 1 and 2, tinted).
