@@ -43,10 +43,15 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
         return true;
     }
 
-    /** Called by the schedule; runs {@link #atmosTick} if the block entity is still in a server level. */
+    /**
+     * Called by the schedule; runs {@link #atmosTick} if the block entity is still in a server level
+     * and its chunk is loaded in full. A chunk next to a loaded one that drops out of full status
+     * keeps its block entities in memory without unloading them; a device there waits, since reading
+     * its own block would load the chunk again.
+     */
     @Override
     public final void step() {
-        if (!isRemoved() && level instanceof ServerLevel server) {
+        if (!isRemoved() && level instanceof ServerLevel server && server.isLoaded(worldPosition)) {
             atmosTick(server);
         }
     }
