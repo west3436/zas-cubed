@@ -62,6 +62,8 @@ dependencies {
     // preset, ambient overrides and the published zones' pins. main stays API-only (CONT-095).
     gametestCompileOnly project(':zas')
     gametestCompileOnly project(':engine')
+    // The GameTest helpers zas shares, such as TestPlayers.
+    gametestCompileOnly project(':zas').sourceSets.gametest.output
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
