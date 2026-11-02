@@ -106,6 +106,16 @@ invariant checker (CORE-073) on or off and print its report.
   can run them in a live world.
 - **Verify:** A GameTest runs the audit and toggles the checker by command.
 
+#### OPS-017 · Pin commands
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: API-017, API-050, OPS-003
+
+Commands shall pin the zone at a point (API-050) and remove an owner's pins
+(API-017), attributed to `command:<player>` unless an owner is named, and
+`/zas zone` shall list a pinned zone's owners.
+
+*2026-11-02: added as Draft with API-050, so pins can be set up and checked
+from the console; built and checked by `ops_017_pin_commands`.*
+
 ## Profiling
 
 #### OPS-004 · Profiling command

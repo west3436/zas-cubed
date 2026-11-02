@@ -641,6 +641,60 @@ public final class OpsTests {
         h.succeed();
     }
 
+    // ---- OPS-017 ------------------------------------------------------------------------
+
+    /**
+     * {@code /zas pin} pins the zone at a block, forming one in a sealed room, and says when the
+     * block is in the open; {@code /zas zone} lists the pins' owners; {@code /zas unpin} takes an
+     * owner's pins off (OPS-017, API-017, API-050).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void ops_017_pin_commands(GameTestHelper h) {
+        area(h, 5);
+        shell(h, 4, 4, 4);
+        tick(h);
+        Capture c = new Capture();
+        CommandSourceStack player = stack(h, c, 2).withEntity(h.makeMockPlayer(GameType.CREATIVE));
+        String by = "command:test-mock-player";
+        String p = coords(h, 2, 2, 2);
+        h.assertTrue(Atmospheres.zoneAt(h.getLevel(), abs(h, 2, 2, 2)).isEmpty(), "the sealed room has a zone");
+
+        run(player, "zas pin " + p);
+        h.assertTrue(c.text().contains("Queued a pin for the next atmos tick, as " + by), c.text());
+        settle(h, c, "Pinned zone");
+        ZoneInfo z = zone(h, 2, 2, 2);
+        h.assertTrue(c.text().contains("Pinned zone " + z.id().value() + " at " + p + " (by " + by + ")"), c.text());
+        close(h, z.mixture().moles(O2), ambient(O2, 27_000), "O2 of the pinned room");
+
+        c.clear();
+        run(player, "zas pin " + p + " zas_gametest:other");
+        settle(h, c, "Pinned zone");
+        c.clear();
+        run(player, "zas zone " + z.id().value());
+        h.assertTrue(c.text().contains("Pinned by: " + by + ", zas_gametest:other"), c.text());
+
+        c.clear();
+        run(player, "zas unpin zas_gametest:other");
+        h.assertTrue(c.text().contains("Queued the removal of the pins of zas_gametest:other"), c.text());
+        settle(h, c, "Removed the pins of zas_gametest:other");
+        c.clear();
+        run(player, "zas zone " + z.id().value());
+        h.assertTrue(c.text().contains("Pinned by: " + by + "\n"), c.text());
+
+        c.clear();
+        run(player, "zas unpin");
+        settle(h, c, "Removed the pins of " + by);
+        c.clear();
+        run(player, "zas zone " + z.id().value());
+        h.assertFalse(c.text().contains("Pinned by"), c.text());
+
+        c.clear();
+        run(player, "zas pin " + coords(h, 2, 8, 2));
+        settle(h, c, "Nothing pinned");
+        h.assertTrue(c.text().contains("Nothing pinned at " + coords(h, 2, 8, 2) + ": it is in the open"), c.text());
+        h.succeed();
+    }
+
     private static void expect(
             GameTestHelper h, List<DatapackErrors.Problem> problems, String kind, String file, String start) {
         for (DatapackErrors.Problem p : problems) {

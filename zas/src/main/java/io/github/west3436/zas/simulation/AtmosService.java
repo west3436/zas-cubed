@@ -3,6 +3,7 @@ package io.github.west3436.zas.simulation;
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -160,6 +161,19 @@ public final class AtmosService {
     public CompletableFuture<MutationResult> remove(
             ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
         return dimensionFor(level).remove(pos, sub, moles, source);
+    }
+
+    /**
+     * Queues a pin of the zone at sub-cell {@code sub} of a position, or with -1 its largest cell,
+     * for the next atmos tick (API-017, API-050).
+     */
+    public CompletableFuture<PinResult> pin(ServerLevel level, BlockPos pos, int sub, SourceId owner) {
+        return dimensionFor(level).pin(pos, sub, owner);
+    }
+
+    /** Queues the removal of an owner's pins from a level's zones for the next atmos tick (API-017). */
+    public CompletableFuture<Void> unpin(ServerLevel level, SourceId owner) {
+        return dimensionFor(level).unpin(owner);
     }
 
     // ---- Ticking ------------------------------------------------------------------------

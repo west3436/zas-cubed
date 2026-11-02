@@ -585,7 +585,8 @@ table keyed by packed position.
   split). The cells of the split-off remnant get a new local index in their
   sections.
 - **Zone records** hold: id (CORE-026), mixture, volume, the list of sections
-  with per-section volume (needed for persistence shares), pins (API-017),
+  with per-section volume (needed for persistence shares), pins with their
+  owners (API-017, §6.6),
   flags (paused, breached), and edge references.
 - **Edges** are keyed by (zone, zone) or (zone, ambient key) (CORE-030,
   ENV-016). They hold connection counts, the direct count (CORE-037) and the
@@ -705,7 +706,7 @@ the lever if the per-cell cost ever matters.
     (moles per gas, temperature) by volume, and every chunk the zone spans
   - block positions whose changes are held for a paused zone (DATA-010)
   - at shutdown only, queued additions that target the chunk (DATA-011)
-  - zone pins (API-018) once they exist (R1)
+  - each zone's pins, by owner id (API-018; format 4, §6.6)
 - **Shares are written at chunk save.** They are computed on the server
   thread from the **published** snapshot (moles × this chunk's volume ÷ zone
   volume). Nothing is written per tick; chunks whose share changed are marked
@@ -749,6 +750,8 @@ the lever if the per-cell cost ever matters.
   dimension:
   - the zone-id counter, so saved ids are never issued again (CORE-026)
   - queued additions that couldn't be assigned to a loaded chunk
+  - the owners whose pins were taken off and who haven't pinned since
+    (API-017, §6.6)
   - dimension pause flags (OPS-005) once they exist (R1)
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
@@ -777,6 +780,9 @@ the lever if the per-cell cost ever matters.
   across them stay paused until they load. Outstanding operations are queued
   again on the new engine with their futures kept, so no gas is lost. Zone
   ids and pins come back with the shares (O-10).
+
+*Implemented (API-018):* format 4 saves each zone's pin owners; a record that
+loads has the pins of owners that unpinned since taken off (§6.6).
 
 *Implemented (#27, #29):* `ChunkRecord`, `ZoneShare` and
 `DimensionPipeline.recordFor` in `engine.scheduler`; the byte format is
@@ -975,7 +981,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, and the `ServerThreads` check |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
-| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `CompletableFuture`-based returns |
+| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
@@ -1013,7 +1019,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 - **Provider methods added later get a default.** FML may load a newer API
   than the one `zas` was built with, and `zas`'s provider must still
   implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict,
-  and `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`).
+  `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`), and
+  `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`).
 
 #### Breathability (API-014)
 
@@ -1101,6 +1108,48 @@ mutation first resolves its point to one cell (`PointResolver` in
 - **Mutations.** A `GasOp` carries the sub-cell index (−1 for the largest
   cell), and the engine acts on that cell, or on the largest if the block no
   longer has that many cells. Saved operations don't keep the index.
+
+### 6.6 Zone pins (API-017, API-018, API-050)
+
+*Implemented ([#59](https://github.com/west3436/zas-cubed/issues/59)).* A
+pinned zone is never dissolved (CORE-052, CORE-076, D-64). The area air
+controller is to pin its room's zone, forming it if needed (CONT-110).
+
+- **Owners.** Each zone holds a sorted list of owner ids (`Zone.pins()`, the
+  engine's `Pins`), and is pinned while the list isn't empty. Owners are
+  `SourceId`s, and a mod gives each thing that holds a pin its own id, such as
+  a block's position in the path. Pinning again under the same owner changes
+  nothing.
+- **Following the zone (D-64).** A merge's survivor takes the union of both
+  lists, and every part of a split keeps the list. The lists are immutable and
+  shared, so a split copies nothing. One owner may therefore come to pin
+  several zones, so `unpin` goes by owner and reaches every zone in memory.
+- **Operations.** A pin is a `GasOp` of kind `PIN` at the cell its point
+  resolves to (API-015), moving no gas, and an unpin is a `GasOp` of kind
+  `UNPIN` with no target, both queued like mutations. A pin is classified like
+  a zone-triggering operation, under either preset and whatever the API-call
+  trigger option says (D-68): at an enclosed, unzoned cell the classifier forms
+  a zone holding the ambient's gas (CORE-051). Both are applied in phase 3
+  *before* the undo point, as classification's zones are, so restoring a
+  rejected component (§3.3) never undoes them and they are never re-queued.
+  Their outcomes complete at apply: `ZONE` with the zone, `OPEN`, or
+  `UNRESOLVED`. A pin waiting for a section the worker doesn't mirror is
+  buffered like any other operation.
+- **Persistence.** Format 4 of the chunk record saves each share's owners;
+  formats 2 and 3 saved only a flag, which loads as the owner `zas:pinned`. A
+  zone stored in unloaded chunks keeps the owners it was saved with, which an
+  in-memory unpin can't reach, and a queued unpin isn't saved at shutdown.
+  Both are covered by one list in the dimension's `zas_atmos` saved data: an
+  owner that unpins is added to it and one that pins is removed, and every
+  record that loads (§4.5's load path, the palette rebuild included) has those
+  owners' pins taken off before it reaches the engine. The list holds one
+  entry per owner that unpinned and never pinned again.
+- **At shutdown and on faults.** A pin not yet applied completes `UNRESOLVED`
+  and pins nothing, so its owner pins again after the restart; an unpin
+  completes, since the list applies it when the zones load. In an excluded
+  dimension, which has no zones, a pin completes `OPEN` at once.
+- **Commands.** `/zas pin` and `/zas unpin` call the API, and `/zas zone`
+  lists a zone's owners ([commands](commands.md#zone-pins-ops-017)).
 
 ## 7. Mixin inventory
 

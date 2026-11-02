@@ -370,7 +370,7 @@ public final class AtmosSnapshot {
         for (int g = 0; g < moles.length; g++) {
             moles[g] = f == 1 ? v.moles(g) : v.moles(g) * f;
         }
-        return new ZoneShare(v.id(), part.cells(), moles, v.temperature(), zoneChunks[part.zone()], v.pinned());
+        return new ZoneShare(v.id(), part.cells(), moles, v.temperature(), zoneChunks[part.zone()], v.pins());
     }
 
     private int ownIndex(long id) {

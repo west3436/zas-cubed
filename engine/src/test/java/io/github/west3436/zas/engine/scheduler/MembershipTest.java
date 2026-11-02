@@ -407,7 +407,7 @@ class MembershipTest {
         assertNull(f.graph.zone(a.id()));
 
         // Restoring reads the zone's cells back from the undo table (architecture §3.3).
-        Zone restored = f.graph.restoreZone(a.id(), undo.cells(ia), copy, false);
+        Zone restored = f.graph.restoreZone(a.id(), undo.cells(ia), copy, io.github.west3436.zas.engine.zone.Pins.NONE);
         Membership after = check(f);
         int ir = after.indexOf(restored.id());
         long[] got = after.cells(ir);

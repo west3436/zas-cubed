@@ -906,6 +906,12 @@ so with an ambient edge it keeps exchanging however close to the ambient it
 gets. The engine already carries the pin on each zone (set only by tests in
 R0) and saves it with the zone.*
 
+*2026-11-02: API pins exist now (API-017, API-018, API-050): each zone keeps
+its pins' owners, and saves them. The collection itself, dissolving a zone
+that has matched its ambient for a configured time, isn't built yet, so this
+stays Accepted. Until it is, a zone without an ambient edge is never
+dissolved, pinned or not.*
+
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest
 

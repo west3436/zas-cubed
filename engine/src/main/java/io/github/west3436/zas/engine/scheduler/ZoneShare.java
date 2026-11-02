@@ -1,6 +1,8 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import io.github.west3436.zas.engine.zone.Pins;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * One chunk's share of one zone, as saved with the chunk (DATA-002, D-54): the zone's cells in that
@@ -17,10 +19,11 @@ import java.util.Arrays;
  * @param temperature the zone's temperature in K
  * @param zoneChunks every chunk the zone spans, this one included, ascending: the zone is complete
  *     once all of them have loaded
- * @param pinned whether the zone is pinned (D-64, API-018); every share of a zone has its pin
+ * @param pins the owners of the zone's pins (D-64, API-017, API-018), sorted; every share of a
+ *     zone has its pins
  */
 public record ZoneShare(
-        long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks, boolean pinned) {
+        long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks, List<String> pins) {
 
     /**
      * Checks and copies the arguments.
@@ -43,11 +46,33 @@ public record ZoneShare(
             throw new IllegalArgumentException("temperature must be finite and >= 0 K: " + temperature);
         }
         zoneChunks = Membership.sortedDistinct(zoneChunks);
+        pins = Pins.of(pins);
     }
 
     /** A share of an unpinned zone. */
     public ZoneShare(long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks) {
-        this(zoneId, cells, moles, temperature, zoneChunks, false);
+        this(zoneId, cells, moles, temperature, zoneChunks, Pins.NONE);
+    }
+
+    /** A share of a zone with the anonymous pin ({@link Pins#ANONYMOUS}) or none. */
+    public ZoneShare(long zoneId, long[] cells, double[] moles, double temperature, long[] zoneChunks, boolean pinned) {
+        this(zoneId, cells, moles, temperature, zoneChunks, pinned ? Pins.ANONYMOUS_ONLY : Pins.NONE);
+    }
+
+    /** Whether the zone is pinned (D-64): it has a pin. */
+    public boolean pinned() {
+        return !pins.isEmpty();
+    }
+
+    /** This share with the given owners' pins taken off, or itself if it has none of them. */
+    public ZoneShare withoutPins(java.util.Set<String> owners) {
+        List<String> kept = pins;
+        for (String o : pins) {
+            if (owners.contains(o)) {
+                kept = Pins.without(kept, o);
+            }
+        }
+        return kept == pins ? this : new ZoneShare(zoneId, cells, moles, temperature, zoneChunks, kept);
     }
 
     @Override
@@ -83,7 +108,7 @@ public record ZoneShare(
                 && Arrays.equals(moles, z.moles)
                 && Double.compare(temperature, z.temperature) == 0
                 && Arrays.equals(zoneChunks, z.zoneChunks)
-                && pinned == z.pinned;
+                && pins.equals(z.pins);
     }
 
     @Override
@@ -94,6 +119,6 @@ public record ZoneShare(
     @Override
     public String toString() {
         return "ZoneShare#" + zoneId + "[" + cells.length + " cells, " + Arrays.toString(moles) + " mol, " + temperature
-                + " K, " + zoneChunks.length + " chunks" + (pinned ? ", pinned" : "") + "]";
+                + " K, " + zoneChunks.length + " chunks" + (pinned() ? ", pinned by " + pins : "") + "]";
     }
 }

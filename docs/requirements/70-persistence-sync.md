@@ -27,6 +27,10 @@ Saving and reloading shall preserve, to a relative error of 1e-9 per gas:
 - **Verify:** A GameTest saves and reloads a world with every listed kind of
   state and compares each within 1e-9.
 
+*2026-11-02: zone pins, with their owners, are saved and restored now
+(API-018, `api_018_pins_survive_a_restart`). Dimension pauses (OPS-005) don't
+exist yet, so this stays Accepted.*
+
 #### DATA-009 · Derived state is rebuilt
 `Must` · `R0` · `Accepted` · Verify: Inspect, GameTest · Trace: D-54
 

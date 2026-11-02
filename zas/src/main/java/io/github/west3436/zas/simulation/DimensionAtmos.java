@@ -1,10 +1,13 @@
 package io.github.west3436.zas.simulation;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.SectionCapture;
@@ -81,6 +84,13 @@ import org.slf4j.Logger;
  * next to it, is dropped: it would change nothing. The engine then treats the operation as any
  * other zone-forming one: in an enclosed, unzoned region it forms a zone holding the region's
  * ambient gas (CORE-051), and in the open it does nothing.
+ *
+ * <p><b>Zone pins</b> (API-017, API-050). A pin is an operation that moves no gas, at the cell its
+ * point resolves to; an unpin has no target. Both travel with the gas operations and complete when
+ * their tick is applied. An owner that unpins is recorded in the dimension's saved data until it
+ * pins again ({@link DimensionData#releasedPins}), and its pins are taken off the records of
+ * chunks that load, so a zone that was stored in unloaded chunks, or saved before an unpin queued
+ * at shutdown was applied, comes back without them.
  *
  * <p><b>Persistence</b> (architecture §4.5). The dimension is the {@link AtmosPersistence.Store}
  * of its level: a chunk saves {@link DimensionPipeline#recordFor its record}, built from the
@@ -159,6 +169,11 @@ public final class DimensionAtmos {
             GasParcel offered,
             Map<ResourceLocation, Double> wanted,
             SourceId source) {}
+
+    /** The futures of queued pins and unpins (API-017, API-050), by sequence number. */
+    private final Map<Long, CompletableFuture<PinResult>> pins = new TreeMap<>();
+
+    private final Map<Long, CompletableFuture<Void>> unpins = new TreeMap<>();
 
     DimensionAtmos(ServerLevel level, Executor workers) {
         this.level = level;
@@ -298,6 +313,50 @@ public final class DimensionAtmos {
         pending.put(seq, p);
     }
 
+    /**
+     * Queues a pin of the zone at sub-cell {@code sub} of a position, or with -1 its largest cell,
+     * under {@code owner} (API-017, API-050). In an excluded dimension there are no zones, so it
+     * completes at once as open.
+     */
+    CompletableFuture<PinResult> pin(BlockPos pos, int sub, SourceId owner) {
+        CompletableFuture<PinResult> future = new CompletableFuture<>();
+        if (isFaulted()) {
+            future.completeExceptionally(faulted());
+            return future;
+        }
+        ensureEngine();
+        DimensionData.of(level).keepPins(owner.toString());
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            future.complete(PinResult.none(PinOutcome.OPEN));
+            return future;
+        }
+        pins.put(pl.pin(pos.asLong(), sub, owner.toString()), future);
+        return future;
+    }
+
+    /** Queues the removal of an owner's pins from every zone of the dimension (API-017). */
+    CompletableFuture<Void> unpin(SourceId owner) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        if (isFaulted()) {
+            future.completeExceptionally(faulted());
+            return future;
+        }
+        ensureEngine();
+        DimensionData.of(level).releasePins(owner.toString());
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            future.complete(null);
+            return future;
+        }
+        unpins.put(pl.unpin(owner.toString()), future);
+        return future;
+    }
+
+    private IllegalStateException faulted() {
+        return new IllegalStateException("the atmosphere of " + dimension().location() + " is paused after an error");
+    }
+
     // ---- Lifecycle ------------------------------------------------------------------
 
     void chunkLoaded(long chunk) {
@@ -319,9 +378,19 @@ public final class DimensionAtmos {
         }
     }
 
-    /** Hands a loaded chunk's saved bytes to the pipeline, decoded; corrupt bytes reset it (DATA-004). */
+    /**
+     * Hands a loaded chunk's saved bytes to the pipeline, decoded; corrupt bytes reset it
+     * (DATA-004). The pins of owners that unpinned since are taken off (API-017).
+     */
     private void deliver(long chunk, byte[] saved) {
         ChunkRecord record = decode(saved, chunk);
+        if (record != null) {
+            ChunkRecord kept = record.withoutPins(DimensionData.of(level).releasedPins());
+            if (kept != record) {
+                record = kept;
+                markUnsaved(chunk);
+            }
+        }
         withData.add(chunk);
         pipeline.chunkLoaded(chunk, record);
         if (record != null && !record.queuedAdditions().isEmpty()) {
@@ -549,13 +618,33 @@ public final class DimensionAtmos {
             deliver(e.getKey(), e.getValue());
         }
         Map<Long, Pending> moved = new TreeMap<>();
+        Map<Long, CompletableFuture<PinResult>> movedPins = new TreeMap<>();
+        Map<Long, CompletableFuture<Void>> movedUnpins = new TreeMap<>();
         for (GasOp op : carried) {
             Pending p = pending.remove(op.seq());
+            CompletableFuture<PinResult> pin = pins.remove(op.seq());
+            CompletableFuture<Void> unpin = unpins.remove(op.seq());
             long seq = pipeline.resubmit(remap(op, oldRegistry));
             if (p != null) {
                 moved.put(seq, p);
             }
+            if (pin != null) {
+                movedPins.put(seq, pin);
+            }
+            if (unpin != null) {
+                movedUnpins.put(seq, unpin);
+            }
         }
+        for (CompletableFuture<PinResult> f : pins.values()) {
+            f.completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
+        for (CompletableFuture<Void> f : unpins.values()) {
+            f.completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
+        pins.clear();
+        unpins.clear();
+        pins.putAll(movedPins);
+        unpins.putAll(movedUnpins);
         // Anything left under the old engine's numbers has no operation to complete it.
         List<Pending> orphans = new ArrayList<>();
         pending.entrySet().removeIf(e -> {
@@ -573,7 +662,7 @@ public final class DimensionAtmos {
 
     /** An operation with its amounts indexed by the current gas registry instead of {@code from}. */
     private GasOp remap(GasOp op, GasRegistry from) {
-        if (from == registry) {
+        if (from == registry || op.kind().isPin()) {
             return op;
         }
         double[] moles = new double[registry.size()];
@@ -901,6 +990,21 @@ public final class DimensionAtmos {
             Pending p = pending.remove(o.seq());
             if (p != null) {
                 p.future().complete(new MutationResult(outcome(o.outcome()), parcel(o.moved(), o.temperature())));
+                continue;
+            }
+            CompletableFuture<PinResult> pin = pins.remove(o.seq());
+            if (pin != null) {
+                pin.complete(
+                        switch (o.outcome()) {
+                            case ZONE -> PinResult.pinned(new ZoneId(o.zoneId()));
+                            case AMBIENT -> PinResult.none(PinOutcome.OPEN);
+                            case UNRESOLVED -> PinResult.none(PinOutcome.UNRESOLVED);
+                        });
+                continue;
+            }
+            CompletableFuture<Void> unpin = unpins.remove(o.seq());
+            if (unpin != null) {
+                unpin.complete(null);
             }
         }
         return true;
@@ -1028,6 +1132,14 @@ public final class DimensionAtmos {
                 w.future().complete(new MutationResult(MutationOutcome.PAUSED, GasParcel.EMPTY));
             }
         }
+        // A pin not yet applied pinned nothing; an unpin is done once the zones load, since its
+        // owner is recorded as released (API-017).
+        List<CompletableFuture<PinResult>> waitingPins = new ArrayList<>(pins.values());
+        List<CompletableFuture<Void>> waitingUnpins = new ArrayList<>(unpins.values());
+        pins.clear();
+        unpins.clear();
+        waitingPins.forEach(f -> f.complete(PinResult.none(PinOutcome.UNRESOLVED)));
+        waitingUnpins.forEach(f -> f.complete(null));
     }
 
     /** Fails every waiting mutation and invariant check. */
@@ -1047,5 +1159,10 @@ public final class DimensionAtmos {
         for (Pending p : all) {
             p.future().completeExceptionally(why);
         }
+        List<CompletableFuture<?>> waiting = new ArrayList<>(pins.values());
+        waiting.addAll(unpins.values());
+        pins.clear();
+        unpins.clear();
+        waiting.forEach(f -> f.completeExceptionally(why));
     }
 }

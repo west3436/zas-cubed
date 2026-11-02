@@ -229,6 +229,31 @@ public final class DimensionPipeline {
     }
 
     /**
+     * Queues a pin of the zone at one sub-cell of a position for the next batch (API-017, API-050):
+     * {@code sub} as in {@link GasOp#sub()}, -1 for the largest cell. If the cell is enclosed and
+     * unzoned, a zone forms there holding the ambient's gas.
+     *
+     * @param owner the pin's owner
+     * @return its sequence number
+     */
+    public long pin(long block, int sub, String owner) {
+        long seq = nextSeq++;
+        enqueue(GasOp.pin(seq, block, sub, owner));
+        return seq;
+    }
+
+    /**
+     * Queues the removal of an owner's pins from every zone for the next batch (API-017).
+     *
+     * @return its sequence number
+     */
+    public long unpin(String owner) {
+        long seq = nextSeq++;
+        enqueue(GasOp.unpin(seq, owner));
+        return seq;
+    }
+
+    /**
      * Queues a saved addition again, under a new sequence number (DATA-011). Its outcome has no
      * caller to go to.
      *
@@ -255,9 +280,12 @@ public final class DimensionPipeline {
      * @return its new sequence number
      */
     public long resubmit(GasOp op) {
-        return op.kind() == GasOp.Kind.ADD
-                ? add(op.block(), op.moles(), op.temperature(), op.category(), op.triggersZone(), op.source())
-                : remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
+        return switch (op.kind()) {
+            case ADD -> add(op.block(), op.moles(), op.temperature(), op.category(), op.triggersZone(), op.source());
+            case REMOVE -> remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
+            case PIN -> pin(op.block(), op.sub(), op.source());
+            case UNPIN -> unpin(op.source());
+        };
     }
 
     private void enqueue(GasOp op) {
