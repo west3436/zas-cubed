@@ -11,6 +11,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.mutation.HeatMutations;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -30,7 +32,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Conduction in a real level (HEAT-001, HEAT-002, HEAT-011, HEAT-013, HEAT-014).
+ * Conduction in a real level (HEAT-001, HEAT-002, HEAT-011, HEAT-013, HEAT-014), heat sources
+ * (HEAT-003, HEAT-016) and heat mutations (API-013, HEAT-010).
  *
  * <p>Each room is a single air block, or a row of them, walled in stone, in an area of its own, so
  * every heat path is a straight line of blocks. A step is checked exactly where it can be: a zone
@@ -263,6 +266,113 @@ public final class HeatTests {
         expectU(h, Blocks.IRON_DOOR, 50);
         h.assertTrue(Double.isNaN(geometry(Blocks.DIRT).transmittance()), "dirt has no U: the fallback");
         h.assertValueEqual(ZasServerConfig.heat().fallbackTransmittance(), 1.7, "the fallback (HEAT-015)");
+        h.succeed();
+    }
+
+    /**
+     * HEAT-003: a room with the test heat source (400 K) beyond one stone wall warms toward it
+     * tick after tick, and never passes the equilibrium it shares with the ground.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void heat_003_room_moves_toward_a_heat_source(GameTestHelper h) {
+        Rooms r = new Rooms(h, 145);
+        fill(r, 0, 0, 0, 12, 12, 12, STONE);
+        r.set(6, 6, 6, AIR);
+        r.set(8, 6, 6, SOURCE);
+        zone(r, 6, 6, 6, 10, 293.15);
+        double gSource = 1 / (1 / 1.7 + 1 / 3.0);
+        double gGround = 5 * 1.7 / 3;
+        double teq = (gSource * 400 + gGround * ambientTemperature(r)) / (gSource + gGround);
+        double start = r.zone(6, 6, 6).mixture().temperature();
+        double t = start;
+        for (int i = 0; i < 20; i++) {
+            r.tick();
+            double next = r.zone(6, 6, 6).mixture().temperature();
+            h.assertTrue(next > t, "tick " + i + ": the room didn't warm (" + t + " K to " + next + " K)");
+            h.assertTrue(next < teq, "tick " + i + ": the room passed equilibrium " + teq + " K: " + next + " K");
+            t = next;
+        }
+        h.assertTrue(t > start + 1, "twenty atmos ticks beside the source warmed the room only to " + t + " K");
+        h.succeed();
+    }
+
+    /** HEAT-016: the shipped heat sources, in every state, and the blocks' U where it is set. */
+    @GameTest(template = "empty")
+    public static void heat_016_default_heat_sources(GameTestHelper h) {
+        expectSource(h, Blocks.LAVA, 1450);
+        expectSource(h, Blocks.MAGMA_BLOCK, 1000);
+        expectSource(h, Blocks.ICE, 273);
+        expectSource(h, Blocks.PACKED_ICE, 263);
+        expectSource(h, Blocks.BLUE_ICE, 253);
+        expectSource(h, Blocks.SNOW_BLOCK, 268);
+        expectU(h, Blocks.PACKED_ICE, 2.2);
+        expectU(h, Blocks.BLUE_ICE, 2.2);
+        h.assertTrue(Double.isNaN(geometry(Blocks.LAVA).transmittance()), "lava has no U of its own: the fallback");
+        h.assertFalse(geometry(Blocks.FROSTED_ICE).isHeatSource(), "frosted ice is a source");
+        h.assertFalse(geometry(Blocks.STONE).isHeatSource(), "stone is a source");
+        h.succeed();
+    }
+
+    private static void expectSource(GameTestHelper h, Block block, double temperature) {
+        for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+            GeometryTable t = Geometries.table();
+            double actual = t.palette().geometry(t.geometryId(state)).sourceTemperature();
+            if (actual != temperature) {
+                h.fail(state + ": source temperature " + actual + ", expected " + temperature);
+            }
+        }
+    }
+
+    /**
+     * HEAT-010: heat added or removed at an open point goes to the ambient: all of it is taken or
+     * supplied, the result reports the ambient and its temperature, and no zone forms.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void heat_010_heat_at_open_air(GameTestHelper h) {
+        Rooms r = new Rooms(h, 146);
+        fill(r, 0, 0, 0, 4, 4, 4, AIR);
+        HeatResult added = r.settle(HeatMutations.add(r.level, r.point(2, 2, 2), 5000, source("heat")));
+        HeatResult removed = r.settle(HeatMutations.remove(r.level, r.point(2, 2, 2), 7000, source("heat")));
+        double ambient = ambientTemperature(r);
+        h.assertValueEqual(added, new HeatResult(MutationOutcome.AMBIENT, 5000, ambient), "the addition");
+        h.assertValueEqual(removed, new HeatResult(MutationOutcome.AMBIENT, 7000, ambient), "the removal");
+        h.assertFalse(r.zoned(2, 2, 2), "a zone formed in the open air");
+        h.assertValueEqual(Atmospheres.at(r.level, r.abs(2, 2, 2)).temperature(), ambient, "the open air changed");
+        h.succeed();
+    }
+
+    /**
+     * API-013: heat added to a room raises it by ΔE/C and heat removed lowers it, each reported with
+     * the zone's new temperature; heating an enclosed, unzoned room forms its zone (CORE-055).
+     * Conduction is off, so each change is exact.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void api_013_heat_mutation(GameTestHelper h) {
+        Rooms r = new Rooms(h, 147);
+        fill(r, 0, 0, 0, 12, 12, 12, STONE);
+        r.set(6, 6, 6, AIR);
+        r.set(6, 9, 6, AIR);
+        Rooms.withoutHeat(() -> {
+            zone(r, 6, 6, 6, 30, 300);
+            ZoneInfo before = r.zone(6, 6, 6);
+            double c = heatCapacity(before);
+            HeatResult added = r.settle(HeatMutations.add(r.level, r.point(6, 6, 6), 5000, source("heat")));
+            double t = before.mixture().temperature() + 5000 / c;
+            h.assertValueEqual(added.outcome(), MutationOutcome.ZONE, "the addition's outcome");
+            h.assertValueEqual(added.joules(), 5000.0, "the energy taken");
+            h.assertTrue(Math.abs(added.temperature() - t) < 1e-9, "added: " + added + ", expected " + t + " K");
+            h.assertTrue(Math.abs(r.zone(6, 6, 6).mixture().temperature() - t) < 1e-9, "the zone isn't at " + t + " K");
+            HeatResult removed = r.settle(HeatMutations.remove(r.level, r.point(6, 6, 6), 2000, source("heat")));
+            h.assertValueEqual(removed.outcome(), MutationOutcome.ZONE, "the removal's outcome");
+            h.assertValueEqual(removed.joules(), 2000.0, "the energy delivered");
+            h.assertTrue(
+                    Math.abs(r.zone(6, 6, 6).mixture().temperature() - (t - 2000 / c)) < 1e-9, "removed: " + removed);
+
+            h.assertFalse(r.zoned(6, 9, 6), "the second room is zoned already");
+            HeatResult formed = r.settle(HeatMutations.add(r.level, r.point(6, 9, 6), 1000, source("heat")));
+            h.assertValueEqual(formed.outcome(), MutationOutcome.ZONE, "heating the unzoned room");
+            h.assertTrue(r.zone(6, 9, 6).mixture().temperature() > ambientTemperature(r), "the new zone isn't warmer");
+        });
         h.succeed();
     }
 

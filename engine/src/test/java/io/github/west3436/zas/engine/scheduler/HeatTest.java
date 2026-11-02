@@ -4,6 +4,7 @@ import static io.github.west3436.zas.engine.scheduler.Sim.N2;
 import static io.github.west3436.zas.engine.scheduler.Sim.O2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
@@ -307,6 +308,133 @@ class HeatTest {
         assertEquals(b, sim.zoneAt(16, Y, Z), "room b kept heat its partner gave back");
         sim.step();
         assertTrue(sim.zoneAt(14, Y, Z).temperature() < a.temperature(), "heat didn't flow after the redo");
+    }
+
+    // ---- Heat operations (API-013, HEAT-010) --------------------------------------------
+
+    /** Queues heat at a point's largest cell, as the API does. */
+    private static long heat(Sim sim, int x, int y, int z, boolean add, double joules) {
+        return sim.pipeline.heat(SectionKeys.block(x, y, z), -1, add, joules, true, "test");
+    }
+
+    /**
+     * API-013: heat added to a zone raises it by ΔE/C; heat removed lowers it, and a removal of more
+     * than it holds above the temperature floor delivers only that, leaving it at the floor.
+     */
+    @Test
+    void api_013_heat_in_a_zone() {
+        Sim sim = sim(Ambient.VACUUM, AIR).withoutHeat();
+        sim.world.room(X, Y, Z, X, Y, Z);
+        add(sim, X, Y, Z, 30, 300);
+        sim.step();
+        ZoneView zone = sim.zoneAt(X, Y, Z);
+        double c = heatCapacity(zone);
+
+        long added = heat(sim, X, Y, Z, true, 5000);
+        sim.step();
+        OpOutcome a = sim.outcomes.get(added);
+        assertEquals(OpOutcome.Outcome.ZONE, a.outcome());
+        assertEquals(zone.id(), a.zoneId());
+        assertEquals(5000, a.energy(), 0, "energy taken");
+        assertEquals(300 + 5000 / c, sim.zoneAt(X, Y, Z).temperature(), 1e-9, "added");
+        assertEquals(sim.zoneAt(X, Y, Z).temperature(), a.temperature(), 0, "the zone's temperature after");
+
+        long removed = heat(sim, X, Y, Z, false, 2000);
+        sim.step();
+        assertEquals(2000, sim.outcomes.get(removed).energy(), 0, "energy delivered");
+        assertEquals(300 + 3000 / c, sim.zoneAt(X, Y, Z).temperature(), 1e-9, "removed");
+
+        double floor = Sim.CONFIG.temperatureFloor();
+        double held = (sim.zoneAt(X, Y, Z).temperature() - floor) * c;
+        long drained = heat(sim, X, Y, Z, false, 2 * held);
+        sim.step();
+        assertEquals(held, sim.outcomes.get(drained).energy(), 1e-6, "more than the zone holds");
+        assertEquals(floor, sim.zoneAt(X, Y, Z).temperature(), 1e-9, "below the floor");
+    }
+
+    /**
+     * HEAT-010: heat added or removed at an open point goes to the ambient: all of it is taken or
+     * supplied, the result reports the ambient, and no zone forms.
+     */
+    @Test
+    void heat_010_heat_at_open_air() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR);
+        long added = heat(sim, X, Y, Z, true, 5000);
+        long removed = heat(sim, X, Y, Z, false, 7000);
+        sim.steps(3);
+        OpOutcome a = sim.outcomes.get(added);
+        OpOutcome r = sim.outcomes.get(removed);
+        assertNotNull(a, "the addition didn't complete");
+        assertNotNull(r, "the removal didn't complete");
+        assertEquals(OpOutcome.Outcome.AMBIENT, a.outcome());
+        assertEquals(OpOutcome.Outcome.AMBIENT, r.outcome());
+        assertEquals(5000, a.energy(), 0);
+        assertEquals(7000, r.energy(), 0);
+        assertEquals(Ambient.STANDARD_AIR.temperature(), r.temperature(), 0, "the ambient's temperature");
+        assertEquals(-1, a.component(), "the ambient isn't a component");
+        assertNull(sim.zoneAt(X, Y, Z), "a zone formed in the open air");
+        assertEquals(0, sim.snapshot().zoneCount(), "a zone formed");
+    }
+
+    /** CORE-055: heating an enclosed, unzoned room through the API forms its zone. */
+    @Test
+    void heat_forms_a_zone_in_an_enclosed_room() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR).withoutHeat();
+        sim.world.room(X, Y, Z, X, Y, Z);
+        long added = heat(sim, X, Y, Z, true, 1000);
+        sim.steps(3);
+        OpOutcome a = sim.outcomes.get(added);
+        assertNotNull(a, "the addition didn't complete");
+        assertEquals(OpOutcome.Outcome.ZONE, a.outcome());
+        assertEquals(1000, a.energy(), 0);
+        assertTrue(
+                sim.zoneAt(X, Y, Z).temperature() > Ambient.STANDARD_AIR.temperature() + 1,
+                "the new zone wasn't heated");
+    }
+
+    /**
+     * A heat operation in a rejected component is undone with it and runs again in the next tick,
+     * once (CORE-070, CORE-074).
+     */
+    @Test
+    void rejected_heat_runs_again_once() {
+        Sim sim = sim(Ambient.VACUUM, AIR).withoutHeat();
+        sim.world.room(X, Y, Z, X, Y, Z);
+        add(sim, X, Y, Z, 30, 300);
+        sim.step();
+        double c = heatCapacity(sim.zoneAt(X, Y, Z));
+        long seq = heat(sim, X, Y, Z, true, 3000);
+        sim.betweenCloseAndApply = s -> {
+            s.world.unload(SectionKeys.chunk(0, 0));
+            s.pipeline.chunkUnloaded(SectionKeys.chunk(0, 0));
+            s.world.load(SectionKeys.chunk(0, 0));
+            s.pipeline.chunkLoaded(SectionKeys.chunk(0, 0));
+        };
+        DimensionPipeline.Applied rejected = sim.step();
+        sim.betweenCloseAndApply = s -> {};
+        assertEquals(1, rejected.rejected(), "the component wasn't rejected");
+        assertNull(sim.outcomes.get(seq), "the rejected operation completed");
+        assertEquals(300, sim.zoneAt(X, Y, Z).temperature(), 1e-9, "the heat wasn't undone");
+        sim.step();
+        assertEquals(1, sim.completions.get(seq));
+        assertEquals(300 + 3000 / c, sim.zoneAt(X, Y, Z).temperature(), 1e-9, "heat was lost or doubled");
+    }
+
+    /** A heat operation keeps its energy and sub-cell, and rejects a negative amount. */
+    @Test
+    void heat_operations_are_checked() {
+        GasOp op = GasOp.heat(1, SectionKeys.block(1, 2, 3), 1, false, 42, true, "test");
+        assertEquals(GasOp.Kind.REMOVE_HEAT, op.kind());
+        assertTrue(op.kind().isHeat());
+        assertEquals(42, op.energy(), 0);
+        assertEquals(1, op.sub());
+        assertEquals(0, op.gasCount());
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> GasOp.heat(1, SectionKeys.block(1, 2, 3), -1, true, -1, true, "test"));
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> GasOp.heat(1, SectionKeys.block(1, 2, 3), -1, true, Double.NaN, true, "test"));
     }
 
     /** The same world gives the same temperatures, bit for bit (CORE-044). */
