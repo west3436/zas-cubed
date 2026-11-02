@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.client;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
+import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
@@ -16,11 +17,12 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
-/** The content mod's client entry point: block tints, device GUIs and item model properties. */
+/** The content mod's client entry point: block and item tints, device GUIs and item model properties. */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
 public final class ZasAtmosClient {
     public ZasAtmosClient(IEventBus modBus) {
         modBus.addListener(ZasAtmosClient::blockColors);
+        modBus.addListener(ZasAtmosClient::itemColors);
         modBus.addListener(ZasAtmosClient::screens);
         modBus.addListener(ZasAtmosClient::setup);
     }
@@ -33,6 +35,15 @@ public final class ZasAtmosClient {
                         : -1,
                 AtmosBlocks.PIPE.get(),
                 AtmosBlocks.PIPE_CAP.get());
+    }
+
+    /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */
+    private static void itemColors(RegisterColorHandlersEvent.Item event) {
+        event.register(
+                (stack, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
+                AtmosItems.PIPE.get(),
+                AtmosItems.PIPE_CAP.get());
     }
 
     /** The device GUIs (CONT-074). */

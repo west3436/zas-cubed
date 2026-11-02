@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
@@ -54,8 +55,10 @@ abstract class DeviceScreen<M extends AbstractContainerMenu> extends AbstractCon
         graphics.drawString(font, title, 8, 6, TEXT, false);
         int y = 20;
         for (Component line : lines()) {
-            graphics.drawString(font, line, 8, y, TEXT, false);
-            y += 11;
+            for (FormattedCharSequence part : font.split(line, imageWidth - 16)) { // long lines wrap
+                graphics.drawString(font, part, 8, y, TEXT, false);
+                y += 11;
+            }
         }
     }
 }

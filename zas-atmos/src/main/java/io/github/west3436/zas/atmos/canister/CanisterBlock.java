@@ -125,17 +125,19 @@ public class CanisterBlock extends BaseEntityBlock implements PipeConnector {
     }
 
     /**
-     * A player about to mine the canister and get it as an item: it keeps its gas for the item.
-     * The game removes the block before it makes the drops, so this is decided first.
+     * A player about to break the canister. Mining it into an item, it keeps its gas for the item;
+     * broken in creative, its gas is destroyed with it. The game removes the block before it makes
+     * the drops, so this is decided first.
      */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (level instanceof ServerLevel server
-                && !player.isCreative()
-                && state.canHarvestBlock(level, pos, player)
-                && server.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS)
-                && level.getBlockEntity(pos) instanceof CanisterBlockEntity canister) {
-            canister.keepContents();
+        if (level instanceof ServerLevel server && level.getBlockEntity(pos) instanceof CanisterBlockEntity canister) {
+            if (player.isCreative()) {
+                canister.voidContents();
+            } else if (state.canHarvestBlock(level, pos, player)
+                    && server.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS)) {
+                canister.keepContents();
+            }
         }
         return super.playerWillDestroy(level, pos, state, player);
     }

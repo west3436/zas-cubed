@@ -9,7 +9,8 @@ alarm became the area air controller and the power cable and multipart block
 were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
 CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
-CONT-114 (dyed pipes) was added as Draft on 2026-11-02.
+CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
+owner and accepted the same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -152,16 +153,29 @@ checks the formula; `PipeTests.cont_004_open_end_exchanges_at_the_one_connection
 and `cont_004_capped_pipe_does_not_leak` (GameTest) check it in a room.*
 
 #### CONT-114 · Dyed pipes
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
 
 Using a dye on a pipe or pipe cap shall colour it, using up one dye outside
 creative. The colour is cosmetic: it doesn't change what the pipe connects to.
+A dyed pipe or cap, mined, shall drop an item of its colour, and a dyed item
+shall place a pipe or cap of that colour.
+
+- **Verify:** A GameTest dyes a pipe and a cap and checks the colour, the dye
+  used and the connections. It mines dyed pipes and caps, checks each drops an
+  item of its colour, and places those items, checking that the blocks are
+  dyed.
 
 *2026-11-02: added as Draft from the owner's choice of 2026-11-01 that players
 dye pipes, which had no requirement. Whether differently dyed pipes should
 stay apart, so parallel runs can share a wall, is left open. Built in
 [#47](https://github.com/west3436/zas-cubed/issues/47) and checked by
 `PipeTests.cont_114_a_dye_colours_a_pipe` (GameTest).*
+
+*2026-11-02: owner changed mined dyed pipes to keep their dye, and accepted.
+Previously a mined dyed pipe dropped a plain pipe, losing the dye it used.
+The item carries the colour in the block state component, as the canister
+item does. `PipeTests.cont_114_a_mined_dyed_pipe_keeps_its_dye` (GameTest)
+checks the drops, the placing and picking the block.*
 
 #### CONT-005 · Overpressure
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; off by default anyway), 2026-10-30. · Verify: GameTest
@@ -430,6 +444,15 @@ controller and its order with its buttons off.
 checks it with `control` called directly; [#160](https://github.com/west3436/zas-cubed/pull/160) checks it with a real
 controller.*
 
+*2026-11-02: Note: in the owner's S-01 test, a vent siphoning into a network
+with a full canister on its port moved nothing, because the network was above
+the internal bound. That is what this requirement asks for, but the GUI didn't
+show why. The GUI now shows the network's pressure, and a status line: moving
+gas, or idle and why (the network or the room has reached its bound, either is
+empty, or the vent is waiting for the air in front to settle).
+`VentFlowTest.cont_014_an_idle_vent_says_why` (Unit) and
+`GasDeviceTests.cont_014_an_idle_vent_says_why` (GameTest) check each reason.*
+
 #### CONT-078 · Vent rate
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
@@ -528,6 +551,9 @@ contents when mined.
   contents when mined is the Minecraft equivalent of moving it.
 - **Verify:** A GameTest mines a filled canister, places it again and checks
   the contents are unchanged.
+- **Changed 2026-11-02 (the owner, in the S-01 integration review,
+  [#160](https://github.com/west3436/zas-cubed/pull/160)):** a canister broken
+  in creative drops nothing, and its gas is destroyed with it, not released.
 
 *2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
 `zas_atmos:canister` is a 1,000 L network node rated at 9,120 kPa
@@ -536,6 +562,10 @@ pickaxe it drops an item carrying its gas (`zas_atmos:gas`) and its paint;
 removed any other way it releases its gas, as a pipe does (CONT-009).
 `GasDeviceTests.cont_017_a_mined_canister_keeps_its_contents` and
 `cont_017_a_canister_removed_without_a_drop_releases_its_gas` (GameTest).*
+
+*2026-11-02: the owner's change is built. Broken in creative, the canister's
+gas is destroyed. `GasDeviceTests.cont_017_a_canister_broken_in_creative_destroys_its_gas`
+(GameTest) checks that the room gains nothing.*
 
 #### CONT-083 · Connector ports
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01
