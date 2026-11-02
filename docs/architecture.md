@@ -989,11 +989,12 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 
 ### Life support (breathing)
 
-*Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34)):
-who breathes, the breath at the eyes, the O₂ minimum, the air meter, gas
-hazard profiles and respiration. Internals and protection are
-[#36](https://github.com/west3436/zas-cubed/issues/36), the pressure and
-temperature hazards [#35](https://github.com/west3436/zas-cubed/issues/35).*
+*Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34),
+[#35](https://github.com/west3436/zas-cubed/issues/35)): who breathes, the
+breath at the eyes, the O₂ minimum, the air meter, gas hazard profiles,
+respiration, and the pressure and temperature hazards with their settings.
+Internals and protection are
+[#36](https://github.com/west3436/zas-cubed/issues/36).*
 The package is `io.github.west3436.zas.life`, server thread only; the client
 runs none of it until LIFE-023.
 
@@ -1009,10 +1010,16 @@ runs none of it until LIFE-023.
   API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
   (LIFE-003), and a gas whose hazard profile does something at its partial
   pressure adds `TOXIC_GAS`.
-- **Cadence** (LIFE-007). Each breather is checked every
-  `check_interval_ticks` (40), staggered by entity id (`(tick + id) % interval`),
-  and again at once when its eyes enter or leave a fluid. A check that comes late
-  (the entity was unloaded) runs on the next breath. The verdict, the meter's
+- **Cadence** (LIFE-007, LIFE-033, LIFE-038). Each living entity with anything
+  to check (a breather, or anything pressure and temperature can harm) is
+  checked every `check_interval_ticks` (40), staggered by entity id
+  (`(tick + id) % interval`), and again at once when its eyes enter or leave a
+  fluid. The checks run from NeoForge's breathing hook, which fires on every
+  living entity's tick, so an immune non-breather costs nothing. A check that
+  comes late (the entity was unloaded) runs on the next breath. A server tick
+  runs at most `max_checks_per_tick` (100) checks over every dimension
+  (`CheckBudget`); a check due beyond the cap is marked deferred and runs on a
+  later tick, before its next turn of the interval. The verdict, the meter's
   drain and the exposure times live in an entity attachment (`BreathState`,
   not saved). Rates are per second and a check charges the seconds since the
   last, capped at one interval, so the interval changes smoothness and cost, not
@@ -1021,8 +1028,9 @@ runs none of it until LIFE-023.
   `UNRESOLVED` (API-010), its mixture is only a last-known guess, such as the
   ambient while a loading room's zone isn't back, so a check holds the state:
   the verdict, the drain and the exposure times stay, the check's time moves on,
-  and nothing is charged or breathed. With no verdict yet, the breather is
-  checked every tick until the cell resolves, and its meter is left to vanilla.
+  and nothing is charged or breathed. With no verdict yet, a breather is
+  checked every tick until the cell resolves, and its meter is left to vanilla;
+  anything else waits for its own tick of the interval.
   `Breathing.of` answers with the held verdict too.
 - **The air meter** (LIFE-003, LIFE-008, LIFE-009) goes through NeoForge's
   events, so there is no mixin. On `LivingBreatheEvent`, a hypoxic breather
@@ -1039,10 +1047,32 @@ runs none of it until LIFE-023.
   effects, the three effect levels being sets of vanilla effects, with the
   highest amplifier of each, lasting until a second after the next check, and
   per gas the highest damage, the gases' damages added, as `zas:toxic_gas`.
-- **Damage types.** `zas:hypoxia` and `zas:toxic_gas` are in
+- **Pressure and temperature** (LIFE-010, LIFE-011, LIFE-014, LIFE-015).
+  `EnvironmentHazards` judges the atmosphere at the eyes, the same sample as
+  the breath, for every living entity but those in `#zas:atmosphere_immune`
+  (`Protection.IMMUNE`) and exempt players, breathing or not, eyes in a fluid
+  or not. An entity's `Shielding` gives the fraction of the difference from
+  1 atm that reaches it (LIFE-020) and of temperature damage dealt (LIFE-025);
+  until #36 every entity is unshielded. The effective pressure is
+  1 atm + (P − 1 atm) × that fraction: below 20 kPa it deals 1 HP/s of
+  decompression, at or above 550 kPa min((P / 550 − 1) × 2, 2) HP/s of
+  barotrauma. Outside `[hazards] comfort_min_k` to `comfort_max_k` (220–360 K),
+  frostbite and burns deal their highest tier reached. Each rate is multiplied
+  by its hazard's scale in the dimension, and a check deals rate × seconds,
+  each as its own damage type.
+- **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
+  per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
+  is off, else its scale; `[hazards] dimension_overrides` overrides either per
+  dimension. A hazard that is off isn't listed in a verdict; with hypoxia off
+  a breath short of O₂ is `BREATHABLE`. Scales multiply damage, not effects.
+  FLOW reads `AIRFLOW_IMPACT`'s.
+- **Damage types.** `zas:hypoxia`, `zas:toxic_gas`, `zas:decompression`,
+  `zas:barotrauma`, `zas:frostbite` and `zas:burns` are in
   `#minecraft:bypasses_armor`, `#minecraft:no_knockback` and
-  `#minecraft:bypasses_cooldown`: breathing damage comes from a check, not a
-  hit, so invulnerability ticks from another source mustn't swallow it.
+  `#minecraft:bypasses_cooldown`: atmospheric damage comes from a check, not a
+  hit, so invulnerability ticks from another source mustn't swallow it, and
+  protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
+  `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
 - **Respiration** (LIFE-005, LIFE-042). A check adds the O₂ the breather used
   since the last, `respiration_multiplier` × 1 mol per hour, to its zone's
   draw. Breathing outside a zone (the ambient, a paused zone, an unresolved
@@ -1135,9 +1165,12 @@ server, `zas` answers with LIFE's verdict
 ([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
 the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
 fluid (LIFE-022). On the client it still answers with vanilla's verdict, until
-LIFE-023. **Not yet built:** breathing from internals (LIFE-021, API-022),
-protection (#36), and the pressure and temperature hazards (#35), so a verdict
-lists no protection but `EXEMPT` and no hazard but `TOXIC_GAS`.
+LIFE-023. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
+the pressure and temperature hazards, listed as `LOW_PRESSURE`,
+`HIGH_PRESSURE`, `COLD` and `HEAT` for every living entity they harm,
+breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
+**Not yet built:** breathing from internals (LIFE-021, API-022) and worn
+protection (#36), so a verdict lists no protection but `EXEMPT` and `IMMUNE`.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
 
@@ -1310,7 +1343,7 @@ The test names include requirement IDs (README rule 5).
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
-| LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
+| LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042; hazards: LIFE-010, LIFE-011, LIFE-014 to LIFE-016, LIFE-030, LIFE-031, LIFE-033, LIFE-035 to LIFE-038) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50), §11 (the content mod) |
 | DATA | §4.5 |
 | SPACE | §2.1 (`compat-adastra`), §7; open item O-1; SPACE-002 in §5 [Life support (breathing)](#life-support-breathing) |

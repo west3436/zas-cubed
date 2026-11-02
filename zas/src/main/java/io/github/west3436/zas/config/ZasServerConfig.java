@@ -26,9 +26,11 @@ import net.neoforged.neoforge.common.NeoForge;
  * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
  * (CORE-035, CORE-068) under {@code [atmos]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
  * {@code [breathing]} ({@link BreathingConfig}); the
+ * hazards' comfort band, switches, scales and per-dimension overrides (LIFE-011, LIFE-031,
+ * LIFE-036) under {@code [hazards]} ({@link HazardConfig}); the
  * permission level of the {@code /zas} commands (OPS-011) under {@code [commands]}; and the
- * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table, thresholds and
- * hazard toggles join this file as their features land.
+ * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table and thresholds join
+ * this file as their features land.
  *
  * <p>Values are read from the loaded config on each call. NeoForge reloads the file when it
  * changes on disk, so an edit applies from the next read; commands that change a value write the
@@ -126,6 +128,7 @@ public final class ZasServerConfig {
                 .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
         builder.pop();
         BreathingConfig.define(builder);
+        HazardConfig.define(builder);
         builder.push("commands");
         PERMISSION_LEVEL = builder.comment(
                         "The permission level every /zas command needs: 0 everyone, 2 operators (the",

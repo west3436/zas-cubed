@@ -72,8 +72,8 @@ import net.neoforged.bus.api.IEventBus;
  * (API-016, API-050).
  *
  * <p>The breathability helper (API-014) answers with LIFE's breathing rules ({@link
- * BreathingRules}); protection, internals and the pressure and temperature hazards join it with
- * #35, #36 and the life-support capability (API-022, #60).
+ * BreathingRules}), with the pressure and temperature hazards; protection and internals join it
+ * with #36 and the life-support capability (API-022, #60).
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -222,9 +222,9 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      * LIFE's verdict on the server ({@link Breathers#verdict}): who breathes, the atmosphere at
      * the eyes, the O₂ minimum and the gases' hazard profiles, keeping vanilla's rule while the
      * eyes are in a fluid (LIFE-022), and the verdict the breath checks hold while the atmosphere
-     * at the eyes is unresolved (LIFE-048). Internals, protection and the pressure and temperature
-     * hazards join it with #35, #36 and API-022 (#60). On the client, vanilla's verdict, until the
-     * client breathing sync (LIFE-023) gives it the server's.
+     * at the eyes is unresolved (LIFE-048), and the pressure and temperature hazards (LIFE-010,
+     * LIFE-011, LIFE-014). Internals and protection join it with #36 and API-022 (#60). On the
+     * client, vanilla's verdict, until the client breathing sync (LIFE-023) gives it the server's.
      */
     @Override
     public Breathability breathability(LivingEntity entity) {

@@ -49,8 +49,11 @@ final class GasHazards {
      * @param seconds the seconds since its last check, for exposure and damage
      * @param state its breathing state
      * @param effectTicks how long the effects last
+     * @param scale the toxic gas hazard's scale, which multiplies the damage but not the effects
+     *     (LIFE-031)
      */
-    static void apply(LivingEntity entity, GasMixture breath, double seconds, BreathState state, int effectTicks) {
+    static void apply(
+            LivingEntity entity, GasMixture breath, double seconds, BreathState state, int effectTicks, double scale) {
         Map<Holder<MobEffect>, Integer> effects = new LinkedHashMap<>();
         double damagePerSecond = 0;
         for (Map.Entry<ResourceLocation, HazardProfile> e : HazardProfiles.all().entrySet()) {
@@ -85,7 +88,7 @@ final class GasHazards {
         }
         effects.forEach((effect, amplifier) ->
                 entity.addEffect(new MobEffectInstance(effect, effectTicks, amplifier, false, false, true)));
-        double damage = damagePerSecond * seconds;
+        double damage = damagePerSecond * seconds * scale;
         if (damage > 0) {
             entity.hurt(LifeDamage.source(entity, LifeDamage.TOXIC_GAS), (float) damage);
         }

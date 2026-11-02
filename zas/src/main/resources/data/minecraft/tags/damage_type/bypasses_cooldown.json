@@ -1,6 +1,10 @@
 {
   "values": [
     "zas:hypoxia",
-    "zas:toxic_gas"
+    "zas:toxic_gas",
+    "zas:decompression",
+    "zas:barotrauma",
+    "zas:frostbite",
+    "zas:burns"
   ]
 }
