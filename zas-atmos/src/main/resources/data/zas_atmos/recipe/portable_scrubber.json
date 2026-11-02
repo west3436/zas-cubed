@@ -1,0 +1,44 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:canister"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:portable_scrubber"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:scrubber"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:canister"
+    },
+    {
+      "item": "zas_atmos:scrubber"
+    },
+    {
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "item": "zas_atmos:machine_frame"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:portable_scrubber"
+  }
+}

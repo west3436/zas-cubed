@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:manual_valve"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_manipulator"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:redstone_valve"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:manual_valve"
+    },
+    {
+      "item": "zas_atmos:micro_manipulator"
+    },
+    {
+      "item": "minecraft:redstone"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:redstone_valve"
+  }
+}

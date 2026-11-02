@@ -11,8 +11,9 @@ set. The changes made in #127, the area air controller and batteries, are in
 the requirements (D-68, D-69).
 
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
-pixels per block (the exceptions are the wrench's 32×32 sprite, D-70, and
-the filter's and mixer's tops, D-71), flat
+pixels per block (the exceptions are the wrench's 32×32 sprite, D-70,
+the filter's and mixer's tops, D-71, and the larger crafting components,
+D-72), flat
 sprites for handheld items, and the standard armor
 texture layout for wearables. Sources and licensing follow D-26 and D-39, with
 each asset's provenance in `CREDITS` (NFR-045). Where each texture comes from,
@@ -174,6 +175,36 @@ cell, high-capacity and super-capacity cells.
 | `zas_atmos:high_capacity_battery` | High-capacity battery | Should | CONT-111 | Flat sprite. The three tiers must be easy to tell apart. Red, with one stripe. |
 | `zas_atmos:super_capacity_battery` | Super-capacity battery | Should | CONT-111 | Flat sprite. Blue, with two stripes. |
 
+**Crafting components.** Recipes go through these (D-72), and each is made
+from vanilla materials, so CONT-051 holds. All are flat sprites taken from
+vg: cropped to 16×16 where the sprite fits, and otherwise vg's sprite as it
+is at 32×32. Where they come from is in the
+[texture procurement plan](texture-procurement.md#65-crafting-components),
+and what each goes into is in [Crafting](crafting.md#crafting-components).
+All are done (2026-11-02).
+
+| Id | Name | Priority | Requirement | Size and notes |
+|---|---|---|---|---|
+| `zas_atmos:cable_coil` | Cable coil | Must | CONT-051, D-72 | 32×32. vg's coil in vg's default red. An item only: there's no cable block (D-68). |
+| `zas_atmos:circuit_board` | Circuit board | Must | CONT-051, D-72 | 32×32. One board for every machine. |
+| `zas_atmos:electronics` | Electronics | Must | CONT-051, D-72 | 16×16. For wall panels and doors. |
+| `zas_atmos:machine_frame` | Machine frame | Must | CONT-051, D-72 | 32×32. An item, not a block. |
+| `zas_atmos:capacitor` | Capacitor | Must | CONT-051, D-72 | 32×32. |
+| `zas_atmos:advanced_capacitor` | Advanced capacitor | Should | CONT-111, D-72 | 32×32. |
+| `zas_atmos:super_capacitor` | Super capacitor | Should | CONT-111, D-72 | 32×32. |
+| `zas_atmos:scanning_module` | Scanning module | Must | CONT-051, D-72 | 16×16, animated in vg's 5 frames. |
+| `zas_atmos:micro_manipulator` | Micro-manipulator | Must | CONT-051, D-72 | 16×16. |
+| `zas_atmos:micro_laser` | Micro-laser | Should | CONT-019, D-72 | 16×16. |
+| `zas_atmos:console_screen` | Console screen | Must | CONT-051, D-72 | 32×32. |
+| `zas_atmos:igniter_assembly` | Igniter assembly | Must | CONT-105, D-72 | 16×16. |
+| `zas_atmos:timer_assembly` | Timer assembly | Must | CONT-104, D-72 | 16×16. |
+| `zas_atmos:ansible_crystal` | Ansible crystal | Must | CONT-042, D-72 | 16×16. |
+| `zas_atmos:subspace_ansible` | Subspace ansible | Must | CONT-042, D-72 | 32×32. |
+| `zas_atmos:subspace_transmitter` | Subspace transmitter | Must | CONT-068, D-72 | 32×32. |
+| `zas_atmos:bluespace_crystal` | Bluespace crystal | Should | CONT-111, D-72 | 16×16. |
+| `zas_atmos:plasteel_sheet` | Plasteel sheet | Must | CONT-036, D-72 | 32×32. |
+| `zas_atmos:reinforced_glass` | Reinforced glass sheet | Must | CONT-055, D-72 | 32×32. |
+
 ### Totals for R1
 
 | | Must | Should | Could | Not set | Total |
@@ -182,9 +213,10 @@ cell, high-capacity and super-capacity cells.
 | Blocks (`zas_atmos`) | 13 | 9 | 1 | 8 | 31 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
 | Items (`zas_atmos`) | 18 | 5 | – | – | 23 |
+| Crafting components (`zas_atmos`) | 15 | 4 | – | – | 19 |
 
-R1 needs no crafting ingredients of its own: all its recipes use vanilla
-materials (CONT-051).
+*2026-11-02: R1 now has crafting components of its own (D-72). Its recipes
+still come down to vanilla materials (CONT-051).*
 
 ## Art that isn't a block or item
 

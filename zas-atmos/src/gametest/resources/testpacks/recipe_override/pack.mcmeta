@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "description": "Overrides zas_atmos:pipe_cap, for the CONT-059 GameTest",
+    "pack_format": 48
+  }
+}

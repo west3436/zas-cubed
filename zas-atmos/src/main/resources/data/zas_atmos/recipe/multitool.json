@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:ansible_crystal"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:multitool"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "zas_atmos:ansible_crystal"
+    },
+    {
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:multitool"
+  }
+}
