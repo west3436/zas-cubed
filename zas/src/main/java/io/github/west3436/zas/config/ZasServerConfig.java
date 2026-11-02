@@ -21,7 +21,8 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
  * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
  * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
- * (CORE-035, CORE-068) under {@code [atmos]}; the
+ * (CORE-035, CORE-068) under {@code [atmos]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
+ * {@code [breathing]} ({@link BreathingConfig}); the
  * permission level of the {@code /zas} commands (OPS-011) under {@code [commands]}; and the
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table, thresholds and
  * hazard toggles join this file as their features land.
@@ -121,6 +122,7 @@ public final class ZasServerConfig {
                         "about the same fraction of its air per second whatever its size.")
                 .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
         builder.pop();
+        BreathingConfig.define(builder);
         builder.push("commands");
         PERMISSION_LEVEL = builder.comment(
                         "The permission level every /zas command needs: 0 everyone, 2 operators (the",

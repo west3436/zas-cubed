@@ -9,6 +9,7 @@ import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
 import io.github.west3436.zas.simulation.AtmosService;
@@ -37,5 +38,6 @@ public final class ZasMod {
         AtmosPersistence.register(NeoForge.EVENT_BUS);
         ZasCommands.register(NeoForge.EVENT_BUS);
         DebugOverlay.register(modBus);
+        Breathers.register(modBus, NeoForge.EVENT_BUS);
     }
 }

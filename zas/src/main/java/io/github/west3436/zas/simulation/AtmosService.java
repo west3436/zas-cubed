@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.scheduler.AtmosWorkers;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import java.util.Arrays;
@@ -160,6 +161,21 @@ public final class AtmosService {
     public CompletableFuture<MutationResult> remove(
             ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
         return dimensionFor(level).remove(pos, sub, moles, source);
+    }
+
+    /**
+     * Respiration's change of gas (LIFE-005): an addition to sub-cell {@code sub} of a position
+     * that is recorded under {@link LedgerCategory#LIFE} and never forms a zone (CORE-051).
+     */
+    public CompletableFuture<MutationResult> addForLife(
+            ServerLevel level, BlockPos pos, int sub, GasParcel gas, SourceId source) {
+        return dimensionFor(level).add(pos, sub, gas, source, LedgerCategory.LIFE, false);
+    }
+
+    /** Respiration's removal, as {@link #addForLife}: recorded under LIFE, and never forms a zone. */
+    public CompletableFuture<MutationResult> removeForLife(
+            ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
+        return dimensionFor(level).remove(pos, sub, moles, source, LedgerCategory.LIFE, false);
     }
 
     // ---- Ticking ------------------------------------------------------------------------

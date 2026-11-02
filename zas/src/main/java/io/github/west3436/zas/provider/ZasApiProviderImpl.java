@@ -15,6 +15,7 @@ import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
@@ -22,6 +23,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ClientGasRegistry;
 import io.github.west3436.zas.gas.ServerGasRegistry;
+import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
@@ -64,9 +66,9 @@ import net.neoforged.bus.api.IEventBus;
  * <p>Mutations resolve their point the same way and act on that cell. They are queued for the next
  * atmos tick and their futures complete on the server thread when that tick is applied (API-016).
  *
- * <p><b>Interim:</b> the breathability helper (API-014) answers with vanilla's verdict, as the
- * fallback does, until LIFE's breathing, hazard and protection rules (#34 to #36) and the
- * life-support capability (API-022, #60) are built.
+ * <p>The breathability helper (API-014) answers with LIFE's breathing rules ({@link
+ * BreathingRules}); protection, internals and the pressure and temperature hazards join it with
+ * #35, #36 and the life-support capability (API-022, #60).
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -191,14 +193,24 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     }
 
     /**
-     * INTERIM until LIFE (#34 to #36) and API-022 (#60): vanilla's verdict, the same as the
-     * fallback's. It ignores the atmosphere, so an entity in a vacuum zone is told it can breathe.
-     * LIFE replaces this with ZAS³'s own verdict: who breathes, the breath source, the O₂ minimum,
-     * gas hazards and protection, keeping vanilla's rule while the eyes are in water (LIFE-022).
+     * LIFE's verdict on the server ({@link BreathingRules#assess}): who breathes, the atmosphere at
+     * the eyes, the O₂ minimum and the gases' hazard profiles, keeping vanilla's rule while the
+     * eyes are in a fluid (LIFE-022). Internals, protection and the pressure and temperature
+     * hazards join it with #35, #36 and API-022 (#60). On the client, vanilla's verdict, until the
+     * client breathing sync (LIFE-023) gives it the server's.
      */
     @Override
     public Breathability breathability(LivingEntity entity) {
-        return Breathing.vanilla(entity);
+        if (entity.level().isClientSide()) {
+            return Breathing.vanilla(entity);
+        }
+        return BreathingRules.assess(entity).verdict();
+    }
+
+    /** The server's configured O₂ minimum (LIFE-003). */
+    @Override
+    public double oxygenMinimum() {
+        return BreathingConfig.oxygenMinimum();
     }
 
     private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {

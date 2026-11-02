@@ -966,6 +966,69 @@ change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
 (NFR-010) and optional in game.
 
+### Life support (breathing)
+
+*Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34)):
+who breathes, the breath at the eyes, the O₂ minimum, the air meter, gas
+hazard profiles and respiration. Internals and protection are
+[#36](https://github.com/west3436/zas-cubed/issues/36), the pressure and
+temperature hazards [#35](https://github.com/west3436/zas-cubed/issues/35).*
+The package is `io.github.west3436.zas.life`, server thread only; the client
+runs none of it until LIFE-023.
+
+- **Who breathes** (LIFE-001, LIFE-006). Players, and the entity types in
+  `#zas:breathers` (`BreathingRules.BREATHERS`), which ships with the
+  air-breathing vanilla mobs and leaves out the undead, golems, aquatic mobs and
+  the Nether's and End's natives ([datapacks.md](datapacks.md#breathers)).
+- **The verdict** (API-014). `BreathingRules.assess` makes it, and
+  `ZasApiProviderImpl.breathability` returns it. With the eyes in a fluid it is
+  vanilla's, so water stays vanilla's (LIFE-022). An invulnerable player is
+  `EXEMPT` (LIFE-037). Anything else that doesn't breathe is `DOES_NOT_BREATHE`.
+  A breather breathes `Atmospheres.of(entity)`, the cell at its eyes (LIFE-002,
+  API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
+  (LIFE-003), and a gas whose hazard profile does something at its partial
+  pressure adds `TOXIC_GAS`.
+- **Cadence** (LIFE-007). Each breather is checked every
+  `check_interval_ticks` (40), staggered by entity id (`(tick + id) % interval`),
+  and again at once when its eyes enter or leave a fluid. A check that comes late
+  (the entity was unloaded) runs on the next breath. The verdict, the meter's
+  drain and the exposure times live in an entity attachment (`BreathState`,
+  not saved). Rates are per second and a check charges the seconds since the
+  last, capped at one interval, so the interval changes smoothness and cost, not
+  outcomes; the first check charges nothing.
+- **The air meter** (LIFE-003, LIFE-008, LIFE-009) goes through NeoForge's
+  events, so there is no mixin. On `LivingBreatheEvent`, a hypoxic breather
+  can't breathe and loses air at its drain times vanilla's underwater rate,
+  where the drain is 1 − pO₂ / minimum: 15 s to empty in vacuum, 30 s at 8 kPa.
+  Otherwise the event keeps vanilla's refill. On `LivingDrownEvent`, a hypoxic
+  breather's empty meter deals `zas:hypoxia` damage, vanilla's 2 HP per second,
+  instead of drowning.
+- **Hazard profiles** (LIFE-004, LIFE-040, LIFE-041) are data
+  (`HazardProfiles`, a reload listener for `zas/hazard_profile`; format in
+  [datapacks.md](datapacks.md#hazard-profiles)). At each check `GasHazards`
+  advances each gas's sustained-exposure time, or resets it below the gas's
+  lowest threshold, and applies every threshold that has been reached: their
+  effects, the three effect levels being sets of vanilla effects, with the
+  highest amplifier of each, lasting until a second after the next check, and
+  per gas the highest damage, the gases' damages added, as `zas:toxic_gas`.
+- **Damage types.** `zas:hypoxia` and `zas:toxic_gas` are in
+  `#minecraft:bypasses_armor`, `#minecraft:no_knockback` and
+  `#minecraft:bypasses_cooldown`: breathing damage comes from a check, not a
+  hit, so invulnerability ticks from another source mustn't swallow it.
+- **Respiration** (LIFE-005, LIFE-042). A check adds the O₂ the breather used
+  since the last, `respiration_multiplier` × 1 mol per hour, to its zone's
+  draw. Breathing outside a zone (the ambient, a paused zone, an unresolved
+  region) draws nothing (CORE-038), and an `EXEMPT` player draws nothing.
+  Once per atmos period `Respiration` sends one removal per zone; when it is
+  applied, the moles actually removed are added back as CO₂ at the removed gas's
+  temperature, so a zone short of O₂ gets only as much CO₂ as it lost. Both go
+  through `AtmosService.removeForLife` and `addForLife`: the ledger's `LIFE`
+  category, and never a zone trigger (CORE-051).
+- **Other mods** (SPACE-002). The air-meter handlers run at `NORMAL` priority
+  and only set the event's fields, so a lower-priority listener sees and can
+  change the verdict, and a higher-priority one's `canBreathe = false` survives:
+  the handler only ever sets it to false.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)
@@ -979,7 +1042,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
-| `.api.life` | `Breathing` (API-014: `of(entity)`, and `vanilla(entity)`, vanilla's verdict alone), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
+| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -1037,13 +1100,16 @@ fluids nothing drowns in. An invulnerable player gets `EXEMPT`. Anything else
 in a fluid gives `DROWNING`. The verdict has no breath gas, hazards or
 protection. The fallback answers with it.
 
-**Interim:** until LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34)
-to [#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022 are
-built, `zas` answers with vanilla's verdict too, so it ignores the atmosphere.
-LIFE replaces `ZasApiProviderImpl.breathability` with the full verdict. That
-verdict covers who breathes, the breath source, the O₂ minimum, gas hazards
-and protection, and keeps vanilla's rule while the eyes are in water
-(LIFE-022).
+*Implemented ([#34](https://github.com/west3436/zas-cubed/issues/34)):* on the
+server, `zas` answers with LIFE's verdict
+([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
+the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
+fluid (LIFE-022). On the client it still answers with vanilla's verdict, until
+LIFE-023. **Not yet built:** breathing from internals (LIFE-021, API-022),
+protection (#36), and the pressure and temperature hazards (#35), so a verdict
+lists no protection but `EXEMPT` and no hazard but `TOXIC_GAS`.
+`Breathing.oxygenMinimum()` gives the server's configured minimum; the
+fallback, and a provider without it, give 16 kPa.
 
 ### 6.3 Threading contract (API-004, API-045, API-046)
 
@@ -1172,8 +1238,9 @@ The test names include requirement IDs (README rule 5).
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
+| LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50) |
 | DATA | §4.5 |
-| SPACE | §2.1 (`compat-adastra`), §7; open item O-1 |
+| SPACE | §2.1 (`compat-adastra`), §7; open item O-1; SPACE-002 in §5 [Life support (breathing)](#life-support-breathing) |
 | OPS | §3.4 (profiler), §5 (commands, audit, preset) |
 | NFR | §2 (packaging, licensing untouched), §3.4 (budgets), §3.6 (fault isolation), §7 (mixins), §8 (tests) |

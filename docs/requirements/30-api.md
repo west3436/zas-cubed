@@ -327,6 +327,17 @@ and GameTests, with and without ZAS³.*
 before the API freezes at 1.0.0. After that, values can be added but not
 removed.*
 
+*2026-11-02: On the server, ZAS³ now answers with LIFE's verdict
+([#34](https://github.com/west3436/zas-cubed/issues/34)): who breathes, the
+breath at the eyes, the O₂ minimum and gas hazards, vanilla's while the eyes
+are in a fluid, and `EXEMPT` for an invulnerable player. The client still gets
+vanilla's verdict until LIFE-023. Internals and suits wait for
+[#36](https://github.com/west3436/zas-cubed/issues/36) and API-022, so this
+stays Accepted. `Breathing.oxygenMinimum()` is added, any thread: the
+configured O₂ minimum, 16 kPa without ZAS³, so a consumer can judge a point's
+air from `Atmospheres.at`. The `api_014_` GameTests check air, vacuum,
+underwater, a harmful gas, an exempt player, an untagged mob and the minimum.*
+
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 

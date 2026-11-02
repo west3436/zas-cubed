@@ -153,4 +153,21 @@ public interface ZasApiProvider {
     default Breathability breathability(LivingEntity entity) {
         return Breathing.vanilla(entity);
     }
+
+    /**
+     * The O₂ partial pressure below which a breathing entity runs out of air (LIFE-003), for
+     * {@link Breathing#oxygenMinimum()}.
+     *
+     * <p>The default is LIFE-003's default, {@link Breathing#DEFAULT_OXYGEN_MINIMUM}, which is
+     * also the fallback's answer. It is there so that a provider built against an API from before
+     * this method still answers when a newer API is loaded (architecture §6.2).
+     *
+     * <p>Thread: any.
+     *
+     * @return the minimum in kPa
+     */
+    @AnyThread
+    default double oxygenMinimum() {
+        return Breathing.DEFAULT_OXYGEN_MINIMUM;
+    }
 }

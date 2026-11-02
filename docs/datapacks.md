@@ -4,9 +4,10 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 `data/` folder; servers can add them with an ordinary datapack.
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
-[geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags).
-The rest of OPS-002's list (reactions, thermal properties, fuel, protection and
-hazard profiles, entity tags) arrives with its features in R1. Every format
+[geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
+[hazard profiles](#hazard-profiles) and the [breathers tag](#breathers).
+The rest of OPS-002's list (reactions, thermal properties, fuel, protection
+data, the other entity tags) arrives with its features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -355,6 +356,137 @@ from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
 [config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
 `zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property.
+
+## Hazard profiles
+
+A gas's hazard profile says how it harms a breathing entity that breathes it
+(LIFE-004). Each file holds one gas's profile, keyed by the gas id:
+
+```
+data/<namespace>/zas/hazard_profile/<path>.json   →   gas <namespace>:<path>
+```
+
+So `data/zas/zas/hazard_profile/carbon_dioxide.json` is CO₂'s. A datapack
+replaces a shipped profile by providing the same file; `"thresholds": []`
+makes the gas harmless.
+
+```json
+{
+  "thresholds": [
+    { "partial_pressure": 5 },
+    { "partial_pressure": 10, "duration": 12, "effect_level": "incapacitated" },
+    { "partial_pressure": 10, "duration": 60, "effect_level": "incapacitated", "damage": 1 },
+    { "partial_pressure": 20, "effects": [{ "id": "minecraft:poison", "amplifier": 1 }] }
+  ]
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `thresholds` | list | yes | The thresholds, in any order |
+| `thresholds[].partial_pressure` | number | yes | The gas's partial pressure in the breath at or above which the threshold applies, in kPa; greater than 0 |
+| `thresholds[].duration` | number | no | Seconds the partial pressure must stay at or above it before it applies; default 0, at once |
+| `thresholds[].effect_level` | string | no | `impaired`, `incapacitated` or `unconscious` ([below](#effect-levels)) |
+| `thresholds[].effects` | list | no | Other status effects: objects with an `id`, such as `"minecraft:poison"`, and an `amplifier`, 0 (level I, the default) to 255 |
+| `thresholds[].damage` | number | no | Toxic gas damage while it applies, in HP per second; default 0 |
+
+- **How it applies.** At each breath check (every 2 s by default,
+  [config.md](config.md)), every threshold whose partial pressure the breath
+  is at or above, and has been for its duration, applies. The duration counts
+  from check to check and starts again once the partial pressure falls below.
+  The effects of every threshold that applies add up; an effect named by
+  several takes the highest amplifier. Effects last a second past the next
+  check, so they hold while the exposure does and wear off soon after.
+- **Damage.** A gas deals the highest `damage` among its thresholds that
+  apply, and the damage of different gases adds up. It is the `zas:toxic_gas`
+  damage type ([below](#damage-types)).
+- **Warning levels.** A threshold with no effect level, effects or damage does
+  nothing to the entity. The HUD warns at it (CLIENT-008).
+- **Gases that aren't defined.** A profile for a gas the server doesn't have
+  loads and never applies, so a pack can ship profiles for another mod's gases.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** profiles load when the server starts and reload with
+  `/reload`.
+
+### Effect levels
+
+Minecraft has no paralysis or sleep, so each level is a set of vanilla effects
+(LIFE-040):
+
+| Level | Effects |
+|---|---|
+| `impaired` | Nausea, Weakness |
+| `incapacitated` | Slowness IV, Mining Fatigue III, Weakness II |
+| `unconscious` | Incapacitated, plus Blindness |
+
+### Shipped profiles
+
+`zas` ships these, in `data/zas/zas/hazard_profile/` (LIFE-041). Partial
+pressures are in the breath.
+
+| Gas | Threshold | Effect |
+|---|---|---|
+| CO₂ | 5 kPa | Warning |
+| CO₂ | 10 kPa for 12 s | Incapacitated |
+| CO₂ | 10 kPa for 60 s | Incapacitated, 1 HP/s |
+| N₂O | 0.15 kPa | Nausea |
+| N₂O | 1 kPa | Incapacitated |
+| N₂O | 5 kPa | Unconscious, no damage |
+| CO | 0.005 kPa (50 ppm) | Warning |
+| CO | 0.12 kPa (1,200 ppm) | Impaired, 0.5 HP/s |
+| CO | 1.28 kPa (12,800 ppm) | Unconscious, 2 HP/s |
+
+The other built-in gases have no profile: they harm only by leaving too little
+O₂ in the breath (LIFE-003).
+
+## Breathers
+
+Players breathe, and so do the entity types in the entity type tag
+`zas:breathers` (LIFE-001):
+
+```
+data/zas/tags/entity_type/breathers.json
+```
+
+A breather's air meter drains while the O₂ partial pressure at its eyes is
+below the minimum, and the gases' hazard profiles apply to it. Inside a zone it
+also turns O₂ into CO₂ (LIFE-005). The shipped tag holds the air-breathing
+vanilla mobs (LIFE-006):
+
+- **In:** armadillo, bat, bee, camel, cat, cave spider, chicken, cow, creeper,
+  donkey, evoker, fox, frog, goat, horse, illusioner, llama, mooshroom, mule,
+  ocelot, panda, parrot, pig, pillager, polar bear, rabbit, ravager, sheep,
+  silverfish, sniffer, spider, trader llama, villager, vindicator, wandering
+  trader, warden, witch, wolf.
+- **Out:** the undead (`#minecraft:undead`); golems; the aquatic mobs
+  (`#minecraft:aquatic`, with the turtle and axolotl, and the tadpole); the
+  Nether's and the End's natives (piglins, piglin brutes, hoglins, striders,
+  ghasts, blazes, magma cubes, endermen, shulkers, endermites, the ender
+  dragon), so that Hardcore's ambients don't kill them at home; the allay and
+  the vex, which are spirits; the slime, which has no lungs, like the magma
+  cube; the breeze, a creature of wind, like the blaze; and non-living
+  entities such as armor stands.
+
+Packs add mobs, their own or other mods', the usual way, with a file at the
+same path; to take one out, they replace the tag with `"replace": true` and
+list what should stay. The tag applies from the next breath check after
+`/reload`.
+
+## Damage types
+
+Breathing deals two damage types of its own, data in `data/zas/damage_type/`
+(LIFE-030):
+
+| Damage type | When | Death message |
+|---|---|---|
+| `zas:hypoxia` | An empty air meter in a breath with too little O₂, 2 HP/s (LIFE-008) | *Steve ran out of oxygen* |
+| `zas:toxic_gas` | A hazard profile's damage (LIFE-004) | *Steve breathed toxic gas* |
+
+Both are in `#minecraft:bypasses_armor` (LIFE-035), `#minecraft:bypasses_cooldown`,
+so a hazard isn't lost to another's invulnerability ticks, and
+`#minecraft:no_knockback`. The other atmospheric damage types come with their
+hazards.
 
 ## Invalid files
 
