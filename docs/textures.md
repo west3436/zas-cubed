@@ -52,7 +52,7 @@ texture), or none (the block has no item).
 | `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. |
 | `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. |
 | `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). Faces any of six ways; a pipe joins only its back. |
-| `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). |
+| `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). Faces any of six ways, like the vent; a pipe joins only its back. |
 | `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. |
 | `zas_atmos:connector_port` | Connector port | Must | CONT-083 | Block model | Free, and with a portable connected. Set in the floor, facing up; a pipe joins only its bottom. |
 | `zas_atmos:igniter` | Igniter | Must | CONT-105 | Block model | Idle and active. |
@@ -94,7 +94,7 @@ scrubbing and filtering, so CONT-050 and CONT-054 need updating.
 | `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
 | `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal and alarm. |
 | `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. |
-| `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's proposed at 1 by 2. |
+| `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's 1 by 2, a frame the block's full depth with its panel in the middle (the owner's choice of 2026-11-01). |
 
 Both door sizes and firelocks on doors are the owner's choices of 2026-11-01.
 The requirements don't cover them yet.
@@ -131,8 +131,8 @@ gives which, are in the
 |---|---|---|---|---|
 | `zas_atmos:oxygen_tank` | O₂ tank | Must | CONT-030 | Flat sprite. |
 | `zas_atmos:emergency_oxygen_tank` | Emergency O₂ tank | Must | CONT-030 | Flat sprite. It holds 2 L against the others' 70 L, so it should look smaller. |
-| `zas_atmos:air_tank` | Air tank | Must | CONT-030 | Flat sprite. |
-| `zas_atmos:empty_tank` | Empty tank | Must | CONT-030 | Flat sprite. |
+| `zas_atmos:air_tank` | Air tank | Must | CONT-030 | Flat sprite. Yellow, as vg's yellow tank (the owner's choice of 2026-11-01). |
+| `zas_atmos:empty_tank` | Empty tank | Must | CONT-030 | Flat sprite. Grey. |
 | `zas_atmos:tank_transfer_valve` | Tank transfer valve | Must | CONT-103, CONT-104 | Flat sprite, with variants for no tanks, one tank and two tanks, and for the timer running. |
 
 **Wearables.** Each piece needs a flat sprite and a worn texture. The
@@ -144,7 +144,7 @@ one suit share their layer files.
 | `zas_atmos:breath_mask` | Breath mask | Must | CONT-031 | Layer 1, head only | |
 | `zas_atmos:gas_mask` | Gas mask | Must | CONT-088 | Layer 1, head only | |
 | `zas_atmos:softsuit_helmet` | Softsuit helmet | Must | CONT-031, CONT-032 | Softsuit layer 1 | |
-| `zas_atmos:softsuit_chestplate` | Softsuit chestplate | Must | CONT-032, CONT-090 | Softsuit layer 1 | Holds a tank (CONT-090); showing it on the back is optional. |
+| `zas_atmos:softsuit_chestplate` | Softsuit chestplate | Must | CONT-032, CONT-090 | Softsuit layer 1 | Holds a tank (CONT-090); showing it on the back is optional. vg's 13 is on the back (the owner's choice of 2026-11-02). |
 | `zas_atmos:softsuit_leggings` | Softsuit leggings | Must | CONT-032 | Softsuit layer 2 | |
 | `zas_atmos:softsuit_boots` | Softsuit boots | Must | CONT-032 | Softsuit layer 1 | |
 | `zas_atmos:hardsuit_helmet` | Hardsuit helmet | Must | CONT-031, CONT-036 | Hardsuit layer 1 | The hardsuit should look heavier than the softsuit (CONT-089). |

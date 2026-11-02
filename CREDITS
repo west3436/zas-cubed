@@ -25,7 +25,8 @@
 #   commit: 0123456789ab
 #
 #   source       the .dmi file, as a path in the vgstation13 repository.
-#                Never a file under goon/ (CC BY-NC-SA, NFR-041).
+#                List several separated by ", " when an asset draws on more
+#                than one. Never a file under goon/ (CC BY-NC-SA, NFR-041).
 #   state        the icon state used. List several separated by ", ".
 #   commit       the vgstation13 commit hash, 7 to 40 hex digits.
 #   attribution  optional; defaults to "vgstation13 contributors, CC BY-SA 3.0 US".
@@ -366,10 +367,10 @@ notes: Cropped from vg's 32 px frame, unchanged.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/softsuit_layer_1.png
 origin: vgstation13
-source: icons/mob/head.dmi
+source: icons/mob/head.dmi, icons/mob/suit.dmi
 state: space
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-notes: The helmet so far: redrawn onto Minecraft's armor layout from vg's four directions, with a new top. Its antenna and ear plates are on the outer layer, so they stand out. The rest of the suit comes in batch 2.
+notes: Redrawn onto Minecraft's armor layout from vg's four directions. The helmet, with a new top, its antenna and ear plates on the outer layer so they stand out; the chestplate's body and arms, with vg's chest controls and 13 on the back; and the boots.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_helmet.json
 origin: original
@@ -385,3 +386,290 @@ notes: Redrawn at 10x16 to fit the slot, with vg's outline and colours.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/atmos_analyzer.json
 origin: original
 notes: A flat item model for the analyzer's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's firelock at one block wide and two tall: its height kept, its width halved. The front view (16x32, top block above bottom) with FIRE in tall narrow letters, the seam band, hazard stripes and kick plate; and the posts' inner face, with the groove the panel runs in, and outer face.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_open.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_open
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Open: the frame only, with the panel's kick plate showing under the header.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_locked.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_closed, palert
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Locked down: closed, with vg's orange lights flashing at the middle of each edge over 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/firelock_locked.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/firelock.png
+origin: vgstation13
+source: icons/obj/doors/Doorfire.dmi
+state: door_closed
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The closed firelock at half size with vg's outline. Too narrow for FIRE, so it has no lettering.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_lower.json
+origin: original
+notes: The firelock's bottom block, closed: gold posts the block's full depth and a 4 px panel in the middle, after vg's firelock (icons/obj/doors/Doorfire.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_upper.json
+origin: original
+notes: The firelock's top block, closed, with the header.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_lower_open.json
+origin: original
+notes: The bottom block, open: the posts only.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_upper_open.json
+origin: original
+notes: The top block, open: the posts, the header and the panel's kick plate under it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_lower_locked.json
+origin: original
+notes: The bottom block, locked down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_upper_locked.json
+origin: original
+notes: The top block, locked down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_lower.json
+origin: original
+notes: Over a door's bottom block, closed: the front view on both faces of vanilla's door slab (x 0..3), 0.5 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_upper.json
+origin: original
+notes: Over a door's top block, closed.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_lower_open.json
+origin: original
+notes: Over a door's bottom block, open: the frame only, 0.25 px out.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_upper_open.json
+origin: original
+notes: Over a door's top block, open: the frame only.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_lower_locked.json
+origin: original
+notes: Over a door's bottom block, locked down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_door_upper_locked.json
+origin: original
+notes: Over a door's top block, locked down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/firelock.json
+origin: original
+notes: A flat item model for the firelock's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_scrubber.dmi
+state: off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The front face, off: vg's round grille in the vent's casing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_scrubber.dmi
+state: on
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Scrubbing: vg's steady blue ring.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front_siphon.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_scrubber.dmi
+state: in
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Siphoning: vg's green ring shrinking over 5 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front_siphon.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front_panic.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_scrubber.dmi
+state: in
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A new state, panic: the siphon's shrinking ring in red, twice as fast. vg has no panic overlay.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/scrubber_front_panic.png.mcmeta
+origin: original
+notes: 1 tick a frame, twice the siphon's speed.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber.json
+origin: original
+notes: The vent's cube with the scrubber's grille facing north, turned to face sideways, off. After vg's scrubber (icons/obj/atmospherics/vent_scrubber.dmi). It uses vent_side.png and vent_back.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_on.json
+origin: original
+notes: The sideways scrubber, scrubbing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_siphon.json
+origin: original
+notes: The sideways scrubber, siphoning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_panic.json
+origin: original
+notes: The sideways scrubber, in panic.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_vertical.json
+origin: original
+notes: The scrubber facing up, turned to face down, off.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_vertical_on.json
+origin: original
+notes: The up or down scrubber, scrubbing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_vertical_siphon.json
+origin: original
+notes: The up or down scrubber, siphoning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/scrubber_vertical_panic.json
+origin: original
+notes: The up or down scrubber, in panic.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/scrubber.json
+origin: original
+notes: The scrubber's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/oxygen_tank.png
+origin: vgstation13
+source: icons/obj/tank.dmi
+state: oxygen
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn to fill the slot at 45 degrees, with vg's blue bands, white band, brass neck and valve, and no outline, as vg's.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/air_tank.png
+origin: vgstation13
+source: icons/obj/tank.dmi
+state: oxygen_f
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The same tank in the colours of vg's yellow variant.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/empty_tank.png
+origin: vgstation13
+source: icons/obj/tank.dmi
+state: oxygen
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The same tank recoloured grey.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/emergency_oxygen_tank.png
+origin: vgstation13
+source: icons/obj/tank.dmi
+state: emergency
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite cut to 16 px tall by dropping a row of its handle and one of its body.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/oxygen_tank.json
+origin: original
+notes: A flat item model for the tank's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/air_tank.json
+origin: original
+notes: A flat item model for the tank's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/empty_tank.json
+origin: original
+notes: A flat item model for the tank's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/emergency_oxygen_tank.json
+origin: original
+notes: A flat item model for the tank's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/crowbar.png
+origin: vgstation13
+source: icons/obj/items.dmi
+state: crowbar
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn to fill the slot's width at 45 degrees, with vg's outline, faces, hook and chisel end.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/crowbar.json
+origin: original
+notes: A handheld item model, held like a vanilla tool.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/breath_mask.png
+origin: vgstation13
+source: icons/obj/clothing/masks.dmi
+state: breath
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite cut to 16 px wide by trimming its straps' ends. Its see-through tube is made solid.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/breath_mask_layer_1.png
+origin: vgstation13
+source: icons/mob/mask.dmi
+state: breath
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn onto Minecraft's armor layout, head only: the strap on the inner layer, the cup and tube on the outer layer.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/breath_mask.json
+origin: original
+notes: A flat item model for the mask's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/gas_mask.png
+origin: vgstation13
+source: icons/obj/clothing/masks.dmi
+state: gas_alt
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's standard gas mask cut to 15x16: its straps' ends and bottom outline row cut off. Its see-through lenses are made solid.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/gas_mask_layer_1.png
+origin: vgstation13
+source: icons/mob/mask.dmi
+state: gas_alt
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn onto Minecraft's armor layout, head only: the face plate, lenses and strap on the inner layer, the filter on the outer layer.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/gas_mask.json
+origin: original
+notes: A flat item model for the mask's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/softsuit_chestplate.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's worn front, waist up, narrowed to 16 px by dropping three plain columns.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/softsuit_leggings.png
+origin: vgstation13
+source: icons/obj/clothing/suits.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Drawn to fill the slot from the suit's lower half, in vg's colours and outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/softsuit_boots.png
+origin: vgstation13
+source: icons/obj/clothing/suits.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A pair of boots drawn to fill the slot from the suit's feet, in vg's colours and outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/softsuit_layer_2.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The leggings, redrawn onto Minecraft's armor layout: the waist's belt and the legs with a knee joint.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_chestplate.json
+origin: original
+notes: A flat item model for the chestplate's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_leggings.json
+origin: original
+notes: A flat item model for the leggings' sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_boots.json
+origin: original
+notes: A flat item model for the boots' sprite.
