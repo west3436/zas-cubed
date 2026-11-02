@@ -17,8 +17,10 @@ import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.geometry.Geometries;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -103,6 +105,19 @@ public final class FirelockTests {
             s.clear();
         }
         h.succeed();
+    }
+
+    /**
+     * {@link #run} with heat off (HEAT): for checks of exact temperatures and pressures, which
+     * conduction through the walls would otherwise move within the atmos tick.
+     */
+    private static void runWithoutHeat(GameTestHelper h, Site s, Runnable checks) {
+        ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
+        try {
+            run(h, s, checks);
+        } finally {
+            ZasServerConfig.overrideHeatForTest(null);
+        }
     }
 
     /** Uses the firelock by hand, as a right click with an empty hand does. */
@@ -344,11 +359,14 @@ public final class FirelockTests {
      * A closed firelock locks down at a 25 kPa difference, at 323.15 K and at 273.15 K on a side;
      * locked down it refuses to open by hand and shows the locked state, and a crowbar forces it
      * open (CONT-093, CONT-094).
+     *
+     * <p>Heat is off: the rooms hold 1 kPa of gas at the thresholds, and conduction through their
+     * walls would carry them off the exact temperatures within the atmos tick.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it(GameTestHelper h) {
         Site s = new Site(h, 24);
-        run(h, s, () -> {
+        runWithoutHeat(h, s, () -> {
             FirelockBlockEntity f = rooms(s); // no controllers, so no alarm
             s.cycle(f);
             Player player = h.makeMockPlayer(GameType.SURVIVAL);
