@@ -355,7 +355,8 @@ placed. A crop growing or a lit furnace turning doesn't count. The tags apply
 from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
 [config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
-`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property.
+`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property, and
+`zas_atmos`'s firelock joins `#zas:zone_boundary`.
 
 ## Hazard profiles
 

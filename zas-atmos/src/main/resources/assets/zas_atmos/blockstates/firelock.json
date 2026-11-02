@@ -1,0 +1,124 @@
+{
+  "variants": {
+    "facing=north,half=lower,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_lower"
+    },
+    "facing=north,half=lower,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_lower_locked"
+    },
+    "facing=north,half=lower,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open"
+    },
+    "facing=north,half=lower,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open"
+    },
+    "facing=north,half=upper,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_upper"
+    },
+    "facing=north,half=upper,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_upper_locked"
+    },
+    "facing=north,half=upper,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open"
+    },
+    "facing=north,half=upper,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open"
+    },
+    "facing=east,half=lower,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_lower",
+      "y": 90
+    },
+    "facing=east,half=lower,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_lower_locked",
+      "y": 90
+    },
+    "facing=east,half=lower,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 90
+    },
+    "facing=east,half=lower,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 90
+    },
+    "facing=east,half=upper,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_upper",
+      "y": 90
+    },
+    "facing=east,half=upper,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_upper_locked",
+      "y": 90
+    },
+    "facing=east,half=upper,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 90
+    },
+    "facing=east,half=upper,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 90
+    },
+    "facing=south,half=lower,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_lower",
+      "y": 180
+    },
+    "facing=south,half=lower,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_lower_locked",
+      "y": 180
+    },
+    "facing=south,half=lower,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 180
+    },
+    "facing=south,half=lower,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 180
+    },
+    "facing=south,half=upper,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_upper",
+      "y": 180
+    },
+    "facing=south,half=upper,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_upper_locked",
+      "y": 180
+    },
+    "facing=south,half=upper,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 180
+    },
+    "facing=south,half=upper,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 180
+    },
+    "facing=west,half=lower,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_lower",
+      "y": 270
+    },
+    "facing=west,half=lower,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_lower_locked",
+      "y": 270
+    },
+    "facing=west,half=lower,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 270
+    },
+    "facing=west,half=lower,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_lower_open",
+      "y": 270
+    },
+    "facing=west,half=upper,locked=false,open=false": {
+      "model": "zas_atmos:block/firelock_upper",
+      "y": 270
+    },
+    "facing=west,half=upper,locked=true,open=false": {
+      "model": "zas_atmos:block/firelock_upper_locked",
+      "y": 270
+    },
+    "facing=west,half=upper,locked=false,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 270
+    },
+    "facing=west,half=upper,locked=true,open=true": {
+      "model": "zas_atmos:block/firelock_upper_open",
+      "y": 270
+    }
+  }
+}

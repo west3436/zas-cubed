@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -11,6 +12,7 @@ import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -43,6 +45,10 @@ public final class AtmosBlocks {
     /** The solid-fuel generator (CONT-061). */
     public static final DeferredBlock<GeneratorBlock> GENERATOR =
             BLOCKS.registerBlock("generator", GeneratorBlock::new, metal());
+
+    /** A standalone firelock, one block wide and two high (CONT-043). As hard as an iron door. */
+    public static final DeferredBlock<FirelockBlock> FIRELOCK = BLOCKS.registerBlock(
+            "firelock", FirelockBlock::new, metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
 
     private AtmosBlocks() {}
 

@@ -19,6 +19,7 @@ import io.github.west3436.zas.atmos.power.PowerFeed;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -77,6 +78,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     private double[] values = new double[0];
     private int[] ratings = new int[0];
     private List<Part> parts = List.of();
+    private Set<ZoneId> coveredZones = Set.of();
+    private Set<BlockPos> coveredCells = Set.of();
 
     public AreaAirControllerBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.AREA_AIR_CONTROLLER.get(), pos, state);
@@ -110,6 +113,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
         powered = buffer.take(own);
         List<PoweredDevice> covered = covered(level);
+        coverage(level);
         if (!powered) {
             danger.reset();
             parts = describe(covered, new boolean[covered.size()]);
@@ -209,6 +213,47 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             }
         }
         return out;
+    }
+
+    /**
+     * Records what the controller covers, for firelocks (CONT-043): its own zone, and for each part
+     * linked to it, the zone at the part's air point, or that cell itself where it isn't zoned.
+     */
+    private void coverage(ServerLevel level) {
+        Set<ZoneId> zones = new HashSet<>();
+        Set<BlockPos> cells = new HashSet<>();
+        if (sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED) {
+            sample.zone().ifPresent(zones::add);
+        }
+        for (BlockPos link : links) {
+            if (level.isLoaded(link) && level.getBlockEntity(link) instanceof PoweredDevice d) {
+                AtmosphereSample at = Atmospheres.at(level, d.airPoint());
+                if (at.zone().isPresent()) {
+                    zones.add(at.zone().get());
+                } else {
+                    cells.add(BlockPos.containing(d.airPoint()));
+                }
+            }
+        }
+        coveredZones = Set.copyOf(zones);
+        coveredCells = Set.copyOf(cells);
+    }
+
+    /**
+     * Whether the controller covers a cell (CONT-043): the cell is in its zone or in the zone of a
+     * part linked to it, or, unzoned, is a linked part's air point. As of its last step.
+     *
+     * @param sample the cell's reading
+     * @param cell the cell
+     */
+    public boolean covers(AtmosphereSample sample, BlockPos cell) {
+        Optional<ZoneId> zone = sample.zone();
+        return zone.isPresent() ? coveredZones.contains(zone.get()) : coveredCells.contains(cell);
+    }
+
+    /** Whether it is powered and at danger 2, so the firelocks it covers close (CONT-043). */
+    public boolean alarming() {
+        return powered && danger.level() >= 2;
     }
 
     private static boolean inZone(ServerLevel level, PoweredDevice d, ZoneId zone) {
