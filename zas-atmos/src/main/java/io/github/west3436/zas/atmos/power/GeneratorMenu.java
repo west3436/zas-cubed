@@ -16,7 +16,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 /**
- * The generator's GUI (CONT-074): one fuel slot, which takes only coal and charcoal, and the burn
+ * The generator's GUI (CONT-074): one fuel slot, which takes only furnace fuel, and the burn
  * time and stored FE. The fuel slot is the only setting, and the slot itself refuses anything else.
  */
 public class GeneratorMenu extends AbstractContainerMenu {

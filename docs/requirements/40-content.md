@@ -1217,14 +1217,22 @@ and an 8,000 FE store that it offers through the FE capability
 #### CONT-066 · Generator fuel
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
 
-The generator shall burn one coal or charcoal per 80 s.
+The generator shall burn any furnace fuel, one coal per 80 s, and other fuels
+for 80 s times their furnace burn time over coal's.
 
 - **Rationale:** Decision: D-35; 80 s per coal matches a vanilla furnace.
-- **Verify:** A GameTest checks one coal lasts 80 s.
+- **Verify:** A GameTest checks one coal lasts 80 s, and that other fuels are
+  accepted and burn in proportion.
 
 *2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). Coal and charcoal are `#minecraft:coals`. A
 generator whose store is full starts no new fuel
 (`cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s`).*
+
+*2026-11-02: Changed by the owner (d-155-fuel): any furnace fuel, not only
+coal and charcoal. Fuel is anything with a furnace burn time, which includes
+NeoForge's furnace fuel data map, except fuels that leave an item behind (a lava
+bucket), which the one slot has nowhere to put. A coal block burns for 800 s and
+a stick for 5 s (`cont_066_generator_burns_any_furnace_fuel_by_its_burn_time`).*
 
 #### CONT-067 · Generator is a lit fuel block
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35

@@ -27,7 +27,7 @@ public final class AtmosServerConfig {
     /** The generator's own store, in FE. */
     public static final ModConfigSpec.IntValue GENERATOR_BUFFER;
 
-    /** How long one coal or charcoal burns in the generator, in seconds (CONT-066). */
+    /** How long one coal burns in the generator, in seconds; other fuels scale by burn time (CONT-066). */
     public static final ModConfigSpec.IntValue GENERATOR_SECONDS_PER_FUEL;
 
     static {
@@ -45,7 +45,8 @@ public final class AtmosServerConfig {
         GENERATOR_BUFFER = builder.comment("The generator's own store, in FE. It stops taking new fuel when full.")
                 .defineInRange("generator_buffer", 8_000, 1_000, 30_000);
         GENERATOR_SECONDS_PER_FUEL = builder.comment(
-                        "How long one coal or charcoal burns in the generator, in seconds (CONT-066)")
+                        "How long one coal burns in the generator, in seconds. Other furnace fuels burn",
+                        "for this times their furnace burn time over coal's (CONT-066)")
                 .defineInRange("generator_seconds_per_fuel", 80, 1, 1_600);
         builder.pop();
         SPEC = builder.build();

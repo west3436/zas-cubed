@@ -1447,8 +1447,11 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   CONT-061, CONT-066, CONT-067). It is a plain ticking block entity, not an
   `AtmosDevice`. Each game tick while it burns it makes `[power]
   generator_output` (40) FE into its own store (`generator_buffer`, 8,000 FE).
-  It starts the next coal or charcoal (`#minecraft:coals`), which burns for
-  `generator_seconds_per_fuel` (80) seconds, only while the store has room. It
+  It starts the next piece of fuel only while the store has room. Fuel is
+  anything with a furnace burn time (NeoForge's `getBurnTime`, so the furnace
+  fuel data map counts) that leaves no item behind, so not a lava bucket. One
+  coal burns for `generator_seconds_per_fuel` (80) seconds, and any other fuel
+  for that times its burn time over coal's 1,600 ticks. It
   offers the store through an extract-only FE capability, and its fuel slot
   through an item handler, so hoppers can feed it. Its `lit` property is true
   while it burns. The block is in `#zas:combustion`
