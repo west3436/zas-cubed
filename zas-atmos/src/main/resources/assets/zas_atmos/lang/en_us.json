@@ -94,13 +94,16 @@
   "gui.zas_atmos.heater.on": "On",
   "gui.zas_atmos.heater.off": "Off",
   "gui.zas_atmos.heater.toggle": "On / off",
-  "gui.zas_atmos.heater.setpoint": "Setpoint: %s K",
+  "gui.zas_atmos.heater.setpoint": "Setpoint %s K, room %s K",
+  "gui.zas_atmos.heater.setpoint_no_room": "Setpoint %s K, no room: heating its own gas",
   "gui.zas_atmos.heater.network": "Network gas: %s K",
   "gui.zas_atmos.heater.heating": "Heating: %s W",
   "gui.zas_atmos.heater.status.off": "Off",
   "gui.zas_atmos.heater.status.unpowered": "Idle: no power",
   "gui.zas_atmos.heater.status.heating": "Heating",
-  "gui.zas_atmos.heater.status.at_setpoint": "Idle: the network gas is at the setpoint",
+  "gui.zas_atmos.heater.status.at_setpoint": "Idle: at the setpoint",
   "gui.zas_atmos.heater.status.network_empty": "Idle: the network is empty",
+  "gui.zas_atmos.heater.status.carrying": "Idle: the network gas holds the heat the room needs",
+  "gui.zas_atmos.heater.status.at_limit": "Idle: the network gas is at its 573 K limit",
   "item.zas_atmos.dyed": "%s %s"
 }

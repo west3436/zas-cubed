@@ -46,8 +46,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The heater (CONT-019, CONT-087) and S-05, heat: a room beside lava warms, a room in a 2.7 K
- * vacuum cools through its walls, and a heater on a network that two vents circulate the room's
- * air through holds the room near its setpoint. Each test builds in its own {@link Site} and runs
+ * vacuum cools through its walls, and a heater in a room, on a network that two vents circulate the
+ * room's air through, holds the room at its setpoint. Each test builds in its own {@link Site} and runs
  * within one game tick. The vacuum tests borrow the End, as S-01 does, each in a batch of its own.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -87,10 +87,16 @@ public final class HeatStationTests {
         }
     }
 
-    /** Fills the zone at a point with standard air at a temperature, from empty, and returns it. */
+    /**
+     * Fills the zone at a point with standard air at a temperature, from empty, and returns it: a
+     * trace of nitrogen forms the zone, and its volume sets the moles.
+     */
     private static ZoneInfo fillAir(Site s, int x, int y, int z, double temperature) {
+        s.settle(
+                GasMutations.add(s.level, s.point(x, y, z), new GasParcel(Map.of(N2, 1e-6), temperature), Site.SOURCE));
+        double litres = s.zone(x, y, z).mixture().volume();
         double moles =
-                StandardAir.PRESSURE * 27_000 / (io.github.west3436.zas.api.gas.GasMixture.GAS_CONSTANT * temperature);
+                StandardAir.PRESSURE * litres / (io.github.west3436.zas.api.gas.GasMixture.GAS_CONSTANT * temperature);
         GasParcel air = new GasParcel(
                 Map.of(N2, moles * (1 - StandardAir.OXYGEN_FRACTION), O2, moles * StandardAir.OXYGEN_FRACTION),
                 temperature);
@@ -150,6 +156,8 @@ public final class HeatStationTests {
             heater.network().gas().add(new GasParcel(Map.of(N2, 10.0), T));
             Player hand = h.makeMockPlayer(GameType.SURVIVAL);
             HeaterMenu menu = (HeaterMenu) heater.createMenu(1, hand.getInventory(), hand);
+            h.assertValueEqual(
+                    AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS), 5000, "the configured power (CONT-087)");
 
             // Off: it draws nothing and does nothing, powered or not.
             heater.power().setTestPowered(true);
@@ -170,9 +178,12 @@ public final class HeatStationTests {
                     heater.power().drawPerAtmosTick(), 60L * AtmosTicks.PERIOD, "60 FE/t (CONT-087) per atmos tick");
             h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW), 60, "the configured draw");
 
-            // 10 mol of N2 needs 208 J for 10 K: one step reaches the setpoint exactly, and stops.
+            // In open air it has no room, so it heats its own gas toward the setpoint. 10 mol of N2
+            // needs 208 J for 10 K: one step reaches the setpoint exactly, and stops.
             s.cycle(heater);
             h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heating heater's status");
+            h.assertTrue(Double.isNaN(heater.roomTemperature()), "a room in open air: " + heater.roomTemperature());
+            h.assertValueEqual(menu.value(HeaterMenu.DATA_ROOM), HeaterMenu.NO_ROOM, "the GUI's room in open air");
             s.close(heater.network().gas().temperature(), T + 10, 1e-9, "the network at the setpoint");
             h.assertTrue(
                     s.level.getBlockState(heater.getBlockPos()).getValue(HeaterBlock.LIT), "not lit while heating");
@@ -191,10 +202,10 @@ public final class HeatStationTests {
             heater.network().gas().add(new GasParcel(Map.of(N2, 990.0), T));
             double c = heater.network().gas().heatCapacity();
             s.cycle(heater);
-            s.close(heater.watts(), HeaterMath.MAX_WATTS, 1e-9, "the heater's power");
+            s.close(heater.watts(), HeaterMath.DEFAULT_MAX_WATTS, 1e-9, "the heater's power");
             s.close(
                     heater.network().gas().temperature(),
-                    T + HeaterMath.MAX_WATTS * AtmosTicks.SECONDS / c,
+                    T + HeaterMath.DEFAULT_MAX_WATTS * AtmosTicks.SECONDS / c,
                     1e-9,
                     "the large network after a second");
 
@@ -252,6 +263,7 @@ public final class HeatStationTests {
                             .zone()
                             .equals(Atmospheres.at(s.level, s.abs(2, 2, 2)).zone()),
                     "the heater's point isn't in the room's zone");
+            s.close(heater.roomTemperature(), temperature(s, 2, 2, 2), 0.5, "the heater's reading of its room");
             h.succeed();
         } finally {
             s.clear();
@@ -326,24 +338,25 @@ public final class HeatStationTests {
 
     /**
      * S-05: a heater holds a room in vacuum at its setpoint. A sealed 3 × 3 × 3 room of air at
-     * 293.15 K, walled in wool, stands in the 2.7 K vacuum. Two vents in its west wall share a
-     * network with a heater outside: one siphons the room into the network, up to 150 kPa there,
-     * and the other blows the network back into the room, up to one atmosphere. The heater, set to
-     * 303 K, heats the network's gas, which carries the heat in. The room warms toward the
-     * setpoint without passing it, and settles within 5 K under it, where the heat the circulation
-     * brings in matches what the walls radiate away: the heater brings the network gas, not the
-     * room, to its setpoint (CONT-019). With the heater off, the same room cools.
+     * 293.15 K, walled in wool, stands in the 2.7 K vacuum. The heater stands on its floor, and two
+     * vents in the room share its network through two pipes: one siphons the room into the
+     * network, up to 150 kPa there, and the other blows the network back into the room, up to one
+     * atmosphere. Set to 303 K, the heater reads the room and heats the network's gas as hot as the
+     * room needs, and the vents carry the heat in. The room warms to the setpoint without passing
+     * it, and holds there, steady and within {@link #HELD} K under it, while its walls radiate
+     * about 420 W away (CONT-019). It settles about 0.12 K under: the room's loss over the
+     * circulation's heat flow, scaled down by the room's heat capacity over the network's. The GUI shows the room's temperature. With the heater off, the room cools.
      */
     @GameTest(template = "empty", batch = "zas_atmos_s05_heater", timeoutTicks = 200)
     public static void s_05_heater_holds_a_room_at_its_setpoint(GameTestHelper h) {
         double setpoint = 303;
         inVacuum(h, 24, s -> {
             room(s, 2, 6, Blocks.WHITE_WOOL.defaultBlockState()); // interior x 3–5, y 1–3, z 1–3
-            VentBlockEntity siphon = vent(s, 2, 2, 2, Direction.EAST);
-            VentBlockEntity blow = vent(s, 2, 2, 3, Direction.EAST);
-            pipe(s, 1, 2, 2);
-            pipe(s, 1, 2, 3);
-            HeaterBlockEntity heater = heater(s, 0, 2, 2, Direction.WEST); // its back, east, joins the pipe
+            pipe(s, 3, 1, 2);
+            pipe(s, 3, 1, 3);
+            HeaterBlockEntity heater = heater(s, 4, 1, 2, Direction.EAST); // its back, west, joins a pipe
+            VentBlockEntity siphon = vent(s, 3, 2, 2, Direction.UP); // its back, down, joins a pipe
+            VentBlockEntity blow = vent(s, 3, 2, 3, Direction.UP);
             h.assertTrue(
                     heater.network() == siphon.network() && heater.network() == blow.network(),
                     "the heater and vents aren't one network");
@@ -355,34 +368,51 @@ public final class HeatStationTests {
             heater.setSetpoint(setpoint);
             heater.setOn(true);
             fillAir(s, 4, 2, 2, T);
+            h.assertTrue(
+                    Atmospheres.at(s.level, heater.airPoint())
+                            .zone()
+                            .equals(Atmospheres.at(s.level, s.abs(4, 2, 2)).zone()),
+                    "the heater isn't in the room");
 
-            double t = T;
             double highest = 0;
+            int reached = -1;
             for (int sec = 0; sec < 600; sec++) {
                 s.cycle(siphon, blow, heater);
-                t = temperature(s, 4, 2, 2);
+                double t = temperature(s, 4, 2, 2);
                 highest = Math.max(highest, t);
+                if (reached < 0 && t > setpoint - HELD) {
+                    reached = sec;
+                }
             }
-            double settled = t;
+            h.assertTrue(reached >= 0, "the room never came within " + HELD + " K of the setpoint");
+            double lowest = Double.MAX_VALUE;
+            double lastHighest = 0;
             for (int sec = 0; sec < 60; sec++) {
                 s.cycle(siphon, blow, heater);
+                double t = temperature(s, 4, 2, 2);
+                highest = Math.max(highest, t);
+                lowest = Math.min(lowest, t);
+                lastHighest = Math.max(lastHighest, t);
             }
-            t = temperature(s, 4, 2, 2);
+            double t = temperature(s, 4, 2, 2);
             ZoneInfo room = s.zone(4, 2, 2);
             h.assertTrue(highest <= setpoint + 1e-6, "the room passed the setpoint: " + highest + " K");
-            s.close(t, settled, 0.2, "the room's temperature over the last minute");
-            // The heater brings the network's gas to the setpoint; the room settles under it by its
-            // loss over the circulation's heat flow: about 650 W over 8 mol/s of air, about 4.7 K.
             h.assertTrue(
-                    t > setpoint - 5 && t < setpoint,
-                    "S-05: the room isn't held within 5 K under its setpoint: " + t + " K");
+                    lowest > setpoint - HELD,
+                    "S-05: the room isn't held within " + HELD + " K of its setpoint: " + lowest + " K");
+            h.assertTrue(
+                    lastHighest - lowest < 0.05,
+                    "the room swung over the last minute: " + lowest + " K to " + lastHighest + " K");
             h.assertValueEqual(siphon.status(), io.github.west3436.zas.atmos.vent.VentStatus.MOVING, "the siphon");
             h.assertValueEqual(blow.status(), io.github.west3436.zas.atmos.vent.VentStatus.MOVING, "the blower");
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heater");
             h.assertTrue(
-                    heater.watts() < HeaterMath.MAX_WATTS, "the heater is at full power: " + heater.watts() + " W");
-            s.close(heater.network().gas().temperature(), setpoint, 1.5, "the network gas");
+                    heater.watts() < HeaterMath.DEFAULT_MAX_WATTS,
+                    "the heater is at full power: " + heater.watts() + " W");
             s.close(room.mixture().pressure(), StandardAir.PRESSURE, 10, "the room's pressure");
+            Player hand = h.makeMockPlayer(GameType.SURVIVAL);
+            HeaterMenu menu = (HeaterMenu) heater.createMenu(1, hand.getInventory(), hand);
+            s.close(menu.value(HeaterMenu.DATA_ROOM) / 10.0, heater.roomTemperature(), 0.06, "the GUI's room");
+            s.close(heater.roomTemperature(), t, 0.5, "the heater's reading of the room");
 
             // The heater off: the room cools.
             heater.setOn(false);
@@ -393,4 +423,10 @@ public final class HeatStationTests {
         });
         h.succeed();
     }
+
+    /**
+     * How close S-05's heater holds its room under the setpoint, K: it settles about 0.12 K under,
+     * and this leaves room for a change in the walls' or vents' rates.
+     */
+    private static final double HELD = 0.5;
 }

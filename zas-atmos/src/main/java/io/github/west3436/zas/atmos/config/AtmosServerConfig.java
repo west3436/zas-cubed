@@ -18,6 +18,9 @@ public final class AtmosServerConfig {
     /** The heater's draw while it is on, in FE/t (CONT-087). */
     public static final ModConfigSpec.IntValue HEATER_DRAW;
 
+    /** The most heat a heater adds, in W (CONT-087). */
+    public static final ModConfigSpec.IntValue HEATER_WATTS;
+
     /** The area air controller's own draw, in FE/t (CONT-065). */
     public static final ModConfigSpec.IntValue CONTROLLER_DRAW;
 
@@ -39,6 +42,8 @@ public final class AtmosServerConfig {
                 .push("power");
         VENT_DRAW = builder.comment("Vent").defineInRange("vent", 10, 0, 100_000);
         HEATER_DRAW = builder.comment("Heater, while it is on (CONT-087)").defineInRange("heater", 60, 0, 100_000);
+        HEATER_WATTS = builder.comment("The most heat a heater adds, in W, not FE/t (CONT-087)")
+                .defineInRange("heater_watts", 5_000, 0, 1_000_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         CONTROLLER_BUFFER = builder.comment(

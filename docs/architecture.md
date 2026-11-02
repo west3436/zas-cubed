@@ -1757,29 +1757,44 @@ the cell in front of its grille).
   - A floor machine, not a full block, so it stands in its room's cell and
     gas passes around it. Its front faces the player who places it, and a
     pipe joins only its back. It holds a 200 L port buffer.
-  - Each atmos tick, while on and powered, it heats its whole network's gas
-    toward its setpoint (293–573 K, default 293.15 K): `HeaterMath.heat`
-    gives the least of 5 kW over the step and what brings the gas to the
-    setpoint. It never cools, and an empty network gets nothing. It changes
-    only the network's `GasStore`, so it calls no API mutation; vents on the
-    network carry the heat into a room, by blowing heated gas in while
-    another vent siphons the room's gas out.
+  - Its setpoint (293–573 K, default 293.15 K) is for its room: the zone its
+    `airPoint` is in. Each atmos tick, while on and powered, it reads that
+    zone and heats its whole network's gas toward `HeaterMath.roomTarget`,
+    the temperature at which the room's gas and the network's, fully mixed,
+    would be at the setpoint: the setpoint plus the room's shortfall times
+    the room's heat capacity over the network's, capped at 573 K. So the
+    colder and larger the room, the hotter the gas, and the heat the network
+    holds above the setpoint is never more than the room still needs, which
+    keeps the vents from carrying the room past it. Once the room is at or
+    above the setpoint it adds nothing. With no zone at its air point (open
+    air, unresolved or paused) it heats the network's gas toward the setpoint
+    itself. `HeaterMath.heat` gives the least of `[power] heater_watts`
+    (5,000 W) over the step and what brings the gas to its target. It never
+    cools, and an empty network gets nothing. It changes only the network's
+    `GasStore`, so it calls no API mutation; vents on the network carry the
+    heat into the room, by blowing heated gas in while another vent siphons
+    the room's gas out.
+  - **How close it holds a room.** The room settles just under the
+    setpoint, by its heat loss over the circulation's heat flow times one
+    plus the room-to-network heat capacity ratio. In S-05's GameTest, a
+    wool-walled 3 × 3 × 3 room in vacuum losing about 420 W, with about
+    8 mol/s circulating, settles about 0.12 K under a 303 K setpoint, steady,
+    and never passes it. A heater can't hold a room that loses more than its power:
+    a stone room in vacuum loses about 5 kW, so insulating walls
+    ([#179](https://github.com/west3436/zas-cubed/issues/179)) are
+    the remedy, not a stronger heater.
   - It draws `[power] heater` FE/t (60) whenever it is on, in the auxiliary
     group, so a short controller powers its vents first (CONT-064). Its
     `airPoint`, for a controller's zone (CONT-068), is the air above it, in
     its own cell.
   - Its block state's `lit` shows the `heater_on` model while it heats. Its
     GUI has an on/off switch and ±1 and ±10 K setpoint buttons, and shows
-    the setpoint, the network gas's temperature, its status (heating, with
-    the watts; at the setpoint; no power; empty network) and its power.
-  - **How close a room gets.** The heater brings the *network* gas to the
-    setpoint, so a room heated through vents settles below it, by its heat
-    loss over the circulation's heat flow, ṅ·C<sub>v</sub>. A siphoning and a
-    blowing vent circulate about 8 mol/s of air, about 165 W/K. In S-05's
-    GameTest a wool-walled 3 × 3 × 3 room in vacuum loses about 650 W at
-    298 K and settles 4.7 K under a 303 K setpoint. A stone room in vacuum
-    loses about 5 kW, so by estimate the same loop would leave it about 30 K
-    under.
+    the setpoint beside the room's temperature (or that it has no room and
+    heats its own gas), the network gas's temperature, its status (heating,
+    with the watts; at the setpoint; the network already holds the heat the
+    room needs; the network is at its 573 K limit; no power; empty network)
+    and its power. The menu syncs the room's temperature in tenths of a
+    kelvin, −1 for no room.
 - **GUIs** (CONT-074). Using a canister, vent or heater with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and

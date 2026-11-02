@@ -9,8 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A heater's GUI (CONT-019): on or off, setpoint, what it did last step, its network's
- * temperature, and power, with a switch and four setpoint buttons.
+ * A heater's GUI (CONT-019): on or off, setpoint beside the room's temperature, what it did last
+ * step, its network's temperature, and power, with a switch and four setpoint buttons.
  */
 final class HeaterScreen extends DeviceScreen<HeaterMenu> {
     private static final String[] STEPS = {"-10", "-1", "+1", "+10"};
@@ -39,8 +39,12 @@ final class HeaterScreen extends DeviceScreen<HeaterMenu> {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable(
                 menu.value(HeaterMenu.DATA_ON) != 0 ? "gui.zas_atmos.heater.on" : "gui.zas_atmos.heater.off"));
+        String setpoint = kelvin(menu.value(HeaterMenu.DATA_SETPOINT));
+        int room = menu.value(HeaterMenu.DATA_ROOM);
         lines.add(
-                Component.translatable("gui.zas_atmos.heater.setpoint", kelvin(menu.value(HeaterMenu.DATA_SETPOINT))));
+                room < 0
+                        ? Component.translatable("gui.zas_atmos.heater.setpoint_no_room", setpoint)
+                        : Component.translatable("gui.zas_atmos.heater.setpoint", setpoint, kelvin(room)));
         if (menu.status() == HeaterStatus.HEATING) {
             lines.add(Component.translatable("gui.zas_atmos.heater.heating", menu.value(HeaterMenu.DATA_WATTS)));
         } else if (menu.status() != HeaterStatus.OFF) {

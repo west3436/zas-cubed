@@ -1,5 +1,9 @@
 package io.github.west3436.zas.atmos.heater;
 
+import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -26,8 +30,14 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A heater's block entity (CONT-019, CONT-087): a node with a port buffer (200 L) that heats its
- * whole network's gas toward its setpoint, 293–573 K, by at most 5 kW. It never cools: gas at or
- * above the setpoint is left alone. Vents on the same network carry the heat into a room.
+ * whole network's gas, by at most {@code [power] heater_watts} (5 kW). Vents on the same network
+ * carry the heat into a room.
+ *
+ * <p>Its setpoint, 293–573 K, is for the room: the zone its {@link #airPoint} is in. Each atmos tick
+ * it reads that zone and heats its network's gas toward {@link HeaterMath#roomTarget}, as hot as the
+ * room needs, up to 573 K, and adds nothing once the room is at or above the setpoint. With no zone
+ * there (open air, unresolved or paused) it heats its network's gas toward the setpoint instead. It
+ * never cools.
  *
  * <p>It runs only while switched on and powered (CONT-060), drawing {@code [power] heater} FE/t
  * (60, CONT-087) whenever it is on, in the auxiliary group (CONT-064): an area air controller
@@ -45,6 +55,7 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
     private double setpoint = HeaterMath.DEFAULT_SETPOINT;
     private HeaterStatus status = HeaterStatus.OFF;
     private double watts;
+    private double room = Double.NaN;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -56,6 +67,7 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
                 case HeaterMenu.DATA_STATUS -> status.ordinal();
                 case HeaterMenu.DATA_POWERED -> power.isPowered() ? 1 : 0;
                 case HeaterMenu.DATA_WATTS -> (int) Math.round(watts);
+                case HeaterMenu.DATA_ROOM -> Double.isNaN(room) ? HeaterMenu.NO_ROOM : tenths(room);
                 default -> 0;
             };
         }
@@ -136,6 +148,14 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         return new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 15 / 16.0, worldPosition.getZ() + 0.5);
     }
 
+    /**
+     * The temperature of the room it regulates, the zone at its air point, as of its last step;
+     * NaN when there was none or it was off. Server side.
+     */
+    public double roomTemperature() {
+        return room;
+    }
+
     /** Its network's gas temperature, K; 0 if removed. Server side. */
     public double networkTemperature() {
         return isRemoved() ? 0 : network().gas().temperature();
@@ -144,29 +164,49 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
     @Override
     protected void atmosTick(ServerLevel level) {
         watts = 0;
+        room = Double.NaN;
         if (!on) {
             status = HeaterStatus.OFF;
-        } else if (!power.isPowered()) {
-            status = HeaterStatus.UNPOWERED;
         } else {
-            GasStore net = network().gas();
-            double c = net.heatCapacity();
-            double joules = HeaterMath.heat(c, net.temperature(), setpoint, AtmosTicks.SECONDS);
-            if (net.isEmpty() || !(c > 0)) {
-                status = HeaterStatus.NETWORK_EMPTY;
-            } else if (joules <= 0) {
-                status = HeaterStatus.AT_SETPOINT;
-            } else {
-                net.setTemperature(Math.min(setpoint, net.temperature() + joules / c));
-                watts = joules / AtmosTicks.SECONDS;
-                status = HeaterStatus.HEATING;
+            AtmosphereSample air = Atmospheres.at(level, airPoint());
+            if (air.state() == AtmosphereState.ZONED) {
+                room = air.temperature();
             }
+            status = power.isPowered() ? heat(network().gas(), air) : HeaterStatus.UNPOWERED;
         }
         boolean lit = status == HeaterStatus.HEATING;
         BlockState state = getBlockState();
         if (state.getValue(HeaterBlock.LIT) != lit) {
             level.setBlock(worldPosition, state.setValue(HeaterBlock.LIT, lit), Block.UPDATE_CLIENTS);
         }
+    }
+
+    /** One step's heating of the network's gas, for the room at its air point or without one. */
+    private HeaterStatus heat(GasStore net, AtmosphereSample air) {
+        double c = net.heatCapacity();
+        if (net.isEmpty() || !(c > 0)) {
+            return HeaterStatus.NETWORK_EMPTY;
+        }
+        double target;
+        if (Double.isNaN(room)) {
+            target = setpoint;
+        } else if (room >= setpoint) {
+            return HeaterStatus.AT_SETPOINT;
+        } else {
+            target = HeaterMath.roomTarget(
+                    GasProperties.heatCapacity(air.mixture().moles()), room, c, setpoint);
+        }
+        double maxWatts = AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS);
+        double joules = HeaterMath.heat(c, net.temperature(), target, AtmosTicks.SECONDS, maxWatts);
+        if (joules <= 0) {
+            if (Double.isNaN(room)) {
+                return HeaterStatus.AT_SETPOINT;
+            }
+            return target >= HeaterMath.MAX_GAS ? HeaterStatus.AT_LIMIT : HeaterStatus.CARRYING;
+        }
+        net.setTemperature(Math.min(target, net.temperature() + joules / c));
+        watts = joules / AtmosTicks.SECONDS;
+        return HeaterStatus.HEATING;
     }
 
     @Override

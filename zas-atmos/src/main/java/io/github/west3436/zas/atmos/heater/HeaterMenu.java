@@ -11,8 +11,8 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A heater's GUI (CONT-019, CONT-074): on or off, its setpoint, its network's temperature, what it
- * did last step and whether it has power. The client sends only button ids; the server checks each
+ * A heater's GUI (CONT-019, CONT-074): on or off, its setpoint beside its room's temperature, its
+ * network's temperature, what it did last step and whether it has power. The client sends only button ids; the server checks each
  * id, refuses a player too far away ({@link #stillValid}), and {@link HeaterMath#clampSetpoint}
  * keeps the setpoint within 293–573 K.
  */
@@ -27,7 +27,10 @@ public class HeaterMenu extends AbstractContainerMenu {
 
     private static final double[] STEPS = {-10, -1, 1, 10};
 
-    /** The synced values: on, setpoint and network temperature in tenths of a kelvin, status, power, watts. */
+    /**
+     * The synced values: on, setpoint and network temperature in tenths of a kelvin, status, power,
+     * watts, and the room's temperature in tenths of a kelvin.
+     */
     public static final int DATA_ON = 0;
 
     public static final int DATA_SETPOINT = 1;
@@ -38,8 +41,13 @@ public class HeaterMenu extends AbstractContainerMenu {
     public static final int DATA_POWERED = 4;
     /** The heat put into the network at the last step, W, rounded. */
     public static final int DATA_WATTS = 5;
+    /** The room's temperature in tenths of a kelvin, or {@link #NO_ROOM}. */
+    public static final int DATA_ROOM = 6;
 
-    public static final int DATA_COUNT = 6;
+    public static final int DATA_COUNT = 7;
+
+    /** {@link #DATA_ROOM}'s value when the heater has no room: open air, unresolved, paused, or off. */
+    public static final int NO_ROOM = -1;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
