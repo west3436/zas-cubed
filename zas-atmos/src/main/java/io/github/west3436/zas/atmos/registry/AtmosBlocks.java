@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
+import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -43,6 +44,9 @@ public final class AtmosBlocks {
     /** The solid-fuel generator (CONT-061). */
     public static final DeferredBlock<GeneratorBlock> GENERATOR =
             BLOCKS.registerBlock("generator", GeneratorBlock::new, metal());
+
+    /** The heater (CONT-019). */
+    public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
 
     private AtmosBlocks() {}
 

@@ -697,6 +697,12 @@ toward a setpoint.
 - **Verify:** A GameTest checks a heater and a freezer bring their network gas
   to a setpoint.
 
+*2026-11-02: Built for the heater only, so this stays Accepted; the freezer
+is out of this round's scope (S-05 needs only the heater). The heater heats
+its network's gas toward a 293–573 K setpoint (architecture §11.5). Checked by
+`cont_019_heater_heats_its_network_to_the_setpoint` and
+`s_05_heater_holds_a_room_at_its_setpoint` (GameTest).*
+
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Accepted` · Verify: Unit
 
@@ -707,6 +713,13 @@ A heater or freezer shall move up to 5 kW toward its setpoint, drawing
   §2](../research/vg-atmos-content.md#2-devices)); 5 kW is a gameplay value
   that warms a 27-block room by about 20 K in under 2 minutes.
 - **Verify:** A Unit test checks the heat moved per second never exceeds 5 kW.
+
+*2026-11-02: Built for the heater only, so this stays Accepted until the
+freezer exists. The heater moves at most 5 kW and draws `[power] heater`,
+60 FE/t, while on, in the auxiliary power group. Checked by
+`cont_087_never_more_than_5_kw` and `cont_087_limited_or_exact` (Unit),
+`cont_019_heater_heats_its_network_to_the_setpoint` and
+`cont_087_a_controller_powers_a_heater_in_its_zone` (GameTest).*
 
 #### CONT-105 · Igniter
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016

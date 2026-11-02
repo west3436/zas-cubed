@@ -52,6 +52,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.VENT.get(), VentScreen::new);
         event.register(AtmosMenus.AREA_AIR_CONTROLLER.get(), ControllerScreen::new);
         event.register(AtmosMenus.GENERATOR.get(), GeneratorScreen::new);
+        event.register(AtmosMenus.HEATER.get(), HeaterScreen::new);
     }
 
     /**

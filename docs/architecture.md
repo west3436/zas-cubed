@@ -1536,7 +1536,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
-| `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1753,7 +1753,34 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
-- **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
+- **Heater** (CONT-019, CONT-087), in `.heater`.
+  - A floor machine, not a full block, so it stands in its room's cell and
+    gas passes around it. Its front faces the player who places it, and a
+    pipe joins only its back. It holds a 200 L port buffer.
+  - Each atmos tick, while on and powered, it heats its whole network's gas
+    toward its setpoint (293–573 K, default 293.15 K): `HeaterMath.heat`
+    gives the least of 5 kW over the step and what brings the gas to the
+    setpoint. It never cools, and an empty network gets nothing. It changes
+    only the network's `GasStore`, so it calls no API mutation; vents on the
+    network carry the heat into a room, by blowing heated gas in while
+    another vent siphons the room's gas out.
+  - It draws `[power] heater` FE/t (60) whenever it is on, in the auxiliary
+    group, so a short controller powers its vents first (CONT-064). Its
+    `airPoint`, for a controller's zone (CONT-068), is the air above it, in
+    its own cell.
+  - Its block state's `lit` shows the `heater_on` model while it heats. Its
+    GUI has an on/off switch and ±1 and ±10 K setpoint buttons, and shows
+    the setpoint, the network gas's temperature, its status (heating, with
+    the watts; at the setpoint; no power; empty network) and its power.
+  - **How close a room gets.** The heater brings the *network* gas to the
+    setpoint, so a room heated through vents settles below it, by its heat
+    loss over the circulation's heat flow, ṅ·C<sub>v</sub>. A siphoning and a
+    blowing vent circulate about 8 mol/s of air, about 165 W/K. In S-05's
+    GameTest a wool-walled 3 × 3 × 3 room in vacuum loses about 650 W at
+    298 K and settles 4.7 K under a 303 K setpoint. A stone room in vacuum
+    loses about 5 kW, so by estimate the same loop would leave it about 30 K
+    under.
+- **GUIs** (CONT-074). Using a canister, vent or heater with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The

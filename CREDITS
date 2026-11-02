@@ -82,6 +82,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/generator.json
 origin: original
 notes: The generator's four facings, lit and unlit.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/heater.json
+origin: original
+notes: The heater's four facings, heating and idle, with the existing heater and heater_on models.
+
 path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_vent.json
 origin: original
 notes: GameTest stand-in for a vent (dev runs only), shown with the existing vent model.

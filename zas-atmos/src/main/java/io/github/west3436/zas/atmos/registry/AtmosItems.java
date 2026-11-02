@@ -26,6 +26,8 @@ public final class AtmosItems {
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
     public static final DeferredItem<BlockItem> GENERATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.GENERATOR);
 
+    public static final DeferredItem<BlockItem> HEATER = ITEMS.registerSimpleBlockItem(AtmosBlocks.HEATER);
+
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
 
