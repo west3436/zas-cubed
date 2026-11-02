@@ -188,7 +188,7 @@ Each remaining one waits on R1 work:
 |---|---|
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
-| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. *2026-11-01: GEO-007 is in ([#133](https://github.com/west3436/zas-cubed/pull/133)), and the overlay needed no change; CLIENT-011 waits on the owner's look at the boundary colours.* |
+| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. *2026-11-01: GEO-007 is in ([#133](https://github.com/west3436/zas-cubed/pull/133)), and the overlay needed no change. CLIENT-011 is Implemented after the owner's check of the boundary colours; #31 waits only on CLIENT-013.* |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
@@ -214,7 +214,7 @@ ready: Hardcore zone triggers and volume-aware venting.*
 | Item | PR | Requirements | Left |
 |---|---|---|---|
 | Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011, CORE-013 and CORE-015 to CORE-017 *Implemented*; CORE-012 back to *Accepted* by the owner, until LIFE, FIRE or CONT reads the tags | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives: left out until a track needs them (owner). `gasesInTag` got a default, like `breathability` ([#138](https://github.com/west3436/zas-cubed/pull/138)) |
-| Zone-boundary blocks | [#133](https://github.com/west3436/zas-cubed/pull/133) | GEO-007, GEO-044, CORE-034 and CORE-067 *Implemented*; [#107](https://github.com/west3436/zas-cubed/issues/107) fixed | CLIENT-011's overlay check (#31). A door opening onto open air still costs a bounded breach fill each time, until GEO-021 and GEO-027 |
+| Zone-boundary blocks | [#133](https://github.com/west3436/zas-cubed/pull/133) | GEO-007, GEO-044, CORE-034 and CORE-067 *Implemented*; [#107](https://github.com/west3436/zas-cubed/issues/107) fixed | None for CLIENT-011, which the owner's overlay check made *Implemented* (#31). A door opening onto open air still costs a bounded breach fill each time, until GEO-021 and GEO-027 |
 | The preset | [#128](https://github.com/west3436/zas-cubed/pull/128) | OPS-015 *Implemented*; OPS-007 stays *Accepted* until the options it lists have users | Per-world presets: NeoForge shares `config/zas-server.toml` between singleplayer worlds that have no `serverconfig` copy. The owner chose to have `/zas preset` write the world's own copy ([#139](https://github.com/west3436/zas-cubed/issues/139)) |
 | Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stays *Accepted* | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. The owner kept `@LevelThread` and the `Hazard` and `Protection` values; LIFE confirms or trims the values before 1.0.0 |
 | Hardcore zone triggers | [#136](https://github.com/west3436/zas-cubed/pull/136) | CORE-056 stays *Accepted* | The fuel generator (CONT) joins `#zas:combustion` when it exists. Fire spreading in the open under Hardcore runs a bounded fill per new fire block, a cost like a door opening to air, with the same mitigation |
@@ -318,10 +318,10 @@ _Updated 2026-11-01._
    - review the [architecture](architecture.md)
      ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
      send changes. That closes Phase B.
-   - from the R1 foundation ([Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)):
-     look at the boundary colours in the debug overlay (CLIENT-011,
-     [#133](https://github.com/west3436/zas-cubed/pull/133)). *The other foundation questions were decided
-     on 2026-11-01: see the table in Phase E.*
+   - ~~from the R1 foundation: look at the boundary colours in the debug
+     overlay (CLIENT-011)~~ *Checked by the owner 2026-11-01. The other
+     foundation questions were decided the same day: see the table in
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done).*
 2. ~~**The R1 foundation**~~ *Done 2026-11-01* (#128, #130, #131, #133, plus
    #134 and #136 from #64; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
 3. **S-01 end to end:** breathing, pipe networks, canister, connector and
