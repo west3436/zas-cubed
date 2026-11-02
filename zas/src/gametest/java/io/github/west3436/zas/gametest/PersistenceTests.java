@@ -292,6 +292,9 @@ public final class PersistenceTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void api_010_reloading_room_never_reads_ambient(GameTestHelper h) {
         Rooms r = fourChunks(h, h.getLevel(), 241, 60);
+        // The test runs over several game ticks: without this, the room's chunks really unload two
+        // ticks in, and if that comes before the server's next atmos tick the zone never returns.
+        r.holdLoaded(chunks(r));
         ZoneInfo before = r.zone(12, 2, 12);
         DimensionAtmos d = r.dimension();
         Map<ChunkPos, byte[]> saved = new LinkedHashMap<>();

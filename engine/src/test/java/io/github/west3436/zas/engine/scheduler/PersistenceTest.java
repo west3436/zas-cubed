@@ -243,6 +243,41 @@ class PersistenceTest {
         assertEquals(westSaved.share(id).moles(N2), z.moles(N2), 1e-9, "only the west share's gas");
     }
 
+    /**
+     * A chunk that loads and is gone again before the next atmos tick keeps its saved shares: its
+     * sections can't be captured, though the server hasn't reported its unload yet, so its record
+     * waits instead of going to the worker without its cells, where the shares would be dropped. What
+     * the chunk saves at its unload still holds them, and the zone comes back when it loads again
+     * (DATA-002, #159).
+     */
+    @Test
+    void data_002_record_of_a_chunk_gone_before_its_batch_is_kept() {
+        Sim sim = new Sim(Ambient.VACUUM);
+        sim.world.room(2, 64, 2, 5, 66, 5);
+        sim.add(3, 65, 3, 36, 0);
+        sim.step();
+        long id = sim.zoneAt(3, 65, 3).id();
+        long chunk = SectionKeys.chunk(0, 0);
+        ChunkRecord saved = sim.unload(chunk);
+        sim.step();
+        assertNull(sim.snapshot().zone(id), "the zone is still in memory");
+
+        sim.load(chunk, saved);
+        sim.world.unload(chunk); // gone, before the server reports the unload
+        sim.steps(2);
+        ChunkRecord atUnload = sim.pipeline.recordFor(chunk, false);
+        assertNotNull(atUnload, "the chunk saves nothing at its unload");
+        assertNotNull(atUnload.share(id), "the chunk's save lost the zone's share");
+        assertEquals(saved.share(id).moles(N2), atUnload.share(id).moles(N2), 1e-9, "the saved share's gas");
+        sim.pipeline.chunkUnloaded(chunk);
+
+        sim.load(chunk, atUnload);
+        sim.steps(2);
+        ZoneView z = sim.snapshot().zone(id);
+        assertNotNull(z, "the zone didn't come back");
+        assertEquals(saved.share(id).moles(N2), z.moles(N2), 1e-9, "the zone's gas");
+    }
+
     /** Zone ids saved in a chunk are never issued again in a later session (CORE-026). */
     @Test
     void saved_ids_are_not_reused() {
