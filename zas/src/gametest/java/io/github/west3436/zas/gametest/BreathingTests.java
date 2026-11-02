@@ -1015,7 +1015,9 @@ public final class BreathingTests {
             h.assertValueEqual(first.drain(), 1.0, "the drain in a vacuum");
             h.assertTrue(state.syncDue(1001) == null, "nothing new to sync");
             player.moveTo(Vec3.atBottomCenterOf(lab.r.abs(8, 1, 2)));
-            Breathers.checkAt(player, 1002);
+            // At the same game time, so the check counts no seconds and leaves no respiration draw
+            // pending for another test's flush.
+            Breathers.checkAt(player, 1000);
             h.assertValueEqual(state.verdict().reason(), BreathReason.BREATHABLE, "in the air room");
             h.assertTrue(state.syncDue(1002) == null, "2 ticks after the last sync");
             h.assertTrue(state.syncDue(1004) == null, "4 ticks after the last sync");
