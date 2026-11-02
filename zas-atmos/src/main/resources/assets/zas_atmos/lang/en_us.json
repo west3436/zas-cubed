@@ -1,5 +1,6 @@
 {
   "itemGroup.zas_atmos": "ZAS³ Atmospherics",
   "block.zas_atmos.pipe": "Pipe",
-  "block.zas_atmos.pipe_cap": "Pipe End Cap"
+  "block.zas_atmos.pipe_cap": "Pipe End Cap",
+  "item.zas_atmos.dyed": "%s %s"
 }
