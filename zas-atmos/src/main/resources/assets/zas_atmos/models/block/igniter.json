@@ -1,0 +1,78 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "ign": "zas_atmos:block/igniter",
+    "particle": "zas_atmos:block/igniter"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        2,
+        15
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ],
+          "texture": "#ign"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ],
+          "texture": "#ign",
+          "cullface": "down"
+        },
+        "north": {
+          "uv": [
+            0,
+            14,
+            14,
+            16
+          ],
+          "texture": "#ign"
+        },
+        "south": {
+          "uv": [
+            0,
+            14,
+            14,
+            16
+          ],
+          "texture": "#ign"
+        },
+        "east": {
+          "uv": [
+            0,
+            14,
+            14,
+            16
+          ],
+          "texture": "#ign"
+        },
+        "west": {
+          "uv": [
+            0,
+            14,
+            14,
+            16
+          ],
+          "texture": "#ign"
+        }
+      }
+    }
+  ]
+}

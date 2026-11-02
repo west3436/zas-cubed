@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "zas_atmos:item/tank_transfer_valve_body",
+    "layer1": "zas_atmos:item/tank_transfer_valve_tank_right"
+  }
+}

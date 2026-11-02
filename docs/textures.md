@@ -28,7 +28,7 @@ texture), or none (the block has no item).
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas:gas_fire` | Gas fire | Must | FIRE-018 | None | Animated, like vanilla fire. It burns in mid air, so it must look right with nothing under it. |
+| `zas:gas_fire` | Gas fire | Must | FIRE-018 | None | Animated, like vanilla fire. It burns in mid air, so it must look right with nothing under it. Crossed planes of flame and a see-through haze on every face, so a burning room fills with a glow (the owner's choice of 2026-11-02). |
 
 ### Content mod (`zas_atmos`): blocks
 
@@ -40,14 +40,14 @@ texture), or none (the block has no item).
 | `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Flat sprite | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it. |
 | `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind. |
-| `zas_atmos:manual_valve` | Manual valve | Must | CONT-010 | Block model | Open and closed. |
-| `zas_atmos:redstone_valve` | Redstone valve | Must | CONT-010 | Block model | Open and closed. It should look different from the manual valve. |
+| `zas_atmos:manual_valve` | Manual valve | Must | CONT-010 | Block model | Open and closed. Inline on the pipe, with a straight lever across the pipe when closed and in line when open (the owner's choice of 2026-11-02). |
+| `zas_atmos:redstone_valve` | Redstone valve | Must | CONT-010 | Block model | Open and closed. It should look different from the manual valve: a redstone trace round its body, lit while powered. |
 
 **Devices**
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:pressure_pump` | Pressure pump | Must | CONT-011 | Block model | On and off. The input and output faces must be easy to tell apart. |
+| `zas_atmos:pressure_pump` | Pressure pump | Must | CONT-011 | Block model | On and off. The way it pumps must be easy to tell. Inline on the pipe, it shows it with arrows along its body (the owner's choice of 2026-11-02). |
 | `zas_atmos:volume_pump` | Volume pump | Should | CONT-012 | Block model | On and off. As the pressure pump, but distinct from it. |
 | `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. |
 | `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. |
@@ -55,7 +55,7 @@ texture), or none (the block has no item).
 | `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). Faces any of six ways, like the vent; a pipe joins only its back. |
 | `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. |
 | `zas_atmos:connector_port` | Connector port | Must | CONT-083 | Block model | Free, and with a portable connected. Set in the floor, facing up; a pipe joins only its bottom. |
-| `zas_atmos:igniter` | Igniter | Must | CONT-105 | Block model | Idle and active. |
+| `zas_atmos:igniter` | Igniter | Must | CONT-105 | Block model | Idle and active. A floor plate, like vg's. |
 | `zas_atmos:heat_exchanger` | Heat exchanger | Not set | None yet | Block model | vg's works in linked pairs that share one temperature ([vg §2](research/vg-atmos-content.md#2-devices)). |
 | `zas_atmos:airlock_controller` | Airlock controller | Not set | None yet | Flat sprite | Wall-mounted. Cycles an airlock with its vents and an air sensor. Idle and cycling. |
 | `zas_atmos:air_sensor` | Air sensor | Not set | None yet | Block model | Reads the gas where it's placed, for an airlock controller. |
@@ -69,8 +69,8 @@ The heater and freezer are now portables (below).
 | `zas_atmos:canister` | Canister | Must | CONT-017 | Block model | Valve open and closed. Coloured as vg's canisters, and players dye them, so it needs a texture for each colour ([below](#content-mod-zas_atmos-creative-canisters)). Survival canisters are crafted empty (CONT-086); the filled ones are below. |
 | `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. |
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. |
-| `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. |
-| `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. |
+| `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
+| `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. The heater's size, in white. |
 | `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It could show how many it holds. |
 
 Portables connect to and disconnect from connector ports with the wrench.
@@ -133,7 +133,7 @@ gives which, are in the
 | `zas_atmos:emergency_oxygen_tank` | Emergency O₂ tank | Must | CONT-030 | Flat sprite. It holds 2 L against the others' 70 L, so it should look smaller. |
 | `zas_atmos:air_tank` | Air tank | Must | CONT-030 | Flat sprite. Yellow, as vg's yellow tank (the owner's choice of 2026-11-01). |
 | `zas_atmos:empty_tank` | Empty tank | Must | CONT-030 | Flat sprite. Grey. |
-| `zas_atmos:tank_transfer_valve` | Tank transfer valve | Must | CONT-103, CONT-104 | Flat sprite, with variants for no tanks, one tank and two tanks, and for the timer running. |
+| `zas_atmos:tank_transfer_valve` | Tank transfer valve | Must | CONT-103, CONT-104 | Flat sprite, with variants for no tanks, one tank and two tanks, each tank tinted in code by its kind. Once primed it's an entity, like primed TNT (CONT-104), drawn with block models: no tanks, one or two, with the timer running or the valve open. |
 
 **Wearables.** Each piece needs a flat sprite and a worn texture. The
 **Worn texture** column gives the vanilla armor layer it's drawn on. Pieces of
