@@ -357,11 +357,17 @@ A scrubber shall stop once its buffer reaches 50 atm.
 
 A passive vent shall equalize its buffer with the room when the pressure
 difference exceeds 0.5 kPa, at the one-connection sharing ratio (CORE-031).
+It faces any of six ways, and a pipe joins it only on its back, the face
+opposite its grille.
 
 - **Rationale:** vg: vg's passive vent, which equalizes above 0.5 kPa ([vg
   §2](../research/vg-atmos-content.md#2-devices)).
 - **Verify:** A GameTest checks a passive vent equalizes with a room only
-  above the threshold.
+  above the threshold. It also checks that a pipe joins the passive vent's
+  back and no other face.
+- **Changed 2026-11-02 (the owner, in the batch 5 art review):** the passive
+  vent is shaped like the vent: it faces any of six ways and takes a pipe
+  only on its back.
 
 #### CONT-082 · Injector
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the vent covers it), 2026-10-30. · Verify: GameTest

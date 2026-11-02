@@ -1,0 +1,8 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "fl": "zas_atmos:block/firelock_large",
+    "particle": "zas_atmos:block/firelock"
+  },
+  "elements": []
+}
