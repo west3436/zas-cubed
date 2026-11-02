@@ -20,5 +20,8 @@
   "gui.zas_atmos.vent.bounds": "External %s kPa, internal %s kPa",
   "gui.zas_atmos.vent.powered": "Powered",
   "gui.zas_atmos.vent.unpowered": "No power",
-  "gui.zas_atmos.vent.cycle": "Off / blow / siphon"
+  "gui.zas_atmos.vent.cycle": "Off / blow / siphon",
+  "gui.zas_atmos.vent.order": "Order: %s",
+  "gui.zas_atmos.vent.controlled": "Controlled by an area air controller",
+  "gui.zas_atmos.vent.controller_at": "at %s, %s, %s"
 }

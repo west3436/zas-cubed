@@ -17,6 +17,7 @@ import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
+import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.vent.VentBlock;
@@ -227,6 +228,7 @@ public final class GasDeviceTests {
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
     public static void cont_014_a_vent_vents_to_the_ambient_in_an_open_cell(GameTestHelper h) {
         Area a = new Area(h, 24);
+        a.forceLoad(true); // it waits in real time
         a.clear(0, 0, 4, 4);
         a.place(2, 1, 2, vent(Direction.NORTH));
         a.place(2, 1, 3, pipe());
@@ -249,13 +251,16 @@ public final class GasDeviceTests {
         // 1 - 0.5·400/540 of its gas. Three such ticks, and no zone in front.
         double keep = 1 - 0.5 * PipeVolumes.VENT / net.volume();
         double third = 100.0 * Math.pow(keep, 3);
-        h.succeedWhen(() -> {
-            double n = vent.network().gas().totalMoles();
-            h.assertTrue(n <= third * (1 + 1e-9), "the network holds " + n + " mol");
-            h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
-            double k = Math.log(n / 100.0) / Math.log(keep);
-            h.assertTrue(Math.abs(k - Math.rint(k)) < 1e-6, "the network fell by other than whole ticks: " + k);
-        });
+        h.startSequence()
+                .thenWaitUntil(() -> {
+                    double n = vent.network().gas().totalMoles();
+                    h.assertTrue(n <= third * (1 + 1e-9), "the network holds " + n + " mol");
+                    h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
+                    double k = Math.log(n / 100.0) / Math.log(keep);
+                    h.assertTrue(Math.abs(k - Math.rint(k)) < 1e-6, "the network fell by other than whole ticks: " + k);
+                })
+                .thenExecute(() -> a.forceLoad(false))
+                .thenSucceed();
     }
 
     /** CONT-060: an unpowered vent does nothing, and shows off. */
@@ -414,5 +419,57 @@ public final class GasDeviceTests {
         vm.clickMenuButton(player, VentMenu.CYCLE_MODE);
         h.assertTrue(vent.settings().mode() == VentMode.BLOW, "the mode didn't cycle to blow");
         h.succeed();
+    }
+
+    /**
+     * CONT-014, CONT-074: a vent no controller orders takes hand settings from its GUI; one a
+     * controller orders refuses them, its GUI shows the controller and its order, and it takes hand
+     * settings again once the orders stop. The controller is stood in for by calling the vent's
+     * {@code control} as a controller does.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 200)
+    public static void cont_014_a_controlled_vent_refuses_hand_settings(GameTestHelper h) {
+        Area a = new Area(h, 30);
+        a.forceLoad(true); // it waits in real time
+        a.clear(0, 0, 6, 4);
+        a.place(2, 1, 2, vent(Direction.UP));
+        VentBlockEntity vent = a.entity(2, 1, 2);
+        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        VentMenu menu = (VentMenu) vent.createMenu(1, player.getInventory(), player);
+
+        // Uncontrolled: the GUI sets it.
+        h.assertFalse(vent.controlled(), "a new vent is controlled");
+        h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 0, "the GUI's control flag");
+        h.assertTrue(menu.clickMenuButton(player, VentMenu.CYCLE_MODE), "the free vent refused a setting");
+        h.assertValueEqual(vent.settings().mode(), VentMode.BLOW, "the free vent's mode");
+
+        // Controlled: the order wins, and the GUI says whose it is.
+        BlockPos controller = new BlockPos(-70_000, -30, 123_456); // beyond a short, to check the halves
+        vent.control(controller, VentSettings.siphon(50));
+        h.assertTrue(vent.controlled(), "the ordered vent isn't controlled");
+        h.assertValueEqual(vent.controller(), java.util.Optional.of(controller), "the vent's controller");
+        for (int id = VentMenu.CYCLE_MODE; id <= VentMenu.LAST_BUTTON; id++) {
+            h.assertFalse(menu.clickMenuButton(player, id), "the controlled vent took button " + id);
+        }
+        h.assertValueEqual(vent.settings(), VentSettings.siphon(50), "the controlled vent's settings");
+        h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 1, "the GUI's control flag");
+        h.assertTrue(menu.controlled(), "the GUI doesn't show the vent controlled");
+        h.assertValueEqual(menu.controller(), java.util.Optional.of(controller), "the GUI's controller");
+        h.assertValueEqual(menu.mode(), VentMode.SIPHON, "the GUI's order");
+        vent.control(null, VentSettings.OFF);
+        h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 2, "an unknown controller's flag");
+        h.assertTrue(menu.controller().isEmpty(), "the GUI shows an unknown controller's position");
+        vent.control(controller, VentSettings.siphon(50));
+
+        // Once the orders stop, the vent is the player's again.
+        h.runAfterDelay(DevicePower.LEASE_TICKS + 1, () -> {
+            h.assertFalse(vent.controlled(), "the vent stayed controlled with no orders");
+            h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 0, "the GUI's control flag after");
+            h.assertTrue(
+                    menu.clickMenuButton(player, VentMenu.EXTERNAL_DOWN_100 + 2), "the freed vent refused a setting");
+            a.close(vent.settings().external(), 60, "the freed vent's external bound");
+            a.forceLoad(false);
+            h.succeed();
+        });
     }
 }
