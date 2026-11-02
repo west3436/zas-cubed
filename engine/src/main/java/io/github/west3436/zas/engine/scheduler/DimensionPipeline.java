@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongPredicate;
 
@@ -44,7 +45,13 @@ import java.util.function.LongPredicate;
  * the worker hasn't confirmed yet, the positions whose changes are held (DATA-010) and, at
  * shutdown, the queued additions that target it. Nothing here waits for the worker.
  *
- * <p>Server thread only, except {@link #published()}, which any thread may read (API-046).
+ * <p><b>Settling chunks.</b> Until the result of the batch that carried a loaded chunk's record is
+ * applied, the published table doesn't hold that chunk's zones yet, so its cells look unzoned.
+ * {@link #isSettling} says which loaded chunks are in that window, so a query there can answer
+ * "not known yet" rather than the ambient (API-010).
+ *
+ * <p>Server thread only, except {@link #published()} and {@link #isSettling}, which any thread may
+ * read (API-046).
  */
 public final class DimensionPipeline {
     /** The world, as the pipeline sees it. Called on the server thread only. */
@@ -119,6 +126,15 @@ public final class DimensionPipeline {
 
     private record Sent(long tick, ChunkRecord record) {}
 
+    /** A settling chunk's record hasn't gone to the worker yet. */
+    private static final long NOT_SENT = Long.MAX_VALUE;
+
+    /**
+     * Loaded chunks whose record the published table doesn't hold yet, with the tick of the batch
+     * that carries it, or {@link #NOT_SENT}. Written on the server thread, read on any.
+     */
+    private final Map<Long, Long> settling = new ConcurrentHashMap<>();
+
     private volatile AtmosSnapshot published;
 
     /**
@@ -143,6 +159,15 @@ public final class DimensionPipeline {
     /** The last published zone table. Any thread (API-046). */
     public AtmosSnapshot published() {
         return published;
+    }
+
+    /**
+     * Whether a loaded chunk's saved zones haven't reached the published table yet: it loaded with
+     * a record, and the result of the batch that carried the record hasn't been applied. Any
+     * thread.
+     */
+    public boolean isSettling(long chunk) {
+        return settling.containsKey(chunk);
     }
 
     /** Whether a batch is closed and not yet applied. */
@@ -306,6 +331,7 @@ public final class DimensionPipeline {
         unloads.remove(chunk);
         loads.add(chunk);
         loadedRecords.remove(chunk);
+        settling.remove(chunk);
         if (record != null) {
             if (record.chunk() != chunk) {
                 throw new IllegalArgumentException("the record is of another chunk: " + record);
@@ -313,6 +339,7 @@ public final class DimensionPipeline {
             ChunkRecord kept = record.withoutQueued();
             if (!kept.isEmpty()) {
                 loadedRecords.put(chunk, kept);
+                settling.put(chunk, NOT_SENT);
             }
             for (GasOp op : record.queuedAdditions()) {
                 requeue(op);
@@ -328,6 +355,7 @@ public final class DimensionPipeline {
         loads.remove(chunk);
         unloads.add(chunk);
         loadedRecords.remove(chunk);
+        settling.remove(chunk);
     }
 
     // ---- Close ----------------------------------------------------------------------
@@ -399,6 +427,7 @@ public final class DimensionPipeline {
                 addWithNeighbours(k, keys);
             }
             unconfirmed.put(r.chunk(), new Sent(tick, r));
+            settling.replace(r.chunk(), NOT_SENT, tick);
         }
         List<SectionSource> sections = new ArrayList<>(keys.size());
         Map<Long, Long> generations = new HashMap<>();
@@ -576,6 +605,8 @@ public final class DimensionPipeline {
         }
         nextZoneId = result.nextZoneId();
         published = snapshot;
+        // After publishing, so a reader that sees a chunk settled sees its zones.
+        settling.values().removeIf(t -> t <= result.tick());
         mirrored = result.mirroredSections();
         requested = result.requestedSections();
         return new Applied(

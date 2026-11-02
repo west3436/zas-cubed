@@ -104,6 +104,15 @@ public final class AtmosPersistence {
         return m == null ? null : m.remove(chunk);
     }
 
+    /**
+     * Whether a loaded chunk's saved bytes are still waiting for its dimension to take them: no
+     * engine has read its zones yet. Any thread.
+     */
+    public static synchronized boolean hasUntaken(ServerLevel level, long chunk) {
+        Map<Long, byte[]> m = SAVED.get(level);
+        return m != null && m.containsKey(chunk);
+    }
+
     /** Takes the saved bytes of every loaded chunk of a level, by chunk. */
     public static synchronized Map<Long, byte[]> takeLoaded(ServerLevel level) {
         Map<Long, byte[]> out = new HashMap<>();

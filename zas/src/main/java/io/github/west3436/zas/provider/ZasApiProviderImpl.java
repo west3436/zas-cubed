@@ -56,9 +56,10 @@ import net.neoforged.bus.api.IEventBus;
  * <ul>
  *   <li>a zoned cell answers with its zone: {@code ZONED}, or {@code PAUSED} with its last-known
  *       state (GEO-035);
- *   <li>an unzoned cell in an unloaded chunk, or in a region a held breach left unresolved because
- *       it reaches unloaded chunks (GEO-024, GEO-026), is {@code UNRESOLVED}, with the ambient as
- *       its last-known state;
+ *   <li>an unzoned cell in an unloaded chunk, in a loaded chunk whose saved zones haven't reached
+ *       the published table yet, or in a region a held breach left unresolved because it reaches
+ *       unloaded chunks (GEO-024, GEO-026), is {@code UNRESOLVED}, with the ambient as its
+ *       last-known state;
  *   <li>any other point is {@code AMBIENT}: the dimension's ambient (CORE-050, ENV-001). That
  *       includes a point inside a full block with no cell next to it, which holds no gas.
  * </ul>
@@ -118,9 +119,10 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         ZoneView zone = table == null ? null : table.zoneAt(block, cell.sub());
         if (zone == null) {
             if (level instanceof ServerLevel server
-                    && (!isLoaded(server, d, cell.pos()) || (table != null && table.heldAt(block, cell.sub())))) {
-                // An unloaded chunk, or a region held at a breach because it reaches one, is
-                // unresolved; its last-known state is the ambient (GEO-026, GEO-035).
+                    && (!isResolved(server, d, cell.pos()) || (table != null && table.heldAt(block, cell.sub())))) {
+                // An unloaded chunk, a loaded one whose saved zones haven't been published yet, or a
+                // region held at a breach because it reaches an unloaded one, is unresolved; its
+                // last-known state is the ambient (GEO-026, GEO-035).
                 return new AtmosphereSample(
                         AtmosphereState.UNRESOLVED,
                         Optional.empty(),
@@ -224,9 +226,17 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return Breathing.vanilla(entity);
     }
 
-    private static boolean isLoaded(ServerLevel level, DimensionAtmos d, BlockPos pos) {
+    /**
+     * Whether the atmosphere knows a position's chunk: it is loaded, and its saved zones, if any,
+     * are in the published table (API-010, #153).
+     */
+    private static boolean isResolved(ServerLevel level, DimensionAtmos d, BlockPos pos) {
         long chunk = ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4);
-        return d != null ? d.isChunkLoaded(chunk) : AtmosPersistence.isLoaded(level.dimension(), chunk);
+        if (d != null) {
+            return d.isChunkLoaded(chunk) && !d.isSettling(chunk);
+        }
+        return AtmosPersistence.isLoaded(level.dimension(), chunk)
+                && (Ambients.isExcluded(level.dimension()) || !AtmosPersistence.hasUntaken(level, chunk));
     }
 
     private static DimensionAtmos dimension(Level level) {
