@@ -408,6 +408,39 @@ public final class ControllerTests {
         });
     }
 
+    /**
+     * A vent that draws nothing until it is ordered on is paid for on the atmos tick the controller
+     * first orders it on, not first on the tick after (CONT-065, CONT-068): the controller gives its
+     * orders before it pays its parts.
+     *
+     * <p>The game clock doesn't move during a GameTest, so a part supplied once counts as supplied
+     * for the rest of the test ({@code DevicePower#suppliedThisAtmosTick}); the test therefore checks
+     * the vent's first covered tick, which is also its switch-on tick.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_068_a_part_switched_on_is_paid_on_that_tick(GameTestHelper h) {
+        Site s = new Site(h, 13);
+        run(h, s, () -> {
+            s.clear();
+            AreaAirControllerBlockEntity c = poweredRoom(s, 0);
+            TestParts.Vent vent =
+                    s.place(2, 1, 3, TestParts.Kind.VENT.block().defaultBlockState(), TestParts.Vent.class);
+            vent.drawsOnlyWhenOn = true;
+            h.assertValueEqual(vent.power().draw(), 0, "the vent's draw before any order");
+            int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
+            int ventCost = TestParts.Kind.VENT.draw * AtmosTicks.PERIOD;
+            // The first step pins the zone; the vent is covered, and ordered on, once it has formed.
+            for (int i = 0; i < 4 && vent.orders.isEmpty(); i++) {
+                s.cycle(c);
+            }
+            h.assertValueEqual(vent.orders, List.of(VentOrder.blow(101)), "the vent's orders");
+            h.assertValueEqual(vent.power().draw(), TestParts.Kind.VENT.draw, "the vent's draw once on");
+            h.assertTrue(vent.power().source() == c, "the vent wasn't powered on the tick it was switched on");
+            h.assertValueEqual(
+                    c.buffer().getEnergyStored(), 10_000 - own - ventCost, "the buffer after the switch-on tick");
+        });
+    }
+
     // ---- CONT-062, CONT-064 ---------------------------------------------------------------
 
     /**

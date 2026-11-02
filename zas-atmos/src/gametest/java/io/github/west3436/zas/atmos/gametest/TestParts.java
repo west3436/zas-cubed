@@ -143,7 +143,12 @@ public final class TestParts {
             super(kind.type, pos, state);
             this.kind = kind;
             this.draw = kind.draw;
-            this.power = new DevicePower(kind.priority, () -> draw, this::now);
+            this.power = new DevicePower(kind.priority, this::currentDraw, this::now);
+        }
+
+        /** What it draws now, in FE/t. */
+        protected int currentDraw() {
+            return draw;
         }
 
         @Override
@@ -164,9 +169,13 @@ public final class TestParts {
         }
     }
 
-    /** A stand-in vent: it records the orders it is given. */
+    /**
+     * A stand-in vent: it records the orders it is given. With {@link #drawsOnlyWhenOn} it draws
+     * nothing until it is ordered on, as a real vent draws nothing while off.
+     */
     public static final class Vent extends Part implements VentControl {
         public final List<VentOrder> orders = new ArrayList<>();
+        public boolean drawsOnlyWhenOn;
 
         Vent(Kind kind, BlockPos pos, BlockState state) {
             super(kind, pos, state);
@@ -179,6 +188,15 @@ public final class TestParts {
 
         public VentOrder last() {
             return orders.isEmpty() ? null : orders.get(orders.size() - 1);
+        }
+
+        @Override
+        protected int currentDraw() {
+            if (!drawsOnlyWhenOn) {
+                return draw;
+            }
+            VentOrder last = last();
+            return last != null && last.on() ? draw : 0;
         }
     }
 
