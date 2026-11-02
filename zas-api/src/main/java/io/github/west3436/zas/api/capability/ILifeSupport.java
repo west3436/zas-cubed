@@ -1,6 +1,7 @@
 package io.github.west3436.zas.api.capability;
 
 import io.github.west3436.zas.api.gas.StandardAir;
+import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.capabilities.EntityCapability;
 import net.neoforged.neoforge.capabilities.ItemCapability;
@@ -13,7 +14,9 @@ import net.neoforged.neoforge.capabilities.ItemCapability;
  *   <li>pressure protection: the range of pressures it is rated for (LIFE-020);
  *   <li>thermal protection: the range of temperatures it is rated for (LIFE-025);
  *   <li>sealed breathing, which internals need, from the head slot (LIFE-021);
- *   <li>gas filtering, and airflow resistance (FLOW-012).
+ *   <li>gas filtering, and airflow resistance (FLOW-012);
+ *   <li>an internal supply of breathable gas for internals ({@link IInternalSupply}), from a gas
+ *       tank anywhere internals look for one, or a suit's tank slot (LIFE-028).
  * </ul>
  *
  * <p>Each part has a default that gives nothing, so an implementation overrides only what it
@@ -111,5 +114,16 @@ public interface ILifeSupport {
      */
     default double airflowResistance() {
         return 0;
+    }
+
+    /**
+     * The internal supply of breathable gas it holds, for internals, or empty for none (the
+     * default). A gas tank gives its own gas, and counts in the offhand and the hotbar too; a suit
+     * gives the tank in its tank slot (LIFE-028).
+     *
+     * @return the supply, or empty
+     */
+    default Optional<IInternalSupply> internalSupply() {
+        return Optional.empty();
     }
 }
