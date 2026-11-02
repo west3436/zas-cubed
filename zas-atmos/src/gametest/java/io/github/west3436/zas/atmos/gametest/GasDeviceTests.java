@@ -456,6 +456,12 @@ public final class GasDeviceTests {
         h.assertTrue(menu.controlled(), "the GUI doesn't show the vent controlled");
         h.assertValueEqual(menu.controller(), java.util.Optional.of(controller), "the GUI's controller");
         h.assertValueEqual(menu.mode(), VentMode.SIPHON, "the GUI's order");
+        var tag = vent.saveWithoutMetadata(a.level.registryAccess()); // what /data get block shows
+        h.assertTrue(tag.getBoolean("Controlled"), "the vent's data doesn't show it controlled: " + tag);
+        h.assertValueEqual(
+                net.minecraft.nbt.NbtUtils.readBlockPos(tag, "Controller"),
+                java.util.Optional.of(controller),
+                "the vent's data's controller");
         vent.control(null, VentSettings.OFF);
         h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 2, "an unknown controller's flag");
         h.assertTrue(menu.controller().isEmpty(), "the GUI shows an unknown controller's position");
@@ -465,6 +471,9 @@ public final class GasDeviceTests {
         h.runAfterDelay(DevicePower.LEASE_TICKS + 1, () -> {
             h.assertFalse(vent.controlled(), "the vent stayed controlled with no orders");
             h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 0, "the GUI's control flag after");
+            h.assertFalse(
+                    vent.saveWithoutMetadata(a.level.registryAccess()).contains("Controlled"),
+                    "the freed vent's data shows it controlled");
             h.assertTrue(
                     menu.clickMenuButton(player, VentMenu.EXTERNAL_DOWN_100 + 2), "the freed vent refused a setting");
             a.close(vent.settings().external(), 60, "the freed vent's external bound");

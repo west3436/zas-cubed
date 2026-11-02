@@ -54,6 +54,8 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
     private static final String MODE = "Mode";
     private static final String EXTERNAL = "External";
     private static final String INTERNAL = "Internal";
+    private static final String CONTROLLED = "Controlled";
+    private static final String CONTROLLER = "Controller";
 
     private final ZonePort port = new ZonePort(VENT);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
@@ -243,6 +245,14 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
         tag.putDouble(EXTERNAL, settings.external());
         tag.putDouble(INTERNAL, settings.internal());
         power.save(tag);
+        // Shown to /data get block while a controller controls the vent; never loaded, since a
+        // controller's orders don't outlast a reload and it sends them again.
+        if (controlled()) {
+            tag.putBoolean(CONTROLLED, true);
+            if (controller != null) {
+                tag.put(CONTROLLER, net.minecraft.nbt.NbtUtils.writeBlockPos(controller));
+            }
+        }
     }
 
     @Override
