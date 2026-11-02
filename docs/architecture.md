@@ -1447,8 +1447,10 @@ the cell in front of its grille).
   first three atmos ticks after it loads, and moves gas only when its cell
   reads the same state and zone twice running: a chunk's zones reach the
   published state a little after the chunk loads, and until then an enclosed
-  cell reads as the ambient, which an open end would vent into
-  ([#153](https://github.com/west3436/zas-cubed/issues/153)). A pipe cap
+  cell could read as the ambient, which an open end would vent into
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)). #154 fixed that
+  in the framework, which now reads such a cell as unresolved; the wait stays
+  as defence in depth. A pipe cap
   closes an end and never leaks.
 - **Dye** (CONT-114, Draft). A dye on a pipe or cap sets its `color` state; the
   client tints the models' tint index 0 with the dye's colour. The colour

@@ -11,9 +11,10 @@ import java.util.Optional;
  * the same state and zone as at its previous step, and is zoned or the ambient.
  *
  * <p>A chunk's zones reach the framework's published state a little after the chunk loads, and
- * until then an enclosed cell can read as the ambient (a framework bug, #153; this works around it
- * until it's fixed). A device that trusted such a reading would vent a sealed room's gas into the
- * "ambient", or fill it as if it were open.
+ * until then an enclosed cell could read as the ambient (#153). A device that trusted such a
+ * reading would vent a sealed room's gas into the "ambient", or fill it as if it were open. #154
+ * fixed that in the framework, which now reads such a cell as unresolved; the wait stays as
+ * defence in depth.
  */
 public final class CellWatch {
     /** The atmos ticks a device waits after it loads before it acts. */
