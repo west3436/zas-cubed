@@ -29,6 +29,8 @@ public final class Zone {
     boolean paused;
     /** The owners of its pins (API-017, D-64), sorted; pinned if any: it never dissolves into the ambient. */
     List<String> pins = Pins.NONE;
+    /** Counts the cells it gained or lost, for the cache of {@link ZoneGraph#openings}. */
+    int version;
     /** Scratch for {@link ZoneGraph}'s search of a group joined through zone boundaries (CORE-067). */
     int groupEpoch;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
@@ -143,6 +145,7 @@ public final class Zone {
         if (cellCount == cells.length) {
             cells = java.util.Arrays.copyOf(cells, cellCount * 2);
         }
+        version++;
         cell.zone = this;
         cell.zoneIndex = cellCount;
         cells[cellCount++] = cell;
@@ -150,6 +153,7 @@ public final class Zone {
     }
 
     void removeCell(Cell cell) {
+        version++;
         int index = cell.zoneIndex;
         Cell last = cells[--cellCount];
         cells[index] = last;

@@ -1116,6 +1116,34 @@ combustion and planting are read by the change hook when a trigger starts
 requirement they wait for.
 `/zas preset` shows and changes them (commands.md).
 
+*Implemented in part ([#44](https://github.com/west3436/zas-cubed/issues/44)):*
+airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009 to FLOW-011, FLOW-013,
+FLOW-014, FLOW-017). The batch carries the least difference airflow needs
+(`EngineSettings.airflowKpa`: the lowest class threshold, or infinity where
+airflow is off). After the exchange, the worker lists every awake edge at or
+above it as a `FlowEdge`, with the sides' pressures and up to 256 openings,
+each a pair of cell ids, in the `Result`. `ZoneGraph.openings` finds an edge's
+openings by scanning the smaller zone (an ambient edge's only zone) and keeps
+them on the edge until its connections or either zone's cells change, so a
+steady breach costs nothing to export. The pipeline publishes them with the
+snapshot (`DimensionPipeline.flows`). The force model is pure and in the engine
+(`engine.flow.FlowField`): openings bucketed by 16-block section, and a push
+that picks the fastest flow reaching a point and closes part of the gap to it.
+On the server (`io.github.west3436.zas.airflow.Airflow`) each game tick
+rebuilds the field when a new atmos tick lands, finds the entities in boxes
+around the sections with openings, and pushes at most `max_entities_per_tick`
+of them, in turns, each at its class's threshold, in its own zone (point
+resolution, §6.5), skipping anchored entities and unresolved atmospheres.
+Players are never pushed by the server: at each atmos tick each player near
+airflow gets an `AirflowSyncPayload` of the openings beside its zone, and the
+client pushes its own player with the same `Airflow.apply` from
+`PlayerTickEvent.Pre`; an `AirflowImpulsePayload` brings the player up to the
+flow's speed when it first takes hold (FLOW-009). An entity's airflow
+resistance r (FLOW-012, `WornProtection.airflowResistance`) scales the flow's
+speed where it is by (1 − r); a player's is worked out on the server and sent
+with its openings, as protection data isn't on the client. Impact damage
+(FLOW-005) and block damage (FLOW-007) aren't done.
+
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
@@ -1219,7 +1247,8 @@ runs none of it until LIFE-023.
   - **Sealed breathing** comes from the head slot or the entity itself
     (`WornProtection.sealedBreathing`), for internals.
   - **Airflow resistance** is the highest of the pieces' and the entity's own
-    (`WornProtection.airflowResistance`), for FLOW-012 to read.
+    (`WornProtection.airflowResistance`), which scales airflow's push
+    (FLOW-012).
   - **Gas filtering** is carried but not yet applied.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
@@ -1459,8 +1488,9 @@ because STARTUP config is too late for block classes.
 Not mixins:
 
 - **Breathing** uses `LivingBreatheEvent` and `LivingDrownEvent`.
-- **Airflow** uses `push` and `hurtMarked` for impulses, and the synced flow
-  field for continuous force.
+- **Airflow** sets entities' velocity with `hasImpulse` on the server, and
+  sends players the openings near them and a one-off impulse, which their
+  client applies.
 - **Torches** use the ignition-source config.
 - **The Ad Astra adapter** uses Ad Astra's own events and ticks (SPACE-016,
   to be proved in S6).

@@ -270,6 +270,57 @@ public final class ZoneGraph {
         return out;
     }
 
+    /**
+     * An edge's openings (FLOW-001): the open pairs of cells between its two sides, at most {@code
+     * max}. The search runs over the cells of the smaller zone, or of the zone of an ambient edge;
+     * its result is kept on the edge until a pair of the edge opens or closes or either zone gains
+     * or loses a cell, so a steady breach costs nothing per tick (FLOW-006).
+     *
+     * @return {cells on {@code e.first()}'s side, cells on the other side}, of equal length; the
+     *     arrays are shared, so don't change them
+     */
+    public long[][] openings(Edge e, int max) {
+        Zone a = e.first();
+        Zone b = e.second();
+        int bVersion = b == null ? 0 : b.version;
+        if (e.openings != null
+                && e.openingsMax == max
+                && e.openingsVersion == e.version
+                && e.openingsAVersion == a.version
+                && e.openingsBVersion == bVersion) {
+            return e.openings;
+        }
+        boolean scanA = b == null || a.cellCount() <= b.cellCount();
+        Zone scan = scanA ? a : b;
+        Zone other = scanA ? b : a;
+        long[] mine = new long[Math.min(max, 16)];
+        long[] theirs = new long[mine.length];
+        int n = 0;
+        for (int i = 0; i < scan.cellCount() && n < max; i++) {
+            Cell c = scan.cellAt(i);
+            for (int k = 0; k < c.degree && n < max; k++) {
+                Cell nb = cells.get(c.neighbours[k]);
+                if (nb != null && nb.zone == other) {
+                    if (n == mine.length) {
+                        mine = Arrays.copyOf(mine, Math.min(max, n * 2));
+                        theirs = Arrays.copyOf(theirs, mine.length);
+                    }
+                    mine[n] = c.id;
+                    theirs[n] = nb.id;
+                    n++;
+                }
+            }
+        }
+        mine = Arrays.copyOf(mine, n);
+        theirs = Arrays.copyOf(theirs, n);
+        e.openings = scanA ? new long[][] {mine, theirs} : new long[][] {theirs, mine};
+        e.openingsMax = max;
+        e.openingsVersion = e.version;
+        e.openingsAVersion = a.version;
+        e.openingsBVersion = bVersion;
+        return e.openings;
+    }
+
     /** The edge between two zones, or null. */
     public Edge edgeBetween(Zone a, Zone b) {
         return a.edgeTo(b);
@@ -1357,6 +1408,7 @@ public final class ZoneGraph {
             e = edgeFor(zx, zy);
         }
         e.connections += sign;
+        e.version++;
         if (direct) {
             e.direct += sign;
         }
