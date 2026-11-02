@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/scrubber_vertical",
+  "textures": {
+    "front": "zas_atmos:block/scrubber_front_on"
+  }
+}

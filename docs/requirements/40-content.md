@@ -309,13 +309,18 @@ a room in one tick as vg's does.
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
 
 A scrubber shall remove selected gases or gas tags from its zone. The default
-selection is CO₂ and `zas:toxic`.
+selection is CO₂ and `zas:toxic`. It faces any of six ways, and a pipe joins
+it only on its back, the face opposite its grille.
 
 - **Rationale:** vg: vg's scrubber ([vg
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)); CO₂ and
   toxic gases replace vg's CO₂ and plasma.
 - **Verify:** A GameTest checks a scrubber removes CO₂ and CO from a room and
-  leaves O₂ and N₂.
+  leaves O₂ and N₂. It also checks that a pipe joins the scrubber's back and
+  no other face.
+- **Changed 2026-11-01 (the owner, in the batch 2 art review):** the scrubber
+  is shaped like the vent: it faces any of six ways and takes a pipe only on
+  its back.
 
 #### CONT-079 · Scrubber modes
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)

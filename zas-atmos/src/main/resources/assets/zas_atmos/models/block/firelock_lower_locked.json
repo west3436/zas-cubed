@@ -1,0 +1,7 @@
+{
+  "parent": "zas_atmos:block/firelock_lower",
+  "textures": {
+    "fl": "zas_atmos:block/firelock_locked",
+    "particle": "zas_atmos:block/firelock"
+  }
+}
