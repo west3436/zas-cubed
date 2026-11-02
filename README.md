@@ -7,7 +7,8 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 > **Status: planning.** There is no playable build yet. Research, the plan,
 > and requirements live in [`docs/`](docs/). Server owners and pack makers:
 > see [configuration](docs/config.md), [commands](docs/commands.md) and
-> [datapack formats](docs/datapacks.md).
+> [datapack formats](docs/datapacks.md). Players: see the
+> [crafting recipes](docs/crafting.md).
 
 ## Goals
 

@@ -2289,3 +2289,223 @@ notes: A firelock on a 2 by 2 airlock's top east block, open: the kick plate und
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_airlock_upper_right_locked.json
 origin: original
 notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).
+
+# Crafting components (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/cable_coil.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: coil
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (26 x 12) in its own 32 x 32 frame (D-72). vg's greyscale coil, tinted vg's default cable red (#FF0000) by multiplying, as vg does.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/cable_coil.json
+origin: original
+notes: A flat item model for the cable coil sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/reinforced_glass.png
+origin: vgstation13
+source: icons/obj/stacks_sheets.dmi
+state: sheet-rglass
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (16 x 20) in its own 32 x 32 frame (D-72). Unchanged since it was in icons/obj/items.dmi, before vg moved its sheets to this file in 2023.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_glass.json
+origin: original
+notes: A flat item model for the reinforced glass sheet sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/plasteel_sheet.png
+origin: vgstation13
+source: icons/obj/stacks_sheets.dmi
+state: sheet-plasteel
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (16 x 20) in its own 32 x 32 frame (D-72). Unchanged since it was in icons/obj/items.dmi, before vg moved its sheets to this file in 2023.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/plasteel_sheet.json
+origin: original
+notes: A flat item model for the plasteel sheet sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/machine_frame.png
+origin: vgstation13
+source: icons/obj/machines/constructable.dmi
+state: box_0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (32 x 26) in its own 32 x 32 frame (D-72). vg's empty machine frame, used here as a crafting item, not a block.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/machine_frame.json
+origin: original
+notes: A flat item model for the machine frame sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/circuit_board.png
+origin: vgstation13
+source: icons/obj/module.dmi
+state: std_mod
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (19 x 13) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/circuit_board.json
+origin: original
+notes: A flat item model for the circuit board sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/electronics.png
+origin: vgstation13
+source: icons/obj/doors/door_assembly.dmi
+state: door_electronics
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (14 x 10), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/electronics.json
+origin: original
+notes: A flat item model for the electronics sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/capacitor.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: capacitor2_basic
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (20 x 6) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/capacitor.json
+origin: original
+notes: A flat item model for the capacitor sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/advanced_capacitor.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: capacitor2_adv
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (20 x 8) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/advanced_capacitor.json
+origin: original
+notes: A flat item model for the advanced capacitor sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/super_capacitor.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: capacitor2_super
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (20 x 8) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacitor.json
+origin: original
+notes: A flat item model for the super capacitor sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/scanning_module.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: scan_module
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (8 x 11), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/scanning_module.png.mcmeta
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: scan_module
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's frame delays, at 2 ticks per tenth of a second.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/scanning_module.json
+origin: original
+notes: A flat item model for the scanning module sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/micro_manipulator.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: micro_mani
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (11 x 10), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/micro_manipulator.json
+origin: original
+notes: A flat item model for the micro-manipulator sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/micro_laser.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: micro_laser
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (5 x 13), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/micro_laser.json
+origin: original
+notes: A flat item model for the micro-laser sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/console_screen.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: screen
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (22 x 11) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/console_screen.json
+origin: original
+notes: A flat item model for the console screen sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/igniter_assembly.png
+origin: vgstation13
+source: icons/obj/assemblies/new_assemblies.dmi
+state: igniter
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (13 x 14), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/igniter_assembly.json
+origin: original
+notes: A flat item model for the igniter assembly sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/timer_assembly.png
+origin: vgstation13
+source: icons/obj/assemblies/new_assemblies.dmi
+state: timer
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (14 x 10), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/timer_assembly.json
+origin: original
+notes: A flat item model for the timer assembly sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/ansible_crystal.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: ansible_crystal
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (7 x 13), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/ansible_crystal.json
+origin: original
+notes: A flat item model for the ansible crystal sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/subspace_ansible.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: subspace_ansible
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (24 x 13) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/subspace_ansible.json
+origin: original
+notes: A flat item model for the subspace ansible sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/subspace_transmitter.png
+origin: vgstation13
+source: icons/obj/stock_parts.dmi
+state: subspace_transmitter
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As is: vg's sprite (20 x 17) in its own 32 x 32 frame (D-72).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/subspace_transmitter.json
+origin: original
+notes: A flat item model for the subspace transmitter sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/bluespace_crystal.png
+origin: vgstation13
+source: icons/obj/telescience.dmi
+state: bluespace_crystal
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (6 x 8), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/bluespace_crystal.json
+origin: original
+notes: A flat item model for the bluespace crystal sprite.
+
+# End of crafting components.

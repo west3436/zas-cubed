@@ -1,0 +1,36 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:advanced_capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:bluespace_crystal"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:super_capacitor"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:advanced_capacitor"
+    },
+    {
+      "item": "zas_atmos:advanced_capacitor"
+    },
+    {
+      "item": "zas_atmos:bluespace_crystal"
+    },
+    {
+      "item": "minecraft:gold_ingot"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:super_capacitor"
+  }
+}

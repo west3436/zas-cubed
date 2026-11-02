@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:ansible_crystal"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:subspace_transmitter"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:lightning_rod"
+    },
+    {
+      "item": "zas_atmos:ansible_crystal"
+    },
+    {
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "item": "zas_atmos:cable_coil"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:subspace_transmitter"
+  }
+}

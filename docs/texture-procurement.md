@@ -22,6 +22,9 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   at 32×32 (D-70).
 - **Worn textures are redrawn** onto Minecraft's armor layout from vg's
   four-direction worn sprites.
+- **The 19 crafting components are vg's own sprites,** cropped to 16×16
+  where they fit and otherwise as they are at 32×32 (D-72,
+  [§6.5](#65-crafting-components)). The table below doesn't count them.
 - **Canisters come in vg's colours,** and players dye them. All 16 dyes give
   a colour, so with vg's red-and-white there are 17
   ([§6.4](#64-canister-colours)).
@@ -47,7 +50,7 @@ canister counts once under Blocks, and its 17 colours separately.
 |---|---|---|
 | **Crop** | A vg item sprite fits in 16×16 px, or is within 2 px of it. It's cut out of its 32 px frame, trimmed to fit, and touched up. Also the filter's and mixer's tops, vg's boxes cut out as they are (D-71). | `vgstation13` |
 | **Redraw** | Any other texture with a vg sprite: every block face, and item sprites larger than 16 px. It's drawn at 16 px per block from the sprite's shapes, markings and colours. | `vgstation13` |
-| **As is** | vg's sprite unchanged, at its own size. Only the wrench (D-70). | `vgstation13` |
+| **As is** | vg's sprite unchanged, at its own size. The wrench (D-70) and the larger crafting components (D-72, [§6.5](#65-crafting-components)). | `vgstation13` |
 | **Original** | No usable vg sprite. | `original` |
 | **Other** | A fallback only, for a texture that's hard to draw from scratch (D-62). | `other` |
 
@@ -335,6 +338,48 @@ texture of its own, not a tint, because vg's red-and-white has a stripe.
   place of vg's plasma, the main fuel, whose canister is orange. Water vapor is
   white, like steam. CH₄ is brown and CO purple, chosen only to stand apart
   from the rest.
+
+### 6.5 Crafting components
+
+Added 2026-11-02 with the recipes (D-72), after the five batches. Every
+component's sprite is vg's own: a **Crop** into 16×16 where vg's sprite fits,
+and otherwise **As is**, vg's sprite unchanged in its 32×32 frame. They're
+crafting items only, so none is redrawn to fill the slot. The vg size is the
+sprite's opaque area.
+
+| Id | vg source | State | vg size | Route | Notes |
+|---|---|---|---|---|---|
+| `zas_atmos:cable_coil` | `icons/obj/power.dmi` | `coil` | 26×12 | As is | vg's greyscale coil, tinted vg's default cable red (#FF0000) by multiplying, as vg tints it in game. |
+| `zas_atmos:circuit_board` | `icons/obj/module.dmi` | `std_mod` | 19×13 | As is | vg's standard board. |
+| `zas_atmos:electronics` | `icons/obj/doors/door_assembly.dmi` | `door_electronics` | 14×10 | Crop | vg's airlock electronics. |
+| `zas_atmos:machine_frame` | `icons/obj/machines/constructable.dmi` | `box_0` | 32×26 | As is | vg's empty machine frame. |
+| `zas_atmos:capacitor` | `icons/obj/stock_parts.dmi` | `capacitor2_basic` | 20×6 | As is | |
+| `zas_atmos:advanced_capacitor` | `icons/obj/stock_parts.dmi` | `capacitor2_adv` | 20×8 | As is | |
+| `zas_atmos:super_capacitor` | `icons/obj/stock_parts.dmi` | `capacitor2_super` | 20×8 | As is | |
+| `zas_atmos:scanning_module` | `icons/obj/stock_parts.dmi` | `scan_module` (5 frames) | 8×11 | Crop | Animated, at vg's frame delay. |
+| `zas_atmos:micro_manipulator` | `icons/obj/stock_parts.dmi` | `micro_mani` | 11×10 | Crop | |
+| `zas_atmos:micro_laser` | `icons/obj/stock_parts.dmi` | `micro_laser` | 5×13 | Crop | |
+| `zas_atmos:console_screen` | `icons/obj/stock_parts.dmi` | `screen` | 22×11 | As is | |
+| `zas_atmos:igniter_assembly` | `icons/obj/assemblies/new_assemblies.dmi` | `igniter` | 13×14 | Crop | |
+| `zas_atmos:timer_assembly` | `icons/obj/assemblies/new_assemblies.dmi` | `timer` | 14×10 | Crop | |
+| `zas_atmos:ansible_crystal` | `icons/obj/stock_parts.dmi` | `ansible_crystal` | 7×13 | Crop | |
+| `zas_atmos:subspace_ansible` | `icons/obj/stock_parts.dmi` | `subspace_ansible` | 24×13 | As is | |
+| `zas_atmos:subspace_transmitter` | `icons/obj/stock_parts.dmi` | `subspace_transmitter` | 20×17 | As is | |
+| `zas_atmos:bluespace_crystal` | `icons/obj/telescience.dmi` | `bluespace_crystal` | 6×8 | Crop | |
+| `zas_atmos:plasteel_sheet` | `icons/obj/stacks_sheets.dmi` | `sheet-plasteel` | 16×20 | As is | |
+| `zas_atmos:reinforced_glass` | `icons/obj/stacks_sheets.dmi` | `sheet-rglass` | 16×20 | As is | |
+
+**History check** ([§3](#3-sources)), 2026-11-02, over the eight files' 133
+commits: no Goon or NonCommercial source.
+
+- **Older files.** vg moved its sheets out of `icons/obj/items.dmi` in 2023,
+  and its machine frame out of `icons/obj/stock_parts.dmi` in 2025. Both
+  sprites are unchanged since, so those files' histories were checked too.
+  The one Goon hit, `items.dmi`'s "Goon-style Ores" (`cda6160`), leaves both
+  sheets' visible pixels as they were.
+- **The other hits** name an artist, or a port from Baystation 12 or
+  /tg/station, both CC BY-SA 3.0. The airlock electronics are unchanged by
+  `door_assembly.dmi`'s Baystation 12 port (`a2d11cf`).
 
 ## 7. Order of work
 
