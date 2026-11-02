@@ -11,6 +11,8 @@ import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentSettings;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,8 +27,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Pipe networks across a chunk border while chunks really leave and return (CONT-003, CONT-009,
- * DATA-002). Each test holds its two chunks with a ticket of its own, removes a ticket, and waits
+ * Pipe networks across a chunk border while chunks really leave and return (CONT-003, CONT-006,
+ * CONT-009, DATA-002). Each test holds its two chunks with a ticket of its own, removes a ticket, and waits
  * for the game to act on it. A chunk next to a loaded one can't unload: ticket levels fall by one
  * per chunk, so it drops only out of full status, with its block entities still in memory. A real
  * unload takes both chunks.
@@ -61,6 +63,11 @@ public final class PipeChunkTests {
         final List<PipeNodeEntity> nodesB = new ArrayList<>();
 
         Row(GameTestHelper h, int index) {
+            this(h, index, cap(Direction.WEST));
+        }
+
+        /** A row whose east end, in chunk B, is a given node: a cap facing west, or a device. */
+        Row(GameTestHelper h, int index, BlockState eastEnd) {
             this.h = h;
             this.a = new Area(h, index);
             this.chunkA = new ChunkPos(a.abs(0, 0, 0));
@@ -72,7 +79,7 @@ public final class PipeChunkTests {
             for (int x = WEST + 1; x < EAST; x++) {
                 a.place(x, 1, 2, AtmosBlocks.PIPE.get().defaultBlockState());
             }
-            a.place(EAST, 1, 2, cap(Direction.WEST));
+            a.place(EAST, 1, 2, eastEnd);
             for (int x = WEST; x <= EAST; x++) {
                 (x < BORDER ? nodesA : nodesB).add(a.entity(x, 1, 2));
             }
@@ -267,6 +274,44 @@ public final class PipeChunkTests {
                             r.nodeA().network().gas().totalMoles(),
                             MOLES - released[0],
                             "the row's gas after chunk B returned");
+                    r.done();
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A vent at the row's east end, in chunk B, blows the row's gas out into open air. While chunk B
+     * is away the vent waits, so the row keeps its gas and chunk B stays away; when it returns the
+     * vent blows again. Two things hold it: the schedule doesn't step it, and the air in front of it
+     * doesn't read as zoned or the ambient while the chunk is away, so its {@code CellWatch} holds
+     * it too.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 600)
+    public static void cont_006_a_vent_waits_while_its_chunk_is_away(GameTestHelper h) {
+        Row r = new Row(h, 43, GasDeviceTests.vent(Direction.EAST));
+        VentBlockEntity vent = (VentBlockEntity) r.nodesB.get(r.nodesB.size() - 1);
+        vent.power().setTestPowered(true);
+        vent.command(VentSettings.blow(500));
+        double[] away = new double[1];
+        h.startSequence()
+                .thenExecute(() -> r.hold(r.chunkB, false))
+                .thenWaitUntil(() -> h.assertFalse(r.full(r.chunkB), "chunk B is still loaded"))
+                .thenExecute(() -> {
+                    away[0] = r.total(r.all());
+                    h.assertTrue(away[0] > 0, "the vent emptied the row before chunk B left");
+                })
+                .thenIdle(60) // three atmos ticks with chunk B away
+                .thenExecute(() -> {
+                    h.assertFalse(r.full(r.chunkB), "chunk B came back by itself");
+                    r.close(r.total(r.all()), away[0], "the row's gas while the vent's chunk is away");
+                    r.hold(r.chunkB, true);
+                })
+                .thenWaitUntil(() -> h.assertTrue(r.full(r.chunkB), "chunk B hasn't returned"))
+                .thenWaitUntil(() -> h.assertTrue(
+                        r.total(r.all()) < away[0] * (1 - 1e-6), "the vent didn't blow again after chunk B returned"))
+                .thenExecute(() -> {
+                    r.noStale(r.nodeA(), "after chunk B returned");
+                    vent.command(VentSettings.OFF);
                     r.done();
                 })
                 .thenSucceed();

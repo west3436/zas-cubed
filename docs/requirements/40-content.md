@@ -205,6 +205,12 @@ on the server thread. The API doesn't expose the framework's period, so the
 content mod always steps every second; rates are per second, so behaviour
 doesn't change with the period.*
 
+*2026-11-02: Note: a device steps only while its chunk is loaded in full. A
+chunk next to a loaded one that drops out of full status keeps its block
+entities, which wait until it returns.
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
+checks a vent there.*
+
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Accepted` · Verify: Manual
 
