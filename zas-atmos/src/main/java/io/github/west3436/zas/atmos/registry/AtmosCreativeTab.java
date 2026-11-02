@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -50,7 +51,7 @@ public final class AtmosCreativeTab {
 
     /**
      * The tab's contents, in order: pipes first, then devices, then the creative canisters, then the
-     * tools, then the crafting components.
+     * tools, then the breathing gear, then the crafting components.
      */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
@@ -66,6 +67,18 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.FIRELOCK.get());
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
+        out.accept(AtmosItems.OXYGEN_TANK.get());
+        out.accept(AtmosItems.AIR_TANK.get());
+        out.accept(AtmosItems.EMPTY_TANK.get());
+        ItemStack emergency = new ItemStack(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
+        GasTankItem.setGas(emergency, AtmosItems.emergencyFill());
+        out.accept(emergency);
+        out.accept(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
+        out.accept(AtmosItems.BREATH_MASK.get());
+        out.accept(AtmosItems.SOFTSUIT_HELMET.get());
+        out.accept(AtmosItems.SOFTSUIT_CHESTPLATE.get());
+        out.accept(AtmosItems.SOFTSUIT_LEGGINGS.get());
+        out.accept(AtmosItems.SOFTSUIT_BOOTS.get());
         AtmosItems.components().forEach(c -> out.accept(c.get()));
     }
 

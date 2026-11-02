@@ -112,5 +112,25 @@
   "block.zas_atmos.firelock.locked.cold": "Locked down: %s K on one side. Force it with a crowbar.",
   "item.zas_atmos.crowbar": "Crowbar",
   "item.zas_atmos.crowbar.forced_open": "You force the firelock open",
-  "item.zas_atmos.crowbar.forced_shut": "You force the firelock shut"
+  "item.zas_atmos.crowbar.forced_shut": "You force the firelock shut",
+
+  "item.zas_atmos.oxygen_tank": "Oxygen Tank",
+  "item.zas_atmos.emergency_oxygen_tank": "Emergency Oxygen Tank",
+  "item.zas_atmos.air_tank": "Air Tank",
+  "item.zas_atmos.empty_tank": "Empty Tank",
+  "item.zas_atmos.empty_tank.filled": "Gas Tank",
+  "item.zas_atmos.gas_tank.distribution": "Distribution pressure: %s kPa",
+  "item.zas_atmos.gas_tank.filled": "Filled the tank with %s mol: now %s kPa",
+  "item.zas_atmos.gas_tank.not_filled": "The tank is already at the canister's release pressure, or the canister is empty",
+  "gui.zas_atmos.gas_tank.title": "Gas Tank",
+  "gui.zas_atmos.gas_tank.range": "Distribution pressure, 0 to %s kPa:",
+  "gui.zas_atmos.gas_tank.default": "Default",
+  "gui.zas_atmos.gas_tank.close": "Close (0 kPa)",
+  "item.zas_atmos.breath_mask": "Breath Mask",
+  "item.zas_atmos.softsuit_helmet": "Softsuit Helmet",
+  "item.zas_atmos.softsuit_chestplate": "Softsuit Chestplate",
+  "item.zas_atmos.softsuit_chestplate.tank": "Tank slot: %s",
+  "item.zas_atmos.softsuit_chestplate.no_tank": "Tank slot: empty (right-click a tank onto it)",
+  "item.zas_atmos.softsuit_leggings": "Softsuit Leggings",
+  "item.zas_atmos.softsuit_boots": "Softsuit Boots"
 }

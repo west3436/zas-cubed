@@ -1,6 +1,10 @@
 package io.github.west3436.zas.atmos.registry;
 
+import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.SuitItem;
+import io.github.west3436.zas.atmos.gear.TankSettings;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -9,7 +13,8 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 /**
  * The content mod's capabilities and network payloads. The generator gives FE and takes fuel
  * (CONT-061); the area air controller's buffer takes FE, from cables that push it as well as from
- * the blocks it pulls from (CONT-062). Devices expose no FE capability (CONT-069).
+ * the blocks it pulls from (CONT-062). Devices expose no FE capability (CONT-069). The breathing
+ * gear gives ZAS³ its life support (API-022).
  */
 public final class AtmosCapabilities {
     /** The network protocol version of the content mod's payloads. */
@@ -31,9 +36,27 @@ public final class AtmosCapabilities {
                 Capabilities.EnergyStorage.BLOCK,
                 AtmosBlockEntities.AREA_AIR_CONTROLLER.get(),
                 (be, side) -> be.buffer());
+        // Breathing gear (S-08): the tanks are internal supplies, the mask and suit protect (API-022).
+        event.registerItem(
+                ILifeSupport.ITEM,
+                (stack, ctx) -> GasTankItem.lifeSupport(stack),
+                AtmosItems.OXYGEN_TANK.get(),
+                AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
+                AtmosItems.AIR_TANK.get(),
+                AtmosItems.EMPTY_TANK.get());
+        event.registerItem(
+                ILifeSupport.ITEM,
+                (stack, ctx) -> SuitItem.lifeSupport(stack),
+                AtmosItems.BREATH_MASK.get(),
+                AtmosItems.SOFTSUIT_HELMET.get(),
+                AtmosItems.SOFTSUIT_CHESTPLATE.get(),
+                AtmosItems.SOFTSUIT_LEGGINGS.get(),
+                AtmosItems.SOFTSUIT_BOOTS.get());
     }
 
     private static void payloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(PROTOCOL).playToClient(ControllerSync.TYPE, ControllerSync.CODEC, ControllerSync::handle);
+        event.registrar(PROTOCOL)
+                .playToClient(ControllerSync.TYPE, ControllerSync.CODEC, ControllerSync::handle)
+                .playToServer(TankSettings.TYPE, TankSettings.CODEC, TankSettings::handle);
     }
 }

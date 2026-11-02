@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos;
 
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosCapabilities;
@@ -25,6 +26,7 @@ public final class ZasAtmosMod {
 
     public ZasAtmosMod(IEventBus modBus, ModContainer container) {
         AtmosBlocks.register(modBus);
+        GearMaterials.register(modBus);
         AtmosItems.register(modBus);
         AtmosComponents.register(modBus);
         AtmosBlockEntities.register(modBus);

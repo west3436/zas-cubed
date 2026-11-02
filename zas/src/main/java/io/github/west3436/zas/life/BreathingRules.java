@@ -34,9 +34,11 @@ import org.jetbrains.annotations.Nullable;
  *       BreathReason#EXEMPT} and never runs out of air or takes a hazard (LIFE-037).
  *   <li>Anything else that is neither a player nor in {@code zas:breathers} doesn't breathe
  *       (LIFE-001).
- *   <li>A breather breathes the atmosphere at its eyes (LIFE-002, API-015). With an O2 partial
- *       pressure below the minimum it can't breathe (LIFE-003); a gas its hazard profile makes
- *       harmful there is a {@link Hazard#TOXIC_GAS} (LIFE-004).
+ *   <li>A breather breathes the atmosphere at its eyes (LIFE-002, API-015), or, with its internals
+ *       on, its breathing sealed and a tank that delivers, the tank's gas ({@link Internals},
+ *       {@link BreathSource#INTERNALS}, {@link Protection#SEALED_BREATHING}: LIFE-021). With an
+ *       O2 partial pressure below the minimum it can't breathe (LIFE-003); a gas its hazard
+ *       profile makes harmful there is a {@link Hazard#TOXIC_GAS} (LIFE-004).
  *   <li>Whether or not it breathes, and with its eyes in a fluid too, the pressure and temperature
  *       of the atmosphere at its eyes may harm it ({@link EnvironmentHazards}: LIFE-010, LIFE-011,
  *       LIFE-014), unless it is in {@code zas:atmosphere_immune} ({@link Protection#IMMUNE},
@@ -49,9 +51,6 @@ import org.jetbrains.annotations.Nullable;
  * <p>Worn and built-in protection ({@link WornProtection}) shields it from pressure and temperature
  * (LIFE-020, LIFE-025), and a verdict lists {@link Protection#PRESSURE} and {@link
  * Protection#THERMAL} where it is rated for the conditions, whether or not a hazard needs it.
- *
- * <p><b>Not yet:</b> internals (LIFE-021, LIFE-002's tank, API-022) come with #36. Until then no
- * breath comes from {@link BreathSource#INTERNALS}.
  *
  * <p>Server thread, for an entity in a server level.
  */
@@ -71,12 +70,23 @@ public final class BreathingRules {
      *     1: 1 − pO2 / minimum while it can't breathe for lack of O2, else 0 (LIFE-003)
      * @param exposure its exposure to pressure and temperature, when they can harm it and the
      *     atmosphere at its eyes was looked at
+     * @param internals the tank it breathes from, when it breathes from its internals (LIFE-021)
      */
     public record Assessment(
             Breathability verdict,
             @Nullable AtmosphereSample sample,
             double drain,
-            EnvironmentHazards.@Nullable Exposure exposure) {}
+            EnvironmentHazards.@Nullable Exposure exposure,
+            Internals.@Nullable Active internals) {
+        /** An assessment of an entity that doesn't breathe from its internals. */
+        public Assessment(
+                Breathability verdict,
+                @Nullable AtmosphereSample sample,
+                double drain,
+                EnvironmentHazards.@Nullable Exposure exposure) {
+            this(verdict, sample, drain, exposure, null);
+        }
+    }
 
     /** Whether an entity type breathes: players, and the types in {@code zas:breathers} (LIFE-001). */
     public static boolean breathes(LivingEntity entity) {
@@ -128,21 +138,27 @@ public final class BreathingRules {
             return new Assessment(b.build(), sample, 0, exposure);
         }
         ResourceKey<Level> dimension = entity.level().dimension();
+        Internals.Active internals = Internals.active(entity);
+        GasMixture breath = internals != null ? internals.breath() : around;
         double minimum = BreathingConfig.oxygenMinimum();
-        double oxygen = around.partialPressure(StandardAir.OXYGEN);
+        double oxygen = breath.partialPressure(StandardAir.OXYGEN);
         boolean enough = oxygen >= minimum || !HazardConfig.enabled(dimension, HazardType.HYPOXIA);
         Breathability.Builder b = Breathability.builder(
-                        enough ? BreathReason.BREATHABLE : BreathReason.LOW_OXYGEN, BreathSource.ATMOSPHERE)
-                .breath(around);
-        if (HazardConfig.enabled(dimension, HazardType.TOXIC_GAS) && GasHazards.harmful(around)) {
+                        enough ? BreathReason.BREATHABLE : BreathReason.LOW_OXYGEN,
+                        internals != null ? BreathSource.INTERNALS : BreathSource.ATMOSPHERE)
+                .breath(breath);
+        if (HazardConfig.enabled(dimension, HazardType.TOXIC_GAS) && GasHazards.harmful(breath)) {
             b.hazard(Hazard.TOXIC_GAS);
         }
         hazards(b, exposure);
+        if (internals != null) {
+            b.protection(Protection.SEALED_BREATHING);
+        }
         if (!environment) {
             b.protection(Protection.IMMUNE);
         }
         double drain = enough ? 0 : Math.min(1, Math.max(0, 1 - oxygen / minimum));
-        return new Assessment(b.build(), sample, drain, exposure);
+        return new Assessment(b.build(), sample, drain, exposure, internals);
     }
 
     /** Adds the pressure and temperature hazards of an exposure to a verdict, and the protection rated for them. */

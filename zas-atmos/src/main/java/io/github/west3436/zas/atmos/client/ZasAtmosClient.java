@@ -2,13 +2,16 @@ package io.github.west3436.zas.atmos.client;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -25,6 +28,8 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::itemColors);
         modBus.addListener(ZasAtmosClient::screens);
         modBus.addListener(ZasAtmosClient::setup);
+        GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
+                .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
