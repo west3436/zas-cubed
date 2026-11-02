@@ -15,7 +15,8 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   at 32 px, so each face is redrawn at 16 px per block (D-67).
 - **11 of the 23 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
-  ones are redrawn at half size, except the wrench, which is vg's own sprite
+  ones are redrawn to fill the 16 px slot, not at half size (the owner's pick
+  for the atmos analyzer). The wrench is the exception: it's vg's own sprite
   at 32×32 (D-70).
 - **Worn textures are redrawn** onto Minecraft's armor layout from vg's
   four-direction worn sprites.
@@ -110,8 +111,15 @@ statement before using it.
   in light greys and tinted in code. Parts that should stand out, like the
   pipe's flanges, are drawn darker, so they come out a darker shade of the
   dye.
-- **One port design.** Every device port uses the pipe's 6 px round flange. Output ports
-  carry an arrow, so a pump's input and output are easy to tell apart.
+- **One port design.** Every device port uses the pipe's 6 px round flange,
+  painted flush on the face in an undyed pipe's colours. Output ports carry an
+  arrow, so a pump's input and output are easy to tell apart. A device with
+  one pipe takes it on the face opposite its output: the vent's back, the
+  connector port's bottom.
+- **Worn helmets look round.** Their faces darken toward the edges, past the
+  one light and one dark edge. Raised details, like the softsuit's antenna
+  and ear plates, go on the armor's outer layer, which Minecraft draws 0.5 px
+  further out.
 - **States** are separate textures, or overlays where only a light changes.
 
 ## 6. Sources for each row
@@ -135,7 +143,7 @@ face.
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
 | `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. |
-| `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | |
+| `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | Done in batch 1: the pipe's flange and tube to the block's middle, closed by a rounded end. Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. |
 | `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. |
 | `zas_atmos:manual_valve` | `icons/obj/atmospherics/valve.dmi` | `valve0`, `valve1` | |
@@ -149,10 +157,10 @@ face.
 | `zas_atmos:volume_pump` | `icons/obj/atmospherics/volume_pump.dmi` | `intact_off`, `intact_on` (11 frames) | |
 | `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | |
 | `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | |
-| `zas_atmos:vent` | `icons/obj/atmospherics/vent_pump.dmi` | `base`, `out`, `in` (8 frames each) | Animated (CONT-070). vg's grille becomes the top face. |
+| `zas_atmos:vent` | `icons/obj/atmospherics/vent_pump.dmi` | `base`, `out`, `in` (8 frames each) | Done in batch 1: a cube that faces any of six ways, like a dispenser, with vg's grille on the front. A light runs round the grille, blue when blowing and red the other way round when siphoning (CONT-070). A pipe joins only the back (CONT-014). |
 | `zas_atmos:scrubber` | `icons/obj/atmospherics/vent_scrubber.dmi` | `off`, `on`, `in` (5 frames) | vg has no panic state. Panic is new: faster frames and a red light. |
 | `zas_atmos:passive_vent` | `icons/obj/atmospherics/pipe_vent.dmi` | `base` | |
-| `zas_atmos:connector_port` | `icons/obj/atmospherics/portables_connector.dmi` | `intact` | The connected state is new. |
+| `zas_atmos:connector_port` | `icons/obj/atmospherics/portables_connector.dmi` | `intact` | Done in batch 1: a cube set in the floor, socket up, that a canister stands on. Connected, a collar rises round the canister's foot, a new state. A pipe joins only the bottom (CONT-083). |
 | `zas_atmos:igniter` | `icons/obj/stationobjs.dmi` | `igniter0`, `igniter1` (3 frames) | |
 | `zas_atmos:heat_exchanger` | `icons/obj/atmospherics/heat_exchanger.dmi` | `intact` | |
 | `zas_atmos:airlock_controller` | `icons/obj/airlock_machines.dmi` | `airlock_control_standby`, `airlock_control_process` (2 frames) | The panel is 11×12 px, so its item sprite is a Crop. |
@@ -174,14 +182,14 @@ face.
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
 | `zas_atmos:electrolyzer` | None | | **Original.** vg's electrolyzer is a chemistry machine, not a water splitter. Its oxygen generator (`icons/obj/atmospherics/oxygen_generator.dmi`) is the nearest atmospherics device; if it's used as a reference, the texture becomes a Redraw. |
-| `zas_atmos:generator` | `icons/obj/power.dmi` | `portgen0`, `portgen1` | vg's P.A.C.M.A.N. |
+| `zas_atmos:generator` | `icons/obj/power.dmi` | `portgen0`, `portgen1` | Done in batch 1: vg's P.A.C.M.A.N., an engine in a tube frame. The firebox, which glows when lit, is new. |
 | `zas_atmos:recharger` | `icons/obj/power.dmi` | `ccharger0`, `ccharger1`, `ccharger-o0` to `ccharger-o4` | vg's cell charger. The overlays give the charge steps. |
 
 **Area air controllers, airlocks and firelocks**
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:area_air_controller` | `icons/obj/monitors.dmi` | `alarm0`, `alarm2`, `alarm1`, `alarmp` | vg's air alarm: normal, danger 1, danger 2 and unpowered, in that order. vg's `alarm2` is yellow and `alarm1` red. |
+| `zas_atmos:area_air_controller` | `icons/obj/monitors.dmi` | `alarm0`, `alarm2`, `alarm1`, `alarmp` | vg's air alarm: normal, danger 1, danger 2 and unpowered, in that order. vg's `alarm2` is yellow and `alarm1` red. Done in batch 1: a 12×7 panel on a wall, without vg's "AIR". The danger lights flash with vg's "!". |
 | `zas_atmos:fire_alarm` | `icons/obj/monitors.dmi` | `fire0e`, `fire1e`, `firep` | Normal, alarm and unpowered. |
 | `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi`; for the 2×2 layout, `icons/obj/doors/Door2x1glassfull.dmi` | `door_closed`, `door_open` | vg's external airlock, in two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. vg's doors are one tile, so both are redrawn taller. The 2×2 follows how vg's two-tile glass airlock splits into two leaves. |
 | `zas_atmos:firelock` | `icons/obj/doors/Doorfire.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames), `alert_hot`, `alert_cold` | vg's old full-tile firelock, red with "FIRE" and hazard stripes, from vg's first commit in 2010. It was replaced in 2012 by today's yellow `DoorHazard.dmi`, ported from Baystation 12. `palert` flashes for lockdown. The temperature lights `alert_hot` and `alert_cold` are optional. See [Firelocks on doors](#firelocks-on-doors). |
@@ -214,7 +222,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:tank_transfer_valve` | `icons/obj/assemblies.dmi` | `valve`, `valve_1`, `oxygen` | 8×10 | Crop | vg draws each attached tank as an overlay, such as `oxygen`. The timer state is new. |
 | `zas_atmos:breath_mask` | `icons/obj/clothing/masks.dmi` | `breath` | 18×13 | Crop | |
 | `zas_atmos:gas_mask` | `icons/obj/clothing/masks.dmi` | `gas_mask` | 16×14 | Crop | |
-| `zas_atmos:softsuit_helmet` | `icons/obj/clothing/hats.dmi` | `space` | 16×16 | Crop | |
+| `zas_atmos:softsuit_helmet` | `icons/obj/clothing/hats.dmi` | `space` | 16×16 | Crop | Done in batch 1, with its worn helmet. |
 | `zas_atmos:softsuit_chestplate` | `icons/obj/clothing/suits.dmi` | `space` | 23×22 | Redraw | |
 | `zas_atmos:softsuit_leggings` | `icons/obj/clothing/suits.dmi` | `space` | | Redraw | vg's suit is one piece. The legs come from its lower half. |
 | `zas_atmos:softsuit_boots` | `icons/obj/clothing/suits.dmi` | `space` | | Redraw | From the suit's feet. |
@@ -223,7 +231,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:hardsuit_leggings` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. |
 | `zas_atmos:hardsuit_boots` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. |
 | `zas_atmos:magnetic_boots` | `icons/obj/clothing/shoes.dmi` | `magboots0`, `magboots1` | 18×12 | Crop | Off and on. |
-| `zas_atmos:atmos_analyzer` | `icons/obj/device.dmi` | `atmos` | 14×22 | Redraw | |
+| `zas_atmos:atmos_analyzer` | `icons/obj/device.dmi` | `atmos` | 14×22 | Redraw | Done in batch 1: redrawn at 10×16 to fill the slot. |
 | `zas_atmos:wrench` | `icons/obj/items.dmi` | `wrench` | 23×22 | As is | Done in the pilot: vg's sprite unchanged, at 32×32 and not mirrored (D-70). |
 | `zas_atmos:crowbar` | `icons/obj/items.dmi` | `crowbar` | 27×21 | Redraw | |
 | `zas_atmos:multitool` | `icons/obj/device.dmi` | `multitool` | 9×17 | Crop | |
@@ -242,6 +250,10 @@ the top and bottom are new. The textures must match their item sprites.
 | Softsuit, layers 1 and 2 | `icons/mob/head.dmi`, `icons/mob/suit.dmi` | `space` |
 | Hardsuit, layers 1 and 2 | `icons/mob/head.dmi`, `icons/mob/suit.dmi` | `rig0-engineering`, `rig-engineering` |
 | Magnetic boots, layer 1, off and on | `icons/mob/feet.dmi` | `magboots0`, `magboots1` |
+
+The softsuit's helmet was drawn in batch 1, as the head part of layer 1. Its
+antenna and ear plates are on the outer layer. Batch 2 adds the rest of the
+suit.
 
 ### 6.4 Canister colours
 
@@ -307,7 +319,7 @@ changes.
 | Batch | Scope | Rows |
 |---|---|---|
 | 0. Set-up | The DMI extractor, the palette, the history check of each vg file ([§3](#3-sources)), and a pilot to settle the style: the pipe, the canister and the wrench, one of each kind of texture. The pilot is done (2026-11-01) | – |
-| 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer | 12 |
+| 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer. Done (2026-11-01) | 12 |
 | 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit | 12 |
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber | 17 |
@@ -356,6 +368,14 @@ The owner settled these on 2026-11-01:
    port; and vg's own wrench sprite (D-70).
 9. **Players dye pipes,** as they dye canisters. Dyeing pipes has no
    requirement yet.
+10. **Batch 1 settled** ([§5](#5-style), [§6](#6-sources-for-each-row)):
+    - The connector port is set in the floor, facing up, and the vent faces
+      any of six ways. Each takes a pipe only on the face opposite its output
+      (CONT-014, CONT-083).
+    - The area air controller is a small wall panel without "AIR".
+    - Item sprites larger than 16 px are redrawn to fill the slot.
+    - Worn helmets are shaded to look round, with raised details on the
+      armor's outer layer.
 
 Still open:
 

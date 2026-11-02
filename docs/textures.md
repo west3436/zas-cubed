@@ -37,7 +37,7 @@ texture), or none (the block has no item).
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
 | `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). |
-| `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). |
+| `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Flat sprite | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it. |
 | `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind. |
 | `zas_atmos:manual_valve` | Manual valve | Must | CONT-010 | Block model | Open and closed. |
@@ -51,10 +51,10 @@ texture), or none (the block has no item).
 | `zas_atmos:volume_pump` | Volume pump | Should | CONT-012 | Block model | On and off. As the pressure pump, but distinct from it. |
 | `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. |
 | `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. |
-| `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). |
+| `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). Faces any of six ways; a pipe joins only its back. |
 | `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). |
 | `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. |
-| `zas_atmos:connector_port` | Connector port | Must | CONT-083 | Block model | Free, and with a portable connected. |
+| `zas_atmos:connector_port` | Connector port | Must | CONT-083 | Block model | Free, and with a portable connected. Set in the floor, facing up; a pipe joins only its bottom. |
 | `zas_atmos:igniter` | Igniter | Must | CONT-105 | Block model | Idle and active. |
 | `zas_atmos:heat_exchanger` | Heat exchanger | Not set | None yet | Block model | vg's works in linked pairs that share one temperature ([vg §2](research/vg-atmos-content.md#2-devices)). |
 | `zas_atmos:airlock_controller` | Airlock controller | Not set | None yet | Flat sprite | Wall-mounted. Cycles an airlock with its vents and an air sensor. Idle and cycling. |

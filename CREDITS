@@ -141,3 +141,247 @@ notes: vg's sprite as it is, at 32x32 (D-70).
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
 origin: original
 notes: A handheld item model for the wrench sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_cap.png
+origin: vgstation13
+source: icons/obj/pipes.dmi
+state: cap
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The rounded end of a capped pipe, at 16 px per block, in greys the dye colour tints.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_cap.json
+origin: original
+notes: Shaped after vg's pipe cap (icons/obj/pipes.dmi): the pipe's flange and tube to the block's middle, closed by a rounded end. The flange and tube use pipe.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pipe_cap.json
+origin: original
+notes: The 3D pipe cap as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/connector_port.png
+origin: vgstation13
+source: icons/obj/atmospherics/portables_connector.dmi
+state: intact
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The top face: vg's socket made round, with the pipe's 6 px flange in the middle and a flush collar round it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/connector_port_side.png
+origin: vgstation13
+source: icons/obj/atmospherics/portables_connector.dmi
+state: intact
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Plain casing in vg's machine grey.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/connector_port_bottom.png
+origin: vgstation13
+source: icons/obj/atmospherics/portables_connector.dmi
+state: intact
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Casing with a port, the pipe's flange painted flush, where a pipe joins.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/connector_port_collar.png
+origin: vgstation13
+source: icons/obj/atmospherics/portables_connector.dmi
+state: intact
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A new state: the collar that rises round a connected canister's foot. vg has no connected state.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/connector_port.json
+origin: original
+notes: A full cube set in the floor, socket up, after vg's connector port (icons/obj/atmospherics/portables_connector.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/connector_port_connected.json
+origin: original
+notes: With a canister connected: the collar risen 2 px into the block above.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/connector_port.json
+origin: original
+notes: The connector port's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_front.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_pump.dmi
+state: base
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The front face, off: vg's grille inside a dark track.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_front_out.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_pump.dmi
+state: out
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Blowing: 8 frames of a blue light running round the grille, as vg's.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_front_out.png.mcmeta
+origin: original
+notes: 2 ticks a frame, near vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_front_in.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_pump.dmi
+state: in
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Siphoning: 8 frames of a red light running round the grille the other way.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_front_in.png.mcmeta
+origin: original
+notes: 2 ticks a frame, near vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_side.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_pump.dmi
+state: base
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Plain casing in vg's machine grey.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/vent_back.png
+origin: vgstation13
+source: icons/obj/atmospherics/vent_pump.dmi
+state: base
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Casing with a port, the pipe's flange painted flush, where a pipe joins.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent.json
+origin: original
+notes: A cube with the grille facing north, turned to face sideways. After vg's vent (icons/obj/atmospherics/vent_pump.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent_out.json
+origin: original
+notes: The sideways vent, blowing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent_in.json
+origin: original
+notes: The sideways vent, siphoning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent_vertical.json
+origin: original
+notes: A cube with the grille facing up, turned to face down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent_vertical_out.json
+origin: original
+notes: The up or down vent, blowing.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/vent_vertical_in.json
+origin: original
+notes: The up or down vent, siphoning.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/vent.json
+origin: original
+notes: The vent's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: alarm0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A 12x7 wall panel with vg's light, readout lines and vent strip, normal.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller_danger1.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: alarm2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 1: vg's amber light with its '!', flashing over 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller_danger1.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller_danger2.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: alarm1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 2: vg's red light with its '!', flashing over 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller_danger2.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/area_air_controller_unpowered.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: alarmp
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Unpowered: the light dark.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/area_air_controller.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: alarm0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The panel as an item sprite, with vg's outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/area_air_controller.json
+origin: original
+notes: A panel 2 px deep on a wall, after vg's air alarm (icons/obj/monitors.dmi). Normal.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/area_air_controller_danger1.json
+origin: original
+notes: The panel in danger 1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/area_air_controller_danger2.json
+origin: original
+notes: The panel in danger 2.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/area_air_controller_unpowered.json
+origin: original
+notes: The panel unpowered.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/area_air_controller.json
+origin: original
+notes: A flat item model for the panel's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/generator.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: portgen0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's P.A.C.M.A.N. at 16 px per block: the engine, its fins and tube frame, unlit. The firebox and fuel hatch are new.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/generator_lit.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: portgen1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Lit: vg's light turns green. The glowing firebox is new.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/generator.json
+origin: original
+notes: An engine in a tube frame on skids, after vg's P.A.C.M.A.N. (icons/obj/power.dmi). Unlit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/generator_lit.json
+origin: original
+notes: The generator lit.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/generator.json
+origin: original
+notes: The generator's block model as its item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/softsuit_helmet.png
+origin: vgstation13
+source: icons/obj/clothing/hats.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Cropped from vg's 32 px frame, unchanged.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/softsuit_layer_1.png
+origin: vgstation13
+source: icons/mob/head.dmi
+state: space
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The helmet so far: redrawn onto Minecraft's armor layout from vg's four directions, with a new top. Its antenna and ear plates are on the outer layer, so they stand out. The rest of the suit comes in batch 2.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/softsuit_helmet.json
+origin: original
+notes: A flat item model for the helmet's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/atmos_analyzer.png
+origin: vgstation13
+source: icons/obj/device.dmi
+state: atmos
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn at 10x16 to fit the slot, with vg's outline and colours.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/atmos_analyzer.json
+origin: original
+notes: A flat item model for the analyzer's sprite.

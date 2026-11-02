@@ -1,0 +1,136 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "panel": "zas_atmos:block/area_air_controller",
+    "particle": "zas_atmos:block/area_air_controller"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        7,
+        14
+      ],
+      "to": [
+        14,
+        14,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            12,
+            7
+          ],
+          "texture": "#panel"
+        },
+        "south": {
+          "uv": [
+            12,
+            8,
+            14,
+            15
+          ],
+          "texture": "#panel"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            12,
+            1
+          ],
+          "texture": "#panel"
+        },
+        "down": {
+          "uv": [
+            0,
+            6,
+            12,
+            7
+          ],
+          "texture": "#panel"
+        },
+        "east": {
+          "uv": [
+            12,
+            8,
+            14,
+            15
+          ],
+          "texture": "#panel"
+        },
+        "west": {
+          "uv": [
+            12,
+            8,
+            14,
+            15
+          ],
+          "texture": "#panel"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        5,
+        15
+      ],
+      "to": [
+        12,
+        7,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            8,
+            8,
+            11
+          ],
+          "texture": "#panel"
+        },
+        "up": {
+          "uv": [
+            0,
+            8,
+            8,
+            9
+          ],
+          "texture": "#panel"
+        },
+        "down": {
+          "uv": [
+            0,
+            10,
+            8,
+            11
+          ],
+          "texture": "#panel"
+        },
+        "east": {
+          "uv": [
+            7,
+            8,
+            8,
+            11
+          ],
+          "texture": "#panel"
+        },
+        "west": {
+          "uv": [
+            0,
+            8,
+            1,
+            11
+          ],
+          "texture": "#panel"
+        }
+      }
+    }
+  ]
+}

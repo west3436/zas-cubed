@@ -281,12 +281,17 @@ at most 4,500 kPa.
 
 A vent shall blow gas into its zone, or siphon gas out of it, within an
 external bound (default 101.325 kPa) and an internal bound, both 0–5,066 kPa.
-In an unenclosed cell it vents to the ambient (CORE-053, CORE-057).
+In an unenclosed cell it vents to the ambient (CORE-053, CORE-057). It faces
+any of six ways, and a pipe joins it only on its back, the face opposite its
+grille.
 
 - **Rationale:** vg: vg's vent pump and its bounds ([vg
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks a vent fills a room to the external bound and
-  siphons down to it, and vents to the ambient in an open cell.
+  siphons down to it, and vents to the ambient in an open cell. It also checks
+  that a pipe joins the vent's back and no other face.
+- **Changed 2026-11-01 (the owner, in the batch 1 art review):** the vent
+  faces any of six ways and takes a pipe only on its back.
 
 #### CONT-078 · Vent rate
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
@@ -374,13 +379,17 @@ contents when mined.
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01
 
 Placing a canister against a connector port shall attach it, joining the
-port's network.
+port's network. The port faces up, so the canister stands on it, and a pipe
+joins the port only on its bottom, the face opposite.
 
 - **Rationale:** vg: vg canisters attach to connector ports and join the
   network ([vg
   §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)).
 - **Verify:** A GameTest places a canister on a port and checks the network
-  includes it.
+  includes it. It also checks that a pipe joins the port's bottom and no
+  other face.
+- **Changed 2026-11-01 (the owner, in the batch 1 art review):** the port
+  faces up and takes a pipe only on its bottom.
 
 #### CONT-084 · Canister release
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: vg quirk 10
