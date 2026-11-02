@@ -29,11 +29,11 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 /**
- * The current {@link GeometryTable}: derived geometry with datapack overrides applied, and zone
- * boundaries marked (architecture §4.1, §4.7).
+ * The current {@link GeometryTable}: derived geometry with datapack overrides applied, zone
+ * boundaries marked and heat data added (architecture §4.1, §4.7, §4.8).
  *
- * <p>Lifecycle: overrides are read on every server data load (start and {@code /reload}). Once
- * tags are bound ({@link TagsUpdatedEvent}, server side), the overrides and the {@link
+ * <p>Lifecycle: overrides and heat data are read on every server data load (start and {@code
+ * /reload}). Once tags are bound ({@link TagsUpdatedEvent}, server side), they and the {@link
  * #ZONE_BOUNDARY} tag are resolved to blocks on the server thread and the table is rebuilt on a
  * background thread. {@link #table()} waits for that build, and the server-started handler waits
  * for it too, so it is ready before the first atmos tick.
@@ -50,6 +50,7 @@ public final class Geometries {
 
     private static volatile List<GeometryOverride> overrides = List.of();
     private static volatile List<GeometryOverride> testOverrides = List.of();
+    private static volatile List<ThermalData> thermal = List.of();
     private static volatile CompletableFuture<GeometryTable> current;
 
     private Geometries() {}
@@ -91,6 +92,10 @@ public final class Geometries {
         overrides = List.copyOf(loaded);
     }
 
+    static void setThermal(List<ThermalData> loaded) {
+        thermal = List.copyOf(loaded);
+    }
+
     /**
      * Rebuilds the table now with {@code extra} applied after the datapack overrides, as a {@code
      * /reload} that added them would; an empty list goes back to the datapack overrides alone. For
@@ -98,7 +103,8 @@ public final class Geometries {
      */
     public static void overrideForTest(List<GeometryOverride> extra) {
         testOverrides = List.copyOf(extra);
-        current = CompletableFuture.completedFuture(build(resolve(allOverrides()), boundaryBlocks()));
+        current = CompletableFuture.completedFuture(
+                build(resolve(allOverrides()), boundaryBlocks(), resolveThermal(thermal)));
     }
 
     private static List<GeometryOverride> allOverrides() {
@@ -113,6 +119,7 @@ public final class Geometries {
 
     private static void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(new GeometryOverrideLoader());
+        event.addListener(new ThermalDataLoader());
     }
 
     private static void onTagsUpdated(TagsUpdatedEvent event) {
@@ -121,7 +128,8 @@ public final class Geometries {
         }
         Map<Block, GeometryOverride> byBlock = resolve(allOverrides());
         List<Block> boundaries = boundaryBlocks();
-        current = CompletableFuture.supplyAsync(() -> build(byBlock, boundaries), Util.backgroundExecutor());
+        Map<Block, double[]> heat = resolveThermal(thermal);
+        current = CompletableFuture.supplyAsync(() -> build(byBlock, boundaries, heat), Util.backgroundExecutor());
     }
 
     private static void onServerStarted(ServerStartedEvent event) {
@@ -203,12 +211,55 @@ public final class Geometries {
     }
 
     /**
-     * The derived table with the overrides applied, then the zone boundaries marked: each tagged
-     * state's geometry, override or derived, with its {@link #boundaryFlags} added.
+     * Maps each block with heat data to its {@code {transmittance, temperature}}, NaN where none
+     * applies (HEAT-002, HEAT-003). Each field is resolved on its own, as {@link #resolve} resolves
+     * overrides: a block named directly beats one matched through a tag; otherwise later files
+     * win. Tags are read here, on the thread that bound them.
      */
-    private static GeometryTable build(Map<Block, GeometryOverride> byBlock, List<Block> boundaries) {
+    static Map<Block, double[]> resolveThermal(List<ThermalData> list) {
+        Map<Block, Double> uTag = new HashMap<>();
+        Map<Block, Double> uDirect = new HashMap<>();
+        Map<Block, Double> tTag = new HashMap<>();
+        Map<Block, Double> tDirect = new HashMap<>();
+        for (ThermalData d : list) {
+            for (GeometryOverride.Target target : d.targets()) {
+                List<Block> blocks = new ArrayList<>();
+                if (target.tag()) {
+                    TagKey<Block> key = TagKey.create(Registries.BLOCK, target.id());
+                    for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(key)) {
+                        blocks.add(holder.value());
+                    }
+                } else {
+                    BuiltInRegistries.BLOCK.getOptional(target.id()).ifPresent(blocks::add);
+                }
+                for (Block b : blocks) {
+                    d.transmittance().ifPresent(u -> (target.tag() ? uTag : uDirect).put(b, u));
+                    d.temperature().ifPresent(t -> (target.tag() ? tTag : tDirect).put(b, t));
+                }
+            }
+        }
+        uTag.putAll(uDirect);
+        tTag.putAll(tDirect);
+        Map<Block, double[]> merged = new HashMap<>();
+        uTag.forEach((b, u) -> merged.computeIfAbsent(b, k -> new double[] {Double.NaN, Double.NaN})[0] = u);
+        tTag.forEach((b, t) -> merged.computeIfAbsent(b, k -> new double[] {Double.NaN, Double.NaN})[1] = t);
+        // In registry order, so the geometries get the same ids on every run.
+        Map<Block, double[]> ordered = new LinkedHashMap<>();
+        merged.entrySet().stream()
+                .sorted(Comparator.comparingInt(e -> BuiltInRegistries.BLOCK.getId(e.getKey())))
+                .forEach(e -> ordered.put(e.getKey(), e.getValue()));
+        return ordered;
+    }
+
+    /**
+     * The derived table with the overrides applied, then the zone boundaries marked: each tagged
+     * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
+     * block's heat data added to its states' geometries.
+     */
+    private static GeometryTable build(
+            Map<Block, GeometryOverride> byBlock, List<Block> boundaries, Map<Block, double[]> heat) {
         GeometryTable derived = GeometryDerivation.derived();
-        if (byBlock.isEmpty() && boundaries.isEmpty()) {
+        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty()) {
             return derived;
         }
         GeometryPalette.Builder palette = derived.palette().toBuilder();
@@ -235,6 +286,17 @@ public final class Geometries {
                     Geometry g = geometry.apply(state);
                     byStateId[stateId] = palette.intern(g.withFlags(boundaryFlags(state, geometry)));
                     marked++;
+                }
+            }
+        }
+        for (Map.Entry<Block, double[]> e : heat.entrySet()) {
+            double u = e.getValue()[0];
+            double t = e.getValue()[1];
+            for (BlockState state : e.getKey().getStateDefinition().getPossibleStates()) {
+                int stateId = Block.getId(state);
+                if (stateId >= 0 && stateId < byStateId.length) {
+                    byStateId[stateId] =
+                            palette.intern(palette.geometry(byStateId[stateId]).withThermal(u, t));
                 }
             }
         }

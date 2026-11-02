@@ -25,7 +25,7 @@ class PausedZonesTest {
 
     /** A sealed room from x 12 to 19, across the border of chunks (0, 0) and (1, 0), with gas in it. */
     private static Sim spanningRoom(Ambient ambient) {
-        Sim sim = new Sim(ambient);
+        Sim sim = new Sim(ambient).withoutHeat();
         sim.world.room(12, 64, 1, 19, 66, 3);
         sim.add(13, 65, 2, 40, 10);
         sim.step();
@@ -150,7 +150,7 @@ class PausedZonesTest {
      */
     @Test
     void geo_035_active_zone_sees_paused_zone_last_known_state() {
-        Sim sim = new Sim(Ambient.VACUUM);
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
         sim.world.room(12, 64, 1, 19, 66, 3); // B, across both chunks
         sim.world.room(4, 64, 1, 10, 66, 3); // A, west only; they share the wall at x = 11
         sim.add(13, 65, 2, 80, 0);
@@ -178,7 +178,7 @@ class PausedZonesTest {
      */
     @Test
     void geo_026_breach_into_unresolved_region_pauses_zone() {
-        Sim sim = new Sim(Ambient.VACUUM);
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
         sim.world.room(4, 64, 1, 10, 66, 3); // A, in the west chunk
         sim.world.room(12, 64, 1, 19, 66, 3); // B, unzoned, across both chunks
         sim.add(5, 65, 2, 30, 0);
@@ -204,7 +204,7 @@ class PausedZonesTest {
     /** A zone-triggering operation in a room that reaches an unloaded chunk is unresolved (GEO-024). */
     @Test
     void geo_024_fill_reaching_unloaded_chunk_is_unresolved() {
-        Sim sim = new Sim(Ambient.VACUUM);
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
         sim.world.room(12, 64, 1, 19, 66, 3);
         sim.unload(EAST);
         long seq = sim.add(13, 65, 2, 10, 0);

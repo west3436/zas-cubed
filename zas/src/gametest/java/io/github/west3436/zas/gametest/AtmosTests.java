@@ -542,9 +542,10 @@ public final class AtmosTests {
         h.assertValueEqual(
                 Atmospheres.zoneAt(nether, netherInside).orElseThrow(), netherZone, "the Nether's table changed");
         service().applyNow(nether);
+        // Its gas, that is: its temperature moves toward the Nether's by conduction (HEAT-001).
         h.assertValueEqual(
-                Atmospheres.zoneAt(nether, netherInside).orElseThrow().mixture(),
-                netherZone.mixture(),
+                Atmospheres.zoneAt(nether, netherInside).orElseThrow().mixture().moles(),
+                netherZone.mixture().moles(),
                 "the Overworld changed the Nether's zone");
         h.succeed();
     }

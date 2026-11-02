@@ -60,6 +60,19 @@ final class MembershipTracker implements MembershipListener {
         return sections.containsKey(key);
     }
 
+    /** Visits the ids of the zones with cells in a section now, in its palette's order. */
+    void forEachZoneIn(long key, java.util.function.LongConsumer action) {
+        SectionMembers s = sections.get(key);
+        if (s == null) {
+            return;
+        }
+        for (int e = 0; e < s.paletteSize(); e++) {
+            if (s.zoneOfEntry(e) != 0 && s.countOfEntry(e) > 0) {
+                action.accept(s.zoneOfEntry(e));
+            }
+        }
+    }
+
     /** The chunks a zone has cells in now, ascending; empty if it has none. Not a copy. */
     long[] chunks(long zoneId) {
         Membership.ZoneSections z = zones.get(zoneId);
