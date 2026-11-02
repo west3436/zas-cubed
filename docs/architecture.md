@@ -1264,6 +1264,14 @@ jar, so providers can be tested before real devices exist.
   leaves in `setRemoved` and `onChunkUnloaded`, so a device in an unloaded
   chunk never steps. Its `atmosTick(ServerLevel)` runs one atmos tick of work
   on the server thread.
+- **Chunks out of full status.** Ticket levels fall by one per chunk, so a
+  chunk next to a loaded one never unloads. It drops out of full status, and
+  its block entities stay in memory, still scheduled. A device steps only
+  while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
+  step that read the device's own block, as a pipe rebuilding its network
+  does, would load the chunk again. A pipe network then rebuilt without that
+  chunk's nodes, and they rejoin when it returns and they step
+  (`PipeChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
