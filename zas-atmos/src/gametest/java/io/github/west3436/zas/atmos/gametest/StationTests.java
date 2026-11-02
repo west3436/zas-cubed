@@ -46,6 +46,7 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.gametest.TestPlayers;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;
@@ -451,7 +452,9 @@ public final class StationTests {
             s.close(room.mixture().temperature(), T, 1e-6, "the room's temperature");
 
             // Without a helmet, a minute in the room does no harm, with the controller running.
-            FakePlayer player = FakePlayerFactory.get(end, new GameProfile(UUID.randomUUID(), "zas_s_01"));
+            // A player that damage reaches: a plain fake player is invulnerable, and would pass this
+            // whatever the room did to it.
+            FakePlayer player = TestPlayers.hurtable(end, "zas_s_01");
             player.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 3)));
             long t0 = end.getGameTime();
             for (int sec = 0; sec < 60; sec++) {
