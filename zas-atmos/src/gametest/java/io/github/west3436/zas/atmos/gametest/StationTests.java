@@ -51,7 +51,6 @@ import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.LifeDamage;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +66,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -489,29 +487,6 @@ public final class StationTests {
 
     // ---- S-02 -----------------------------------------------------------------------------
 
-    /**
-     * A survival player that can be hurt. NeoForge's fake players are invulnerable, and a new
-     * player is spared most damage for its first 60 ticks, which a fake player, whose tick does
-     * nothing, never counts down; this one is neither.
-     */
-    private static FakePlayer vulnerable(ServerLevel level, String name) {
-        FakePlayer p = new FakePlayer(level, new GameProfile(UUID.randomUUID(), name)) {
-            @Override
-            public boolean isInvulnerableTo(DamageSource source) {
-                return false;
-            }
-        };
-        try {
-            Field spawn = ServerPlayer.class.getDeclaredField("spawnInvulnerableTime");
-            spawn.setAccessible(true);
-            spawn.setInt(p, 0);
-        } catch (ReflectiveOperationException e) {
-            throw new GameTestAssertException("can't end the player's spawn protection: " + e);
-        }
-        return p;
-    }
-
-    /** Fills the zone at a point with standard air at {@code kpa}, in N₂ and O₂. */
     /** 20 °C, at which {@link #at20} gives a zone's air. */
     private static final double ROOM_K = 293.15;
 
@@ -520,6 +495,7 @@ public final class StationTests {
         return zone.mixture().totalMoles() * GasMixture.GAS_CONSTANT * ROOM_K / zone.volume();
     }
 
+    /** Fills the zone at a point with standard air at {@code kpa}, in N₂ and O₂. */
     private static void air(Site s, int x, int y, int z, double kpa) {
         s.addKpa(x, y, z, N2, kpa * (1 - StandardAir.OXYGEN_FRACTION));
         s.addKpa(x, y, z, O2, kpa * StandardAir.OXYGEN_FRACTION);
@@ -712,7 +688,7 @@ public final class StationTests {
                     firelock.lockdown().map(Lockdown::reason).orElse(null),
                     Lockdown.Reason.PRESSURE,
                     "the firelock's lockdown with A near vacuum");
-            FakePlayer exposed = vulnerable(end, "zas_s_02");
+            FakePlayer exposed = TestPlayers.hurtable(end, "zas_s_02");
             exposed.moveTo(Vec3.atBottomCenterOf(s.abs(3, 1, 3)));
             long t0 = end.getGameTime();
             Breathers.checkAt(exposed, t0);
