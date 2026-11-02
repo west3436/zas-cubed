@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:manual_valve"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:tank_transfer_valve"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:timer_assembly"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "zas_atmos:manual_valve"
+    },
+    {
+      "item": "zas_atmos:timer_assembly"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:tank_transfer_valve"
+  }
+}

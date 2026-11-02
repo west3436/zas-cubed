@@ -1,0 +1,35 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:hardsuit_leggings"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:softsuit_leggings"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "SVS",
+    "S S",
+    "S S"
+  ],
+  "key": {
+    "S": {
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    "V": {
+      "item": "zas_atmos:softsuit_leggings"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:hardsuit_leggings"
+  }
+}
