@@ -7,6 +7,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.controller.VentControl;
+import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -41,9 +43,10 @@ import net.minecraft.world.phys.Vec3;
  * the ambient.
  *
  * <p>It runs only while powered (CONT-060), drawing {@code [power] vent} FE/t (CONT-065) whenever
- * it isn't off, in the life-support group. An area air controller sets it with {@link #command}.
+ * it isn't off, in the life-support group. An area air controller that covers it commands it
+ * every atmos tick ({@link #ventOrder}, CONT-041), which overrides what its GUI set.
  */
-public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, MenuProvider {
+public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, VentControl, MenuProvider {
     /** Who a vent's changes are made by. */
     public static final SourceId VENT = SourceId.of(ZasAtmosMod.MOD_ID, "vent");
 
@@ -102,6 +105,15 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
             this.settings = next;
             setChanged();
         }
+    }
+
+    /**
+     * An area air controller's order (CONT-041): off, or blow to its target, with the internal
+     * bound at 0. The same order every atmos tick changes nothing.
+     */
+    @Override
+    public void ventOrder(VentOrder order) {
+        command(order.on() ? VentSettings.blow(order.targetKpa()) : VentSettings.OFF);
     }
 
     @Override

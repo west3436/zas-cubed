@@ -73,6 +73,7 @@ origin: original
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/vent.json
 origin: original
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/area_air_controller.json
 origin: original
 notes: The panel's four facings and four status models.
