@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -407,8 +408,17 @@ public final class DimensionPipeline {
                 keys.add(k);
             }
         }
-        List<ChunkRecord> records = new ArrayList<>(loadedRecords.values());
-        loadedRecords.clear();
+        // A record whose chunk is already gone again, before the server reports its unload, waits:
+        // its sections can't be captured, so the worker would drop its shares, and once that
+        // result applied the chunk would save without them. Its unload saves it from here.
+        List<ChunkRecord> records = new ArrayList<>();
+        for (Iterator<ChunkRecord> it = loadedRecords.values().iterator(); it.hasNext(); ) {
+            ChunkRecord r = it.next();
+            if (world.isLoaded(r.chunk())) {
+                records.add(r);
+                it.remove();
+            }
+        }
         TreeSet<Long> unloadedListed = new TreeSet<>();
         Classifier classifier = scheduler.engine().classifier();
         for (ChunkRecord r : records) {
