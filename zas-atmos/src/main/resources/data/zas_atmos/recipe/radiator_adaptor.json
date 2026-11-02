@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:radiator_adaptor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:radiator_pipe"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:pipe"
+    },
+    {
+      "item": "zas_atmos:radiator_pipe"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:radiator_adaptor"
+  }
+}

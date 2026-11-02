@@ -1,0 +1,32 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:advanced_capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:high_capacity_battery"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:advanced_capacitor"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:copper_ingot"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:high_capacity_battery"
+  }
+}

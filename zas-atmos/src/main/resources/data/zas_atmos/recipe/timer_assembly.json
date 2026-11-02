@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:timer_assembly"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:clock"
+    },
+    {
+      "item": "zas_atmos:cable_coil"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:timer_assembly"
+  }
+}

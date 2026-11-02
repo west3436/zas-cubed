@@ -1,0 +1,40 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:airlock_controller"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:electronics"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:subspace_ansible"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:electronics"
+    },
+    {
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "item": "zas_atmos:subspace_ansible"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:airlock_controller"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:magnetic_boots"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:iron_boots"
+    },
+    {
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "item": "zas_atmos:cable_coil"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:magnetic_boots"
+  }
+}
