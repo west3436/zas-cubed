@@ -10,7 +10,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Atmosphere and zone queries (API-010, API-011, API-015).
+ * Atmosphere and zone queries (API-010, API-011, API-015), and the atmos
+ * period (API-052).
  *
  * <p><b>Threads:</b> every query may be called from any thread. Queries read
  * the published, immutable snapshot of the last applied atmos tick and return
@@ -34,7 +35,29 @@ import net.minecraft.world.phys.Vec3;
  * standard air and no zone exists (D-17).
  */
 public final class Atmospheres {
+    /** CORE-041's default atmos period: 20 game ticks, 1 s. */
+    public static final int DEFAULT_PERIOD_TICKS = 20;
+
     private Atmospheres() {}
+
+    /**
+     * The atmos tick period, in game ticks (CORE-041, API-052): how often ZAS³ steps its
+     * simulation and applies queued mutations. A mod that steps its own devices in time with the
+     * atmosphere reads it here. Every rate in ZAS³ is per second, so a different period changes
+     * how often changes land, not how fast things happen.
+     *
+     * <p>It is the server's configured period ({@code period_ticks}), which can change when the
+     * server's config reloads; without ZAS³, {@link #DEFAULT_PERIOD_TICKS}.
+     *
+     * <p>Thread: any.
+     *
+     * @return the period in game ticks, at least 2
+     */
+    @AnyThread
+    public static int periodTicks() {
+        int ticks = ZasApi.provider().atmosPeriodTicks();
+        return ticks >= 2 ? ticks : DEFAULT_PERIOD_TICKS;
+    }
 
     /**
      * The atmosphere at an exact point.

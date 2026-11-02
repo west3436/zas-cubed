@@ -3,7 +3,8 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). API-019 was added and accepted on
-2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68).
+2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68), and API-051 and API-052
+on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)).
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -443,6 +444,43 @@ unzoned Overworld room and checks a pinned 27-cell zone forms holding exactly
 the ambient's gas, and that a room with a hole in its roof forms nothing and
 reports `OPEN`. The `api_050_` Unit tests also cover a vacuum room, a pin that
 waits for its section and a rejected tick.*
+
+#### API-051 · Gas heat capacities
+`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CORE-003, CONT-008, CONT-095 · Depends: API-009
+
+The API shall give each gas's molar heat capacity from the server's gas
+definitions, and a documented default for a gas the server doesn't define.
+
+- **Rationale:** Inferred: the content mod may use only the API (CONT-095),
+  and it can't mix pipe gas at different temperatures conserving energy
+  (CONT-008, CORE-003) without heat capacities
+  ([#157](https://github.com/west3436/zas-cubed/issues/157)).
+- **Verify:** Unit tests check the fallback's values and that a parcel's heat
+  capacity and an energy-conserving mix follow from them; a GameTest checks
+  the API's value for every loaded gas against its definition.
+
+*2026-11-02: Implemented ([#157](https://github.com/west3436/zas-cubed/issues/157)).
+`GasProperties.molarHeatCapacity(gas)` gives C<sub>v</sub> in J/(mol·K), or
+20.8 (about (5/2)R) for an undefined gas; `heatCapacity`, `mix` and
+`mixedTemperature` build on it. Without ZAS³, N₂ and O₂ have their shipped
+values (API-009). Checked by `GasPropertiesTest` (Unit) and
+`api_051_heat_capacities_come_from_the_gas_definitions` (GameTest).*
+
+#### API-052 · Atmos period
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CORE-041 · Depends: API-009
+
+The API shall give the atmos tick period in game ticks, 20 without ZAS³.
+
+- **Rationale:** Inferred: the period is configurable (CORE-041), and a mod
+  that steps devices in time with the atmosphere needs to know it
+  ([#157](https://github.com/west3436/zas-cubed/issues/157)).
+- **Verify:** A Unit test checks the fallback's 20, and a GameTest checks the
+  API gives the server's configured period.
+
+*2026-11-02: Implemented ([#157](https://github.com/west3436/zas-cubed/issues/157)).
+`Atmospheres.periodTicks()`. Checked by
+`api_052_fallback_period_is_20_ticks` (Unit) and
+`api_052_period_is_the_servers` (GameTest).*
 
 ## Extension points
 
