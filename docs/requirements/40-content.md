@@ -284,6 +284,10 @@ refused and edits are clamped (`cont_074_gui_settings_are_checked_and_an_edited_
 The generator's only setting is its fuel slot, which takes only fuel. This
 stays Accepted until every device's GUI is built.*
 
+*2026-11-02: The vent's GUI also refuses every button while an area air
+controller controls the vent (CONT-014), on the server, whatever the client
+sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
+
 #### CONT-010 · Valves
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
@@ -381,9 +385,17 @@ grille.
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks a vent fills a room to the external bound and
   siphons down to it, and vents to the ambient in an open cell. It also checks
-  that a pipe joins the vent's back and no other face.
+  that a pipe joins the vent's back and no other face, and that a vent an area
+  air controller controls refuses a hand setting while one no controller
+  controls takes it.
 - **Changed 2026-11-01 (the owner, in the batch 1 art review):** the vent
   faces any of six ways and takes a pipe only on its back.
+- **Changed 2026-11-02 (the owner, in the S-01 integration review,
+  [#160](https://github.com/west3436/zas-cubed/pull/160)):** the controller
+  wins, and the GUI says so. A vent an area air controller covers keeps taking
+  the controller's orders. Its GUI shows the controller's position and its
+  current order, its own settings are disabled, and the server refuses hand
+  settings for it (CONT-074). A vent no controller covers is still set by hand.
 
 *2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
 `zas_atmos:vent` blows into, or siphons from, the cell in front of its grille,
@@ -395,6 +407,15 @@ bounds; `GasDeviceTests.cont_014_a_vent_fills_a_room_to_the_external_bound`,
 `cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and
 `cont_014_a_pipe_joins_a_vent_only_on_its_back` (GameTest) check the Verify.
 The vent runs only while powered (CONT-060).*
+
+*2026-11-02: The owner's change above is built. A controller's order
+(`VentBlockEntity.control`) makes the vent controlled for two atmos ticks, and
+a controller renews that every atmos tick. While controlled, `setByHand`
+refuses settings, so the GUI's buttons do nothing, and the GUI shows the
+controller and its order with its buttons off.
+`GasDeviceTests.cont_014_a_controlled_vent_refuses_hand_settings` (GameTest)
+checks it with `control` called directly; [#160](https://github.com/west3436/zas-cubed/pull/160) checks it with a real
+controller.*
 
 #### CONT-078 · Vent rate
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)

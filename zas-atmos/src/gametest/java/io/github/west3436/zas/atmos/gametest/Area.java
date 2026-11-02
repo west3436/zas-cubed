@@ -50,6 +50,19 @@ final class Area {
         this.origin = new BlockPos(4096 + 256 * index, 100, 16384);
     }
 
+    /**
+     * Force-loads the area's chunk and its neighbours on x, or releases them. A test that waits in
+     * real time needs it: otherwise the chunk can unload mid-test, and the test is left holding
+     * removed block entities.
+     */
+    void forceLoad(boolean on) {
+        int cx = origin.getX() >> 4;
+        int cz = origin.getZ() >> 4;
+        for (int dx = -1; dx <= 1; dx++) {
+            level.setChunkForced(cx + dx, cz, on);
+        }
+    }
+
     BlockPos abs(int x, int y, int z) {
         return origin.offset(x, y, z);
     }

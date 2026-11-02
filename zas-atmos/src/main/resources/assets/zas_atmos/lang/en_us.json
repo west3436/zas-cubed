@@ -59,5 +59,8 @@
   "gui.zas_atmos.controller.off": "no power",
   "gui.zas_atmos.controller.more": "and %s more",
   "gui.zas_atmos.generator.burn": "Burning: %s s",
-  "gui.zas_atmos.generator.energy": "Stored: %s / %s FE"
+  "gui.zas_atmos.generator.energy": "Stored: %s / %s FE",
+  "gui.zas_atmos.vent.order": "Order: %s",
+  "gui.zas_atmos.vent.controlled": "Controlled by an area air controller",
+  "gui.zas_atmos.vent.controller_at": "at %s, %s, %s"
 }

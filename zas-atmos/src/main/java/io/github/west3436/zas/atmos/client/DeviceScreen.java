@@ -27,8 +27,8 @@ abstract class DeviceScreen<M extends AbstractContainerMenu> extends AbstractCon
     abstract List<Component> lines();
 
     /** Adds a button that sends an id to the server. */
-    void button(int x, int y, int width, Component label, int id) {
-        addRenderableWidget(Button.builder(label, b -> {
+    Button button(int x, int y, int width, Component label, int id) {
+        return addRenderableWidget(Button.builder(label, b -> {
                     if (minecraft != null && minecraft.gameMode != null) {
                         minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
                     }

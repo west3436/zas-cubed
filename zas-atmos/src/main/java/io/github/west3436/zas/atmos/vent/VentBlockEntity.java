@@ -43,8 +43,12 @@ import net.minecraft.world.phys.Vec3;
  * the ambient.
  *
  * <p>It runs only while powered (CONT-060), drawing {@code [power] vent} FE/t (CONT-065) whenever
- * it isn't off, in the life-support group. An area air controller that covers it commands it
- * every atmos tick ({@link #ventOrder}, CONT-041), which overrides what its GUI set.
+ * it isn't off, in the life-support group.
+ *
+ * <p>An area air controller that covers it orders it every atmos tick ({@link #ventOrder},
+ * CONT-041, which calls {@link #control}). While
+ * those orders keep coming, the vent is controlled: its GUI shows the controller and its order, and
+ * refuses hand settings ({@link #setByHand}). A vent no controller orders is set by hand.
  */
 public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, VentControl, MenuProvider {
     /** Who a vent's changes are made by. */
@@ -57,6 +61,8 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     private final ZonePort port = new ZonePort(VENT);
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
     private VentSettings settings = VentSettings.OFF;
+    private long controlledUntil = Long.MIN_VALUE;
+    private BlockPos controller;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -66,6 +72,12 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                 case VentMenu.DATA_EXTERNAL -> (int) Math.round(settings.external());
                 case VentMenu.DATA_INTERNAL -> (int) Math.round(settings.internal());
                 case VentMenu.DATA_POWERED -> power.isPowered() ? 1 : 0;
+                case VentMenu.DATA_CONTROLLED -> !controlled() ? 0 : controller == null ? 2 : 1;
+                case VentMenu.DATA_X_LOW -> low(controller == null ? 0 : controller.getX());
+                case VentMenu.DATA_X_HIGH -> high(controller == null ? 0 : controller.getX());
+                case VentMenu.DATA_Y -> controller == null ? 0 : controller.getY();
+                case VentMenu.DATA_Z_LOW -> low(controller == null ? 0 : controller.getZ());
+                case VentMenu.DATA_Z_HIGH -> high(controller == null ? 0 : controller.getZ());
                 default -> 0;
             };
         }
@@ -83,6 +95,16 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         super(AtmosBlockEntities.VENT.get(), pos, state, PipeVolumes.VENT);
     }
 
+    /** The low 16 bits of a coordinate: menu data syncs as shorts. */
+    private static int low(int v) {
+        return (short) v;
+    }
+
+    /** The high 16 bits of a coordinate. */
+    private static int high(int v) {
+        return (short) (v >> 16);
+    }
+
     /** What the vent draws now: its configured draw unless it is off (CONT-065). */
     private int currentDraw() {
         return settings.mode() == VentMode.OFF ? 0 : AtmosServerConfig.get(AtmosServerConfig.VENT_DRAW);
@@ -94,8 +116,9 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     }
 
     /**
-     * Sets the vent's mode and bounds, as an area air controller or the GUI does. The bounds are
-     * already clamped by {@link VentSettings}. Server side.
+     * Sets the vent's mode and bounds. The bounds are already clamped by {@link VentSettings}.
+     * Server side. A player's settings go through {@link #setByHand}, and a controller's through
+     * {@link #control}.
      *
      * @param settings the new settings; null is off
      */
@@ -113,7 +136,50 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
      */
     @Override
     public void ventOrder(VentOrder order) {
-        command(order.on() ? VentSettings.blow(order.targetKpa()) : VentSettings.OFF);
+        // The order doesn't say who sent it. A controller supplies its parts before it orders them,
+        // so the vent's power source is that controller, unless it couldn't pay for the vent.
+        BlockPos from = power.source() instanceof net.minecraft.world.level.block.entity.BlockEntity be
+                ? be.getBlockPos()
+                : null;
+        control(from, order.on() ? VentSettings.blow(order.targetKpa()) : VentSettings.OFF);
+    }
+
+    /**
+     * An area air controller's order: sets the vent and makes it controlled for the next {@link
+     * DevicePower#LEASE_TICKS} game ticks. A controller orders its vents every atmos tick, so a vent
+     * stays controlled while one covers it. Server side.
+     *
+     * @param controller where the controller is, for the GUI; null if not known
+     * @param order the settings it orders
+     */
+    public void control(BlockPos controller, VentSettings order) {
+        this.controller = controller == null ? null : controller.immutable();
+        controlledUntil = now() + DevicePower.LEASE_TICKS;
+        command(order);
+    }
+
+    /** Whether an area air controller has ordered the vent within the last {@link DevicePower#LEASE_TICKS} game ticks. */
+    public boolean controlled() {
+        return now() < controlledUntil;
+    }
+
+    /** The controller that ordered the vent last, while it is controlled, if known. */
+    public java.util.Optional<BlockPos> controller() {
+        return controlled() ? java.util.Optional.ofNullable(controller) : java.util.Optional.empty();
+    }
+
+    /**
+     * A player's settings, from the GUI: applied unless a controller controls the vent, whose orders
+     * win (CONT-014, CONT-074).
+     *
+     * @return whether they were applied
+     */
+    public boolean setByHand(VentSettings settings) {
+        if (controlled()) {
+            return false;
+        }
+        command(settings);
+        return true;
     }
 
     @Override

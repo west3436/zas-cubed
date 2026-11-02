@@ -1509,12 +1509,17 @@ the cell in front of its grille).
     `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
     what it is doing: its mode while it runs, else off.
   - **For the area air controller:** the vent is a `VentControl` (§11.6).
-    `ventOrder` turns an order into `VentBlockEntity.command(VentSettings)`,
-    and an unchanged setting changes nothing, so a controller can send the
-    same order every atmos tick. A covered vent's GUI settings last only until
-    the next order. `VentSettings.OFF`,
-    `VentSettings.blow(target)` and `VentSettings.siphon(target)` build the
-    usual settings.
+    `ventOrder` passes the order to `VentBlockEntity.control(controller,
+    VentSettings)`, naming the controller that powers the vent (its
+    `DevicePower.source()`). That sets the vent, and an unchanged setting changes nothing, so a
+    controller can send the same order every atmos tick. Each order makes the
+    vent *controlled* for `DevicePower.LEASE_TICKS` (two atmos ticks). While
+    it is controlled, `setByHand`, which the GUI uses, refuses settings, and
+    the GUI shows the controller and its order with its buttons off (CONT-014).
+    When the orders stop, the vent is set by hand again. The menu syncs the
+    controller's x and z in two 16-bit halves each, because menu data syncs as
+    shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
+    `VentSettings.siphon(target)` build the usual settings.
 - **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
