@@ -219,6 +219,16 @@ block is lit or a plant is placed, so neither waits any more, and the
 way. Still waiting: block pressure damage, photosynthesis rates and container
 explosions.*
 
+*2026-11-02: the preset is now per world in singleplayer too
+([#139](https://github.com/west3436/zas-cubed/issues/139)). In a world without
+its own `serverconfig/zas-server.toml`, the first `/zas preset` change writes
+one with the whole config, and leaves the shared `config/zas-server.toml` to
+the other worlds. A dedicated server saves where it read, as before.
+`ops_007_first_preset_change_writes_a_world_copy` checks the copy, the
+unchanged shared file and a reload of it, and `ops_007_preset_save_target`
+checks where each kind of world saves. So Verify's per-world part is covered;
+OPS-007 stays Accepted for the options still waiting.*
+
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
 

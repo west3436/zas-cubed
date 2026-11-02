@@ -229,7 +229,10 @@ the preset changes. The options and their config keys are in
 
 Changes are written to the config file `/zas preset` names, so they last, and
 apply from the next time the option is read: a new ambient variant reaches the
-simulation with the next atmos tick. Editing the file by hand works too;
+simulation with the next atmos tick. In a singleplayer world without a server
+config of its own, the first change writes the world's own copy instead of the
+shared `config/zas-server.toml`, and says so, so other worlds keep their values
+([config.md](config.md#the-preset-and-its-options)). Editing the file by hand works too;
 NeoForge reloads it within a few seconds. Switching the preset and changing an
 override are reported to the other operators, as vanilla reports
 game-changing commands.

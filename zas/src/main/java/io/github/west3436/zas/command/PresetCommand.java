@@ -11,7 +11,9 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOption;
 import io.github.west3436.zas.config.PresetOptions;
+import io.github.west3436.zas.config.WorldConfigCopy;
 import io.github.west3436.zas.config.ZasServerConfig;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -30,7 +32,9 @@ import net.minecraft.network.chat.Component;
  *
  * <p>Switching the preset or changing an override writes the server config file, so the change
  * lasts, and applies from the next read of the option: for the ambient, the next atmos tick.
- * Overrides are kept when the preset changes.
+ * Overrides are kept when the preset changes. In a singleplayer world without a server config of
+ * its own, the first change writes the world's own copy instead of the shared file, and says so
+ * ({@link WorldConfigCopy}, OPS-007).
  */
 final class PresetCommand {
     private static final DynamicCommandExceptionType UNKNOWN_OPTION =
@@ -90,9 +94,10 @@ final class PresetCommand {
             return report(source);
         }
         ZasServerConfig.setPreset(preset);
-        ZasServerConfig.save();
+        Optional<WorldConfigCopy.Saved> saved = save(source);
         int kept = PresetOptions.overridden();
         source.sendSuccess(() -> Component.translatable("commands.zas.preset.switched", name(preset), kept), true);
+        copied(source, saved);
         return report(source);
     }
 
@@ -108,11 +113,12 @@ final class PresetCommand {
                 .orElseThrow(() ->
                         INVALID_VALUE.create(option.key(), text, option.type().describe()));
         option.setOverride(value);
-        ZasServerConfig.save();
+        Optional<WorldConfigCopy.Saved> saved = save(source);
         source.sendSuccess(
                 () -> Component.translatable("commands.zas.preset.overridden", option.key(), option.format(value)),
                 true);
         source.sendSuccess(() -> line(option), false);
+        copied(source, saved);
         source.sendSuccess(() -> fileLine(source), false);
         return 1;
     }
@@ -127,14 +133,39 @@ final class PresetCommand {
             return 0;
         }
         option.clearOverride();
-        ZasServerConfig.save();
+        Optional<WorldConfigCopy.Saved> saved = save(source);
         source.sendSuccess(
                 () -> Component.translatable(
                         "commands.zas.preset.cleared", option.key(), name(ZasServerConfig.preset())),
                 true);
         source.sendSuccess(() -> line(option), false);
+        copied(source, saved);
         source.sendSuccess(() -> fileLine(source), false);
         return 1;
+    }
+
+    /**
+     * Writes the change: to the file the config came from, or to a new copy for a singleplayer
+     * world without one (OPS-007). If the file can't be written, says so; the change still applies
+     * until the server stops.
+     */
+    private static Optional<WorldConfigCopy.Saved> save(CommandSourceStack source) {
+        try {
+            return ZasServerConfig.save(source.getServer());
+        } catch (UncheckedIOException e) {
+            source.sendFailure(Component.translatable(
+                    "commands.zas.error.config_unwritten",
+                    String.valueOf(e.getCause().getMessage())));
+            return Optional.empty();
+        }
+    }
+
+    /** Says so when a save made the world's own copy of the server config. */
+    private static void copied(CommandSourceStack source, Optional<WorldConfigCopy.Saved> saved) {
+        saved.filter(WorldConfigCopy.Saved::newCopy)
+                .map(WorldConfigCopy.Saved::file)
+                .ifPresent(file -> source.sendSuccess(
+                        () -> Component.translatable("commands.zas.preset.copied", shown(source, file)), true));
     }
 
     // ---- Output ------------------------------------------------------------------------
