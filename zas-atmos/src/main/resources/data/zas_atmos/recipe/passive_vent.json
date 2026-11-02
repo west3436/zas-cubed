@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:passive_vent"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "XXX",
+    "IPI"
+  ],
+  "key": {
+    "X": {
+      "item": "minecraft:iron_bars"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "zas_atmos:pipe"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:passive_vent"
+  }
+}

@@ -634,6 +634,17 @@ since worn protection (LIFE-020, LIFE-025) stands in for armor;
 invulnerability ticks; and `#minecraft:no_knockback`. Airflow impact is a blow,
 so armor and the damage cooldown apply to it as to any other.
 
+## Recipes
+
+The content mod's recipes are ordinary vanilla crafting recipes in
+`data/zas_atmos/recipe/` (CONT-059). A pack replaces one by shipping a file
+with the same name, such as `data/zas_atmos/recipe/pipe_cap.json`, and removes
+one with a file whose only entry is a failed condition,
+`{"neoforge:conditions": [{"type": "neoforge:false"}]}`. Every recipe uses
+vanilla materials and the mod's own crafting components (CONT-051); the
+components, the recipes and their progression are in
+[crafting.md](crafting.md).
+
 ## Invalid files
 
 An invalid entry in any format is logged as an error naming the file and the
