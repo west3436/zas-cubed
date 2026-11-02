@@ -13,6 +13,7 @@ import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.zone.Edge;
+import io.github.west3436.zas.engine.zone.MembershipListener;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
@@ -54,7 +55,9 @@ import java.util.TreeSet;
  *       waiting for classification is applied to its zone, the open air (CORE-053, CORE-057) or an
  *       unresolved region.
  *   <li>Exchange (CORE-031 to CORE-038, CORE-023, CORE-076).
- *   <li>to 8. Heat, hotspots, zone updates and garbage collection: R1, empty for now.
+ *   <li>Heat: conduction through zone boundaries, heat sources and radiation to a vacuum
+ *       ({@link Conduction}, HEAT-001 to HEAT-015).
+ *   <li>to 8. Hotspots, zone updates and garbage collection: R1, empty for now.
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
@@ -106,6 +109,9 @@ public final class DimensionEngine {
      * graph change by change, and published as immutable tables for the undo point and the snapshot.
      */
     private final MembershipTracker membership;
+
+    /** The heat phase, with each zone's cached heat paths (architecture §4.8). */
+    private final Conduction conduction;
 
     private AtmosSnapshot lastSnapshot;
 
@@ -161,7 +167,8 @@ public final class DimensionEngine {
                 settings.exchange(),
                 ConservationLedger.of(registry, config));
         this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
-        graph.setMembershipListener(membership);
+        this.conduction = new Conduction(graph, mirror, palette, space.naming(), membership);
+        graph.setMembershipListener(MembershipListener.both(membership, conduction));
         this.lastSnapshot = AtmosSnapshot.empty(registry);
     }
 
@@ -356,8 +363,11 @@ public final class DimensionEngine {
         phases.enter(Phase.EXCHANGE);
         graph.exchange();
 
-        // 5-8. R1.
+        // 5. Heat (HEAT-001 to HEAT-015).
         phases.enter(Phase.HEAT);
+        conduction.tick(batch.settings().heat(), batch.settings().exchange().periodSeconds(), ambient);
+
+        // 6-8. R1.
         phases.enter(Phase.HOTSPOTS);
         phases.enter(Phase.ZONE_UPDATES);
         phases.enter(Phase.GARBAGE_COLLECTION);
@@ -526,6 +536,7 @@ public final class DimensionEngine {
             SectionSnapshot old = mirror.section(s.key());
             if (old == null) {
                 mirror.put(s);
+                conduction.sectionArrived(s.key());
                 addBorderCells(s.key(), toRefresh);
                 continue;
             }
@@ -563,6 +574,7 @@ public final class DimensionEngine {
             mirror.put(s);
             for (int index : changed) {
                 long block = blockAt(base, index);
+                conduction.blockChanged(block);
                 space.forEachCellAt(block, changedCells::add);
                 for (Face f : Face.values()) {
                     space.forEachCellAt(offset(block, f), toRefresh::add);
@@ -1150,7 +1162,8 @@ public final class DimensionEngine {
 
     /**
      * Groups the zones changed since the undo point: zones whose mixture differs, or that were
-     * destroyed (merged or dissolved), linked when they shared a zone edge at the undo point.
+     * destroyed (merged or dissolved), linked when they shared a zone edge at the undo point or
+     * exchanged heat through a wall this tick.
      * Merges need such an edge, and a zone that absorbs another inherits its edges, so every
      * chain of exchange stays inside one component.
      */
@@ -1180,6 +1193,15 @@ public final class DimensionEngine {
                 }
             }
         }
+        // Zones that exchanged heat through a wall are linked too, so a rejection restores both
+        // and energy stays conserved (HEAT-001, architecture §4.8).
+        for (long[] pair : conduction.exchanged()) {
+            int i = undo.indexOf(pair[0]);
+            int j = undo.indexOf(pair[1]);
+            if (i >= 0 && j >= 0 && changed[i] && changed[j]) {
+                union(parent, i, j);
+            }
+        }
         Arrays.fill(componentOf, -1);
         List<List<Integer>> groups = new ArrayList<>();
         int[] groupOfRoot = new int[n];
@@ -1196,6 +1218,20 @@ public final class DimensionEngine {
             groups.get(groupOfRoot[r]).add(i);
             componentOf[i] = groupOfRoot[r];
         }
+        // Each component's operations, in one pass over them: with heat, every zone in a vacuum
+        // changes each tick, so there can be as many components as zones.
+        List<List<Long>> seqsOf = new ArrayList<>(groups.size());
+        for (int g = 0; g < groups.size(); g++) {
+            seqsOf.add(new ArrayList<>());
+        }
+        for (int i = 0; i < ops.size(); i++) {
+            if (opZone[i] != 0) {
+                int idx = undo.indexOf(opZone[i]);
+                if (idx >= 0 && componentOf[idx] >= 0) {
+                    seqsOf.get(componentOf[idx]).add(ops.get(i).seq());
+                }
+            }
+        }
         List<Component> out = new ArrayList<>(groups.size());
         for (int g = 0; g < groups.size(); g++) {
             List<Integer> members = groups.get(g);
@@ -1206,16 +1242,7 @@ public final class DimensionEngine {
                 ids[k] = undo.zoneIds[i];
                 undo.addChunks(i, chunks);
             }
-            List<Long> seqs = new ArrayList<>();
-            for (int i = 0; i < ops.size(); i++) {
-                if (opZone[i] != 0) {
-                    int idx = undo.indexOf(opZone[i]);
-                    if (idx >= 0 && componentOf[idx] == g) {
-                        seqs.add(ops.get(i).seq());
-                    }
-                }
-            }
-            out.add(new Component(g, ids, sortedArray(chunks), toArray(seqs)));
+            out.add(new Component(g, ids, sortedArray(chunks), toArray(seqsOf.get(g))));
         }
         return out;
     }

@@ -787,13 +787,13 @@ public final class DimensionAtmos {
     }
 
     /**
-     * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068), with
-     * the openings exported for airflow (FLOW-001, FLOW-014).
+     * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
+     * with the openings exported for airflow (FLOW-001, FLOW-014).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()).withVenting(ZasServerConfig.venting());
-        return new EngineSettings(exchange, ZasServerConfig.conservationChecker())
+        return new EngineSettings(exchange, ZasServerConfig.conservationChecker(), ZasServerConfig.heat())
                 .withAirflow(AirflowConfig.exportKpa(dimension().location()));
     }
 

@@ -6,6 +6,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.Comparator;
@@ -152,6 +154,20 @@ final class Rooms {
 
     void tick() {
         service().tickNow(level);
+    }
+
+    /**
+     * Runs a test's body with conduction and radiation off (HEAT), for tests that compare a zone's
+     * state across a pause, a restart or a held batch, which heat would otherwise change. The body
+     * must run within the call, so no other test's atmos tick sees the setting.
+     */
+    static void withoutHeat(Runnable body) {
+        ZasServerConfig.overrideHeatForTest(HeatSettings.OFF);
+        try {
+            body.run();
+        } finally {
+            ZasServerConfig.overrideHeatForTest(null);
+        }
     }
 
     void ticks(int n) {

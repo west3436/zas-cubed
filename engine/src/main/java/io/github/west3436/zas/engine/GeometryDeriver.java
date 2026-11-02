@@ -13,6 +13,11 @@ import java.util.List;
  * touches a boundary layer is a cell with its volume and per-face footprint (GEO-001, GEO-002,
  * GEO-004). Components that touch no boundary are ignored.
  *
+ * <p>For heat (HEAT-011 to HEAT-013) it also walks every line of the 1/16 grid along each axis:
+ * lines that meet no cell are wall layers ({@link Geometry#through}), lines that cross solid before
+ * reaching a cell are that cell's shields ({@link Geometry.Cell#shields}), and lines that cross
+ * solid from one cell to another count toward the pair's {@link Geometry.Partition}.
+ *
  * <p>Cells come out in the order of their lowest voxel index, so the result is deterministic.
  */
 public final class GeometryDeriver {
@@ -62,9 +67,14 @@ public final class GeometryDeriver {
             coverage.add(FaceMask.canonical(w));
         }
 
-        List<Geometry.Cell> cells = new ArrayList<>();
+        // Label every voxel with its cell's index; solid voxels and enclosed pockets stay -1.
+        int[] cellOf = new int[VOXELS];
+        java.util.Arrays.fill(cellOf, -1);
+        List<Double> volumes = new ArrayList<>();
+        List<long[][]> feet = new ArrayList<>();
         BitSet visited = (BitSet) solid.clone();
         int[] stack = new int[VOXELS];
+        int[] component = new int[VOXELS];
         for (int start = visited.nextClearBit(0); start < VOXELS; start = visited.nextClearBit(start + 1)) {
             long[][] foot = new long[6][4];
             boolean touches = false;
@@ -74,7 +84,7 @@ public final class GeometryDeriver {
             visited.set(start);
             while (top > 0) {
                 int i = stack[--top];
-                count++;
+                component[count++] = i;
                 int x = i & 15;
                 int z = (i >>> 4) & 15;
                 int y = i >>> 8;
@@ -87,14 +97,93 @@ public final class GeometryDeriver {
                 if (y < N - 1) top = push(visited, stack, top, i + N * N);
             }
             if (touches) {
-                List<FaceMask> footprints = new ArrayList<>(6);
-                for (long[] w : foot) {
-                    footprints.add(FaceMask.canonical(w));
+                for (int k = 0; k < count; k++) {
+                    cellOf[component[k]] = volumes.size();
                 }
-                cells.add(new Geometry.Cell(count * Geometry.VOXEL_VOLUME, footprints));
+                volumes.add(count * Geometry.VOXEL_VOLUME);
+                feet.add(foot);
             }
         }
-        return new Geometry(coverage, cells, 0);
+
+        // Heat (HEAT-011 to HEAT-013): walk every line of the grid along each axis.
+        int n = volumes.size();
+        long[][] through = new long[6][4];
+        long[][][] shields = new long[n][6][4];
+        int[][] partition = new int[n][n];
+        for (Face f : Face.values()) {
+            for (int v = 0; v < N; v++) {
+                for (int u = 0; u < N; u++) {
+                    // Inward from face f: the first cell met, and whether solid came before it.
+                    int first = -1;
+                    boolean crossed = false;
+                    for (int d = 0; d < N; d++) {
+                        int c = cellOf[voxelOnLine(f, u, v, d)];
+                        if (c >= 0) {
+                            first = c;
+                            break;
+                        }
+                        crossed = true;
+                    }
+                    if (first < 0) {
+                        set(through[f.ordinal()], u, v);
+                    } else if (crossed) {
+                        set(shields[first][f.ordinal()], u, v);
+                    }
+                    // Partitions: each line once, from the face whose inward walk runs toward
+                    // increasing coordinates (down, north, west).
+                    if ((f.ordinal() & 1) == 0) {
+                        int last = -1;
+                        for (int d = 0; d < N; d++) {
+                            int c = cellOf[voxelOnLine(f, u, v, d)];
+                            if (c >= 0) {
+                                if (last >= 0 && last != c) {
+                                    partition[Math.min(last, c)][Math.max(last, c)]++;
+                                }
+                                last = c;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        List<Geometry.Cell> cells = new ArrayList<>(n);
+        for (int c = 0; c < n; c++) {
+            List<FaceMask> footprints = new ArrayList<>(6);
+            List<FaceMask> shieldMasks = new ArrayList<>(6);
+            for (int f = 0; f < 6; f++) {
+                footprints.add(FaceMask.canonical(feet.get(c)[f]));
+                shieldMasks.add(FaceMask.canonical(shields[c][f]));
+            }
+            cells.add(new Geometry.Cell(volumes.get(c), footprints, shieldMasks));
+        }
+        List<FaceMask> throughMasks = new ArrayList<>(6);
+        for (long[] w : through) {
+            throughMasks.add(FaceMask.canonical(w));
+        }
+        List<Geometry.Partition> partitions = new ArrayList<>();
+        for (int a = 0; a < n; a++) {
+            for (int b = a + 1; b < n; b++) {
+                if (partition[a][b] > 0) {
+                    partitions.add(new Geometry.Partition(a, b, partition[a][b]));
+                }
+            }
+        }
+        return new Geometry(coverage, cells, 0, throughMasks, partitions, Double.NaN, Double.NaN);
+    }
+
+    /**
+     * The voxel at depth {@code d} (0 at the face) on line {@code (u, v)} of face {@code f}, in
+     * the face's mask coordinates ({@link Face}).
+     */
+    private static int voxelOnLine(Face f, int u, int v, int d) {
+        return switch (f) {
+            case DOWN -> index(u, d, v);
+            case UP -> index(u, N - 1 - d, v);
+            case NORTH -> index(u, v, d);
+            case SOUTH -> index(u, v, N - 1 - d);
+            case WEST -> index(d, v, u);
+            case EAST -> index(N - 1 - d, v, u);
+        };
     }
 
     /**

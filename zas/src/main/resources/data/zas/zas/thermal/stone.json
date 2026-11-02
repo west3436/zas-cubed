@@ -1,0 +1,11 @@
+{
+  "blocks": [
+    "#minecraft:base_stone_overworld",
+    "#minecraft:base_stone_nether",
+    "#minecraft:stone_bricks",
+    "#c:stones",
+    "#c:cobblestones",
+    "minecraft:smooth_stone"
+  ],
+  "transmittance": 1.7
+}

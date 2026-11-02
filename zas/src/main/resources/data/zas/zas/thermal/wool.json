@@ -1,0 +1,4 @@
+{
+  "blocks": ["#minecraft:wool", "#minecraft:wool_carpets"],
+  "transmittance": 0.04
+}

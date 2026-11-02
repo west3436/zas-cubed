@@ -1,0 +1,13 @@
+{
+  "blocks": [
+    "#minecraft:planks",
+    "#minecraft:logs",
+    "#minecraft:wooden_slabs",
+    "#minecraft:wooden_stairs",
+    "#minecraft:wooden_doors",
+    "#minecraft:wooden_trapdoors",
+    "#minecraft:wooden_fences",
+    "#minecraft:fence_gates"
+  ],
+  "transmittance": 0.15
+}
