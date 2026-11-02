@@ -267,21 +267,44 @@ public final class DimensionAtmos {
     // ---- Mutations ----------------------------------------------------------------
 
     CompletableFuture<MutationResult> add(BlockPos pos, int sub, GasParcel gas, SourceId source) {
+        // CORE-055: an API call may form a zone in an enclosed, unzoned area, under either preset.
+        return add(pos, sub, gas, source, LedgerCategory.API, ZoneTrigger.API_CALLS.active());
+    }
+
+    /** An addition recorded under {@code category}, which forms a zone only if {@code triggers}. */
+    CompletableFuture<MutationResult> add(
+            BlockPos pos, int sub, GasParcel gas, SourceId source, LedgerCategory category, boolean triggers) {
         CompletableFuture<MutationResult> future = new CompletableFuture<>();
         Pending p = new Pending(future, true, pos.immutable(), sub, gas, Map.of(), source);
-        queue(p, gas.moles(), gas.temperature());
+        queue(p, gas.moles(), gas.temperature(), category, triggers);
         return future;
     }
 
     CompletableFuture<MutationResult> remove(
             BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
+        return remove(pos, sub, moles, source, LedgerCategory.API, ZoneTrigger.API_CALLS.active());
+    }
+
+    /** A removal recorded under {@code category}, which forms a zone only if {@code triggers}. */
+    CompletableFuture<MutationResult> remove(
+            BlockPos pos,
+            int sub,
+            Map<ResourceLocation, Double> moles,
+            SourceId source,
+            LedgerCategory category,
+            boolean triggers) {
         CompletableFuture<MutationResult> future = new CompletableFuture<>();
         Pending p = new Pending(future, false, pos.immutable(), sub, GasParcel.EMPTY, moles, source);
-        queue(p, moles, 0);
+        queue(p, moles, 0, category, triggers);
         return future;
     }
 
-    private void queue(Pending p, Map<ResourceLocation, Double> moles, double temperature) {
+    private void queue(
+            Pending p,
+            Map<ResourceLocation, Double> moles,
+            double temperature,
+            LedgerCategory category,
+            boolean triggers) {
         if (isFaulted()) {
             p.future()
                     .completeExceptionally(new IllegalStateException(
@@ -305,11 +328,9 @@ public final class DimensionAtmos {
         });
         long block = p.pos().asLong();
         String source = p.source().toString();
-        // CORE-055: an API call may form a zone in an enclosed, unzoned area, under either preset.
-        boolean triggers = ZoneTrigger.API_CALLS.active();
         long seq = p.add()
-                ? pl.add(block, p.sub(), amounts, temperature, LedgerCategory.API, triggers, source)
-                : pl.remove(block, p.sub(), amounts, LedgerCategory.API, triggers, source);
+                ? pl.add(block, p.sub(), amounts, temperature, category, triggers, source)
+                : pl.remove(block, p.sub(), amounts, category, triggers, source);
         pending.put(seq, p);
     }
 

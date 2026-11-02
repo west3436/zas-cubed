@@ -2,7 +2,8 @@
 
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
-the [README](README.md#writing-rules).
+the [README](README.md#writing-rules). LIFE-048 was added as Draft on
+2026-11-02.
 
 **Scope.** This area covers:
 - which entities breathe, and what they breathe
@@ -18,7 +19,7 @@ rates. Plasma's roles are taken over by gas tags (CORE-012).
 ## Breathing
 
 #### LIFE-001 · Who breathes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, D-27
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-27
 
 Players, and the entity types in the `zas:breathers` tag, shall breathe.
 
@@ -26,8 +27,14 @@ Players, and the entity types in the `zas:breathers` tag, shall breathe.
 - **Verify:** A GameTest checks a player and a tagged mob lose air in vacuum
   and an untagged mob doesn't.
 
+*2026-11-02: Implemented
+([#34](https://github.com/west3436/zas-cubed/issues/34)). Players and the types
+in `#zas:breathers` breathe; anything else is `DOES_NOT_BREATHE` and keeps a
+full meter. The `life_001_player_and_breather_lose_air_in_vacuum` GameTest
+checks a player and a pig lose air in a vacuum zone and a zombie doesn't.*
+
 #### LIFE-006 · Default breather tag
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-27, ENV-012
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-27, ENV-012
 
 The default `zas:breathers` tag shall include air-breathing mobs. It excludes:
 - undead, golems, aquatic and other non-living entities
@@ -40,6 +47,16 @@ The default `zas:breathers` tag shall include air-breathing mobs. It excludes:
 - **Verify:** Inspect the tag; a GameTest checks a piglin survives in the
   Hardcore Nether.
 
+*2026-11-02: Implemented. `data/zas/tags/entity_type/breathers.json` lists the
+air-breathing vanilla mobs ([datapacks.md](../datapacks.md#breathers)). Besides
+the groups above it leaves out the allay and the vex (spirits), the slime (no
+lungs, like the magma cube), the breeze (wind, like the blaze), the tadpole and
+the turtle, which is in `#minecraft:aquatic`. `life_006_default_breathers`
+checks members of each group, and
+`life_006_piglin_survives_the_hardcore_nether` that a piglin takes no effects
+or damage from the Hardcore Nether's CO₂ while a pig beside it is incapacitated
+and then hurt.*
+
 #### LIFE-002 · Breath source
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: API-015
 
@@ -51,8 +68,30 @@ and supplied, and otherwise from the atmosphere at its eye position.
 - **Verify:** A GameTest checks a player in vacuum breathes from a supplied
   tank, and from the atmosphere without one.
 
+*2026-11-02: The atmosphere half is in
+([#34](https://github.com/west3436/zas-cubed/issues/34)): a breather breathes
+the cell at its eyes (API-015), checked by
+`life_002_breathes_the_atmosphere_at_its_eyes`. Internals come with LIFE-021
+([#36](https://github.com/west3436/zas-cubed/issues/36)), so this stays
+Accepted.*
+
+#### LIFE-048 · Unresolved atmosphere
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: API-010, LIFE-002
+
+While the atmosphere at a breathing entity's eyes is unresolved (API-010), its
+breath checks shall keep its last verdict, air drain and gas exposures and
+charge no hazard; with no verdict yet, they shall wait for the atmosphere to
+resolve.
+
+*2026-11-02: added as Draft with
+[#34](https://github.com/west3436/zas-cubed/issues/34). An unresolved sample's
+mixture is only a last-known guess, the ambient for a loading room, so a player
+logging in to a pressurised room in a vacuum dimension would otherwise breathe
+the vacuum for a moment. Built and checked by
+`life_048_unresolved_atmosphere_holds_the_breath_state`.*
+
 #### LIFE-007 · Breath check cadence
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Breathing and its hazards shall be evaluated every 2 s by default
 (configurable). Rates are per second, so the cadence doesn't change how fast
@@ -63,8 +102,18 @@ anything happens.
 - **Verify:** A GameTest checks hazards apply every 2 s by default and that a
   1 s cadence gives the same damage per second.
 
+*2026-11-02: Implemented. `[breathing] check_interval_ticks`, 40 by default
+([config.md](../config.md)); checks are staggered by entity id, and run again
+at once when the eyes enter or leave a fluid. A check charges the seconds since
+the last, capped at one interval.
+`life_007_checks_every_2_s_and_damage_doesnt_depend_on_it` checks a test gas
+harms every 40 ticks by default and that a 20-tick interval deals the same
+damage over the same time;
+`life_007_check_runs_again_when_the_eyes_leave_water` checks the fluid
+trigger.*
+
 #### LIFE-003 · Hypoxia
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 If the breath's O₂ partial pressure is below a configurable minimum (default
 16 kPa, as in vg), the entity's air meter (the vanilla bubble meter) shall
@@ -77,8 +126,14 @@ empties in 15 s.
 - **Verify:** A GameTest checks the meter empties in 15 s in vacuum and in 30
   s at 8 kPa O₂.
 
+*2026-11-02: Implemented. `[breathing] oxygen_minimum_kpa`, 16 by default. The
+meter drains through NeoForge's `LivingBreatheEvent` at the rate above,
+carrying fractions of air between ticks.
+`life_003_meter_empties_in_15_s_in_vacuum` and
+`life_003_meter_empties_in_30_s_at_8_kpa` (to within a tick) check it.*
+
 #### LIFE-008 · Suffocation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Depends: LIFE-003
+`Must` · `R1` · `Implemented` · Verify: GameTest · Depends: LIFE-003
 
 An entity whose air meter is empty shall take hypoxia damage as vanilla
 drowning does (2 HP per second).
@@ -86,8 +141,13 @@ drowning does (2 HP per second).
 - **Rationale:** Inferred: matching vanilla drowning makes hypoxia familiar.
 - **Verify:** A GameTest checks an empty meter deals 2 HP/s.
 
+*2026-11-02: Implemented. While hypoxic, `LivingDrownEvent` is cancelled and
+the same 2 HP a second is dealt as `zas:hypoxia`.
+`life_008_empty_meter_deals_2_hp_per_second` checks the amount, the timing and
+the damage type.*
+
 #### LIFE-009 · Air recovery
-`Must` · `R1` · `Accepted` · Verify: GameTest · Depends: LIFE-003
+`Must` · `R1` · `Implemented` · Verify: GameTest · Depends: LIFE-003
 
 When the breath's O₂ partial pressure is at or above the minimum, the air
 meter shall refill at the vanilla rate.
@@ -96,8 +156,12 @@ meter shall refill at the vanilla rate.
 - **Verify:** A GameTest checks the meter refills at the vanilla rate in
   breathable air.
 
+*2026-11-02: Implemented. In breathable air the event is left as vanilla starts
+it, so the meter refills 4 a tick. `life_009_meter_refills_at_the_vanilla_rate`
+checks a pig in air refills at that rate while one in a vacuum zone doesn't.*
+
 #### LIFE-004 · Gas hazard profiles
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-08
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-08
 
 Each gas may have a data-driven hazard profile that maps partial-pressure
 thresholds, optionally sustained for a duration, to effects: an effect level
@@ -109,8 +173,17 @@ thresholds, optionally sustained for a duration, to effects: an effect level
 - **Verify:** A GameTest checks a test profile applies at its threshold and
   only after its duration.
 
+*2026-11-02: Implemented. Profiles are data at
+`data/<namespace>/zas/hazard_profile/<path>.json` for the gas
+`<namespace>:<path>` ([datapacks.md](../datapacks.md#hazard-profiles)). A
+threshold applies at or above its partial pressure, or strictly above it with
+`"above": true`, once sustained for its duration; per gas the highest damage applies, and gases add up.
+`life_004_profile_applies_at_its_threshold_after_its_duration` checks a test
+profile applies at its threshold, not below it, and only after its duration,
+and that invalid files are skipped (OPS-008).*
+
 #### LIFE-040 · Effect levels
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Hazard profiles shall be able to apply these effect levels:
 
@@ -125,8 +198,12 @@ Hazard profiles shall be able to apply these effect levels:
   vanilla effects.
 - **Verify:** A GameTest checks each level applies its listed effects.
 
+*2026-11-02: Implemented as `effect_level` in the profile format, with the
+effects above. `life_040_effect_levels_apply_their_effects` checks each level's
+effects and amplifiers.*
+
 #### LIFE-041 · Default hazard profiles
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-42 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-42 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 ZAS³ shall ship these default profiles (partial pressures in the breath):
 
@@ -149,8 +226,17 @@ The other built-in gases are hazardous only by displacing O₂ (LIFE-003).
   CO, so its thresholds come from the OSHA and NIOSH limits shown.
 - **Verify:** Inspect the shipped profiles; GameTests check each row's effect.
 
+*2026-11-02: Implemented in `data/zas/zas/hazard_profile/`
+([datapacks.md](../datapacks.md#shipped-profiles)). The rows that say "above"
+apply strictly above their partial pressure (`"above": true` in the profile),
+and the others at or above it. `life_041_shipped_profiles_hold_the_table` reads
+the loaded profiles against the table, including that CO₂ isn't harmful at
+exactly 10 kPa and N₂O and CO are at exactly 0.15 and 0.12 kPa, and `life_041_carbon_dioxide_rows`,
+`life_041_nitrous_oxide_rows` and `life_041_carbon_monoxide_rows` check each
+row's effect on a pig.*
+
 #### LIFE-005 · Respiration changes zone air
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-27
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-27
 
 Inside an existing zone, breathing shall take O₂ from the breath source and
 return the same number of moles of CO₂ to the surrounding zone. (Breathing
@@ -162,8 +248,15 @@ CORE-038.)
 - **Verify:** A GameTest checks a breather in a zone lowers O₂ and raises CO₂
   by the same moles.
 
+*2026-11-02: Implemented for the atmosphere; breathing from internals
+(LIFE-021) is #36's. Each check adds the breather's O₂ to its zone's draw, and
+once per atmos period each zone's draw is removed and the moles actually
+removed come back as CO₂, under the ledger's `LIFE` category and never forming
+a zone. `life_005_respiration_turns_o2_into_co2` checks O₂ falls and CO₂ rises
+by the same moles, and that a breather in the open air draws nothing.*
+
 #### LIFE-042 · Respiration rate
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-27
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-27
 
 Respiration shall run at the realistic rate, about 1 mol of O₂ per breather
 per hour, in both presets, with a configurable multiplier.
@@ -171,6 +264,11 @@ per hour, in both presets, with a configurable multiplier.
 - **Rationale:** Decision: D-27.
 - **Verify:** A GameTest with a high multiplier measures O₂ use per breather
   against the rate.
+
+*2026-11-02: Implemented. `[breathing] respiration_multiplier`, 1 by default;
+the rate doesn't depend on the preset. `life_042_respiration_rate` measures a
+breather's O₂ use with a multiplier of 360 (0.1 mol a second) against the
+rate.*
 
 ## Environmental hazards
 
@@ -420,6 +518,11 @@ atmospheric breathing.
 - **Verify:** A GameTest checks a submerged player in a zone drowns as in
   vanilla.
 
+*2026-11-02: The verdict is vanilla's while the eyes are in a fluid
+([#34](https://github.com/west3436/zas-cubed/issues/34)), checked by
+`api_014_keeps_vanilla_underwater`. The drowning GameTest this asks for is left
+to [#36](https://github.com/west3436/zas-cubed/issues/36), with LIFE-047.*
+
 #### LIFE-047 · Internals underwater
 `Should` · `R1` · `Accepted` · Verify: GameTest · Depends: LIFE-021
 
@@ -450,6 +553,14 @@ message:
 - **Verify:** Inspect the damage-type data; a GameTest checks each hazard uses
   its type.
 
+*2026-11-02: `zas:hypoxia` and `zas:toxic_gas` are in, with death messages
+([#34](https://github.com/west3436/zas-cubed/issues/34),
+[datapacks.md](../datapacks.md#damage-types));
+`life_008_empty_meter_deals_2_hp_per_second` and the LIFE-041 GameTests check
+they are used. The others come with their hazards
+([#35](https://github.com/west3436/zas-cubed/issues/35)), so this stays
+Accepted.*
+
 #### LIFE-035 · Armor bypass
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
@@ -461,6 +572,12 @@ twice.
   LIFE-025, so armor reduction would count twice; impacts are physical, so
   armor applies to them.
 - **Verify:** A GameTest compares damage with and without armor for each type.
+
+*2026-11-02: `zas:hypoxia` and `zas:toxic_gas` are in
+`#minecraft:bypasses_armor`
+([#34](https://github.com/west3436/zas-cubed/issues/34)); the armor GameTest
+comes with the other types
+([#35](https://github.com/west3436/zas-cubed/issues/35)).*
 
 #### LIFE-031 · Hazard toggles and scaling
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04
@@ -489,6 +606,13 @@ Creative and spectator players shall be exempt from all hazards.
 - **Verify:** A GameTest checks creative and spectator players in vacuum take
   no harm.
 
+*2026-11-02: For breathing, an invulnerable player (creative or spectator) is
+`EXEMPT`, keeps its air and takes no gas hazards
+([#34](https://github.com/west3436/zas-cubed/issues/34),
+`api_014_invulnerable_player_is_exempt`). The other hazards are
+[#35](https://github.com/west3436/zas-cubed/issues/35)'s, so this stays
+Accepted.*
+
 #### LIFE-032 · Hazard extension API
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, D-12
 
@@ -510,6 +634,10 @@ entities.
   spikes (NFR-001).
 - **Verify:** Bench checks hazard work is spread evenly across ticks with 100
   breathers (S-10).
+
+*2026-11-02: Breath checks are staggered by entity id (LIFE-007,
+[#34](https://github.com/west3436/zas-cubed/issues/34)); the Bench is left to
+the hazards work ([#35](https://github.com/west3436/zas-cubed/issues/35)).*
 
 #### LIFE-038 · Per-tick entity cap
 `Must` · `R1` · `Accepted` · Verify: Bench · Trace: NFR-001

@@ -987,6 +987,76 @@ change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
 (NFR-010) and optional in game.
 
+### Life support (breathing)
+
+*Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34)):
+who breathes, the breath at the eyes, the O₂ minimum, the air meter, gas
+hazard profiles and respiration. Internals and protection are
+[#36](https://github.com/west3436/zas-cubed/issues/36), the pressure and
+temperature hazards [#35](https://github.com/west3436/zas-cubed/issues/35).*
+The package is `io.github.west3436.zas.life`, server thread only; the client
+runs none of it until LIFE-023.
+
+- **Who breathes** (LIFE-001, LIFE-006). Players, and the entity types in
+  `#zas:breathers` (`BreathingRules.BREATHERS`), which ships with the
+  air-breathing vanilla mobs and leaves out the undead, golems, aquatic mobs and
+  the Nether's and End's natives ([datapacks.md](datapacks.md#breathers)).
+- **The verdict** (API-014). `BreathingRules.assess` makes it, and
+  `ZasApiProviderImpl.breathability` returns it. With the eyes in a fluid it is
+  vanilla's, so water stays vanilla's (LIFE-022). An invulnerable player is
+  `EXEMPT` (LIFE-037). Anything else that doesn't breathe is `DOES_NOT_BREATHE`.
+  A breather breathes `Atmospheres.of(entity)`, the cell at its eyes (LIFE-002,
+  API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
+  (LIFE-003), and a gas whose hazard profile does something at its partial
+  pressure adds `TOXIC_GAS`.
+- **Cadence** (LIFE-007). Each breather is checked every
+  `check_interval_ticks` (40), staggered by entity id (`(tick + id) % interval`),
+  and again at once when its eyes enter or leave a fluid. A check that comes late
+  (the entity was unloaded) runs on the next breath. The verdict, the meter's
+  drain and the exposure times live in an entity attachment (`BreathState`,
+  not saved). Rates are per second and a check charges the seconds since the
+  last, capped at one interval, so the interval changes smoothness and cost, not
+  outcomes; the first check charges nothing.
+- **Unresolved atmosphere** (LIFE-048). Where the cell at the eyes is
+  `UNRESOLVED` (API-010), its mixture is only a last-known guess, such as the
+  ambient while a loading room's zone isn't back, so a check holds the state:
+  the verdict, the drain and the exposure times stay, the check's time moves on,
+  and nothing is charged or breathed. With no verdict yet, the breather is
+  checked every tick until the cell resolves, and its meter is left to vanilla.
+  `Breathing.of` answers with the held verdict too.
+- **The air meter** (LIFE-003, LIFE-008, LIFE-009) goes through NeoForge's
+  events, so there is no mixin. On `LivingBreatheEvent`, a hypoxic breather
+  can't breathe and loses air at its drain times vanilla's underwater rate,
+  where the drain is 1 − pO₂ / minimum: 15 s to empty in vacuum, 30 s at 8 kPa.
+  Otherwise the event keeps vanilla's refill. On `LivingDrownEvent`, a hypoxic
+  breather's empty meter deals `zas:hypoxia` damage, vanilla's 2 HP per second,
+  instead of drowning.
+- **Hazard profiles** (LIFE-004, LIFE-040, LIFE-041) are data
+  (`HazardProfiles`, a reload listener for `zas/hazard_profile`; format in
+  [datapacks.md](datapacks.md#hazard-profiles)). At each check `GasHazards`
+  advances each gas's sustained-exposure time, or resets it below the gas's
+  lowest threshold, and applies every threshold that has been reached: their
+  effects, the three effect levels being sets of vanilla effects, with the
+  highest amplifier of each, lasting until a second after the next check, and
+  per gas the highest damage, the gases' damages added, as `zas:toxic_gas`.
+- **Damage types.** `zas:hypoxia` and `zas:toxic_gas` are in
+  `#minecraft:bypasses_armor`, `#minecraft:no_knockback` and
+  `#minecraft:bypasses_cooldown`: breathing damage comes from a check, not a
+  hit, so invulnerability ticks from another source mustn't swallow it.
+- **Respiration** (LIFE-005, LIFE-042). A check adds the O₂ the breather used
+  since the last, `respiration_multiplier` × 1 mol per hour, to its zone's
+  draw. Breathing outside a zone (the ambient, a paused zone, an unresolved
+  region) draws nothing (CORE-038), and an `EXEMPT` player draws nothing.
+  Once per atmos period `Respiration` sends one removal per zone; when it is
+  applied, the moles actually removed are added back as CO₂ at the removed gas's
+  temperature, so a zone short of O₂ gets only as much CO₂ as it lost. Both go
+  through `AtmosService.removeForLife` and `addForLife`: the ledger's `LIFE`
+  category, and never a zone trigger (CORE-051).
+- **Other mods** (SPACE-002). The air-meter handlers run at `NORMAL` priority
+  and only set the event's fields, so a lower-priority listener sees and can
+  change the verdict, and a higher-priority one's `canBreathe = false` survives:
+  the handler only ever sets it to false.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)
@@ -1000,7 +1070,7 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
-| `.api.life` | `Breathing` (API-014: `of(entity)`, and `vanilla(entity)`, vanilla's verdict alone), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
+| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -1035,7 +1105,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
   than the one `zas` was built with, and `zas`'s provider must still
   implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict,
   `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`), and
-  `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`).
+  `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`), and
+  `oxygenMinimum` to 16 kPa.
 
 #### Breathability (API-014)
 
@@ -1059,13 +1130,16 @@ fluids nothing drowns in. An invulnerable player gets `EXEMPT`. Anything else
 in a fluid gives `DROWNING`. The verdict has no breath gas, hazards or
 protection. The fallback answers with it.
 
-**Interim:** until LIFE ([#34](https://github.com/west3436/zas-cubed/issues/34)
-to [#36](https://github.com/west3436/zas-cubed/issues/36)) and API-022 are
-built, `zas` answers with vanilla's verdict too, so it ignores the atmosphere.
-LIFE replaces `ZasApiProviderImpl.breathability` with the full verdict. That
-verdict covers who breathes, the breath source, the O₂ minimum, gas hazards
-and protection, and keeps vanilla's rule while the eyes are in water
-(LIFE-022).
+*Implemented ([#34](https://github.com/west3436/zas-cubed/issues/34)):* on the
+server, `zas` answers with LIFE's verdict
+([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
+the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
+fluid (LIFE-022). On the client it still answers with vanilla's verdict, until
+LIFE-023. **Not yet built:** breathing from internals (LIFE-021, API-022),
+protection (#36), and the pressure and temperature hazards (#35), so a verdict
+lists no protection but `EXEMPT` and no hazard but `TOXIC_GAS`.
+`Breathing.oxygenMinimum()` gives the server's configured minimum; the
+fallback, and a provider without it, give 16 kPa.
 
 ### 6.3 Threading contract (API-004, API-045, API-046)
 
@@ -1236,9 +1310,10 @@ The test names include requirement IDs (README rule 5).
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
+| LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50), §11 (the content mod) |
 | DATA | §4.5 |
-| SPACE | §2.1 (`compat-adastra`), §7; open item O-1 |
+| SPACE | §2.1 (`compat-adastra`), §7; open item O-1; SPACE-002 in §5 [Life support (breathing)](#life-support-breathing) |
 | OPS | §3.4 (profiler), §5 (commands, audit, preset) |
 | NFR | §2 (packaging, licensing untouched), §3.4 (budgets), §3.6 (fault isolation), §7 (mixins), §8 (tests) |
 
@@ -1256,11 +1331,14 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister item's `zas_atmos:gas`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
-| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks` |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
-| `pipe` | Pipes and pipe networks (§11.4) |
+| `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
+| `pipe` | Pipes, caps and pipe networks (§11.4) |
+| `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -1276,6 +1354,14 @@ jar, so providers can be tested before real devices exist.
   leaves in `setRemoved` and `onChunkUnloaded`, so a device in an unloaded
   chunk never steps. Its `atmosTick(ServerLevel)` runs one atmos tick of work
   on the server thread.
+- **Chunks out of full status.** Ticket levels fall by one per chunk, so a
+  chunk next to a loaded one never unloads. It drops out of full status, and
+  its block entities stay in memory, still scheduled. A device steps only
+  while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
+  step that read the device's own block, as a pipe rebuilding its network
+  does, would load the chunk again. A pipe network then rebuilt without that
+  chunk's nodes, and they rejoin when it returns and they step
+  (`PipeChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -1330,19 +1416,281 @@ the cell in front of its grille).
 
 ### 11.4 Pipe networks
 
-*To come with [#47](https://github.com/west3436/zas-cubed/issues/47).*
+*Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)), in
+`.pipe`.*
+
+- **Nodes.** Every network member is a `PipeNodeEntity`, a device block
+  entity with a gas volume (CONT-007): a pipe or a pipe cap holds 70 L, a
+  port buffer 200 L, a vent's buffer 400 L, a canister 1,000 L. Device
+  buffers are network members, so a device sees its network's conditions.
+- **Connections.** A block that pipes join implements `PipeConnector`, which
+  says on which faces it offers a connection; two neighbours are connected
+  when both offer one on their shared face. A pipe offers every face, a cap
+  only the face it points at, a vent only its back (CONT-014) and a
+  connector port only its bottom, plus its top for a canister (CONT-083).
+  A pipe's block state has a boolean per face, updated from its neighbours;
+  its blockstate is a multipart of the core and an arm per connected face.
+- **One mixture.** A `PipeNetwork` is its members and one `GasStore`, whose
+  volume is theirs summed (CONT-001), so every change mixes the whole network
+  (CONT-008). A `GasStore` is the content mod's mutable mixture. The API has
+  no heat capacities, so gas added to a store takes the mole-weighted mean
+  temperature, which is exact when temperatures are equal.
+- **Rebuilds.** A network never changes its members. It dissolves when a
+  member is added, removed or unloaded: each member keeps its share by volume
+  in its own store. The next network built, when a node needs its gas or at a
+  pipe's next atmos tick, gathers the shares of every loaded node it reaches, and dissolves any old
+  network it crosses, so splits share gas by volume, merges add it up, and no
+  gas is counted twice (CONT-003). A node that loads (in `onLoad`, which the
+  game calls at the start of the next tick) dissolves its neighbours'
+  networks, so they are rebuilt with it.
+- **Removal and unloading.** A node removed from the world gives its share to
+  its cell through `GasMutations.add` (CONT-009); the rest stays in the
+  remaining nodes. A node whose chunk unloads keeps its share, saved with it,
+  and the network dissolves; a network never reaches into an unloaded chunk.
+- **Saving.** Each node saves its share (`Gas`: temperature and moles per
+  gas), so a network's gas is saved across the chunks it spans.
+- **Open ends** (CONT-004). A pipe with fewer than two connections has an open
+  end. Once per atmos tick it exchanges each gas with the zone at its cell by
+  ZAS's one-connection rule (CORE-031): r·(n_p·V_z − n_z·V_p)/(V_p + V_z) moles
+  out, with r = 0.163 per second; the ambient is an infinite reservoir,
+  r·(n_p − c·V_p). Gases leaving and entering are one change on its port.
+  Flows under 10⁻⁴ mol are skipped, so a settled end goes quiet, and nothing
+  moves while the cell is paused or unresolved. An end also waits for its
+  first three atmos ticks after it loads, and moves gas only when its cell
+  reads the same state and zone twice running: a chunk's zones reach the
+  published state a little after the chunk loads, and until then an enclosed
+  cell could read as the ambient, which an open end would vent into
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)). #154 fixed that
+  in the framework, which now reads such a cell as unresolved; the wait stays
+  as defence in depth. A pipe cap
+  closes an end and never leaks.
+- **Dye** (CONT-114). A dye on a pipe or cap sets its `color` state; the
+  client tints the models' tint index 0 with the dye's colour. The colour
+  doesn't change connections. A `PipeItem` carries a colour in the vanilla
+  block state component, which placing applies. The loot tables copy a dyed
+  block's colour to its drop (`copy_state`), and an undyed drop carries
+  nothing, so it stacks with new items. Items are tinted like blocks, with
+  no extra models.
+- **Deferred:** pipe bursts (CONT-108), reactions in pipes (CONT-100) and
+  client smoothing (CONT-070) are not built yet; S-01 needs none of them.
 
 ### 11.5 Devices
 
-*To come with [#48](https://github.com/west3436/zas-cubed/issues/48): the
-canister, connector port and vent, and their GUIs.*
+*Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)), in
+`.port`, `.canister` and `.vent`.*
+
+- **Devices are network nodes.** The connector port (200 L), canister
+  (1,000 L) and vent (400 L) are `PipeNodeEntity`s, so each device's buffer is
+  part of its network's one mixture (§11.4), and each changes zones only
+  through a `ZonePort` (CONT-071, CONT-072).
+- **Reading the cell.** A device that acts on a cell uses a `CellWatch`: it
+  waits three atmos ticks after it loads, and acts only on a cell that reads
+  the same state and zone twice running and is zoned or the ambient. This is
+  the open pipe end's guard of §11.4, shared
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)).
+- **Connector port** (CONT-083). Set in the floor, facing up. It connects to
+  a pipe below it and a canister on it; its `connected` state shows a collar
+  while a canister stands on it.
+- **Canister** (CONT-017, CONT-084).
+  - It connects only down, to a port, so a canister on a pipe stays apart.
+    Its block state has its valve's facing, its paint (`color`: yellow, the
+    16 dyes' colours and red-and-white) and its valve (`open`). A dye paints
+    it.
+  - An open valve releases its network's gas into its own cell (the canister
+    doesn't fill its cell): the least of (P_release − P_zone)·V_zone/(R·T),
+    which brings the zone to the release pressure, and what equalises the
+    canister and the zone. V_zone is the zone's real volume, or one cell's in
+    the ambient. The release pressure is clamped to 10–1,013 kPa.
+  - A player who mines it with the right tool gets an item carrying its gas as
+    the `zas_atmos:gas` data component, with its paint as block state;
+    placing the item puts the gas back. The game removes a mined block before
+    it makes the drops, so `playerWillDestroy` marks the canister to keep its
+    share; drops made before removal (`destroyBlock`, explosions) mark it in
+    `getDrops`. Broken by a creative player, `playerWillDestroy` marks it to
+    destroy its share instead. Removed any other way, as by `setblock`, it
+    releases its share, as a pipe does.
+  - It is rated at 9,120 kPa; rupture (CONT-085) isn't built.
+  - The creative tab has a canister of each built-in gas at 45 atm and
+    293.15 K, painted in that gas's colour (CONT-086). The item model picks
+    the paint's model by the `zas_atmos:color` item property.
+- **Vent** (CONT-014, CONT-078).
+  - A full block whose grille faces any of six ways, facing the player who
+    places it. A pipe joins only its back. It acts on the cell in front of the
+    grille, which is also its `airPoint` (§11.3).
+  - Its `VentSettings` are a `VentMode` (off, blow, siphon) and two bounds,
+    each clamped to 0–5,066 kPa. Blowing, it moves the least of what brings the
+    zone up to the external bound, what brings the network down to the
+    internal bound, and half a 400 L buffer of the network a second. Siphoning
+    is the reverse, capped at half a 400 L slice of the zone a second. In an
+    open cell the zone is the ambient, one cell's volume.
+  - It runs only while powered (CONT-060), in the life-support group, drawing
+    `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
+    what it is doing: its mode while it runs, else off.
+  - Each atmos tick it also decides a `VentStatus` for its GUI. It is off,
+    moving gas, or idle, and when idle it records why: it is waiting for the
+    air in front to settle, the network or the air in front is empty, or the
+    network or the room has reached its bound. `VentFlow.blowIdle` and
+    `siphonIdle` tell which term of the flow is zero. The GUI shows the
+    status and the network's pressure, the figure the internal bound is
+    compared with, so a vent that animates but moves nothing says why.
+  - **For the area air controller:** the vent is a `VentControl` (§11.6).
+    `ventOrder` passes the order to `VentBlockEntity.control(controller,
+    VentSettings)`, naming the controller that last paid for the vent (its
+    `DevicePower.source()`). A controller orders its parts before it pays
+    them, so the first order names no controller, and the GUI shows it as
+    unknown until the next. That sets the vent, and an unchanged setting changes nothing, so a
+    controller can send the same order every atmos tick. Each order makes the
+    vent *controlled* for `DevicePower.LEASE_TICKS` (two atmos ticks). While
+    it is controlled, `setByHand`, which the GUI uses, refuses settings, and
+    the GUI shows the controller and its order with its buttons off (CONT-014).
+    When the orders stop, the vent is set by hand again. While it is
+    controlled, its saved data, as `/data get block` shows it, has
+    `Controlled: 1b` and `Controller: [I; x, y, z]`. Neither is loaded
+    back, since the orders come again after a reload. The menu syncs the
+    controller's x and z in two 16-bit halves each, because menu data syncs as
+    shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
+    `VentSettings.siphon(target)` build the usual settings.
+- **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
+  menu. Values reach the client as the menu's data slots (whole kPa); the
+  client sends only button ids, through the game's menu-button packet, and
+  the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
+  screens are plain panels with buttons and no textures. A line too long for
+  the panel wraps.
 
 ### 11.6 The area air controller
 
-*Reserved for the area air controller: sampling, danger levels, modes and its
-zone pin (CONT-040 to CONT-049, CONT-110).*
+Package `controller`. The block (`AreaAirControllerBlock`) is a wall panel:
+`facing` points out of the wall into the room, it needs a sturdy face behind
+it and drops when that goes. Its `status` property (`unpowered`, `safe`,
+`danger1`, `danger2`) picks the panel's model. The work is in
+`AreaAirControllerBlockEntity`, an `AtmosDevice` that does this each atmos
+tick, in order:
+
+1. **Fills its buffer** from the blocks next to it (§11.7).
+2. **Keeps its zone pinned** (CONT-110, API-050). It samples one point, the
+   middle of its own block, which is in front of the wall (`airPoint()`). Its
+   pin owner is `zas_atmos:area_air_controller/<x>_<y>_<z>`. It calls
+   `ZonePins.pin` when it hasn't pinned the zone at that point: on its first
+   step after loading, and whenever the point's zone isn't the one its last
+   pin named. So an open room is pinned again every second (outcome `OPEN`,
+   nothing forms) until its last block goes in, and then the zone forms on the
+   next step. Pins are idempotent, so a repeat costs one queued operation.
+   Only one pin is outstanding at a time. The block's `onRemove` calls
+   `ZonePins.unpin`, but a chunk unloading doesn't, so the pin stays with the
+   saved zone.
+3. **Pays its own draw**, `[power] area_air_controller` × 20 FE. If the buffer
+   can't, it is unpowered for the tick: danger drops to 0, it gives no orders
+   and powers nothing, and its parts stop when their leases run out (§11.3).
+4. **Rates the air** (CONT-040). The readings are pressure, temperature, each
+   listed gas's partial pressure, and the summed partial pressure of the rest,
+   each against a `Thresholds` (min2, min1, max1, max2; −1 disables a bound).
+   At or beyond min2 or max2 is danger 2, at or beyond min1 or max1 danger 1.
+   An open cell's ambient air is rated as well, so a controller in a vacuum
+   reports it. An unresolved sample changes nothing. Nitrogen is listed with
+   no bounds, so the filler gas isn't one of "the rest".
+5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
+   reading at once, and falls after 10 readings in a row below it (10 s) to
+   the highest of those readings.
+6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
+   becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
+   target.
+7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
+   whose air point is in its zone, and every part linked to it with the
+   multitool (CONT-042). It powers them (§11.7), then gives each `VentControl`
+   the mode's `VentOrder` and each `ScrubberControl` the mode's
+   `ScrubberOrder`, every tick.
+
+**Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
+Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the
+O₂ minimum and the temperature bounds, which would always trip in a room meant
+to be empty. Each controller holds its own copy. Editing it changes only that
+controller, and loading a shipped preset discards the edits. The **target**
+that vents blow to in Scrubbing, Replacement and Fill is the middle of the
+pressure's safe band, min1 to max1 (101 kPa for Human).
+
+| Mode | Scrubbers | Vents |
+|---|---|---|
+| Scrubbing | `SCRUB` CO₂ and `#zas:toxic` | `blow(target)` |
+| Replacement | `PANIC` | `blow(target)` |
+| Panic | `PANIC` | `OFF` |
+| Cycle | `PANIC`, then Fill below 5.07 kPa | `OFF` |
+| Fill | `OFF` | `blow(target)`, then Scrubbing at 95 % of target |
+| Off | `OFF` | `OFF` |
+
+**Device control.** `VentControl` and `ScrubberControl` are the controller's
+side of the vent and scrubber. The vent (#48) implements `VentControl` by
+mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
+blowing with external bound `t` (and internal bound 0). No scrubber exists
+yet; its GameTests use a stand-in (`gametest.TestParts`).
+
+**Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
+at danger 2. It powers the wall behind it strongly, as a lever does.
+
+**The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
+that controller's position and dimension on the stack. Used on a powered
+part, it links the part to the stored controller, or unlinks it if it was
+linked. Sneak-use in the air clears the selection. Links are positions saved
+with the controller, and a link whose block is no longer a powered part is
+dropped when its chunk is loaded.
+
+**GUI** (`ControllerMenu`, `ControllerSync`, CONT-049, CONT-074). The menu has
+no slots. Twice a second the server sends the viewer a `ControllerSync`
+payload: status, buffer, the last pin outcome, mode, preset, each reading's
+value, rating and bounds, and the parts it covers, each marked as in its zone,
+linked, or both, and whether it is powered. The screen's buttons are vanilla
+menu button clicks. Vanilla checks that the player is still near the
+controller, and `clickMenuButton` refuses any unknown id. Edits go through
+`Thresholds.with`, which clamps each bound to 0–5,066 and between its
+enabled neighbours. Nudging a disabled bound is refused. The screen is drawn
+with flat panels until the GUI art exists.
+
+**Saved:** buffer, mode, preset, danger state and links. The pin isn't saved;
+the controller pins again on its first step after loading.
+
+**Cost.** Each controller scans its level's loaded devices once a second and
+samples each one's air point. That is fine at R1's scale. A per-zone index
+can replace the scan if profiling asks for one.
+
+**Tests.** The pure parts (thresholds, presets, danger, modes, the power feed)
+have unit tests. The GameTests (`ControllerTests`, `GeneratorTests`) run each
+test within one game tick, as the framework's own world tests do. They step
+the controller and the parts directly and drive atmos ticks with the
+framework's `AtmosService.tickNow`. For that, and for the preset, the
+borrowed vacuum ambient and the published zones' pins, the `gametest` source
+set compiles against `:zas` and `:engine`. `main` still compiles against
+`zas-api` alone (CONT-095). The stand-ins in `gametest.TestParts` are a test
+vent, scrubber, pump and heater, one per priority group, and a test FE block.
+Like `TestDevice`, they never reach the jar.
 
 ### 11.7 Controller power
 
-*Reserved for the controller as the provider of §11.3: its buffer, the parts
-it powers and its priorities (CONT-062, CONT-064, CONT-068).*
+The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
+
+- **Buffer.** An `EnergyStore` of `[power] area_air_controller_buffer`
+  (10,000 FE). Each atmos tick, before anything else, it pulls from each of
+  the six neighbours' `Capabilities.EnergyStorage.BLOCK`, as much as fits. It
+  also exposes a receive-only FE capability, for cables that push. It never
+  gives FE out, so two controllers side by side don't trade.
+- **Feeding.** Parts that another provider already paid for this atmos tick
+  (`suppliedThisAtmosTick()`) are skipped. The rest are shared out by
+  `power.PowerFeed`, which is pure and unit-tested. Groups are served in
+  `PowerPriority` order. Within a group, each part whose `drawPerAtmosTick()`
+  fits what is left is paid and supplied. If any part of a group misses out,
+  the later groups get nothing that tick, so a cheap heater never runs while
+  a vent starves. A part drawing nothing is always supplied.
+- **The generator** (`power.GeneratorBlock`, `GeneratorBlockEntity`,
+  CONT-061, CONT-066, CONT-067). It is a plain ticking block entity, not an
+  `AtmosDevice`. Each game tick while it burns it makes `[power]
+  generator_output` (40) FE into its own store (`generator_buffer`, 8,000 FE).
+  It starts the next piece of fuel only while the store has room. Fuel is
+  anything with a furnace burn time (NeoForge's `getBurnTime`, so the furnace
+  fuel data map counts) that leaves no item behind, so not a lava bucket. One
+  coal burns for `generator_seconds_per_fuel` (80) seconds, and any other fuel
+  for that times its burn time over coal's 1,600 ticks. It
+  offers the store through an extract-only FE capability, and its fuel slot
+  through an item handler, so hoppers can feed it. Its `lit` property is true
+  while it burns. The block is in `#zas:combustion`
+  (`data/zas/tags/block/combustion.json` in `zas_atmos`), so the framework's
+  change hook treats lighting it as combustion (CORE-056, FIRE-024), with
+  nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
+  takes only fuel, and shows the burn time and stored FE.

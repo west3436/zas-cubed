@@ -28,6 +28,9 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
+| `[breathing] check_interval_ticks` | `40` | Game ticks between each breathing entity's breath checks, 1 to 1,200 (LIFE-007). Rates are per second, so the interval changes smoothness and cost, not how fast anything happens |
+| `[breathing] oxygen_minimum_kpa` | `16.0` | The O₂ partial pressure of the breath below which the air meter drains (LIFE-003) |
+| `[breathing] respiration_multiplier` | `1.0` | Multiplies respiration inside zones, about 1 mol of O₂ per breather per hour turned into CO₂ (LIFE-042); 0 turns it off. The same under both presets (D-27) |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
@@ -36,8 +39,9 @@ their features land in R1. NeoForge reloads the file when it changes on disk,
 so an edit made while the server runs applies without a restart: the preset,
 its options and the excluded dimensions from the next lookup (for the
 simulation, its next atmos tick), the `[atmos]` timing and venting model from
-the next atmos tick, the thread mode when a dimension's simulation starts, and
-`[commands]` and `[profiling]` at once. OPS-016's guarantee that every server
+the next atmos tick, the thread mode when a dimension's simulation starts,
+`[breathing]` from each entity's next breath check, and `[commands]` and
+`[profiling]` at once. OPS-016's guarantee that every server
 setting applies without a restart is R1.
 
 ### Venting
@@ -100,14 +104,28 @@ Candles and torches aren't combustion. Which blocks count is data, the block
 tags `#zas:combustion` and `#zas:plants`
 ([datapacks.md](datapacks.md#block-tags)).
 
-`/zas preset` can also switch the preset and set or clear an override. It
-writes the file the server read, which is the world's
-`serverconfig/zas-server.toml` if there is one and `config/zas-server.toml`
-otherwise; `/zas preset` names it. A singleplayer world without its own copy
-shares `config/zas-server.toml` with every other such world, so to keep a
-world's preset to itself, put a copy in its `serverconfig/` folder first. A
-copy can be as short as one line, `preset = "HARDCORE"`; NeoForge fills in the
-rest when the world loads.
+`/zas preset` can also switch the preset and set or clear an override, and
+names the file it wrote:
+- **A world with its own `serverconfig/zas-server.toml`:** the change goes
+  there.
+- **A singleplayer world without one:** the first change writes one. It holds
+  the whole config with the change, and `/zas preset` says it made it. The
+  shared `config/zas-server.toml` isn't touched, so the other worlds that read
+  it keep their values. The copy is read from the world's next load; until then
+  the change is already in effect, and later changes go to the copy too.
+- **A dedicated server:** the change goes to the file it read, the world's copy
+  if it has one, else `config/zas-server.toml`, as before.
+
+A copy written by hand works the same way, and can be as short as one line,
+`preset = "HARDCORE"`; NeoForge fills in the rest when the world loads.
+
+For the rest of the session that made a copy, NeoForge still watches
+`config/zas-server.toml`. Editing that file reloads the config from it, and ZAS³
+then puts the copy's values back, so the world keeps its own. Edit the world's
+copy instead, which applies from its next load. A player who joins over LAN in
+that session is sent the shared file, as NeoForge sends the file it read; this
+only matters for values a client reads, and none of the preset's options are
+read by a client.
 
 ```toml
 # The atmosphere preset, and an override that keeps Hardcore's Nether and End under Normal.
@@ -127,6 +145,11 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | Key | Default | Meaning |
 |---|---|---|
 | `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
+| `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
+| `[power] generator_output` | `40` | What the generator makes while it burns, in FE/t, 0 to 100,000 (CONT-061) |
+| `[power] generator_buffer` | `8000` | The generator's own store, in FE, 1,000 to 30,000. It starts no new fuel while the store is full |
+| `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 
 ## Common: `zas-common.toml`
 

@@ -9,6 +9,8 @@ alarm became the area air controller and the power cable and multipart block
 were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
 CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
+CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
+owner and accepted the same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -21,7 +23,7 @@ at the end). vg's per-2 s device rates are converted to per second (D-20).
 ## Pipe networks
 
 #### CONT-001 · Network model
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 Connected pipes shall form a network. Each continuous pipe run holds one
 mixture whose volume is the sum of its segments' volumes.
@@ -31,8 +33,16 @@ mixture whose volume is the sum of its segments' volumes.
 - **Verify:** A Unit test builds runs of several lengths and checks their
   volumes; a GameTest checks connected pipes share one mixture.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network is one `GasStore` whose volume is its members' sum ([architecture
+§11.4](../architecture.md#114-pipe-networks)). `PipeNetworkTest.cont_001_*`
+(Unit) checks runs of 1 to 50 pipes and a vent buffer;
+`PipeTests.cont_001_connected_pipes_share_one_mixture` (GameTest) checks a run,
+a branch and a cap share one mixture, and `cont_001_a_pipe_saves_its_share`
+that a segment saves its share by volume.*
+
 #### CONT-007 · Pipe and buffer volumes
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 Each pipe block shall hold 70 L, and each device port buffer 200 L (vents
 400 L), as in vg.
@@ -42,8 +52,13 @@ Each pipe block shall hold 70 L, and each device port buffer 200 L (vents
   is inferred, twice a port buffer, so a vent can keep up its rate (CONT-078).
 - **Verify:** A Unit test checks each part's volume.
 
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Pipes and caps hold 70 L, a connector port 200 L, a vent 400 L and a canister
+1,000 L (`PipeVolumes`). `PipeVolumesTest.cont_007_each_part_has_its_volume`
+(Unit); `GasDeviceTests` checks the volumes of built networks.*
+
 #### CONT-008 · Perfect mixing
-`Must` · `R1` · `Accepted` · Verify: Unit
+`Must` · `R1` · `Implemented` · Verify: Unit
 
 A pipe run's mixture shall be perfectly mixed after every change.
 
@@ -52,8 +67,14 @@ A pipe run's mixture shall be perfectly mixed after every change.
 - **Verify:** A Unit test adds gas at one end of a run and checks the whole
   run is uniform after the change.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network's gas is a single mixture, so every change mixes the whole run.
+`PipeNetworkTest.cont_008_gas_added_at_one_end_is_uniform_across_the_run`
+(Unit). The API gives no heat capacities, so gases at different temperatures
+mix at the mole-weighted mean; the Verify doesn't cover temperatures.*
+
 #### CONT-002 · Separate from zones
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: API-021
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: API-021
 
 Pipe gas shall never join zone gas directly. Only devices, open ends (CONT-004)
 and ruptures move gas between pipes and zones.
@@ -63,8 +84,12 @@ and ruptures move gas between pipes and zones.
 - **Verify:** Inspect the code: only devices, open ends and ruptures call zone
   mutations.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+Inspect: the content mod calls `GasMutations` only in `ZonePort` (devices and
+open ends) and `PipeNodeEntity` (a removed segment's share, CONT-009).*
+
 #### CONT-003 · Gas-conserving rebuilds
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: CORE-036
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-036
 
 Splitting or merging networks shall share gas out by volume.
 
@@ -74,8 +99,22 @@ Splitting or merging networks shall share gas out by volume.
 - **Verify:** A Unit test splits and merges networks and checks each part gets
   gas by volume; a GameTest breaks a pipe in a run and checks total moles.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network never changes its members: it dissolves, each member keeping its
+share by volume, and the next one built gathers the shares.
+`PipeNetworkTest.cont_003_*` (Unit) splits and merges networks;
+`PipeTests.cont_003_breaking_a_pipe_conserves_gas` (GameTest) breaks a pipe in
+a run and checks each part's share and the total.*
+
+*2026-11-02: Note: `PipeChunkTests.cont_003_*` (GameTest) runs a network across
+a chunk border through chunk lifecycles. The total stays the same when the far
+chunk drops out of full status, when both chunks unload and load again, and when
+the network is rebuilt while the far chunk is away. Writing them found a bug,
+now fixed: devices in a chunk that had dropped out of full status still
+stepped, and a rebuild that read their blocks loaded the chunk again.*
+
 #### CONT-009 · Removed segments release their gas
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-036
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
 A removed pipe segment's share of gas shall be released into its cell
 (CORE-053 if the cell is open).
@@ -85,8 +124,14 @@ A removed pipe segment's share of gas shall be released into its cell
 - **Verify:** A GameTest removes a segment from a filled run and checks its
   cell gains the segment's share.
 
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A removed node adds its share at its position through the API.
+`PipeTests.cont_003_breaking_a_pipe_conserves_gas` (GameTest) checks the
+room gains the segment's share; `PipeNetworkTest.cont_009_*` (Unit) checks the
+share.*
+
 #### CONT-004 · Open ends leak
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: vg quirk 4, CORE-031
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: vg quirk 4, CORE-031
 
 A pipe end with no connection shall exchange gas with its cell's atmosphere as
 a one-connection edge does (sharing ratio 0.163 per second). vg disabled this.
@@ -96,6 +141,41 @@ a one-connection edge does (sharing ratio 0.163 per second). vg disabled this.
   §1](../research/vg-atmos-content.md#1-pipe-networks)).
 - **Verify:** A GameTest checks an open pipe end exchanges gas with its room
   at the one-connection ratio.
+
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A pipe with fewer than two connections has an open end; a pipe cap
+(`zas_atmos:pipe_cap`) closes one and never leaks. An open end exchanges each
+gas by ZAS's one-connection rule with its cell's zone, or with the ambient as
+an infinite reservoir, and skips flows under 10⁻⁴ mol. After it loads, it waits
+until its cell reads the same twice running ([architecture
+§11.4](../architecture.md#114-pipe-networks)). `OpenEndTest` (Unit)
+checks the formula; `PipeTests.cont_004_open_end_exchanges_at_the_one_connection_ratio`
+and `cont_004_capped_pipe_does_not_leak` (GameTest) check it in a room.*
+
+#### CONT-114 · Dyed pipes
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
+
+Using a dye on a pipe or pipe cap shall colour it, using up one dye outside
+creative. The colour is cosmetic: it doesn't change what the pipe connects to.
+A dyed pipe or cap, mined, shall drop an item of its colour, and a dyed item
+shall place a pipe or cap of that colour.
+
+- **Verify:** A GameTest dyes a pipe and a cap and checks the colour, the dye
+  used and the connections. It mines dyed pipes and caps, checks each drops an
+  item of its colour, and places those items, checking that the blocks are
+  dyed.
+
+*2026-11-02: added as Draft from the owner's choice of 2026-11-01 that players
+dye pipes, which had no requirement. Whether differently dyed pipes should
+stay apart, so parallel runs can share a wall, is left open. Built in
+[#47](https://github.com/west3436/zas-cubed/issues/47) and checked by
+`PipeTests.cont_114_a_dye_colours_a_pipe` (GameTest).*
+
+*2026-11-02: owner changed mined dyed pipes to keep their dye, and accepted.
+Previously a mined dyed pipe dropped a plain pipe, losing the dye it used.
+The item carries the colour in the block state component, as the canister
+item does. `PipeTests.cont_114_a_mined_dyed_pipe_keeps_its_dye` (GameTest)
+checks the drops, the placing and picking the block.*
 
 #### CONT-005 · Overpressure
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; off by default anyway), 2026-10-30. · Verify: GameTest
@@ -120,7 +200,7 @@ that never runs.)
   everything, with no explosion.
 
 #### CONT-006 · Network cadence
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-31, D-20, D-50
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50
 
 Pipe networks and devices shall step once per atmos tick, on the server
 thread.
@@ -128,6 +208,22 @@ thread.
 - **Rationale:** Decision: D-31, D-20 and D-50.
 - **Verify:** A Unit test checks networks and devices step exactly once per
   atmos tick, on the server thread.
+
+*2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+Devices and pipe segments are `AtmosDevice` block entities, stepped every
+20 game ticks on the server thread, spread across ticks ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_*` (Unit) checks the timing;
+`DeviceTests.cont_006_devices_step_once_per_atmos_tick` (GameTest) checks it
+on the server thread. The API doesn't expose the framework's period, so the
+content mod always steps every second; rates are per second, so behaviour
+doesn't change with the period.*
+
+*2026-11-02: Note: a device steps only while its chunk is loaded in full. A
+chunk next to a loaded one that drops out of full status keeps its block
+entities, which wait until it returns.
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
+checks a vent there.*
 
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Accepted` · Verify: Manual
@@ -139,7 +235,7 @@ Device animations shall be smoothed on the client between steps.
 - **Verify:** Manual check that pump and vent animations play smoothly.
 
 #### CONT-071 · Zones through the public API
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-50, API-010, API-016
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-50, API-010, API-016
 
 Devices shall read zones through atmosphere queries (API-010) and change them
 through asynchronous mutations (API-016).
@@ -147,6 +243,11 @@ through asynchronous mutations (API-016).
 - **Rationale:** Decision: D-50.
 - **Verify:** Inspect the content mod's code for non-API engine access;
   GameTests of the devices exercise the calls.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Inspect: devices read zones only with `Atmospheres.at` and change them only
+through a `ZonePort`. The open pipe end, canister valve and vent GameTests
+exercise the calls.*
 
 #### CONT-072 · One outstanding mutation per port
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-50, CORE-036
@@ -159,6 +260,11 @@ twice.
   snapshot would move gas twice (CORE-036).
 - **Verify:** A Unit test checks a port waits for its future; a GameTest runs
   a vent and scrubber with the conservation checker on.
+
+*2026-11-02: the vent, canister valve and open pipe end each issue their
+changes through one `ZonePort` and wait while it is busy
+([#48](https://github.com/west3436/zas-cubed/issues/48)); the GameTest with a
+scrubber and the conservation checker waits for the scrubber.*
 
 #### CONT-073 · No reactions in pipes
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
@@ -182,7 +288,7 @@ R1.*
 All active devices consume FE as described under [Power](#power).
 
 #### CONT-074 · Server-validated device GUIs
-`Must` · `R1` · `Accepted` · Verify: GameTest, Inspect
+`Must` · `R1` · `Implemented` · Verify: GameTest, Inspect
 
 Each device's configuration shall be set through a GUI whose inputs the
 server validates.
@@ -191,6 +297,23 @@ server validates.
   checked on the server, as with any multiplayer GUI.
 - **Verify:** A GameTest sends out-of-range settings and checks they are
   clamped or refused; Inspect the packet handlers.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+The canister and vent GUIs send only button ids, through the game's own
+menu-button packet; the server refuses unknown ids and clamps every setting
+(`CanisterMenu`, `VentMenu`).
+`GasDeviceTests.cont_074_out_of_range_settings_are_clamped_or_refused`
+(GameTest). Later devices' GUIs follow the same pattern.*
+
+*2026-11-02: The controller's and the generator's GUIs are built ([#50](https://github.com/west3436/zas-cubed/issues/50),
+[#52](https://github.com/west3436/zas-cubed/issues/52)). The controller's buttons are menu button clicks: unknown ids are
+refused and edits are clamped (`cont_074_gui_settings_are_checked_and_an_edited_preset_rates`).
+The generator's only setting is its fuel slot, which takes only fuel. This
+stays Accepted until every device's GUI is built.*
+
+*2026-11-02: The vent's GUI also refuses every button while an area air
+controller controls the vent (CONT-014), on the server, whatever the client
+sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
 
 #### CONT-010 · Valves
 `Must` · `R1` · `Accepted` · Verify: GameTest
@@ -277,7 +400,7 @@ at most 4,500 kPa.
   scale together when one runs short.
 
 #### CONT-014 · Vent
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A vent shall blow gas into its zone, or siphon gas out of it, within an
 external bound (default 101.325 kPa) and an internal bound, both 0–5,066 kPa.
@@ -289,12 +412,49 @@ grille.
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks a vent fills a room to the external bound and
   siphons down to it, and vents to the ambient in an open cell. It also checks
-  that a pipe joins the vent's back and no other face.
+  that a pipe joins the vent's back and no other face, and that a vent an area
+  air controller controls refuses a hand setting while one no controller
+  controls takes it.
 - **Changed 2026-11-01 (the owner, in the batch 1 art review):** the vent
   faces any of six ways and takes a pipe only on its back.
+- **Changed 2026-11-02 (the owner, in the S-01 integration review,
+  [#160](https://github.com/west3436/zas-cubed/pull/160)):** the controller
+  wins, and the GUI says so. A vent an area air controller covers keeps taking
+  the controller's orders. Its GUI shows the controller's position and its
+  current order, its own settings are disabled, and the server refuses hand
+  settings for it (CONT-074). A vent no controller covers is still set by hand.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:vent` blows into, or siphons from, the cell in front of its grille,
+within its external and internal bounds (`VentSettings`, clamped to
+0–5,066 kPa), and in an open cell into or from the ambient ([architecture
+§11.5](../architecture.md#115-devices)). `VentFlowTest` (Unit) checks the
+bounds; `GasDeviceTests.cont_014_a_vent_fills_a_room_to_the_external_bound`,
+`cont_014_a_vent_siphons_a_room_to_the_external_bound`,
+`cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and
+`cont_014_a_pipe_joins_a_vent_only_on_its_back` (GameTest) check the Verify.
+The vent runs only while powered (CONT-060).*
+
+*2026-11-02: The owner's change above is built. A controller's order
+(`VentBlockEntity.control`) makes the vent controlled for two atmos ticks, and
+a controller renews that every atmos tick. While controlled, `setByHand`
+refuses settings, so the GUI's buttons do nothing, and the GUI shows the
+controller and its order with its buttons off.
+`GasDeviceTests.cont_014_a_controlled_vent_refuses_hand_settings` (GameTest)
+checks it with `control` called directly; [#160](https://github.com/west3436/zas-cubed/pull/160) checks it with a real
+controller.*
+
+*2026-11-02: Note: in the owner's S-01 test, a vent siphoning into a network
+with a full canister on its port moved nothing, because the network was above
+the internal bound. That is what this requirement asks for, but the GUI didn't
+show why. The GUI now shows the network's pressure, and a status line: moving
+gas, or idle and why (the network or the room has reached its bound, either is
+empty, or the vent is waiting for the air in front to settle).
+`VentFlowTest.cont_014_an_idle_vent_says_why` (Unit) and
+`GasDeviceTests.cont_014_an_idle_vent_says_why` (GameTest) check each reason.*
 
 #### CONT-078 · Vent rate
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A vent shall move at most half its buffer's moles per second, so it can't fill
 a room in one tick as vg's does.
@@ -304,6 +464,12 @@ a room in one tick as vg's does.
   wrong and makes airflow spike; half the buffer per second spreads it out.
 - **Verify:** A Unit test checks the moles moved per second; a GameTest checks
   a room fills over several ticks.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+A vent moves at most half a 400 L buffer's moles a second: of its network
+when blowing, and of its zone when siphoning (`VentFlow`).
+`VentFlowTest.cont_078_*` (Unit); the `GasDeviceTests.cont_014_*` fill and
+siphon tests (GameTest) check a room takes at least four atmos ticks.*
 
 #### CONT-015 · Scrubber
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
@@ -375,7 +541,7 @@ opposite its grille.
 A fixed-rate injector shall push gas into its zone regardless of room pressure.
 
 #### CONT-017 · Canister
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01 · [vg §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)
 
 A canister shall be a 1,000 L block rated at 9,120 kPa (90 atm) that keeps its
 contents when mined.
@@ -385,9 +551,24 @@ contents when mined.
   contents when mined is the Minecraft equivalent of moving it.
 - **Verify:** A GameTest mines a filled canister, places it again and checks
   the contents are unchanged.
+- **Changed 2026-11-02 (the owner, in the S-01 integration review,
+  [#160](https://github.com/west3436/zas-cubed/pull/160)):** a canister broken
+  in creative drops nothing, and its gas is destroyed with it, not released.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:canister` is a 1,000 L network node rated at 9,120 kPa
+(`CanisterBlockEntity.RATED_KPA`; rupture is CONT-085, not built). Mined with a
+pickaxe it drops an item carrying its gas (`zas_atmos:gas`) and its paint;
+removed any other way it releases its gas, as a pipe does (CONT-009).
+`GasDeviceTests.cont_017_a_mined_canister_keeps_its_contents` and
+`cont_017_a_canister_removed_without_a_drop_releases_its_gas` (GameTest).*
+
+*2026-11-02: the owner's change is built. Broken in creative, the canister's
+gas is destroyed. `GasDeviceTests.cont_017_a_canister_broken_in_creative_destroys_its_gas`
+(GameTest) checks that the room gains nothing.*
 
 #### CONT-083 · Connector ports
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01
 
 Placing a canister against a connector port shall attach it, joining the
 port's network. The port faces up, so the canister stands on it, and a pipe
@@ -402,8 +583,14 @@ joins the port only on its bottom, the face opposite.
 - **Changed 2026-11-01 (the owner, in the batch 1 art review):** the port
   faces up and takes a pipe only on its bottom.
 
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:connector_port` joins a pipe below it and a canister standing on
+it; its `connected` state shows the collar.
+`GasDeviceTests.cont_083_a_canister_on_a_port_joins_its_network` (GameTest).
+Placing the canister attaches it; the wrench (CONT-035) isn't built.*
+
 #### CONT-084 · Canister release
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: vg quirk 10
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: vg quirk 10
 
 A canister shall release through a valve at a set release pressure
 (10–1,013 kPa) into the room or a held tank, computed against the receiving
@@ -414,6 +601,15 @@ volume: the zone's real volume, not vg's fixed 2,500 L.
   fixed 2,500 L receiving volume is replaced with the real volume.
 - **Verify:** A Unit test checks the moles released against the formula; a
   GameTest checks a canister fills a room to the release pressure.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+An open valve releases the least of what brings the zone to the release
+pressure, by the zone's real volume, and what equalises the canister and the
+zone (`CanisterRelease`); the release pressure is clamped to 10–1,013 kPa.
+`CanisterReleaseTest` (Unit);
+`GasDeviceTests.cont_084_a_canister_fills_a_room_to_the_release_pressure`
+(GameTest). Releasing into a held tank waits for held tanks, which R1 doesn't
+have.*
 
 #### CONT-085 · Canister rupture
 `Must` · `R1` · `Accepted` · Verify: GameTest
@@ -459,6 +655,12 @@ Survival canisters are crafted empty.
 - **Rationale:** Inferred: pre-filled canisters in survival would skip gas
   acquisition (CONT-050); creative players need them for building and tests.
 - **Verify:** Inspect the creative tab and recipes.
+
+*2026-11-02: the creative tab has a canister of each of the 8 gases at
+45 atm and 293.15 K, in the gas's colour
+([#48](https://github.com/west3436/zas-cubed/issues/48)), and no recipe makes a
+filled one. Survival recipes, the empty canister's included, aren't written
+yet.*
 
 #### CONT-018 · Portable pump and scrubber
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
@@ -730,7 +932,7 @@ The area air controller takes the place of vg's air alarm (D-68). It also
 powers the parts around it (see [Power](#power)).
 
 #### CONT-040 · Area air controller
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, D-68 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02, D-68 · [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 An area air controller shall sample its zone each atmos tick and rate each
 reading against its preset's (min2, min1, max1, max2): at or beyond min2 or
@@ -744,8 +946,16 @@ temperature, each listed gas, and all other gases combined.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The controller samples the middle of its own
+block each atmos tick and rates pressure, temperature, each listed gas and the
+other gases summed (architecture §11.6). Nitrogen is listed with no bounds, so
+the air's filler gas isn't counted among the other gases. An open cell's
+ambient air is rated too. `cont_040_danger_follows_the_readings` steps a
+zone's CO₂ through each band; `ControllerLogicTest` checks every reading and
+both bounds of each band.*
+
 #### CONT-046 · Danger hysteresis
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
 
 A controller's danger level shall rise immediately and fall only after 10 s of
 lower readings.
@@ -757,8 +967,12 @@ lower readings.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The level falls after 10 readings in a row
+below it, one per atmos tick, to the highest of those readings
+(`DangerLevel`; `cont_046_danger_rises_at_once_and_falls_after_10_s`).*
+
 #### CONT-047 · Controller presets
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), LIFE-041, FIRE-003
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), LIFE-041, FIRE-003
 
 Area air controllers shall ship an editable Human preset and a Vacuum preset.
 Human (min2 / min1 / max1 / max2):
@@ -786,6 +1000,14 @@ Vacuum sets pressure max1 / max2 to 1 / 5 kPa.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). Each controller holds its own copy of a
+preset, edited from its GUI; loading a shipped preset discards the edits.
+Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa and has no O₂
+minimum and no temperature bounds, which would always trip in an empty room.
+`cont_047_presets_hold_the_table` checks the table, and
+`cont_074_gui_settings_are_checked_and_an_edited_preset_rates` checks an edit
+changes the rating.*
+
 #### CONT-041 · Controller modes
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
@@ -807,8 +1029,19 @@ The area air controller shall command its vents and scrubbers in these modes:
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: The controller's side is built ([#50](https://github.com/west3436/zas-cubed/issues/50)): each mode's vent and
+scrubber orders, and Cycle's and Fill's switches (`ControllerMode`,
+`VentControl`, `ScrubberControl`). `cont_041_modes_command_vents_and_scrubbers`
+checks them with stand-in parts. This stays Accepted until the vent (#48) and
+scrubber follow the orders.*
+
+*2026-11-02: The vent half passes with the real vent ([#160](https://github.com/west3436/zas-cubed/pull/160)):
+it implements `VentControl`, and `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest) checks that the vent
+follows Scrubbing, Off, Panic and Replacement, and moves nothing while ordered
+off. This stays Accepted until the scrubber follows its orders.*
+
 #### CONT-048 · Controller redstone
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 An area air controller shall emit a redstone signal of 7 at danger 1 and 15 at
 danger 2.
@@ -819,6 +1052,10 @@ danger 2.
   level.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The signal goes to every side, and strongly
+into the wall behind the panel, as a lever's does
+(`cont_040_danger_follows_the_readings`).*
 
 #### CONT-042 · Room model
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-68
@@ -833,8 +1070,14 @@ multitool can also link parts to it by hand, for example across a firelock.
 *2026-11-01: the air alarm is renamed the area air controller, and the linking
 tool is the multitool (D-68). A link also powers the part (CONT-068).*
 
+*2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)): a controller covers the loaded parts whose air
+point is in its zone, and the parts linked to it with the multitool, which
+`cont_068_controller_powers_its_zone_and_its_links` checks with stand-in parts
+across a stone wall. This stays Accepted until it is checked across a
+firelock (CONT-043).*
+
 #### CONT-110 · Controller forms its zone
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
 
 When placed, an area air controller shall pin the zone at the cell it samples
 (API-050), forming one there if that cell's region is enclosed and has no zone,
@@ -857,6 +1100,16 @@ before its room is sealed forms the zone once the room is sealed, so a player
 needn't build the walls first or break and replace the controller. The Verify
 gains that case.*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)). The controller pins the zone at the middle
+of its own block under the owner `zas_atmos:area_air_controller/<x>_<y>_<z>`.
+It pins on its first step after loading and again whenever that point's zone
+isn't the one it last pinned, so an open room is tried once a second until it
+is sealed. Removing the block unpins; a chunk unloading doesn't. The
+`cont_110_` GameTests cover a sealed Overworld room, a vacuum room (the End
+with the test vacuum ambient), a room sealed after the controller went in, and
+removal. CORE-052's timed collection isn't built yet, so "outlasts" is checked
+against an opened room, which dissolves an unpinned zone at once.*
+
 #### CONT-049 · Controller device list
 `Must` · `R1` · `Accepted` · Verify: Manual
 
@@ -869,6 +1122,10 @@ came from the zone or from a link.
   links.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+*2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)). The GUI lists each part with its position, whether
+it is in the zone, linked or both, and whether it has power. This stays
+Accepted until the manual check.*
 
 #### CONT-043 · Firelock
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, GEO-007
@@ -1106,6 +1363,20 @@ Active devices shall consume Forge Energy (FE). A device without power stops.
 - **Rationale:** Decision: D-25 and D-37.
 - **Verify:** A GameTest checks each device stops when its power is cut.
 
+*2026-11-02: the vent runs only while powered;
+`GasDeviceTests.cont_014_an_unpowered_vent_does_nothing` (GameTest). The
+GameTest that cuts a provider's power waits for the area air controller.*
+
+*2026-11-02: The controller is the first FE source ([#52](https://github.com/west3436/zas-cubed/issues/52)): it stops when it
+can't pay its own draw, and parts stop when it stops paying them
+(`cont_064_a_starved_controller_powers_life_support_first`). This stays
+Accepted until each device exists to check.*
+
+*2026-11-02: The vent stops when its provider's power is cut ([#160](https://github.com/west3436/zas-cubed/pull/160)).
+In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest), the controller's generator is removed and its buffer
+spent; once the vent's lease runs out, it moves nothing and shows off. This
+stays Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1135,8 +1406,21 @@ Devices shall draw these amounts by default:
 *2026-11-01: the air alarm is renamed the area air controller (D-68), and the
 recharger is added (CONT-113, D-69).*
 
+*2026-11-02: the vent's 10 FE/t is `[power] vent`, drawn while it isn't off
+([#48](https://github.com/west3436/zas-cubed/issues/48)); the other devices'
+draws come with them.*
+
+*2026-11-02: The controller's 5 FE/t is in the config (`[power]
+area_air_controller`, [config.md](../config.md)). This stays Accepted until
+every device's draw is.*
+
+*2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
+a controller pays 100 FE per atmos tick for itself and 200 for a blowing
+vent, out of a real generator's FE, and an ordered-off vent draws nothing.
+This stays Accepted until every device's draw is in the config.*
+
 #### CONT-061 · Built-in generator
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
 
 ZAS³ content shall include a portable solid-fuel generator in the style of
 SS13's P.A.C.M.A.N., making 40 FE/t, so the mod is playable without any other
@@ -1145,13 +1429,29 @@ power mod.
 - **Rationale:** Decision: D-25, D-35 and D-37.
 - **Verify:** A GameTest checks the generator makes 40 FE/t while burning.
 
-#### CONT-066 · Generator fuel
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). The generator is a block with a fuel slot
+and an 8,000 FE store that it offers through the FE capability
+(`cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s`).*
 
-The generator shall burn one coal or charcoal per 80 s.
+#### CONT-066 · Generator fuel
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
+
+The generator shall burn any furnace fuel, one coal per 80 s, and other fuels
+for 80 s times their furnace burn time over coal's.
 
 - **Rationale:** Decision: D-35; 80 s per coal matches a vanilla furnace.
-- **Verify:** A GameTest checks one coal lasts 80 s.
+- **Verify:** A GameTest checks one coal lasts 80 s, and that other fuels are
+  accepted and burn in proportion.
+
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). Coal and charcoal are `#minecraft:coals`. A
+generator whose store is full starts no new fuel
+(`cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s`).*
+
+*2026-11-02: Changed by the owner (d-155-fuel): any furnace fuel, not only
+coal and charcoal. Fuel is anything with a furnace burn time, which includes
+NeoForge's furnace fuel data map, except fuels that leave an item behind (a lava
+bucket), which the one slot has nowhere to put. A coal block burns for 800 s and
+a stick for 5 s (`cont_066_generator_burns_any_furnace_fuel_by_its_burn_time`).*
 
 #### CONT-067 · Generator is a lit fuel block
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
@@ -1173,8 +1473,13 @@ its FIRE-025 profile. If the generator made those changes itself through
 `GasMutations`, it would form zones under Normal too, because API calls are
 Normal triggers (CORE-055).*
 
+*2026-11-02: The generator is in `#zas:combustion` with a `lit` property
+([#52](https://github.com/west3436/zas-cubed/issues/52)), and `core_056_lit_generator_forms_a_zone_under_hardcore` checks it
+forms a zone under Hardcore and not under Normal. This stays Accepted until
+FIRE-021 and HEAT-007 make lit fuel blocks use O₂, emit CO₂ and heat.*
+
 #### CONT-062 · Controller power buffer
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-34, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-34, D-68
 
 An area air controller shall take FE from any block next to it that exposes
 the FE capability, such as the generator (CONT-061) or another mod's cable,
@@ -1188,6 +1493,11 @@ into an internal 10,000 FE buffer.
 
 *2026-11-01: the air alarm is renamed the area air controller, and its buffer
 fills only from a block next to it, since there is no cable (D-68).*
+
+*2026-11-02: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)). Each atmos tick the controller pulls from
+the FE capability of each of its six neighbours, and it also takes FE that
+cables push. It gives none out
+(`cont_062_buffer_fills_from_fe_blocks_next_to_it`).*
 
 #### CONT-068 · Wireless feed to parts
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34, D-68
@@ -1204,8 +1514,14 @@ that draws FE (CONT-065) in its zone or linked to it with the multitool
 every part in its zone or linked to it, not only the devices it controls
 (D-68).*
 
+*2026-11-02: Built ([#52](https://github.com/west3436/zas-cubed/issues/52)): the controller pays each part's draw for one
+atmos tick at a time (architecture §11.7).
+`cont_068_controller_powers_its_zone_and_its_links` checks it with stand-in
+parts in its zone and linked across a wall. This stays Accepted until it is
+checked with real parts across a firelock.*
+
 #### CONT-069 · Parts without a controller have no power
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68
 
 An atmospherics part that no area air controller powers (CONT-068) shall have
 no power, even beside an FE source. Portables run on their battery instead
@@ -1217,6 +1533,15 @@ no power, even beside an FE source. Portables run on their battery instead
 
 *2026-11-01: a part with no controller now has no power; it used to need its
 own cable (D-68).*
+
+*2026-11-02: `cont_068_controller_powers_its_zone_and_its_links` checks a
+stand-in part beside a burning generator has no power, then runs once linked.
+This stays Accepted until it is checked with the vent (#48).*
+
+*2026-11-02: Implemented ([#160](https://github.com/west3436/zas-cubed/pull/160)). In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest), a vent
+beside a burning generator, with no controller, stays unpowered and moves no
+gas; once it is linked with the multitool to a generator-powered controller in
+another room, it is powered by that controller and blows.*
 
 #### CONT-064 · Controller power priority
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
@@ -1234,6 +1559,16 @@ Devices that miss out stop until power returns.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68), and
 rechargers join the last group (CONT-113, D-69).*
+
+*2026-11-02: Built ([#52](https://github.com/west3436/zas-cubed/issues/52)). Groups are served in order; within a group each
+part that fits is paid, and once a part of a group misses out, the later
+groups get nothing that atmos tick (`PowerFeedTest`,
+`cont_064_a_starved_controller_powers_life_support_first` with stand-in
+parts). This stays Accepted until it is checked with the vent and scrubber.*
+
+*2026-11-02: With the real vent ([#160](https://github.com/west3436/zas-cubed/pull/160)): a controller with FE for
+itself and the vent but not a pump powers the vent and leaves the pump off
+(`StationTests.cont_069_a_real_vent_runs_only_on_a_controller`). This stays Accepted until it is checked with the scrubber.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)

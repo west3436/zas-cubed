@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "connected=false": {
+      "model": "zas_atmos:block/connector_port"
+    },
+    "connected=true": {
+      "model": "zas_atmos:block/connector_port_connected"
+    }
+  }
+}

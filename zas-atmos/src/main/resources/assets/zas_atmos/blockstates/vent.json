@@ -1,0 +1,70 @@
+{
+  "variants": {
+    "facing=north,mode=off": {
+      "model": "zas_atmos:block/vent"
+    },
+    "facing=east,mode=off": {
+      "model": "zas_atmos:block/vent",
+      "y": 90
+    },
+    "facing=south,mode=off": {
+      "model": "zas_atmos:block/vent",
+      "y": 180
+    },
+    "facing=west,mode=off": {
+      "model": "zas_atmos:block/vent",
+      "y": 270
+    },
+    "facing=up,mode=off": {
+      "model": "zas_atmos:block/vent_vertical"
+    },
+    "facing=down,mode=off": {
+      "model": "zas_atmos:block/vent_vertical",
+      "x": 180
+    },
+    "facing=north,mode=blow": {
+      "model": "zas_atmos:block/vent_out"
+    },
+    "facing=east,mode=blow": {
+      "model": "zas_atmos:block/vent_out",
+      "y": 90
+    },
+    "facing=south,mode=blow": {
+      "model": "zas_atmos:block/vent_out",
+      "y": 180
+    },
+    "facing=west,mode=blow": {
+      "model": "zas_atmos:block/vent_out",
+      "y": 270
+    },
+    "facing=up,mode=blow": {
+      "model": "zas_atmos:block/vent_vertical_out"
+    },
+    "facing=down,mode=blow": {
+      "model": "zas_atmos:block/vent_vertical_out",
+      "x": 180
+    },
+    "facing=north,mode=siphon": {
+      "model": "zas_atmos:block/vent_in"
+    },
+    "facing=east,mode=siphon": {
+      "model": "zas_atmos:block/vent_in",
+      "y": 90
+    },
+    "facing=south,mode=siphon": {
+      "model": "zas_atmos:block/vent_in",
+      "y": 180
+    },
+    "facing=west,mode=siphon": {
+      "model": "zas_atmos:block/vent_in",
+      "y": 270
+    },
+    "facing=up,mode=siphon": {
+      "model": "zas_atmos:block/vent_vertical_in"
+    },
+    "facing=down,mode=siphon": {
+      "model": "zas_atmos:block/vent_vertical_in",
+      "x": 180
+    }
+  }
+}

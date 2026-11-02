@@ -1,21 +1,29 @@
 package io.github.west3436.zas.gametest;
 
+import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.ZasApi;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.Hazard;
+import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.config.BreathingConfig;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,9 +35,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForgeMod;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -39,10 +50,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * {@link AtmosTests}; the paused and unresolved ones are in
  * {@link PausedZoneTests}.
  *
- * <p>The breathability helper (API-014) is interim until LIFE (#34 to #36)
- * and the life-support capability (API-022): {@code zas} answers with
- * vanilla's verdict, as the fallback does. The {@code api_014_interim_} tests
- * pin that down, and change when LIFE's verdict lands.
+ * <p>The breathability helper (API-014) answers with LIFE's breathing rules;
+ * internals, protection and the pressure and temperature hazards join it with
+ * #35, #36 and the life-support capability (API-022). The breathing itself is
+ * in {@link BreathingTests}.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -160,16 +171,16 @@ public final class ApiTests {
         });
     }
 
-    // ---- Breathability (API-014): interim, vanilla's verdict until LIFE --------------------
+    // ---- Breathability (API-014): LIFE's breathing rules -------------------------------------
 
-    /** In the open air, zas answers with vanilla's verdict: the pig breathes the atmosphere. */
+    /** In the open air, the pig breathes the atmosphere at its eyes, and nothing harms it. */
     @GameTest(template = "empty")
-    public static void api_014_interim_answers_vanilla_in_air(GameTestHelper h) {
+    public static void api_014_breathes_the_open_air(GameTestHelper h) {
         Pig pig = h.spawn(EntityType.PIG, new BlockPos(1, 2, 1));
         Breathability b = Breathing.of(pig);
-        h.assertValueEqual(b, Breathing.vanilla(pig), "the interim verdict is vanilla's");
         h.assertValueEqual(b.reason(), BreathReason.BREATHABLE, "reason");
         h.assertValueEqual(b.source(), BreathSource.ATMOSPHERE, "source");
+        h.assertValueEqual(b.breath(), Optional.of(Atmospheres.of(pig).mixture()), "the breath is the air at its eyes");
         h.assertTrue(b.canBreathe(), "the pig can't breathe in the open air");
         h.assertTrue(b.isProtected(), "the pig isn't protected in the open air");
         h.succeed();
@@ -177,7 +188,7 @@ public final class ApiTests {
 
     /** With its eyes in water, zas keeps vanilla's verdict: a pig drowns (LIFE-022). */
     @GameTest(template = "empty")
-    public static void api_014_interim_answers_vanilla_underwater(GameTestHelper h) {
+    public static void api_014_keeps_vanilla_underwater(GameTestHelper h) {
         // A stone basin on a floor at y = 0, with a column of water two deep at (1, 1, 1).
         for (BlockPos p : BlockPos.betweenClosed(BlockPos.ZERO, new BlockPos(2, 2, 2))) {
             boolean water = p.getY() > 0 && p.getX() == 1 && p.getZ() == 1;
@@ -187,20 +198,16 @@ public final class ApiTests {
         h.succeedWhen(() -> {
             assertEyesInWater(h, pig);
             Breathability b = Breathing.of(pig);
-            h.assertValueEqual(b, Breathing.vanilla(pig), "the interim verdict is vanilla's");
+            h.assertValueEqual(b, Breathing.vanilla(pig), "the verdict under water is vanilla's");
             h.assertValueEqual(b.reason(), BreathReason.DROWNING, "reason");
             h.assertValueEqual(b.source(), BreathSource.FLUID, "source");
             h.assertFalse(b.canBreathe(), "a submerged pig can breathe");
         });
     }
 
-    /**
-     * Interim until LIFE (#34): in a vacuum zone, zas still answers with vanilla's verdict, which
-     * never looks at the atmosphere, so the pig is told it can breathe. LIFE's verdict is
-     * {@link BreathReason#LOW_OXYGEN} there; this test changes with it.
-     */
+    /** In a vacuum zone, the pig can't breathe for lack of O₂ (LIFE-003). */
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void api_014_interim_ignores_a_vacuum_zone(GameTestHelper h) {
+    public static void api_014_vacuum_zone_is_low_oxygen(GameTestHelper h) {
         Rooms r = new Rooms(h, 80);
         ServerLevel level = r.level;
         r.clear(0, 6);
@@ -219,13 +226,99 @@ public final class ApiTests {
             h.assertValueEqual(at.state(), AtmosphereState.ZONED, "the pig's eyes aren't in the room's zone");
             h.assertTrue(at.pressure() < 1e-6, "the room isn't a vacuum: " + at.pressure() + " kPa");
             Breathability b = Breathing.of(pig);
-            h.assertValueEqual(b, Breathing.vanilla(pig), "the interim verdict is vanilla's");
-            h.assertValueEqual(b.reason(), BreathReason.BREATHABLE, "reason");
-            h.assertTrue(b.isProtected(), "the interim verdict reports a hazard");
+            h.assertValueEqual(b.reason(), BreathReason.LOW_OXYGEN, "reason");
+            h.assertFalse(b.canBreathe(), "the pig can breathe in a vacuum");
+            h.assertValueEqual(b.source(), BreathSource.ATMOSPHERE, "source");
+            h.assertValueEqual(b.breath(), Optional.of(at.mixture()), "breath");
+            // Decompression (LIFE-010) is #35's: until then a vacuum lists no hazard.
+            h.assertTrue(b.isProtected(), "a hazard other than breathing: " + b.hazards());
         } finally {
             pig.discard();
         }
         h.succeed();
+    }
+
+    /** A gas its hazard profile makes harmful is a toxic-gas hazard (LIFE-004). */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_014_harmful_gas_is_a_toxic_gas_hazard(GameTestHelper h) {
+        Rooms r = new Rooms(h, 81);
+        ServerLevel level = r.level;
+        r.clear(0, 6);
+        r.shell(0, 4);
+        // Standard air with 0.5 kPa of CO, at which its profile impairs and damages (LIFE-041).
+        r.settle(GasMutations.add(level, r.point(2, 2, 2), carbonMonoxide(0.5, 27_000), Rooms.source("api_014")));
+        Pig pig = EntityType.PIG.create(level);
+        h.assertTrue(pig != null, "no pig");
+        pig.moveTo(Vec3.atBottomCenterOf(r.abs(2, 1, 2)));
+        level.addFreshEntity(pig);
+        try {
+            Breathability b = Breathing.of(pig);
+            h.assertValueEqual(b.reason(), BreathReason.BREATHABLE, "reason");
+            h.assertValueEqual(b.hazards(), Set.of(Hazard.TOXIC_GAS), "hazards");
+            h.assertFalse(b.isProtected(), "protected from CO");
+        } finally {
+            pig.discard();
+        }
+        h.succeed();
+    }
+
+    /** A player in creative or spectator mode is exempt: it never runs out of air (LIFE-037). */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_014_invulnerable_player_is_exempt(GameTestHelper h) {
+        Rooms r = new Rooms(h, 82);
+        ServerLevel level = r.level;
+        r.clear(0, 6);
+        r.shell(0, 4);
+        r.settle(GasMutations.remove(
+                level,
+                r.point(2, 2, 2),
+                Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
+                Rooms.source("api_014")));
+        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "zas_api_014"));
+        player.moveTo(Vec3.atBottomCenterOf(r.abs(2, 1, 2)));
+        player.getAbilities().invulnerable = true;
+        Breathability b = Breathing.of(player);
+        h.assertValueEqual(b.reason(), BreathReason.EXEMPT, "reason");
+        h.assertTrue(b.canBreathe(), "an exempt player can't breathe");
+        h.assertTrue(b.protection().contains(Protection.EXEMPT), "protection " + b.protection());
+        for (int i = 0; i < 20; i++) {
+            player.baseTick();
+        }
+        h.assertValueEqual(player.getAirSupply(), player.getMaxAirSupply(), "an exempt player's air");
+        h.succeed();
+    }
+
+    /** A mob that isn't in {@code zas:breathers} doesn't breathe (LIFE-001). */
+    @GameTest(template = "empty")
+    public static void api_014_untagged_mob_does_not_breathe(GameTestHelper h) {
+        Zombie zombie = h.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(1, 2, 1));
+        Breathability b = Breathing.of(zombie);
+        h.assertValueEqual(b.reason(), BreathReason.DOES_NOT_BREATHE, "reason");
+        h.assertValueEqual(b.source(), BreathSource.NONE, "source");
+        h.assertTrue(b.canBreathe(), "a non-breather can't breathe");
+        h.succeed();
+    }
+
+    /** The O₂ minimum is the server's setting (LIFE-003), 16 kPa by default. */
+    @GameTest(template = "empty")
+    public static void api_014_oxygen_minimum_follows_the_config(GameTestHelper h) {
+        h.assertValueEqual(Breathing.oxygenMinimum(), 16.0, "the default minimum");
+        double before = BreathingConfig.OXYGEN_MINIMUM.get();
+        try {
+            BreathingConfig.OXYGEN_MINIMUM.set(10.0);
+            h.assertValueEqual(Breathing.oxygenMinimum(), 10.0, "the configured minimum");
+        } finally {
+            BreathingConfig.OXYGEN_MINIMUM.set(before);
+        }
+        h.succeed();
+    }
+
+    /** CO at a partial pressure in kPa in a volume of standard air, at standard temperature. */
+    private static GasParcel carbonMonoxide(double kPa, double volume) {
+        double perKpa = volume / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+        return new GasParcel(
+                Map.of(ResourceLocation.fromNamespaceAndPath("zas", "carbon_monoxide"), kPa * perKpa),
+                StandardAir.TEMPERATURE);
     }
 
     /** The breathability helper is refused off the server thread for a server-side entity. */

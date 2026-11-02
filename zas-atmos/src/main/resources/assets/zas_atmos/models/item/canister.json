@@ -18,5 +18,103 @@
         0.48
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "zas_atmos:color": 0.03125
+      },
+      "model": "zas_atmos:block/canister_white"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.0625
+      },
+      "model": "zas_atmos:block/canister_orange"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.09375
+      },
+      "model": "zas_atmos:block/canister_magenta"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.125
+      },
+      "model": "zas_atmos:block/canister_light_blue"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.15625
+      },
+      "model": "zas_atmos:block/canister_lime"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.1875
+      },
+      "model": "zas_atmos:block/canister_pink"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.21875
+      },
+      "model": "zas_atmos:block/canister_gray"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.25
+      },
+      "model": "zas_atmos:block/canister_light_gray"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.28125
+      },
+      "model": "zas_atmos:block/canister_cyan"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.3125
+      },
+      "model": "zas_atmos:block/canister_purple"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.34375
+      },
+      "model": "zas_atmos:block/canister_blue"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.375
+      },
+      "model": "zas_atmos:block/canister_brown"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.40625
+      },
+      "model": "zas_atmos:block/canister_green"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.4375
+      },
+      "model": "zas_atmos:block/canister_red"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.46875
+      },
+      "model": "zas_atmos:block/canister_black"
+    },
+    {
+      "predicate": {
+        "zas_atmos:color": 0.5
+      },
+      "model": "zas_atmos:block/canister_red_white"
+    }
+  ]
 }

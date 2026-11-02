@@ -7,10 +7,13 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The server config, {@code config/zas-server.toml}, which a world's {@code
@@ -21,14 +24,15 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * for each option the preset sets ({@link PresetOptions}), which either follows the preset or
  * overrides it (OPS-014); the dimensions excluded from simulation (ENV-007); the atmos scheduler's
  * timing and debug switches (CORE-041, CORE-047, CORE-071, CORE-073) and the venting model
- * (CORE-035, CORE-068) under {@code [atmos]}; the
+ * (CORE-035, CORE-068) under {@code [atmos]}; breathing (LIFE-003, LIFE-007, LIFE-042) under
+ * {@code [breathing]} ({@link BreathingConfig}); the
  * permission level of the {@code /zas} commands (OPS-011) under {@code [commands]}; and the
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table, thresholds and
  * hazard toggles join this file as their features land.
  *
  * <p>Values are read from the loaded config on each call. NeoForge reloads the file when it
  * changes on disk, so an edit applies from the next read; commands that change a value write the
- * file with {@link #save()}.
+ * file with {@link #save}.
  */
 public final class ZasServerConfig {
     public static final ModConfigSpec SPEC;
@@ -66,7 +70,7 @@ public final class ZasServerConfig {
     /** {@code /zas checker on|off} until the server stops; null follows the config (OPS-010). */
     private static volatile Boolean checkerOverride;
 
-    /** Whether {@link #save()} leaves the file alone, for GameTests. */
+    /** Whether {@link #save} leaves the file alone, for GameTests. */
     private static volatile boolean savesHeldForTest;
 
     static {
@@ -121,6 +125,7 @@ public final class ZasServerConfig {
                         "about the same fraction of its air per second whatever its size.")
                 .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
         builder.pop();
+        BreathingConfig.define(builder);
         builder.push("commands");
         PERMISSION_LEVEL = builder.comment(
                         "The permission level every /zas command needs: 0 everyone, 2 operators (the",
@@ -141,6 +146,10 @@ public final class ZasServerConfig {
     /** Registers the config with the mod. */
     public static void register(ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, SPEC);
+        IEventBus modBus = container.getEventBus();
+        if (modBus != null) {
+            WorldConfigCopy.register(modBus, NeoForge.EVENT_BUS);
+        }
     }
 
     /** The active preset; {@link AtmospherePreset#NORMAL} while no world's config is loaded. */
@@ -150,7 +159,7 @@ public final class ZasServerConfig {
 
     /**
      * Switches the preset in the loaded config. Overrides stay (OPS-014). Not written to the file:
-     * {@link #save()} does that.
+     * {@link #save} does that.
      *
      * @throws IllegalStateException if no world's config is loaded
      */
@@ -162,17 +171,23 @@ public final class ZasServerConfig {
     }
 
     /**
-     * Writes the loaded config to the file it came from, so a change made by command lasts; NeoForge
-     * then fires its reload event. Does nothing while no world's config is loaded. Server thread.
+     * Writes the loaded config so a change made by command lasts: to the file it came from, or, in
+     * a singleplayer world without a server config of its own, to a new copy in the world's {@code
+     * serverconfig/}, leaving the shared file to the other worlds ({@link WorldConfigCopy},
+     * OPS-007). Server thread.
+     *
+     * @return what it wrote; empty while no world's config is loaded, or while saves are held
+     * @throws java.io.UncheckedIOException if the world's copy can't be written
      */
-    public static void save() {
-        if (SPEC.isLoaded() && !savesHeldForTest) {
-            SPEC.save();
+    public static Optional<WorldConfigCopy.Saved> save(MinecraftServer server) {
+        if (!SPEC.isLoaded() || savesHeldForTest) {
+            return Optional.empty();
         }
+        return modConfig().map(config -> WorldConfigCopy.save(server, config));
     }
 
     /**
-     * For GameTests: makes {@link #save()} leave the file alone, so commands under test don't write
+     * For GameTests: makes {@link #save} leave the file alone, so commands under test don't write
      * the config, whose reload would drop other tests' unsaved values.
      */
     public static void holdSavesForTest(boolean hold) {
@@ -180,18 +195,27 @@ public final class ZasServerConfig {
     }
 
     /**
-     * The file the loaded server config came from: the world's {@code serverconfig/zas-server.toml}
-     * if it has one, else {@code config/zas-server.toml}. Empty while none is loaded, or for a
-     * config a server synced to this client.
+     * The file the loaded server config is kept in: the world's {@code serverconfig/zas-server.toml}
+     * if it has one, including one {@link #save} made this session, else {@code
+     * config/zas-server.toml}. Empty while none is loaded, or for a config a server synced to this
+     * client.
      */
     public static Optional<Path> file() {
+        if (!SPEC.isLoaded()) {
+            return Optional.empty();
+        }
+        Optional<Path> copy = WorldConfigCopy.active();
+        if (copy.isPresent()) {
+            return copy;
+        }
+        return modConfig().map(WorldConfigCopy::path);
+    }
+
+    /** NeoForge's record of this config. */
+    public static Optional<ModConfig> modConfig() {
         for (ModConfig config : ModConfigs.getModConfigs(ZasMod.MOD_ID)) {
             if (config.getType() == ModConfig.Type.SERVER && config.getSpec() == SPEC) {
-                try {
-                    return Optional.of(config.getFullPath());
-                } catch (IllegalStateException notFromAFile) {
-                    return Optional.empty();
-                }
+                return Optional.of(config);
             }
         }
         return Optional.empty();

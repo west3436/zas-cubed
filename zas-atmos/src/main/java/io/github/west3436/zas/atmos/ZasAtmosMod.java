@@ -4,6 +4,8 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosCapabilities;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosCreativeTab;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
@@ -24,9 +26,11 @@ public final class ZasAtmosMod {
     public ZasAtmosMod(IEventBus modBus, ModContainer container) {
         AtmosBlocks.register(modBus);
         AtmosItems.register(modBus);
+        AtmosComponents.register(modBus);
         AtmosBlockEntities.register(modBus);
         AtmosMenus.register(modBus);
         AtmosCreativeTab.register(modBus);
+        AtmosCapabilities.register(modBus);
         AtmosServerConfig.register(container);
         DeviceTicker.register(NeoForge.EVENT_BUS);
     }

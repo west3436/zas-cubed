@@ -849,7 +849,7 @@ With the Normal preset, these operations shall trigger a zone:
   Normal and check a zone forms, and that a lit furnace doesn't form one.
 
 #### CORE-056 · Hardcore zone triggers
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-13, D-14, D-33, D-35 · Depends: FIRE-024, CONT-053
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-14, D-33, D-35 · Depends: FIRE-024, CONT-053
 
 With the Hardcore preset, these operations shall trigger a zone, in addition
 to the Normal triggers (CORE-055):
@@ -886,6 +886,12 @@ not the API: it lists itself in `#zas:combustion` and has a boolean `lit`
 property (CONT-067). `core_056_a_tagged_fuel_block_forms_a_zone_like_the_generator`
 checks that path with a redstone lamp standing in. CONT-067's GameTest with the
 real generator completes this Verify.*
+
+*2026-11-02: Implemented. The generator is in `#zas:combustion` with a `lit`
+property (CONT-067, [#52](https://github.com/west3436/zas-cubed/issues/52)).
+`core_056_lit_generator_forms_a_zone_under_hardcore` checks a lit generator
+forms a zone in a sealed room under Hardcore, and that unlit, or lit under
+Normal, it forms none.*
 
 #### CORE-052 · Zone garbage collection
 `Should` · `R1` · `Accepted` · Verify: GameTest

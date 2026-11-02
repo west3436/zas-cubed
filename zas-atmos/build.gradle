@@ -58,6 +58,10 @@ dependencies {
     implementation project(':zas-api')
     runtimeOnly project(':zas')
     gametestRuntimeOnly project(':zas').sourceSets.gametest.output
+    // GameTests (only) may use the framework's test hooks: driving atmos ticks (tickNow), the
+    // preset, ambient overrides and the published zones' pins. main stays API-only (CONT-095).
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

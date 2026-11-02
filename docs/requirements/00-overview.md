@@ -237,6 +237,18 @@ contents. The vacuum test dimension is the End with a test datapack's vacuum
 ambient, since the GameTest server has only the vanilla dimensions. The plans
 above stay the R1 plans. See [Phase D exit status](../plan.md#phase-d-exit-status-2026-10-31).*
 
+*2026-11-02: S-01's R1 plan passes on the integration branch
+([#160](https://github.com/west3436/zas-cubed/pull/160)), as
+`StationTests.s_01_pressurise_station` in the End with the vacuum ambient. A
+generator powers the room's area air controller. The O₂ goes in first, from a
+canister in the room whose release pressure is turned down eight 10 kPa steps
+to 21.325 kPa. Then an N₂ canister stands on a connector port outside, and the
+controller's vent blows the room to the Human target, 101 kPa: 0.325 kPa below
+101.325, at 21.1 % O₂. A player without a helmet then breathes it for 60 s
+with no harm. Until there is a gas mixer, a canister on a port can't send a
+measured share of one gas through a vent, so the O₂ is dosed with a canister's
+valve.*
+
 ## Questions
 
 ### Resolved (2026-10-30)
