@@ -82,6 +82,30 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/generator.json
 origin: original
 notes: The generator's four facings, lit and unlit.
 
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_vent.json
+origin: original
+notes: GameTest stand-in for a vent (dev runs only), shown with the existing vent model.
+
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_scrubber.json
+origin: original
+notes: GameTest stand-in for a scrubber (dev runs only), shown with the existing scrubber model.
+
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_pump.json
+origin: original
+notes: GameTest stand-in for a pump (dev runs only), shown with the existing pressure_pump model.
+
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_heater.json
+origin: original
+notes: GameTest stand-in for a heater (dev runs only), shown with the existing heater model.
+
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_device.json
+origin: original
+notes: GameTest stand-in for a powered device (dev runs only), shown with the existing volume_pump model.
+
+path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_battery.json
+origin: original
+notes: GameTest stand-in for an FE source (dev runs only), shown with the existing recharger model.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe.png
 origin: vgstation13
 source: icons/obj/pipes/regular.dmi

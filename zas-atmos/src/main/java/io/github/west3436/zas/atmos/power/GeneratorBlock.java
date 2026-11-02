@@ -26,7 +26,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * The solid-fuel generator (CONT-061, CONT-066, CONT-067): it burns coal or charcoal and offers the
+ * The solid-fuel generator (CONT-061, CONT-066, CONT-067): it burns furnace fuel and offers the
  * FE it makes through the FE capability, to an area air controller next to it (CONT-062) or any
  * other mod's FE block.
  *

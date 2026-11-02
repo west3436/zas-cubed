@@ -149,7 +149,7 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
 | `[power] generator_output` | `40` | What the generator makes while it burns, in FE/t, 0 to 100,000 (CONT-061) |
 | `[power] generator_buffer` | `8000` | The generator's own store, in FE, 1,000 to 30,000. It starts no new fuel while the store is full |
-| `[power] generator_seconds_per_fuel` | `80` | How long one coal or charcoal burns, in seconds, 1 to 1,600 (CONT-066) |
+| `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 
 ## Common: `zas-common.toml`
 

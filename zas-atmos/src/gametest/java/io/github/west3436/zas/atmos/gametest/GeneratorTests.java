@@ -10,6 +10,7 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.ZasServerConfig;
+import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Player;
@@ -37,8 +38,7 @@ public final class GeneratorTests {
 
     /**
      * The generator makes 40 FE/t while it burns, one coal lasts 80 s (1,600 game ticks), and it goes
-     * out when its fuel runs out; its slot takes only coal and charcoal (CONT-061, CONT-066,
-     * CONT-074).
+     * out when its fuel runs out; its slot takes fuel and not dirt (CONT-061, CONT-066, CONT-074).
      */
     @GameTest(template = "empty", batch = "zas_atmos_controller")
     public static void cont_061_generator_makes_40_fe_per_tick_and_a_coal_lasts_80_s(GameTestHelper h) {
@@ -85,6 +85,77 @@ public final class GeneratorTests {
             GeneratorMenu menu = new GeneratorMenu(0, player.getInventory(), g, new SimpleContainerData(4));
             h.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.DIRT)), "the menu's slot takes dirt");
             h.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(Items.CHARCOAL)), "the menu's slot refuses charcoal");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /**
+     * Any furnace fuel burns, for 80 s times its furnace burn time over coal's: a coal block 800 s, a
+     * stick 5 s. A lava bucket isn't fuel, since the slot has nowhere for its empty bucket: the slot
+     * refuses it, and one put there by other means isn't burnt (CONT-066, d-155-fuel).
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_controller")
+    public static void cont_066_generator_burns_any_furnace_fuel_by_its_burn_time(GameTestHelper h) {
+        Site s = new Site(h, 14);
+        try {
+            s.clear();
+            for (var item : List.of(
+                    Items.COAL,
+                    Items.CHARCOAL,
+                    Items.COAL_BLOCK,
+                    Items.STICK,
+                    Items.OAK_PLANKS,
+                    Items.BLAZE_ROD,
+                    Items.DRIED_KELP_BLOCK)) {
+                h.assertTrue(GeneratorBlockEntity.isFuel(new ItemStack(item)), item + " isn't fuel");
+            }
+            for (var item : List.of(Items.LAVA_BUCKET, Items.BUCKET, Items.DIRT, Items.AIR)) {
+                h.assertFalse(GeneratorBlockEntity.isFuel(new ItemStack(item)), item + " is fuel");
+            }
+            h.assertValueEqual(GeneratorBlockEntity.burnTicks(new ItemStack(Items.COAL)), 1600, "a coal's ticks");
+            h.assertValueEqual(
+                    GeneratorBlockEntity.burnTicks(new ItemStack(Items.COAL_BLOCK)), 16_000, "a coal block's ticks");
+            h.assertValueEqual(GeneratorBlockEntity.burnTicks(new ItemStack(Items.STICK)), 100, "a stick's ticks");
+            h.assertValueEqual(
+                    GeneratorBlockEntity.burnTicks(new ItemStack(Items.BLAZE_ROD)), 2400, "a blaze rod's ticks");
+
+            GeneratorBlockEntity g = generator(s, 2, 1, 2);
+            g.fuel().insertItem(0, new ItemStack(Items.COAL_BLOCK), false);
+            g.serverTick();
+            h.assertTrue(lit(s), "unlit with a coal block in it");
+            h.assertValueEqual(g.burnLeft(), 16_000, "a coal block burns for 800 s");
+            for (int t = 0; t < 16_000; t++) {
+                g.energy().extractEnergy(Integer.MAX_VALUE, false);
+                g.serverTick();
+            }
+            h.assertFalse(lit(s), "still lit after 800 s");
+
+            g.fuel().insertItem(0, new ItemStack(Items.STICK), false);
+            g.serverTick();
+            h.assertValueEqual(g.burnLeft(), 100, "a stick burns for 5 s");
+            for (int t = 0; t < 100; t++) {
+                g.energy().extractEnergy(Integer.MAX_VALUE, false);
+                g.serverTick();
+            }
+            h.assertFalse(lit(s), "still lit after a stick's 5 s");
+
+            h.assertValueEqual(
+                    g.fuel()
+                            .insertItem(0, new ItemStack(Items.LAVA_BUCKET), false)
+                            .getCount(),
+                    1,
+                    "the slot took a lava bucket");
+            g.fuel().setStackInSlot(0, new ItemStack(Items.LAVA_BUCKET));
+            g.serverTick();
+            h.assertFalse(lit(s), "burnt a lava bucket");
+            h.assertTrue(g.fuel().getStackInSlot(0).is(Items.LAVA_BUCKET), "the lava bucket went");
+
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            GeneratorMenu menu = new GeneratorMenu(0, player.getInventory(), g, new SimpleContainerData(4));
+            h.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(Items.OAK_PLANKS)), "the menu's slot refuses planks");
+            h.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.LAVA_BUCKET)), "the menu's slot takes lava");
             h.succeed();
         } finally {
             s.clear();
