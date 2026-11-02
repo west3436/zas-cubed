@@ -1066,7 +1066,7 @@ into the wall behind the panel, as a lever's does
 (`cont_040_danger_follows_the_readings`).*
 
 #### CONT-042 · Room model
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-68
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-68
 
 By default, an area air controller shall control the devices in its zone. The
 multitool can also link parts to it by hand, for example across a firelock.
@@ -1083,6 +1083,11 @@ point is in its zone, and the parts linked to it with the multitool, which
 `cont_068_controller_powers_its_zone_and_its_links` checks with stand-in parts
 across a stone wall. This stays Accepted until it is checked across a
 firelock (CONT-043).*
+
+*2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
+(GameTest) links a real vent in the room across a firelock: it is powered from
+the controller's buffer, follows its orders, and is listed as linked, not in
+the zone.*
 
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
@@ -1136,7 +1141,7 @@ it is in the zone, linked or both, and whether it has power. This stays
 Accepted until the manual check.*
 
 #### CONT-043 · Firelock
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, GEO-007
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02, GEO-007
 
 A firelock shall be a zone-boundary door (tagged `zas:zone_boundary`) that
 closes when any area air controller covering either side reaches danger 2. A
@@ -1151,8 +1156,20 @@ side.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), the standalone 1 × 2 firelock only
+(architecture §11.8). A controller covers a side if the side's cell is in its
+zone, or in the zone of a part linked to it (or, unzoned, is that part's air
+point). Its panel seals one face, which is its boundary face, so its cells
+join the room behind it. While the alarm holds, an opening by hand or with a
+crowbar closes again after 5 s, as vg's firedoors do ([vg
+§3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
+`FirelockTests` (GameTest): `cont_043_firelock_is_a_zone_boundary_on_its_panel_face`,
+`cont_043_controller_at_danger_2_on_either_side_closes_and_reopens` (a
+controller on each side in turn), `cont_043_an_opening_during_the_alarm_closes_after_5_s`
+and `cont_043_a_link_covers_the_part_s_room`.*
+
 #### CONT-092 · Firelock reopening
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 A firelock closed by a controller shall reopen once no controller covering
 either side is at danger 2.
@@ -1164,8 +1181,14 @@ either side is at danger 2.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented. A firelock closed by hand doesn't reopen, and one
+that is locked down (CONT-093) waits for the lockdown to end before it
+reopens, so it never opens onto a vacuum by itself.
+`cont_043_controller_at_danger_2_on_either_side_closes_and_reopens` and
+`cont_092_a_locked_down_firelock_waits_to_reopen` (GameTest).*
+
 #### CONT-093 · Firelock lockdown
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 A closed firelock shall lock down while the pressure difference across it is
 at least 25 kPa, or either side is at least 323.15 K (50 °C) or at most
@@ -1176,14 +1199,24 @@ at least 25 kPa, or either side is at least 323.15 K (50 °C) or at most
 - **Verify:** GameTests check lockdown at each threshold and that a locked
   firelock refuses to open by hand.
 
+*2026-11-02: Implemented. The warning is the locked-down model and a message
+on the action bar naming the reason. `LockdownTest` (Unit) checks each
+threshold from both sides; `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
+(GameTest) checks 24.4 and 25.1 kPa, 323 and 323.15 K and 273.15 K, and the
+refusal.*
+
 #### CONT-094 · Forcing firelocks
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 A tool shall force a firelock open, even in lockdown.
 
 - **Rationale:** vg: vg lets crew with access force firelocks; in Minecraft a
   tool stands in for access.
 - **Verify:** A GameTest checks the tool opens a locked-down firelock.
+
+*2026-11-02: Implemented. The tool is the crowbar; it also shuts an open
+firelock. `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
+(GameTest).*
 
 #### CONT-044 · Fire alarm
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, FIRE-019
@@ -1508,7 +1541,7 @@ cables push. It gives none out
 (`cont_062_buffer_fills_from_fe_blocks_next_to_it`).*
 
 #### CONT-068 · Wireless feed to parts
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-34, D-68
 
 An area air controller shall power, from its buffer, every atmospherics part
 that draws FE (CONT-065) in its zone or linked to it with the multitool
@@ -1527,6 +1560,10 @@ atmos tick at a time (architecture §11.7).
 `cont_068_controller_powers_its_zone_and_its_links` checks it with stand-in
 parts in its zone and linked across a wall. This stays Accepted until it is
 checked with real parts across a firelock.*
+
+*2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
+(GameTest) checks a real vent linked across a firelock runs from the
+controller's buffer.*
 
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68

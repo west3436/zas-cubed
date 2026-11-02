@@ -71,5 +71,12 @@
   "gui.zas_atmos.vent.status.room_empty": "Idle: there is no gas in front",
   "gui.zas_atmos.vent.status.network_bound": "Idle: the network has reached the internal bound",
   "gui.zas_atmos.vent.status.room_bound": "Idle: the room has reached the external bound",
-  "item.zas_atmos.dyed": "%s %s"
+  "item.zas_atmos.dyed": "%s %s",
+  "block.zas_atmos.firelock": "Firelock",
+  "block.zas_atmos.firelock.locked.pressure": "Locked down: %s kPa difference across it. Force it with a crowbar.",
+  "block.zas_atmos.firelock.locked.hot": "Locked down: %s K on one side. Force it with a crowbar.",
+  "block.zas_atmos.firelock.locked.cold": "Locked down: %s K on one side. Force it with a crowbar.",
+  "item.zas_atmos.crowbar": "Crowbar",
+  "item.zas_atmos.crowbar.forced_open": "You force the firelock open",
+  "item.zas_atmos.crowbar.forced_shut": "You force the firelock shut"
 }
