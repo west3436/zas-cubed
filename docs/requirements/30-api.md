@@ -349,6 +349,11 @@ configured O₂ minimum, 16 kPa without ZAS³, so a consumer can judge a point's
 air from `Atmospheres.at`. The `api_014_` GameTests check air, vacuum,
 underwater, a harmful gas, an exempt player, an untagged mob and the minimum.*
 
+*2026-11-02: On the client, ZAS³ now answers for the local player with the
+verdict the server last synced (LIFE-023), without the breath gas, while its
+eyes are where the server last checked them; for other entities, and before
+the first sync, with vanilla's. Still Accepted, for internals and suits.*
+
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 

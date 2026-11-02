@@ -40,8 +40,9 @@ import net.neoforged.neoforge.fluids.FluidType;
  * life-support capability (LIFE-021, API-022) and the protection of worn items (LIFE-020,
  * LIFE-025, LIFE-026) are still to come: until then no verdict breathes from {@link
  * BreathSource#INTERNALS} or lists any {@link Protection} but {@link Protection#EXEMPT} and {@link
- * Protection#IMMUNE}. On the client, ZAS³ answers with {@link #vanilla vanilla's verdict} until
- * the client breathing sync (LIFE-023) gives it the server's.
+ * Protection#IMMUNE}. On the client, ZAS³ answers for the local player with the verdict the server
+ * last synced (LIFE-023), without its breath gas, and for other entities with {@link #vanilla
+ * vanilla's verdict}.
  *
  * <p><b>Without ZAS³</b> the answer is {@link #vanilla vanilla's verdict} (API-009, D-17): in air
  * an entity breathes, and with its eyes in water it drowns unless vanilla lets it breathe there.
