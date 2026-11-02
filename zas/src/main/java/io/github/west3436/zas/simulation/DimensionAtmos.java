@@ -495,6 +495,19 @@ public final class DimensionAtmos {
         }
     }
 
+    /**
+     * Whether a loaded chunk's saved zones haven't reached the published table yet (API-010): its
+     * record waits for the next batch or for that batch's result, or, before the engine exists,
+     * its saved bytes wait to be read. Its cells then look unzoned without being so. Any thread.
+     */
+    public boolean isSettling(long chunk) {
+        DimensionPipeline p = pipeline;
+        if (p != null) {
+            return p.isSettling(chunk);
+        }
+        return !Ambients.isExcluded(level.dimension()) && AtmosPersistence.hasUntaken(level, chunk);
+    }
+
     /** Whether a chunk is loaded, as the atmosphere sees it. Any thread. */
     public boolean isChunkLoaded(long chunk) {
         return !simulatedUnloaded.contains(chunk) && AtmosPersistence.isLoaded(dimension(), chunk);

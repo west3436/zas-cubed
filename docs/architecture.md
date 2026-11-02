@@ -723,6 +723,17 @@ the lever if the per-cell cost ever matters.
   it is rebuilt a chunk at a time and holds the sum of its shares once complete
   (DATA-008, GEO-033). *Spike (S5):* conservation was exact across repeated
   unload and reload cycles.
+- **Settling chunks read as unresolved** ([#153](https://github.com/west3436/zas-cubed/issues/153)).
+  Between a chunk's load and the apply of the batch that carried its record,
+  the published snapshot doesn't hold its zones, so its cells look unzoned.
+  `DimensionPipeline` keeps those chunks, with the tick of the batch that
+  carries each record, in a concurrent set that any thread may read
+  (`isSettling`), and drops them once a result of that tick or later is
+  published. Before the dimension has an engine, a loaded chunk whose saved
+  bytes `AtmosPersistence` still holds counts as settling too. Queries answer
+  `UNRESOLVED` for an unzoned cell of a settling chunk (API-010), never the
+  ambient. A chunk that loads with nothing saved is never settling: its cells
+  are unzoned.
 - **Leaving memory.** Once every chunk a zone spans has unloaded, and no zone
   with a loaded chunk shares an edge with it, the worker drops it
   (`ZoneGraph.evict`); its state is in the chunks. Moving gas between memory

@@ -217,6 +217,16 @@ as unresolved; it read as ambient before
 lists the cells of held regions. Checked by
 `api_010_held_breach_region_is_unresolved` (Unit and GameTest).*
 
+*2026-11-02: A loaded chunk's cells now read as unresolved, not ambient, until
+the zones it saved are back in the published table
+([#153](https://github.com/west3436/zas-cubed/issues/153)). Before, a point in
+a saved room read as the dimension's ambient for up to an atmos tick after its
+chunk loaded or the server started. Checked by the GameTests
+`api_010_reloading_room_is_unresolved_until_its_zone_returns`,
+`api_010_reloading_room_never_reads_ambient`, which samples the room at every
+game tick from its load until its zone is back, and
+`api_010_restarted_room_is_unresolved_until_its_zone_returns`.*
+
 #### API-015 · Point resolution
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-44
 
