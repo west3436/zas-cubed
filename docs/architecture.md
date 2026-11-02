@@ -1164,14 +1164,41 @@ runs none of it until LIFE-023.
   the breath, for every living entity but those in `#zas:atmosphere_immune`
   (`Protection.IMMUNE`) and exempt players, breathing or not, eyes in a fluid
   or not. An entity's `Shielding` gives the fraction of the difference from
-  1 atm that reaches it (LIFE-020) and of temperature damage dealt (LIFE-025);
-  until #36 every entity is unshielded. The effective pressure is
+  1 atm that reaches it (LIFE-020) and of temperature damage dealt (LIFE-025),
+  from its protection (below). The effective pressure is
   1 atm + (P − 1 atm) × that fraction: below 20 kPa it deals 1 HP/s of
   decompression, at or above 550 kPa min((P / 550 − 1) × 2, 2) HP/s of
   barotrauma. Outside `[hazards] comfort_min_k` to `comfort_max_k` (220–360 K),
   frostbite and burns deal their highest tier reached. Each rate is multiplied
   by its hazard's scale in the dimension, and a check deals rate × seconds,
   each as its own damage type.
+- **Protection** (LIFE-020, LIFE-024 to LIFE-027, API-022). `WornProtection`
+  is an entity's `Shielding`, read once a check. Its parts:
+  - **Sources.** The pieces in its four armor slots, each covering its slot's
+    share of the body (`[protection]`: head 0.3, chest 0.4, legs 0.2, feet
+    0.1), and its own life support, which covers all of it.
+  - **Lookup.** `Protections` finds a piece's life support. The item's
+    `ILifeSupport` capability (`ILifeSupport.ITEM`) comes first. Next is
+    protection data naming the item, then data naming a tag the item is in
+    (`zas/protection`; [datapacks.md](datapacks.md#protection)). An entity's
+    own comes from `ILifeSupport.ENTITY`.
+  - **Pressure.** A piece protects against P below 1 atm if its
+    `minPressure` is at most P, and above 1 atm if its `maxPressure` is at
+    least P. The shares of the pieces that do give c, and (1 − c⁵) of the
+    difference reaches the wearer.
+  - **Temperature.** Pieces whose `minTemperature`–`maxTemperature` range
+    holds the temperature give c, and temperature damage is scaled by (1 − c).
+  - **Edge cases.** At exactly 1 atm or 293.15 K nothing covers. A sum within
+    1e-9 of 1 counts as 1.
+  - **The verdict.** It lists `PRESSURE` and `THERMAL` wherever some
+    protection is rated for the conditions.
+  - **Vanilla armor** is data (`zas:vanilla_armor`): heat protection to
+    400 K only.
+  - **Sealed breathing** comes from the head slot or the entity itself
+    (`WornProtection.sealedBreathing`), for internals.
+  - **Airflow resistance** is the highest of the pieces' and the entity's own
+    (`WornProtection.airflowResistance`), for FLOW-012 to read.
+  - **Gas filtering** is carried but not yet applied.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -1209,7 +1236,7 @@ runs none of it until LIFE-023.
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`; later `addHeat`, `removeHeat`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
-| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
+| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
@@ -1282,8 +1309,11 @@ LIFE-023. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):
 the pressure and temperature hazards, listed as `LOW_PRESSURE`,
 `HIGH_PRESSURE`, `COLD` and `HEAT` for every living entity they harm,
 breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
-**Not yet built:** breathing from internals (LIFE-021, API-022) and worn
-protection (#36), so a verdict lists no protection but `EXEMPT` and `IMMUNE`.
+*Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
+and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
+for the conditions. **Not yet built:** breathing from internals (LIFE-021,
+API-022) and gas filtering, so no verdict lists `SEALED_BREATHING` or
+`GAS_FILTERING`.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
 
