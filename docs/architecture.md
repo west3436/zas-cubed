@@ -1508,9 +1508,11 @@ the cell in front of its grille).
   - It runs only while powered (CONT-060), in the life-support group, drawing
     `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
     what it is doing: its mode while it runs, else off.
-  - **For the area air controller:** `VentBlockEntity.command(VentSettings)`
-    sets it, and an unchanged setting changes nothing, so a controller can
-    send the same order every atmos tick. `VentSettings.OFF`,
+  - **For the area air controller:** the vent is a `VentControl` (§11.6).
+    `ventOrder` turns an order into `VentBlockEntity.command(VentSettings)`,
+    and an unchanged setting changes nothing, so a controller can send the
+    same order every atmos tick. A covered vent's GUI settings last only until
+    the next order. `VentSettings.OFF`,
     `VentSettings.blow(target)` and `VentSettings.siphon(target)` build the
     usual settings.
 - **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
@@ -1582,8 +1584,8 @@ pressure's safe band, min1 to max1 (101 kPa for Human).
 **Device control.** `VentControl` and `ScrubberControl` are the controller's
 side of the vent and scrubber. The vent (#48) implements `VentControl` by
 mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
-blowing with external bound `t`. No device implements them yet; the
-GameTests use stand-ins (`gametest.TestParts`).
+blowing with external bound `t` (and internal bound 0). No scrubber exists
+yet; its GameTests use a stand-in (`gametest.TestParts`).
 
 **Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
 at danger 2. It powers the wall behind it strongly, as a lever does.

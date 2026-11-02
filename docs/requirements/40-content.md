@@ -971,6 +971,11 @@ scrubber orders, and Cycle's and Fill's switches (`ControllerMode`,
 checks them with stand-in parts. This stays Accepted until the vent (#48) and
 scrubber follow the orders.*
 
+*2026-11-02: The vent half passes with the real vent ([#160](https://github.com/west3436/zas-cubed/pull/160)):
+it implements `VentControl`, and `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest) checks that the vent
+follows Scrubbing, Off, Panic and Replacement, and moves nothing while ordered
+off. This stays Accepted until the scrubber follows its orders.*
+
 #### CONT-048 · Controller redstone
 `Must` · `R1` · `Implemented` · Verify: GameTest
 
@@ -1303,6 +1308,11 @@ can't pay its own draw, and parts stop when it stops paying them
 (`cont_064_a_starved_controller_powers_life_support_first`). This stays
 Accepted until each device exists to check.*
 
+*2026-11-02: The vent stops when its provider's power is cut ([#160](https://github.com/west3436/zas-cubed/pull/160)).
+In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest), the controller's generator is removed and its buffer
+spent; once the vent's lease runs out, it moves nothing and shows off. This
+stays Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1339,6 +1349,11 @@ draws come with them.*
 *2026-11-02: The controller's 5 FE/t is in the config (`[power]
 area_air_controller`, [config.md](../config.md)). This stays Accepted until
 every device's draw is.*
+
+*2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
+a controller pays 100 FE per atmos tick for itself and 200 for a blowing
+vent, out of a real generator's FE, and an ordered-off vent draws nothing.
+This stays Accepted until every device's draw is in the config.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -1434,7 +1449,7 @@ parts in its zone and linked across a wall. This stays Accepted until it is
 checked with real parts across a firelock.*
 
 #### CONT-069 · Parts without a controller have no power
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68
 
 An atmospherics part that no area air controller powers (CONT-068) shall have
 no power, even beside an FE source. Portables run on their battery instead
@@ -1450,6 +1465,11 @@ own cable (D-68).*
 *2026-11-02: `cont_068_controller_powers_its_zone_and_its_links` checks a
 stand-in part beside a burning generator has no power, then runs once linked.
 This stays Accepted until it is checked with the vent (#48).*
+
+*2026-11-02: Implemented ([#160](https://github.com/west3436/zas-cubed/pull/160)). In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest), a vent
+beside a burning generator, with no controller, stays unpowered and moves no
+gas; once it is linked with the multitool to a generator-powered controller in
+another room, it is powered by that controller and blows.*
 
 #### CONT-064 · Controller power priority
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
@@ -1473,6 +1493,10 @@ part that fits is paid, and once a part of a group misses out, the later
 groups get nothing that atmos tick (`PowerFeedTest`,
 `cont_064_a_starved_controller_powers_life_support_first` with stand-in
 parts). This stays Accepted until it is checked with the vent and scrubber.*
+
+*2026-11-02: With the real vent ([#160](https://github.com/west3436/zas-cubed/pull/160)): a controller with FE for
+itself and the vent but not a pump powers the vent and leaves the pump off
+(`StationTests.cont_069_a_real_vent_runs_only_on_a_controller`). This stays Accepted until it is checked with the scrubber.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
