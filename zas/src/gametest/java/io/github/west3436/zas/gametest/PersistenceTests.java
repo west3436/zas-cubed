@@ -244,6 +244,94 @@ public final class PersistenceTests {
         h.succeed();
     }
 
+    // ---- API-010: a loading chunk is unresolved until its zones are published (#153) ----------
+
+    /** Asserts a point of a reloading room isn't read as the ambient, and returns its state. */
+    private static AtmosphereState notAmbient(GameTestHelper h, Rooms r, String when) {
+        AtmosphereState s = Atmospheres.at(r.level, r.abs(12, 2, 12)).state();
+        h.assertTrue(s != AtmosphereState.AMBIENT, "the reloading room reads as the ambient " + when);
+        return s;
+    }
+
+    /**
+     * A zoned room whose chunks load again is {@code UNRESOLVED} while its saved zones wait for the
+     * next batch and while that batch is in flight, and its zone once the result is applied; never
+     * the ambient (API-010, #153).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_010_reloading_room_is_unresolved_until_its_zone_returns(GameTestHelper h) {
+        Rooms r = fourChunks(h, h.getLevel(), 240, 60);
+        ZoneInfo before = r.zone(12, 2, 12);
+        DimensionAtmos d = r.dimension();
+        Map<ChunkPos, byte[]> saved = new LinkedHashMap<>();
+        for (ChunkPos c : chunks(r)) {
+            saved.put(c, d.simulateUnload(c));
+        }
+        r.tick();
+        h.assertValueEqual(notAmbient(h, r, "while unloaded"), AtmosphereState.UNRESOLVED, "unloaded");
+        saved.forEach(d::simulateLoad);
+        for (ChunkPos c : chunks(r)) {
+            h.assertTrue(d.isSettling(c.toLong()), "chunk " + c + " isn't settling after its load");
+        }
+        h.assertValueEqual(notAmbient(h, r, "after its load"), AtmosphereState.UNRESOLVED, "loaded, not sent");
+        service().closeNow(r.level);
+        h.assertValueEqual(notAmbient(h, r, "in flight"), AtmosphereState.UNRESOLVED, "loaded, in flight");
+        service().applyNow(r.level);
+        h.assertValueEqual(notAmbient(h, r, "after the apply"), AtmosphereState.ZONED, "after the apply");
+        h.assertValueEqual(Atmospheres.at(r.level, r.abs(12, 2, 12)).zone(), Optional.of(before.id()), "its zone");
+        for (ChunkPos c : chunks(r)) {
+            h.assertFalse(d.isSettling(c.toLong()), "chunk " + c + " is still settling");
+        }
+        h.succeed();
+    }
+
+    /**
+     * The same with the server's own atmos ticks: from the load until its zone is back, the room is
+     * sampled at every game tick and never reads as the ambient (API-010, #153).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_010_reloading_room_never_reads_ambient(GameTestHelper h) {
+        Rooms r = fourChunks(h, h.getLevel(), 241, 60);
+        ZoneInfo before = r.zone(12, 2, 12);
+        DimensionAtmos d = r.dimension();
+        Map<ChunkPos, byte[]> saved = new LinkedHashMap<>();
+        for (ChunkPos c : chunks(r)) {
+            saved.put(c, d.simulateUnload(c));
+        }
+        r.tick();
+        saved.forEach(d::simulateLoad);
+        List<AtmosphereState> seen = new ArrayList<>();
+        seen.add(notAmbient(h, r, "right after its load"));
+        h.onEachTick(() -> seen.add(Atmospheres.at(r.level, r.abs(12, 2, 12)).state()));
+        h.succeedWhen(() -> {
+            h.assertFalse(seen.contains(AtmosphereState.AMBIENT), "read as the ambient while loading: " + seen);
+            h.assertValueEqual(Atmospheres.at(r.level, r.abs(12, 2, 12)).zone(), Optional.of(before.id()), "its zone");
+        });
+    }
+
+    /**
+     * After a restart, a room is {@code UNRESOLVED} until the new engine has published its saved
+     * zones, including while its saved bytes wait for an engine to read them (API-010, #153).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
+    public static void api_010_restarted_room_is_unresolved_until_its_zone_returns(GameTestHelper h) {
+        ServerLevel nether = restartLevel(h);
+        Rooms r = fourChunks(h, nether, 242, 60);
+        ZoneInfo before = r.zone(12, 2, 12);
+        Map<Long, byte[]> saved = service().stopForTest(nether, keys(r));
+        // As at a server start: the chunks have loaded with their bytes, and no engine has read them.
+        saved.forEach((chunk, bytes) -> AtmosPersistence.restore(nether, chunk, bytes));
+        h.assertValueEqual(notAmbient(h, r, "before an engine read it"), AtmosphereState.UNRESOLVED, "no engine");
+        service().startForTest(nether, saved);
+        h.assertValueEqual(notAmbient(h, r, "once delivered"), AtmosphereState.UNRESOLVED, "delivered, not sent");
+        service().closeNow(nether);
+        h.assertValueEqual(notAmbient(h, r, "in flight"), AtmosphereState.UNRESOLVED, "first batch in flight");
+        service().applyNow(nether);
+        h.assertValueEqual(notAmbient(h, r, "after the apply"), AtmosphereState.ZONED, "after the first apply");
+        h.assertValueEqual(Atmospheres.at(nether, r.abs(12, 2, 12)).zone(), Optional.of(before.id()), "its zone");
+        h.succeed();
+    }
+
     /**
      * Edges aren't saved; they are rebuilt when the zones are, and start awake (DATA-009). Hotspots
      * don't exist before FIRE (R1), so there is nothing of them to save or rebuild yet.
