@@ -11,8 +11,10 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 - **vg covers nearly everything.** vgstation13 has a sprite to start from for
   every R1 row except the gas fire and the electrolyzer. Every vg sprite and
   state named here exists at the pinned commit ([§3](#3-sources)).
-- **Block faces are all redrawn.** vg draws machines in a three-quarter view
-  at 32 px, so each face is redrawn at 16 px per block (D-67).
+- **Block faces are redrawn.** vg draws machines in a three-quarter view
+  at 32 px, so each face is redrawn at 16 px per block (D-67). The filter's
+  and mixer's tops are the exception: vg's own boxes, cut out at 32×32
+  (D-71).
 - **10 of the 23 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
   ones are redrawn to fill the 16 px slot, not at half size (the owner's pick
@@ -31,8 +33,8 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
-| Crop | – | – | 11 | – |
-| Redraw | 30 | 17 | 17 | 8 files |
+| Crop | 2 | – | 12 | – |
+| Redraw | 28 | 17 | 16 | 8 files |
 | As is | – | – | 1 | – |
 | Original | 2 | – | – | – |
 
@@ -43,7 +45,7 @@ canister counts once under Blocks, and its 17 colours separately.
 
 | Route | When | `CREDITS` origin |
 |---|---|---|
-| **Crop** | A vg item sprite fits in 16×16 px, or is within 2 px of it. It's cut out of its 32 px frame, trimmed to fit, and touched up. | `vgstation13` |
+| **Crop** | A vg item sprite fits in 16×16 px, or is within 2 px of it. It's cut out of its 32 px frame, trimmed to fit, and touched up. Also the filter's and mixer's tops, vg's boxes cut out as they are (D-71). | `vgstation13` |
 | **Redraw** | Any other texture with a vg sprite: every block face, and item sprites larger than 16 px. It's drawn at 16 px per block from the sprite's shapes, markings and colours. | `vgstation13` |
 | **As is** | vg's sprite unchanged, at its own size. Only the wrench (D-70). | `vgstation13` |
 | **Original** | No usable vg sprite. | `original` |
@@ -97,7 +99,8 @@ it isn't used.
 ## 5. Style
 
 - **16 px per block,** on the 1/16-block grid (D-67). No higher resolutions,
-  except vg's wrench sprite at 32×32 (D-70). A block taller than a block,
+  except vg's wrench sprite at 32×32 (D-70), and the filter's and mixer's
+  boxes, vg's own at 2 texels a pixel (D-71). A block taller than a block,
   like the 26 px canister, uses a 32×32 texture, still at 16 px per block.
 - **vg's colours with a vanilla finish** (style A, the owner's pick in the
   pilot): no black outlines on block faces, flat colour with one light and
@@ -117,10 +120,16 @@ it isn't used.
   arrow, so a device's input and output are easy to tell apart. A device with
   one pipe takes it on the face opposite its output: the vent's back, the
   connector port's bottom.
-- **Inline devices sit on the pipe.** The pressure pump and the valves have
-  the pipe's flange at each block edge and a short tube into a body in the
-  middle, in an undyed pipe's greys. The pump shows its direction with arrows
-  along its body, not on a port (the owner's pick in batch 3).
+- **Ports for one gas or for water are coloured.** The electrolyzer's gas
+  outlets are the pipe's flange in each gas's canister colour, and its water
+  inlet is square and water blue, so it can't be taken for a gas port.
+- **Inline devices sit on the pipe.** The pumps and the valves have the
+  pipe's flange at each block edge and a short tube into a body in the
+  middle, in an undyed pipe's greys. The pressure pump shows its direction
+  with arrows along its body, not on a port (the owner's pick in batch 3),
+  and the volume pump with a lamp sweeping toward the output. The filter and
+  mixer are boxes with a short third pipe to one side, which the wrench
+  swaps, and vg's arrow diagram on top (batch 4).
 - **Hand valves turn a straight lever,** like the canister's: the manual
   valve's lies across the pipe when shut and in line when open, and the tank
   transfer valve has the same one. Its grip is vg's handwheel red.
@@ -162,9 +171,9 @@ face.
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
 | `zas_atmos:pressure_pump` | `icons/obj/atmospherics/pump.dmi` | `intact_off`, `intact_on` (5 frames) | vg's pump is a small part on a pipe, 7×16 px. The block is mostly new, with its colours and markings. Done in batch 3: inline on the pipe, an 8 px round body whose lamp bars are two chevrons pointing the way the gas goes, lit in vg's lamp colours when on. vg's red band at the output is left out. |
-| `zas_atmos:volume_pump` | `icons/obj/atmospherics/volume_pump.dmi` | `intact_off`, `intact_on` (11 frames) | |
-| `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | |
-| `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | |
+| `zas_atmos:volume_pump` | `icons/obj/atmospherics/volume_pump.dmi` | `intact_off`, `intact_on` (11 frames) | Done in batch 4: the pressure pump's shape, with vg's dark slot along the body. On, one lamp sweeps toward the output in vg's colours for each place, and an arrowhead at the slot's output end shows the way when off. |
+| `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: inline, a box 10.5 by 11 px with a short third pipe to one side, the side the wrench sets (vg's mirrored filter). Its top is vg's box cut out as it is, at 32×32 (D-71), with vg's 5 frames: the input glows, then the path, then the outputs. vg leaves the filtered outlet's arrow dark; here it lights with the output's (the owner's ask). |
+| `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: the filter's shape, with vg's box and its 5 frames as they are. |
 | `zas_atmos:vent` | `icons/obj/atmospherics/vent_pump.dmi` | `base`, `out`, `in` (8 frames each) | Done in batch 1: a cube that faces any of six ways, like a dispenser, with vg's grille on the front. A light runs round the grille, blue when blowing and red the other way round when siphoning (CONT-070). A pipe joins only the back (CONT-014). |
 | `zas_atmos:scrubber` | `icons/obj/atmospherics/vent_scrubber.dmi` | `off`, `on`, `in` (5 frames) | Done in batch 2: the vent's cube, facing any of six ways with a pipe only on its back, with vg's round grille. vg's rings show the mode: a steady blue ring when scrubbing, a shrinking green one when siphoning. vg has no panic state. Panic is new: the siphon's ring in red, twice as fast. vg's own red rings are its stalled states, which ZAS has no texture for. |
 | `zas_atmos:passive_vent` | `icons/obj/atmospherics/pipe_vent.dmi` | `base` | |
@@ -179,8 +188,8 @@ face.
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
 | `zas_atmos:canister` | `icons/obj/atmos.dmi` | `yellow`, `can-open`, `can-connector`, `can-o0` to `can-o3` | vg's empty canister is yellow, so that's an undyed canister. Its other colours are in [§6.4](#64-canister-colours). The `can-o` lights show pressure; they're optional. |
-| `zas_atmos:portable_pump` | `icons/obj/atmos.dmi` | `psiphon:0`, `psiphon:1` (2 frames) | |
-| `zas_atmos:portable_scrubber` | `icons/obj/atmos.dmi` | `pscrubber:0`, `pscrubber:1` (2 frames) | |
+| `zas_atmos:portable_pump` | `icons/obj/atmos.dmi` | `psiphon:0`, `psiphon:1` (2 frames) | Done in batch 4: 12×14×12 in vg's blues, with its carry handle and a fan that turns when on. The top has the battery's hatch (CONT-018). |
+| `zas_atmos:portable_scrubber` | `icons/obj/atmos.dmi` | `pscrubber:0`, `pscrubber:1` (2 frames) | Done in batch 4: 14 wide, 9 tall and 12 deep, a low white body with its corners cut back under vg's grey housing. The light between vg's green stripes blinks when on. |
 | `zas_atmos:heater` | `icons/obj/atmos.dmi` | `sheater0`, `sheater1` (7 frames) | vg's space heater. Done in batch 3: a box 14 px wide on four feet, with vg's own front. |
 | `zas_atmos:air_conditioner` | `icons/obj/atmos.dmi` | `aircond0`, `aircond1` (9 frames) | vg's chiller. It's white where the heater is black, so the two already differ. Done in batch 3, at the heater's size. |
 | `zas_atmos:tank_holder` | `icons/obj/objects.dmi` | `dispenser`, `oxygen-1` to `oxygen-4` | vg's tank storage unit. Its overlays show how many tanks it holds. |
@@ -189,16 +198,16 @@ face.
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:electrolyzer` | None | | **Original.** vg's electrolyzer is a chemistry machine, not a water splitter. Its oxygen generator (`icons/obj/atmospherics/oxygen_generator.dmi`) is the nearest atmospherics device; if it's used as a reference, the texture becomes a Redraw. |
+| `zas_atmos:electrolyzer` | None | | **Original.** vg's electrolyzer is a chemistry machine, not a water splitter. Its oxygen generator (`icons/obj/atmospherics/oxygen_generator.dmi`) is the nearest atmospherics device; if it's used as a reference, the texture becomes a Redraw. Done in batch 4, from scratch: the owner found the oxygen generator a poor base. Two round glass columns, after a lab's Hofmann apparatus, stand on a plinth that is the water tank, its front window showing the water. On, bubbles rise and gas gathers under the caps, twice as much H₂ as O₂. Each gas leaves by a pipe flange in its canister colour on its own side (CONT-055), and fluid pipes join only the square inlet on the back (CONT-056). The flanges are the pipe's fitting recoloured, so they're credited to vg's pipe. |
 | `zas_atmos:generator` | `icons/obj/power.dmi` | `portgen0`, `portgen1` | Done in batch 1: vg's P.A.C.M.A.N., an engine in a tube frame. The firebox, which glows when lit, is new. |
-| `zas_atmos:recharger` | `icons/obj/power.dmi` | `ccharger0`, `ccharger1`, `ccharger-o0` to `ccharger-o4` | vg's cell charger. The overlays give the charge steps. |
+| `zas_atmos:recharger` | `icons/obj/power.dmi` | `ccharger0`, `ccharger1`, `ccharger-o0` to `ccharger-o4` | vg's cell charger. The overlays give the charge steps. Done in batch 4: vg's plate and tower, with the 4-step gauge on the tower's front. Six states: no battery, empty (its red step blinks) and steps 1 to 4. The battery on it is vg's plain cell whatever its tier. |
 
 **Area air controllers, airlocks and firelocks**
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
 | `zas_atmos:area_air_controller` | `icons/obj/monitors.dmi` | `alarm0`, `alarm2`, `alarm1`, `alarmp` | vg's air alarm: normal, danger 1, danger 2 and unpowered, in that order. vg's `alarm2` is yellow and `alarm1` red. Done in batch 1: a 12×7 panel on a wall, without vg's "AIR". The danger lights flash with vg's "!". |
-| `zas_atmos:fire_alarm` | `icons/obj/monitors.dmi` | `fire0e`, `fire1e`, `firep` | Normal, alarm and unpowered. |
+| `zas_atmos:fire_alarm` | `icons/obj/monitors.dmi` | `fire0e`, `fire1e`, `firep` | Normal, alarm and unpowered. Done in batch 4: vg's red box as a 10×8 wall panel, 2 deep, its lamp flashing red in an alarm. Its item sprite is a Crop, vg's own with two repeated columns dropped. |
 | `zas_atmos:airlock` | `icons/obj/doors/Doorext.dmi`; for the 2×2 layout, `icons/obj/doors/Door2x1glassfull.dmi` | `door_closed`, `door_open` | vg's external airlock, in two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. vg's doors are one tile, so both are redrawn taller. The 2×2 follows how vg's two-tile glass airlock splits into two leaves. |
 | `zas_atmos:firelock` | `icons/obj/doors/Doorfire.dmi` | `door_open`, `door_closed`, `door_locked`, `palert` (2 frames), `alert_hot`, `alert_cold` | vg's old full-tile firelock, red with "FIRE" and hazard stripes, from vg's first commit in 2010. It was replaced in 2012 by today's yellow `DoorHazard.dmi`, ported from Baystation 12. `palert` flashes for lockdown. The temperature lights `alert_hot` and `alert_cold` are optional. See [Firelocks on doors](#firelocks-on-doors). Done in batch 2: 1 by 2, a gold frame the block's full depth with a 4 px panel in the middle, closed, open and locked down, on its own and over a vanilla door. The temperature lights aren't drawn. |
 
@@ -235,18 +244,18 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:softsuit_chestplate` | `icons/obj/clothing/suits.dmi` | `space` | 23×22 | Redraw | Done in batch 2: vg's worn front, waist up, narrowed to 16 px. |
 | `zas_atmos:softsuit_leggings` | `icons/obj/clothing/suits.dmi` | `space` | | Redraw | vg's suit is one piece. The legs come from its lower half. Done in batch 2. |
 | `zas_atmos:softsuit_boots` | `icons/obj/clothing/suits.dmi` | `space` | | Redraw | From the suit's feet. Done in batch 2. |
-| `zas_atmos:hardsuit_helmet` | `icons/obj/clothing/hats.dmi` | `rig0-engineering` | 15×16 | Crop | vg's base hardsuit, in brown and gold with a blue visor. vg's civilian and engineering hardsuits both use it. |
-| `zas_atmos:hardsuit_chestplate` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | 21×25 | Redraw | |
-| `zas_atmos:hardsuit_leggings` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. |
-| `zas_atmos:hardsuit_boots` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. |
-| `zas_atmos:magnetic_boots` | `icons/obj/clothing/shoes.dmi` | `magboots0`, `magboots1` | 18×12 | Crop | Off and on. |
+| `zas_atmos:hardsuit_helmet` | `icons/obj/clothing/hats.dmi` | `rig0-engineering` | 15×16 | Crop | vg's base hardsuit, in brown and gold with a blue visor. vg's civilian and engineering hardsuits both use it. Done in batch 4: vg's sprite as it is, with its worn helmet. vg's rig sprites came from Baystation 12 (Flashkirby99's), which licenses its icons CC BY-SA 3.0. |
+| `zas_atmos:hardsuit_chestplate` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | 21×25 | Redraw | Done in batch 4: vg's worn front (`icons/mob/suit.dmi`), waist up, narrowed to 16 px. |
+| `zas_atmos:hardsuit_leggings` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. Done in batch 4, from the worn suit's legs. |
+| `zas_atmos:hardsuit_boots` | `icons/obj/clothing/suits.dmi` | `rig-engineering` | | Redraw | As the softsuit's. Done in batch 4, from the worn suit's feet. |
+| `zas_atmos:magnetic_boots` | `icons/obj/clothing/shoes.dmi` | `magboots0`, `magboots1` | 18×12 | Crop | Off and on. Done in batch 4: cut to 16 px wide, with vg's ankle light red off and green on, on the item and worn (the owner's choice). |
 | `zas_atmos:atmos_analyzer` | `icons/obj/device.dmi` | `atmos` | 14×22 | Redraw | Done in batch 1: redrawn at 10×16 to fill the slot. |
 | `zas_atmos:wrench` | `icons/obj/items.dmi` | `wrench` | 23×22 | As is | Done in the pilot: vg's sprite unchanged, at 32×32 and not mirrored (D-70). |
 | `zas_atmos:crowbar` | `icons/obj/items.dmi` | `crowbar` | 27×21 | Redraw | Done in batch 2: redrawn at 45° to fill the slot's width. |
-| `zas_atmos:multitool` | `icons/obj/device.dmi` | `multitool` | 9×17 | Crop | |
-| `zas_atmos:battery` | `icons/obj/power.dmi` | `cell`, `cell-o1`, `cell-o2` | 11×8 | Crop | The overlays show the charge. |
-| `zas_atmos:high_capacity_battery` | `icons/obj/power.dmi` | `hcell` | 11×8 | Crop | vg's high- and super-capacity cells look much alike. Recolour them so the tiers are easy to tell apart. |
-| `zas_atmos:super_capacity_battery` | `icons/obj/power.dmi` | `scell` | 11×8 | Crop | |
+| `zas_atmos:multitool` | `icons/obj/device.dmi` | `multitool` | 9×17 | Crop | Done in batch 4: cut to 16 px tall. |
+| `zas_atmos:battery` | `icons/obj/power.dmi` | `cell`, `cell-o1`, `cell-o2` | 11×8 | Crop | The overlays show the charge. Done in batch 4: grey, as it is. The overlays, yellow part charged and green full, are shared by all three tiers. |
+| `zas_atmos:high_capacity_battery` | `icons/obj/power.dmi` | `hcell` | 11×8 | Crop | vg's high- and super-capacity cells look much alike. Recolour them so the tiers are easy to tell apart. Done in batch 4: red, as it is. |
+| `zas_atmos:super_capacity_battery` | `icons/obj/power.dmi` | `scell` | 11×8 | Crop | Done in batch 4: in the blues of vg's ultra cell, `ucell`, keeping `scell`'s two stripes. |
 
 **Worn textures** are redrawn onto Minecraft's armor layout from vg's worn
 sprites. Those have four directions, which give the front, back and sides;
@@ -264,7 +273,11 @@ The softsuit's helmet was drawn in batch 1, as the head part of layer 1. Its
 antenna and ear plates are on the outer layer. Batch 2 drew the rest of the
 suit, with vg's 13 on the back (the owner's choice). It doesn't show the tank
 it holds. The masks' raised parts, the breath mask's cup and the gas mask's
-filter, are on the outer layer too.
+filter, are on the outer layer too. Batch 4 drew the hardsuit the same
+way, its crest ridges and headlamp on the outer layer and its ribs
+alternating gold and brown so it looks heavier (CONT-089). Minecraft mirrors
+the right arm onto the left, so vg's arm light is on both arms' outer sides.
+The magnetic boots cover the legs' lower seven rows.
 
 ### 6.4 Canister colours
 
@@ -338,7 +351,7 @@ changes.
 | 1. S-01 | Pipe, pipe cap, connector port, vent, the canister in yellow, blue and red (the O₂ and N₂ creative canisters), area air controller, generator, softsuit helmet, wrench, atmos analyzer. Done (2026-11-01) | 12 |
 | 2. S-02 and S-08 | Firelock at 1 by 2, on its own and over a vanilla door, crowbar, scrubber, the rest of the softsuit, the four tanks, breath mask, gas mask, and the worn textures of the masks and softsuit. Done (2026-11-02) | 12 |
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters. Done (2026-11-02) | 14 |
-| 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber | 17 |
+| 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber. Done (2026-11-02) | 17 |
 | 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent | 8 |
 
 The batches cover all 63 rows. The pilot's three textures count in batch 1.
@@ -412,3 +425,16 @@ The owner settled these on 2026-11-01:
     - The redstone valve has a redstone trace.
     - A primed tank transfer valve is an entity (CONT-104), with tanks lying
       on the floor either side of the valve.
+13. **Batch 4 settled** ([§5](#5-style), [§6](#6-sources-for-each-row)):
+    - The filter and mixer sit inline, with the side port on the side the
+      wrench sets. Their tops are vg's own boxes at 32×32 (D-71).
+    - The volume pump is the pressure pump's shape, with vg's slot and a
+      sweeping lamp.
+    - The electrolyzer is drawn from scratch as glass columns on a water
+      tank. Each gas leaves by its own port (CONT-055), and fluid pipes join
+      only the inlet on the back (CONT-056).
+    - The recharger shows the charge in four steps, and the batteries are
+      grey, red and blue.
+    - The portable pump and scrubber each fit in one block.
+    - The hardsuit's crest and headlamp stand out on the outer layer, and
+      the magnetic boots show vg's ankle light.

@@ -964,22 +964,30 @@ An air compressor shall fill a canister with 2 mol/s of ambient gas, up to
 
 A water electrolyzer shall produce 1 mol/s of O₂ and 2 mol/s of H₂, drawing
 80 FE/t. The rate is gameplay-scaled; real electrolysis energy would make
-about 140 times less.
+about 140 times less. Each gas leaves by its own pipe port, on opposite sides:
+facing its front, O₂ on the left and H₂ on the right.
 
 - **Rationale:** Decision: D-33; the rate is gameplay-scaled, as the statement
   says.
-- **Verify:** A GameTest checks the O₂ and H₂ output per second.
+- **Verify:** A GameTest checks the O₂ and H₂ output per second, and that each
+  gas leaves only by its own port.
+- **Changed 2026-11-02 (the owner, in the batch 4 art review):** each gas
+  leaves by its own pipe port, on opposite sides.
 
 #### CONT-056 · Electrolyzer water supply
 `Must` · `R1` · `Accepted` · Verify: GameTest
 
 The electrolyzer shall take water from buckets or a fluid capability into a
-4-bucket internal tank. One bucket lasts about 7.7 h of operation.
+4-bucket internal tank. One bucket lasts about 7.7 h of operation. Fluid
+pipes join it only at the water inlet on its back.
 
 - **Rationale:** Inferred: a 4-bucket tank lets the electrolyzer run for hours
   unattended; the 7.7 h follows from 2 mol/s of H₂.
 - **Verify:** A GameTest checks buckets and a fluid capability fill the tank,
-  and the water used per second.
+  and the water used per second. It also checks that the fluid capability is
+  offered on the back and no other face.
+- **Changed 2026-11-02 (the owner, in the batch 4 art review):** fluid pipes
+  join only the water inlet on the back.
 
 #### CONT-053 · Photosynthesis
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33, D-13, S-11

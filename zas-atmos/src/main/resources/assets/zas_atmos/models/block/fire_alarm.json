@@ -1,0 +1,77 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "panel": "zas_atmos:block/fire_alarm",
+    "particle": "zas_atmos:block/fire_alarm"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        6,
+        14
+      ],
+      "to": [
+        13,
+        14,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            10,
+            8
+          ],
+          "texture": "#panel"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            10,
+            8
+          ],
+          "texture": "#panel"
+        },
+        "east": {
+          "uv": [
+            10,
+            0,
+            12,
+            8
+          ],
+          "texture": "#panel"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            12,
+            8
+          ],
+          "texture": "#panel"
+        },
+        "up": {
+          "uv": [
+            0,
+            8,
+            10,
+            10
+          ],
+          "texture": "#panel"
+        },
+        "down": {
+          "uv": [
+            0,
+            8,
+            10,
+            10
+          ],
+          "texture": "#panel"
+        }
+      }
+    }
+  ]
+}

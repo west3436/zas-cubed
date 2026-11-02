@@ -1,0 +1,40 @@
+{
+  "textures": {
+    "water": "zas_atmos:block/electrolyzer_water",
+    "particle": "zas_atmos:block/electrolyzer_water"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        1,
+        1.5
+      ],
+      "to": [
+        12,
+        3,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            2,
+            8,
+            4
+          ],
+          "texture": "#water"
+        },
+        "up": {
+          "uv": [
+            0,
+            4,
+            8,
+            5
+          ],
+          "texture": "#water"
+        }
+      }
+    }
+  ]
+}
