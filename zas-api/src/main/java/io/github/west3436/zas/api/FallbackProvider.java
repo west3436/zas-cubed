@@ -1,6 +1,7 @@
 package io.github.west3436.zas.api;
 
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -14,6 +15,7 @@ import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
@@ -29,7 +31,9 @@ import net.minecraft.world.phys.Vec3;
  * mutations complete at once with nothing moved, pins complete at once with
  * nothing pinned, and breathing follows
  * vanilla's rules, so being underwater still counts (API-014). Standard
- * air's gases are the only gases, grouped as ZAS³'s shipped tags group them.
+ * air's gases are the only gases, grouped as ZAS³'s shipped tags group them
+ * and with the heat capacities ZAS³ ships for them. The atmos period is
+ * CORE-041's default, 1 s.
  */
 final class FallbackProvider implements ZasApiProvider {
     static final FallbackProvider INSTANCE = new FallbackProvider();
@@ -38,6 +42,12 @@ final class FallbackProvider implements ZasApiProvider {
     private static final CompletableFuture<MutationResult> ABSENT =
             CompletableFuture.completedFuture(MutationResult.ABSENT);
     private static final Set<ResourceLocation> OXIDIZERS = Set.of(StandardAir.OXYGEN);
+
+    /** N₂'s C<sub>v</sub> at 298.15 K, as ZAS³ ships it (CORE-015), in J/(mol·K). */
+    static final double NITROGEN_HEAT_CAPACITY = 20.81;
+
+    /** O₂'s C<sub>v</sub> at 298.15 K, as ZAS³ ships it (CORE-015), in J/(mol·K). */
+    static final double OXYGEN_HEAT_CAPACITY = 21.06;
 
     private FallbackProvider() {}
 
@@ -100,5 +110,29 @@ final class FallbackProvider implements ZasApiProvider {
     @Override
     public Breathability breathability(LivingEntity entity) {
         return Breathing.vanilla(entity);
+    }
+
+    @Override
+    public OptionalDouble molarHeatCapacity(ResourceLocation gas) {
+        return standardAirHeatCapacity(gas);
+    }
+
+    /**
+     * Standard air's gases' heat capacities as ZAS³ ships them; nothing for any other gas. Also
+     * {@link ZasApiProvider#molarHeatCapacity}'s default.
+     */
+    static OptionalDouble standardAirHeatCapacity(ResourceLocation gas) {
+        if (gas.equals(StandardAir.NITROGEN)) {
+            return OptionalDouble.of(NITROGEN_HEAT_CAPACITY);
+        }
+        if (gas.equals(StandardAir.OXYGEN)) {
+            return OptionalDouble.of(OXYGEN_HEAT_CAPACITY);
+        }
+        return OptionalDouble.empty();
+    }
+
+    @Override
+    public int atmosPeriodTicks() {
+        return Atmospheres.DEFAULT_PERIOD_TICKS;
     }
 }

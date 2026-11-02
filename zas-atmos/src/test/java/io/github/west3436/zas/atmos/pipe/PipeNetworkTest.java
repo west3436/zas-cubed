@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.ArrayList;
@@ -188,17 +189,52 @@ class PipeNetworkTest {
     }
 
     @Test
-    void gas_store_mixes_moles_at_the_mole_weighted_temperature_and_saves() {
+    void gas_store_mixes_moles_and_saves() {
         GasStore s = new GasStore(100);
-        s.add(new GasParcel(Map.of(O2, 1.0), 300));
-        s.add(new GasParcel(Map.of(N2, 3.0), 200));
-        close(225, s.temperature(), "mole-weighted temperature");
-        close(4 * GasMixture.GAS_CONSTANT * 225 / 100, s.pressure(), "pressure");
+        s.add(new GasParcel(Map.of(O2, 1.0), 250));
+        s.add(new GasParcel(Map.of(N2, 3.0), 250));
+        close(250, s.temperature(), "equal temperatures stay");
+        close(4 * GasMixture.GAS_CONSTANT * 250 / 100, s.pressure(), "pressure");
         GasParcel taken = s.take(Map.of(O2, 5.0, N2, 1.0));
         close(1, taken.moles(O2), "takes no more than there is");
         close(2, s.moles(N2), "N2 left");
         GasParcel back = GasStore.parcel(GasStore.save(s.fraction(0.5)));
         close(1, back.moles(N2), "saved and loaded");
-        close(225, back.temperature(), "saved temperature");
+        close(250, back.temperature(), "saved temperature");
+    }
+
+    /**
+     * Gas at different temperatures mixes conserving thermal energy (CONT-008, CORE-003): the
+     * store's C·T is the sum of the parts', with each gas's heat capacity from the API. Without
+     * ZAS³ (as here) the API answers with the shipped N₂ and O₂ values.
+     */
+    @Test
+    void cont_008_gas_at_different_temperatures_mixes_conserving_thermal_energy() {
+        double cO2 = GasProperties.molarHeatCapacity(O2);
+        double cN2 = GasProperties.molarHeatCapacity(N2);
+        assertEquals(21.06, cO2);
+        assertEquals(20.81, cN2);
+        GasStore s = new GasStore(100);
+        s.add(new GasParcel(Map.of(O2, 1.0), 400));
+        s.add(new GasParcel(Map.of(N2, 3.0), 200));
+        double energy = cO2 * 400 + 3 * cN2 * 200;
+        close(energy / (cO2 + 3 * cN2), s.temperature(), "heat-capacity-weighted temperature");
+        close(energy, s.thermalEnergy(), "thermal energy conserved");
+
+        // A whole network: a hot and a cold part mixed by a rebuild keep their energy.
+        List<Node> nodes = run(2);
+        nodes.get(0).stored.set(new GasParcel(Map.of(O2, 2.0), 500));
+        nodes.get(1).stored.set(new GasParcel(Map.of(N2, 6.0), 250));
+        PipeNetwork net = nodes.get(0).net();
+        close(2 * cO2 * 500 + 6 * cN2 * 250, net.gas().thermalEnergy(), "network energy conserved");
+
+        // A gas the server doesn't define uses the default heat capacity.
+        ResourceLocation unknown = ResourceLocation.fromNamespaceAndPath("test", "unknown");
+        assertEquals(GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY, GasProperties.molarHeatCapacity(unknown));
+        GasStore u = new GasStore(100);
+        u.add(new GasParcel(Map.of(O2, 1.0), 300));
+        u.add(new GasParcel(Map.of(unknown, 1.0), 100));
+        double cu = GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY;
+        close((cO2 * 300 + cu * 100) / (cO2 + cu), u.temperature(), "unknown gas mixes at the default");
     }
 }

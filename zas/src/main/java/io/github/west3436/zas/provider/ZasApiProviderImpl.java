@@ -18,6 +18,7 @@ import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
@@ -35,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -72,8 +74,8 @@ import net.neoforged.bus.api.IEventBus;
  * (API-016, API-050).
  *
  * <p>The breathability helper (API-014) answers with LIFE's breathing rules ({@link
- * BreathingRules}); protection, internals and the pressure and temperature hazards join it with
- * #35, #36 and the life-support capability (API-022, #60).
+ * BreathingRules}), with the pressure and temperature hazards; protection and internals join it
+ * with #36 and the life-support capability (API-022, #60).
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
     /** One cell of each ambient seen, by value; ambients are few. */
@@ -204,6 +206,23 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return sets.gases().getOrDefault(tag.id(), Set.of());
     }
 
+    /**
+     * The gas's C<sub>v</sub> in the gas set of the server running in this JVM, or else in the set
+     * the client received from its server (CORE-003, API-051).
+     */
+    @Override
+    public OptionalDouble molarHeatCapacity(ResourceLocation gas) {
+        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        int index = registry.indexOf(gas.toString());
+        return index < 0 ? OptionalDouble.empty() : OptionalDouble.of(registry.molarHeatCapacity(index));
+    }
+
+    /** The configured atmos period (CORE-041, API-052); the default before the config loads. */
+    @Override
+    public int atmosPeriodTicks() {
+        return ZasServerConfig.scheduler().periodTicks();
+    }
+
     /** A registry's tags as the API's id sets, built once per registry. */
     private record TagSets(GasRegistry registry, Map<ResourceLocation, Set<ResourceLocation>> gases) {
         static TagSets of(GasRegistry registry) {
@@ -222,9 +241,9 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      * LIFE's verdict on the server ({@link Breathers#verdict}): who breathes, the atmosphere at
      * the eyes, the O₂ minimum and the gases' hazard profiles, keeping vanilla's rule while the
      * eyes are in a fluid (LIFE-022), and the verdict the breath checks hold while the atmosphere
-     * at the eyes is unresolved (LIFE-048). Internals, protection and the pressure and temperature
-     * hazards join it with #35, #36 and API-022 (#60). On the client, vanilla's verdict, until the
-     * client breathing sync (LIFE-023) gives it the server's.
+     * at the eyes is unresolved (LIFE-048), and the pressure and temperature hazards (LIFE-010,
+     * LIFE-011, LIFE-014). Internals and protection join it with #36 and API-022 (#60). On the
+     * client, vanilla's verdict, until the client breathing sync (LIFE-023) gives it the server's.
      */
     @Override
     public Breathability breathability(LivingEntity entity) {

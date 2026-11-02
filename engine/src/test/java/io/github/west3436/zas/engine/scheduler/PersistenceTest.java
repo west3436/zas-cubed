@@ -59,7 +59,7 @@ class PersistenceTest {
 
     private static void reassemble(long seed) {
         Random random = new Random(seed);
-        Sim sim = new Sim(Ambient.VACUUM);
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
         rooms(sim.world);
         for (int[] p : SEEDS) {
             sim.add(p[0], p[1], p[2], 1 + random.nextDouble() * 50, random.nextDouble() * 20);

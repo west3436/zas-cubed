@@ -75,6 +75,15 @@ final class Sim {
         this.pipeline = new DimensionPipeline(scheduler, world, TestWorld.MIN_SECTION_Y, TestWorld.MAX_SECTION_Y);
     }
 
+    /**
+     * Turns conduction and radiation off, for tests that compare gas states across pauses or
+     * reloads, during which a paused zone keeps its temperature while the control would not.
+     */
+    Sim withoutHeat() {
+        settings = settings.withHeat(io.github.west3436.zas.engine.heat.HeatSettings.OFF);
+        return this;
+    }
+
     static GasDefinition gas(String id, double molarMass, double heatCapacity) {
         return new GasDefinition(
                 id, "gas." + id.replace(':', '.'), id.substring(4), molarMass, heatCapacity, Optional.empty());

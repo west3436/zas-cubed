@@ -785,11 +785,11 @@ public final class DimensionAtmos {
         return true;
     }
 
-    /** The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068). */
+    /** The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT). */
     private static EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()).withVenting(ZasServerConfig.venting());
-        return new EngineSettings(exchange, ZasServerConfig.conservationChecker());
+        return new EngineSettings(exchange, ZasServerConfig.conservationChecker(), ZasServerConfig.heat());
     }
 
     // ---- Commands and the profiler ------------------------------------------------------

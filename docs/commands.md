@@ -1,8 +1,9 @@
 # Commands
 
 ZAS³'s operator commands live under `/zas`. They inspect the atmosphere,
-edit gas, audit the simulation against the world, profile it and set the
-atmosphere preset. They are for operators and testers, not players.
+edit gas, audit the simulation against the world, profile it, set the
+atmosphere preset and report on life support. They are for operators and
+testers, not players.
 
 ## Permission
 
@@ -254,3 +255,28 @@ Atmosphere preset: Normal, 1 of 7 options overridden
   container_explosions_break_blocks = false [preset] (Normal false, Hardcore true), not used yet: waits for CONT-107
   Zone triggers under both presets (CORE-055): API calls, which include devices, leaks and /zas gas, and breaches of zones
 ```
+
+## Life support
+
+These commands only read. They show what breathing and the hazards make of an
+entity, and the hazard settings, so a tester can follow a check without
+waiting for death messages.
+
+| Command | What it reports |
+|---|---|
+| `/zas life [<targets>]` | For each living target, or yourself: the breathing verdict (API-014), its reason and breath source; the hazards that harm it and what protects it; for an entity pressure and temperature can harm, the pressure and temperature at its eyes, the effective pressure its protection lets reach it (LIFE-020), and the damage per second of each hazard there; and its health and air |
+| `/zas hazards` | The comfort band and each hazard's switch and scale in the dimension you're in, marking those a dimension override sets (LIFE-031, LIFE-036; [config.md](config.md#hazards)) |
+
+A zombie in a pumped-down room, which doesn't breathe:
+
+```
+> /zas life @e[type=zombie,limit=1,sort=nearest]
+Zombie in minecraft:overworld: does not breathe, breathing from none
+  Hazards: low pressure; protection: -
+  Exposure: 0 kPa (effective 0 kPa), 293.15 K (zoned)
+  Damage per second: decompression 1
+  Health 18 / 20, air 300 / 300
+```
+
+Damage is dealt at each entity's check, every 2 s by default
+(`[breathing] check_interval_ticks`), for the seconds since the last.

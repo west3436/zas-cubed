@@ -16,6 +16,7 @@ import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.life.BreathState;
@@ -24,6 +25,7 @@ import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EffectLevel;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
+import io.github.west3436.zas.life.HazardType;
 import io.github.west3436.zas.life.LifeDamage;
 import io.github.west3436.zas.life.Respiration;
 import java.util.ArrayList;
@@ -168,6 +170,13 @@ public final class BreathingTests {
             double before = BreathingConfig.RESPIRATION_MULTIPLIER.get();
             restore.add(() -> BreathingConfig.RESPIRATION_MULTIPLIER.set(before));
             BreathingConfig.RESPIRATION_MULTIPLIER.set(multiplier);
+        }
+
+        /** Turns a hazard off until the test ends (LIFE-031). */
+        void off(HazardType hazard) {
+            boolean before = HazardConfig.ENABLED.get(hazard).get();
+            restore.add(() -> HazardConfig.ENABLED.get(hazard).set(before));
+            HazardConfig.ENABLED.get(hazard).set(false);
         }
 
         /** Puts a hazard profile in place of a gas's own until the test ends. */
@@ -384,6 +393,7 @@ public final class BreathingTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void life_048_unresolved_atmosphere_holds_the_breath_state(GameTestHelper h) {
         try (Lab lab = new Lab(h, 217)) {
+            lab.off(HazardType.DECOMPRESSION); // room A holds only 0.5 kPa
             Rooms r = lab.r;
             r.clear(0, 23);
             r.shell(2, 9); // A, in the west chunk: 54 cells of CO alone

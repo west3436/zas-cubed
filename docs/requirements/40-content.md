@@ -73,6 +73,13 @@ A network's gas is a single mixture, so every change mixes the whole run.
 (Unit). The API gives no heat capacities, so gases at different temperatures
 mix at the mole-weighted mean; the Verify doesn't cover temperatures.*
 
+*2026-11-02: Gas at different temperatures now mixes conserving thermal
+energy, with each gas's heat capacity from the API (API-051,
+[#157](https://github.com/west3436/zas-cubed/issues/157)), as the owner
+required before release. Checked by
+`PipeNetworkTest.cont_008_gas_at_different_temperatures_mixes_conserving_thermal_energy`
+(Unit).*
+
 #### CONT-002 · Separate from zones
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: API-021
 

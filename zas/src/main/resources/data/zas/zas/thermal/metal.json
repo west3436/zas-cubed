@@ -1,0 +1,12 @@
+{
+  "blocks": [
+    "#c:storage_blocks/iron",
+    "#c:storage_blocks/gold",
+    "#c:storage_blocks/copper",
+    "#c:storage_blocks/netherite",
+    "minecraft:iron_bars",
+    "minecraft:iron_door",
+    "minecraft:iron_trapdoor"
+  ],
+  "transmittance": 50
+}

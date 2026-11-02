@@ -305,6 +305,52 @@ data/<namespace>/zas/geometry_overrides/<path>.json
   `/reload`, which rebuilds the geometry table; zones are rebuilt if the
   geometry changed.
 
+## Heat data
+
+How well a block conducts heat, and whether it is a heat source, are set per
+block or tag (HEAT-002, HEAT-003):
+
+```
+data/<namespace>/zas/thermal/<path>.json
+```
+
+```json
+{
+  "blocks": ["#minecraft:wool", "#minecraft:wool_carpets"],
+  "transmittance": 0.04
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, above 0 and at most 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ |
+| `temperature` | number | no | Makes the blocks heat sources at this temperature in K, 0 to 1,000,000. A source ends any heat path that reaches it and conducts with its own U |
+
+- A file needs `transmittance`, `temperature` or both.
+- **Each field is resolved on its own.** For each block, a file naming it
+  directly beats one matching it through a tag; between equals, the file whose
+  id sorts last wins. So a tag's file can set a U and another file can make
+  one of its blocks a source.
+- A block with no `transmittance` uses the server's fallback,
+  `[heat] fallback_transmittance` (1.7, as stone; [config](config.md#server-zas-servertoml)).
+- **Shipped data** (HEAT-014), in `data/zas/zas/thermal/`:
+
+  | File | Blocks | U |
+  |---|---|---|
+  | `wool.json` | `#minecraft:wool`, `#minecraft:wool_carpets` | 0.04 |
+  | `wood.json` | `#minecraft:planks`, `#minecraft:logs`, and the wooden slabs, stairs, doors, trapdoors, fences and fence gates | 0.15 |
+  | `stone.json` | `#minecraft:base_stone_overworld`, `#minecraft:base_stone_nether`, `#minecraft:stone_bricks`, `#c:stones`, `#c:cobblestones`, smooth stone | 1.7 |
+  | `ice.json` | `#minecraft:ice` | 2.2 |
+  | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
+  | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
+
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** with geometry overrides, at server start and on
+  `/reload`. Heat data is part of a block's geometry, so a change rebuilds the
+  zones as a geometry change does.
+
 ## Zone boundaries
 
 Blocks in the block tag `zas:zone_boundary` pass gas but keep the zones on
@@ -477,20 +523,42 @@ same path; to take one out, they replace the tag with `"replace": true` and
 list what should stay. The tag applies from the next breath check after
 `/reload`.
 
+## Atmosphere-immune entities
+
+Pressure and temperature (LIFE-010, LIFE-011, LIFE-014) harm every living
+entity, breathing or not, except the entity types in `zas:atmosphere_immune`
+(LIFE-015):
+
+```
+data/zas/tags/entity_type/atmosphere_immune.json
+```
+
+The shipped tag holds the bosses (the wither and the ender dragon) and the
+golems (the iron golem and the snow golem) (LIFE-016). An immune entity can
+still breathe if it is in `zas:breathers`: the tag spares it pressure and
+temperature only. Creative and spectator players are spared every hazard
+without a tag (LIFE-037). Packs change the tag as they do `zas:breathers`.
+
 ## Damage types
 
-Breathing deals two damage types of its own, data in `data/zas/damage_type/`
+Each hazard deals its own damage type, data in `data/zas/damage_type/`
 (LIFE-030):
 
 | Damage type | When | Death message |
 |---|---|---|
 | `zas:hypoxia` | An empty air meter in a breath with too little O₂, 2 HP/s (LIFE-008) | *Steve ran out of oxygen* |
 | `zas:toxic_gas` | A hazard profile's damage (LIFE-004) | *Steve breathed toxic gas* |
+| `zas:decompression` | An effective pressure below 20 kPa, 1 HP/s (LIFE-010) | *Steve was exposed to vacuum* |
+| `zas:barotrauma` | An effective pressure at or above 550 kPa, up to 2 HP/s (LIFE-014) | *Steve was crushed by the pressure* |
+| `zas:frostbite` | Below the comfort band, 0.5 to 2 HP/s (LIFE-011) | *Steve froze in the cold air* |
+| `zas:burns` | Above the comfort band, 1 to 4 HP/s (LIFE-011) | *Steve was burned by the hot air* |
+| `zas:airflow_impact` | Thrown against a block by airflow (FLOW) | *Steve was thrown by rushing air* |
 
-Both are in `#minecraft:bypasses_armor` (LIFE-035), `#minecraft:bypasses_cooldown`,
-so a hazard isn't lost to another's invulnerability ticks, and
-`#minecraft:no_knockback`. The other atmospheric damage types come with their
-hazards.
+All but `zas:airflow_impact` are in `#minecraft:bypasses_armor` (LIFE-035),
+since worn protection (LIFE-020, LIFE-025) stands in for armor;
+`#minecraft:bypasses_cooldown`, so a hazard isn't lost to another's
+invulnerability ticks; and `#minecraft:no_knockback`. Airflow impact is a blow,
+so armor and the damage cooldown apply to it as to any other.
 
 ## Invalid files
 

@@ -224,6 +224,10 @@ public final class ZasCommands {
         // OPS-007, OPS-014, OPS-015: the preset and the options it sets.
         root.then(PresetCommand.node());
 
+        // LIFE-010 to LIFE-036: an entity's breathing and hazards, and the hazard settings.
+        root.then(LifeCommand.lifeNode());
+        root.then(LifeCommand.hazardsNode());
+
         dispatcher.register(root);
     }
 

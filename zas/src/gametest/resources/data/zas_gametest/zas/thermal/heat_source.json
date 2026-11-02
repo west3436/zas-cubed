@@ -1,0 +1,5 @@
+{
+  "blocks": ["#zas_gametest:heat_source"],
+  "transmittance": 3.0,
+  "temperature": 400
+}

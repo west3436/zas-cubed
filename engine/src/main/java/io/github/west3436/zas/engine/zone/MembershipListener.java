@@ -26,6 +26,35 @@ public interface MembershipListener {
         public void zoneMerged(Zone from, Zone into) {}
     };
 
+    /** A listener that tells {@code first}, then {@code second}, of every change. */
+    static MembershipListener both(MembershipListener first, MembershipListener second) {
+        return new MembershipListener() {
+            @Override
+            public void cellAdded(long cell, Zone zone, double volume) {
+                first.cellAdded(cell, zone, volume);
+                second.cellAdded(cell, zone, volume);
+            }
+
+            @Override
+            public void cellRemoved(long cell, Zone zone, double volume) {
+                first.cellRemoved(cell, zone, volume);
+                second.cellRemoved(cell, zone, volume);
+            }
+
+            @Override
+            public void cellResized(long cell, Zone zone, double oldVolume, double newVolume) {
+                first.cellResized(cell, zone, oldVolume, newVolume);
+                second.cellResized(cell, zone, oldVolume, newVolume);
+            }
+
+            @Override
+            public void zoneMerged(Zone from, Zone into) {
+                first.zoneMerged(from, into);
+                second.zoneMerged(from, into);
+            }
+        };
+    }
+
     /** A cell joined a zone: created with it, joined it, split off into it, or was restored or loaded into it. */
     void cellAdded(long cell, Zone zone, double volume);
 

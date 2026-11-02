@@ -28,21 +28,64 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
-| `[breathing] check_interval_ticks` | `40` | Game ticks between each breathing entity's breath checks, 1 to 1,200 (LIFE-007). Rates are per second, so the interval changes smoothness and cost, not how fast anything happens |
+| `[heat] enabled` | `true` | Whether zones conduct heat through their walls, to and from heat sources, and radiate it to a vacuum (HEAT-001, HEAT-004) |
+| `[heat] fallback_transmittance` | `1.7` | U in W/(m²·K) per block-thick layer of a block with none in a datapack, 0.001 to 1,000,000 (HEAT-015). 1.7 is stone's |
+| `[heat] wall_thickness` | `3` | How many blocks deep a wall is searched for the space on its far side, 1 to 16 (HEAT-011). Past that, heat goes to the ground at the ambient temperature |
+| `[heat] near_vacuum_percent` | `1.0` | A zone thinner than this percentage of standard air's density neither conducts nor radiates (HEAT-008) |
+| `[heat] emissivity` | `0.9` | The emissivity of a wall's outer surface facing a vacuum, 0 to 1 (HEAT-004) |
+| `[breathing] check_interval_ticks` | `40` | Game ticks between each living entity's breath and hazard checks, 1 to 1,200 (LIFE-007). Rates are per second, so the interval changes smoothness and cost, not how fast anything happens |
+| `[breathing] max_checks_per_tick` | `100` | The most breath and hazard checks a server tick runs, over every dimension, 1 to 100,000 (LIFE-038). A check due beyond it waits for the next tick |
 | `[breathing] oxygen_minimum_kpa` | `16.0` | The O₂ partial pressure of the breath below which the air meter drains (LIFE-003) |
 | `[breathing] respiration_multiplier` | `1.0` | Multiplies respiration inside zones, about 1 mol of O₂ per breather per hour turned into CO₂ (LIFE-042); 0 turns it off. The same under both presets (D-27) |
+| `[hazards] comfort_min_k` | `220.0` | The bottom of the temperature comfort band; below it frostbite harms (LIFE-011) |
+| `[hazards] comfort_max_k` | `360.0` | The top of the temperature comfort band; above it burns harm (LIFE-011) |
+| `[hazards] dimension_overrides` | `[]` | Per-dimension overrides of the hazards' switches and scales (LIFE-036), [below](#hazards) |
+| `[hazards.<hazard>] enabled` | `true` | Whether the hazard harms anything (LIFE-031) |
+| `[hazards.<hazard>] scale` | `1.0` | Multiplies the hazard's damage, 0 to 1,000 (LIFE-031) |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
-The sharing table, thresholds and hazard toggles join the server config as
-their features land in R1. NeoForge reloads the file when it changes on disk,
-so an edit made while the server runs applies without a restart: the preset,
-its options and the excluded dimensions from the next lookup (for the
-simulation, its next atmos tick), the `[atmos]` timing and venting model from
-the next atmos tick, the thread mode when a dimension's simulation starts,
-`[breathing]` from each entity's next breath check, and `[commands]` and
-`[profiling]` at once. OPS-016's guarantee that every server
+The sharing table and thresholds join the server config as their features
+land in R1. NeoForge reloads the file when it changes on disk, so an edit made
+while the server runs applies without a restart: the preset, its options and
+the excluded dimensions from the next lookup (for the simulation, its next
+atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
+`[heat]` from the next atmos tick (a change to the fallback or the thickness
+finds every wall's paths again), the thread mode when a dimension's simulation
+starts, `[breathing]` and `[hazards]` from each entity's next check, and
+`[commands]` and `[profiling]` at once. OPS-016's guarantee that every server
 setting applies without a restart is R1.
+
+### Hazards
+
+Each hazard has its own `[hazards.<hazard>]` table with `enabled` and `scale`
+(LIFE-031), named as its damage type: `hypoxia`, `toxic_gas`, `decompression`,
+`barotrauma`, `frostbite`, `burns` and `airflow_impact`.
+
+- **Off,** a hazard harms nothing and isn't listed among a verdict's hazards
+  (API-014). With `hypoxia` off, a breath short of O₂ is breathable, so the air
+  meter doesn't drain. With `toxic_gas` off, the gases' hazard profiles apply
+  neither effects nor damage.
+- **The scale** multiplies the hazard's damage. It doesn't change effects or
+  the air meter: `toxic_gas` at 0 keeps the profiles' effects, and `hypoxia`
+  scales the 2 HP/s an empty meter deals.
+
+`[hazards] dimension_overrides` overrides a hazard's switch or scale in one
+dimension (LIFE-036). Each entry is `"<dimension> <hazard> <setting>"`, where
+the setting is `on`, `off` or a scale. Two entries for the same dimension and
+hazard combine, so one can turn it on and the other scale it. An entry that
+doesn't parse is dropped when the config loads. `/zas hazards` shows the
+settings in effect where you are ([commands.md](commands.md#life-support)).
+
+```toml
+[hazards]
+# Halve burns in the Nether, and turn frostbite off in the End.
+dimension_overrides = ["minecraft:the_nether burns 0.5", "minecraft:the_end frostbite off"]
+
+[hazards.decompression]
+enabled = true
+scale = 1.0
+```
 
 ### Venting
 
