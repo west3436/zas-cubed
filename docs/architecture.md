@@ -722,7 +722,11 @@ the lever if the per-cell cost ever matters.
   built this way stays paused while any chunk its shares list is unloaded, so
   it is rebuilt a chunk at a time and holds the sum of its shares once complete
   (DATA-008, GEO-033). *Spike (S5):* conservation was exact across repeated
-  unload and reload cycles.
+  unload and reload cycles. A record whose chunk is already gone again when
+  the batch closes, before the server has reported its unload, stays with the
+  server thread: its sections can't be captured, so the worker would find none
+  of its cells and drop the share. The chunk's unload then saves the record
+  as it loaded ([#159](https://github.com/west3436/zas-cubed/issues/159)).
 - **Settling chunks read as unresolved** ([#153](https://github.com/west3436/zas-cubed/issues/153)).
   Between a chunk's load and the apply of the batch that carried its record,
   the published snapshot doesn't hold its zones, so its cells look unzoned.

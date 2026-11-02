@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
@@ -15,6 +16,7 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -24,7 +26,9 @@ import net.minecraft.world.phys.Vec3;
  * Building and ticking for the paused-zone and persistence GameTests: each test gets a
  * chunk-aligned area of its own in a level, so rooms can be placed across chunk borders, and drives
  * atmos ticks itself. Nothing forces a chunk (GEO-034): building loads the area, and each test runs
- * within one game tick.
+ * within one game tick. The area's chunks unload a couple of game ticks later, since nothing holds
+ * them; a test that runs over several ticks holds them with {@link #holdLoaded}, as a player nearby
+ * would.
  *
  * <p>Numbered areas are at z = 8192, apart from the {@code AtmosTests} areas and from each other,
  * which keeps the tests independent of where their structures land. A test can also name its own
@@ -36,6 +40,10 @@ final class Rooms {
     static final ResourceLocation N2 = StandardAir.NITROGEN;
     static final BlockState STONE = Blocks.STONE.defaultBlockState();
     static final BlockState AIR = Blocks.AIR.defaultBlockState();
+
+    /** Holds an area's chunks loaded for {@link #holdLoaded}; lapses after 300 game ticks. */
+    private static final TicketType<ChunkPos> HELD =
+            TicketType.create("zas_gametest_held", Comparator.comparingLong(ChunkPos::toLong), 300);
 
     final GameTestHelper h;
     final ServerLevel level;
@@ -61,6 +69,18 @@ final class Rooms {
 
     Rooms(GameTestHelper h, int index) {
         this(h, h.getLevel(), index);
+    }
+
+    /**
+     * Keeps chunks loaded for a test that runs over several game ticks, with a ticket that lapses by
+     * itself after 300 game ticks, longer than any of these tests' timeouts. Without it they unload a
+     * couple of ticks after the building tick, really, not as {@link DimensionAtmos#simulateUnload}
+     * pretends. Not a forced chunk, so {@code geo_034_no_force_loading} still sees none.
+     */
+    void holdLoaded(Iterable<ChunkPos> chunks) {
+        for (ChunkPos c : chunks) {
+            level.getChunkSource().addRegionTicket(HELD, c, 0, c);
+        }
     }
 
     static SourceId source(String test) {
