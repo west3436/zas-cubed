@@ -15,15 +15,18 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.jetbrains.annotations.Nullable;
@@ -61,9 +64,11 @@ import org.jetbrains.annotations.Nullable;
  * drowning once a second as in vanilla; for a hypoxic entity this cancels that and deals 2 HP of
  * {@link LifeDamage#HYPOXIA} instead of drowning damage (LIFE-008), times the hazard's scale.
  *
- * <p><b>Client.</b> The hook also runs on the client, where this does nothing: until the client
- * breathing sync (LIFE-023, #36), the local player's air bar refills between the server's
- * updates.
+ * <p><b>Client.</b> The hook also runs on the client, where vanilla alone would refill the local
+ * player's air bar between the server's updates. So each player's state is synced to its own
+ * client ({@link BreathSyncPayload}) when it changes, at most 4 times a second, and on the client
+ * {@link ClientBreath} drains the local player's bar with it as this does on the server (LIFE-023).
+ * Other entities on the client are left to vanilla.
  */
 public final class Breathers {
     private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
@@ -84,6 +89,7 @@ public final class Breathers {
      */
     public static void register(IEventBus modBus, IEventBus gameBus) {
         ATTACHMENTS.register(modBus);
+        modBus.addListener(Breathers::registerPayloads);
         HazardProfiles.register(gameBus);
         Protections.register(gameBus);
         gameBus.addListener(EventPriority.NORMAL, LivingBreatheEvent.class, Breathers::onBreathe);
@@ -96,8 +102,16 @@ public final class Breathers {
         gameBus.addListener((ServerStoppedEvent e) -> Respiration.clear());
     }
 
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        event.registrar("1").playToClient(BreathSyncPayload.TYPE, BreathSyncPayload.STREAM_CODEC, ClientBreath::handle);
+    }
+
     private static void onBreathe(LivingBreatheEvent e) {
         LivingEntity entity = e.getEntity();
+        if (ClientBreath.isLocal(entity)) {
+            ClientBreath.LOCAL.breathe(e, ClientBreath.eyesInFluid(entity));
+            return;
+        }
         if (!(entity.level() instanceof ServerLevel level) || !BreathingRules.checked(entity)) {
             return;
         }
@@ -113,6 +127,9 @@ public final class Breathers {
     private static void onDrown(LivingDrownEvent e) {
         LivingEntity entity = e.getEntity();
         if (entity.level().isClientSide()) {
+            if (ClientBreath.isLocal(entity)) {
+                ClientBreath.LOCAL.drown(e, ClientBreath.eyesInFluid(entity));
+            }
             return;
         }
         BreathState state = entity.getExistingDataOrNull(STATE);
@@ -148,7 +165,24 @@ public final class Breathers {
                 state.defer();
             }
         }
+        if (entity instanceof ServerPlayer player) {
+            sync(player, state, now);
+        }
         return state;
+    }
+
+    /**
+     * Sends a player's breathing state to its client if a sync is due (LIFE-023, DATA-005): to that
+     * player only, when it changes, at most 4 times a second.
+     */
+    private static void sync(ServerPlayer player, BreathState state, long now) {
+        BreathSyncPayload payload = state.syncDue(now);
+        // Fake players have no client; every real client has the channel (zas is required on both sides).
+        if (payload != null
+                && !(player instanceof FakePlayer)
+                && player.connection.hasChannel(BreathSyncPayload.TYPE)) {
+            player.connection.send(payload);
+        }
     }
 
     /**

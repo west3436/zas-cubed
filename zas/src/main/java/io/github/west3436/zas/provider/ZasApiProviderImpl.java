@@ -29,6 +29,7 @@ import io.github.west3436.zas.gas.ClientGasRegistry;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
@@ -265,13 +266,14 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      * eyes are in a fluid (LIFE-022), and the verdict the breath checks hold while the atmosphere
      * at the eyes is unresolved (LIFE-048), and the pressure and temperature hazards (LIFE-010,
      * LIFE-011, LIFE-014) with worn and built-in protection (LIFE-020, LIFE-025). Internals join it
-     * with #36. On the
-     * client, vanilla's verdict, until the client breathing sync (LIFE-023) gives it the server's.
+     * with #36. On the client, for the local player, the server's verdict without its breath gas,
+     * as the client breathing sync (LIFE-023) last gave it ({@link ClientBreath#verdict}); for any
+     * other entity, and before the first sync, vanilla's.
      */
     @Override
     public Breathability breathability(LivingEntity entity) {
         if (entity.level().isClientSide()) {
-            return Breathing.vanilla(entity);
+            return ClientBreath.isLocal(entity) ? ClientBreath.LOCAL.verdict(entity) : Breathing.vanilla(entity);
         }
         return Breathers.verdict(entity);
     }

@@ -88,6 +88,12 @@ then the client leaves the event alone. The listener is `Breathers`, at
 `space_002_another_mods_cant_breathe_survives` that a `HIGH` listener's false
 stands in breathable air.*
 
+*2026-11-02: The client's half is built with LIFE-023
+([#36](https://github.com/west3436/zas-cubed/issues/36)). For the local player
+the same `NORMAL` listener sets `canBreathe` to false while the synced state
+finds it short of O₂ and its eyes aren't in a fluid, and otherwise leaves the
+event alone, as on the server.*
+
 #### SPACE-003 · Adapter version check
 `Must` · `R2` · `Deferred` — moved to R2 with the Ad Astra adapter (D-66), 2026-11-01. · Verify: GameTest · Trace: NFR-022, D-29
 

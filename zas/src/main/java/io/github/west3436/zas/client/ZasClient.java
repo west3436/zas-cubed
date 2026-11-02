@@ -3,6 +3,7 @@ package io.github.west3436.zas.client;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.airflow.AirflowReceiver;
 import io.github.west3436.zas.debug.ClientDebugOverlay;
+import io.github.west3436.zas.life.ClientBreath;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -22,5 +23,6 @@ public final class ZasClient {
             ClientDebugOverlay.clear();
             AirflowReceiver.CLIENT.clear();
         });
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientBreath.LOCAL.clear());
     }
 }
