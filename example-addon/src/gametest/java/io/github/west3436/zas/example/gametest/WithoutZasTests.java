@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
@@ -22,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -88,6 +90,22 @@ public final class WithoutZasTests {
         h.assertTrue(Atmospheres.zoneAt(overworld, pos).isEmpty(), "zoneAt(pos) found a zone");
         h.assertTrue(Atmospheres.zoneAt(overworld, Vec3.atCenterOf(pos)).isEmpty(), "zoneAt(point) found a zone");
         h.assertTrue(Atmospheres.zone(overworld, new ZoneId(1)).isEmpty(), "zone(id) found a zone");
+        h.succeed();
+    }
+
+    /**
+     * Standard air's gases have the heat capacities ZAS³ ships, any other gas the API's default,
+     * and the atmos period is 20 game ticks (API-009, API-051, API-052).
+     */
+    @GameTest(template = "empty")
+    public static void s_12_heat_capacities_and_period_are_the_defaults(GameTestHelper h) {
+        h.assertValueEqual(GasProperties.molarHeatCapacity(StandardAir.NITROGEN), 20.81, "N₂");
+        h.assertValueEqual(GasProperties.molarHeatCapacity(StandardAir.OXYGEN), 21.06, "O₂");
+        h.assertValueEqual(
+                GasProperties.molarHeatCapacity(ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide")),
+                GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY,
+                "a gas the fallback doesn't define");
+        h.assertValueEqual(Atmospheres.periodTicks(), 20, "the period");
         h.succeed();
     }
 

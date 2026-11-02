@@ -1105,8 +1105,9 @@ runs none of it until LIFE-023.
   than the one `zas` was built with, and `zas`'s provider must still
   implement it. `ZasApiProvider.breathability` defaults to vanilla's verdict,
   `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`), and
-  `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`), and
-  `oxygenMinimum` to 16 kPa.
+  `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`),
+  `oxygenMinimum` to 16 kPa, `molarHeatCapacity` to the shipped values for
+  N₂ and O₂ and nothing for other gases, and `atmosPeriodTicks` to 20.
 
 #### Breathability (API-014)
 
@@ -1366,9 +1367,10 @@ jar, so providers can be tested before real devices exist.
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
   `AtmosTicks.PERIOD` = 20 game ticks, 1 s (D-20), and rates are per second.
-  The API doesn't expose `[atmos] period_ticks`, so a changed period changes
-  how often the framework applies the devices' changes, not how fast they
-  act.
+  The API gives the framework's `[atmos] period_ticks`
+  (`Atmospheres.periodTicks()`, API-052), but devices keep their own fixed
+  step: rates are per second, so a changed period changes how often the
+  framework applies the devices' changes, not how fast they act.
 - **Spreading.** The n-th device to join is first due 1 + n mod 20 game ticks
   later, so devices placed or loaded together step in different game ticks.
 - **Ports.** A device changes a zone only through a `ZonePort`. A port's
@@ -1432,9 +1434,11 @@ the cell in front of its grille).
   its blockstate is a multipart of the core and an arm per connected face.
 - **One mixture.** A `PipeNetwork` is its members and one `GasStore`, whose
   volume is theirs summed (CONT-001), so every change mixes the whole network
-  (CONT-008). A `GasStore` is the content mod's mutable mixture. The API has
-  no heat capacities, so gas added to a store takes the mole-weighted mean
-  temperature, which is exact when temperatures are equal.
+  (CONT-008). A `GasStore` is the content mod's mutable mixture. Gas added
+  to a store mixes conserving thermal energy: the store takes the
+  heat-capacity-weighted mean temperature, with each gas's molar heat
+  capacity from the API (`GasProperties`, API-051). A gas the server doesn't
+  define mixes at the API's default, 20.8 J/(mol·K).
 - **Rebuilds.** A network never changes its members. It dissolves when a
   member is added, removed or unloaded: each member keeps its share by volume
   in its own store. The next network built, when a node needs its gas or at a

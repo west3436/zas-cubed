@@ -5,8 +5,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasPhaseData;
@@ -327,5 +331,36 @@ public final class GasRegistryTests {
         }
         h.assertTrue(end == plain.length() && end > 0, "can't read formula " + formula);
         return mass;
+    }
+
+    /**
+     * The API answers each gas's molar heat capacity from the server's definitions, and the
+     * default for a gas the server doesn't define (API-051); a parcel's heat capacity sums them.
+     */
+    @GameTest(template = "empty")
+    public static void api_051_heat_capacities_come_from_the_gas_definitions(GameTestHelper h) {
+        GasRegistry registry = ServerGasRegistry.current();
+        h.assertTrue(registry.size() >= 8, "the built-in gases aren't loaded");
+        for (GasDefinition d : registry.definitions()) {
+            h.assertValueEqual(
+                    GasProperties.molarHeatCapacity(ResourceLocation.parse(d.id())), d.molarHeatCapacity(), d.id());
+        }
+        ResourceLocation co2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+        h.assertValueEqual(GasProperties.molarHeatCapacity(co2), 28.81, "CO₂, from its shipped definition");
+        h.assertValueEqual(
+                GasProperties.molarHeatCapacity(ResourceLocation.fromNamespaceAndPath("zas_gametest", "no_such_gas")),
+                GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY,
+                "a gas the server doesn't define");
+        double c = GasProperties.heatCapacity(new GasParcel(Map.of(co2, 2.0), 300));
+        h.assertTrue(Math.abs(c - 2 * 28.81) < 1e-9, "2 mol of CO₂ has " + c + " J/K");
+        h.succeed();
+    }
+
+    /** The API answers the server's configured atmos period (API-052). */
+    @GameTest(template = "empty")
+    public static void api_052_period_is_the_servers(GameTestHelper h) {
+        h.assertValueEqual(
+                Atmospheres.periodTicks(), ZasServerConfig.scheduler().periodTicks(), "the configured period");
+        h.succeed();
     }
 }

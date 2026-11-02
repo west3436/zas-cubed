@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.gas;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
@@ -14,9 +15,9 @@ import net.minecraft.resources.ResourceLocation;
  * store. Moles per gas id (sorted, so iteration is deterministic), a temperature in K and a volume
  * in L; pressures in kPa, as in the API.
  *
- * <p><b>Mixing temperatures.</b> The public API doesn't expose gases' heat capacities, so gas added
- * to a store takes the mole-weighted mean temperature, as if every gas had the same molar heat
- * capacity (architecture §11.4). It is exact when the temperatures are equal.
+ * <p><b>Mixing temperatures.</b> Gas added to a store mixes conserving thermal energy (CONT-008,
+ * CORE-003): the store takes the heat-capacity-weighted mean temperature, with each gas's molar
+ * heat capacity from the API ({@link GasProperties}, architecture §11.4).
  *
  * <p>Server thread only; not thread-safe.
  */
@@ -89,6 +90,16 @@ public final class GasStore {
         return total;
     }
 
+    /** The heat capacity in J/K: Σ moles × molar heat capacity (CORE-003), 0 when empty. */
+    public double heatCapacity() {
+        return GasProperties.heatCapacity(moles);
+    }
+
+    /** The thermal energy in J: the heat capacity times the temperature. */
+    public double thermalEnergy() {
+        return heatCapacity() * temperature;
+    }
+
     /** Whether the store holds no gas. */
     public boolean isEmpty() {
         return moles.isEmpty();
@@ -110,7 +121,7 @@ public final class GasStore {
     }
 
     /**
-     * Adds gas, at the mole-weighted mean temperature.
+     * Adds gas, conserving thermal energy.
      *
      * @param gas the gas
      */
@@ -119,21 +130,18 @@ public final class GasStore {
     }
 
     /**
-     * Adds gas, at the mole-weighted mean temperature.
+     * Adds gas, conserving thermal energy: the store takes the heat-capacity-weighted mean of its
+     * temperature and the gas's, or the gas's own if the store is empty.
      *
      * @param add moles per gas, none negative
      * @param at their temperature in K
      */
     public void add(Map<ResourceLocation, Double> add, double at) {
-        double added = 0;
-        for (double n : add.values()) {
-            added += n;
-        }
+        double added = GasProperties.heatCapacity(add);
         if (!(added > 0)) {
             return;
         }
-        double before = totalMoles();
-        temperature = (before * temperature + added * at) / (before + added);
+        temperature = GasProperties.mixedTemperature(heatCapacity(), temperature, added, at);
         add.forEach((gas, n) -> {
             if (n > 0) {
                 moles.merge(gas, n, Double::sum);

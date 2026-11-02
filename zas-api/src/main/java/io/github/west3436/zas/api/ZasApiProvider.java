@@ -1,6 +1,7 @@
 package io.github.west3436.zas.api;
 
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -12,6 +13,7 @@ import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
@@ -208,5 +210,39 @@ public interface ZasApiProvider {
     @AnyThread
     default double oxygenMinimum() {
         return Breathing.DEFAULT_OXYGEN_MINIMUM;
+    }
+
+    /**
+     * A gas's molar heat capacity at constant volume (CORE-003, API-051), for
+     * {@link io.github.west3436.zas.api.gas.GasProperties}.
+     *
+     * <p>The default is the fallback's answer: the heat capacities ZAS³ ships for standard air's
+     * gases, and nothing for any other gas. It is there so that a provider built against an API
+     * from before this method still answers when a newer API is loaded (architecture §6.2).
+     *
+     * <p>Thread: any.
+     *
+     * @param gas the gas id
+     * @return C<sub>v</sub> in J/(mol·K), or empty if the gas isn't defined
+     */
+    @AnyThread
+    default OptionalDouble molarHeatCapacity(ResourceLocation gas) {
+        return FallbackProvider.standardAirHeatCapacity(gas);
+    }
+
+    /**
+     * The atmos tick period in game ticks (CORE-041, API-052), for
+     * {@link Atmospheres#periodTicks()}.
+     *
+     * <p>The default is the fallback's answer, CORE-041's default of 20 (1 s). It is there for the
+     * same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return the period, at least 2
+     */
+    @AnyThread
+    default int atmosPeriodTicks() {
+        return Atmospheres.DEFAULT_PERIOD_TICKS;
     }
 }

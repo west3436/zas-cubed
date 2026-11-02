@@ -18,6 +18,7 @@ import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
@@ -35,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -202,6 +204,23 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             tagSets = sets;
         }
         return sets.gases().getOrDefault(tag.id(), Set.of());
+    }
+
+    /**
+     * The gas's C<sub>v</sub> in the gas set of the server running in this JVM, or else in the set
+     * the client received from its server (CORE-003, API-051).
+     */
+    @Override
+    public OptionalDouble molarHeatCapacity(ResourceLocation gas) {
+        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        int index = registry.indexOf(gas.toString());
+        return index < 0 ? OptionalDouble.empty() : OptionalDouble.of(registry.molarHeatCapacity(index));
+    }
+
+    /** The configured atmos period (CORE-041, API-052); the default before the config loads. */
+    @Override
+    public int atmosPeriodTicks() {
+        return ZasServerConfig.scheduler().periodTicks();
     }
 
     /** A registry's tags as the API's id sets, built once per registry. */
