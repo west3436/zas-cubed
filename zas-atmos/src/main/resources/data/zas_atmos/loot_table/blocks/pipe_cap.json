@@ -3,8 +3,38 @@
   "pools": [
     {
       "rolls": 1,
-      "entries": [{ "type": "minecraft:item", "name": "zas_atmos:pipe_cap" }],
-      "conditions": [{ "condition": "minecraft:survives_explosion" }]
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "zas_atmos:pipe_cap",
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "zas_atmos:pipe_cap",
+              "properties": [
+                "color"
+              ],
+              "conditions": [
+                {
+                  "condition": "minecraft:inverted",
+                  "term": {
+                    "condition": "minecraft:block_state_property",
+                    "block": "zas_atmos:pipe_cap",
+                    "properties": {
+                      "color": "none"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
     }
   ]
 }

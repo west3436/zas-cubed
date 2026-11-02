@@ -9,7 +9,8 @@ alarm became the area air controller and the power cable and multipart block
 were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
 CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
-CONT-114 (dyed pipes) was added as Draft on 2026-11-02.
+CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
+owner and accepted the same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -152,16 +153,29 @@ checks the formula; `PipeTests.cont_004_open_end_exchanges_at_the_one_connection
 and `cont_004_capped_pipe_does_not_leak` (GameTest) check it in a room.*
 
 #### CONT-114 · Dyed pipes
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [textures](../textures.md#content-mod-zas_atmos-blocks)
 
 Using a dye on a pipe or pipe cap shall colour it, using up one dye outside
 creative. The colour is cosmetic: it doesn't change what the pipe connects to.
+A dyed pipe or cap, mined, shall drop an item of its colour, and a dyed item
+shall place a pipe or cap of that colour.
+
+- **Verify:** A GameTest dyes a pipe and a cap and checks the colour, the dye
+  used and the connections. It mines dyed pipes and caps, checks each drops an
+  item of its colour, and places those items, checking that the blocks are
+  dyed.
 
 *2026-11-02: added as Draft from the owner's choice of 2026-11-01 that players
 dye pipes, which had no requirement. Whether differently dyed pipes should
 stay apart, so parallel runs can share a wall, is left open. Built in
 [#47](https://github.com/west3436/zas-cubed/issues/47) and checked by
 `PipeTests.cont_114_a_dye_colours_a_pipe` (GameTest).*
+
+*2026-11-02: owner changed mined dyed pipes to keep their dye, and accepted.
+Previously a mined dyed pipe dropped a plain pipe, losing the dye it used.
+The item carries the colour in the block state component, as the canister
+item does. `PipeTests.cont_114_a_mined_dyed_pipe_keeps_its_dye` (GameTest)
+checks the drops, the placing and picking the block.*
 
 #### CONT-005 · Overpressure
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; off by default anyway), 2026-10-30. · Verify: GameTest

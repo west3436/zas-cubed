@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -90,6 +91,12 @@ public class PipeCapBlock extends BaseEntityBlock implements PipeConnector {
             InteractionHand hand,
             BlockHitResult hit) {
         return PipeBlock.dye(stack, state, level, pos, player);
+    }
+
+    /** Picking a dyed cap gives a cap of its colour (CONT-114). */
+    @Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        return PipeBlock.dyed(super.getCloneItemStack(level, pos, state), state);
     }
 
     @Override

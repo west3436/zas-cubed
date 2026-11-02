@@ -14,6 +14,7 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -171,6 +172,20 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
             stack.consume(1, player);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Picking a dyed pipe gives a pipe of its colour (CONT-114). */
+    @Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        return dyed(super.getCloneItemStack(level, pos, state), state);
+    }
+
+    /** A stack of a pipe or cap item, given the colour of a block state. */
+    static ItemStack dyed(ItemStack stack, BlockState state) {
+        if (stack.getItem() instanceof PipeItem item) {
+            return PipeItem.of(item, state.getValue(PipeColor.PROPERTY), stack.getCount());
+        }
+        return stack;
     }
 
     @Override

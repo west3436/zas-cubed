@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
+import io.github.west3436.zas.atmos.pipe.PipeItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -11,8 +12,10 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class AtmosItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ZasAtmosMod.MOD_ID);
 
-    public static final DeferredItem<BlockItem> PIPE = ITEMS.registerSimpleBlockItem(AtmosBlocks.PIPE);
-    public static final DeferredItem<BlockItem> PIPE_CAP = ITEMS.registerSimpleBlockItem(AtmosBlocks.PIPE_CAP);
+    public static final DeferredItem<PipeItem> PIPE =
+            ITEMS.registerItem("pipe", p -> new PipeItem(AtmosBlocks.PIPE.get(), p));
+    public static final DeferredItem<PipeItem> PIPE_CAP =
+            ITEMS.registerItem("pipe_cap", p -> new PipeItem(AtmosBlocks.PIPE_CAP.get(), p));
     public static final DeferredItem<BlockItem> CONNECTOR_PORT =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.CONNECTOR_PORT);
     public static final DeferredItem<CanisterItem> CANISTER =

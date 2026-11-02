@@ -23,5 +23,6 @@
   "gui.zas_atmos.vent.cycle": "Off / blow / siphon",
   "gui.zas_atmos.vent.order": "Order: %s",
   "gui.zas_atmos.vent.controlled": "Controlled by an area air controller",
-  "gui.zas_atmos.vent.controller_at": "at %s, %s, %s"
+  "gui.zas_atmos.vent.controller_at": "at %s, %s, %s",
+  "item.zas_atmos.dyed": "%s %s"
 }

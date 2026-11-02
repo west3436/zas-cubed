@@ -14,21 +14,27 @@ import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
+import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosItems;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -227,5 +233,75 @@ public final class PipeTests {
         h.assertTrue(network(a, 1, 1, 1) == net, "dyeing rebuilt the network");
         a.close(net.gas().moles(O2), 3.0, "gas after dyeing");
         h.succeed();
+    }
+
+    /**
+     * CONT-114: a mined dyed pipe or cap drops an item of its colour, which places dyed and picks
+     * dyed; an undyed one drops a plain item that stacks with new ones.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_114_a_mined_dyed_pipe_keeps_its_dye(GameTestHelper h) {
+        Area a = new Area(h, 6);
+        a.clear(0, 0, 6, 4);
+        pipe(a, 1, 1, 1);
+        cap(a, 2, 1, 1, Direction.WEST);
+        pipe(a, 4, 1, 1);
+        a.set(1, 1, 1, a.get(1, 1, 1).setValue(PipeColor.PROPERTY, PipeColor.RED));
+        a.set(2, 1, 1, a.get(2, 1, 1).setValue(PipeColor.PROPERTY, PipeColor.LIGHT_BLUE));
+
+        ItemStack redPipe = drop(a, 1, 1, 1);
+        ItemStack blueCap = drop(a, 2, 1, 1);
+        ItemStack plain = drop(a, 4, 1, 1);
+        h.assertTrue(redPipe.is(AtmosItems.PIPE.get()), "a dyed pipe dropped " + redPipe);
+        h.assertValueEqual(PipeItem.color(redPipe), PipeColor.RED, "the mined pipe's colour");
+        h.assertTrue(blueCap.is(AtmosItems.PIPE_CAP.get()), "a dyed cap dropped " + blueCap);
+        h.assertValueEqual(PipeItem.color(blueCap), PipeColor.LIGHT_BLUE, "the mined cap's colour");
+        h.assertTrue(
+                ItemStack.isSameItemSameComponents(plain, new ItemStack(AtmosItems.PIPE.get())),
+                "an undyed pipe's drop doesn't stack with a new pipe: " + plain);
+        h.assertTrue(
+                redPipe.getHoverName().getContents() instanceof TranslatableContents t
+                        && t.getKey().equals("item.zas_atmos.dyed"),
+                "a dyed pipe isn't named by its colour: " + redPipe.getHoverName());
+        h.assertValueEqual(
+                PipeItem.color(a.get(1, 1, 1)
+                        .getCloneItemStack(
+                                new BlockHitResult(a.point(1, 1, 1), Direction.UP, a.abs(1, 1, 1), false),
+                                a.level,
+                                a.abs(1, 1, 1),
+                                h.makeMockPlayer(GameType.CREATIVE))),
+                PipeColor.RED,
+                "picking a dyed pipe");
+
+        // The dropped items place dyed.
+        a.clear(0, 0, 6, 4);
+        a.set(1, 0, 1, Area.STONE);
+        a.set(2, 0, 1, Area.STONE);
+        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        for (int x : new int[] {2, 1}) {
+            ItemStack stack = x == 1 ? redPipe : blueCap;
+            player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+            BlockPos below = a.abs(x, 0, 1);
+            stack.useOn(new UseOnContext(
+                    player,
+                    InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(below), Direction.UP, below, false)));
+            h.assertValueEqual(stack.getCount(), 0, "items left after placing at x = " + x);
+        }
+        h.assertTrue(a.get(1, 1, 1).is(AtmosBlocks.PIPE.get()), "the red pipe wasn't placed");
+        h.assertValueEqual(a.get(1, 1, 1).getValue(PipeColor.PROPERTY), PipeColor.RED, "the placed pipe's colour");
+        h.assertTrue(a.get(2, 1, 1).is(AtmosBlocks.PIPE_CAP.get()), "the blue cap wasn't placed");
+        h.assertValueEqual(
+                a.get(2, 1, 1).getValue(PipeColor.PROPERTY), PipeColor.LIGHT_BLUE, "the placed cap's colour");
+        a.clear(0, 0, 6, 4);
+        h.succeed();
+    }
+
+    /** What a block drops when mined, which must be one stack. */
+    private static ItemStack drop(Area a, int x, int y, int z) {
+        BlockPos pos = a.abs(x, y, z);
+        List<ItemStack> drops = Block.getDrops(a.level.getBlockState(pos), a.level, pos, a.level.getBlockEntity(pos));
+        a.h.assertValueEqual(drops.size(), 1, "stacks dropped at " + x + ", " + y + ", " + z);
+        return drops.get(0);
     }
 }

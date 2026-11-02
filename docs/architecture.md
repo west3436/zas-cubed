@@ -1374,9 +1374,13 @@ the cell in front of its grille).
   in the framework, which now reads such a cell as unresolved; the wait stays
   as defence in depth. A pipe cap
   closes an end and never leaks.
-- **Dye** (CONT-114, Draft). A dye on a pipe or cap sets its `color` state; the
+- **Dye** (CONT-114). A dye on a pipe or cap sets its `color` state; the
   client tints the models' tint index 0 with the dye's colour. The colour
-  doesn't change connections.
+  doesn't change connections. A `PipeItem` carries a colour in the vanilla
+  block state component, which placing applies. The loot tables copy a dyed
+  block's colour to its drop (`copy_state`), and an undyed drop carries
+  nothing, so it stacks with new items. Items are tinted like blocks, with
+  no extra models.
 - **Deferred:** pipe bursts (CONT-108), reactions in pipes (CONT-100) and
   client smoothing (CONT-070) are not built yet; S-01 needs none of them.
 
