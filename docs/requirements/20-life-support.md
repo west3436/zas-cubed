@@ -3,7 +3,7 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). LIFE-048 was added as Draft on
-2026-11-02.
+2026-11-02 and accepted by the owner the same day.
 
 **Scope.** This area covers:
 - which entities breathe, and what they breathe
@@ -76,7 +76,7 @@ the cell at its eyes (API-015), checked by
 Accepted.*
 
 #### LIFE-048 · Unresolved atmosphere
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: API-010, LIFE-002
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-010, LIFE-002
 
 While the atmosphere at a breathing entity's eyes is unresolved (API-010), its
 breath checks shall keep its last verdict, air drain and gas exposures and
@@ -89,6 +89,9 @@ mixture is only a last-known guess, the ambient for a loading room, so a player
 logging in to a pressurised room in a vacuum dimension would otherwise breathe
 the vacuum for a moment. Built and checked by
 `life_048_unresolved_atmosphere_holds_the_breath_state`.*
+
+*2026-11-02: accepted by the owner after the S-01 round test, and
+Implemented ([#151](https://github.com/west3436/zas-cubed/pull/151)).*
 
 #### LIFE-007 · Breath check cadence
 `Must` · `R1` · `Implemented` · Verify: GameTest
