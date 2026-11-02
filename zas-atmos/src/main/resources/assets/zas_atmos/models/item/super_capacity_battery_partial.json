@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "zas_atmos:item/super_capacity_battery",
+    "layer1": "zas_atmos:item/battery_charge_partial"
+  }
+}

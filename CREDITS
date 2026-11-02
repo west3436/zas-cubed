@@ -1211,3 +1211,606 @@ notes: The valve with one tank: the body and the right tank (layer 1, tinted).
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_transfer_valve_two.json
 origin: original
 notes: The valve with two tanks: the body, the right tank and the left tank (layers 1 and 2, tinted).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/multitool.png
+origin: vgstation13
+source: icons/obj/device.dmi
+state: multitool
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, 9 x 17, with one of its two matching rows dropped so it's 16 tall.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/multitool.json
+origin: original
+notes: A flat item model for the multitool sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/battery.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: cell
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's power cell as it is, 11 x 8: grey.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/high_capacity_battery.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: hcell
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's high-capacity cell as it is: red, one stripe.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/super_capacity_battery.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: scell, ucell
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's super-capacity cell (two stripes) recoloured in the blues of vg's ultra cell, ucell.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/battery_charge_partial.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: cell-o1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's part-charged overlay (yellow), in the charge window every tier shares; layer1 of the _partial item models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/battery_charge_full.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: cell-o2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's full overlay (green), in the charge window every tier shares; layer1 of the _full item models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/battery.json
+origin: original
+notes: A flat item model for the battery, empty.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/battery_partial.json
+origin: original
+notes: The battery part charged: its sprite with battery_charge_partial.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/battery_full.json
+origin: original
+notes: The battery full: its sprite with battery_charge_full.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/high_capacity_battery.json
+origin: original
+notes: A flat item model for the high-capacity battery, empty.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/high_capacity_battery_partial.json
+origin: original
+notes: The high-capacity battery part charged: its sprite with battery_charge_partial.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/high_capacity_battery_full.json
+origin: original
+notes: The high-capacity battery full: its sprite with battery_charge_full.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacity_battery.json
+origin: original
+notes: A flat item model for the super-capacity battery, empty.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacity_battery_partial.json
+origin: original
+notes: The super-capacity battery part charged: its sprite with battery_charge_partial.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacity_battery_full.json
+origin: original
+notes: The super-capacity battery full: its sprite with battery_charge_full.png as layer1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/fire_alarm.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: fire0e
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's red box redrawn as a 10 x 8 wall panel 2 deep, with the vanilla finish: the lamp green, the slot below it and the pull lever on the right.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/fire_alarm_alarm.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: fire1e
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: In an alarm: the lamp flashes red, 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/fire_alarm_alarm.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/fire_alarm_unpowered.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: firep
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Unpowered: the frame dims and the lamp goes dark red.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/fire_alarm.png
+origin: vgstation13
+source: icons/obj/monitors.dmi
+state: fire0e
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite with two of its repeated columns dropped, 16 x 15, with vg's outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/fire_alarm.json
+origin: original
+notes: A wall panel 10 x 8 x 2 at x 3..13, y 6..14, facing north with its back on the wall to the south. After vg's fire alarm (icons/obj/monitors.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/fire_alarm_alarm.json
+origin: original
+notes: As fire_alarm.json, in an alarm.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/fire_alarm_unpowered.json
+origin: original
+notes: As fire_alarm.json, unpowered.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/fire_alarm.json
+origin: original
+notes: A flat item model for the fire alarm sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/volume_pump.png
+origin: vgstation13
+source: icons/obj/atmospherics/volume_pump.dmi
+state: intact_off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The pressure pump's 8 px round body with vg's dark slot along it, and a dark arrowhead at the output end that shows the way when off.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/volume_pump_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/volume_pump.dmi
+state: intact_on
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: one lamp sweeps toward the output in vg's colours for each place, violet to yellow, with a one-texel trail, and the arrowhead flashes yellow as it arrives. 6 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/volume_pump_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/volume_pump.json
+origin: original
+notes: Inline, north-south, as pressure_pump.json: the pipe's flange at each block edge and a short tube (pipe_fitting.png), and an 8 px round body with the slot on every side. It pumps north. After vg's volume pump (icons/obj/atmospherics/volume_pump.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/volume_pump_on.json
+origin: original
+notes: As volume_pump.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/volume_pump.json
+origin: original
+notes: The volume pump item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/inline_box.png
+origin: vgstation13
+source: icons/obj/atmospherics/filter.dmi, icons/obj/atmospherics/mixer.dmi
+state: intact_off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 64 x 64, 2 texels a pixel: the sides and ends of the filter's and mixer's box, vg's two outer rings round a plain field.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/filter.png
+origin: vgstation13
+source: icons/obj/atmospherics/filter.dmi
+state: intact_off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 32 x 32, 2 texels a pixel: vg's north-facing box as it is, without its outline (21 x 22), with vg's black arrows drawing the flow.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/filter_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/filter.dmi
+state: intact_on
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: vg's 5 frames, the input arrow glowing, then the path, then the outputs. In the third and fourth frames the filtered (side) arrow lights with the output arrow, with vg's glow round it; vg leaves it dark.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/filter_on.png.mcmeta
+origin: original
+notes: 4 ticks a frame, vg's 0.2 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/mixer.png
+origin: vgstation13
+source: icons/obj/atmospherics/mixer.dmi
+state: intact_off
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 32 x 32, 2 texels a pixel: vg's north-facing box as it is, without its outline (21 x 22), with vg's black arrows drawing the flow.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/mixer_on.png
+origin: vgstation13
+source: icons/obj/atmospherics/mixer.dmi
+state: intact_on
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: vg's 5 frames as they are, both input arrows glowing, then the path, then the output.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/mixer_on.png.mcmeta
+origin: original
+notes: 4 ticks a frame, vg's 0.2 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter.json
+origin: original
+notes: Inline, north-south: the pipe's flange at each block edge and a short tube (pipe_fitting.png), a box 10.5 x 11 x 11 in the middle with vg's diagram on its top and bottom, and a short third pipe to the east. Gas goes in from the south, out to the north and, filtered, to the east. After vg's filter (icons/obj/atmospherics/filter.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter_on.json
+origin: original
+notes: As filter.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter_mirrored.json
+origin: original
+notes: As filter.json with the side port to the west, as the wrench sets it (vg's mirrored filter).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter_mirrored_on.json
+origin: original
+notes: As filter_mirrored.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/filter.json
+origin: original
+notes: The filter item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer.json
+origin: original
+notes: Inline, north-south: the pipe's flange at each block edge and a short tube (pipe_fitting.png), a box 10.5 x 11 x 11 in the middle with vg's diagram on its top and bottom, and a short third pipe to the east. Gas goes in from the south and the east, out to the north. After vg's mixer (icons/obj/atmospherics/mixer.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer_on.json
+origin: original
+notes: As mixer.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer_mirrored.json
+origin: original
+notes: As mixer.json with the side port to the west, as the wrench sets it (vg's mirrored mixer).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer_mirrored_on.json
+origin: original
+notes: As mixer_mirrored.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/mixer.json
+origin: original
+notes: The mixer item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_front.png
+origin: original
+notes: The water tank's front: a see-through window, the status lamp (dark) left of it and a vent on the right.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_front_on.png
+origin: original
+notes: As electrolyzer_front.png, the status lamp green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_base.png
+origin: original
+notes: The tank's sides and back, and the window's back wall and walls.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_top.png
+origin: original
+notes: The tank's top and bottom.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_column.png
+origin: original
+notes: A round glass gas column full of water, the electrode at its foot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_column_o2_on.png
+origin: original
+notes: The O2 column on: bubbles rising from the electrode and gas gathering under the cap, half as much as H2. 4 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_column_o2_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, so the bubbles rise quickly.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_column_h2_on.png
+origin: original
+notes: The H2 column on: twice the O2 column's bubbles and gas, as electrolysis gives them. 4 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_column_h2_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, so the bubbles rise quickly.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_cap.png
+origin: original
+notes: The columns' caps, the stopcocks in O2's blue and H2's orange, and the steel standpipe with its filler cap.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_inlet.png
+origin: original
+notes: The square water inlet on the back, in water blue, where fluid pipes join.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_water.png
+origin: original
+notes: The water in the tank and its surface.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_o2_port.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: pipe_fitting.png recoloured light to dark in the blue of vg's O2 canister: the O2 column's pipe flange.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_h2_port.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: pipe_fitting.png recoloured light to dark in the H2 canister's orange: the H2 column's pipe flange.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer.json
+origin: original
+notes: Drawn from scratch: the water tank as a plinth with its front window, facing north; two round glass columns on it, H2 at the west and O2 at the east, each with a cap, a stopcock and a pipe flange on its own side; the standpipe with its filler cap behind them; and the square water inlet in the middle of the back (south). Cutout.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer_on.json
+origin: original
+notes: As electrolyzer.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer_water_1.json
+origin: original
+notes: The tank's water at 1 of 4 buckets, behind the front window, for a multipart blockstate to add.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer_water_2.json
+origin: original
+notes: The tank's water at 2 of 4 buckets, behind the front window, for a multipart blockstate to add.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer_water_3.json
+origin: original
+notes: The tank's water at 3 of 4 buckets, behind the front window, for a multipart blockstate to add.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/electrolyzer_water_4.json
+origin: original
+notes: The tank's water at 4 of 4 buckets, behind the front window, for a multipart blockstate to add.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/electrolyzer.json
+origin: original
+notes: The electrolyzer item: the block model, off.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's cell charger's low grey plate, 14 x 12, and its red and navy leads.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's white tower, its 4-step gauge dark: no battery.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_empty.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger-o0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The gauge's bottom step blinking red: the battery is empty. 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_empty.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_1.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger-o1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The gauge at step 1 of 4: red.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_2.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger-o2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The gauge at step 2 of 4: red and yellow.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_3.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger-o3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The gauge at step 3 of 4: red and two yellows.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_tower_4.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger-o4
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The gauge at step 4 of 4: red, two yellows and green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger_battery.png
+origin: vgstation13
+source: icons/obj/power.dmi
+state: ccharger1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's plain cell as it sits on the charger, whatever the battery's tier.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger.json
+origin: original
+notes: The plate 14 x 2 x 12, the tower 4 x 11 x 4 at the west end with its gauge facing north, and the leads lying on the plate: no battery. After vg's cell charger (icons/obj/power.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger_0.json
+origin: original
+notes: As recharger.json with a battery on the plate, the leads clipped to it, and the gauge blinking: empty.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger_1.json
+origin: original
+notes: As recharger_0.json, the gauge at step 1 of 4.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger_2.json
+origin: original
+notes: As recharger_0.json, the gauge at step 2 of 4.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger_3.json
+origin: original
+notes: As recharger_0.json, the gauge at step 3 of 4.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/recharger_4.json
+origin: original
+notes: As recharger_0.json, the gauge at step 4 of 4.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/recharger.json
+origin: original
+notes: The recharger item: the block model, no battery.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_pump_front.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: psiphon:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's blue front, 12 x 11, with the fan and the light dark, and the vanilla finish.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_pump_front_on.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: psiphon:1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: the fan turns, its blades a cross then a saltire, and the light is green. 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_pump_front_on.png.mcmeta
+origin: original
+notes: 2 ticks a frame, vg's 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_pump_side.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: psiphon:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The sides and back, vented, in vg's blues.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_pump_top.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: psiphon:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The top with the battery's hatch, vg's carry handle and the feet.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/portable_pump.json
+origin: original
+notes: 12 x 14 x 12: the body 12 x 11 x 12 on 1 px feet, with vg's carry handle 2 px over it. It faces north. After vg's portable pump (icons/obj/atmos.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/portable_pump_on.json
+origin: original
+notes: As portable_pump.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/portable_pump.json
+origin: original
+notes: The portable pump item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_scrubber.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: pscrubber:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's white body: the front with its two green stripes and the light dark, the back, the cut corners, the feet and the housing's sides.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_scrubber_on.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: pscrubber:1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: On: the light blinks bright and dim green. 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_scrubber_on.png.mcmeta
+origin: original
+notes: 10 ticks a frame, a slow blink where vg's frames are 0.1 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_scrubber_side.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: pscrubber:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The body's ends.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/portable_scrubber_top.png
+origin: vgstation13
+source: icons/obj/atmos.dmi
+state: pscrubber:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The body's top under vg's grey housing with its slots.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/portable_scrubber.json
+origin: original
+notes: 14 x 9 x 12: 1 px feet, a 6 px body with its corners cut back 1 px so it reads as rounded from above, and a 2 px housing on top. It faces north. After vg's portable scrubber (icons/obj/atmos.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/portable_scrubber_on.json
+origin: original
+notes: As portable_scrubber.json, on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/portable_scrubber.json
+origin: original
+notes: The portable scrubber item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/hardsuit_layer_1.png
+origin: vgstation13
+source: icons/mob/head.dmi, icons/mob/suit.dmi
+state: rig0-engineering, rig-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Redrawn onto Minecraft's armor layout from vg's four directions. The helmet, its gold crest ridges and headlamp on the outer layer so they stand out; the chestplate's body and arms, its ribs alternating gold and brown, with vg's cyan spine light and arm lights; and the boots.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/hardsuit_layer_2.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: rig-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The leggings, redrawn onto Minecraft's armor layout: the waist's band and the legs with vg's gold knee pads.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/hardsuit_helmet.png
+origin: vgstation13
+source: icons/obj/clothing/hats.dmi
+state: rig0-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is, 15 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/hardsuit_chestplate.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: rig-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's worn suit from the front, waist up, with three columns dropped to fit 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/hardsuit_leggings.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: rig-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Drawn to fill the slot from the suit's legs, in vg's colours and outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/hardsuit_boots.png
+origin: vgstation13
+source: icons/mob/suit.dmi
+state: rig-engineering
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: A pair of boots drawn to fill the slot from the suit's feet, in vg's colours and outline.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/hardsuit_helmet.json
+origin: original
+notes: A flat item model for the hardsuit helmet sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/hardsuit_chestplate.json
+origin: original
+notes: A flat item model for the hardsuit chestplate sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/hardsuit_leggings.json
+origin: original
+notes: A flat item model for the hardsuit leggings sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/hardsuit_boots.json
+origin: original
+notes: A flat item model for the hardsuit boots sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/magnetic_boots_layer_1.png
+origin: vgstation13
+source: icons/mob/feet.dmi
+state: magboots0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The worn boots on Minecraft's armor layout, the legs' lower seven rows, with the ankle light red on the front and outer side.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/models/armor/magnetic_boots_on_layer_1.png
+origin: vgstation13
+source: icons/mob/feet.dmi
+state: magboots1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: As magnetic_boots_layer_1.png, the light green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/magnetic_boots.png
+origin: vgstation13
+source: icons/obj/clothing/shoes.dmi
+state: magboots0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite with two of its repeated columns dropped to fit 16, the light red.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/magnetic_boots_on.png
+origin: vgstation13
+source: icons/obj/clothing/shoes.dmi
+state: magboots1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite with two of its repeated columns dropped to fit 16, the light green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots.json
+origin: original
+notes: A flat item model for the magnetic boots, off.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots_on.json
+origin: original
+notes: A flat item model for the magnetic boots, on.

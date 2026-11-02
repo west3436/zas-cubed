@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/fire_alarm",
+  "textures": {
+    "panel": "zas_atmos:block/fire_alarm_alarm"
+  }
+}

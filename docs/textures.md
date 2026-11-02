@@ -11,7 +11,8 @@ set. The changes made in #127, the area air controller and batteries, are in
 the requirements (D-68, D-69).
 
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
-pixels per block (the wrench's 32×32 sprite is the one exception, D-70), flat
+pixels per block (the exceptions are the wrench's 32×32 sprite, D-70, and
+the filter's and mixer's tops, D-71), flat
 sprites for handheld items, and the standard armor
 texture layout for wearables. Sources and licensing follow D-26 and D-39, with
 each asset's provenance in `CREDITS` (NFR-045). Where each texture comes from,
@@ -48,9 +49,9 @@ texture), or none (the block has no item).
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
 | `zas_atmos:pressure_pump` | Pressure pump | Must | CONT-011 | Block model | On and off. The way it pumps must be easy to tell. Inline on the pipe, it shows it with arrows along its body (the owner's choice of 2026-11-02). |
-| `zas_atmos:volume_pump` | Volume pump | Should | CONT-012 | Block model | On and off. As the pressure pump, but distinct from it. |
-| `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. |
-| `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. |
+| `zas_atmos:volume_pump` | Volume pump | Should | CONT-012 | Block model | On and off. As the pressure pump, but distinct from it: inline the same way, with a dark slot along its body where a lamp sweeps toward the output (the owner's choice of 2026-11-02). |
+| `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. Inline on the pipe, the side outlet left or right of the flow, which the wrench swaps (the owner's choice of 2026-11-02); no requirement covers the swap yet. |
+| `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. Inline on the pipe like the filter, the side input left or right, which the wrench swaps (the owner's choice of 2026-11-02); no requirement covers the swap yet. |
 | `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). Faces any of six ways; a pipe joins only its back. |
 | `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). Faces any of six ways, like the vent; a pipe joins only its back. |
 | `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. |
@@ -67,8 +68,8 @@ The heater and freezer are now portables (below).
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
 | `zas_atmos:canister` | Canister | Must | CONT-017 | Block model | Valve open and closed. Coloured as vg's canisters, and players dye them, so it needs a texture for each colour ([below](#content-mod-zas_atmos-creative-canisters)). Survival canisters are crafted empty (CONT-086); the filled ones are below. |
-| `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. |
-| `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. |
+| `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
+| `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
 | `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. The heater's size, in white. |
 | `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It could show how many it holds. |
@@ -79,9 +80,9 @@ Portables connect to and disconnect from connector ports with the wrench.
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:electrolyzer` | Water electrolyzer | Must | CONT-055, CONT-056 | Block model | On and off. It could also show its water level. |
+| `zas_atmos:electrolyzer` | Water electrolyzer | Must | CONT-055, CONT-056 | Block model | On and off, and its water level, 0 to 4 buckets. Two glass gas columns on a water tank (the owner's choice of 2026-11-02). Each gas leaves by its own pipe port, on opposite sides (CONT-055), and fluid pipes join only the water inlet on its back (CONT-056). |
 | `zas_atmos:generator` | Generator | Must | CONT-061, CONT-067 | Block model | Lit and unlit. In the style of SS13's P.A.C.M.A.N. |
-| `zas_atmos:recharger` | Recharger | Should | CONT-113 | Block model | Empty, charging and full. Charges one battery (below) for the portables. It could show the charge in steps, as vg's cell charger does. |
+| `zas_atmos:recharger` | Recharger | Should | CONT-113 | Block model | No battery, empty, and four charge steps, as vg's cell charger shows them (the owner's choice of 2026-11-02). Charges one battery (below) for the portables. |
 
 The air compressor is gone, and so are the power cable and the multipart block
 (D-68). Without the compressor, R1 gets gas from the electrolyzer and from
@@ -92,7 +93,7 @@ scrubbing and filtering, so CONT-050 and CONT-054 need updating.
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
 | `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
-| `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal and alarm. |
+| `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal, alarm and unpowered. vg's small red box, not the controller's panel (the owner's choice of 2026-11-02). |
 | `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open and closed. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. |
 | `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's 1 by 2, a frame the block's full depth with its panel in the middle (the owner's choice of 2026-11-01). |
 
@@ -147,11 +148,11 @@ one suit share their layer files.
 | `zas_atmos:softsuit_chestplate` | Softsuit chestplate | Must | CONT-032, CONT-090 | Softsuit layer 1 | Holds a tank (CONT-090); showing it on the back is optional. vg's 13 is on the back (the owner's choice of 2026-11-02). |
 | `zas_atmos:softsuit_leggings` | Softsuit leggings | Must | CONT-032 | Softsuit layer 2 | |
 | `zas_atmos:softsuit_boots` | Softsuit boots | Must | CONT-032 | Softsuit layer 1 | |
-| `zas_atmos:hardsuit_helmet` | Hardsuit helmet | Must | CONT-031, CONT-036 | Hardsuit layer 1 | The hardsuit should look heavier than the softsuit (CONT-089). |
+| `zas_atmos:hardsuit_helmet` | Hardsuit helmet | Must | CONT-031, CONT-036 | Hardsuit layer 1 | The hardsuit should look heavier than the softsuit (CONT-089). Its crest and headlamp stand out on the outer layer (the owner's choice of 2026-11-02). |
 | `zas_atmos:hardsuit_chestplate` | Hardsuit chestplate | Must | CONT-036, CONT-090 | Hardsuit layer 1 | Holds a tank (CONT-090). |
 | `zas_atmos:hardsuit_leggings` | Hardsuit leggings | Must | CONT-036 | Hardsuit layer 2 | |
 | `zas_atmos:hardsuit_boots` | Hardsuit boots | Must | CONT-036 | Hardsuit layer 1 | |
-| `zas_atmos:magnetic_boots` | Magnetic boots | Should | CONT-033 | Layer 1, feet only | On and off, both as a sprite and worn. |
+| `zas_atmos:magnetic_boots` | Magnetic boots | Should | CONT-033 | Layer 1, feet only | On and off, both as a sprite and worn, shown by vg's ankle light, red off and green on (the owner's choice of 2026-11-02). |
 
 **Tools**
 
@@ -168,9 +169,9 @@ cell, high-capacity and super-capacity cells.
 
 | Proposed id | Name | Priority | Requirement | States and notes |
 |---|---|---|---|---|
-| `zas_atmos:battery` | Battery | Should | CONT-111 | Flat sprite. It could show its charge, as vg's cells do. |
-| `zas_atmos:high_capacity_battery` | High-capacity battery | Should | CONT-111 | Flat sprite. The three tiers must be easy to tell apart. |
-| `zas_atmos:super_capacity_battery` | Super-capacity battery | Should | CONT-111 | Flat sprite. |
+| `zas_atmos:battery` | Battery | Should | CONT-111 | Flat sprite. Grey (the owner's choice of 2026-11-02). It shows its charge, as vg's cells do: part charged and full. |
+| `zas_atmos:high_capacity_battery` | High-capacity battery | Should | CONT-111 | Flat sprite. The three tiers must be easy to tell apart. Red, with one stripe. |
+| `zas_atmos:super_capacity_battery` | Super-capacity battery | Should | CONT-111 | Flat sprite. Blue, with two stripes. |
 
 ### Totals for R1
 
