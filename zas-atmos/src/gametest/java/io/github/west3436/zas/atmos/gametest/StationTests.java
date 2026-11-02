@@ -230,15 +230,17 @@ public final class StationTests {
             // CONT-041: Scrubbing orders the vent to blow to the target, and it does.
             h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the vent's settings in Scrubbing");
 
-            // CONT-014: the controller wins, and the GUI says so.
+            // CONT-014: the controller wins, and the GUI says so. The first order comes before the
+            // controller has paid the vent, so it names the controller from the second.
             h.assertTrue(vent.controlled(), "the ordered vent isn't controlled");
+            seconds(s, g, 1, c, vent, pump);
             h.assertValueEqual(menu.controller(), java.util.Optional.of(c.getBlockPos()), "the GUI's controller");
             h.assertValueEqual(menu.mode(), VentMode.BLOW, "the GUI's order");
             for (int id = VentMenu.CYCLE_MODE; id <= VentMenu.LAST_BUTTON; id++) {
                 h.assertFalse(menu.clickMenuButton(hand, id), "the controlled vent took button " + id);
             }
             h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the controlled vent after its GUI");
-            double before = vent.network().gas().totalMoles();
+            double before = 1000.0; // all the N2 there is, once nothing is in flight
             seconds(s, g, 3, c, vent, pump);
             double moved = moles(s.zone(5, 2, 2));
             h.assertTrue(moved > 1, "the vent moved " + moved + " mol into room A");

@@ -1510,8 +1510,10 @@ the cell in front of its grille).
     what it is doing: its mode while it runs, else off.
   - **For the area air controller:** the vent is a `VentControl` (§11.6).
     `ventOrder` passes the order to `VentBlockEntity.control(controller,
-    VentSettings)`, naming the controller that powers the vent (its
-    `DevicePower.source()`). That sets the vent, and an unchanged setting changes nothing, so a
+    VentSettings)`, naming the controller that last paid for the vent (its
+    `DevicePower.source()`). A controller orders its parts before it pays
+    them, so the first order names no controller, and the GUI shows it as
+    unknown until the next. That sets the vent, and an unchanged setting changes nothing, so a
     controller can send the same order every atmos tick. Each order makes the
     vent *controlled* for `DevicePower.LEASE_TICKS` (two atmos ticks). While
     it is controlled, `setByHand`, which the GUI uses, refuses settings, and
