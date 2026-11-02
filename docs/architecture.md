@@ -1172,8 +1172,113 @@ The test names include requirement IDs (README rule 5).
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
-| CONT | §5 (devices through the API, D-50) |
+| CONT | §5 (devices through the API, D-50), §11 (the content mod) |
 | DATA | §4.5 |
 | SPACE | §2.1 (`compat-adastra`), §7; open item O-1 |
 | OPS | §3.4 (profiler), §5 (commands, audit, preset) |
 | NFR | §2 (packaging, licensing untouched), §3.4 (budgets), §3.6 (fault isolation), §7 (mixins), §8 (tests) |
+
+## 11. The content mod (`zas_atmos`)
+
+`zas_atmos` is the SS13-style content (D-02, D-16, D-38). It compiles against
+`zas-api` alone, with `zas` required at run time (D-50, CONT-095): its
+`main` source set has no compile dependency on `zas`, so a use of the
+framework's internals fails the build. Everything it does to zones goes
+through `Atmospheres` and `GasMutations` (CONT-071); pipe gas lives in the
+content mod and never joins zone gas except through a device (CONT-002).
+
+### 11.1 Packages and registries
+
+| Package (`io.github.west3436.zas.atmos.`) | Contents |
+|---|---|
+| (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks` |
+| `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
+| `pipe` | Pipes and pipe networks (§11.4) |
+
+Unit tests of the pure logic (the schedule, the power lease, ports) are in
+`src/test`, with Minecraft's classes on the classpath but no bootstrap.
+GameTests are in `src/gametest`, which also registers a
+`zas_atmos:test_device` (`gametest.TestDevice`): a powered device that only
+counts its steps. It exists in dev runs and on GameTest servers, never in the
+jar, so providers can be tested before real devices exist.
+
+### 11.2 Device stepping (D-31, CONT-006, CONT-072)
+
+- **The base.** A device's block entity extends `AtmosDevice`. While it is
+  loaded on a server it is in its level's schedule; it joins in `onLoad` and
+  leaves in `setRemoved` and `onChunkUnloaded`, so a device in an unloaded
+  chunk never steps. Its `atmosTick(ServerLevel)` runs one atmos tick of work
+  on the server thread.
+- **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
+  end of every server tick (`ServerTickEvent.Post`), after the framework's own
+  tick, whose listener `zas` registers first. Each device steps once every
+  `AtmosTicks.PERIOD` = 20 game ticks, 1 s (D-20), and rates are per second.
+  The API doesn't expose `[atmos] period_ticks`, so a changed period changes
+  how often the framework applies the devices' changes, not how fast they
+  act.
+- **Spreading.** The n-th device to join is first due 1 + n mod 20 game ticks
+  later, so devices placed or loaded together step in different game ticks.
+- **Ports.** A device changes a zone only through a `ZonePort`. A port's
+  change is one addition, one removal, or both, decided on one snapshot, and
+  the port refuses another until all of it has completed (CONT-072). A device
+  whose port is busy isn't ready to step; the schedule asks it again each
+  game tick, then steps it and keeps that new phase. Mutations complete when
+  the framework applies an atmos tick, so a device that had to wait settles
+  just after the apply and steps every 20 game ticks from then on: it never
+  loses a step to a slow future. An addition that takes less than it offered
+  (when ZAS³ is absent, nothing moves) hands the rest back to the device
+  (`ZonePort.untaken`).
+- **Order.** Devices due in the same game tick step in the order they became
+  due, then the order they joined. Removal during a step is safe.
+- **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once, for
+  GameTests that drive atmos ticks themselves with the framework's
+  `tickNow`.
+
+### 11.3 The power contract (CONT-060, CONT-065, CONT-069)
+
+A device that draws FE implements `PoweredDevice`: `power()` returns its
+`DevicePower`, and `airPoint()` is the point whose zone it is in (for a vent,
+the cell in front of its grille).
+
+| Side | Calls | Meaning |
+|---|---|---|
+| Device | `new DevicePower(priority, drawSupplier, this::now)` | Its priority group (`PowerPriority`: `LIFE_SUPPORT`, `GAS_HANDLING`, `AUXILIARY`, CONT-064) and what it draws now, in FE/t, 0 while it is off (CONT-065) |
+| Device | `power.isPowered()` | Checked at the start of each `atmosTick`; unpowered, the device does nothing (CONT-060) |
+| Provider | `DeviceTicker.loaded(level)`, then `instanceof PoweredDevice` and `Atmospheres.at(level, d.airPoint()).zone()` | Finds the parts it covers |
+| Provider | `power.drawPerAtmosTick()`, then `power.supply(this)` | Pays draw × 20 FE from its own store for one atmos tick, then powers the device for `DevicePower.LEASE_TICKS` (40) game ticks |
+| Provider | `power.suppliedThisAtmosTick()` | True if another provider (or this one, through a link) already paid this atmos tick |
+
+- **Leases, not switches.** Each supply powers the device for two atmos ticks
+  from the call, so the device and the provider can step in any order. When
+  no provider supplies it any more, because the provider ran short, was
+  removed or no longer covers it, the lease runs out and the device stops.
+  Nothing has to switch it off, and nothing is saved: after a reload a device
+  has no power until its provider steps.
+- **No provider, no power** (CONT-069). Devices expose no FE capability, so
+  an FE source beside one does nothing.
+- **Test power.** `power.setTestPowered(true)` powers a device with no
+  provider. It is saved with the device as `TestPowered`, so a test world can
+  set it with `/data merge block <pos> {TestPowered:1b}`. It is for GameTests
+  and test worlds only.
+
+### 11.4 Pipe networks
+
+*To come with [#47](https://github.com/west3436/zas-cubed/issues/47).*
+
+### 11.5 Devices
+
+*To come with [#48](https://github.com/west3436/zas-cubed/issues/48): the
+canister, connector port and vent, and their GUIs.*
+
+### 11.6 The area air controller
+
+*Reserved for the area air controller: sampling, danger levels, modes and its
+zone pin (CONT-040 to CONT-049, CONT-110).*
+
+### 11.7 Controller power
+
+*Reserved for the controller as the provider of §11.3: its buffer, the parts
+it powers and its priorities (CONT-062, CONT-064, CONT-068).*
