@@ -1013,7 +1013,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   higher id) order. Links are summed in the order cells are visited and then
   sorted by kind, far end and resistance. Nothing depends on hash order
   (§3.5).
-- **Config** (`[heat]` in `zas-server.toml`, [config](config.md#heat)):
+- **Config** (`[heat]` in `zas-server.toml`, [config](config.md#server-zas-servertoml)):
   `enabled`, `fallback_transmittance` (1.7), `wall_thickness` (3),
   `near_vacuum_percent` (1) and `emissivity` (0.9). Batches carry them, so a
   change applies from a batch boundary.
