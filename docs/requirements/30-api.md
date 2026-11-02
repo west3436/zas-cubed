@@ -292,7 +292,7 @@ call time; removed gas is delivered when the future completes.
   zone.
 
 #### API-013 · Heat mutation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: API-016, HEAT-010
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: API-016, HEAT-010
 
 The API shall allow adding or removing heat at a point. The energy actually
 applied is delivered as in API-016.
@@ -301,6 +301,18 @@ applied is delivered as in API-016.
   zones, and heat follows API-016 for the same reasons as gas (D-46).
 - **Verify:** A GameTest adds and removes heat in a zone and in open air and
   checks the energy applied.
+
+*2026-11-02: Implemented ([#40](https://github.com/west3436/zas-cubed/issues/40)).
+`HeatMutations.add` and `remove(level, point, joules, source)` return a future
+of `HeatResult`: the outcome (`ZONE`, `AMBIENT`, `PAUSED`, `ABSENT`), the
+joules moved and the temperature after. Added heat leaves the caller at the
+call; a removal stops at the temperature floor and delivers what it got. A
+call at an enclosed, unzoned point forms a zone (CORE-055). Heat isn't saved:
+a call still queued at shutdown completes `PAUSED` with nothing moved. The
+provider's new methods have defaults that give `ABSENT`. Checked by
+`api_013_heat_mutation` and `heat_010_heat_at_open_air` (GameTest), the
+`api_013_` and `heat_010_` Unit tests, and the example addon's
+`s_12_mutations_complete_absent` without ZAS³.*
 
 #### API-014 · Breathability helper
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-06

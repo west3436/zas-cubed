@@ -12,6 +12,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinOutcome;
@@ -169,6 +170,27 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         }
         PointResolver.Cell cell = PointResolver.resolve(level, point);
         return service.remove(level, cell.pos(), cell.sub(), moles, source);
+    }
+
+    @Override
+    public CompletableFuture<HeatResult> addHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return heat(level, point, true, joules, source);
+    }
+
+    @Override
+    public CompletableFuture<HeatResult> removeHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return heat(level, point, false, joules, source);
+    }
+
+    private static CompletableFuture<HeatResult> heat(
+            ServerLevel level, Vec3 point, boolean add, double joules, SourceId source) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            // No server running the scheduler yet: the open air takes or supplies it all.
+            return CompletableFuture.completedFuture(new HeatResult(MutationOutcome.AMBIENT, joules, Double.NaN));
+        }
+        PointResolver.Cell cell = PointResolver.resolve(level, point);
+        return service.heat(level, cell.pos(), cell.sub(), add, joules, source);
     }
 
     @Override

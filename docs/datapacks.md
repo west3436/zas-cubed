@@ -345,6 +345,23 @@ data/<namespace>/zas/thermal/<path>.json
   | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
   | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
 
+  And the heat sources (HEAT-016), one file per block in
+  `data/zas/zas/thermal/sources/`:
+
+  | File | Block | Temperature |
+  |---|---|---|
+  | `lava.json` | lava | 1,450 K |
+  | `magma_block.json` | magma block | 1,000 K |
+  | `ice.json` | ice | 273 K |
+  | `packed_ice.json` | packed ice | 263 K |
+  | `blue_ice.json` | blue ice | 253 K |
+  | `snow_block.json` | snow block | 268 K |
+
+  These set no U, so lava, magma and snow conduct at the fallback, and the ice
+  at `ice.json`'s 2.2. A source acts only at the far end of a wall: until
+  fluids seal (GEO-006), lava is open space, so lava inside a room, or beside
+  one with nothing between, isn't a source to it.
+
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)).
 - **When it applies:** with geometry overrides, at server start and on
