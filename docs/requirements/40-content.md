@@ -105,6 +105,13 @@ share by volume, and the next one built gathers the shares.
 `PipeTests.cont_003_breaking_a_pipe_conserves_gas` (GameTest) breaks a pipe in
 a run and checks each part's share and the total.*
 
+*2026-11-02: Note: `PipeChunkTests.cont_003_*` (GameTest) runs a network across
+a chunk border through chunk lifecycles. The total stays the same when the far
+chunk drops out of full status, when both chunks unload and load again, and when
+the network is rebuilt while the far chunk is away. Writing them found a bug,
+now fixed: devices in a chunk that had dropped out of full status still
+stepped, and a rebuild that read their blocks loaded the chunk again.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -197,6 +204,12 @@ Devices and pipe segments are `AtmosDevice` block entities, stepped every
 on the server thread. The API doesn't expose the framework's period, so the
 content mod always steps every second; rates are per second, so behaviour
 doesn't change with the period.*
+
+*2026-11-02: Note: a device steps only while its chunk is loaded in full. A
+chunk next to a loaded one that drops out of full status keeps its block
+entities, which wait until it returns.
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
+checks a vent there.*
 
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Accepted` · Verify: Manual
