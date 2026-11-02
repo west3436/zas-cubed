@@ -40,7 +40,7 @@ public class PipeBlockEntity extends PipeNodeEntity {
     /**
      * The atmos ticks an open end waits after it loads before it moves gas. A chunk's zones reach
      * the framework's published state a little after the chunk loads, and until then an enclosed
-     * cell can read as the ambient.
+     * cell can read as the ambient (a framework bug, #153; this works around it until it's fixed).
      */
     public static final int SETTLE_STEPS = 3;
 
