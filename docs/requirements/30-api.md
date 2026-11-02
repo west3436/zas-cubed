@@ -367,7 +367,7 @@ The R0 chunk record (format version 2) already saves whether each zone is
 pinned; the owner ids remain to be added with API-017.*
 
 #### API-050 · Pinning a point forms a zone
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-68, D-13 · Depends: API-016, API-017
+`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-68, D-13 · Depends: API-016, API-017
 
 The API shall let a mod pin the zone at a point under an owner id. If the
 point's region is enclosed and has no zone, a zone forms there holding its
@@ -380,6 +380,8 @@ API-016, gives the zone, or says the region is open or unresolved.
 - **Verify:** A GameTest pins a point in a sealed, unzoned room and checks a
   pinned zone forms holding the ambient's gas, and that pinning a point in the
   open forms nothing and says so.
+
+*2026-11-01: Accepted by the owner as written.*
 
 ## Extension points
 

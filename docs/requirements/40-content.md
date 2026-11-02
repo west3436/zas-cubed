@@ -806,11 +806,13 @@ multitool can also link parts to it by hand, for example across a firelock.
 tool is the multitool (D-68). A link also powers the part (CONT-068).*
 
 #### CONT-110 · Controller forms its zone
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
+`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
 
 When placed, an area air controller shall pin the zone at the cell it samples
 (API-050), forming one there if that cell's region is enclosed and has no zone,
 and it shall unpin the zone when removed. In an open region no zone forms.
+While its cell has no zone, it shall form one as soon as the region becomes
+enclosed, for example when the last wall of its room goes up.
 
 - **Rationale:** Decision: D-68. A sealed room has no zone until its air
   changes (D-13, CORE-051), so without this a vent in a new room would have no
@@ -818,8 +820,14 @@ and it shall unpin the zone when removed. In an open region no zone forms.
   only ambient air from being dissolved (CORE-052).
 - **Verify:** GameTests place a controller in a sealed vacuum room and in a
   sealed Overworld room and check a zone forms and outlasts CORE-052's delay,
-  that none forms in the open, and that removing the controller unpins the
-  zone.
+  that none forms in the open, that a controller placed in an unfinished room
+  forms one once the room is sealed, and that removing the controller unpins
+  the zone.
+
+*2026-11-01: Accepted by the owner, with one addition: a controller placed
+before its room is sealed forms the zone once the room is sealed, so a player
+needn't build the walls first or break and replace the controller. The Verify
+gains that case.*
 
 #### CONT-049 · Controller device list
 `Must` · `R1` · `Accepted` · Verify: Manual
@@ -1192,7 +1200,7 @@ Devices that miss out stop until power returns.
 rechargers join the last group (CONT-113, D-69).*
 
 #### CONT-111 · Batteries
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
 
 There shall be three batteries, holding 100,000 FE (battery), 1,000,000 FE
 (high-capacity battery) and 2,000,000 FE (super-capacity battery) through the
@@ -1207,8 +1215,10 @@ FE item capability, so other mods' chargers and machines can use them.
 - **Verify:** A GameTest fills each battery through the FE item capability and
   checks it stops at its capacity.
 
+*2026-11-01: Accepted by the owner as written.*
+
 #### CONT-112 · Battery tag
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69 · Depends: CONT-111
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69 · Depends: CONT-111
 
 A portable's battery slot and the recharger (CONT-113) shall accept any item
 in the `zas_atmos:batteries` item tag that exposes the FE item capability, and
@@ -1221,8 +1231,10 @@ other mods' batteries and energy tablets to it.
   runs from it and the recharger charges it, and that an FE item outside the
   tag is refused.
 
+*2026-11-01: Accepted by the owner as written.*
+
 #### CONT-113 · Recharger
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers) · Depends: CONT-068, CONT-112
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers) · Depends: CONT-068, CONT-112
 
 A recharger shall hold one battery (CONT-112) and charge it at 28 FE/t,
 drawing 40 FE/t from its controller (CONT-068): 70 % of what it draws reaches
@@ -1235,6 +1247,8 @@ the battery.
   smallest battery fills in about 3 minutes and the largest in about an hour.
 - **Verify:** A GameTest checks a recharger charges a battery at 28 FE/t while
   drawing 40 FE/t, and stops when the battery is full or its power is cut.
+
+*2026-11-01: Accepted by the owner as written.*
 
 #### CONT-063 · Cable sharing a block with pipes
 `Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable, 2026-11-01.
