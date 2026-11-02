@@ -32,6 +32,9 @@ neoForge {
             logLevel = org.slf4j.event.Level.INFO
         }
     }
+    // Unit tests of the content mod's pure logic. Minecraft's classes are on the
+    // test classpath, but the game is never bootstrapped.
+    addModdingDependenciesTo(sourceSets.test)
     mods {
         zas {
             zasMod.modSourceSets.get().each { sourceSet it }
@@ -55,4 +58,12 @@ dependencies {
     implementation project(':zas-api')
     runtimeOnly project(':zas')
     gametestRuntimeOnly project(':zas').sourceSets.gametest.output
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
