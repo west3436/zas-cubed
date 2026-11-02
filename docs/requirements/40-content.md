@@ -41,7 +41,7 @@ a branch and a cap share one mixture, and `cont_001_a_pipe_saves_its_share`
 that a segment saves its share by volume.*
 
 #### CONT-007 · Pipe and buffer volumes
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 Each pipe block shall hold 70 L, and each device port buffer 200 L (vents
 400 L), as in vg.
@@ -50,6 +50,11 @@ Each pipe block shall hold 70 L, and each device port buffer 200 L (vents
   §1](../research/vg-atmos-content.md#1-pipe-networks)); the 400 L vent buffer
   is inferred, twice a port buffer, so a vent can keep up its rate (CONT-078).
 - **Verify:** A Unit test checks each part's volume.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Pipes and caps hold 70 L, a connector port 200 L, a vent 400 L and a canister
+1,000 L (`PipeVolumes`). `PipeVolumesTest.cont_007_each_part_has_its_volume`
+(Unit); `GasDeviceTests` checks the volumes of built networks.*
 
 #### CONT-008 · Perfect mixing
 `Must` · `R1` · `Implemented` · Verify: Unit
@@ -203,7 +208,7 @@ Device animations shall be smoothed on the client between steps.
 - **Verify:** Manual check that pump and vent animations play smoothly.
 
 #### CONT-071 · Zones through the public API
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-50, API-010, API-016
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-50, API-010, API-016
 
 Devices shall read zones through atmosphere queries (API-010) and change them
 through asynchronous mutations (API-016).
@@ -211,6 +216,11 @@ through asynchronous mutations (API-016).
 - **Rationale:** Decision: D-50.
 - **Verify:** Inspect the content mod's code for non-API engine access;
   GameTests of the devices exercise the calls.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Inspect: devices read zones only with `Atmospheres.at` and change them only
+through a `ZonePort`. The open pipe end, canister valve and vent GameTests
+exercise the calls.*
 
 #### CONT-072 · One outstanding mutation per port
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-50, CORE-036
@@ -223,6 +233,11 @@ twice.
   snapshot would move gas twice (CORE-036).
 - **Verify:** A Unit test checks a port waits for its future; a GameTest runs
   a vent and scrubber with the conservation checker on.
+
+*2026-11-02: the vent, canister valve and open pipe end each issue their
+changes through one `ZonePort` and wait while it is busy
+([#48](https://github.com/west3436/zas-cubed/issues/48)); the GameTest with a
+scrubber and the conservation checker waits for the scrubber.*
 
 #### CONT-073 · No reactions in pipes
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
@@ -246,7 +261,7 @@ R1.*
 All active devices consume FE as described under [Power](#power).
 
 #### CONT-074 · Server-validated device GUIs
-`Must` · `R1` · `Accepted` · Verify: GameTest, Inspect
+`Must` · `R1` · `Implemented` · Verify: GameTest, Inspect
 
 Each device's configuration shall be set through a GUI whose inputs the
 server validates.
@@ -255,6 +270,13 @@ server validates.
   checked on the server, as with any multiplayer GUI.
 - **Verify:** A GameTest sends out-of-range settings and checks they are
   clamped or refused; Inspect the packet handlers.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+The canister and vent GUIs send only button ids, through the game's own
+menu-button packet; the server refuses unknown ids and clamps every setting
+(`CanisterMenu`, `VentMenu`).
+`GasDeviceTests.cont_074_out_of_range_settings_are_clamped_or_refused`
+(GameTest). Later devices' GUIs follow the same pattern.*
 
 #### CONT-010 · Valves
 `Must` · `R1` · `Accepted` · Verify: GameTest
@@ -341,7 +363,7 @@ at most 4,500 kPa.
   scale together when one runs short.
 
 #### CONT-014 · Vent
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A vent shall blow gas into its zone, or siphon gas out of it, within an
 external bound (default 101.325 kPa) and an internal bound, both 0–5,066 kPa.
@@ -357,8 +379,19 @@ grille.
 - **Changed 2026-11-01 (the owner, in the batch 1 art review):** the vent
   faces any of six ways and takes a pipe only on its back.
 
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:vent` blows into, or siphons from, the cell in front of its grille,
+within its external and internal bounds (`VentSettings`, clamped to
+0–5,066 kPa), and in an open cell into or from the ambient ([architecture
+§11.5](../architecture.md#115-devices)). `VentFlowTest` (Unit) checks the
+bounds; `GasDeviceTests.cont_014_a_vent_fills_a_room_to_the_external_bound`,
+`cont_014_a_vent_siphons_a_room_to_the_external_bound`,
+`cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and
+`cont_014_a_pipe_joins_a_vent_only_on_its_back` (GameTest) check the Verify.
+The vent runs only while powered (CONT-060).*
+
 #### CONT-078 · Vent rate
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A vent shall move at most half its buffer's moles per second, so it can't fill
 a room in one tick as vg's does.
@@ -368,6 +401,12 @@ a room in one tick as vg's does.
   wrong and makes airflow spike; half the buffer per second spreads it out.
 - **Verify:** A Unit test checks the moles moved per second; a GameTest checks
   a room fills over several ticks.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+A vent moves at most half a 400 L buffer's moles a second: of its network
+when blowing, and of its zone when siphoning (`VentFlow`).
+`VentFlowTest.cont_078_*` (Unit); the `GasDeviceTests.cont_014_*` fill and
+siphon tests (GameTest) check a room takes at least four atmos ticks.*
 
 #### CONT-015 · Scrubber
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
@@ -439,7 +478,7 @@ opposite its grille.
 A fixed-rate injector shall push gas into its zone regardless of room pressure.
 
 #### CONT-017 · Canister
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01 · [vg §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)
 
 A canister shall be a 1,000 L block rated at 9,120 kPa (90 atm) that keeps its
 contents when mined.
@@ -450,8 +489,16 @@ contents when mined.
 - **Verify:** A GameTest mines a filled canister, places it again and checks
   the contents are unchanged.
 
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:canister` is a 1,000 L network node rated at 9,120 kPa
+(`CanisterBlockEntity.RATED_KPA`; rupture is CONT-085, not built). Mined with a
+pickaxe it drops an item carrying its gas (`zas_atmos:gas`) and its paint;
+removed any other way it releases its gas, as a pipe does (CONT-009).
+`GasDeviceTests.cont_017_a_mined_canister_keeps_its_contents` and
+`cont_017_a_canister_removed_without_a_drop_releases_its_gas` (GameTest).*
+
 #### CONT-083 · Connector ports
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01
 
 Placing a canister against a connector port shall attach it, joining the
 port's network. The port faces up, so the canister stands on it, and a pipe
@@ -466,8 +513,14 @@ joins the port only on its bottom, the face opposite.
 - **Changed 2026-11-01 (the owner, in the batch 1 art review):** the port
   faces up and takes a pipe only on its bottom.
 
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:connector_port` joins a pipe below it and a canister standing on
+it; its `connected` state shows the collar.
+`GasDeviceTests.cont_083_a_canister_on_a_port_joins_its_network` (GameTest).
+Placing the canister attaches it; the wrench (CONT-035) isn't built.*
+
 #### CONT-084 · Canister release
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: vg quirk 10
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: vg quirk 10
 
 A canister shall release through a valve at a set release pressure
 (10–1,013 kPa) into the room or a held tank, computed against the receiving
@@ -478,6 +531,15 @@ volume: the zone's real volume, not vg's fixed 2,500 L.
   fixed 2,500 L receiving volume is replaced with the real volume.
 - **Verify:** A Unit test checks the moles released against the formula; a
   GameTest checks a canister fills a room to the release pressure.
+
+*2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+An open valve releases the least of what brings the zone to the release
+pressure, by the zone's real volume, and what equalises the canister and the
+zone (`CanisterRelease`); the release pressure is clamped to 10–1,013 kPa.
+`CanisterReleaseTest` (Unit);
+`GasDeviceTests.cont_084_a_canister_fills_a_room_to_the_release_pressure`
+(GameTest). Releasing into a held tank waits for held tanks, which R1 doesn't
+have.*
 
 #### CONT-085 · Canister rupture
 `Must` · `R1` · `Accepted` · Verify: GameTest
@@ -523,6 +585,12 @@ Survival canisters are crafted empty.
 - **Rationale:** Inferred: pre-filled canisters in survival would skip gas
   acquisition (CONT-050); creative players need them for building and tests.
 - **Verify:** Inspect the creative tab and recipes.
+
+*2026-11-02: the creative tab has a canister of each of the 8 gases at
+45 atm and 293.15 K, in the gas's colour
+([#48](https://github.com/west3436/zas-cubed/issues/48)), and no recipe makes a
+filled one. Survival recipes, the empty canister's included, aren't written
+yet.*
 
 #### CONT-018 · Portable pump and scrubber
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
@@ -1170,6 +1238,10 @@ Active devices shall consume Forge Energy (FE). A device without power stops.
 - **Rationale:** Decision: D-25 and D-37.
 - **Verify:** A GameTest checks each device stops when its power is cut.
 
+*2026-11-02: the vent runs only while powered;
+`GasDeviceTests.cont_014_an_unpowered_vent_does_nothing` (GameTest). The
+GameTest that cuts a provider's power waits for the area air controller.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1198,6 +1270,10 @@ Devices shall draw these amounts by default:
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68), and the
 recharger is added (CONT-113, D-69).*
+
+*2026-11-02: the vent's 10 FE/t is `[power] vent`, drawn while it isn't off
+([#48](https://github.com/west3436/zas-cubed/issues/48)); the other devices'
+draws come with them.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01

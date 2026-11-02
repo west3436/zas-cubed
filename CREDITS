@@ -65,6 +65,15 @@ origin: original
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/pipe_cap.json
 origin: original
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/connector_port.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/canister.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/vent.json
+origin: original
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe.png
 origin: vgstation13
 source: icons/obj/pipes/regular.dmi

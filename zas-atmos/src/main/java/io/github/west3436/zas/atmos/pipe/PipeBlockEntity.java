@@ -3,17 +3,16 @@ package io.github.west3436.zas.atmos.pipe;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
-import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import net.minecraft.core.BlockPos;
@@ -37,17 +36,10 @@ public class PipeBlockEntity extends PipeNodeEntity {
     /** Who an open end's exchanges are made by. */
     public static final SourceId OPEN_END = SourceId.of(ZasAtmosMod.MOD_ID, "open_pipe_end");
 
-    /**
-     * The atmos ticks an open end waits after it loads before it moves gas. A chunk's zones reach
-     * the framework's published state a little after the chunk loads, and until then an enclosed
-     * cell can read as the ambient (a framework bug, #153; this works around it until it's fixed).
-     */
-    public static final int SETTLE_STEPS = 3;
+    /** The atmos ticks an open end waits after it loads; see {@link CellWatch}. */
+    public static final int SETTLE_STEPS = CellWatch.SETTLE_STEPS;
 
     private final ZonePort port = new ZonePort(OPEN_END);
-    private int settling = SETTLE_STEPS;
-    private AtmosphereState lastState;
-    private Optional<ZoneId> lastZone = Optional.empty();
 
     public PipeBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.PIPE.get(), pos, state, PipeVolumes.PIPE);
@@ -64,19 +56,8 @@ public class PipeBlockEntity extends PipeNodeEntity {
     }
 
     @Override
-    public void onLoad() {
-        super.onLoad();
-        settling = SETTLE_STEPS;
-        lastState = null;
-        lastZone = Optional.empty();
-    }
-
-    @Override
     protected void atmosTick(ServerLevel level) {
-        boolean settled = settling == 0;
-        if (!settled) {
-            settling--;
-        }
+        cellWatch().step();
         // Rebuild a dissolved network now, so its gas is shared over its new members even where
         // no open end needs it.
         network();
@@ -84,16 +65,8 @@ public class PipeBlockEntity extends PipeNodeEntity {
             return;
         }
         AtmosphereSample sample = Atmospheres.at(level, worldPosition);
-        // The cell must read the same twice running, so a passing reading (such as the ambient
-        // before a loading chunk's zones are published) moves nothing.
-        boolean steady = sample.state() == lastState && sample.zone().equals(lastZone);
-        lastState = sample.state();
-        lastZone = sample.zone();
-        if (!settled || !steady) {
-            return;
-        }
-        if (sample.state() != AtmosphereState.ZONED && sample.state() != AtmosphereState.AMBIENT) {
-            return; // paused or unresolved: wait until the cell is known
+        if (!cellWatch().trust(sample)) {
+            return; // settling, a passing reading, or a paused or unresolved cell
         }
         GasStore pipe = network().gas();
         Flow flow = openEndFlow(

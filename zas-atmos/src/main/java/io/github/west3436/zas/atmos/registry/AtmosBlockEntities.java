@@ -1,8 +1,11 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
+import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -25,6 +28,21 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<PipeCapBlockEntity>> PIPE_CAP = BLOCK_ENTITIES.register(
             "pipe_cap",
             () -> BlockEntityType.Builder.of(PipeCapBlockEntity::new, AtmosBlocks.PIPE_CAP.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<ConnectorPortBlockEntity>> CONNECTOR_PORT = BLOCK_ENTITIES.register(
+            "connector_port",
+            () -> BlockEntityType.Builder.of(ConnectorPortBlockEntity::new, AtmosBlocks.CONNECTOR_PORT.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<CanisterBlockEntity>> CANISTER = BLOCK_ENTITIES.register(
+            "canister",
+            () -> BlockEntityType.Builder.of(CanisterBlockEntity::new, AtmosBlocks.CANISTER.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<VentBlockEntity>> VENT = BLOCK_ENTITIES.register(
+            "vent",
+            () -> BlockEntityType.Builder.of(VentBlockEntity::new, AtmosBlocks.VENT.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

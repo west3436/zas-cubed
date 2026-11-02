@@ -1,5 +1,24 @@
 {
   "itemGroup.zas_atmos": "ZAS³ Atmospherics",
   "block.zas_atmos.pipe": "Pipe",
-  "block.zas_atmos.pipe_cap": "Pipe End Cap"
+  "block.zas_atmos.pipe_cap": "Pipe End Cap",
+  "block.zas_atmos.connector_port": "Connector Port",
+  "block.zas_atmos.canister": "Canister",
+  "block.zas_atmos.vent": "Vent",
+  "item.zas_atmos.canister.empty": "Empty",
+  "item.zas_atmos.canister.pressure": "%s kPa at %s K",
+  "item.zas_atmos.canister.gas": "%s: %s mol",
+  "gui.zas_atmos.canister.contents": "Pressure: %s kPa (%s mol)",
+  "gui.zas_atmos.canister.release": "Release pressure: %s kPa",
+  "gui.zas_atmos.canister.open": "Valve: open",
+  "gui.zas_atmos.canister.closed": "Valve: closed",
+  "gui.zas_atmos.canister.valve": "Open or close the valve",
+  "gui.zas_atmos.vent.mode": "Mode: %s",
+  "gui.zas_atmos.vent.mode.off": "Off",
+  "gui.zas_atmos.vent.mode.blow": "Blowing",
+  "gui.zas_atmos.vent.mode.siphon": "Siphoning",
+  "gui.zas_atmos.vent.bounds": "External %s kPa, internal %s kPa",
+  "gui.zas_atmos.vent.powered": "Powered",
+  "gui.zas_atmos.vent.unpowered": "No power",
+  "gui.zas_atmos.vent.cycle": "Off / blow / siphon"
 }

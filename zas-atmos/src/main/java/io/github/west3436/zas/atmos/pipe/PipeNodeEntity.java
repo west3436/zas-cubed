@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     private static final String GAS = "Gas";
 
     private final GasStore stored;
+    private final CellWatch cellWatch = new CellWatch();
     private PipeNetwork network;
     private boolean unloading;
 
@@ -80,6 +82,19 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
             PipeNetwork.build(this, n -> ((PipeNodeEntity) n).connectedNodes());
         }
         return network;
+    }
+
+    /** The watch on the cell the node acts on, reset when it loads. */
+    protected CellWatch cellWatch() {
+        return cellWatch;
+    }
+
+    /**
+     * Whether the node keeps its share when it is removed now, instead of releasing it: a canister
+     * mined into an item that carries its gas (CONT-017). The default is false.
+     */
+    protected boolean keepsShareWhenRemoved() {
+        return false;
     }
 
     /** The node's share of its network's gas, or its own gas if it is in no network. */
@@ -144,6 +159,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
         super.onLoad();
         if (level instanceof ServerLevel) {
             unloading = false;
+            cellWatch.reset();
             if (network != null) {
                 network.dissolve();
             }
@@ -165,7 +181,9 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
         if (!unloading && level instanceof ServerLevel server) {
             GasParcel share = network != null && network.valid() ? network.detach(this) : stored.drain();
             network = null;
-            if (!share.isEmpty()) {
+            if (keepsShareWhenRemoved()) {
+                stored.set(share); // carried away, as by a mined canister's item
+            } else if (!share.isEmpty()) {
                 GasMutations.add(server, Vec3.atCenterOf(worldPosition), share, RELEASE);
             }
         }
