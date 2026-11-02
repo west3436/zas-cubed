@@ -823,9 +823,12 @@ public final class BreathingTests {
             Breathers.checkAt(outside, t0);
             Breathers.checkAt(pig, t0 + 40);
             Breathers.checkAt(outside, t0 + 40);
+            // The flush sends every draw waiting in the level, including other tests' from this tick,
+            // so look only at this test's: its room is drawn from, and the open air has no zone to
+            // draw from.
             Map<Long, CompletableFuture<GasParcel>> sent = Respiration.flush(lab.r.level);
-            h.assertValueEqual(
-                    sent.keySet(), Set.of(before.id().value()), "the zones drawn from (none for the open air)");
+            h.assertTrue(sent.containsKey(before.id().value()), "the room drawn from: " + sent.keySet());
+            h.assertTrue(Atmospheres.of(outside).zone().isEmpty(), "the pig outside has no zone to draw from");
             GasParcel removed = lab.r.settle(sent.get(before.id().value()));
             close(h, removed.moles(StandardAir.OXYGEN), 2, 1e-9, "O2 breathed in 2 s");
             lab.r.ticks(2);
