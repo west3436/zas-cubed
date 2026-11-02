@@ -35,8 +35,9 @@ import net.minecraft.world.phys.Vec3;
  * gas into its cell's zone, up to the release pressure.
  *
  * <p>Mined with the right tool, it keeps its gas: the item carries it as {@link
- * AtmosComponents#GAS}, and placing the item puts it back. Removed any other way, it releases its
- * gas into its cell, as a pipe does (CONT-009).
+ * AtmosComponents#GAS}, and placing the item puts it back. Broken in creative, its gas is
+ * destroyed with it. Removed any other way, it releases its gas into its cell, as a pipe does
+ * (CONT-009).
  */
 public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider {
     /** The pressure a canister is rated for, kPa (90 atm). Rupture isn't built yet (CONT-085). */
@@ -50,6 +51,7 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
     private final ZonePort port = new ZonePort(VALVE);
     private double releasePressure = CanisterRelease.DEFAULT_KPA;
     private boolean keepContents;
+    private boolean voidContents;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -115,9 +117,19 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         keepContents = true;
     }
 
+    /** Called when a creative player is about to break the canister: its gas is destroyed with it. */
+    void voidContents() {
+        voidContents = true;
+    }
+
     @Override
     protected boolean keepsShareWhenRemoved() {
         return keepContents;
+    }
+
+    @Override
+    protected boolean voidsShareWhenRemoved() {
+        return voidContents;
     }
 
     @Override

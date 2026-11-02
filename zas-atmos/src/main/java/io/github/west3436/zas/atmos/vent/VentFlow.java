@@ -46,6 +46,33 @@ public final class VentFlow {
     }
 
     /**
+     * Why blowing would move less than {@code minFlow} moles (CONT-014): the network is empty (too
+     * little gas for even its rate cap to reach {@code minFlow}), it has reached the internal bound, or the zone has reached the external bound. The arguments are
+     * {@link #blow}'s.
+     *
+     * @return the reason, or {@link VentStatus#MOVING} if it would move at least {@code minFlow}
+     */
+    public static VentStatus blowIdle(
+            double zonePressure,
+            double zoneVolume,
+            double netMoles,
+            double netVolume,
+            double netTemperature,
+            VentSettings settings,
+            double minFlow) {
+        if (blow(zonePressure, zoneVolume, netMoles, netVolume, netTemperature, settings) >= minFlow) {
+            return VentStatus.MOVING;
+        }
+        if (netTemperature <= 0 || netVolume <= 0 || RATE * netMoles * Math.min(1, BUFFER / netVolume) < minFlow) {
+            return VentStatus.NETWORK_EMPTY;
+        }
+        double rt = GasMixture.GAS_CONSTANT * netTemperature;
+        double byZone = (settings.external() - zonePressure) * zoneVolume / rt;
+        double byNet = (netMoles * rt / netVolume - settings.internal()) * netVolume / rt;
+        return byNet <= byZone ? VentStatus.NETWORK_BOUND : VentStatus.ROOM_BOUND;
+    }
+
+    /**
      * Siphoning: moles out of the zone into the network.
      *
      * @param zoneMoles the zone's moles
@@ -75,5 +102,37 @@ public final class VentFlow {
         double byNet = (settings.internal() - netPressure) * netVolume / rt;
         double cap = RATE * zoneMoles * Math.min(1, BUFFER / zoneVolume);
         return Math.max(0, Math.min(Math.min(byZone, byNet), cap));
+    }
+
+    /**
+     * Why siphoning would move less than {@code minFlow} moles (CONT-014): there is no gas in front
+     * (too little for even the rate cap to reach {@code minFlow}), the network has reached the internal bound, or the zone has reached the external bound. The
+     * arguments are {@link #siphon}'s.
+     *
+     * @return the reason, or {@link VentStatus#MOVING} if it would move at least {@code minFlow}
+     */
+    public static VentStatus siphonIdle(
+            double zoneMoles,
+            double zoneVolume,
+            double zoneTemperature,
+            double netMoles,
+            double netVolume,
+            double netTemperature,
+            VentSettings settings,
+            double minFlow) {
+        if (siphon(zoneMoles, zoneVolume, zoneTemperature, netMoles, netVolume, netTemperature, settings) >= minFlow) {
+            return VentStatus.MOVING;
+        }
+        if (zoneTemperature <= 0
+                || zoneVolume <= 0
+                || netVolume <= 0
+                || RATE * zoneMoles * Math.min(1, BUFFER / zoneVolume) < minFlow) {
+            return VentStatus.ROOM_EMPTY;
+        }
+        double rt = GasMixture.GAS_CONSTANT * zoneTemperature;
+        double netPressure = netMoles * GasMixture.GAS_CONSTANT * netTemperature / netVolume;
+        double byZone = (zoneMoles * rt / zoneVolume - settings.external()) * zoneVolume / rt;
+        double byNet = (settings.internal() - netPressure) * netVolume / rt;
+        return byNet <= byZone ? VentStatus.NETWORK_BOUND : VentStatus.ROOM_BOUND;
     }
 }

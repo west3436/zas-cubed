@@ -1416,7 +1416,9 @@ the cell in front of its grille).
     placing the item puts the gas back. The game removes a mined block before
     it makes the drops, so `playerWillDestroy` marks the canister to keep its
     share; drops made before removal (`destroyBlock`, explosions) mark it in
-    `getDrops`. Removed any other way, it releases its share, as a pipe does.
+    `getDrops`. Broken by a creative player, `playerWillDestroy` marks it to
+    destroy its share instead. Removed any other way, as by `setblock`, it
+    releases its share, as a pipe does.
   - It is rated at 9,120 kPa; rupture (CONT-085) isn't built.
   - The creative tab has a canister of each built-in gas at 45 atm and
     293.15 K, painted in that gas's colour (CONT-086). The item model picks
@@ -1434,6 +1436,13 @@ the cell in front of its grille).
   - It runs only while powered (CONT-060), in the life-support group, drawing
     `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
     what it is doing: its mode while it runs, else off.
+  - Each atmos tick it also decides a `VentStatus` for its GUI. It is off,
+    moving gas, or idle, and when idle it records why: it is waiting for the
+    air in front to settle, the network or the air in front is empty, or the
+    network or the room has reached its bound. `VentFlow.blowIdle` and
+    `siphonIdle` tell which term of the flow is zero. The GUI shows the
+    status and the network's pressure, the figure the internal bound is
+    compared with, so a vent that animates but moves nothing says why.
   - **For the area air controller:** `VentBlockEntity.control(controller,
     VentSettings)` sets it, and an unchanged setting changes nothing, so a
     controller can send the same order every atmos tick. Each order makes the
@@ -1451,7 +1460,8 @@ the cell in front of its grille).
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
-  screens are plain panels with buttons and no textures.
+  screens are plain panels with buttons and no textures. A line too long for
+  the panel wraps.
 
 ### 11.6 The area air controller
 

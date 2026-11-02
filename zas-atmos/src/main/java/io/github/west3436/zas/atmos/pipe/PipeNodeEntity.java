@@ -97,6 +97,14 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
         return false;
     }
 
+    /**
+     * Whether the node destroys its share when it is removed now, instead of releasing it: a
+     * canister broken in creative. The default is false.
+     */
+    protected boolean voidsShareWhenRemoved() {
+        return false;
+    }
+
     /** The node's share of its network's gas, or its own gas if it is in no network. */
     public GasParcel share() {
         return network != null && network.valid()
@@ -183,7 +191,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
             network = null;
             if (keepsShareWhenRemoved()) {
                 stored.set(share); // carried away, as by a mined canister's item
-            } else if (!share.isEmpty()) {
+            } else if (!share.isEmpty() && !voidsShareWhenRemoved()) { // a voided share is destroyed
                 GasMutations.add(server, Vec3.atCenterOf(worldPosition), share, RELEASE);
             }
         }

@@ -25,6 +25,7 @@ import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
+import io.github.west3436.zas.atmos.vent.VentStatus;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -353,17 +354,32 @@ public final class GasDeviceTests {
         a.level.removeBlock(pos2, false);
         h.assertTrue(gas.equals(second.get(AtmosComponents.GAS.get())), "drops before removal lost the gas");
         a.close(again.stored().totalMoles(), gas.totalMoles(), "the removed canister kept its gas for the item");
+        h.succeed();
+    }
 
-        // Mined in creative, there is no item: the gas is released, not kept.
+    /**
+     * CONT-017 (owner's change of 2026-11-02): a canister broken in creative drops nothing, and its
+     * gas is destroyed with it, not released into its room.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_017_a_canister_broken_in_creative_destroys_its_gas(GameTestHelper h) {
+        Area a = new Area(h, 31);
+        room(a);
         a.place(2, 1, 2, canister());
+        a.tick();
         CanisterBlockEntity creative = a.entity(2, 1, 2);
-        creative.network().gas().add(gas);
+        creative.network().gas().add(new GasParcel(Map.of(O2, 50.0), T));
+        double o2 = a.zone(2, 2, 2).mixture().moles(O2);
         Player builder = h.makeMockPlayer(GameType.CREATIVE);
-        creative.getBlockState()
-                .getBlock()
-                .playerWillDestroy(a.level, a.abs(2, 1, 2), creative.getBlockState(), builder);
-        a.level.removeBlock(a.abs(2, 1, 2), false);
-        a.close(creative.stored().totalMoles(), 0, "a canister mined in creative kept its gas");
+        BlockPos pos = a.abs(2, 1, 2);
+        BlockState state = a.level.getBlockState(pos);
+        state.getBlock().playerWillDestroy(a.level, pos, state, builder);
+        a.level.removeBlock(pos, false);
+        for (int i = 0; i < 3; i++) {
+            a.tick();
+        }
+        a.close(creative.stored().totalMoles(), 0, "a canister broken in creative kept its gas");
+        a.close(a.zone(2, 2, 2).mixture().moles(O2), o2, "the room's O2 after a canister was broken in creative");
         h.succeed();
     }
 
@@ -380,6 +396,70 @@ public final class GasDeviceTests {
         a.tick();
         a.close(a.zone(2, 2, 2).mixture().moles(O2) - o2, 50.0, "the room gains the canister's gas");
         h.succeed();
+    }
+
+    /**
+     * CONT-014, CONT-074: a vent's GUI shows its network's pressure, and why it moves nothing. As in
+     * the S-01 round's test: a vent siphoning into a network with a full canister on its port, with
+     * the internal bound below the network's pressure, is idle, and says the network is why.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_014_an_idle_vent_says_why(GameTestHelper h) {
+        Area a = new Area(h, 32);
+        room(a);
+        VentBlockEntity vent = ventRig(a);
+        PipeNetwork net = vent.network();
+        net.gas().add(new GasParcel(Map.of(N2, 1_500.0), T));
+        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        VentMenu menu = (VentMenu) vent.createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(menu.status(), VentStatus.OFF, "an off vent's status");
+        double kPa = vent.networkPressure();
+        h.assertTrue(kPa > 2_000, "the network is at " + kPa + " kPa");
+        h.assertValueEqual(menu.value(VentMenu.DATA_NETWORK), (int) Math.round(kPa), "the GUI's network pressure");
+
+        // Siphoning up to 400 kPa into a network at over 2,000: idle, because of the network.
+        double room = a.zone(2, 2, 2).mixture().totalMoles();
+        vent.command(new VentSettings(VentMode.SIPHON, 0, 400));
+        settle(a, vent);
+        h.assertValueEqual(vent.status(), VentStatus.NETWORK_BOUND, "the siphoning vent's status");
+        h.assertValueEqual(menu.status(), VentStatus.NETWORK_BOUND, "the GUI's status");
+        a.close(a.zone(2, 2, 2).mixture().totalMoles(), room, "the room's moles while the vent is idle");
+
+        // Raise the internal bound above the network: it siphons.
+        vent.command(new VentSettings(VentMode.SIPHON, 0, VentSettings.MAX_KPA));
+        a.step();
+        h.assertValueEqual(vent.status(), VentStatus.MOVING, "the status with the bound raised");
+        a.step();
+        h.assertTrue(a.zone(2, 2, 2).mixture().totalMoles() < room, "the vent didn't siphon with the bound raised");
+
+        // Blowing into a room above the external bound: idle, because of the room.
+        vent.command(new VentSettings(VentMode.BLOW, 0, 0));
+        settle(a, vent);
+        h.assertValueEqual(menu.status(), VentStatus.ROOM_BOUND, "the GUI's status blowing past the external bound");
+
+        // Blowing from an empty network: idle, because the network is empty.
+        net = vent.network();
+        net.gas().takeFraction(1.0);
+        vent.command(VentSettings.blow(VentSettings.MAX_KPA));
+        settle(a, vent);
+        h.assertValueEqual(menu.status(), VentStatus.NETWORK_EMPTY, "the GUI's status with an empty network");
+        h.assertValueEqual(menu.value(VentMenu.DATA_NETWORK), 0, "the GUI's network pressure when empty");
+
+        vent.command(VentSettings.OFF);
+        a.step();
+        h.assertValueEqual(menu.status(), VentStatus.OFF, "an off vent's status");
+        h.succeed();
+    }
+
+    /** Steps until the vent's port is free and it has read the air in front, at most 8 times. */
+    private static void settle(Area a, VentBlockEntity vent) {
+        for (int i = 0; i < 8; i++) {
+            a.step();
+            if (vent.readyToStep() && vent.status() != VentStatus.WAITING) {
+                a.step(); // and once more on the new settings
+                return;
+            }
+        }
     }
 
     /** CONT-074: GUI buttons are checked and settings clamped on the server. */

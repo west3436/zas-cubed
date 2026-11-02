@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.client;
 
 import io.github.west3436.zas.atmos.vent.VentMenu;
+import io.github.west3436.zas.atmos.vent.VentStatus;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.components.Button;
@@ -8,7 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A vent's GUI (CONT-014): mode, bounds and power. While an area air controller controls the vent,
+ * A vent's GUI (CONT-014): mode, what it did last atmos tick (moving gas, or idle and why), bounds,
+ * its network's pressure, and power. While an area air controller controls the vent,
  * it shows the controller and its order, and its buttons are off.
  */
 final class VentScreen extends DeviceScreen<VentMenu> {
@@ -18,18 +20,21 @@ final class VentScreen extends DeviceScreen<VentMenu> {
 
     VentScreen(VentMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        imageHeight = 143;
+        imageHeight = 176;
     }
 
     @Override
     protected void init() {
         super.init();
         buttons.clear();
-        buttons.add(button(8, 75, 184, Component.translatable("gui.zas_atmos.vent.cycle"), VentMenu.CYCLE_MODE));
+        // Below the most lines there can be: three of control, a status of two, bounds, network, power.
+        int top = 108;
+        buttons.add(button(8, top, 184, Component.translatable("gui.zas_atmos.vent.cycle"), VentMenu.CYCLE_MODE));
         for (int i = 0; i < 4; i++) {
-            buttons.add(button(8 + 46 * i, 97, 44, Component.literal("E " + STEPS[i]), VentMenu.EXTERNAL_DOWN_100 + i));
-            buttons.add(
-                    button(8 + 46 * i, 119, 44, Component.literal("I " + STEPS[i]), VentMenu.INTERNAL_DOWN_100 + i));
+            buttons.add(button(
+                    8 + 46 * i, top + 22, 44, Component.literal("E " + STEPS[i]), VentMenu.EXTERNAL_DOWN_100 + i));
+            buttons.add(button(
+                    8 + 46 * i, top + 44, 44, Component.literal("I " + STEPS[i]), VentMenu.INTERNAL_DOWN_100 + i));
         }
         enableButtons();
     }
@@ -62,8 +67,12 @@ final class VentScreen extends DeviceScreen<VentMenu> {
         } else {
             lines.add(Component.translatable("gui.zas_atmos.vent.mode", mode));
         }
+        if (menu.status() != VentStatus.OFF) {
+            lines.add(Component.translatable(menu.status().key()));
+        }
         lines.add(Component.translatable(
                 "gui.zas_atmos.vent.bounds", menu.value(VentMenu.DATA_EXTERNAL), menu.value(VentMenu.DATA_INTERNAL)));
+        lines.add(Component.translatable("gui.zas_atmos.vent.network", menu.value(VentMenu.DATA_NETWORK)));
         lines.add(Component.translatable(
                 menu.value(VentMenu.DATA_POWERED) != 0
                         ? "gui.zas_atmos.vent.powered"

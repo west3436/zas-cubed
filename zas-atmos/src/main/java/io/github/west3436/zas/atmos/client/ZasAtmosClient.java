@@ -40,7 +40,8 @@ public final class ZasAtmosClient {
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */
     private static void itemColors(RegisterColorHandlersEvent.Item event) {
         event.register(
-                (stack, tintIndex) -> tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
+                (stack, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get());
     }

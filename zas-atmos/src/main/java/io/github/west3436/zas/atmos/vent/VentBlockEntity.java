@@ -46,6 +46,9 @@ import net.minecraft.world.phys.Vec3;
  * <p>An area air controller that covers it orders it every atmos tick with {@link #control}. While
  * those orders keep coming, the vent is controlled: its GUI shows the controller and its order, and
  * refuses hand settings ({@link #setByHand}). A vent no controller orders is set by hand.
+ *
+ * <p>Its GUI also shows its network's pressure, which the internal bound is compared with, and
+ * its {@link VentStatus}: whether it moved gas at its last atmos tick, or why not.
  */
 public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, MenuProvider {
     /** Who a vent's changes are made by. */
@@ -62,6 +65,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
     private VentSettings settings = VentSettings.OFF;
     private long controlledUntil = Long.MIN_VALUE;
     private BlockPos controller;
+    private VentStatus status = VentStatus.OFF;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -77,6 +81,8 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
                 case VentMenu.DATA_Y -> controller == null ? 0 : controller.getY();
                 case VentMenu.DATA_Z_LOW -> low(controller == null ? 0 : controller.getZ());
                 case VentMenu.DATA_Z_HIGH -> high(controller == null ? 0 : controller.getZ());
+                case VentMenu.DATA_NETWORK -> (int) Math.min(Short.MAX_VALUE, Math.round(networkPressure()));
+                case VentMenu.DATA_STATUS -> status.ordinal();
                 default -> 0;
             };
         }
@@ -178,6 +184,23 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
         return Vec3.atCenterOf(worldPosition.relative(getBlockState().getValue(VentBlock.FACING)));
     }
 
+    /**
+     * The pressure of the vent's pipe network, kPa: what siphoning fills up to the internal bound,
+     * and blowing empties down to it. Server side.
+     */
+    public double networkPressure() {
+        if (isRemoved()) {
+            return 0;
+        }
+        GasStore net = network().gas();
+        return net.volume() <= 0 ? 0 : GasMixture.GAS_CONSTANT * net.temperature() * net.totalMoles() / net.volume();
+    }
+
+    /** What the vent did at its last atmos tick: off, moving gas, or idle and why. */
+    public VentStatus status() {
+        return status;
+    }
+
     /** Whether the vent is running: on and powered. */
     public boolean running() {
         return settings.mode() != VentMode.OFF && power.isPowered();
@@ -198,23 +221,45 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
             level.setBlock(worldPosition, state.setValue(VentMode.PROPERTY, shown), Block.UPDATE_CLIENTS);
         }
         if (shown == VentMode.OFF) {
+            status = VentStatus.OFF;
             return;
         }
         Vec3 point = airPoint();
         AtmosphereSample sample = Atmospheres.at(level, point);
         if (!cellWatch().trust(sample)) {
+            status = VentStatus.WAITING;
             return;
         }
         GasMixture zone = sample.mixture();
         if (shown == VentMode.BLOW) {
-            double n = VentFlow.blow(
-                    zone.pressure(), zone.volume(), net.totalMoles(), net.volume(), net.temperature(), settings);
-            if (n < PipeBlockEntity.MIN_FLOW) {
+            status = VentFlow.blowIdle(
+                    zone.pressure(),
+                    zone.volume(),
+                    net.totalMoles(),
+                    net.volume(),
+                    net.temperature(),
+                    settings,
+                    PipeBlockEntity.MIN_FLOW);
+            if (status != VentStatus.MOVING) {
                 return;
             }
+            double n = VentFlow.blow(
+                    zone.pressure(), zone.volume(), net.totalMoles(), net.volume(), net.temperature(), settings);
             GasParcel out = net.takeFraction(n / net.totalMoles());
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
         } else {
+            status = VentFlow.siphonIdle(
+                    zone.totalMoles(),
+                    zone.volume(),
+                    zone.temperature(),
+                    net.totalMoles(),
+                    net.volume(),
+                    net.temperature(),
+                    settings,
+                    PipeBlockEntity.MIN_FLOW);
+            if (status != VentStatus.MOVING) {
+                return;
+            }
             double n = VentFlow.siphon(
                     zone.totalMoles(),
                     zone.volume(),
@@ -223,9 +268,6 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Me
                     net.volume(),
                     net.temperature(),
                     settings);
-            if (n < PipeBlockEntity.MIN_FLOW) {
-                return;
-            }
             double total = zone.totalMoles();
             Map<ResourceLocation, Double> want = new TreeMap<>();
             zone.moles().forEach((gas, m) -> {

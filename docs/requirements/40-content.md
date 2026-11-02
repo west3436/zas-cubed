@@ -438,6 +438,15 @@ controller and its order with its buttons off.
 checks it with `control` called directly; [#160](https://github.com/west3436/zas-cubed/pull/160) checks it with a real
 controller.*
 
+*2026-11-02: Note: in the owner's S-01 test, a vent siphoning into a network
+with a full canister on its port moved nothing, because the network was above
+the internal bound. That is what this requirement asks for, but the GUI didn't
+show why. The GUI now shows the network's pressure, and a status line: moving
+gas, or idle and why (the network or the room has reached its bound, either is
+empty, or the vent is waiting for the air in front to settle).
+`VentFlowTest.cont_014_an_idle_vent_says_why` (Unit) and
+`GasDeviceTests.cont_014_an_idle_vent_says_why` (GameTest) check each reason.*
+
 #### CONT-078 · Vent rate
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
@@ -536,6 +545,9 @@ contents when mined.
   contents when mined is the Minecraft equivalent of moving it.
 - **Verify:** A GameTest mines a filled canister, places it again and checks
   the contents are unchanged.
+- **Changed 2026-11-02 (the owner, in the S-01 integration review,
+  [#160](https://github.com/west3436/zas-cubed/pull/160)):** a canister broken
+  in creative drops nothing, and its gas is destroyed with it, not released.
 
 *2026-11-02: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
 `zas_atmos:canister` is a 1,000 L network node rated at 9,120 kPa
@@ -544,6 +556,10 @@ pickaxe it drops an item carrying its gas (`zas_atmos:gas`) and its paint;
 removed any other way it releases its gas, as a pipe does (CONT-009).
 `GasDeviceTests.cont_017_a_mined_canister_keeps_its_contents` and
 `cont_017_a_canister_removed_without_a_drop_releases_its_gas` (GameTest).*
+
+*2026-11-02: the owner's change is built. Broken in creative, the canister's
+gas is destroyed. `GasDeviceTests.cont_017_a_canister_broken_in_creative_destroys_its_gas`
+(GameTest) checks that the room gains nothing.*
 
 #### CONT-083 · Connector ports
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01

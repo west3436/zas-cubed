@@ -12,8 +12,8 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A vent's GUI (CONT-074, CONT-014): its mode and bounds, whether it has power, and the area air
- * controller that controls it, if one does. The client sends only button ids; the server checks
+ * A vent's GUI (CONT-074, CONT-014): its mode and bounds, its network's pressure, what it did last
+ * atmos tick, whether it has power, and the area air controller that controls it, if one does. The client sends only button ids; the server checks
  * each id, refuses every button while a controller controls the vent, and {@link VentSettings}
  * clamps the bounds to 0–5,066 kPa.
  */
@@ -43,7 +43,12 @@ public class VentMenu extends AbstractContainerMenu {
     public static final int DATA_Y = 7;
     public static final int DATA_Z_LOW = 8;
     public static final int DATA_Z_HIGH = 9;
-    public static final int DATA_COUNT = 10;
+    /** The network's pressure, kPa, rounded and capped at 32,767. */
+    public static final int DATA_NETWORK = 10;
+    /** The {@link VentStatus}'s ordinal. */
+    public static final int DATA_STATUS = 11;
+
+    public static final int DATA_COUNT = 12;
 
     private static final double[] STEPS = {-100, -10, 10, 100};
 
@@ -75,6 +80,11 @@ public class VentMenu extends AbstractContainerMenu {
     public VentMode mode() {
         int i = data.get(DATA_MODE);
         return i >= 0 && i < VentMode.values().length ? VentMode.values()[i] : VentMode.OFF;
+    }
+
+    /** The synced status. */
+    public VentStatus status() {
+        return VentStatus.of(data.get(DATA_STATUS));
     }
 
     /** Whether a controller controls the vent, as synced. */

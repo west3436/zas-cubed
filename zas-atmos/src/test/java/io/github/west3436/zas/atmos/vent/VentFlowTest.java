@@ -73,4 +73,42 @@ class VentFlowTest {
         assertTrue(VentSettings.siphon(50).internal() == VentSettings.MAX_KPA);
         assertEquals(VentMode.OFF, VentSettings.OFF.mode());
     }
+
+    @Test
+    void cont_014_an_idle_vent_says_why() {
+        double min = 1e-4;
+        double netVolume = 1_470;
+        double zoneVolume = 27_000;
+        double highNet = 3_000 * netVolume / (R * T); // moles at 3,000 kPa
+        double room = 100 * zoneVolume / (R * T); // moles at 100 kPa
+
+        // Siphoning into a network at 3,000 kPa with the internal bound at 400: the network.
+        VentSettings siphon = new VentSettings(VentMode.SIPHON, 0, 400);
+        assertEquals(
+                VentStatus.NETWORK_BOUND, VentFlow.siphonIdle(room, zoneVolume, T, highNet, netVolume, T, siphon, min));
+        // Raise the bound above the network, and it siphons.
+        VentSettings higher = new VentSettings(VentMode.SIPHON, 0, 5_000);
+        assertEquals(VentStatus.MOVING, VentFlow.siphonIdle(room, zoneVolume, T, highNet, netVolume, T, higher, min));
+        // The room already at or below the external bound: the room.
+        VentSettings floor = new VentSettings(VentMode.SIPHON, 150, 5_000);
+        assertEquals(
+                VentStatus.ROOM_BOUND, VentFlow.siphonIdle(room, zoneVolume, T, highNet, netVolume, T, floor, min));
+        // Nothing in front: empty.
+        assertEquals(VentStatus.ROOM_EMPTY, VentFlow.siphonIdle(0, zoneVolume, T, highNet, netVolume, T, higher, min));
+
+        // Blowing into a room already at the external bound: the room.
+        assertEquals(
+                VentStatus.ROOM_BOUND,
+                VentFlow.blowIdle(101.325, zoneVolume, highNet, netVolume, T, VentSettings.blow(101.325), min));
+        // Blowing with the network at its internal bound: the network.
+        VentSettings keep = new VentSettings(VentMode.BLOW, 5_000, 3_000);
+        assertEquals(VentStatus.NETWORK_BOUND, VentFlow.blowIdle(100, zoneVolume, highNet, netVolume, T, keep, min));
+        // Blowing from an empty network: empty.
+        assertEquals(
+                VentStatus.NETWORK_EMPTY,
+                VentFlow.blowIdle(100, zoneVolume, 0, netVolume, T, VentSettings.blow(5_000), min));
+        assertEquals(
+                VentStatus.MOVING,
+                VentFlow.blowIdle(100, zoneVolume, highNet, netVolume, T, VentSettings.blow(5_000), min));
+    }
 }
