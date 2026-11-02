@@ -276,7 +276,7 @@ rate.*
 ## Environmental hazards
 
 #### LIFE-015 · Who takes environmental hazards
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Pressure and temperature hazards shall apply to every living entity except
 those in the `zas:atmosphere_immune` tag.
@@ -286,8 +286,16 @@ those in the `zas:atmosphere_immune` tag.
 - **Verify:** A GameTest checks a zombie takes vacuum damage and a tagged mob
   doesn't.
 
+*2026-11-02: Implemented
+([#35](https://github.com/west3436/zas-cubed/issues/35)). Every living entity
+not in the tag is checked on the breath check's cadence, breathing or not, and
+judged on the atmosphere at its eyes; an immune entity's verdict lists
+`Protection.IMMUNE`, and an immune entity that doesn't breathe isn't checked at
+all. `life_015_zombie_takes_vacuum_damage_and_an_immune_mob_doesnt` checks a
+zombie and an iron golem in a vacuum zone.*
+
 #### LIFE-016 · Default immune tag
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 The default `zas:atmosphere_immune` tag shall contain the bosses (wither,
 ender dragon) and golems (iron, snow).
@@ -296,8 +304,12 @@ ender dragon) and golems (iron, snow).
   break golem builds.
 - **Verify:** Inspect the shipped tag.
 
+*2026-11-02: Implemented in `data/zas/tags/entity_type/atmosphere_immune.json`
+([datapacks.md](../datapacks.md#atmosphere-immune-entities)), with those four
+and nothing else; `life_016_default_immune_tag` reads it.*
+
 #### LIFE-010 · Low-pressure hazard
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 An effective pressure (LIFE-020) below 20 kPa shall deal 1 HP/s of
 decompression damage. (The HUD warnings at 50 and 325 kPa are CLIENT-008.)
@@ -307,8 +319,15 @@ decompression damage. (The HUD warnings at 50 and 325 kPa are CLIENT-008.)
   20 HP and per second.
 - **Verify:** A GameTest checks an unprotected entity at 15 kPa takes 1 HP/s.
 
+*2026-11-02: Implemented as `zas:decompression`
+([#35](https://github.com/west3436/zas-cubed/issues/35)). The effective
+pressure is 101.325 kPa + (P − 101.325 kPa) × the fraction of the difference
+the entity's protection lets through, which is the whole of it until LIFE-020
+([#36](https://github.com/west3436/zas-cubed/issues/36)).
+`life_010_low_pressure_deals_1_hp_per_second` checks 15 kPa and 25 kPa.*
+
 #### LIFE-014 · High-pressure hazard
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 An effective pressure at or above 550 kPa shall deal
 min((P / 550 kPa − 1) × 2, 2) HP/s of barotrauma damage.
@@ -318,8 +337,13 @@ min((P / 550 kPa − 1) × 2, 2) HP/s of barotrauma damage.
 - **Verify:** GameTests check 1 HP/s at 825 kPa and the 2 HP/s cap at 1,650
   kPa.
 
+*2026-11-02: Implemented as `zas:barotrauma`
+([#35](https://github.com/west3436/zas-cubed/issues/35)), with LIFE-010's
+effective pressure. `life_014_high_pressure` checks 825 kPa, 1,650 kPa and
+545 kPa.*
+
 #### LIFE-011 · Temperature hazard
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-05 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-05 · [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 Exposure temperatures outside the comfort band (default 220–360 K) shall deal
 damage by tier. Every tier applies, unlike vg.
@@ -338,6 +362,17 @@ frostbite), before hypoxia.
   Every tier applies because vg's tiers never escalate, which is a bug ([vg
   §6](../research/vg-atmos-content.md#6-config-knobs-fictional-gases-and-quirks)).
 - **Verify:** GameTests check the damage in each tier.
+
+*2026-11-02: Implemented as `zas:frostbite` and `zas:burns`
+([#35](https://github.com/west3436/zas-cubed/issues/35)). The exposure
+temperature is the temperature of the atmosphere at the eyes. Each tier is
+reached as the temperature passes it, and the highest reached applies, so the
+2.7 K vacuum gives 2 HP/s of frostbite and 3 HP/s with decompression, as
+stated; adding the tiers would give 4.5. The band's edges are
+`[hazards] comfort_min_k` and `comfort_max_k` ([config.md](../config.md));
+the other tiers are fixed. `life_011_temperature_tiers` checks either side of
+each tier, `life_011_a_hot_room_burns` a zone at 450 K, and
+`life_011_unprotected_in_vacuum_takes_3_hp_per_second` the vacuum.*
 
 #### LIFE-012 · Breath temperature
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; only matters for very cold tanks), 2026-10-30. · Verify: GameTest
@@ -538,7 +573,7 @@ Internals that are on and supplied shall give water breathing.
 ## Damage, configuration and cost
 
 #### LIFE-030 · Damage types
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest
 
 Hazards shall use dedicated data-driven damage types, each with its own death
 message:
@@ -564,8 +599,15 @@ they are used. The others come with their hazards
 ([#35](https://github.com/west3436/zas-cubed/issues/35)), so this stays
 Accepted.*
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+`zas:decompression`, `zas:barotrauma`, `zas:frostbite`, `zas:burns` and
+`zas:airflow_impact` join them, each with a death message;
+`life_030_damage_types` checks all seven exist with their messages, and the
+LIFE-010, LIFE-011 and LIFE-014 GameTests check each hazard uses its type.
+Airflow impact is dealt by FLOW's work, which checks its own use of it.*
+
 #### LIFE-035 · Armor bypass
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Every atmospheric damage type except airflow impact shall bypass armor.
 Protection comes from LIFE-020 and LIFE-025 instead, so armor doesn't count
@@ -582,16 +624,32 @@ twice.
 comes with the other types
 ([#35](https://github.com/west3436/zas-cubed/issues/35)).*
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+The four new atmospheric types are in `#minecraft:bypasses_armor`, and
+`zas:airflow_impact` isn't. `life_035_armor_bypass` hurts a bare zombie and
+one in diamond armor with each type: the same damage for each atmospheric
+type, less for airflow impact.*
+
 #### LIFE-031 · Hazard toggles and scaling
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04
 
 Every hazard shall be individually toggleable and scalable.
 
 - **Rationale:** Decision: D-04. Servers and packs tune hazards.
 - **Verify:** GameTests turn off and scale each hazard.
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+Each of the seven hazards, one per LIFE-030 damage type, has
+`[hazards.<hazard>] enabled` and `scale` ([config.md](../config.md#hazards)).
+A hazard that is off harms nothing and isn't listed in a verdict; with
+hypoxia off, a breath short of O₂ is breathable. A scale multiplies damage,
+not effects or the air meter's drain. FLOW reads airflow impact's.
+`life_031_pressure_and_temperature_hazards_turn_off_and_scale`,
+`life_031_toxic_gas_turns_off_and_scales` and
+`life_031_hypoxia_turns_off_and_scales` check them.*
+
 #### LIFE-036 · Per-dimension hazard overrides
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04
 
 Hazard toggles and scales shall be overridable per dimension.
 
@@ -599,8 +657,14 @@ Hazard toggles and scales shall be overridable per dimension.
 - **Verify:** A GameTest overrides a hazard in one dimension and checks
   another is unaffected.
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+`[hazards] dimension_overrides` takes entries
+`"<dimension> <hazard> <on|off|scale>"`; an entry that doesn't parse is
+dropped. `life_036_per_dimension_overrides` turns decompression off and halves
+burns in the Overworld and checks the Nether keeps both.*
+
 #### LIFE-037 · Creative and spectator exemption
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Creative and spectator players shall be exempt from all hazards.
 
@@ -616,6 +680,13 @@ Creative and spectator players shall be exempt from all hazards.
 [#35](https://github.com/west3436/zas-cubed/issues/35)'s, so this stays
 Accepted.*
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+An exempt player is never judged on pressure or temperature either.
+`life_037_creative_and_spectator_are_exempt` checks creative and spectator
+players in a vacuum have no hazards, nothing to be charged and a full meter,
+while a survival player there has the hazards. Fake players can't be hurt at
+all, so it checks what a check would charge rather than their health.*
+
 #### LIFE-032 · Hazard extension API
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, D-12
 
@@ -628,7 +699,7 @@ intercepts existing hazard ticks; this adds new hazards.)
   applies.
 
 #### LIFE-033 · Staggered evaluation
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: NFR-001
+`Must` · `R1` · `Implemented` · Verify: Bench · Trace: NFR-001
 
 Hazard evaluation shall run at a per-entity cadence, staggered across
 entities.
@@ -642,8 +713,16 @@ entities.
 [#34](https://github.com/west3436/zas-cubed/issues/34)); the Bench is left to
 the hazards work ([#35](https://github.com/west3436/zas-cubed/issues/35)).*
 
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+The pressure and temperature hazards run in the same staggered check as
+breathing, one check per entity per interval.
+`life_033_checks_spread_across_the_interval` checks 100 breathers are each
+checked once in a 2 s interval and no tick runs more than 3 checks. The
+engine's Bench is headless, so S-10's Bench with a running server is left to
+S-10.*
+
 #### LIFE-038 · Per-tick entity cap
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: NFR-001
+`Must` · `R1` · `Implemented` · Verify: Bench · Trace: NFR-001
 
 The number of entities evaluated per server tick shall be capped
 (configurable).
@@ -651,6 +730,13 @@ The number of entities evaluated per server tick shall be capped
 - **Rationale:** Inferred: a large mob farm in a zone mustn't break the tick
   budget (NFR-001).
 - **Verify:** Bench checks the per-tick count never exceeds the cap.
+
+*2026-11-02: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+`[breathing] max_checks_per_tick`, 100 by default, caps breath and hazard
+checks per server tick over every dimension; a check due beyond it waits for
+the next tick. `life_038_checks_per_tick_are_capped` checks 20 breathers due
+at once under a cap of 5 are checked 5 a tick, none lost. As with LIFE-033,
+the Bench is S-10's.*
 
 #### LIFE-034 · Spawning in lethal atmospheres
 `Could` · `R1` · `Accepted` · Verify: GameTest

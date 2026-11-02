@@ -230,8 +230,9 @@ public final class ApiTests {
             h.assertFalse(b.canBreathe(), "the pig can breathe in a vacuum");
             h.assertValueEqual(b.source(), BreathSource.ATMOSPHERE, "source");
             h.assertValueEqual(b.breath(), Optional.of(at.mixture()), "breath");
-            // Decompression (LIFE-010) is #35's: until then a vacuum lists no hazard.
-            h.assertTrue(b.isProtected(), "a hazard other than breathing: " + b.hazards());
+            // An unprotected pig in a vacuum also decompresses (LIFE-010).
+            h.assertFalse(b.isProtected(), "protected in a vacuum");
+            h.assertTrue(b.hazards().contains(Hazard.LOW_PRESSURE), "hazards: " + b.hazards());
         } finally {
             pig.discard();
         }

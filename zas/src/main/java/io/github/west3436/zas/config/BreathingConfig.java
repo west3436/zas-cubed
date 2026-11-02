@@ -3,9 +3,10 @@ package io.github.west3436.zas.config;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * The server config's {@code [breathing]} section (LIFE): how often breathing is checked, the O2
- * minimum and the respiration rate. None of them is preset-controlled: D-27 sets the same
- * respiration in both presets.
+ * The server config's {@code [breathing]} section (LIFE): how often each living entity's breathing
+ * and hazards are checked and how many checks a server tick may run, the O2 minimum and the
+ * respiration rate. None of them is preset-controlled: D-27 sets the same respiration in both
+ * presets.
  *
  * <p>Each getter reads the loaded config on each call, so an edited file applies from the next
  * read, and gives the default while no world's config is loaded. Any thread.
@@ -17,11 +18,17 @@ public final class BreathingConfig {
     /** The O2 partial pressure below which an entity suffocates by default, in kPa (LIFE-003). */
     public static final double DEFAULT_OXYGEN_MINIMUM = 16.0;
 
+    /** The most breath and hazard checks a server tick runs by default (LIFE-038). */
+    public static final int DEFAULT_MAX_CHECKS_PER_TICK = 100;
+
     /** O2 one breather uses per hour by default, in mol (LIFE-042, D-27). */
     public static final double RESPIRATION_MOLES_PER_HOUR = 1.0;
 
     /** Game ticks between breath checks (LIFE-007). */
     public static ModConfigSpec.IntValue CHECK_INTERVAL_TICKS;
+
+    /** The most checks a server tick runs (LIFE-038). */
+    public static ModConfigSpec.IntValue MAX_CHECKS_PER_TICK;
 
     /** The O2 minimum in kPa (LIFE-003). */
     public static ModConfigSpec.DoubleValue OXYGEN_MINIMUM;
@@ -35,10 +42,14 @@ public final class BreathingConfig {
     static void define(ModConfigSpec.Builder builder) {
         builder.push("breathing");
         CHECK_INTERVAL_TICKS = builder.comment(
-                        "Game ticks between checks of each breathing entity's breath and gas hazards (20 = 1 s).",
+                        "Game ticks between checks of each living entity's breath and hazards (20 = 1 s).",
                         "Rates are per second, so a different interval changes smoothness and cost, not how",
                         "fast anything happens. Entities are spread across the interval.")
                 .defineInRange("check_interval_ticks", DEFAULT_CHECK_INTERVAL_TICKS, 1, 1200);
+        MAX_CHECKS_PER_TICK = builder.comment(
+                        "The most breath and hazard checks a server tick runs, over every dimension. A check",
+                        "due beyond it waits for the next tick.")
+                .defineInRange("max_checks_per_tick", DEFAULT_MAX_CHECKS_PER_TICK, 1, 100_000);
         OXYGEN_MINIMUM = builder.comment(
                         "The O2 partial pressure of the breath, in kPa, below which an entity's air meter",
                         "drains: at the underwater rate in a vacuum, proportionally slower closer to the minimum.")
@@ -53,6 +64,11 @@ public final class BreathingConfig {
     /** Game ticks between breath checks. */
     public static int checkIntervalTicks() {
         return ZasServerConfig.SPEC.isLoaded() ? CHECK_INTERVAL_TICKS.get() : DEFAULT_CHECK_INTERVAL_TICKS;
+    }
+
+    /** The most checks a server tick runs. */
+    public static int maxChecksPerTick() {
+        return ZasServerConfig.SPEC.isLoaded() ? MAX_CHECKS_PER_TICK.get() : DEFAULT_MAX_CHECKS_PER_TICK;
     }
 
     /** The O2 minimum in kPa. */

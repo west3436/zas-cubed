@@ -476,20 +476,42 @@ same path; to take one out, they replace the tag with `"replace": true` and
 list what should stay. The tag applies from the next breath check after
 `/reload`.
 
+## Atmosphere-immune entities
+
+Pressure and temperature (LIFE-010, LIFE-011, LIFE-014) harm every living
+entity, breathing or not, except the entity types in `zas:atmosphere_immune`
+(LIFE-015):
+
+```
+data/zas/tags/entity_type/atmosphere_immune.json
+```
+
+The shipped tag holds the bosses (the wither and the ender dragon) and the
+golems (the iron golem and the snow golem) (LIFE-016). An immune entity can
+still breathe if it is in `zas:breathers`: the tag spares it pressure and
+temperature only. Creative and spectator players are spared every hazard
+without a tag (LIFE-037). Packs change the tag as they do `zas:breathers`.
+
 ## Damage types
 
-Breathing deals two damage types of its own, data in `data/zas/damage_type/`
+Each hazard deals its own damage type, data in `data/zas/damage_type/`
 (LIFE-030):
 
 | Damage type | When | Death message |
 |---|---|---|
 | `zas:hypoxia` | An empty air meter in a breath with too little O₂, 2 HP/s (LIFE-008) | *Steve ran out of oxygen* |
 | `zas:toxic_gas` | A hazard profile's damage (LIFE-004) | *Steve breathed toxic gas* |
+| `zas:decompression` | An effective pressure below 20 kPa, 1 HP/s (LIFE-010) | *Steve was exposed to vacuum* |
+| `zas:barotrauma` | An effective pressure at or above 550 kPa, up to 2 HP/s (LIFE-014) | *Steve was crushed by the pressure* |
+| `zas:frostbite` | Below the comfort band, 0.5 to 2 HP/s (LIFE-011) | *Steve froze in the cold air* |
+| `zas:burns` | Above the comfort band, 1 to 4 HP/s (LIFE-011) | *Steve was burned by the hot air* |
+| `zas:airflow_impact` | Thrown against a block by airflow (FLOW) | *Steve was thrown by rushing air* |
 
-Both are in `#minecraft:bypasses_armor` (LIFE-035), `#minecraft:bypasses_cooldown`,
-so a hazard isn't lost to another's invulnerability ticks, and
-`#minecraft:no_knockback`. The other atmospheric damage types come with their
-hazards.
+All but `zas:airflow_impact` are in `#minecraft:bypasses_armor` (LIFE-035),
+since worn protection (LIFE-020, LIFE-025) stands in for armor;
+`#minecraft:bypasses_cooldown`, so a hazard isn't lost to another's
+invulnerability ticks; and `#minecraft:no_knockback`. Airflow impact is a blow,
+so armor and the damage cooldown apply to it as to any other.
 
 ## Invalid files
 
