@@ -7,7 +7,8 @@ import java.util.Objects;
 /**
  * One queued gas operation (architecture §2.3, §3.2): an addition or removal of gas at a block
  * position, carried in a {@link Batch} and applied in phase 3 of an atmos tick (CORE-040). A pin
- * or an unpin (API-017, API-050) travels the same way and moves no gas.
+ * or an unpin (API-017, API-050) travels the same way and moves no gas, and so does an addition or
+ * removal of heat (API-013), which moves only energy.
  *
  * <p>Plain, immutable data. Moles are indexed by the gas registry the engine runs with, which is
  * fixed for the server's lifetime.
@@ -27,6 +28,7 @@ import java.util.Objects;
  *     (API-015, GEO-004), or -1 for the position's largest cell. If the position no longer has
  *     that many cells when the operation applies, it acts on the largest. Not saved: an operation
  *     restored from a chunk acts on the largest cell.
+ * @param energy for an addition or removal of heat, the joules offered or wanted; otherwise 0
  */
 public record GasOp(
         long seq,
@@ -37,7 +39,8 @@ public record GasOp(
         LedgerCategory category,
         boolean triggersZone,
         String source,
-        int sub) {
+        int sub,
+        double energy) {
 
     /** What an operation does. */
     public enum Kind {
@@ -50,12 +53,35 @@ public record GasOp(
          */
         PIN,
         /** Removes the source's pins from every zone in memory (API-017). Its target is unused. */
-        UNPIN;
+        UNPIN,
+        /** Adds {@link #energy()} joules of heat at the target (API-013); it moves no gas. */
+        ADD_HEAT,
+        /** Removes up to {@link #energy()} joules of heat at the target (API-013); it moves no gas. */
+        REMOVE_HEAT;
 
         /** Whether the kind is a pin or an unpin, which moves no gas. */
         public boolean isPin() {
             return this == PIN || this == UNPIN;
         }
+
+        /** Whether the kind adds or removes heat, which moves no gas. */
+        public boolean isHeat() {
+            return this == ADD_HEAT || this == REMOVE_HEAT;
+        }
+    }
+
+    /** An operation that moves no heat. */
+    public GasOp(
+            long seq,
+            Kind kind,
+            long block,
+            double[] moles,
+            double temperature,
+            LedgerCategory category,
+            boolean triggersZone,
+            String source,
+            int sub) {
+        this(seq, kind, block, moles, temperature, category, triggersZone, source, sub, 0);
     }
 
     /** An operation on a position's largest cell. */
@@ -68,13 +94,14 @@ public record GasOp(
             LedgerCategory category,
             boolean triggersZone,
             String source) {
-        this(seq, kind, block, moles, temperature, category, triggersZone, source, -1);
+        this(seq, kind, block, moles, temperature, category, triggersZone, source, -1, 0);
     }
 
     /**
      * Checks and copies the arguments.
      *
-     * @throws IllegalArgumentException if an amount or the temperature is negative or not finite
+     * @throws IllegalArgumentException if an amount, the temperature or the energy is negative or
+     *     not finite
      */
     public GasOp {
         Objects.requireNonNull(kind, "kind");
@@ -91,6 +118,9 @@ public record GasOp(
         }
         if (sub < -1) {
             throw new IllegalArgumentException("sub-cell must be -1 or >= 0: " + sub);
+        }
+        if (!Double.isFinite(energy) || energy < 0) {
+            throw new IllegalArgumentException("energy must be finite and >= 0 J: " + energy);
         }
     }
 
@@ -112,6 +142,26 @@ public record GasOp(
     /** An API removal. */
     public static GasOp remove(long seq, long block, double[] moles, String source) {
         return new GasOp(seq, Kind.REMOVE, block, moles, 0, LedgerCategory.API, true, source);
+    }
+
+    /**
+     * An addition ({@code add}) or removal of {@code joules} of heat at a position's cell {@code
+     * sub} (-1 for its largest), as an API call (API-013): it may form a zone as {@code
+     * triggersZone} says (CORE-055).
+     */
+    public static GasOp heat(
+            long seq, long block, int sub, boolean add, double joules, boolean triggersZone, String source) {
+        return new GasOp(
+                seq,
+                add ? Kind.ADD_HEAT : Kind.REMOVE_HEAT,
+                block,
+                new double[0],
+                0,
+                LedgerCategory.API,
+                triggersZone,
+                source,
+                sub,
+                joules);
     }
 
     @Override
@@ -140,7 +190,8 @@ public record GasOp(
                 && category == g.category
                 && triggersZone == g.triggersZone
                 && source.equals(g.source)
-                && sub == g.sub;
+                && sub == g.sub
+                && Double.compare(energy, g.energy) == 0;
     }
 
     @Override
@@ -152,6 +203,11 @@ public record GasOp(
     public String toString() {
         if (kind == Kind.UNPIN) {
             return "GasOp#" + seq + "[UNPIN " + source + "]";
+        }
+        if (kind.isHeat()) {
+            return "GasOp#" + seq + "[" + kind + " at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block)
+                    + "," + SectionKeys.blockZ(block) + (sub >= 0 ? " sub-cell " + sub : "") + ", " + energy + " J, "
+                    + source + "]";
         }
         return "GasOp#" + seq + "[" + kind + " at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block) + ","
                 + SectionKeys.blockZ(block) + (sub >= 0 ? " sub-cell " + sub : "") + ", "

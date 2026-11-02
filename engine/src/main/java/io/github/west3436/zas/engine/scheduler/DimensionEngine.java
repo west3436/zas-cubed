@@ -386,7 +386,7 @@ public final class DimensionEngine {
             if (opZone[i] != 0) {
                 int idx = undo.indexOf(opZone[i]);
                 int component = idx >= 0 ? componentOf[idx] : -1;
-                o = new OpOutcome(o.seq(), o.outcome(), o.zoneId(), o.moved(), o.temperature(), component);
+                o = o.inComponent(component);
                 if (component >= 0) {
                     zoneOps.put(o.seq(), ops.get(i));
                 }
@@ -988,6 +988,9 @@ public final class DimensionEngine {
     }
 
     private OpOutcome apply(GasOp op, Target target, List<OpenAirEvent> events, long[] opZone, int index) {
+        if (op.kind().isHeat()) {
+            return applyHeat(op, target, opZone, index);
+        }
         double[] moved = new double[registry.size()];
         int n = Math.min(op.gasCount(), moved.length);
         switch (target.route()) {
@@ -1056,6 +1059,60 @@ public final class DimensionEngine {
             default:
                 throw new AssertionError(target.route());
         }
+    }
+
+    /**
+     * Adds or removes heat (API-013). In a zone, added heat raises its temperature by ΔE/C, and
+     * removed heat lowers it, never below the temperature floor, so less may be delivered; a
+     * request the mixture rejects (a temperature that would overflow) applies nothing. At an open
+     * point the ambient takes or supplies it all, unchanged (HEAT-010); at a paused zone or an
+     * unresolved region it is voided or supplied as gas is (GEO-036, GEO-038), up to what a paused
+     * zone holds above the floor. Energy has no ledger: only moles are conserved by the checker
+     * (CORE-073).
+     *
+     * @return the outcome, or null while the operation waits for classification
+     */
+    private OpOutcome applyHeat(GasOp op, Target target, long[] opZone, int index) {
+        double[] none = new double[registry.size()];
+        boolean add = op.kind() == GasOp.Kind.ADD_HEAT;
+        double joules = op.energy();
+        switch (target.route()) {
+            case WAIT:
+                return null;
+            case ZONE: {
+                Zone zone = graph.zoneOf(target.cell());
+                GasMixture m = zone.mixture();
+                if (zone.isPaused()) {
+                    double supplied = add ? joules : Math.min(joules, heatAboveFloor(m));
+                    return new OpOutcome(
+                            op.seq(), OpOutcome.Outcome.UNRESOLVED, zone.id(), none, m.temperature(), -1, supplied);
+                }
+                opZone[index] = zone.id();
+                double applied = add ? m.addThermalEnergy(joules) : m.removeThermalEnergy(joules);
+                if (applied > 0) {
+                    graph.markChanged(zone);
+                }
+                return new OpOutcome(op.seq(), OpOutcome.Outcome.ZONE, zone.id(), none, m.temperature(), -1, applied);
+            }
+            case UNRESOLVED:
+                return new OpOutcome(op.seq(), OpOutcome.Outcome.UNRESOLVED, 0, none, 0, -1, joules);
+            case AMBIENT:
+                return new OpOutcome(
+                        op.seq(),
+                        OpOutcome.Outcome.AMBIENT,
+                        0,
+                        none,
+                        graph.ambient().temperature(),
+                        -1,
+                        joules);
+            default:
+                throw new AssertionError(target.route());
+        }
+    }
+
+    /** The heat a mixture holds above the temperature floor, in J. */
+    private double heatAboveFloor(GasMixture m) {
+        return Math.max(0, (m.temperature() - config.temperatureFloor()) * m.heatCapacity());
     }
 
     /**

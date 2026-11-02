@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -31,6 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * <p><b>Consumers don't call or implement this.</b> They use
  * {@link io.github.west3436.zas.api.atmosphere.Atmospheres},
  * {@link io.github.west3436.zas.api.mutation.GasMutations},
+ * {@link io.github.west3436.zas.api.mutation.HeatMutations},
  * {@link io.github.west3436.zas.api.mutation.ZonePins} and
  * {@link io.github.west3436.zas.api.life.Breathing}, which check arguments
  * and threads before delegating here, so implementations may assume non-null
@@ -119,6 +121,45 @@ public interface ZasApiProvider {
     @ServerThread
     CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source);
+
+    /**
+     * Queues an addition of heat (API-013).
+     *
+     * <p>The default is the fallback's answer: {@link HeatResult#ABSENT} at once. It is there so
+     * that a provider built against an API from before this method still answers when a newer API
+     * is loaded (architecture §6.2).
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param point the point
+     * @param joules the energy offered, in J, already checked
+     * @param source who is adding it
+     * @return a future that completes on the server thread once the change is applied
+     */
+    @ServerThread
+    default CompletableFuture<HeatResult> addHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return CompletableFuture.completedFuture(HeatResult.ABSENT);
+    }
+
+    /**
+     * Queues a removal of heat (API-013).
+     *
+     * <p>The default is the fallback's answer, as for {@link #addHeat}.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param point the point
+     * @param joules the energy wanted, in J, already checked
+     * @param source who is removing it
+     * @return a future that completes on the server thread, with the heat delivered, once the
+     *     change is applied
+     */
+    @ServerThread
+    default CompletableFuture<HeatResult> removeHeat(ServerLevel level, Vec3 point, double joules, SourceId source) {
+        return CompletableFuture.completedFuture(HeatResult.ABSENT);
+    }
 
     /**
      * Queues a pin of the zone at a point (API-017, API-050), forming one if the point's region is

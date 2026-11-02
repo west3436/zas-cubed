@@ -13,6 +13,8 @@ import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.mutation.HeatMutations;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -124,6 +126,11 @@ public final class WithoutZasTests {
             MutationResult r = f.join();
             h.assertValueEqual(r.outcome(), MutationOutcome.ABSENT, "outcome");
             h.assertTrue(r.moved().isEmpty(), "the fallback moved gas: " + r.moved());
+        }
+        for (CompletableFuture<HeatResult> f : List.of(
+                HeatMutations.add(level, point, 5000, SOURCE), HeatMutations.remove(level, point, 5000, SOURCE))) {
+            h.assertTrue(f.isDone(), "a fallback heat mutation didn't complete at once");
+            h.assertValueEqual(f.join(), HeatResult.ABSENT, "a fallback heat mutation (API-013)");
         }
         h.succeed();
     }

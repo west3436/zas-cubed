@@ -16,8 +16,11 @@ import java.util.Objects;
  * @param temperature the temperature of the moved gas in K
  * @param component the index of the operation's exchange component in {@link
  *     Result#components()}, or -1 if it touched no zone
+ * @param energy for an addition of heat, the joules taken; for a removal, the joules delivered
+ *     (API-013); otherwise 0
  */
-public record OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component) {
+public record OpOutcome(
+        long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component, double energy) {
 
     /** Where an operation's gas went or came from. */
     public enum Outcome {
@@ -40,6 +43,16 @@ public record OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, 
         moved = moved.clone();
     }
 
+    /** The outcome of an operation that moves no heat. */
+    public OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component) {
+        this(seq, outcome, zoneId, moved, temperature, component, 0);
+    }
+
+    /** The same outcome in exchange component {@code c}. */
+    public OpOutcome inComponent(int c) {
+        return new OpOutcome(seq, outcome, zoneId, moved, temperature, c, energy);
+    }
+
     @Override
     public double[] moved() {
         return moved.clone();
@@ -58,7 +71,8 @@ public record OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, 
                 && zoneId == r.zoneId
                 && Arrays.equals(moved, r.moved)
                 && Double.compare(temperature, r.temperature) == 0
-                && component == r.component;
+                && component == r.component
+                && Double.compare(energy, r.energy) == 0;
     }
 
     @Override
@@ -69,6 +83,7 @@ public record OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, 
     @Override
     public String toString() {
         return "OpOutcome#" + seq + "[" + outcome + (zoneId != 0 ? " " + zoneId : "") + ", " + Arrays.toString(moved)
-                + " at " + temperature + " K" + (component >= 0 ? ", component " + component : "") + "]";
+                + " at " + temperature + " K" + (energy != 0 ? ", " + energy + " J" : "")
+                + (component >= 0 ? ", component " + component : "") + "]";
     }
 }
