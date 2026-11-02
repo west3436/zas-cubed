@@ -14,6 +14,8 @@ import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -61,8 +63,9 @@ import net.neoforged.bus.api.IEventBus;
  *       includes a point inside a full block with no cell next to it, which holds no gas.
  * </ul>
  *
- * <p>Mutations resolve their point the same way and act on that cell. They are queued for the next
- * atmos tick and their futures complete on the server thread when that tick is applied (API-016).
+ * <p>Mutations and pins resolve their point the same way and act on that cell. They are queued for
+ * the next atmos tick and their futures complete on the server thread when that tick is applied
+ * (API-016, API-050).
  *
  * <p><b>Interim:</b> the breathability helper (API-014) answers with vanilla's verdict, as the
  * fallback does, until LIFE's breathing, hazard and protection rules (#34 to #36) and the
@@ -159,6 +162,26 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         }
         PointResolver.Cell cell = PointResolver.resolve(level, point);
         return service.remove(level, cell.pos(), cell.sub(), moles, source);
+    }
+
+    @Override
+    public CompletableFuture<PinResult> pin(ServerLevel level, Vec3 point, SourceId owner) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            // No server running the scheduler yet: there are no zones to pin or form.
+            return CompletableFuture.completedFuture(PinResult.none(PinOutcome.UNRESOLVED));
+        }
+        PointResolver.Cell cell = PointResolver.resolve(level, point);
+        return service.pin(level, cell.pos(), cell.sub(), owner);
+    }
+
+    @Override
+    public CompletableFuture<Void> unpin(ServerLevel level, SourceId owner) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return service.unpin(level, owner);
     }
 
     /**

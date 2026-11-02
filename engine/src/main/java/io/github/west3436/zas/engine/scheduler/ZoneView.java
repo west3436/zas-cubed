@@ -1,7 +1,9 @@
 package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.gas.GasConstants;
+import io.github.west3436.zas.engine.zone.Pins;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * An immutable copy of one zone as of an atmos tick, for the published {@link AtmosSnapshot}
@@ -18,7 +20,8 @@ import java.util.Arrays;
  * @param paused whether it is paused (GEO-030): part of it is in an unloaded chunk, it waits for
  *     saved shares, or it opens onto a region that reaches an unloaded chunk (GEO-026); its
  *     mixture is then its last-known state (GEO-035)
- * @param pinned whether it is pinned (D-64): it never dissolves into the ambient (CORE-076)
+ * @param pins the owners of its pins (API-017), sorted; while it has any it is pinned (D-64) and
+ *     never dissolves into the ambient (CORE-076)
  */
 public record ZoneView(
         long id,
@@ -30,10 +33,11 @@ public record ZoneView(
         int ambientEdges,
         int openFaces,
         boolean paused,
-        boolean pinned) {
+        List<String> pins) {
 
     public ZoneView {
         moles = moles.clone();
+        pins = Pins.of(pins);
     }
 
     /** A view of an unpinned zone. */
@@ -47,7 +51,12 @@ public record ZoneView(
             int ambientEdges,
             int openFaces,
             boolean paused) {
-        this(id, volume, cellCount, moles, temperature, zoneEdges, ambientEdges, openFaces, paused, false);
+        this(id, volume, cellCount, moles, temperature, zoneEdges, ambientEdges, openFaces, paused, Pins.NONE);
+    }
+
+    /** Whether it is pinned (D-64): it has a pin, and never dissolves into the ambient (CORE-076). */
+    public boolean pinned() {
+        return !pins.isEmpty();
     }
 
     @Override
@@ -96,7 +105,7 @@ public record ZoneView(
                 && ambientEdges == z.ambientEdges
                 && openFaces == z.openFaces
                 && paused == z.paused
-                && pinned == z.pinned;
+                && pins.equals(z.pins);
     }
 
     @Override
@@ -108,6 +117,6 @@ public record ZoneView(
     public String toString() {
         return "ZoneView#" + id + "[" + cellCount + " cells, " + volume + " L, " + Arrays.toString(moles) + " mol, "
                 + temperature + " K, " + zoneEdges + " zone edges, " + ambientEdges + " ambient edges, " + openFaces
-                + " open faces" + (paused ? ", paused" : "") + (pinned ? ", pinned" : "") + "]";
+                + " open faces" + (paused ? ", paused" : "") + (pinned() ? ", pinned by " + pins : "") + "]";
     }
 }

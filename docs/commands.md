@@ -34,7 +34,7 @@ loads a chunk.
 |---|---|
 | `/zas at [<pos>]` | The atmosphere at a block position's largest cell (API-010, API-015): zoned, ambient, paused or unresolved, the zone id, pressure, temperature, and each gas's moles and partial pressure. With no position, at your eyes, as an exact point. At a block with several cells (a glass pane), it names the sub-cell |
 | `/zas at point <x> <y> <z>` | The same at an exact point: the cell holding it, or the nearest cell if the point is inside a block (API-015) |
-| `/zas zone <id>` | A zone's details (API-011): cells, volume, breached or enclosed, paused, pressure, temperature, total moles, edges to zones and to the ambient, open faces, and each gas |
+| `/zas zone <id>` | A zone's details (API-011): cells, volume, breached or enclosed, paused, pressure, temperature, total moles, edges to zones and to the ambient, open faces, the owners of its pins if it has any (API-017), and each gas |
 | `/zas zone at [<pos>]` | The details of the zone at a block position, or with no position at your eyes |
 | `/zas zones` | The dimension's zone and cell counts, the atmos tick of the table, and the first 10 zones by id |
 
@@ -76,6 +76,34 @@ loaded positions. Gas ids complete with Tab.
 > /zas gas add 0 64 0 zas:oxygen 10
 Queued for the next atmos tick, as command:alex
 Added 10 mol of Oxygen at 0 64 0, into a zone (by command:alex)
+```
+
+## Zone pins (OPS-017)
+
+A pinned zone is never dissolved into the ambient (API-017, D-64). Mods pin
+zones through the API; these commands do the same by hand.
+
+| Command | What it does |
+|---|---|
+| `/zas pin <pos> [<owner>]` | Pins the zone at a block's cell under an owner id, by default `command:<player>`. In a sealed room with no zone this forms one holding the ambient's air, with no gas added (API-050). In the open nothing is pinned, and the command says so |
+| `/zas unpin [<owner>]` | Takes an owner's pins off every zone of the dimension, by default the pins made as `command:<player>` |
+
+Pins queue for the next atmos tick, like gas edits. A zone stays pinned while
+any owner pins it, and `/zas zone` lists them:
+
+```
+> /zas pin 2 64 2
+Queued a pin for the next atmos tick, as command:alex
+Pinned zone 12 at 2 64 2 (by command:alex)
+> /zas zone 12
+Zone 12: 27 cells, 27000 L, enclosed, active
+  101.325 kPa, 293.15 K, 1122.42 mol
+  Edges: 0 to zones, 0 to the ambient, 0 open faces
+  Pinned by: command:alex
+  ...
+> /zas unpin
+Queued the removal of the pins of command:alex for the next atmos tick
+Removed the pins of command:alex
 ```
 
 ## Audit and the invariant checker (OPS-010)

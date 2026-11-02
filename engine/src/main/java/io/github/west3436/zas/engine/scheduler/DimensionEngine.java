@@ -111,7 +111,7 @@ public final class DimensionEngine {
     // The last tick's undo point, kept until the next tick in case its components are rejected.
     private Membership undoMembership = Membership.EMPTY;
     private GasMixture[] undoMixtures = new GasMixture[0];
-    private boolean[] undoPinned = new boolean[0];
+    private List<List<String>> undoPinned = List.of();
     private List<Component> lastComponents = List.of();
     private Map<Long, GasOp> lastZoneOps = Map.of();
 
@@ -317,6 +317,14 @@ public final class DimensionEngine {
                 lastUnresolved.add(t.cell());
             }
         }
+        // Pins and unpins are applied before the undo point, like the zones classification forms
+        // for them, so a rejected component never undoes one (API-017, API-050).
+        OpOutcome[] outcomes = new OpOutcome[ops.size()];
+        for (int i = 0; i < ops.size(); i++) {
+            if (ops.get(i).kind().isPin()) {
+                outcomes[i] = applyPin(ops.get(i), targets[i]);
+            }
+        }
         Membership undo = membership.publish();
         if (undo.size() != graph.zoneCount()) {
             throw new IllegalStateException(
@@ -324,22 +332,23 @@ public final class DimensionEngine {
         }
         GasMixture[] undoCopies = new GasMixture[undo.zoneIds.length];
         long[][] undoPartners = new long[undo.zoneIds.length][];
-        boolean[] undoPins = new boolean[undo.zoneIds.length];
+        List<List<String>> undoPins = new ArrayList<>(undo.zoneIds.length);
         int zi = 0;
         for (Zone z : graph.zones()) {
             if (undo.zoneIds[zi] != z.id()) {
                 throw new IllegalStateException("zone membership lists zone " + undo.zoneIds[zi] + " for " + z);
             }
             undoCopies[zi] = z.mixture().copy();
-            undoPins[zi] = z.isPinned();
+            undoPins.add(z.pins());
             undoPartners[zi] = partners(z);
             zi++;
         }
         List<OpenAirEvent> events = new ArrayList<>();
         long[] opZone = new long[ops.size()];
-        OpOutcome[] outcomes = new OpOutcome[ops.size()];
         for (int i = 0; i < ops.size(); i++) {
-            outcomes[i] = apply(ops.get(i), targets[i], events, opZone, i);
+            if (!ops.get(i).kind().isPin()) {
+                outcomes[i] = apply(ops.get(i), targets[i], events, opZone, i);
+            }
         }
 
         // 4. Exchange.
@@ -428,13 +437,13 @@ public final class DimensionEngine {
             for (long id : c.zoneIds()) {
                 if (graph.zone(id) == null) {
                     int i = undoMembership.indexOf(id);
-                    graph.restoreZone(id, undoMembership.cells(i), undoMixtures[i], undoPinned[i]);
+                    graph.restoreZone(id, undoMembership.cells(i), undoMixtures[i], undoPinned.get(i));
                 }
             }
             for (long id : c.zoneIds()) {
                 int i = undoMembership.indexOf(id);
                 graph.restoreMixture(graph.zone(id), undoMixtures[i]);
-                graph.setPinned(graph.zone(id), undoPinned[i]);
+                graph.setPins(graph.zone(id), undoPinned.get(i));
             }
             for (long seq : c.opSeqs()) {
                 requeued.add(lastZoneOps.get(seq));
@@ -701,7 +710,7 @@ public final class DimensionEngine {
                 if (z != null && Arrays.binarySearch(membership.chunks(z.id()), r.chunk()) >= 0) {
                     continue;
                 }
-                Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share), share.pinned());
+                Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share), share.pins());
                 if (loaded == null) {
                     log.warn("The saved share of zone " + share.zoneId() + " in chunk " + SectionKeys.chunkX(r.chunk())
                             + ", " + SectionKeys.chunkZ(r.chunk()) + " has no cells left; its gas is dropped");
@@ -863,7 +872,9 @@ public final class DimensionEngine {
         ZONE,
         AMBIENT,
         UNRESOLVED,
-        WAIT
+        WAIT,
+        /** An unpin, which has no target cell. */
+        NONE
     }
 
     private record Target(Route route, long cell) {}
@@ -872,6 +883,10 @@ public final class DimensionEngine {
         Target[] targets = new Target[ops.size()];
         for (int i = 0; i < ops.size(); i++) {
             GasOp op = ops.get(i);
+            if (op.kind() == GasOp.Kind.UNPIN) {
+                targets[i] = new Target(Route.NONE, CellSpace.NO_CELL);
+                continue;
+            }
             long cell = space.cellAt(op.block(), op.sub());
             Route route;
             long section = SectionKeys.sectionOfBlockKey(op.block());
@@ -931,6 +946,33 @@ public final class DimensionEngine {
             return Route.WAIT;
         }
         return Route.AMBIENT;
+    }
+
+    /**
+     * Applies a pin or an unpin (API-017, API-050). A pin at a zoned cell, paused or not, pins that
+     * zone, which classification has formed if the cell was enclosed and unzoned; at an open cell,
+     * or a cell with no geometry, it pins nothing and reports the ambient; at an unresolved region
+     * it pins nothing and reports it unresolved. An unpin takes the owner's pin off every zone in
+     * memory. Neither moves gas or belongs to an exchange component.
+     *
+     * @return the outcome, or null while the pin waits for classification
+     */
+    private OpOutcome applyPin(GasOp op, Target target) {
+        double[] none = new double[registry.size()];
+        if (op.kind() == GasOp.Kind.UNPIN) {
+            graph.unpinEverywhere(op.source());
+            return new OpOutcome(op.seq(), OpOutcome.Outcome.AMBIENT, 0, none, 0, -1);
+        }
+        return switch (target.route()) {
+            case WAIT -> null;
+            case ZONE -> {
+                Zone zone = graph.zoneOf(target.cell());
+                graph.pin(zone, op.source());
+                yield new OpOutcome(op.seq(), OpOutcome.Outcome.ZONE, zone.id(), none, 0, -1);
+            }
+            case UNRESOLVED -> new OpOutcome(op.seq(), OpOutcome.Outcome.UNRESOLVED, 0, none, 0, -1);
+            case AMBIENT, NONE -> new OpOutcome(op.seq(), OpOutcome.Outcome.AMBIENT, 0, none, 0, -1);
+        };
     }
 
     private OpOutcome apply(GasOp op, Target target, List<OpenAirEvent> events, long[] opZone, int index) {
@@ -1220,7 +1262,7 @@ public final class DimensionEngine {
                     ambientEdges,
                     faces,
                     z.isPaused(),
-                    z.isPinned()));
+                    z.pins()));
         }
         long[][] chunks = new long[table.size()][];
         for (int i = 0; i < chunks.length; i++) {

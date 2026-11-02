@@ -17,7 +17,9 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
@@ -61,8 +63,9 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
- * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-009, OPS-010, OPS-011, GEO-032, and
- * with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented in {@code docs/commands.md}.
+ * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-009, OPS-010, OPS-011, OPS-017,
+ * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented in {@code
+ * docs/commands.md}.
  *
  * <p>Every command needs the permission level in {@code [commands] permission_level} of the server
  * config, 2 by default (OPS-011). Other {@code /zas} subcommands registered elsewhere, such as the
@@ -182,6 +185,19 @@ public final class ZasCommands {
                                 .then(Commands.argument("to", BlockPosArgument.blockPos())
                                         .executes(ctx -> vent(ctx, null))
                                         .then(gasArgument().executes(ctx -> vent(ctx, gas(ctx))))))));
+
+        // OPS-017: zone pins (API-017, API-050).
+        root.then(Commands.literal("pin")
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .executes(ctx -> pin(ctx, sourceOf(ctx.getSource())))
+                        .then(Commands.argument("owner", ResourceLocationArgument.id())
+                                .executes(
+                                        ctx -> pin(ctx, new SourceId(ResourceLocationArgument.getId(ctx, "owner")))))));
+        root.then(Commands.literal("unpin")
+                .executes(ctx -> unpin(ctx.getSource(), sourceOf(ctx.getSource())))
+                .then(Commands.argument("owner", ResourceLocationArgument.id())
+                        .executes(ctx ->
+                                unpin(ctx.getSource(), new SourceId(ResourceLocationArgument.getId(ctx, "owner"))))));
 
         // OPS-010, GEO-032: audit and the invariant checker.
         root.then(Commands.literal("audit")
@@ -344,20 +360,33 @@ public final class ZasCommands {
 
     private static int zoneAt(CommandSourceStack source, BlockPos pos) throws CommandSyntaxException {
         ZoneInfo zone = Atmospheres.zoneAt(source.getLevel(), pos).orElseThrow(NO_ZONE_HERE::create);
-        replyAll(source, zoneLines(zone));
+        replyAll(source, zoneLines(source, zone));
         return 1;
     }
 
     private static int zoneAt(CommandSourceStack source, Vec3 point) throws CommandSyntaxException {
         ZoneInfo zone = Atmospheres.zoneAt(source.getLevel(), point).orElseThrow(NO_ZONE_HERE::create);
-        replyAll(source, zoneLines(zone));
+        replyAll(source, zoneLines(source, zone));
         return 1;
     }
 
     private static int zone(CommandSourceStack source, long id) throws CommandSyntaxException {
         ZoneInfo zone = Atmospheres.zone(source.getLevel(), new ZoneId(id)).orElseThrow(() -> UNKNOWN_ZONE.create(id));
-        replyAll(source, zoneLines(zone));
+        replyAll(source, zoneLines(source, zone));
         return 1;
+    }
+
+    /** A zone's details, with the owners of its pins if it has any (API-011, API-017). */
+    private static List<Component> zoneLines(CommandSourceStack source, ZoneInfo zone) {
+        List<Component> out = zoneLines(zone);
+        AtmosService s = AtmosService.current();
+        DimensionAtmos d = s == null ? null : s.dimension(source.getLevel());
+        AtmosSnapshot table = d == null ? null : d.published();
+        ZoneView view = table == null ? null : table.zone(zone.id().value());
+        if (view != null && view.pinned()) {
+            out.add(3, Component.translatable("commands.zas.zone.pins", String.join(", ", view.pins())));
+        }
+        return out;
     }
 
     /** A zone's details (API-011). */
@@ -408,6 +437,42 @@ public final class ZasCommands {
                             "commands.zas.zones.line", z.id(), z.cellCount(), num(z.pressure()), num(z.temperature())));
         }
         return zones.size();
+    }
+
+    // ---- Zone pins (OPS-017) -------------------------------------------------------------
+
+    /** {@code /zas pin <pos> [<owner>]}: pins the zone at a block, forming one in a sealed room (API-050). */
+    private static int pin(CommandContext<CommandSourceStack> ctx, SourceId owner) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        service();
+        ServerLevel level = source.getLevel();
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(ctx, level, "pos");
+        CompletableFuture<PinResult> f = ZonePins.pin(level, PointResolver.pointIn(level, pos), owner);
+        reply(source, Component.translatable("commands.zas.pin.queued", owner.toString()));
+        whenDone(
+                source,
+                f,
+                r -> source.sendSuccess(
+                        () -> r.zone()
+                                .map(id -> Component.translatable(
+                                        "commands.zas.pin.zone", id.value(), pos(pos), owner.toString()))
+                                .orElseGet(() -> Component.translatable(
+                                        "commands.zas.pin." + r.outcome().name().toLowerCase(Locale.ROOT), pos(pos))),
+                        true));
+        return 1;
+    }
+
+    /** {@code /zas unpin [<owner>]}: takes an owner's pins off every zone of the dimension (API-017). */
+    private static int unpin(CommandSourceStack source, SourceId owner) throws CommandSyntaxException {
+        service();
+        CompletableFuture<Void> f = ZonePins.unpin(source.getLevel(), owner);
+        reply(source, Component.translatable("commands.zas.unpin.queued", owner.toString()));
+        whenDone(
+                source,
+                f,
+                done -> source.sendSuccess(
+                        () -> Component.translatable("commands.zas.unpin.done", owner.toString()), true));
+        return 1;
     }
 
     // ---- Gas editing (OPS-009) ----------------------------------------------------------

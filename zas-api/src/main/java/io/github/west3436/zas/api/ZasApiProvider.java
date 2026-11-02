@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.Map;
 import java.util.Optional;
@@ -27,7 +28,8 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p><b>Consumers don't call or implement this.</b> They use
  * {@link io.github.west3436.zas.api.atmosphere.Atmospheres},
- * {@link io.github.west3436.zas.api.mutation.GasMutations} and
+ * {@link io.github.west3436.zas.api.mutation.GasMutations},
+ * {@link io.github.west3436.zas.api.mutation.ZonePins} and
  * {@link io.github.west3436.zas.api.life.Breathing}, which check arguments
  * and threads before delegating here, so implementations may assume non-null
  * arguments and, for mutations, the server thread.
@@ -115,6 +117,43 @@ public interface ZasApiProvider {
     @ServerThread
     CompletableFuture<MutationResult> removeGas(
             ServerLevel level, Vec3 point, Map<ResourceLocation, Double> moles, SourceId source);
+
+    /**
+     * Queues a pin of the zone at a point (API-017, API-050), forming one if the point's region is
+     * enclosed and unzoned.
+     *
+     * <p>The default is the fallback's answer: {@link PinResult#ABSENT} at once. It is there so that
+     * a provider built against an API from before this method still answers when a consumer nests
+     * a newer API, which FML then loads instead (architecture §6.2).
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param point the point
+     * @param owner who holds the pin
+     * @return a future that completes on the server thread once the pin is applied
+     */
+    @ServerThread
+    default CompletableFuture<PinResult> pin(ServerLevel level, Vec3 point, SourceId owner) {
+        return CompletableFuture.completedFuture(PinResult.ABSENT);
+    }
+
+    /**
+     * Queues the removal of an owner's pins from every zone of a level (API-017).
+     *
+     * <p>The default is the fallback's answer: done at once, since there are no zones. It is there
+     * for the same reason as {@link #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param owner whose pins to remove
+     * @return a future that completes on the server thread once the pins are removed
+     */
+    @ServerThread
+    default CompletableFuture<Void> unpin(ServerLevel level, SourceId owner) {
+        return CompletableFuture.completedFuture(null);
+    }
 
     /**
      * The gases in a gas tag (CORE-012), for

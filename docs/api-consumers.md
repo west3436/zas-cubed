@@ -76,6 +76,31 @@ if (!breath.isProtected()) {
   then the answer ignores the atmosphere, even in a vacuum. The details are in
   architecture [§6.2](architecture.md#breathability-api-014).
 
+## Keeping a zone: pins
+
+A zone that matches the ambient can be dissolved (CORE-052, CORE-076). To keep
+one, for a room your block looks after, pin it (API-017, API-050). Pinning a
+point in a sealed room with no zone forms one there, holding the ambient's air.
+
+```java
+SourceId owner = SourceId.of("mymod", "habitat/" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ());
+ZonePins.pin(level, Vec3.atCenterOf(pos.above()), owner).thenAccept(result -> {
+    // result.outcome(): ZONE (result.zone() names it), OPEN, UNRESOLVED or ABSENT
+});
+// When the block is removed:
+ZonePins.unpin(level, owner);
+```
+
+- **One owner id per holder.** A zone stays pinned while any owner pins it,
+  and `unpin` takes off every pin of one owner, including those on parts of a
+  zone that has split since. Pinning again under the same id changes nothing,
+  so it is safe to pin again whenever your block loads.
+- **In the open** the result is `OPEN` and nothing is pinned; pin again once
+  the room is sealed. `UNRESOLVED` means the region reaches an unloaded chunk.
+- **Threads:** server thread only, like mutations. The futures complete on the
+  server thread at the next atmos tick. Pins are saved with their zone.
+- **Without ZAS³** a pin completes at once with `ABSENT`.
+
 ## Versioning and the compatibility check
 
 The API has its own semver, separate from the mod version (API-002). `check`,

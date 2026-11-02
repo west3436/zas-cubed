@@ -16,8 +16,9 @@ import java.util.Objects;
  * an optional dependency on {@code zas} with {@code ordering = "AFTER"}.
  *
  * <p>The queries are in {@link io.github.west3436.zas.api.atmosphere.Atmospheres},
- * the mutations in {@link io.github.west3436.zas.api.mutation.GasMutations}, and
- * the breathability helper in {@link io.github.west3436.zas.api.life.Breathing}.
+ * the mutations in {@link io.github.west3436.zas.api.mutation.GasMutations}, zone
+ * pins in {@link io.github.west3436.zas.api.mutation.ZonePins}, and the
+ * breathability helper in {@link io.github.west3436.zas.api.life.Breathing}.
  */
 public final class ZasApi {
     private static volatile ZasApiProvider provider = FallbackProvider.INSTANCE;

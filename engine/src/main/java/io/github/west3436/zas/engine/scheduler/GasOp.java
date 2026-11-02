@@ -6,7 +6,8 @@ import java.util.Objects;
 
 /**
  * One queued gas operation (architecture §2.3, §3.2): an addition or removal of gas at a block
- * position, carried in a {@link Batch} and applied in phase 3 of an atmos tick (CORE-040).
+ * position, carried in a {@link Batch} and applied in phase 3 of an atmos tick (CORE-040). A pin
+ * or an unpin (API-017, API-050) travels the same way and moves no gas.
  *
  * <p>Plain, immutable data. Moles are indexed by the gas registry the engine runs with, which is
  * fixed for the server's lifetime.
@@ -15,12 +16,13 @@ import java.util.Objects;
  *     operation is processed in sequence order, exactly once (CORE-048, §3.5)
  * @param kind addition or removal
  * @param block the target block position ({@link SectionKeys#block})
- * @param moles for an addition, the moles offered per gas; for a removal, the moles wanted; copied
+ * @param moles for an addition, the moles offered per gas; for a removal, the moles wanted; for a
+ *     pin or unpin, none; copied
  * @param temperature for an addition, the gas's temperature in K; ignored for a removal
  * @param category the ledger category the change is recorded under (CORE-036)
  * @param triggersZone whether the operation may create a zone when its target is enclosed and
  *     unzoned (CORE-051, CORE-055); breathing, for one, doesn't (LIFE-005)
- * @param source who queued it, for logs
+ * @param source who queued it, for logs; for a pin or unpin, the pin's owner
  * @param sub the sub-cell of the position the operation acts on, as resolved from an exact point
  *     (API-015, GEO-004), or -1 for the position's largest cell. If the position no longer has
  *     that many cells when the operation applies, it acts on the largest. Not saved: an operation
@@ -40,7 +42,20 @@ public record GasOp(
     /** What an operation does. */
     public enum Kind {
         ADD,
-        REMOVE
+        REMOVE,
+        /**
+         * Pins the zone at the target under the source as owner (API-017, API-050), forming one if
+         * the target is enclosed and unzoned. It moves no gas, and it is applied before the undo
+         * point, as zones formed by classification are, so a rejected component never undoes it.
+         */
+        PIN,
+        /** Removes the source's pins from every zone in memory (API-017). Its target is unused. */
+        UNPIN;
+
+        /** Whether the kind is a pin or an unpin, which moves no gas. */
+        public boolean isPin() {
+            return this == PIN || this == UNPIN;
+        }
     }
 
     /** An operation on a position's largest cell. */
@@ -84,6 +99,16 @@ public record GasOp(
         return new GasOp(seq, Kind.ADD, block, moles, temperature, LedgerCategory.API, true, source);
     }
 
+    /** A pin at a position's cell {@code sub} (-1 for its largest), under {@code owner} (API-050). */
+    public static GasOp pin(long seq, long block, int sub, String owner) {
+        return new GasOp(seq, Kind.PIN, block, new double[0], 0, LedgerCategory.API, true, owner, sub);
+    }
+
+    /** An unpin of every zone {@code owner} pins (API-017). */
+    public static GasOp unpin(long seq, String owner) {
+        return new GasOp(seq, Kind.UNPIN, 0, new double[0], 0, LedgerCategory.API, false, owner, -1);
+    }
+
     /** An API removal. */
     public static GasOp remove(long seq, long block, double[] moles, String source) {
         return new GasOp(seq, Kind.REMOVE, block, moles, 0, LedgerCategory.API, true, source);
@@ -125,6 +150,9 @@ public record GasOp(
 
     @Override
     public String toString() {
+        if (kind == Kind.UNPIN) {
+            return "GasOp#" + seq + "[UNPIN " + source + "]";
+        }
         return "GasOp#" + seq + "[" + kind + " at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block) + ","
                 + SectionKeys.blockZ(block) + (sub >= 0 ? " sub-cell " + sub : "") + ", "
                 + java.util.Arrays.toString(moles) + ", " + source + "]";
