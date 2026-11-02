@@ -48,7 +48,10 @@ public final class AtmosCreativeTab {
         return Collections.unmodifiableMap(m);
     }
 
-    /** The tab's contents, in order: pipes first, then devices, then the creative canisters. */
+    /**
+     * The tab's contents, in order: pipes first, then devices, then the creative canisters, then the
+     * tools, then the crafting components.
+     */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
         out.accept(AtmosItems.PIPE_CAP.get());
@@ -60,6 +63,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.AREA_AIR_CONTROLLER.get());
         out.accept(AtmosItems.GENERATOR.get());
         out.accept(AtmosItems.MULTITOOL.get());
+        AtmosItems.components().forEach(c -> out.accept(c.get()));
     }
 
     public static void register(IEventBus modBus) {

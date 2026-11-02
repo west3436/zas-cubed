@@ -1310,6 +1310,11 @@ All R1 content shall be craftable from vanilla materials.
   alone.
 - **Verify:** Inspect the recipes for non-vanilla ingredients.
 
+*2026-11-02: recipes go through 19 crafting components, each made from
+vanilla materials (D-72), so every chain ends in vanilla materials. The
+GameTest `cont_051_recipes_use_vanilla_materials` checks it for the recipes
+that load.*
+
 #### CONT-058 · Documented progression
 `Must` · `R1` · `Accepted` · Verify: Inspect
 
@@ -1319,6 +1324,9 @@ The content's crafting progression shall be documented.
   players, so the progression needs a guide.
 - **Verify:** Inspect the documentation against the recipes.
 
+*2026-11-02: the progression and every recipe are in
+[docs/crafting.md](../crafting.md).*
+
 #### CONT-059 · Data-driven recipes
 `Must` · `R1` · `Accepted` · Verify: Inspect
 
@@ -1327,6 +1335,10 @@ Recipes shall be data-driven, so packs can override them.
 - **Rationale:** Inferred: packs rebalance recipes, and data-driven recipes
   are the Minecraft norm.
 - **Verify:** Inspect the recipe files; a test datapack overrides one.
+
+*2026-11-02: the recipes are in `data/zas_atmos/recipe/`. The GameTest
+`cont_059_datapack_overrides_recipe` loads a data pack that replaces the pipe
+cap's recipe and checks that its version wins.*
 
 #### CONT-052 · Packaging
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-16, D-38

@@ -1,0 +1,59 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:capacitor"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_manipulator"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:volume_pump"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "MKM",
+    "PIP",
+    "WBW"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    },
+    "P": {
+      "item": "zas_atmos:pipe"
+    },
+    "M": {
+      "item": "zas_atmos:micro_manipulator"
+    },
+    "K": {
+      "item": "zas_atmos:capacitor"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:volume_pump"
+  }
+}

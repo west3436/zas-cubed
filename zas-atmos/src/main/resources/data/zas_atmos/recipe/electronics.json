@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:electronics"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "item": "minecraft:redstone_torch"
+    },
+    {
+      "item": "zas_atmos:cable_coil"
+    }
+  ],
+  "result": {
+    "count": 2,
+    "id": "zas_atmos:electronics"
+  }
+}

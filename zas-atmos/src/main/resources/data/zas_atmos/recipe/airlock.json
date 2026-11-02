@@ -1,0 +1,38 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:airlock"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:electronics"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:micro_manipulator"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IE",
+    "IM",
+    "II"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "E": {
+      "item": "zas_atmos:electronics"
+    },
+    "M": {
+      "item": "zas_atmos:micro_manipulator"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:airlock"
+  }
+}
