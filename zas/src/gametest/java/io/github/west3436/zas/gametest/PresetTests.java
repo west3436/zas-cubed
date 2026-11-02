@@ -1,5 +1,8 @@
 package io.github.west3436.zas.gametest;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.toml.TomlFormat;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
@@ -11,10 +14,18 @@ import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOption;
 import io.github.west3436.zas.config.PresetOptions;
+import io.github.west3436.zas.config.WorldConfigCopy;
+import io.github.west3436.zas.config.WorldConfigCopy.Target;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,10 +39,13 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -42,7 +56,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * own, and each sets them and restores them within one game tick: it drives the atmos ticks it
  * needs with {@link io.github.west3436.zas.simulation.AtmosService#tickNow}. Commands run with
  * {@link ZasServerConfig#holdSavesForTest}, so they don't write the config file, whose reload
- * would drop other tests' unsaved values.
+ * would drop other tests' unsaved values. The exception is the test of the world's own copy
+ * (OPS-007): its saves go to a new copy in the GameTest world, which NeoForge doesn't watch, and
+ * it deletes the copy afterwards.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -313,6 +329,107 @@ public final class PresetTests {
             ZasServerConfig.holdSavesForTest(false);
         }
         h.succeed();
+    }
+
+    // ---- OPS-007: a world's own copy of the server config (#139) -------------------------
+
+    /**
+     * Where {@code /zas preset} saves: a singleplayer world without a server config of its own gets
+     * a new copy, then the session's later saves go to it; a world with one, a dedicated server and
+     * a synced config save in place (OPS-007).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_preset_save_target(GameTestHelper h) {
+        Path shared = Path.of("config", "zas-server.toml");
+        Path copy = Path.of("saves", "World", "serverconfig", "zas-server.toml");
+        h.assertValueEqual(WorldConfigCopy.target(false, shared, copy, null), Target.NEW_COPY, "no copy");
+        h.assertValueEqual(WorldConfigCopy.target(false, shared, copy, copy), Target.COPY, "after the copy");
+        h.assertValueEqual(WorldConfigCopy.target(false, copy, copy, null), Target.IN_PLACE, "its own copy");
+        h.assertValueEqual(
+                WorldConfigCopy.target(false, copy.toAbsolutePath(), copy, null),
+                Target.IN_PLACE,
+                "its own copy, as an absolute path");
+        h.assertValueEqual(WorldConfigCopy.target(true, shared, copy, null), Target.IN_PLACE, "dedicated");
+        h.assertValueEqual(WorldConfigCopy.target(true, copy, copy, null), Target.IN_PLACE, "dedicated, copy");
+        h.assertValueEqual(WorldConfigCopy.target(false, null, copy, null), Target.IN_PLACE, "synced");
+        h.succeed();
+    }
+
+    /**
+     * In a world without a server config of its own, the first {@code /zas preset} change writes
+     * the world's own copy, with the change, and says so; the shared file is untouched. Later
+     * changes go to the copy, and a reload of the shared file doesn't undo them (OPS-007, #139).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_first_preset_change_writes_a_world_copy(GameTestHelper h) {
+        requireNoOverrides(h);
+        MinecraftServer server = h.getLevel().getServer();
+        Path shared = ZasServerConfig.file().orElseThrow(() -> new GameTestAssertException("no config file"));
+        Path copy = server.getWorldPath(new LevelResource("serverconfig")).resolve("zas-server.toml");
+        h.assertFalse(Files.exists(copy), "the GameTest world already has its own server config");
+        h.assertTrue(WorldConfigCopy.active().isEmpty(), "a copy is already active");
+        byte[] sharedBefore = bytes(shared);
+        AtmospherePreset before = ZasServerConfig.preset();
+        AtmospherePreset other =
+                before == AtmospherePreset.NORMAL ? AtmospherePreset.HARDCORE : AtmospherePreset.NORMAL;
+        Capture c = new Capture();
+        CommandSourceStack op = stack(h, c);
+        try {
+            run(op, "zas preset " + other.id());
+            h.assertTrue(
+                    c.text().contains("This world had no server config of its own, so it now has one: "), c.text());
+            h.assertTrue(Files.exists(copy), "no copy at " + copy);
+            h.assertTrue(text(copy).contains("preset = \"" + other.name() + "\""), "the copy: " + text(copy));
+            h.assertTrue(Arrays.equals(bytes(shared), sharedBefore), "the shared file changed");
+            h.assertValueEqual(ZasServerConfig.file(), Optional.of(copy), "the config's file");
+            h.assertValueEqual(ZasServerConfig.preset(), other, "the preset");
+
+            c.clear();
+            run(op, "zas preset override ambient_variant HARDCORE");
+            h.assertFalse(c.text().contains("no server config of its own"), "a second copy: " + c.text());
+            h.assertTrue(text(copy).contains("ambient_variant = \"HARDCORE\""), "the copy: " + text(copy));
+            h.assertTrue(Arrays.equals(bytes(shared), sharedBefore), "the shared file changed");
+
+            // NeoForge reloading the shared file puts its values in the loaded config.
+            ModConfig config = ZasServerConfig.modConfig().orElseThrow();
+            CommentedConfig values = (CommentedConfig) config.getLoadedConfig().config();
+            try (CommentedFileConfig file = CommentedFileConfig.builder(shared, TomlFormat.instance())
+                    .sync()
+                    .build()) {
+                file.load();
+                values.putAll(file);
+            }
+            ZasServerConfig.SPEC.afterReload();
+            h.assertValueEqual(ZasServerConfig.preset(), before, "the preset after the shared file's reload");
+            WorldConfigCopy.reapply(config);
+            h.assertValueEqual(ZasServerConfig.preset(), other, "the preset once the copy is reapplied");
+            h.assertValueEqual(
+                    PresetOptions.AMBIENT_VARIANT.source(), PresetOption.Source.OVERRIDE, "the copy's override");
+        } finally {
+            ZasServerConfig.holdSavesForTest(true);
+            clearOverrides();
+            ZasServerConfig.setPreset(before);
+            ZasServerConfig.holdSavesForTest(false);
+            try {
+                Files.deleteIfExists(copy);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            WorldConfigCopy.forgetForTest();
+        }
+        h.succeed();
+    }
+
+    private static byte[] bytes(Path file) {
+        try {
+            return Files.readAllBytes(file);
+        } catch (IOException e) {
+            throw new GameTestAssertException("can't read " + file + ": " + e);
+        }
+    }
+
+    private static String text(Path file) {
+        return new String(bytes(file), StandardCharsets.UTF_8);
     }
 
     // ---- Helpers ------------------------------------------------------------------------

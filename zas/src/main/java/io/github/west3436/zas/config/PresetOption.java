@@ -135,7 +135,7 @@ public final class PresetOption<T> {
 
     /**
      * Overrides the option in the loaded config, under either preset. Not written to the file:
-     * {@link ZasServerConfig#save()} does that.
+     * {@link ZasServerConfig#save} does that.
      *
      * @throws IllegalStateException if no world's config is loaded
      */
@@ -146,7 +146,7 @@ public final class PresetOption<T> {
 
     /**
      * Removes the override from the loaded config, so the preset's default applies again. Not
-     * written to the file: {@link ZasServerConfig#save()} does that.
+     * written to the file: {@link ZasServerConfig#save} does that.
      *
      * @throws IllegalStateException if no world's config is loaded
      */

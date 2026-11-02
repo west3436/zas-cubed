@@ -24,6 +24,7 @@
   "commands.zas.error.unknown_gas": "Unknown gas: %s",
   "commands.zas.error.unknown_zone": "No zone %s in this dimension",
   "commands.zas.error.not_running": "The atmosphere simulation isn't running",
+  "commands.zas.error.config_unwritten": "Couldn't write the server config (%s); the change applies until the server stops",
   "commands.zas.error.no_zone_here": "No zone there; the point holds the ambient",
   "commands.zas.error.region_too_big": "The region is too big (at most %s blocks)",
   "commands.zas.error.failed": "Failed: %s",
@@ -141,5 +142,6 @@
   "commands.zas.preset.switched": "Switched the atmosphere preset to %s; overrides kept: %s",
   "commands.zas.preset.overridden": "Overrode %s with %s under either preset",
   "commands.zas.preset.cleared": "%s follows the preset again, now %s",
+  "commands.zas.preset.copied": "This world had no server config of its own, so it now has one: %s. The shared config/zas-server.toml, which other worlds read, is unchanged",
   "commands.zas.preset.not_overridden": "%s isn't overridden; it follows the preset"
 }

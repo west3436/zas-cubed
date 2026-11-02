@@ -100,14 +100,28 @@ Candles and torches aren't combustion. Which blocks count is data, the block
 tags `#zas:combustion` and `#zas:plants`
 ([datapacks.md](datapacks.md#block-tags)).
 
-`/zas preset` can also switch the preset and set or clear an override. It
-writes the file the server read, which is the world's
-`serverconfig/zas-server.toml` if there is one and `config/zas-server.toml`
-otherwise; `/zas preset` names it. A singleplayer world without its own copy
-shares `config/zas-server.toml` with every other such world, so to keep a
-world's preset to itself, put a copy in its `serverconfig/` folder first. A
-copy can be as short as one line, `preset = "HARDCORE"`; NeoForge fills in the
-rest when the world loads.
+`/zas preset` can also switch the preset and set or clear an override, and
+names the file it wrote:
+- **A world with its own `serverconfig/zas-server.toml`:** the change goes
+  there.
+- **A singleplayer world without one:** the first change writes one. It holds
+  the whole config with the change, and `/zas preset` says it made it. The
+  shared `config/zas-server.toml` isn't touched, so the other worlds that read
+  it keep their values. The copy is read from the world's next load; until then
+  the change is already in effect, and later changes go to the copy too.
+- **A dedicated server:** the change goes to the file it read, the world's copy
+  if it has one, else `config/zas-server.toml`, as before.
+
+A copy written by hand works the same way, and can be as short as one line,
+`preset = "HARDCORE"`; NeoForge fills in the rest when the world loads.
+
+For the rest of the session that made a copy, NeoForge still watches
+`config/zas-server.toml`. Editing that file reloads the config from it, and ZAS³
+then puts the copy's values back, so the world keeps its own. Edit the world's
+copy instead, which applies from its next load. A player who joins over LAN in
+that session is sent the shared file, as NeoForge sends the file it read; this
+only matters for values a client reads, and none of the preset's options are
+read by a client.
 
 ```toml
 # The atmosphere preset, and an override that keeps Hardcore's Nether and End under Normal.
