@@ -134,7 +134,7 @@ riding a minecart and a player sneaking on the ground stay put, while a free
 pig, a standing player and a player sneaking in the air move.*
 
 #### FLOW-012 · Airflow resistance
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, API-022
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, API-022
 
 Worn airflow resistance r, from 0 to 1 (API-022), shall scale the push by
 (1 − r). Magnetic boots give r = 1 while on (CONT-033).
@@ -143,6 +143,15 @@ Worn airflow resistance r, from 0 to 1 (API-022), shall scale the push by
   come from vg.
 - **Verify:** A GameTest checks resistance 0.5 halves the push and magnetic
   boots stop it.
+
+*2026-11-02: Implemented for worn resistance. r is the highest of an entity's
+worn pieces' and its own (`WornProtection.airflowResistance`, API-022), and it
+scales the flow's speed where the entity is by (1 − r), so the push from rest
+and the speed it is carried to. The server sends a player its r with the
+openings, and the client's push and the onset impulse use it. The
+`flow_012_resistance_scales_the_push` GameTest checks r = 0.5 halves the push
+of a mob and of a player, and the impulse, and r = 1 from protection data stops
+both. Magnetic boots don't exist yet; they give r = 1 when CONT-033 lands.*
 
 #### FLOW-005 · Impact damage
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-030

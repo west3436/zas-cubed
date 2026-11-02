@@ -104,6 +104,19 @@ class FlowFieldTest {
     }
 
     @Test
+    void flow_012_resistance_scales_the_flow() {
+        FlowField f = breach(FlowSettings.ONE_ATM);
+        double[] bare = f.push(3.5, 64.5, 0.5, 0, 0, 0, ROOM, 0, S, 0);
+        double[] half = f.push(3.5, 64.5, 0.5, 0, 0, 0, ROOM, 0, S, 0.5);
+        assertEquals(bare[0], f.push(3.5, 64.5, 0.5, 0, 0, 0, ROOM, 0, S)[0], EPS);
+        assertEquals(bare[0] / 2, half[0], EPS);
+        assertNull(f.push(3.5, 64.5, 0.5, 0, 0, 0, ROOM, 0, S, 1));
+        // The flow's speed is what's scaled: an entity at half the flow's speed isn't pushed at r = 0.5.
+        double flow = S.speed(FlowSettings.ONE_ATM, 3.5);
+        assertNull(f.push(3.5, 64.5, 0.5, -flow / 2, 0, 0, ROOM, 0, S, 0.5));
+    }
+
+    @Test
     void flow_006_openings_are_found_by_section() {
         FlowField f = breach(FlowSettings.ONE_ATM);
         assertEquals(1, f.near(3.5, 64.5, 0.5, 9, ROOM, 0).size());

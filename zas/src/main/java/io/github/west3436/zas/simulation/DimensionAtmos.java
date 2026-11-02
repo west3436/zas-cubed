@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinOutcome;
@@ -175,6 +176,9 @@ public final class DimensionAtmos {
     private final Map<Long, CompletableFuture<PinResult>> pins = new TreeMap<>();
 
     private final Map<Long, CompletableFuture<Void>> unpins = new TreeMap<>();
+
+    /** The futures of queued heat mutations (API-013), by sequence number. */
+    private final Map<Long, CompletableFuture<HeatResult>> heats = new TreeMap<>();
 
     DimensionAtmos(ServerLevel level, Executor workers) {
         this.level = level;
@@ -372,6 +376,32 @@ public final class DimensionAtmos {
             return future;
         }
         unpins.put(pl.unpin(owner.toString()), future);
+        return future;
+    }
+
+    /**
+     * Queues an addition ({@code add}) or removal of heat at sub-cell {@code sub} of a position, or
+     * with -1 its largest cell (API-013). It forms a zone in an enclosed, unzoned area as a gas
+     * mutation through the API does (CORE-055). In an excluded dimension, which is all open air,
+     * the ambient takes or supplies it all at once (ENV-007, HEAT-010).
+     */
+    CompletableFuture<HeatResult> heat(BlockPos pos, int sub, boolean add, double joules, SourceId source) {
+        CompletableFuture<HeatResult> future = new CompletableFuture<>();
+        if (isFaulted()) {
+            future.completeExceptionally(faulted());
+            return future;
+        }
+        ensureEngine();
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            future.complete(new HeatResult(
+                    MutationOutcome.AMBIENT,
+                    joules,
+                    Ambients.ambient(level.dimension()).temperature()));
+            return future;
+        }
+        long seq = pl.heat(pos.asLong(), sub, add, joules, ZoneTrigger.API_CALLS.active(), source.toString());
+        heats.put(seq, future);
         return future;
     }
 
@@ -655,11 +685,16 @@ public final class DimensionAtmos {
         Map<Long, Pending> moved = new TreeMap<>();
         Map<Long, CompletableFuture<PinResult>> movedPins = new TreeMap<>();
         Map<Long, CompletableFuture<Void>> movedUnpins = new TreeMap<>();
+        Map<Long, CompletableFuture<HeatResult>> movedHeats = new TreeMap<>();
         for (GasOp op : carried) {
             Pending p = pending.remove(op.seq());
             CompletableFuture<PinResult> pin = pins.remove(op.seq());
             CompletableFuture<Void> unpin = unpins.remove(op.seq());
+            CompletableFuture<HeatResult> heat = heats.remove(op.seq());
             long seq = pipeline.resubmit(remap(op, oldRegistry));
+            if (heat != null) {
+                movedHeats.put(seq, heat);
+            }
             if (p != null) {
                 moved.put(seq, p);
             }
@@ -676,10 +711,15 @@ public final class DimensionAtmos {
         for (CompletableFuture<Void> f : unpins.values()) {
             f.completeExceptionally(new CancellationException("the gas geometry changed"));
         }
+        for (CompletableFuture<HeatResult> f : heats.values()) {
+            f.completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
         pins.clear();
         unpins.clear();
+        heats.clear();
         pins.putAll(movedPins);
         unpins.putAll(movedUnpins);
+        heats.putAll(movedHeats);
         // Anything left under the old engine's numbers has no operation to complete it.
         List<Pending> orphans = new ArrayList<>();
         pending.entrySet().removeIf(e -> {
@@ -697,7 +737,7 @@ public final class DimensionAtmos {
 
     /** An operation with its amounts indexed by the current gas registry instead of {@code from}. */
     private GasOp remap(GasOp op, GasRegistry from) {
-        if (from == registry || op.kind().isPin()) {
+        if (from == registry || op.kind().isPin() || op.kind().isHeat()) {
             return op;
         }
         double[] moles = new double[registry.size()];
@@ -1044,6 +1084,13 @@ public final class DimensionAtmos {
             CompletableFuture<Void> unpin = unpins.remove(o.seq());
             if (unpin != null) {
                 unpin.complete(null);
+                continue;
+            }
+            CompletableFuture<HeatResult> heat = heats.remove(o.seq());
+            if (heat != null) {
+                // A paused region with no zone has no temperature to report.
+                boolean known = o.outcome() != OpOutcome.Outcome.UNRESOLVED || o.zoneId() != 0;
+                heat.complete(new HeatResult(outcome(o.outcome()), o.energy(), known ? o.temperature() : Double.NaN));
             }
         }
         return true;
@@ -1179,6 +1226,10 @@ public final class DimensionAtmos {
         unpins.clear();
         waitingPins.forEach(f -> f.complete(PinResult.none(PinOutcome.UNRESOLVED)));
         waitingUnpins.forEach(f -> f.complete(null));
+        // Heat isn't saved (API-013): a heat mutation not yet applied moved nothing.
+        List<CompletableFuture<HeatResult>> waitingHeats = new ArrayList<>(heats.values());
+        heats.clear();
+        waitingHeats.forEach(f -> f.complete(new HeatResult(MutationOutcome.PAUSED, 0, Double.NaN)));
     }
 
     /** Fails every waiting mutation and invariant check. */
@@ -1200,8 +1251,10 @@ public final class DimensionAtmos {
         }
         List<CompletableFuture<?>> waiting = new ArrayList<>(pins.values());
         waiting.addAll(unpins.values());
+        waiting.addAll(heats.values());
         pins.clear();
         unpins.clear();
+        heats.clear();
         waiting.forEach(f -> f.completeExceptionally(why));
     }
 }

@@ -169,7 +169,7 @@ by `heat_006_never_crosses_equilibrium` and
 ## Sources and sinks
 
 #### HEAT-003 · Heat-source blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-05
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-05
 
 Data-driven heat-source blocks shall act as a far side (HEAT-011) at a fixed
 temperature, conducting with their own U.
@@ -179,8 +179,16 @@ temperature, conducting with their own U.
 - **Verify:** A GameTest checks a room beside a test heat source moves toward
   its temperature.
 
+*2026-11-02: Implemented ([#40](https://github.com/west3436/zas-cubed/issues/40)).
+A heat file's `temperature` makes its blocks sources
+([datapacks](../datapacks.md#heat-data)), and conduction ends a heat path at
+one ([#39](https://github.com/west3436/zas-cubed/issues/39)). Checked by
+`heat_003_room_moves_toward_a_heat_source` (GameTest), which runs twenty atmos
+ticks beside the test datapack's 400 K source, and by the `heat_011_` source
+tests.*
+
 #### HEAT-016 · Default heat sources
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: S-05
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: S-05
 
 ZAS³ shall ship these heat sources:
 
@@ -198,6 +206,13 @@ Fire and lit fuel blocks are heat sources through FIRE-025 instead.
 - **Rationale:** Inferred: approximate real temperatures of these materials,
   so S-05 works.
 - **Verify:** Inspect the shipped data.
+
+*2026-11-02: Implemented ([#40](https://github.com/west3436/zas-cubed/issues/40)).
+`data/zas/zas/thermal/sources/`, one file per block
+([datapacks](../datapacks.md#heat-data)). They set no U, so lava, magma and
+snow use the fallback and the ice keeps 2.2. Until fluids seal (GEO-006,
+[#65](https://github.com/west3436/zas-cubed/issues/65)), lava is a source only
+beyond a wall. `heat_016_default_heat_sources` (GameTest) checks every state.*
 
 #### HEAT-007 · Lit fuel blocks
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35 · Depends: FIRE-025
@@ -227,7 +242,7 @@ with conduction, since a face's far side in a vacuum is found the same way.
 and `heat_004_radiates_to_vacuum` (Unit).*
 
 #### HEAT-010 · Heat at open air
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-053
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-053
 
 Heat added to or removed from an unzoned point shall go to the ambient, with no
 effect.
@@ -236,6 +251,10 @@ effect.
   heat behaves as gas does at open air (CORE-053).
 - **Verify:** A GameTest adds heat at an open point and checks nothing changes
   and the result reports the ambient.
+
+*2026-11-02: Implemented ([#40](https://github.com/west3436/zas-cubed/issues/40)),
+with API-013. Removal at open air is supplied in full, as gas is (CORE-057).
+Checked by `heat_010_heat_at_open_air` (Unit and GameTest).*
 
 #### HEAT-005 · Heat API
 `Must` · `R1` · `Rejected` — duplicate of API-013 and API-011; the open-air rule moved to HEAT-010, 2026-10-30.

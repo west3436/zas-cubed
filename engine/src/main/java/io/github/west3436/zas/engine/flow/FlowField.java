@@ -207,7 +207,29 @@ public final class FlowField {
             long zone,
             double threshold,
             FlowSettings s) {
-        if (isEmpty()) {
+        return push(x, y, z, vx, vy, vz, zone, threshold, s, 0);
+    }
+
+    /**
+     * {@link #push(double, double, double, double, double, double, long, double, FlowSettings)} for
+     * an entity with airflow resistance (FLOW-012): the flow's speed where it is, and so the push
+     * from rest, scaled by (1 − r). An entity with r = 1 is never pushed.
+     *
+     * @param resistance its resistance r, 0 to 1
+     */
+    public double[] push(
+            double x,
+            double y,
+            double z,
+            double vx,
+            double vy,
+            double vz,
+            long zone,
+            double threshold,
+            FlowSettings s,
+            double resistance) {
+        double keep = 1 - Math.min(1, Math.max(0, resistance));
+        if (isEmpty() || keep <= 0) {
             return null;
         }
         Opening best = null;
@@ -222,7 +244,7 @@ public final class FlowField {
         if (best == null) {
             return null;
         }
-        return push(best, bestSpeed, x, y, z, vx, vy, vz, s.response());
+        return push(best, bestSpeed * keep, x, y, z, vx, vy, vz, s.response());
     }
 
     /**

@@ -46,10 +46,12 @@ import org.jetbrains.annotations.Nullable;
  * <p>A hazard turned off in the entity's dimension isn't one (LIFE-031, LIFE-036): with hypoxia
  * off, a breath short of O2 is still {@link BreathReason#BREATHABLE}.
  *
- * <p><b>Not yet:</b> internals (LIFE-021, LIFE-002's tank, API-022) and worn protection (LIFE-020,
- * LIFE-025, LIFE-026) come with #36. Until then no breath comes from {@link
- * BreathSource#INTERNALS}, and a verdict lists no protection but {@link Protection#EXEMPT} and
- * {@link Protection#IMMUNE}.
+ * <p>Worn and built-in protection ({@link WornProtection}) shields it from pressure and temperature
+ * (LIFE-020, LIFE-025), and a verdict lists {@link Protection#PRESSURE} and {@link
+ * Protection#THERMAL} where it is rated for the conditions, whether or not a hazard needs it.
+ *
+ * <p><b>Not yet:</b> internals (LIFE-021, LIFE-002's tank, API-022) come with #36. Until then no
+ * breath comes from {@link BreathSource#INTERNALS}.
  *
  * <p>Server thread, for an entity in a server level.
  */
@@ -143,10 +145,11 @@ public final class BreathingRules {
         return new Assessment(b.build(), sample, drain, exposure);
     }
 
-    /** Adds the pressure and temperature hazards of an exposure to a verdict. */
+    /** Adds the pressure and temperature hazards of an exposure to a verdict, and the protection rated for them. */
     private static void hazards(Breathability.Builder b, EnvironmentHazards.@Nullable Exposure exposure) {
         if (exposure != null) {
             exposure.hazards().forEach(b::hazard);
+            exposure.protection().forEach(b::protection);
         }
     }
 }

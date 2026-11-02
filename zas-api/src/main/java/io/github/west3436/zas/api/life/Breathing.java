@@ -36,11 +36,12 @@ import net.neoforged.neoforge.fluids.FluidType;
  * <p><b>Not yet built.</b> ZAS³ applies who breathes, the atmosphere at the eyes, the O₂ minimum,
  * the gases' hazard profiles ({@link Hazard#TOXIC_GAS}), the pressure and temperature hazards for
  * every living entity but those in {@code zas:atmosphere_immune} ({@link Protection#IMMUNE}),
- * vanilla's rule in water and the creative and spectator exemption. Internals and the
- * life-support capability (LIFE-021, API-022) and the protection of worn items (LIFE-020,
- * LIFE-025, LIFE-026) are still to come: until then no verdict breathes from {@link
- * BreathSource#INTERNALS} or lists any {@link Protection} but {@link Protection#EXEMPT} and {@link
- * Protection#IMMUNE}. On the client, ZAS³ answers with {@link #vanilla vanilla's verdict} until
+ * vanilla's rule in water, the creative and spectator exemption, and the pressure and thermal
+ * protection of worn items and of the entity itself, from the life-support capability ({@link
+ * io.github.west3436.zas.api.capability.ILifeSupport}) or data (LIFE-020, LIFE-025, LIFE-026).
+ * Internals (LIFE-021) and gas filtering are still to come: until then no verdict breathes from
+ * {@link BreathSource#INTERNALS} or lists {@link Protection#SEALED_BREATHING} or {@link
+ * Protection#GAS_FILTERING}. On the client, ZAS³ answers with {@link #vanilla vanilla's verdict} until
  * the client breathing sync (LIFE-023) gives it the server's.
  *
  * <p><b>Without ZAS³</b> the answer is {@link #vanilla vanilla's verdict} (API-009, D-17): in air
