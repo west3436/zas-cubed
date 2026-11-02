@@ -1002,6 +1002,13 @@ runs none of it until LIFE-023.
   not saved). Rates are per second and a check charges the seconds since the
   last, capped at one interval, so the interval changes smoothness and cost, not
   outcomes; the first check charges nothing.
+- **Unresolved atmosphere** (LIFE-048). Where the cell at the eyes is
+  `UNRESOLVED` (API-010), its mixture is only a last-known guess, such as the
+  ambient while a loading room's zone isn't back, so a check holds the state:
+  the verdict, the drain and the exposure times stay, the check's time moves on,
+  and nothing is charged or breathed. With no verdict yet, the breather is
+  checked every tick until the cell resolves, and its meter is left to vanilla.
+  `Breathing.of` answers with the held verdict too.
 - **The air meter** (LIFE-003, LIFE-008, LIFE-009) goes through NeoForge's
   events, so there is no mixin. On `LivingBreatheEvent`, a hypoxic breather
   can't breathe and loses air at its drain times vanilla's underwater rate,

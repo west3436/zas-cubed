@@ -58,6 +58,17 @@ public final class BreathState {
     }
 
     /**
+     * A check at {@code gameTime} that kept the last verdict, its drain and the exposures, since
+     * the atmosphere at the eyes was unresolved (LIFE-048). The next check counts its seconds from
+     * here, so the held time charges no hazard. Its eyes weren't in a fluid, or vanilla's verdict
+     * would have applied.
+     */
+    void held(long gameTime) {
+        this.inFluid = false;
+        this.lastCheck = gameTime;
+    }
+
+    /**
      * Drains the air meter by {@code consume}, the vanilla amount this tick, times the drain
      * fraction, carrying the fraction of a unit to later ticks.
      *

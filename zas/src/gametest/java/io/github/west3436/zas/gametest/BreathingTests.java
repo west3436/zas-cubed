@@ -53,6 +53,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.monster.piglin.Piglin;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -367,6 +368,82 @@ public final class BreathingTests {
             h.assertValueEqual(out.source(), BreathSource.ATMOSPHERE, "outside: source");
             h.assertValueEqual(out.breath(), Optional.of(Atmospheres.of(outside).mixture()), "outside: the ambient");
             h.assertValueEqual(Atmospheres.of(outside).state(), AtmosphereState.AMBIENT, "outside is ambient");
+        }
+        h.succeed();
+    }
+
+    // ---- LIFE-048: an unresolved atmosphere -------------------------------------------
+
+    /**
+     * While the atmosphere at the eyes is unresolved, a breath check holds the state: the last
+     * verdict and its air drain stay, and nothing is charged, though the last-known mixture is the
+     * breathable ambient. An entity with no verdict yet waits for the atmosphere to resolve
+     * (LIFE-048). The unresolved region is one held at a breach because it reaches an unloaded
+     * chunk (GEO-026); CO at 0.5 kPa deals 0.5 HP/s (LIFE-041).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_048_unresolved_atmosphere_holds_the_breath_state(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 217)) {
+            Rooms r = lab.r;
+            r.clear(0, 23);
+            r.shell(2, 9); // A, in the west chunk: 54 cells of CO alone
+            r.shell(9, 21); // B, unzoned, across both chunks, sharing the wall at x = 9
+            r.settle(GasMutations.remove(
+                    r.level,
+                    r.point(5, 2, 2),
+                    Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
+                    Rooms.source("life")));
+            double moles = 0.5 * 54_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+            r.settle(GasMutations.add(
+                    r.level,
+                    r.point(5, 2, 2),
+                    new GasParcel(Map.of(CO, moles), StandardAir.TEMPERATURE),
+                    Rooms.source("life")));
+            Pig pig = lab.mob(EntityType.PIG, r.level, Vec3.atBottomCenterOf(r.abs(5, 1, 2)));
+            long t = r.level.getGameTime();
+            Breathability before = Breathers.checkAt(pig, t).verdict();
+            h.assertValueEqual(before.reason(), BreathReason.LOW_OXYGEN, "the verdict in A");
+            Breathers.checkAt(pig, t + 40);
+            float health = pig.getHealth();
+            close(h, pig.getMaxHealth() - health, 1, 1e-4, "damage from 2 s of CO");
+
+            ChunkPos east = new ChunkPos(r.abs(16, 0, 0));
+            byte[] saved = r.dimension().simulateUnload(east);
+            try {
+                r.tick();
+                r.set(9, 2, 2, Blocks.AIR.defaultBlockState());
+                r.tick();
+                Vec3 inB = Vec3.atBottomCenterOf(r.abs(12, 1, 2));
+                pig.moveTo(inB);
+                h.assertValueEqual(Atmospheres.of(pig).state(), AtmosphereState.UNRESOLVED, "B's loaded part");
+                h.assertValueEqual(
+                        BreathingRules.assess(pig).verdict().reason(),
+                        BreathReason.BREATHABLE,
+                        "the last-known ambient");
+                BreathState held = Breathers.checkAt(pig, t + 80);
+                h.assertValueEqual(held.verdict(), before, "the held verdict");
+                h.assertValueEqual(held.lastCheck(), t + 80, "the held check's time");
+                h.assertValueEqual(Breathing.of(pig), before, "the API's verdict");
+                h.assertValueEqual(pig.getHealth(), health, "health after a held check");
+                int air = pig.getAirSupply();
+                ticks(pig, 20);
+                h.assertValueEqual(pig.getAirSupply(), air - 20, "air while held");
+
+                Pig fresh = lab.mob(EntityType.PIG, r.level, inB);
+                BreathState waiting = Breathers.tickAt(fresh, t + 80);
+                h.assertTrue(waiting.verdict() == null, "a verdict from the last-known ambient");
+                h.assertValueEqual(waiting.lastCheck(), -1L, "the waiting check's time");
+                h.assertValueEqual(Breathers.tickAt(fresh, t + 81).lastCheck(), -1L, "the next tick's check");
+            } finally {
+                r.dimension().simulateLoad(east, saved);
+            }
+            r.ticks(3);
+            h.assertValueEqual(Atmospheres.of(pig).state(), AtmosphereState.ZONED, "B once the chunk loads");
+            BreathState resolved = Breathers.checkAt(pig, t + 120);
+            h.assertValueEqual(resolved.verdict(), BreathingRules.assess(pig).verdict(), "the verdict in the zone");
+            h.assertValueEqual(resolved.lastCheck(), t + 120, "the check's time");
+            Pig fresh = (Pig) lab.entities.get(lab.entities.size() - 1);
+            h.assertTrue(Breathers.tickAt(fresh, t + 121).verdict() != null, "no verdict once resolved");
         }
         h.succeed();
     }

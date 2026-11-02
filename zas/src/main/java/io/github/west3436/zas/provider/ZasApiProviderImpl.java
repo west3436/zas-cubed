@@ -25,6 +25,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ClientGasRegistry;
 import io.github.west3436.zas.gas.ServerGasRegistry;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.simulation.AtmosService;
@@ -216,9 +217,10 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     }
 
     /**
-     * LIFE's verdict on the server ({@link BreathingRules#assess}): who breathes, the atmosphere at
+     * LIFE's verdict on the server ({@link Breathers#verdict}): who breathes, the atmosphere at
      * the eyes, the O₂ minimum and the gases' hazard profiles, keeping vanilla's rule while the
-     * eyes are in a fluid (LIFE-022). Internals, protection and the pressure and temperature
+     * eyes are in a fluid (LIFE-022), and the verdict the breath checks hold while the atmosphere
+     * at the eyes is unresolved (LIFE-048). Internals, protection and the pressure and temperature
      * hazards join it with #35, #36 and API-022 (#60). On the client, vanilla's verdict, until the
      * client breathing sync (LIFE-023) gives it the server's.
      */
@@ -227,7 +229,7 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         if (entity.level().isClientSide()) {
             return Breathing.vanilla(entity);
         }
-        return BreathingRules.assess(entity).verdict();
+        return Breathers.verdict(entity);
     }
 
     /** The server's configured O₂ minimum (LIFE-003). */

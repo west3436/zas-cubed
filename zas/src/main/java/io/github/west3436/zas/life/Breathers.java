@@ -22,6 +22,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Breathing on the server (LIFE-001 to LIFE-009, LIFE-040 to LIFE-042, SPACE-002): each breathing
@@ -33,6 +34,12 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  * It takes the verdict ({@link BreathingRules#assess}), applies the gases' hazard profiles for the
  * seconds since the last check ({@link GasHazards}) and adds the O2 used to its zone's respiration
  * ({@link Respiration}). Rates are per second, so the interval changes smoothness, not speed.
+ *
+ * <p><b>Unresolved atmosphere.</b> Where the atmosphere at the eyes is {@code UNRESOLVED}, such
+ * as for the moment a loading room's zone isn't back yet, its mixture is only a last-known guess,
+ * so a check holds the state instead (LIFE-048): the last verdict, its air drain and the gas
+ * exposures stay, and nothing is charged or breathed. Before any verdict, checks run every tick
+ * until the atmosphere resolves, and the air meter is left to vanilla.
  *
  * <p><b>The air meter</b> follows NeoForge's breathing hook, which runs on every living entity's
  * tick. This listens at normal priority to {@link LivingBreatheEvent}. While the last check found
@@ -145,8 +152,14 @@ public final class Breathers {
         double seconds = last < 0 ? 0 : Math.clamp(now - last, 0, interval) / 20.0;
         BreathingRules.Assessment a = BreathingRules.assess(entity);
         Breathability verdict = a.verdict();
-        state.checked(verdict, a.drain(), verdict.source() == BreathSource.FLUID, now);
         AtmosphereSample sample = a.sample();
+        if (holds(verdict, sample)) {
+            if (state.verdict() != null) {
+                state.held(now);
+            }
+            return;
+        }
+        state.checked(verdict, a.drain(), verdict.source() == BreathSource.FLUID, now);
         if (verdict.reason() == BreathReason.EXEMPT || verdict.breath().isEmpty() || sample == null) {
             state.clearExposure();
             return;
@@ -159,6 +172,34 @@ public final class Breathers {
                     entity.getEyePosition(),
                     BreathingConfig.respirationMolesPerSecond() * seconds);
         }
+    }
+
+    /**
+     * The breathing verdict for an entity where it is now (API-014): the breathing rules' verdict,
+     * or while the atmosphere at its eyes is unresolved, the verdict its checks are holding, if
+     * they have one (LIFE-048). Server thread.
+     */
+    public static Breathability verdict(LivingEntity entity) {
+        BreathingRules.Assessment a = BreathingRules.assess(entity);
+        if (holds(a.verdict(), a.sample())) {
+            BreathState state = entity.getExistingDataOrNull(STATE);
+            if (state != null && state.verdict() != null) {
+                return state.verdict();
+            }
+        }
+        return a.verdict();
+    }
+
+    /**
+     * Whether a check holds the entity's state instead of acting on its verdict: when the
+     * atmosphere at the eyes is {@code UNRESOLVED}, whose mixture is only a last-known guess, such
+     * as the ambient while a loading room's zone isn't back yet (LIFE-048, API-010). An exempt
+     * player has nothing to hold.
+     */
+    private static boolean holds(Breathability verdict, @Nullable AtmosphereSample sample) {
+        return sample != null
+                && sample.state() == AtmosphereState.UNRESOLVED
+                && verdict.reason() != BreathReason.EXEMPT;
     }
 
     // ---- For GameTests ---------------------------------------------------------------
