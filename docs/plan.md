@@ -231,6 +231,26 @@ gives the vent ([#52](https://github.com/west3436/zas-cubed/issues/52)). After t
 the tracks widen out in parallel, one scenario at a time (S-02 to S-05, S-08,
 S-11, S-13).
 
+*2026-11-02: S-01 passes end to end.* A sealed glass room in a vacuum dimension
+forms its zone from its area air controller. A coal generator powers the
+controller, which orders its vent to fill the room from N₂ and O₂ canisters on
+connector ports. The room settles at 101 kPa and 21 % O₂, and a survival
+player breathes in it for 60 s unharmed. The owner played the whole round in
+one combined test world, including building a second room from a chest. Then
+it merged as [#160](https://github.com/west3436/zas-cubed/pull/160).
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Breathing | [#151](https://github.com/west3436/zas-cubed/pull/151) | The #34 breathing subset; LIFE-048 added and *Implemented* | The air bar flickers while the server drains it, and the owner saw it "always": LIFE-023, client breathing sync ([#36](https://github.com/west3436/zas-cubed/issues/36)) |
+| Pipe networks | [#152](https://github.com/west3436/zas-cubed/pull/152) | The #47 subset; CONT-114 (dyed pipes) added, changed by the owner so mined pipes keep their dye, and *Implemented* | Mole-weighted mixing until the API has heat capacities, which the owner requires before release ([#157](https://github.com/west3436/zas-cubed/issues/157)). Open ends need art that reads as open, then particles ([#164](https://github.com/west3436/zas-cubed/issues/164)) |
+| Canister, connector port, vent | [#156](https://github.com/west3436/zas-cubed/pull/156) | The #48 subset | The owner changed it so a canister broken in creative destroys its gas. The vent GUI now shows its network's pressure and why it is idle. A controlled vent's GUI is locked (owner) |
+| Area air controller and generator | [#155](https://github.com/west3436/zas-cubed/pull/155) | The #50 and #52 subset | The generator burns any furnace fuel (owner), scaled to coal. A vent's first order doesn't yet name its controller (the sender position on `VentOrder`). GUI textures for the controller and generator screens are still to draw. The power-lease GameTest clock gap ([#162](https://github.com/west3436/zas-cubed/issues/162)) |
+| Zone pins | [#149](https://github.com/west3436/zas-cubed/pull/149) | API-050; OPS-017 added and *Implemented* | None |
+| Per-world preset copy | [#161](https://github.com/west3436/zas-cubed/pull/161) | Closes [#139](https://github.com/west3436/zas-cubed/issues/139) | None |
+| Loading rooms read as unresolved | [#154](https://github.com/west3436/zas-cubed/pull/154), [#163](https://github.com/west3436/zas-cubed/pull/163) | API-010 | Flaky `geo_010_piston` and `geo_010_fluid` ([#159](https://github.com/west3436/zas-cubed/issues/159)). Open-air additions under test-driven ticks ([#158](https://github.com/west3436/zas-cubed/issues/158)) |
+
+The S-01 GameTest is `StationTests.s_01_pressurise_station`.
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -310,7 +330,7 @@ S-11, S-13).
 
 ## Immediate next steps
 
-_Updated 2026-11-01._
+_Updated 2026-11-02._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -324,10 +344,15 @@ _Updated 2026-11-01._
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done).*
 2. ~~**The R1 foundation**~~ *Done 2026-11-01* (#128, #130, #131, #133, plus
    #134 and #136 from #64; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
-3. **S-01 end to end:** breathing, pipe networks, canister, connector and
-   vent, the area air controller and the power it gives the vent (#34, #47,
-   #48, #50, #52). Then widen out scenario by scenario.
-   - Per-world preset copies ([#139](https://github.com/west3436/zas-cubed/issues/139)) can go in at any time.
+3. ~~**S-01 end to end**~~ *Done 2026-11-02* (#149, #151, #152, #154 to #156,
+   #160, #161, #163; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
+   Per-world preset copies (#139) went in with it.
+4. **Widen out scenario by scenario:** S-02 to S-05, S-08, S-11 and S-13, on
+   the rest of #34, #47, #48, #50 and #52 (pumps, filters, scrubbers,
+   firelocks, batteries and the recharger).
+   - Carried over from S-01: the vent order's sender, client breathing sync
+     (LIFE-023, #36), heat capacities before release (#157), and art for open
+     pipe ends (#164) and the controller and generator screens.
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
      ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved
@@ -335,5 +360,5 @@ _Updated 2026-11-01._
      ([#122](https://github.com/west3436/zas-cubed/issues/122)), and sub-cells
      of position-dependent shapes, with GEO-043
      ([#123](https://github.com/west3436/zas-cubed/issues/123)).
-4. **After R1:** the reference integrations, Mekanism and Ad Astra
+5. **After R1:** the reference integrations, Mekanism and Ad Astra
    (D-11, D-66; see [After R1](#after-r1-already-queued)).

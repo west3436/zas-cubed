@@ -2,7 +2,8 @@
 
 **Status:** Accepted 2026-10-31 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
-the [README](README.md#writing-rules).
+the [README](README.md#writing-rules). OPS-017 was added as Draft on
+2026-11-02 and accepted by the owner the same day.
 
 **Scope.** Config files, datapack formats, commands, profiling and admin
 controls. Background:
@@ -107,7 +108,7 @@ invariant checker (CORE-073) on or off and print its report.
 - **Verify:** A GameTest runs the audit and toggles the checker by command.
 
 #### OPS-017 · Pin commands
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: API-017, API-050, OPS-003
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: API-017, API-050, OPS-003
 
 Commands shall pin the zone at a point (API-050) and remove an owner's pins
 (API-017), attributed to `command:<player>` unless an owner is named, and
@@ -115,6 +116,9 @@ Commands shall pin the zone at a point (API-050) and remove an owner's pins
 
 *2026-11-02: added as Draft with API-050, so pins can be set up and checked
 from the console; built and checked by `ops_017_pin_commands`.*
+
+*2026-11-02: accepted by the owner after the S-01 round test, and
+Implemented ([#149](https://github.com/west3436/zas-cubed/pull/149)).*
 
 ## Profiling
 
