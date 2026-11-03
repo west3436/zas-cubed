@@ -425,9 +425,9 @@ uncovered part of the face (GEO-003, GEO-004).
   before any query and at the end of each server tick. A chunk's dirty bits
   are dropped when it unloads.
 - **Locality filter (GEO-011).** In the hook, a write that keeps the geometry
-  id (stone to cobblestone, air to a torch) sets no dirty bit. At batch close
-  the scheduler drains with the set of sections that hold zoned cells, border
-  a zone, or contain a pending classification, and only those are
+  id (stone to cobblestone, a poppy to a dandelion) sets no dirty bit. At
+  batch close the scheduler drains with the set of sections that hold zoned
+  cells, border a zone, or contain a pending classification, and only those are
   snapshotted (`ChangeTracker.drain(level, interest)`). All other dirty bits
   are cleared without work. Drains come out sorted by section x, z, then y.
   *Implemented (#23):* the interest set is the sections the worker mirrors,
@@ -1150,6 +1150,38 @@ through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
 into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
 aren't done.
+
+*Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):*
+ignition sources (FIRE-014, FIRE-015), in `io.github.west3436.zas.ignition`.
+`IgnitionSources` reads `data/<namespace>/zas/ignition_source/` on every data
+load. Detection is change-driven; nothing scans the world:
+
+- **Standing sources** (`block`: fire, lava, lit campfires, torches, and the
+  blocks in `#zas:ignition_sources`, API-053) are a predicate over block
+  states, handed to the geometry table once at mod construction. It reads the
+  files the last load swapped in and the tags as bound, and the table asks it
+  of every state when it is rebuilt after each data load, so its answer never
+  depends on listener order. The worker sees flagged blocks in the sections it
+  mirrors and tries ignition at one whose cell or neighbour is zoned, with no
+  server-thread work per tick. Placing one in a mirrored section changes its
+  geometry id and so reaches the worker with the next batch. A block with a
+  boolean `lit` property counts only while lit, so a mod's block such as the
+  igniter joins by tag and lights by block state, with no API call.
+- **One-off sources** call the engine's ignite entry point (hotspots, #42),
+  which queues like a mutation and decides flammability on the worker:
+  `IgnitionEvents` listens for an item used on a block (`UseItemOnBlockEvent`
+  in its item phase: flint and steel), an entity joining a level (lightning)
+  and `ExplosionEvent.Detonate` (except bursts that only trigger blocks).
+- **Sparks** (the redstone spark, off by default) come from the change hook
+  (§4.2): a write to a spark state is queued, on any thread, and sent at the end
+  of the server tick. With no spark source on, the hook pays one array read.
+
+A position whose last ignition hasn't been applied isn't sent again, so an
+explosion chain or a redstone clock queues at most one per position per atmos
+tick. One-off sources go through `Fires.ignite` (API-056), which completes when
+the ignition is applied. Fire and soul fire are standing sources, but not
+`zas:gas_fire`, though it is in `#minecraft:fire`: a gas fire is a hotspot
+already, and spreads by FIRE-016's odds.
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the

@@ -6,9 +6,9 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
 [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
-[airflow class tags](#airflow-classes) and [reactions](#reactions).
-The rest of OPS-002's list (fuel, the other entity tags) arrives with its
-features in R1. Every format
+[airflow class tags](#airflow-classes), [reactions](#reactions) and
+[ignition sources](#ignition-sources). The rest of OPS-002's list (fuel, the
+other entity tags) arrives with its features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -589,6 +589,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 |---|---|---|
 | `#zas:combustion` | `#minecraft:fire` (fire, soul fire; `zas:gas_fire` is in `#minecraft:fire` but never counts here, since it burns zone gas, not a fuel), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
+| `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. See [Ignition sources](#ignition-sources) |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
 A trigger counts when it starts: a fire appears, a block is lit or a plant is
@@ -599,6 +600,73 @@ preset's (`combustion_forms_zones`, `planting_forms_zones`,
 `#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins
 `#zas:zone_boundary`. `zas_atmos`'s generator isn't in `#zas:combustion`: it
 doesn't use the air (D-35, CONT-067).
+
+## Ignition sources
+
+What ignites a flammable mixture (FIRE-014, FIRE-015), one source per file:
+
+```
+data/<namespace>/zas/ignition_source/<path>.json
+```
+
+```json
+{
+  "type": "block",
+  "blocks": ["#minecraft:campfires"],
+  "state": {"lit": "true"}
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `type` | string | yes, unless `enabled` is false | What ignites: `block`, `spark`, `item_use`, `entity` or `explosion` (below) |
+| `enabled` | boolean | no | Whether the source is on; default true |
+| `blocks` | list of strings | for `block` and `spark` | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `state` | object | no | For `block` and `spark`: the block state properties that must match, as in vanilla's block state predicates, such as `{"lit": "true"}` or `{"power": {"min": "1"}}`. Without it, a `block` source's block with a boolean `lit` property counts only while lit |
+| `items` | list of strings | for `item_use` | Item ids, or item tags prefixed with `#` |
+| `entities` | list of strings | for `entity` | Entity type ids, or entity type tags prefixed with `#` |
+
+The types:
+
+- **`block`:** a block that ignites while it is there. The gas engine flags
+  these states in its geometry, so it finds them in and next to zones without
+  scanning the world.
+- **`spark`:** a block that ignites once, when a block is changed to one of
+  its states: a lever thrown, a redstone wire's power changing.
+- **`item_use`:** an item used on a block, once the block hasn't taken the
+  click itself, ignites the cell on the side used.
+- **`entity`:** an entity of the type appearing in the world ignites its cell.
+  An entity loaded with its chunk doesn't.
+- **`explosion`:** an explosion ignites its centre. A burst that only
+  triggers blocks, such as a wind charge's, doesn't.
+
+A source only ever ignites a mixture the engine finds flammable, in the
+source's cell or a neighbouring cell of its zone; outside zones it does
+nothing.
+
+- **Shipped sources**, in `data/zas/zas/ignition_source/`:
+
+  | File | Type | What |
+  |---|---|---|
+  | `fire.json` | `block` | fire and soul fire. Not all of `#minecraft:fire`, which holds `zas:gas_fire`: a gas fire is a hotspot already, and spreads by FIRE-016's odds |
+  | `lava.json` | `block` | lava and lava cauldrons |
+  | `campfire.json` | `block` | `#minecraft:campfires` with `lit` true |
+  | `torch.json` | `block` | torches and soul torches, standing or on a wall |
+  | `flint_and_steel.json` | `item_use` | flint and steel |
+  | `lightning.json` | `entity` | lightning bolts |
+  | `explosion.json` | `explosion` | explosions |
+  | `tagged.json` | `block` | `#zas:ignition_sources`, empty unless a mod adds to it ([Block tags](#block-tags)) |
+  | `redstone_spark.json` | `spark` | **off**: redstone wire, redstone torches, repeaters, comparators, levers, `#minecraft:buttons` and `#minecraft:pressure_plates` |
+
+- **Adding and removing.** A pack adds a source with a file of its own. It
+  replaces a shipped one with a file at the same path: to turn torches off,
+  `data/zas/zas/ignition_source/torch.json` holding `{"enabled": false}`; to
+  turn the redstone spark on, a copy of `redstone_spark.json` with `"enabled":
+  true`. Where two files claim the same block state, item or entity type, the
+  file whose id sorts last names it.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** at server start and on `/reload`, once tags are bound.
 
 ## Hazard profiles
 

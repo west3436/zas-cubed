@@ -1,0 +1,4 @@
+{
+  "type": "block",
+  "blocks": ["minecraft:fire", "minecraft:soul_fire"]
+}

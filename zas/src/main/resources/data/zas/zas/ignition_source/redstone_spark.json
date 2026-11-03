@@ -1,0 +1,14 @@
+{
+  "type": "spark",
+  "enabled": false,
+  "blocks": [
+    "minecraft:redstone_wire",
+    "minecraft:redstone_torch",
+    "minecraft:redstone_wall_torch",
+    "minecraft:repeater",
+    "minecraft:comparator",
+    "minecraft:lever",
+    "#minecraft:buttons",
+    "#minecraft:pressure_plates"
+  ]
+}

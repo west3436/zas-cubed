@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.ignition.IgnitionEvents;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -36,12 +37,14 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <ul>
  *   <li>bumps the chunk's block generation ({@link ChunkGenerations}), on every write;
  *   <li>if the geometry id changed, marks the position in the dimension's {@link DirtySections};
- *       a write that keeps the geometry id (stone to cobblestone, air to a torch) stops there
+ *       a write that keeps the geometry id (stone to cobblestone, air to a redstone torch) stops there
  *       (GEO-011);
  *   <li>if the write starts a Hardcore zone trigger that is active, a fire or a lit furnace
  *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
  *       position in that trigger's set (CORE-056). Which states start one is a table read per
- *       state ({@link TriggerStates}); the preset is read only for a write that starts one.
+ *       state ({@link TriggerStates}); the preset is read only for a write that starts one;
+ *   <li>if the new state is a redstone spark or another spark ignition source, queues an ignition
+ *       ({@link IgnitionEvents}, FIRE-015); with none on, as by default, that is one read.
  * </ul>
  *
  * <p>Repeated changes to a position coalesce into one dirty bit until the scheduler drains them
@@ -117,6 +120,7 @@ public final class ChangeTracker {
         int nowId = Block.getId(now);
         boolean geometryChanged = geometryChanged(oldId, nowId);
         int triggers = TriggerStates.started(oldId, nowId);
+        IgnitionEvents.onBlockWrite(level, pos, now);
         if (level.getServer().isSameThread()) {
             dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers);
             Burners.onBlockWrite(level, pos, old, now);

@@ -5,8 +5,9 @@ with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). API-019 was added and accepted on
 2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68), and API-051 and API-052
 on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)); the
-owner accepted both on 2026-11-03. API-055 to API-058, the fire API, were added
-as Draft on 2026-11-03 ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+owner accepted both on 2026-11-03. API-053, the ignition source tag, and
+API-055 to API-058, the fire API, were added as Draft on 2026-11-03
+([#42](https://github.com/west3436/zas-cubed/issues/42)).
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -742,6 +743,19 @@ and their result cached until `markDirty` (GEO-014).
 
 #### API-024 · Ambient provider
 `Must` · `R1` · `Rejected` — duplicate of ENV-004, 2026-10-30.
+
+#### API-053 · Ignition source tag
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: FIRE-014, FIRE-015, CONT-105
+
+Blocks in the block tag `#zas:ignition_sources` shall be ignition sources
+(FIRE-014) while they are there. A block with a boolean `lit` property shall
+count only while it is lit.
+
+- **Rationale:** Inferred: a mod's block, such as the igniter (CONT-105), can
+  then ignite gas without calling ZAS³ at all, which also works without ZAS³
+  installed.
+- **Verify:** A GameTest checks a tagged block ignites a flammable zone, and
+  one with a `lit` property only while lit.
 
 ## Events
 
