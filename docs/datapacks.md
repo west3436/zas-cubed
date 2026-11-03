@@ -438,14 +438,23 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
   released gives the new temperature at the products' heat capacities (CORE-003).
   An endothermic reaction never cools the gas below the temperature floor.
 
-**Shipped reactions** (FIRE-003), in `data/zas/zas/reaction/`. Each needs
-ignition and burns with O₂ to H₂O vapour and CO₂:
+**Shipped reactions**, in `data/zas/zas/reaction/`. The combustion
+(FIRE-003) needs ignition and burns with O₂ to H₂O vapour and CO₂:
 
 | File | Reaction | Enthalpy | Flammability limits | Autoignition |
 |---|---|---|---|---|
 | `hydrogen_combustion.json` | H₂ + ½ O₂ → H₂O | −242 kJ/mol | 4–75 % H₂ | 858 K |
 | `methane_combustion.json` | CH₄ + 2 O₂ → CO₂ + 2 H₂O | −802 kJ/mol | 5–15 % CH₄ | 810 K |
 | `carbon_monoxide_combustion.json` | CO + ½ O₂ → CO₂ | −283 kJ/mol | 12.5–74 % CO | 882 K |
+
+- **Methane's incomplete form** (FIRE-005) is CH₄ + 1.5 O₂ → CO + 2 H₂O,
+  −519 kJ/mol. Below an O₂ fraction of 0.18 (`[fire]` in the server config) a
+  share of the carbon burns this way, rising linearly to all of it at the fire
+  threshold, 0.14: half at 0.16.
+- **`nitrous_oxide_decomposition.json`** (FIRE-004) runs in zones without
+  ignition: N₂O → N₂ + ½ O₂, −82.05 kJ/mol, above 850 K, at `per_second`
+  0.012 at 1,000 K with an activation energy of 250 kJ/mol. That is about 1 %
+  a second at 1,000 K and 1.8 per second at 1,200 K.
 
 - A pack replaces a shipped reaction with a file of the same id, and can't
   remove one except by replacing it with one whose conditions never hold.
