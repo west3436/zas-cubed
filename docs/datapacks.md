@@ -412,7 +412,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 |---|---|---|
 | `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
-| `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. See [Ignition sources](#ignition-sources) |
+| `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. `zas_atmos`'s igniter is in it. See [Ignition sources](#ignition-sources) |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
 A trigger counts when it starts: a fire appears, a block is lit or a plant is

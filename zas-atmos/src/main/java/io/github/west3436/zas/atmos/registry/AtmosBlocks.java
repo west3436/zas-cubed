@@ -6,6 +6,7 @@ import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
+import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -58,6 +59,10 @@ public final class AtmosBlocks {
     /** The recharger (CONT-113). */
     public static final DeferredBlock<RechargerBlock> RECHARGER =
             BLOCKS.registerBlock("recharger", RechargerBlock::new, metal());
+
+    /** The igniter (CONT-105). */
+    public static final DeferredBlock<IgniterBlock> IGNITER =
+            BLOCKS.registerBlock("igniter", IgniterBlock::new, metal());
 
     private AtmosBlocks() {}
 

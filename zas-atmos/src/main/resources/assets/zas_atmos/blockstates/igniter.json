@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "zas_atmos:block/igniter"
+    },
+    "lit=true": {
+      "model": "zas_atmos:block/igniter_on"
+    }
+  }
+}

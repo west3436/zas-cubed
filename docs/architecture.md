@@ -1675,6 +1675,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
+| `igniter` | The igniter (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1950,6 +1951,16 @@ the cell in front of its grille).
   `recharger_4` models. Broken, it drops its battery. Its GUI has the
   battery slot and no buttons, and shows its status (charging, full, no
   power, no battery) and the battery's charge.
+- **Igniter** (CONT-105), in `.igniter`. A floor plate 2 px thick, and a
+  controller's part like the recharger, in the auxiliary group. Its block
+  state's `powered` follows the redstone signal as its neighbours change, and
+  while it is true the igniter draws `[power] igniter` FE/t (20); otherwise 0.
+  At each step it sets `lit` if it has a signal and paid-for power, and clears
+  it otherwise; losing the signal clears `lit` at once. It never touches gas:
+  `zas_atmos` puts it in `#zas:ignition_sources`
+  (`data/zas/tags/block/ignition_sources.json`), so the framework counts it as
+  a standing ignition source while `lit` is true (API-053, §5), with nothing
+  added to the API. `lit` picks the `igniter_on` model. No GUI.
 - **GUIs** (CONT-074). Using a canister, vent, heater or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
