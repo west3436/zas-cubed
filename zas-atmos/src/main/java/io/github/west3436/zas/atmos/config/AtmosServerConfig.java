@@ -33,6 +33,9 @@ public final class AtmosServerConfig {
     /** The area air controller's own draw, in FE/t (CONT-065). */
     public static final ModConfigSpec.IntValue CONTROLLER_DRAW;
 
+    /** The fire alarm's draw, in FE/t (CONT-044, CONT-065). */
+    public static final ModConfigSpec.IntValue FIRE_ALARM_DRAW;
+
     /** The area air controller's buffer, in FE (CONT-062). */
     public static final ModConfigSpec.IntValue CONTROLLER_BUFFER;
 
@@ -66,6 +69,8 @@ public final class AtmosServerConfig {
                 .defineInRange("igniter", 20, 0, 100_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
+        FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
+                .defineInRange("fire_alarm", 1, 0, 100_000);
         CONTROLLER_BUFFER = builder.comment(
                         "The area air controller's buffer, in FE (CONT-062). It fills from FE blocks next to it.")
                 .defineInRange("area_air_controller_buffer", 10_000, 1_000, 1_000_000);

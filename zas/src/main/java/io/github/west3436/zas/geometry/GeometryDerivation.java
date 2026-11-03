@@ -32,7 +32,8 @@ import org.slf4j.Logger;
  * <p>Fire blocks are flagged here too, since which blocks are fire doesn't depend on datapacks
  * either: vanilla fire ({@link BaseFireBlock}) with {@link Geometry#FLAG_FIRE} (FIRE-019) and
  * {@code zas:gas_fire} with {@link Geometry#FLAG_GAS_FIRE} (FIRE-018), so the engine's hotspots see
- * them come and go through the change hook (architecture §5).
+ * them come and go through the change hook (architecture §5). So is every other state that isn't
+ * air but whose geometry is air's, with {@link Geometry#FLAG_OCCUPIED}: a gas fire can't go there.
  */
 public final class GeometryDerivation {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -110,6 +111,16 @@ public final class GeometryDerivation {
         return state.getBlock() instanceof BaseFireBlock ? Geometry.FLAG_FIRE : 0;
     }
 
+    /**
+     * The geometry id for a state: {@code id}, or for a state that isn't air but has air's
+     * geometry, that geometry with {@link Geometry#FLAG_OCCUPIED} (FIRE-018).
+     */
+    static int occupied(GeometryPalette.Builder palette, int id, BlockState state) {
+        return id == GeometryPalette.AIR_ID && !state.isAir()
+                ? palette.intern(Geometry.AIR.withFlags(Geometry.FLAG_OCCUPIED))
+                : id;
+    }
+
     private static GeometryTable deriveAll() {
         long start = System.nanoTime();
         int maxId = -1;
@@ -144,6 +155,7 @@ public final class GeometryDerivation {
             if (fire != 0) {
                 id = palette.intern(palette.geometry(id).withFlags(fire));
             }
+            id = occupied(palette, id, state);
             byStateId[Block.getId(state)] = id;
         }
         if (failures > 1) {

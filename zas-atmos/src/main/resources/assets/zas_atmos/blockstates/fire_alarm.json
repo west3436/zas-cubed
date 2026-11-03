@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,status=unpowered": {
+      "model": "zas_atmos:block/fire_alarm_unpowered"
+    },
+    "facing=north,status=normal": {
+      "model": "zas_atmos:block/fire_alarm"
+    },
+    "facing=north,status=alarm": {
+      "model": "zas_atmos:block/fire_alarm_alarm"
+    },
+    "facing=east,status=unpowered": {
+      "model": "zas_atmos:block/fire_alarm_unpowered",
+      "y": 90
+    },
+    "facing=east,status=normal": {
+      "model": "zas_atmos:block/fire_alarm",
+      "y": 90
+    },
+    "facing=east,status=alarm": {
+      "model": "zas_atmos:block/fire_alarm_alarm",
+      "y": 90
+    },
+    "facing=south,status=unpowered": {
+      "model": "zas_atmos:block/fire_alarm_unpowered",
+      "y": 180
+    },
+    "facing=south,status=normal": {
+      "model": "zas_atmos:block/fire_alarm",
+      "y": 180
+    },
+    "facing=south,status=alarm": {
+      "model": "zas_atmos:block/fire_alarm_alarm",
+      "y": 180
+    },
+    "facing=west,status=unpowered": {
+      "model": "zas_atmos:block/fire_alarm_unpowered",
+      "y": 270
+    },
+    "facing=west,status=normal": {
+      "model": "zas_atmos:block/fire_alarm",
+      "y": 270
+    },
+    "facing=west,status=alarm": {
+      "model": "zas_atmos:block/fire_alarm_alarm",
+      "y": 270
+    }
+  }
+}

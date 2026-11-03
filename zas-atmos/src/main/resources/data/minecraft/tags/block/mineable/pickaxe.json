@@ -6,6 +6,7 @@
     "zas_atmos:canister",
     "zas_atmos:vent",
     "zas_atmos:area_air_controller",
+    "zas_atmos:fire_alarm",
     "zas_atmos:generator",
     "zas_atmos:firelock",
     "zas_atmos:heater",

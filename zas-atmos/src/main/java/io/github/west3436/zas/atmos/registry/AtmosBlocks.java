@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
+import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
@@ -44,6 +45,10 @@ public final class AtmosBlocks {
     /** The area air controller, a wall panel (CONT-040, D-68). */
     public static final DeferredBlock<AreaAirControllerBlock> AREA_AIR_CONTROLLER =
             BLOCKS.registerBlock("area_air_controller", AreaAirControllerBlock::new, metal().strength(1.5f, 4.8f));
+
+    /** The fire alarm, a small box on a wall (CONT-044). As hard as the controller. */
+    public static final DeferredBlock<FireAlarmBlock> FIRE_ALARM =
+            BLOCKS.registerBlock("fire_alarm", FireAlarmBlock::new, metal().strength(1.5f, 4.8f));
 
     /** The solid-fuel generator (CONT-061). */
     public static final DeferredBlock<GeneratorBlock> GENERATOR =

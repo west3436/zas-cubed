@@ -202,7 +202,7 @@ flammable at or above a fuel's autoignition point starts a gas fire at its lowes
 free position. `fire_010_hydrogen_autoignites_at_900_k_not_800_k` checks it.*
 
 #### FIRE-014 · Ignition sources
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-03, D-49
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-03, D-49
 
 A mixture within a fuel's flammability limits shall ignite when an ignition
 source is in its cell or a neighbouring cell of its zone. The default sources
@@ -212,8 +212,14 @@ torches.
 - **Rationale:** Decision: D-49 (torches ignite), for S-03.
 - **Verify:** GameTests check each default source ignites a flammable zone.
 
+*2026-11-03: Implemented ([#189](https://github.com/west3436/zas-cubed/pull/189)).
+Standing sources (fire, soul fire, lava, lit campfires, torches) are flagged
+in the geometry table and found by the engine. One-off sources (flint and
+steel, lightning, explosions) call `Fires.ignite` when they happen. `zas:gas_fire`
+is not a source. `IgnitionZoneTests` lights a 10 % H₂ room with each.*
+
 #### FIRE-015 · Configurable ignition sources
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 Ignition sources shall be data-driven. Redstone sparks are available but off
 by default.
@@ -222,6 +228,12 @@ by default.
   sparks would make every redstone build a hazard, so they're off by default.
 - **Verify:** A GameTest checks a datapack can add and remove sources and that
   redstone doesn't ignite by default.
+
+*2026-11-03: Implemented ([#189](https://github.com/west3436/zas-cubed/pull/189)).
+Sources are `data/<ns>/zas/ignition_source/*.json`, documented in
+[datapacks.md](../datapacks.md#ignition-sources). The redstone spark ships
+disabled. `fire_015_datapack_adds_and_removes_sources_in_a_zone` and
+`fire_015_redstone_ignites_only_when_enabled` check it.*
 
 #### FIRE-011 · Hotspot burn rate
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-03, D-20
@@ -285,6 +297,16 @@ air, where vanilla fire can't survive.
 *2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). The engine asks for the block with
 fire intents, which the server applies only to air (architecture §5).
 `fire_018_gas_fire_burns_in_mid_air` checks it.*
+
+*2026-11-03: a block that isn't air but that gas passes as it passes air (a
+lever, redstone wire, a rail, a flower, grass, a fluid) has its own geometry,
+air's with `FLAG_OCCUPIED`, so the engine never asks for a gas fire there. An
+ignition at one lights an air neighbour, and spread passes it by. Before, the
+engine asked for the block, the server refused it and the ignition reported a
+fire that never burned. `fire_018_ignition_at_a_lever_lights_the_air_beside_it`
+and `fire_018_spread_skips_flowers` check it, and
+`fire_018_passable_blocks_leave_the_zone_as_air_does` checks such blocks leave
+a zone's gas and volume as air does.*
 
 #### FIRE-019 · Vanilla fire in zones is a hotspot
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-49
