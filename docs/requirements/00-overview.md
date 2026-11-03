@@ -266,6 +266,29 @@ which closes the firelock in the same step, so the second room keeps over
 90 kPa of its air (as at 20 °C) and then holds it. Once the breached room is below 10 kPa, a player without a helmet takes 1
 HP/s of decompression, and hypoxia damage once its air meter is empty.*
 
+*2026-11-03: S-03's R1 plan passes on the scenario branch, as
+`FireStationTests.s_03_gas_leak_in_a_sealed_workshop` in the Overworld under
+Normal. The workshop is a sealed 5 × 3 × 3 room with a torch on the floor at
+one end and an H₂ canister at the other. Before the leak the room is unzoned.
+A release to 103 kPa forms a zone at about 1.6 % H₂, below the 4 % lower
+limit, and nothing burns. Raised to 125 kPa, the leak passes the limit and the
+torch ignites it; the step before ignition is at or above 4 % H₂. With the
+valve closed, O₂ falls by more than 5 % while H₂O, the temperature and the
+pressure rise, the pressure past the valve's 125 kPa.*
+
+*2026-11-03: S-04's R1 plan passes on the scenario branch, as
+`FireScenarioTests.s_04_room_fire_suffocates_and_rekindles_under_hardcore`
+and `s_04_room_fire_stays_vanilla_under_normal`. The room is a sealed
+3 × 3 × 3 stone room with a closed oak door, and the fire burns on netherrack.
+Under Hardcore the fire forms a zone of the room's 27 cells and the door's 2
+(GEO-007). It burns the shipped 10 kW profile in two-minute steps until it
+goes out, with the O₂ fraction between 0.12 and 0.14 (FIRE-030). By then O₂
+has fallen by more than 30 %, over 10 mol of CO₂ has formed and the air is
+more than 20 K warmer. Fire can't be lit in the stale air. With the door
+open, the room airs out to 20 % O₂, and a fire lit again burns on. Under
+Normal the room stays unzoned, its air stays the ambient, and the fire burns
+as vanilla's does.*
+
 ## Questions
 
 ### Resolved (2026-10-30)
