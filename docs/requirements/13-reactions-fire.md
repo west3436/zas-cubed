@@ -316,28 +316,34 @@ power. Defaults:
 | Block | Power |
 |---|---|
 | Furnace, smoker, campfire | 5 kW |
-| Blast furnace, ZAS³ fuel generator | 10 kW |
+| Blast furnace | 10 kW |
 | Fire block | 10 kW |
 
 - **Rationale:** Decision: D-35 and D-49.
 - **Verify:** Inspect the profiles; a Unit test checks 5 kW consumes about
   0.0127 mol of O₂ per second.
+- **Changed 2026-11-03 (the owner, D-35):** the ZAS³ fuel generator has no
+  profile; it doesn't use the air (CONT-067).
 
 *2026-11-03: Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)). The profiles are data,
 `data/<namespace>/zas/fuel_profile/` ([datapacks.md](../datapacks.md#fuel-profiles)),
 and ship with the defaults above; `zas_atmos` ships the generator's. Checked by
 `fire_025_five_kilowatts_uses_0_0127_mol_o2_per_second` (Unit).*
 
+*2026-11-03: `zas_atmos` no longer ships the generator's profile (D-35,
+CONT-067).*
+
 #### FIRE-021 · Lit fuel blocks consume O₂
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35 · Depends: FIRE-025
 
 In a zone, lit fuel-burning blocks (furnaces, smokers, blast furnaces,
-campfires, the ZAS³ fuel generator) shall consume O₂ and emit CO₂ according to
-their profile.
+campfires) shall consume O₂ and emit CO₂ according to their profile.
 
 - **Rationale:** Decision: D-35.
 - **Verify:** A GameTest checks a lit furnace in a zone lowers O₂ and raises
   CO₂ at its profile's rate.
+- **Changed 2026-11-03 (the owner, D-35):** the ZAS³ fuel generator is no
+  longer listed; it doesn't use the air (CONT-067).
 
 *2026-11-03: Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)). Every burning state of `#zas:combustion` is
 tracked through the change hook and a scan of each loaded chunk, and burns its
@@ -347,16 +353,23 @@ proportion to the O₂ actually removed. Nothing forms a zone. Checked by
 `fire_021_lit_fuel_blocks_use_o2_at_their_profile` (furnace, blast furnace,
 smoker, campfire) and `cont_067_running_generator_uses_o2_and_makes_co2_and_heat`.*
 
-#### FIRE-027 · Fuel blocks pause without oxygen
-`Should` · `R1` · `Accepted` · Verify: GameTest · Depends: FIRE-030
+*2026-11-03: the generator is no longer a lit fuel block (D-35, CONT-067);
+`fire_021_lit_fuel_blocks_use_o2_at_their_profile` checks the rest.*
 
-A lit fuel-burning block shall pause, without using up its fuel, while its
-cell fails the fire oxygen threshold.
+#### FIRE-027 · Fuel blocks pause without oxygen
+`Should` · `R1` · `Implemented` · Verify: GameTest · Depends: FIRE-030
+
+A lit vanilla fuel-burning block (a furnace, smoker or blast furnace) shall
+pause, without using up its fuel, while its cell fails the fire oxygen
+threshold.
 
 - **Rationale:** Inferred: a furnace that burned fuel without oxygen would
   waste the player's fuel; pausing lets it resume when air returns.
 - **Verify:** A GameTest checks a furnace in a low-O₂ zone keeps its fuel and
   resumes when O₂ returns.
+- **Changed 2026-11-03 (the owner, D-35):** it covers the vanilla fuel blocks
+  only. The ZAS³ fuel generator doesn't use the air, so it runs without O₂
+  (CONT-067).
 
 *2026-11-03: Built for the vanilla blocks ([#43](https://github.com/west3436/zas-cubed/issues/43)). M5 skips the tick of a furnace, smoker or
 blast furnace that burns or has fuel while the cell in front of it fails
@@ -366,6 +379,9 @@ M6 puts a lit campfire out, as it has no fuel to keep. Checked by
 `fire_027_campfire_goes_out_without_oxygen`. The fuel generator lives in
 `zas_atmos`, which sees only the API, so it pauses through API-054 in its own
 PR; this stays Accepted until then.*
+
+*2026-11-03: Implemented. The owner took the generator out (D-35), so the
+vanilla blocks above are all of it, and API-054 isn't needed.*
 
 #### FIRE-022 · Burning blocks
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: S-04, D-49 · Depends: FIRE-025
@@ -385,13 +401,15 @@ by `fire_022_fire_burns_its_profile_and_a_tag_overrides_it`.*
 #### FIRE-024 · Combustion as a zone trigger (Hardcore)
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-14, S-04
 
-With the Hardcore preset, fire or a lit furnace, campfire or fuel generator
-(D-35) in an enclosed, unzoned area shall create a zone (CORE-051, CORE-056),
-so a sealed room's fire can suffocate itself.
+With the Hardcore preset, fire or a lit furnace or campfire in an enclosed,
+unzoned area shall create a zone (CORE-051, CORE-056), so a sealed room's fire
+can suffocate itself.
 
 - **Rationale:** Decision: D-13 and D-14.
 - **Verify:** A GameTest under Hardcore checks a fire in a sealed room forms a
   zone and goes out once O₂ is low.
+- **Changed 2026-11-03 (the owner, D-35):** the ZAS³ fuel generator is no
+  longer listed; it doesn't use the air, so it is no trigger (CONT-067).
 
 *2026-11-01: The trigger is built (CORE-056,
 [#64](https://github.com/west3436/zas-cubed/issues/64)). Under Hardcore, a fire
@@ -405,6 +423,10 @@ Verify also needs the fire to go out once O₂ is low (FIRE-017, FIRE-020).*
 `fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore` lights a fire
 in a sealed two-cell room under Hardcore. It forms a zone, burns the O₂ down
 with CO forming below 18 %, and goes out between 12 % and 14 %.*
+
+*2026-11-03: the generator left `#zas:combustion` (D-35, CONT-067);
+`core_056_lit_generator_forms_no_zone_under_hardcore` checks it forms no
+zone.*
 
 #### FIRE-023 · Extinguishing
 `Should` · `R1` · `Rejected` — covered by FIRE-017, FIRE-020 and FIRE-030 plus vanilla water; the extinguisher is CONT-037 (R2), 2026-10-30.

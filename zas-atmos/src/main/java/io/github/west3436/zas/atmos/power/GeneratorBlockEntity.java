@@ -24,7 +24,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * (80), and any other fuel for that times its furnace burn time over coal's ({@link #burnTicks}).
  * It starts a new piece only while its store has room, so a full generator with nothing drawing
  * from it goes out instead of wasting fuel. Its store gives FE to any block that takes it, and its
- * fuel slot takes fuel from hoppers.
+ * fuel slot takes fuel from hoppers. It never touches the air (D-35, CONT-067).
  */
 public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
     private final ItemStackHandler fuel = new ItemStackHandler(1) {
