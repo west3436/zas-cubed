@@ -23,9 +23,11 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.RedStoneOreBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.BlockHitResult;
@@ -128,17 +130,21 @@ public final class IgnitionTests {
      */
     @GameTest(template = "empty", batch = OVERRIDES)
     public static void fire_015_datapack_adds_and_removes_sources(GameTestHelper h) {
-        IgnitionSource glowstone = new IgnitionSource(
-                Optional.of(IgnitionSource.Type.BLOCK),
-                true,
-                List.of(new Target(ResourceLocation.withDefaultNamespace("glowstone"), false)),
-                Optional.empty(),
-                List.of(),
-                List.of());
         try {
-            IgnitionSources.overrideForTest(
-                    Map.of(TORCH, IgnitionSource.disabled(), id("test_glowstone"), glowstone));
+            IgnitionSources.overrideForTest(Map.of(
+                    TORCH,
+                    IgnitionSource.disabled(),
+                    id("test_glowstone"),
+                    blocks("glowstone"),
+                    id("test_furnace"),
+                    blocks("furnace")));
             h.assertTrue(IgnitionSources.isStanding(Blocks.GLOWSTONE.defaultBlockState()), "added: glowstone");
+            // A block with a lit property, named without a state, counts only while lit.
+            BlockState furnace = Blocks.FURNACE.defaultBlockState();
+            h.assertTrue(
+                    IgnitionSources.isStanding(furnace.setValue(AbstractFurnaceBlock.LIT, true)), "added: lit furnace");
+            h.assertFalse(
+                    IgnitionSources.isStanding(furnace.setValue(AbstractFurnaceBlock.LIT, false)), "an unlit furnace");
             h.assertFalse(IgnitionSources.isStanding(Blocks.TORCH.defaultBlockState()), "removed: torch");
             h.assertFalse(IgnitionSources.isStanding(Blocks.WALL_TORCH.defaultBlockState()), "removed: wall torch");
             h.assertTrue(IgnitionSources.isStanding(Blocks.LAVA.defaultBlockState()), "kept: lava");
@@ -147,6 +153,33 @@ public final class IgnitionTests {
         }
         h.assertTrue(IgnitionSources.isStanding(Blocks.TORCH.defaultBlockState()), "torch back after the override");
         h.assertFalse(IgnitionSources.isStanding(Blocks.GLOWSTONE.defaultBlockState()), "glowstone gone again");
+        h.succeed();
+    }
+
+    /** A block source naming these vanilla blocks, with no state. */
+    private static IgnitionSource blocks(String... ids) {
+        return new IgnitionSource(
+                Optional.of(IgnitionSource.Type.BLOCK),
+                true,
+                java.util.Arrays.stream(ids)
+                        .map(i -> new Target(ResourceLocation.withDefaultNamespace(i), false))
+                        .toList(),
+                Optional.empty(),
+                List.of(),
+                List.of());
+    }
+
+    /**
+     * Blocks in {@code #zas:ignition_sources} are standing sources, those with a {@code lit}
+     * property only while lit: here the GameTest pack's redstone ore and crying obsidian (API-053).
+     */
+    @GameTest(template = "empty")
+    public static void api_053_tagged_blocks_are_standing_sources(GameTestHelper h) {
+        BlockState ore = Blocks.REDSTONE_ORE.defaultBlockState();
+        h.assertTrue(IgnitionSources.isStanding(ore.setValue(RedStoneOreBlock.LIT, true)), "lit redstone ore");
+        h.assertFalse(IgnitionSources.isStanding(ore.setValue(RedStoneOreBlock.LIT, false)), "unlit redstone ore");
+        h.assertTrue(IgnitionSources.isStanding(Blocks.CRYING_OBSIDIAN.defaultBlockState()), "crying obsidian");
+        h.assertFalse(IgnitionSources.isStanding(Blocks.OBSIDIAN.defaultBlockState()), "obsidian, untagged");
         h.succeed();
     }
 
@@ -170,8 +203,7 @@ public final class IgnitionTests {
             IgnitionSource shipped = IgnitionSources.sources().get(REDSTONE);
             IgnitionSources.overrideForTest(Map.of(
                     REDSTONE,
-                    new IgnitionSource(
-                            shipped.type(), true, shipped.blocks(), shipped.state(), List.of(), List.of())));
+                    new IgnitionSource(shipped.type(), true, shipped.blocks(), shipped.state(), List.of(), List.of())));
             try {
                 h.setBlock(on, lever.setValue(LeverBlock.POWERED, true));
             } finally {

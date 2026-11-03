@@ -1,5 +1,6 @@
 package io.github.west3436.zas.ignition;
 
+import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -100,7 +101,7 @@ public final class IgnitionEvents {
         if (watcher != null) {
             watcher.accept(new Strike(level, at, source));
         }
-        EngineLink.ignite(level, at, source.toString()).whenComplete((r, e) -> {
+        EngineLink.ignite(level, at, new SourceId(source)).whenComplete((r, e) -> {
             Set<Long> s = IN_FLIGHT.get(level);
             if (s != null) {
                 s.remove(key);

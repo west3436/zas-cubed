@@ -86,8 +86,8 @@ public record IgnitionSource(
                             return DataResult.success(t);
                         }
                     }
-                    return DataResult.error(() ->
-                            "Unknown type '" + s + "'; expected block, spark, item_use, entity or explosion");
+                    return DataResult.error(
+                            () -> "Unknown type '" + s + "'; expected block, spark, item_use, entity or explosion");
                 },
                 Type::id);
     }

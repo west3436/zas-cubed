@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Predicate;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,7 +24,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.bus.api.EventPriority;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
@@ -40,29 +39,36 @@ import org.jetbrains.annotations.Nullable;
  * ({@code "enabled": false}) or on, such as the redstone spark, shipped off. An invalid file is
  * logged, naming the file and field, and skipped (OPS-008).
  *
- * <p>Once tags are bound ({@link TagsUpdatedEvent}, server side), the sources are resolved on the
- * server thread, before the geometry table is rebuilt from the same event: block sources become the
- * predicate the geometry table flags (Track 2's {@code Geometry.FLAG_IGNITION_SOURCE}), so the
- * engine finds standing sources itself; sparks become a table the change hook reads; items, entity
- * types and explosions are read by {@link IgnitionEvents}. Reads are safe from any thread.
+ * <p>Block sources are the states the geometry table flags as ignition sources: it is handed {@link
+ * #isStanding} once, and asks it of every state whenever it is rebuilt, after each data load once
+ * tags are bound, so the engine finds standing sources itself. The one-off sources are resolved
+ * when tags are bound ({@link TagsUpdatedEvent}, server side): sparks into a table the change hook
+ * reads; items, entity types and explosions for {@link IgnitionEvents}. Reads are safe from any
+ * thread.
  */
 public final class IgnitionSources {
     /** The kind of entry, in {@link DatapackErrors} messages. */
     static final String KIND = "ignition source";
 
     /**
-     * The resolved sources: the source id of each block state that is a standing source or a
-     * spark, by state id (null where none); the item and entity type sources; the explosion source.
+     * Blocks that are standing ignition sources, for mods (API-053): the shipped source {@code
+     * zas:tagged} names this tag, so a block in it with a boolean {@code lit} property ignites while
+     * lit, and one without always does.
+     */
+    public static final TagKey<Block> TAG =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("zas", "ignition_sources"));
+
+    /**
+     * The resolved one-off sources: the source id of each block state that is a spark, by state id
+     * (null where none); the item and entity type sources; the explosion source.
      */
     private record Resolved(
-            ResourceLocation[] standing,
             ResourceLocation[] spark,
             boolean anySpark,
             Map<Item, ResourceLocation> items,
             Map<EntityType<?>, ResourceLocation> entities,
             @Nullable ResourceLocation explosion) {
-        static final Resolved NONE =
-                new Resolved(new ResourceLocation[0], new ResourceLocation[0], false, Map.of(), Map.of(), null);
+        static final Resolved NONE = new Resolved(new ResourceLocation[0], false, Map.of(), Map.of(), null);
     }
 
     private static volatile Map<ResourceLocation, IgnitionSource> loaded = Map.of();
@@ -74,20 +80,31 @@ public final class IgnitionSources {
     /** Registers the loader and the tag listener on the game event bus. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener((AddReloadListenerEvent e) -> e.addListener(new Loader()));
-        // Before the geometry table's own rebuild on the same event, which reads the predicate.
-        gameBus.addListener(EventPriority.HIGH, IgnitionSources::onTagsUpdated);
+        gameBus.addListener(IgnitionSources::onTagsUpdated);
+        EngineLink.setStandingSources(IgnitionSources::isStanding);
     }
 
     // ---- lookups (any thread) ----
 
-    /** Whether {@code state} is a standing source: one that ignites while it is there. */
+    /**
+     * Whether {@code state} is a standing source: one that ignites while it is there. The geometry
+     * table asks this of every state when it is built, after each data load once tags are bound;
+     * it reads the sources the last load swapped in, and the tags as they are bound now, so it
+     * doesn't depend on which listener runs first.
+     */
     public static boolean isStanding(BlockState state) {
         return standingSource(state) != null;
     }
 
-    /** The standing source {@code state} is, or null. */
+    /** The standing source {@code state} is, or null: the last, in file id order, that names it. */
     public static @Nullable ResourceLocation standingSource(BlockState state) {
-        return at(resolved.standing, Block.getId(state));
+        ResourceLocation found = null;
+        for (Map.Entry<ResourceLocation, IgnitionSource> e : all().entrySet()) {
+            if (e.getValue().is(IgnitionSource.Type.BLOCK) && matches(e.getValue(), state, true)) {
+                found = e.getKey();
+            }
+        }
+        return found;
     }
 
     /**
@@ -128,7 +145,8 @@ public final class IgnitionSources {
     /**
      * Resolves the sources again with {@code files} replacing or adding to the datapacks' files by
      * id, as a datapack holding them would after {@code /reload}; an empty map goes back to the
-     * datapacks alone. The geometry table must then be rebuilt for block sources to apply. For
+     * datapacks alone. The geometry table must then be rebuilt for block sources to reach the engine
+     * ({@code Geometries.rebuildForTest}). For
      * GameTests. Server thread, since tags are read here.
      */
     public static void overrideForTest(Map<ResourceLocation, IgnitionSource> files) {
@@ -154,12 +172,10 @@ public final class IgnitionSources {
 
     /**
      * Resolves every enabled source against the bound tags, in file id order: where two sources
-     * claim the same block state, item or entity type, the later id names it. Hands the standing
-     * predicate to the geometry table.
+     * claim the same block state, item or entity type, the later id names it.
      */
     private static void rebuild() {
         int states = Block.BLOCK_STATE_REGISTRY.size();
-        ResourceLocation[] standing = new ResourceLocation[states];
         ResourceLocation[] spark = new ResourceLocation[states];
         boolean anySpark = false;
         Map<Item, ResourceLocation> items = new HashMap<>();
@@ -172,7 +188,7 @@ public final class IgnitionSources {
             }
             ResourceLocation id = e.getKey();
             switch (s.type().get()) {
-                case BLOCK -> markStates(s, id, standing);
+                case BLOCK -> {} // asked of each state by the geometry table: isStanding
                 case SPARK -> anySpark |= markStates(s, id, spark);
                 case ITEM_USE -> {
                     for (Item item : resolve(BuiltInRegistries.ITEM, Registries.ITEM, s.items())) {
@@ -188,23 +204,42 @@ public final class IgnitionSources {
                 case EXPLOSION -> explosion = id;
             }
         }
-        Resolved r = new Resolved(standing, spark, anySpark, Map.copyOf(items), Map.copyOf(entities), explosion);
-        resolved = r;
-        EngineLink.setStandingSources(standingPredicate(r));
+        resolved = new Resolved(spark, anySpark, Map.copyOf(items), Map.copyOf(entities), explosion);
     }
 
-    /** A predicate over this resolution's table alone, so a later rebuild doesn't change it. */
-    private static Predicate<BlockState> standingPredicate(Resolved r) {
-        ResourceLocation[] table = r.standing;
-        return state -> at(table, Block.getId(state)) != null;
+    /**
+     * Whether a block or spark source names {@code state}: its block is one of the source's, directly
+     * or through a tag, and the state matches the source's state predicate. Without a predicate, a
+     * block source's block with a boolean {@code lit} property counts only while lit, as {@code
+     * #zas:combustion} does; a spark's counts in every state.
+     */
+    private static boolean matches(IgnitionSource s, BlockState state, boolean litRule) {
+        boolean named = false;
+        for (Target t : s.blocks()) {
+            if (t.tag()
+                    ? state.is(TagKey.create(Registries.BLOCK, t.id()))
+                    : state.getBlockHolder().is(t.id())) {
+                named = true;
+                break;
+            }
+        }
+        if (!named) {
+            return false;
+        }
+        if (s.state().isPresent()) {
+            return s.state().get().matches(state);
+        }
+        return !litRule
+                || !(state.getBlock().getStateDefinition().getProperty("lit") instanceof BooleanProperty lit)
+                || state.getValue(lit);
     }
 
-    /** Marks the states of a block or spark source's blocks that match its state predicate; whether any did. */
+    /** Marks the states of a spark source's blocks it names; whether any. */
     private static boolean markStates(IgnitionSource s, ResourceLocation id, ResourceLocation[] table) {
         boolean any = false;
         for (Block block : resolve(BuiltInRegistries.BLOCK, Registries.BLOCK, s.blocks())) {
             for (BlockState state : block.getStateDefinition().getPossibleStates()) {
-                if (s.state().map(p -> p.matches(state)).orElse(true)) {
+                if (matches(s, state, false)) {
                     int stateId = Block.getId(state);
                     if (stateId >= 0 && stateId < table.length) {
                         table[stateId] = id;
@@ -246,8 +281,8 @@ public final class IgnitionSources {
             for (Map.Entry<ResourceLocation, JsonElement> e : new TreeMap<>(files).entrySet()) {
                 var result = IgnitionSource.CODEC.parse(JsonOps.INSTANCE, e.getValue());
                 result.error()
-                        .ifPresent(err ->
-                                DatapackErrors.skip(KIND, IgnitionSource.DIRECTORY, e.getKey(), err.message()));
+                        .ifPresent(
+                                err -> DatapackErrors.skip(KIND, IgnitionSource.DIRECTORY, e.getKey(), err.message()));
                 result.result().ifPresent(s -> out.put(e.getKey(), s));
             }
             loaded = out;
