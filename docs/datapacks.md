@@ -414,8 +414,8 @@ data/<namespace>/zas/fuel_profile/<path>.json
   | `blast_furnace.json` | blast furnace | 10 kW |
   | `fire.json` | `#minecraft:fire` | 10 kW |
 
-  `zas_atmos` ships `data/zas_atmos/zas/fuel_profile/generator.json`: the
-  fuel generator, 10 kW.
+  `zas_atmos`'s fuel generator has none: it doesn't use the air (D-35,
+  CONT-067).
 - **A modded fuel block** needs both: a place in `#zas:combustion` with a
   boolean `lit` property, and a profile. A block in the tag without a profile
   forms zones under Hardcore but uses no O₂.
@@ -468,7 +468,33 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
 | `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture, 0 to 1), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
 | `rate` | object | no | How fast it goes (CORE-046): `per_second` (k, above 0), `activation_energy` (Ea in J/mol, default 0) and `reference_temperature` (K, default 298.15). Without one it goes as far as its reactants allow in one step. Not allowed with `requires_ignition` |
 | `incomplete_combustion` | object | no | Another form, with its own `reactants`, `products` and `enthalpy`, blended in by the share of carbon that forms CO when the O₂ fraction is low (FIRE-005) |
+| `parameters` | any | no | Only for a code type: passed to it as it loads, and checked by it |
 | `sources` | object | no | Citations by field name, as for gases; the game doesn't read them |
+
+**Reaction types in code** (API-020). A mod registers a type with
+`Reactions.registerType(id, type)` during setup; a definition names it in
+`type` and gives it `parameters`:
+
+```json
+{
+  "type": "examplemod:catalytic_converter",
+  "parameters": { "efficiency": 0.8 },
+  "min_temperature": 500,
+  "catalysts": [{ "gas": "zas:oxygen" }]
+}
+```
+
+- The definition's conditions (temperatures, concentrations, catalysts,
+  ignition, flammability) still decide whether it runs; the type works out its
+  own amounts, so `reactants`, `products`, `enthalpy`, `rate` and
+  `incomplete_combustion` aren't allowed with it.
+- Its change is scaled back like any other reaction's when it asks for more
+  than there is.
+- A `type` no mod registers, or `parameters` the type rejects, skips the file
+  with an error naming the field.
+- A type that throws, or that consumes or produces a gas the server doesn't
+  define, changes nothing that step and is logged at most once a minute; the
+  simulation carries on.
 
 **How reactions run.**
 
@@ -561,7 +587,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
-| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
+| `#zas:combustion` | `#minecraft:fire` (fire, soul fire; `zas:gas_fire` is in `#minecraft:fire` but never counts here, since it burns zone gas, not a fuel), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
@@ -569,9 +595,10 @@ A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
 from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
-[config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
-`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property, and
-`zas_atmos`'s firelock joins `#zas:zone_boundary`.
+[config.md](config.md#the-preset-and-its-options)). A mod's fuel block joins
+`#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins
+`#zas:zone_boundary`. `zas_atmos`'s generator isn't in `#zas:combustion`: it
+doesn't use the air (D-35, CONT-067).
 
 ## Hazard profiles
 

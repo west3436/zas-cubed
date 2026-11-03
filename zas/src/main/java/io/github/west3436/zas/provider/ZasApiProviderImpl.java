@@ -7,6 +7,8 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.EdgeSummary;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.fire.Ignition;
+import io.github.west3436.zas.api.fire.IgnitionOutcome;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
@@ -19,6 +21,7 @@ import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -31,11 +34,16 @@ import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.persistence.AtmosPersistence;
+import io.github.west3436.zas.reaction.ServerReactions;
+import io.github.west3436.zas.reaction.StandaloneReactions;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import io.github.west3436.zas.simulation.Ignited;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -214,6 +222,66 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return service.unpin(level, owner);
     }
 
+    @Override
+    public List<BlockPos> hotspots(Level level, ZoneId zone) {
+        DimensionAtmos d = dimension(level);
+        if (d == null) {
+            return List.of();
+        }
+        long[] blocks = d.hotspots().inZone(zone.value());
+        List<BlockPos> out = new ArrayList<>(blocks.length);
+        for (long b : blocks) {
+            out.add(BlockPos.of(b));
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    @Override
+    public boolean isBurning(Level level, ZoneId zone) {
+        DimensionAtmos d = dimension(level);
+        return d != null && d.hotspots().burning(zone.value());
+    }
+
+    @Override
+    public boolean isHotspot(Level level, BlockPos pos) {
+        DimensionAtmos d = dimension(level);
+        return d != null && d.hotspots().zoneAt(pos.asLong()) != 0;
+    }
+
+    @Override
+    public CompletableFuture<Ignition> ignite(ServerLevel level, BlockPos pos, SourceId source) {
+        AtmosService service = AtmosService.current();
+        if (service == null) {
+            // No server running the scheduler yet: there are no zones to burn.
+            return CompletableFuture.completedFuture(
+                    new Ignition(IgnitionOutcome.OPEN, Optional.empty(), Optional.empty()));
+        }
+        return service.ignite(level, pos, source).thenApply(ZasApiProviderImpl::ignition);
+    }
+
+    /** The API's view of an ignition's result (API-056). */
+    static Ignition ignition(Ignited i) {
+        IgnitionOutcome outcome = switch (i.status()) {
+            case IGNITED -> IgnitionOutcome.IGNITED;
+            case BURNING -> IgnitionOutcome.BURNING;
+            case NOT_FLAMMABLE -> IgnitionOutcome.NOT_FLAMMABLE;
+            case NO_SPACE -> IgnitionOutcome.NO_SPACE;
+            case OPEN -> IgnitionOutcome.OPEN;
+            case PAUSED -> IgnitionOutcome.PAUSED;
+        };
+        boolean burns = outcome == IgnitionOutcome.IGNITED || outcome == IgnitionOutcome.BURNING;
+        return new Ignition(
+                outcome,
+                burns ? Optional.ofNullable(i.hotspot()) : Optional.empty(),
+                i.zoneId() == 0 ? Optional.empty() : Optional.of(new ZoneId(i.zoneId())));
+    }
+
+    @Override
+    public int extinguish(ServerLevel level, BlockPos from, BlockPos to) {
+        AtmosService service = AtmosService.current();
+        return service == null ? 0 : service.extinguish(level, from, to);
+    }
+
     /**
      * The tag's gases in the gas set of the server running in this JVM, or else in the set the
      * client received from its server (CORE-012). In a singleplayer game they are the same set.
@@ -244,6 +312,15 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     @Override
     public int atmosPeriodTicks() {
         return ZasServerConfig.scheduler().periodTicks();
+    }
+
+    /**
+     * The running server's reactions on a standalone mixture (API-019, FIRE-031), with the
+     * configured fire oxygen threshold; unchanged when no server runs in this JVM.
+     */
+    @Override
+    public GasMixture applyStandalone(GasMixture mixture, double seconds, boolean ignition) {
+        return StandaloneReactions.apply(mixture, seconds, ignition, ServerReactions.current(), FireConfig.settings());
     }
 
     /** A registry's tags as the API's id sets, built once per registry. */

@@ -5,7 +5,8 @@ with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). API-019 was added and accepted on
 2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68), and API-051 and API-052
 on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)); the
-owner accepted both on 2026-11-03.
+owner accepted both on 2026-11-03. API-055 to API-058, the fire API, were added
+as Draft on 2026-11-03 ([#42](https://github.com/west3436/zas-cubed/issues/42)).
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -368,7 +369,7 @@ eyes are where the server last checked them; for other entities, and before
 the first sync, with vanilla's. Still Accepted, for internals and suits.*
 
 #### API-019 · Standalone mixture reactions
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 
 The API shall offer a call that applies reactions (FIRE-001, API-020) and
 combustion (FIRE-031) to a standalone mixture of a given volume over a given
@@ -379,6 +380,15 @@ world state and may be called from any thread.
 - **Verify:** Unit tests react a test mixture at several volumes and times,
   compare it with the same reaction in a zone, and call it from a worker
   thread.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`Reactions.applyStandalone(mixture, seconds, ignition)` burns the mixture's
+ignition reactions in a 375 L-per-second parcel (FIRE-031), then runs its zone
+reactions for the time, and returns a new mixture; a gas the server doesn't
+define is carried through and only absorbs heat. Without ZAS³ it returns the
+mixture unchanged. Checked by the `api_019_` tests in `StandaloneReactionsTest`
+(zas), `ZoneReactionsTest` (engine, against a zone) and `ReactionsTest`
+(zas-api).*
 
 #### API-017 · Zone pins
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-052
@@ -507,10 +517,104 @@ The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 `zas_atmos`'s devices don't read it yet: they still step every 20 game
 ticks.*
 
+#### API-055 · Hotspot queries
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
+
+The API shall give a zone's hotspots, whether a zone is burning and whether a
+block position is a hotspot, from any thread, as of the last applied atmos
+tick. Without ZAS³ there are none.
+
+- **Rationale:** Inferred: alarms, sensors and extinguishers need to find
+  fires without reading blocks, and a hotspot is the atmosphere's fire, which
+  a vanilla fire outside any zone isn't (FIRE-019).
+- **Verify:** A Unit test checks the fallback's answers; a GameTest lights two
+  fires in one of two rooms and checks the queries for both.
+
+*2026-11-03: implemented for review ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+`Fires.hotspots(level, zone)` (positions in ascending `BlockPos.asLong` order,
+immutable), `Fires.isBurning(level, zone)` and `Fires.isHotspot(level, pos)`.
+Provider methods with defaults; the fallback finds none. Checked by
+`api_055_fallback_has_no_fire` (Unit) and `api_055_hotspot_queries` (GameTest).*
+
+#### API-056 · Ignition through the API
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-014, API-016, API-045 · Depends: API-009
+
+The API shall let a mod ignite the gas at a block position from the server
+thread. The ignition is applied in the next atmos tick and its result,
+delivered as in API-016, says whether a fire started or already burned there
+(with its hotspot and zone), the zone's gas won't burn, there is no space for
+a fire (API-058), the position is in the open, or the region is paused.
+Without ZAS³ the result is at once that ZAS³ is absent.
+
+- **Rationale:** Inferred: ignition sources in other mods (FIRE-014), and
+  ZAS³'s own content, need one way in that says what happened.
+- **Verify:** A Unit test checks the fallback and the result's rules; a
+  GameTest ignites in open air, in air, in hydrogen and next to the fire, and
+  checks each result.
+
+*2026-11-03: implemented for review ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+`Fires.ignite(level, pos, source)` returns a `CompletableFuture<Ignition>`:
+an `IgnitionOutcome` (`IGNITED`, `BURNING`, `NOT_FLAMMABLE`, `NO_SPACE`, `OPEN`,
+`PAUSED` or `ABSENT`), an `Optional` hotspot present exactly for `IGNITED` and
+`BURNING`, and an `Optional` zone. The future completes once the tick's gas
+fire block is placed. It is FIRE-014's entry point, the same one that
+`AtmosService.ignite` gives ZAS³'s own code. Checked by
+`api_056_provider_fire_methods_have_defaults` (Unit) and
+`api_056_ignite_through_the_api` (GameTest).*
+
+#### API-057 · Extinguishing
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: CONT-037, FIRE-018, FIRE-019, API-045 · Depends: API-009
+
+The API shall let a mod put out every fire in a box of at most 4,096 blocks,
+from the server thread: the gas fires and vanilla fire blocks in it go at once,
+and their hotspots with the next atmos tick. The zone's gas is unchanged.
+
+- **Rationale:** Inferred: the fire extinguisher (CONT-037) and other mods'
+  suppression need to put fires out, and a fire block removed by hand could
+  be placed again by the atmos tick already running.
+- **Verify:** A GameTest puts out a gas fire and a vanilla fire in a burning
+  room and checks the zone stops burning with its gas kept and an oversized
+  box is refused; another sprays a box while the tick that ignites it is in
+  flight and checks no gas fire is placed there.
+
+*2026-11-03: implemented for review ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+`Fires.extinguish(level, from, to)` returns how many fire blocks it removed,
+in loaded chunks; a box over `Fires.MAX_EXTINGUISH_BLOCKS` throws. A gas fire
+that the batch in flight when it is called asks for inside the box isn't
+placed; the next batch has seen the spray. A zone hot enough lights again by
+itself (FIRE-010). The fire extinguisher (CONT-037) calls it. Checked by
+`api_057_extinguish_puts_out_fires` and
+`api_057_extinguish_stops_a_fire_in_flight`.*
+
+#### API-058 · No space for a fire
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-014, FIRE-018 · Depends: API-056
+
+An ignition in a flammable zone shall report that there is no space when
+neither the position nor any neighbour in the zone could hold a fire block,
+naming the zone and no hotspot, and change nothing. A position can hold a fire
+block when it is plain air with no fire and no gas fire refused there in the
+last 30 atmos ticks.
+
+- **Rationale:** Inferred: every hotspot is a block (FIRE-018), so a zone
+  whose space is all partial blocks, such as the space over a slab, can't
+  catch fire from an ignition, and the caller needs to know why.
+- **Verify:** A Unit test checks an ignition names a hotspot only when a fire
+  burns; a GameTest ignites a hydrogen-filled space over a bottom slab and
+  checks the result and that no block changed.
+
+*2026-11-03: implemented for review ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+`IgnitionOutcome.NO_SPACE`. One gap is left for review: a non-air block whose
+geometry the palette shares with air (one with no collision and no flags, such
+as a flower) counts as air to the engine, so an ignition there reports
+`IGNITED`, the server refuses the gas fire block, the hotspot is dropped at the
+next tick and the position isn't tried for 30 ticks.
+Checked by `api_058_ignition_names_a_hotspot_only_when_burning` (Unit) and
+`api_058_no_space` (GameTest).*
+
 ## Extension points
 
 #### API-020 · Code-defined reactions
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-001
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-001
 
 The API shall let mods register reaction types implemented in code, which
 datapack reaction definitions can reference. Datapack gases and reactions
@@ -521,6 +625,15 @@ themselves are CORE-010 and FIRE-001.
   §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
 - **Verify:** A GameTest registers a test reaction type, references it from a
   datapack, and checks it runs in a zone.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`Reactions.registerType(id, type)` registers a `ReactionType`; a definition
+names it in `type` and passes it `parameters` ([datapacks.md](../datapacks.md#reactions)).
+The definition's conditions still apply, and the type's change is scaled to
+what the zone has (FIRE-002). A type that throws or asks for a gas the server
+doesn't define changes nothing and is logged at most once a minute (§3.6).
+Checked by `api_020_a_code_reaction_type_runs_in_a_zone` (GameTest) and the
+`api_020_` tests in `CodeTypesTest` (zas) and `ReactionSetTest` (engine).*
 
 #### API-021 · Gas handler capability
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-12
@@ -650,7 +763,7 @@ The API shall raise events when a zone is created, merged, split, breached
   fires once.
 
 #### API-031 · Fire events
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 The API shall raise events on fire ignition and extinguishing.
 
@@ -658,6 +771,18 @@ The API shall raise events on fire ignition and extinguishing.
   and stopping.
 - **Verify:** A GameTest lights and starves a fire and checks both events
   fire.
+
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)).
+`FireIgnitedEvent(level, zone, hotspot)` when a zone's first hotspot appears,
+and `FireExtinguishedEvent(level, zone, lastHotspot)` when its last one goes,
+each once per zone, on `NeoForge.EVENT_BUS` on the server thread when the atmos
+tick is applied, after its gas fire blocks are placed or removed. A new gas
+fire's zone catches fire the tick after the ignition, when the tick sees the
+block. Events go by zone id, so a fire that a merge or split carries into
+another zone goes out in the old one and catches in the new one. The
+`api_031_fire_events_fire_on_ignition_and_going_out` GameTest lights a
+hydrogen room, empties it, and checks each event fires once, on the server
+thread, with its block already changed.*
 
 #### API-033 · Hazard tick events
 `Should` · `R1` · `Accepted` · Verify: GameTest

@@ -175,6 +175,19 @@ public final class AtmosService {
     }
 
     /**
+     * Queues an ignition at a position for the next atmos tick (FIRE-014): a flammable zone in the
+     * position's cell or a neighbouring one starts burning there.
+     */
+    public CompletableFuture<Ignited> ignite(ServerLevel level, BlockPos pos, SourceId source) {
+        return dimensionFor(level).ignite(pos, source);
+    }
+
+    /** Puts out every fire block in a box of a level, now (API-057). */
+    public int extinguish(ServerLevel level, BlockPos from, BlockPos to) {
+        return dimensionFor(level).extinguish(from, to);
+    }
+
+    /**
      * Queues a pin of the zone at sub-cell {@code sub} of a position, or with -1 its largest cell,
      * for the next atmos tick (API-017, API-050).
      */

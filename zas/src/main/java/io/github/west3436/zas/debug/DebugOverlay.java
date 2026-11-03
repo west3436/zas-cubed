@@ -245,8 +245,24 @@ public final class DebugOverlay {
         }
         DebugOverlayPayload.Probe probe =
                 DebugLayer.CELLS.in(layers) ? probe(level, eyes) : DebugOverlayPayload.Probe.NONE;
-        // Hotspots are a FIRE concept (R1): nothing produces them yet, so the list stays empty.
-        List<DebugOverlayPayload.Hotspot> hotspots = List.of();
+        // Hotspots (CLIENT-013), each labelled with its zone's published temperature.
+        List<DebugOverlayPayload.Hotspot> hotspots = new ArrayList<>();
+        if (DebugLayer.HOTSPOTS.in(layers)) {
+            for (DebugView.HotspotEntry h : view.hotspots()) {
+                if (region.contains(h.block())) {
+                    if (hotspots.size() >= MAX_ENTRIES) {
+                        truncated = true;
+                        break;
+                    }
+                    ZoneView z = published == null ? null : published.zone(h.zone());
+                    hotspots.add(new DebugOverlayPayload.Hotspot(
+                            dx(h.block(), origin),
+                            dy(h.block(), origin),
+                            dz(h.block(), origin),
+                            z == null ? Float.NaN : (float) z.temperature()));
+                }
+            }
+        }
         return new DebugOverlayPayload(
                 layers,
                 level.dimension().location(),

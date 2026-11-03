@@ -73,6 +73,7 @@ public final class AtmosCreativeTab {
         });
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
+        out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());
         out.accept(AtmosItems.AIR_TANK.get());
         out.accept(AtmosItems.EMPTY_TANK.get());

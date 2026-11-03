@@ -337,7 +337,7 @@ public final class PersistenceTests {
 
     /**
      * Edges aren't saved; they are rebuilt when the zones are, and start awake (DATA-009). Hotspots
-     * don't exist before FIRE (R1), so there is nothing of them to save or rebuild yet.
+     * are {@code HotspotTests.data_009_hotspots_rebuilt_after_reload}.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void data_009_edges_rebuilt(GameTestHelper h) {

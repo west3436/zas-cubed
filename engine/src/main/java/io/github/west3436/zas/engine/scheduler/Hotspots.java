@@ -6,7 +6,6 @@ import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.fire.FireSettings;
-import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.reaction.Flammability;
 import io.github.west3436.zas.engine.reaction.ReactionResult;
 import io.github.west3436.zas.engine.reaction.ReactionSet;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.LongConsumer;
 
 /**
  * The hotspot phase (phase 6 of the atmos tick, architecture §3.2 and §5's fire row): per-cell
@@ -103,6 +103,22 @@ final class Hotspots {
     private FireSettings fireSettings = FireSettings.DEFAULT;
     private List<FireIntent> intents = new ArrayList<>();
 
+    /**
+     * Each zone's flammability this tick, by zone id: worked out once and shared by ignitions,
+     * autoignition, burning and spread, and dropped for a zone when it burns. Zones don't change
+     * otherwise during the phase.
+     */
+    private final Map<Long, Flammability> flammable = new HashMap<>();
+
+    private boolean zonedFound;
+    private final LongConsumer zonedCheck = this::checkZoned;
+
+    private void checkZoned(long cell) {
+        if (!zonedFound && graph.zoneOf(cell) != null) {
+            zonedFound = true;
+        }
+    }
+
     Hotspots(ZoneGraph graph, CellSpace space, SectionMirror mirror, GeometryPalette palette) {
         this.graph = graph;
         this.space = space;
@@ -174,6 +190,7 @@ final class Hotspots {
         this.fireSettings = settings.fire();
         this.intents = out;
         burningBefore = burning;
+        flammable.clear();
 
         sync();
 
@@ -184,7 +201,8 @@ final class Hotspots {
         long[] flagged = mirror.flagged();
         for (long block : flagged) {
             int id = mirror.geometryAt(block);
-            if (id >= 0 && source[id]) {
+            // Most standing sources are nowhere near a zone: skip them before the per-face work.
+            if (id >= 0 && source[id] && zonedNear(block)) {
                 ignite(block);
             }
         }
@@ -277,7 +295,6 @@ final class Hotspots {
         }
         OpOutcome.IgnitionStatus status = OpOutcome.IgnitionStatus.OPEN;
         Zone at = null;
-        Map<Long, Boolean> flammable = new HashMap<>();
         for (int k = 0; k <= faces.length; k++) {
             long here = k == 0 ? block : offset(block, faces[k - 1]);
             List<Long> cells = new ArrayList<>(2);
@@ -298,8 +315,7 @@ final class Hotspots {
                 if (h != null) {
                     return new Ignition(OpOutcome.IgnitionStatus.BURNING, here, z);
                 }
-                if (!flammable.computeIfAbsent(
-                        z.id(), id -> flammability(z.mixture()).flammable())) {
+                if (!flammability(z).flammable()) {
                     if (rank(status) < rank(OpOutcome.IgnitionStatus.NOT_FLAMMABLE)) {
                         status = OpOutcome.IgnitionStatus.NOT_FLAMMABLE;
                         at = z;
@@ -344,8 +360,7 @@ final class Hotspots {
             if (z.isPaused() || withFire.contains(z.id())) {
                 continue;
             }
-            GasMixture m = z.mixture();
-            if (!flammability(m).ignitesAt(m.temperature())) {
+            if (!flammability(z).ignitesAt(z.mixture().temperature())) {
                 continue;
             }
             long[] lowest = {Long.MAX_VALUE};
@@ -385,14 +400,14 @@ final class Hotspots {
             if (z.isPaused()) {
                 continue;
             }
-            GasMixture m = z.mixture();
-            if (!flammability(m).flammable()) {
+            if (!flammability(z).flammable()) {
                 if (h.gas()) {
                     goOut(h, z.id());
                 }
                 continue;
             }
-            ReactionResult r = reactions.burn(m, litres, true, fireSettings);
+            ReactionResult r = reactions.burn(z.mixture(), litres, true, fireSettings);
+            flammable.remove(z.id());
             if (r.reacted()) {
                 graph.ledger().record(LedgerCategory.REACTION, r.moles());
             }
@@ -402,9 +417,30 @@ final class Hotspots {
         return burned;
     }
 
-    /** Whether a zone's gas can burn, and its autoignition point, with this tick's reactions. */
-    private Flammability flammability(GasMixture m) {
-        return reactions.isEmpty() ? Flammability.NONE : reactions.flammability(m, fireSettings);
+    /**
+     * Whether a zone's gas can burn, and its autoignition point, with this tick's reactions; cached
+     * for the tick until the zone burns.
+     */
+    private Flammability flammability(Zone z) {
+        Flammability f = flammable.get(z.id());
+        if (f == null) {
+            f = reactions.isEmpty() ? Flammability.NONE : reactions.flammability(z.mixture(), fireSettings);
+            flammable.put(z.id(), f);
+        }
+        return f;
+    }
+
+    /** Whether a position or one of its six neighbours has a zoned cell. */
+    private boolean zonedNear(long block) {
+        zonedFound = false;
+        space.forEachCellAt(block, zonedCheck);
+        for (Face f : Face.values()) {
+            if (zonedFound) {
+                return true;
+            }
+            space.forEachCellAt(offset(block, f), zonedCheck);
+        }
+        return zonedFound;
     }
 
     private void goOut(Hotspot h, long zoneId) {
@@ -419,7 +455,6 @@ final class Hotspots {
         if (!(chance > 0)) {
             return;
         }
-        Map<Long, Boolean> flammable = new HashMap<>();
         for (long[] b : burned) {
             long from = b[0];
             long zoneId = b[2];
@@ -439,8 +474,7 @@ final class Hotspots {
                 if (z == null || z.isPaused() || !placeable(to)) {
                     continue;
                 }
-                if (!flammable.computeIfAbsent(
-                        z.id(), id -> flammability(z.mixture()).flammable())) {
+                if (!flammability(z).flammable()) {
                     continue;
                 }
                 if (draw(seed, tick, zoneId, from, to) < chance) {
@@ -508,7 +542,7 @@ final class Hotspots {
     }
 
     /** Feeds the hotspots into a state hash (CORE-044). */
-    void hash(java.util.function.LongConsumer h) {
+    void hash(LongConsumer h) {
         for (Hotspot s : byBlock.values()) {
             h.accept(s.block());
             h.accept(s.gas() ? 1 : 0);

@@ -4,6 +4,8 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.fire.Ignition;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
@@ -12,6 +14,7 @@ import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -285,5 +288,110 @@ public interface ZasApiProvider {
     @AnyThread
     default int atmosPeriodTicks() {
         return Atmospheres.DEFAULT_PERIOD_TICKS;
+    }
+
+    /**
+     * Applies the server's reactions to a standalone mixture (API-019, FIRE-031), for {@link
+     * io.github.west3436.zas.api.reaction.Reactions#applyStandalone}.
+     *
+     * <p>The default is the fallback's answer: the mixture unchanged, as there are no reactions. It
+     * is there for the same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param mixture the gas
+     * @param seconds the time step, already checked
+     * @param ignition whether an ignition source acts on the gas
+     * @return the gas after the step
+     */
+    @AnyThread
+    default GasMixture applyStandalone(GasMixture mixture, double seconds, boolean ignition) {
+        return mixture;
+    }
+
+    /**
+     * The hotspots of a zone, in ascending order of {@link BlockPos#asLong} (API-055).
+     *
+     * <p>The default is the fallback's answer: none, as nothing burns. It is there so that a
+     * provider built against an API from before this method still answers when a newer API is
+     * loaded (architecture §6.2).
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level
+     * @param zone the zone
+     * @return an immutable list
+     */
+    @AnyThread
+    default List<BlockPos> hotspots(Level level, ZoneId zone) {
+        return List.of();
+    }
+
+    /**
+     * Whether a zone has a hotspot (API-055).
+     *
+     * <p>The default is the fallback's answer, as for {@link #hotspots}.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level
+     * @param zone the zone
+     * @return true if it burns
+     */
+    @AnyThread
+    default boolean isBurning(Level level, ZoneId zone) {
+        return false;
+    }
+
+    /**
+     * Whether a position is a hotspot (API-055).
+     *
+     * <p>The default is the fallback's answer, as for {@link #hotspots}.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level
+     * @param pos the position
+     * @return true if a fire burns gas there
+     */
+    @AnyThread
+    default boolean isHotspot(Level level, BlockPos pos) {
+        return false;
+    }
+
+    /**
+     * Queues an ignition at a position (API-056).
+     *
+     * <p>The default is the fallback's answer: {@link Ignition#ABSENT} at once. It is there for the
+     * same reason as {@link #hotspots}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param pos the position, immutable
+     * @param source what ignites
+     * @return a future that completes on the server thread once the ignition is applied
+     */
+    @ServerThread
+    default CompletableFuture<Ignition> ignite(ServerLevel level, BlockPos pos, SourceId source) {
+        return CompletableFuture.completedFuture(Ignition.ABSENT);
+    }
+
+    /**
+     * Puts out the fire blocks in a box, now (API-057).
+     *
+     * <p>The default is the fallback's answer: nothing, as no fire is ZAS³'s. It is there for the
+     * same reason as {@link #hotspots}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param from one corner, immutable
+     * @param to the opposite corner, immutable; the box is already checked
+     * @return how many fire blocks were removed
+     */
+    @ServerThread
+    default int extinguish(ServerLevel level, BlockPos from, BlockPos to) {
+        return 0;
     }
 }

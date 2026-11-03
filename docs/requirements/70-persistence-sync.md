@@ -32,7 +32,7 @@ Saving and reloading shall preserve, to a relative error of 1e-9 per gas:
 exist yet, so this stays Accepted.*
 
 #### DATA-009 · Derived state is rebuilt
-`Must` · `R0` · `Accepted` · Verify: Inspect, GameTest · Trace: D-54
+`Must` · `R0` · `Implemented` · Verify: Inspect, GameTest · Trace: D-54
 
 Edges, seal masks, sub-cell shapes and hotspots shall not be saved; they are
 rebuilt on load. Edges start awake and sleep again once equivalent (CORE-066).
@@ -43,6 +43,10 @@ Hotspots are rebuilt from fire blocks, since every hotspot is a vanilla fire or
   stale.
 - **Verify:** Inspect the saved format; a GameTest checks edges and hotspots
   return after a reload.
+
+*2026-11-03: Implemented. Hotspots are rebuilt from their blocks as the
+sections are mirrored again ([#42](https://github.com/west3436/zas-cubed/issues/42)); `data_009_edges_rebuilt` and
+`data_009_hotspots_rebuilt_after_reload` check edges and hotspots.*
 
 #### DATA-002 · Chunk-aligned storage
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-030, D-43, D-54
