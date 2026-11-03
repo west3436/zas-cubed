@@ -57,7 +57,12 @@ public record GasOp(
         /** Adds {@link #energy()} joules of heat at the target (API-013); it moves no gas. */
         ADD_HEAT,
         /** Removes up to {@link #energy()} joules of heat at the target (API-013); it moves no gas. */
-        REMOVE_HEAT;
+        REMOVE_HEAT,
+        /**
+         * Ignites a flammable zone in the target's cell or a neighbouring cell (FIRE-014): a hotspot
+         * starts there, in the hotspot phase. It moves no gas itself and never forms a zone.
+         */
+        IGNITE;
 
         /** Whether the kind is a pin or an unpin, which moves no gas. */
         public boolean isPin() {
@@ -139,6 +144,11 @@ public record GasOp(
         return new GasOp(seq, Kind.UNPIN, 0, new double[0], 0, LedgerCategory.API, false, owner, -1);
     }
 
+    /** An ignition at a position by {@code source} (FIRE-014). */
+    public static GasOp ignite(long seq, long block, String source) {
+        return new GasOp(seq, Kind.IGNITE, block, new double[0], 0, LedgerCategory.REACTION, false, source, -1);
+    }
+
     /** An API removal. */
     public static GasOp remove(long seq, long block, double[] moles, String source) {
         return new GasOp(seq, Kind.REMOVE, block, moles, 0, LedgerCategory.API, true, source);
@@ -203,6 +213,10 @@ public record GasOp(
     public String toString() {
         if (kind == Kind.UNPIN) {
             return "GasOp#" + seq + "[UNPIN " + source + "]";
+        }
+        if (kind == Kind.IGNITE) {
+            return "GasOp#" + seq + "[IGNITE at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block) + ","
+                    + SectionKeys.blockZ(block) + ", " + source + "]";
         }
         if (kind.isHeat()) {
             return "GasOp#" + seq + "[" + kind + " at " + SectionKeys.blockX(block) + "," + SectionKeys.blockY(block)

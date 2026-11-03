@@ -18,9 +18,46 @@ import java.util.Objects;
  *     Result#components()}, or -1 if it touched no zone
  * @param energy for an addition of heat, the joules taken; for a removal, the joules delivered
  *     (API-013); otherwise 0
+ * @param ignition for an ignition ({@link GasOp.Kind#IGNITE}), what it did; otherwise null
  */
 public record OpOutcome(
-        long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component, double energy) {
+        long seq,
+        Outcome outcome,
+        long zoneId,
+        double[] moved,
+        double temperature,
+        int component,
+        double energy,
+        Ignition ignition) {
+
+    /**
+     * What an ignition did (FIRE-014).
+     *
+     * @param status what happened
+     * @param block the hotspot's position ({@link io.github.west3436.zas.engine.SectionKeys#block})
+     *     for {@link IgnitionStatus#IGNITED} and {@link IgnitionStatus#BURNING}; otherwise 0
+     */
+    public record Ignition(IgnitionStatus status, long block) {
+        public Ignition {
+            Objects.requireNonNull(status, "status");
+        }
+    }
+
+    /** What an ignition did. */
+    public enum IgnitionStatus {
+        /** A new hotspot burns at {@link Ignition#block()}. */
+        IGNITED,
+        /** A hotspot already burned at the position or a neighbour, at {@link Ignition#block()}. */
+        BURNING,
+        /** A zone was there, but its gas wouldn't burn (FIRE-003, FIRE-030). */
+        NOT_FLAMMABLE,
+        /** A flammable zone was there, but no position next to the source could hold a fire block. */
+        NO_SPACE,
+        /** No zone was there: the position and its neighbours are open air or solid. */
+        OPEN,
+        /** Only paused zones or unresolved regions were there (GEO-030). */
+        PAUSED
+    }
 
     /** Where an operation's gas went or came from. */
     public enum Outcome {
@@ -43,6 +80,12 @@ public record OpOutcome(
         moved = moved.clone();
     }
 
+    /** The outcome of an operation that isn't an ignition. */
+    public OpOutcome(
+            long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component, double energy) {
+        this(seq, outcome, zoneId, moved, temperature, component, energy, null);
+    }
+
     /** The outcome of an operation that moves no heat. */
     public OpOutcome(long seq, Outcome outcome, long zoneId, double[] moved, double temperature, int component) {
         this(seq, outcome, zoneId, moved, temperature, component, 0);
@@ -50,7 +93,7 @@ public record OpOutcome(
 
     /** The same outcome in exchange component {@code c}. */
     public OpOutcome inComponent(int c) {
-        return new OpOutcome(seq, outcome, zoneId, moved, temperature, c, energy);
+        return new OpOutcome(seq, outcome, zoneId, moved, temperature, c, energy, ignition);
     }
 
     @Override
@@ -72,7 +115,8 @@ public record OpOutcome(
                 && Arrays.equals(moved, r.moved)
                 && Double.compare(temperature, r.temperature) == 0
                 && component == r.component
-                && Double.compare(energy, r.energy) == 0;
+                && Double.compare(energy, r.energy) == 0
+                && Objects.equals(ignition, r.ignition);
     }
 
     @Override
@@ -84,6 +128,7 @@ public record OpOutcome(
     public String toString() {
         return "OpOutcome#" + seq + "[" + outcome + (zoneId != 0 ? " " + zoneId : "") + ", " + Arrays.toString(moved)
                 + " at " + temperature + " K" + (energy != 0 ? ", " + energy + " J" : "")
-                + (component >= 0 ? ", component " + component : "") + "]";
+                + (component >= 0 ? ", component " + component : "") + (ignition != null ? ", " + ignition : "")
+                + "]";
     }
 }
