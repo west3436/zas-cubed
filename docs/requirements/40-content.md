@@ -11,7 +11,7 @@ CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
 owner, accepted and implemented the same day. CONT-115 to CONT-124, the
-central atmospherics controller, were added as Draft on 2026-11-03 (D-75).
+central atmospherics controller, were added and accepted on 2026-11-03 (D-75).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -1886,7 +1886,7 @@ powers its own parts (CONT-068), and still takes FE from the blocks next to
 it (CONT-062).
 
 #### CONT-115 · Central atmospherics controller
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75
 
 A central atmospherics controller shall take FE from any block next to it that
 exposes the FE capability into an internal 100,000 FE buffer, and pay its own
@@ -1898,8 +1898,10 @@ draw of 5 FE/t from it.
 - **Verify:** A GameTest checks the central controller fills from an adjacent
   generator up to 100,000 FE and pays its 5 FE/t.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-116 · Claiming area air controllers
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
 
 A central atmospherics controller shall claim every area air controller in
 the same dimension, at any height, within its range of 10 chunks of its own
@@ -1914,8 +1916,10 @@ controller belongs to at most one central controller.
   range, and one already claimed by a second central controller, and checks
   only the unclaimed ones in range are claimed.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-117 · Central controller range
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
 
 A central atmospherics controller's range shall be set in its GUI, from 1
 chunk up to `[central_controller] max_range_chunks` (default 10), and start
@@ -1928,8 +1932,10 @@ reaches.
   controller now outside it is released, and that the range can't be set above
   the server's maximum.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-118 · Moving an area air controller to another central controller
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
 
 The multitool shall move an area air controller to another central
 controller whose range it's in. The area air controller's GUI shall name the
@@ -1941,8 +1947,10 @@ central controller it belongs to, if any.
   from one central controller to another and checks the new one powers it.
   Manual check that its GUI names the central controller.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-119 · Removing a central controller
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
 
 Removing a central atmospherics controller shall release its area air
 controllers, which another central controller in range may then claim.
@@ -1951,8 +1959,10 @@ controllers, which another central controller in range may then claim.
 - **Verify:** A GameTest breaks a central controller and checks a second one
   in range claims its area air controllers.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-120 · Central controller power feed
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-062, CONT-115, CONT-121
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-062, CONT-115, CONT-121
 
 Each atmos tick, a central atmospherics controller shall first pay, from its
 buffer, each claimed area air controller's shortfall: the part of that tick's
@@ -1973,8 +1983,10 @@ lost in sending.
   to it runs its vent from a central controller; that one with a generator
   next to it draws only its shortfall; and that spare intake fills its buffer.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-121 · Zone power priority
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
 
 Each area air controller a central atmospherics controller claims shall have
 a zone power priority, set in the central controller's GUI: Critical, Normal
@@ -1989,8 +2001,10 @@ controllers it can't pay run on their own buffer, or stop.
   Low zone and checks the Critical zone's vent keeps running while the Low
   zone's stops once its buffer is empty.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-122 · Central controller keeps its chunks loaded
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
 
 While `[central_controller] force_load` is true (the default), a central
 atmospherics controller shall keep its own chunk and the 8 around it loaded
@@ -2005,8 +2019,10 @@ and ticking.
   and are released when the central controller is removed or the option is
   false.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-123 · Central controller GUI
-`Should` · `R1` · `Draft` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
+`Should` · `R1` · `Accepted` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
 
 The central atmospherics controller's GUI shall list each area air controller
 it has claimed, with its position, its zone's pressure and temperature, its
@@ -2019,8 +2035,10 @@ last readings.
 - **Verify:** Manual check of the list against the area air controllers in
   range, with one in an unloaded chunk.
 
+*2026-11-03: Accepted by the owner as written.*
+
 #### CONT-124 · Remote control from the central controller
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
 From the central atmospherics controller's GUI, a player shall be able to
 open the GUI of any loaded area air controller it has claimed and do anything
@@ -2032,6 +2050,8 @@ if the player were there (CONT-074).
 - **Verify:** A GameTest changes a claimed area air controller's mode through
   the central controller and checks it takes effect, and that a controller in
   an unloaded chunk can't be opened.
+
+*2026-11-03: Accepted by the owner as written.*
 
 ## R1 / R2 split
 
