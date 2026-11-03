@@ -1178,7 +1178,7 @@ load. Detection is change-driven; nothing scans the world:
 
 A position whose last ignition hasn't been applied isn't sent again, so an
 explosion chain or a redstone clock queues at most one per position per atmos
-tick. One-off sources go through `AtmosService.ignite`, which completes when
+tick. One-off sources go through `Fires.ignite` (API-056), which completes when
 the ignition is applied. Fire and soul fire are standing sources, but not
 `zas:gas_fire`, though it is in `#minecraft:fire`: a gas fire is a hotspot
 already, and spreads by FIRE-016's odds.
