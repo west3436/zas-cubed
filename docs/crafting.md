@@ -164,6 +164,7 @@ in any arrangement.
 | Makes | Stage | Grid | Ingredients |
 |---|---|---|---|
 | Area air controller | Workshop | Shapeless | electronics, console screen, scanning module, subspace ansible, subspace transmitter, capacitor, iron ingot |
+| Central atmospherics controller | Workshop | `TTT` / `AFX` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `T` console screen, `A` subspace ansible, `X` subspace transmitter |
 | Fire alarm | Workshop | Shapeless | electronics, scanning module, note block, red dye |
 | Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
 | Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |

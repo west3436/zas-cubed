@@ -10,7 +10,8 @@ were dropped (D-68), and portables moved to batteries (D-69): CONT-018,
 CONT-042, CONT-062, CONT-068 and CONT-069 changed, CONT-063 and CONT-097 to
 CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
-owner, accepted and implemented the same day.
+owner, accepted and implemented the same day. CONT-115 to CONT-124, the
+central atmospherics controller, were added as Draft on 2026-11-03 (D-75).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -1590,6 +1591,7 @@ Devices shall draw these amounts by default:
 | Recharger (while charging) | 40 |
 | Electrolyzer | 80 |
 | Area air controller (base) | 5 |
+| Central atmospherics controller (base) | 5 |
 | Fire alarm | 1 |
 | Firelock | 0 |
 
@@ -1615,6 +1617,8 @@ every device's draw is.*
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing
 vent, out of a real generator's FE, and an ordered-off vent draws nothing.
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-03: added the central atmospherics controller (CONT-115, D-75).*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -1702,6 +1706,10 @@ the FE capability of each of its six neighbours, and it also takes FE that
 cables push. It gives none out
 (`cont_062_buffer_fills_from_fe_blocks_next_to_it`).*
 
+*2026-11-03: a central atmospherics controller that has claimed this
+controller pays what its buffer can't (CONT-120, D-75). The blocks next to it
+still pay first, so this requirement is unchanged.*
+
 #### CONT-068 · Wireless feed to parts
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-34, D-68
 
@@ -1780,6 +1788,10 @@ parts). This stays Accepted until it is checked with the vent and scrubber.*
 *2026-11-02: With the real vent ([#160](https://github.com/west3436/zas-cubed/pull/160)): a controller with FE for
 itself and the vent but not a pump powers the vent and leaves the pump off
 (`StationTests.cont_069_a_real_vent_runs_only_on_a_controller`). This stays Accepted until it is checked with the scrubber.*
+
+*2026-11-03: a central atmospherics controller ranks zones above this
+(CONT-121, D-75): it decides how much FE each area air controller gets, and
+each area air controller then powers its parts in this order.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
@@ -1864,13 +1876,172 @@ outlasts its single game tick.*
 #### CONT-099 · Cables connect to FE blocks
 `Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable; the area air controller takes FE from any block next to it (CONT-062), 2026-11-01.
 
+## Central atmospherics controller
+
+Decided in D-75. Area air controllers are mounted on walls, so an FE block or
+cable next to each one is hard to hide. The central atmospherics controller
+is a console that powers the area air controllers around it from one place,
+shows their status and controls them from there. An area air controller still
+powers its own parts (CONT-068), and still takes FE from the blocks next to
+it (CONT-062).
+
+#### CONT-115 · Central atmospherics controller
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75
+
+A central atmospherics controller shall take FE from any block next to it that
+exposes the FE capability into an internal 100,000 FE buffer, and pay its own
+draw of 5 FE/t from it.
+
+- **Rationale:** Decision: D-75. It fills as an area air controller does
+  (CONT-062). The buffer is one battery's worth (CONT-111) and ten area air
+  controllers' buffers, a starting value for playtesting.
+- **Verify:** A GameTest checks the central controller fills from an adjacent
+  generator up to 100,000 FE and pays its 5 FE/t.
+
+#### CONT-116 · Claiming area air controllers
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+
+A central atmospherics controller shall claim every area air controller in
+the same dimension, at any height, within its range of 10 chunks of its own
+chunk (CONT-117), that no other central controller has claimed. An area air
+controller belongs to at most one central controller.
+
+- **Rationale:** Decision: D-75. Range is a square of chunks: the larger of
+  the X and Z chunk distances. Claiming only unclaimed controllers stops two
+  overlapping central controllers, or a neighbour's base in multiplayer, from
+  fighting over one.
+- **Verify:** A GameTest places area air controllers inside and outside the
+  range, and one already claimed by a second central controller, and checks
+  only the unclaimed ones in range are claimed.
+
+#### CONT-117 · Central controller range
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+
+A central atmospherics controller's range shall be set in its GUI, from 1
+chunk up to `[central_controller] max_range_chunks` (default 10), and start
+at that maximum. Lowering it releases the area air controllers it no longer
+reaches.
+
+- **Rationale:** Decision: D-75. The server sets the ceiling; a player may
+  only lower it.
+- **Verify:** A GameTest lowers a central controller's range and checks a
+  controller now outside it is released, and that the range can't be set above
+  the server's maximum.
+
+#### CONT-118 · Moving an area air controller to another central controller
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+
+The multitool shall move an area air controller to another central
+controller whose range it's in. The area air controller's GUI shall name the
+central controller it belongs to, if any.
+
+- **Rationale:** Decision: D-75. It's the same tool as the links to parts
+  (CONT-042, D-68).
+- **Verify:** A GameTest uses the multitool to move an area air controller
+  from one central controller to another and checks the new one powers it.
+  Manual check that its GUI names the central controller.
+
+#### CONT-119 · Removing a central controller
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+
+Removing a central atmospherics controller shall release its area air
+controllers, which another central controller in range may then claim.
+
+- **Rationale:** Decision: D-75.
+- **Verify:** A GameTest breaks a central controller and checks a second one
+  in range claims its area air controllers.
+
+#### CONT-120 · Central controller power feed
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-062, CONT-115, CONT-121
+
+Each atmos tick, a central atmospherics controller shall first pay, from its
+buffer, each claimed area air controller's shortfall: the part of that tick's
+draw (its own and its parts', CONT-065) that its own buffer, filled from the
+blocks next to it (CONT-062), can't pay. It pays them in zone priority order
+(CONT-121). Then the FE it took in that tick and didn't spend is split evenly
+among the claimed area air controllers whose buffers have room. Nothing is
+lost in sending.
+
+- **Rationale:** Decision: D-75. Paying the tick's demand first stops a
+  high-priority zone filling its reserve while a lower zone's vents stop.
+  Local power is used first, so an outpost can run on its own generator and
+  still report to the central controller. Only the tick's spare intake tops up
+  the area air controllers' buffers, so the central controller's own buffer
+  stays a reserve for demand. Each area air controller then powers its parts
+  by CONT-064.
+- **Verify:** A GameTest checks an area air controller with no FE block next
+  to it runs its vent from a central controller; that one with a generator
+  next to it draws only its shortfall; and that spare intake fills its buffer.
+
+#### CONT-121 · Zone power priority
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
+
+Each area air controller a central atmospherics controller claims shall have
+a zone power priority, set in the central controller's GUI: Critical, Normal
+(the default) or Low. The central controller pays shortfalls (CONT-120) in
+that order, and in the order it claimed them within a priority. Area air
+controllers it can't pay run on their own buffer, or stop.
+
+- **Rationale:** Decision: D-75. Three levels give enough control, and are
+  easy to show in a GUI. Zone priority comes before the device priority inside
+  each area air controller (CONT-064).
+- **Verify:** A GameTest starves a central controller with a Critical and a
+  Low zone and checks the Critical zone's vent keeps running while the Low
+  zone's stops once its buffer is empty.
+
+#### CONT-122 · Central controller keeps its chunks loaded
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+
+While `[central_controller] force_load` is true (the default), a central
+atmospherics controller shall keep its own chunk and the 8 around it loaded
+and ticking.
+
+- **Rationale:** Decision: D-75. Its range is wider than most servers'
+  simulation distance, so a player at a far zone would otherwise leave the
+  central controller unloaded, and with it the generator next to it. The 3×3
+  area keeps a generator ticking across a chunk border. Servers that don't want
+  chunks force-loaded can turn it off.
+- **Verify:** A GameTest checks the 3×3 chunks stay loaded with no player near,
+  and are released when the central controller is removed or the option is
+  false.
+
+#### CONT-123 · Central controller GUI
+`Should` · `R1` · `Draft` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
+
+The central atmospherics controller's GUI shall list each area air controller
+it has claimed, with its position, its zone's pressure and temperature, its
+danger level, whether it has power, and its zone power priority. An area air
+controller whose chunk isn't loaded shall be shown as out of contact, with its
+last readings.
+
+- **Rationale:** Decision: D-75, after vg's atmospheric alert computer, which
+  lists the station's air alarms.
+- **Verify:** Manual check of the list against the area air controllers in
+  range, with one in an unloaded chunk.
+
+#### CONT-124 · Remote control from the central controller
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
+
+From the central atmospherics controller's GUI, a player shall be able to
+open the GUI of any loaded area air controller it has claimed and do anything
+there they could do at that controller. The server validates each action as
+if the player were there (CONT-074).
+
+- **Rationale:** Decision: D-75. Opening the area air controller's own GUI
+  avoids a second copy of its controls.
+- **Verify:** A GameTest changes a claimed area air controller's mode through
+  the central controller and checks it takes effect, and that a controller in
+  an unloaded chunk can't be opened.
+
 ## R1 / R2 split
 
 | R1 | R2 |
 |---|---|
 | Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (compressor, electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
-| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent | |
+| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's
 pipe layers reuse the multipart block, so they need another design. Batteries
 and the recharger are added (D-69).*
+
+*2026-11-03: the central atmospherics controller is added (D-75).*
