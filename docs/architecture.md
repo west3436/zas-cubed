@@ -1567,6 +1567,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `firelock` | The firelock and its lockdown (§11.8) |
+| `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1823,7 +1825,14 @@ tick, in order:
    no bounds, so the filler gas isn't one of "the rest".
 5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
    reading at once, and falls after 10 readings in a row below it (10 s) to
-   the highest of those readings.
+   the highest of those readings. A **breach** reads as danger 2 at once
+   (`BreachAlarm`, CONT-043), for a preset with a pressure min2. It is a
+   breach when the zone has an edge to the ambient and the ambient's pressure
+   is at or below min2, as space is, or when the pressure fell by
+   `[controller] breach_drop_kpa` (10) since the last reading to below min1.
+   The ambient's pressure is read at the top of the controller's column, which
+   is ambient in almost any build; a dimension has one ambient. A door to
+   ordinary outside air is no breach.
 6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
    becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
    target.
@@ -1833,6 +1842,10 @@ tick, in order:
    with its own position as the order's `sender`, and each `ScrubberControl`
    the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
    come first because a part's draw follows its order.
+8. **Closes its firelocks at once.** In the step its alarm starts, it steps
+   each loaded firelock it covers that isn't alarmed yet
+   (`FirelockBlockEntity.alarmRaised`), so the firelocks close in that atmos
+   tick, not at their own steps up to a second later (§11.8).
 
 **Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
 Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the
@@ -1928,3 +1941,56 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   change hook treats lighting it as combustion (CORE-056, FIRE-024), with
   nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
+
+### 11.8 Firelocks
+
+*Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
+`.firelock`: the standalone firelock only. A firelock over a door or an
+airlock is not built.*
+
+- **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
+  placed and broken as a door is: the item places both halves, either half
+  going takes the other, and only the lower half drops the item. Its
+  properties are `facing` (the way its passage runs), `half`, `open` and
+  `locked`, which picks the existing closed, locked-down and open models.
+  Redstone doesn't move it. It is in `#zas:zone_boundary`
+  (`data/zas/tags/block/zone_boundary.json` in `zas_atmos`).
+- **Its geometry.** The model draws the panel in the middle of the block,
+  which would seal no face, and the framework picks a boundary's faces from
+  the faces a block seals in one state but not the other (§4.7). So the
+  closed collision shape fills the passage from the face in front of it up to
+  the far side of the visible panel. Closed, it seals that one face; open, the
+  frame and lintel seal only the side faces and the top. The front face is
+  the boundary, in both states: the firelock's cells join the room behind it,
+  and opening or closing it never splits a zone (GEO-044). The outline shape
+  is the model's.
+- **Its work** (`FirelockBlockEntity`, an `AtmosDevice` on the lower half),
+  each atmos tick. It reads the cells in front of the panel and behind it. A
+  side that reads as unresolved changes nothing that step.
+  - **Alarm** (CONT-043). It is alarmed while a loaded, powered area air
+    controller at danger 2 covers it. A controller covers a firelock when
+    the cell on either side is in its own zone, or when the firelock itself
+    is linked to it with the multitool (from either half; the link is the
+    lower half). Linking a part in another room doesn't bring that room's
+    firelocks under the controller. The controller records its zone at each
+    step (`AreaAirControllerBlockEntity.covers`, `alarming`).
+  - **Closing.** When the alarm starts, an open firelock closes and records
+    that the alarm closed it. The controller steps it in the atmos tick its
+    alarm starts (§11.6, step 8), so a breach closes it within an atmos tick
+    of the framework seeing the breach. While the alarm holds, an opening by
+    hand or with a crowbar lasts `RECLOSE_STEPS` (5) atmos ticks, then the
+    alarm closes it again.
+  - **Reopening** (CONT-092). Once no covering controller is at danger 2, a
+    firelock the alarm closed opens, unless it is locked down: it then opens
+    when the lockdown ends. One closed by hand stays closed.
+  - **Lockdown** (CONT-093, `Lockdown`). A closed firelock is locked down
+    while the pressure difference across it is at least 25 kPa, or either
+    side is at least 323.15 K or at most 273.15 K. Its `locked` state shows
+    the warning model. By hand it then refuses to open and tells the player
+    why on the action bar.
+- **The crowbar** (`tool.CrowbarItem`, CONT-094). Used on either half, it
+  opens a closed firelock, locked down or not, and closes an open one.
+- **Saved:** the alarm, whether the alarm closed it, the re-close countdown
+  and the lockdown.
+- **Cost.** Each firelock scans its level's loaded devices for controllers
+  once a second, as a controller scans for its parts (§11.6).

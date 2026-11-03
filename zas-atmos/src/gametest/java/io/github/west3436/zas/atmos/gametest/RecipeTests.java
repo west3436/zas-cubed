@@ -36,7 +36,9 @@ public final class RecipeTests {
                 AtmosItems.VENT.get(),
                 AtmosItems.AREA_AIR_CONTROLLER.get(),
                 AtmosItems.GENERATOR.get(),
-                AtmosItems.MULTITOOL.get()));
+                AtmosItems.FIRELOCK.get(),
+                AtmosItems.MULTITOOL.get(),
+                AtmosItems.CROWBAR.get()));
         AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
         return items;
     }
