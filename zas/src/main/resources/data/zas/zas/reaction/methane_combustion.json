@@ -15,7 +15,19 @@
     "upper": 0.15,
     "autoignition": 810
   },
+  "incomplete_combustion": {
+    "reactants": {
+      "zas:methane": 1,
+      "zas:oxygen": 1.5
+    },
+    "products": {
+      "zas:carbon_monoxide": 1,
+      "zas:water_vapor": 2
+    },
+    "enthalpy": -519000
+  },
   "sources": {
+    "incomplete_combustion": "FIRE-005 (docs/requirements/13-reactions-fire.md): below an O2 fraction of 0.18 part of the carbon forms CO. Burning to CO saves the 1/2 mol of O2 and the 283 kJ that CO's own combustion would take and give (FIRE-003), so 802 - 283 = 519 kJ/mol",
     "enthalpy": "FIRE-003 (docs/requirements/13-reactions-fire.md): 802 kJ/mol, the heat of combustion with the water as vapour. From standard enthalpies of formation at 298.15 K, CO2(g) -393.522 plus 2 x H2O(g) -241.826 less CH4(g) -74.873 kJ/mol gives -802.30 kJ/mol: NIST-JANAF Thermochemical Tables C-095, H-064 and C-067, https://janaf.nist.gov/",
     "flammability": "FIRE-003 (docs/requirements/13-reactions-fire.md): flammability limits in air 5-15 %, autoignition 810 K"
   }

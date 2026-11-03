@@ -40,7 +40,8 @@ Definitions are read from `data/<ns>/zas/reaction/*.json`, documented in
 [datapacks.md](../datapacks.md#reactions), and compiled against the server's
 gases at start and on `/reload` (architecture §5, Reactions). Checked by the
 `fire_001_` tests in `ReactionFormatTest` (zas) and `ReactionSetTest` (engine).
-Running reactions zone-wide is phase 7, which comes with FIRE-004.*
+Zones run their reactions that don't need ignition in phase 7 (ZONE_UPDATES),
+checked by `ZoneReactionsTest`.*
 
 #### FIRE-006 · Reactions requiring ignition
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-57 · Depends: FIRE-001, FIRE-014
@@ -101,8 +102,15 @@ it at the fire threshold (0.14), with the heat release reduced to match.
 - **Verify:** A Unit test checks half the carbon forms CO at an O₂ fraction of
   0.16; a GameTest checks a sealed room with a furnace builds up CO.
 
+*2026-11-03: CH₄'s part is implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)):
+the shipped methane combustion has an incomplete form, CH₄ + 1.5 O₂ → CO +
+2 H₂O at 519 kJ/mol, blended in by the CO share. Checked by
+`fire_005_half_the_methane_carbon_forms_co_at_an_oxygen_fraction_of_016`. This
+stays Accepted until the solid-fuel half and the furnace GameTest
+([#43](https://github.com/west3436/zas-cubed/issues/43)) are done.*
+
 #### FIRE-004 · Non-combustion examples
-`Could` · `R1` · `Accepted` · Verify: Unit
+`Could` · `R1` · `Implemented` · Verify: Unit
 
 Ship at least one non-combustion reaction to exercise the framework, such as
 N₂O thermal decomposition.
@@ -110,6 +118,12 @@ N₂O thermal decomposition.
 - **Rationale:** Inferred: a non-combustion reaction proves the framework
   isn't fire-only.
 - **Verify:** A Unit test runs N₂O decomposition above its threshold.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`data/zas/zas/reaction/nitrous_oxide_decomposition.json`: N₂O → N₂ + ½ O₂,
+82.05 kJ/mol released, above 850 K, at an Arrhenius rate (about 1 % a second
+at 1,000 K, 250 kJ/mol). The rate is chosen for play, not fitted. Checked by
+`fire_004_nitrous_oxide_decomposes_above_its_threshold`.*
 
 ## Oxygen
 
