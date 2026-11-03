@@ -37,6 +37,10 @@ public final class AtmosComponents {
     public static final Supplier<DataComponentType<Integer>> ENERGY = COMPONENTS.registerComponentType(
             "energy", b -> b.persistent(ExtraCodecs.NON_NEGATIVE_INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
+    /** The sprays left in a fire extinguisher (CONT-037). */
+    public static final Supplier<DataComponentType<Integer>> CHARGES = COMPONENTS.registerComponentType(
+            "charges", b -> b.persistent(ExtraCodecs.NON_NEGATIVE_INT).networkSynchronized(ByteBufCodecs.VAR_INT));
+
     private AtmosComponents() {}
 
     public static void register(IEventBus modBus) {

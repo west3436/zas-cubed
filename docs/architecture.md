@@ -1858,7 +1858,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank` and a battery's `zas_atmos:energy`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy` and a fire extinguisher's `zas_atmos:charges`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -1866,7 +1866,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `firelock` | The firelock and its lockdown (§11.8) |
-| `tool` | The multitool (§11.6) and the crowbar (§11.8) |
+| `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
@@ -2383,3 +2383,35 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+
+### 11.10 The fire extinguisher (CONT-037)
+
+`tool.FireExtinguisherItem`, one to a stack, with vg's sprite (D-74).
+
+- **Spraying.** Using it starts a held use, as a bow's. While the use is held,
+  every `SPRAY_INTERVAL` (4) ticks it sprays once and uses one of its
+  `CHARGES` (100) charges, so a full one sprays for 20 s. The server works out
+  each spray from the user's eye and look direction; the client only starts and
+  stops the use. The spray follows the look up to `REACH` (5) blocks, or to the
+  first block with collision it meets, so a wall or glass stops it while fire
+  and water don't. Along that line it takes the cell every half block: the cell
+  alone within `NARROW` (2) blocks of the eye, and the 3 × 3 × 3 cells around
+  it beyond. The samples stop short of the block the line meets: a point on its
+  face is in that block's cell, and a box around it would reach behind a
+  one-block wall. Where the line meets a block, the 3 × 3 × 3 cells around the one
+  in front of the face it meets join the spray, so a fire on a floor or wall
+  the user aims at goes out. Each box goes to `Fires.extinguish` (zas-api's
+  `fire` package; until that is on main, a stand-in with the same signature in
+  `tool`), which removes the gas fires and vanilla fire blocks in it; the
+  engine drops a removed gas fire's hotspot at its next tick.
+- **Sound.** Each spray plays vanilla's `block.fire.extinguish` quietly at the
+  user, with a high pitch; a spray that put something out also plays it as
+  vanilla's dowsed fire does, at the spray's end. Empty, it clicks
+  (`block.dispenser.fail`) and says so on the action bar.
+- **Charges.** In the stack's `zas_atmos:charges` (a new stack is full), shown
+  on the item bar in water blue and in the tooltip. Using it on a water source
+  block while it isn't full refills it, with the bucket's fill sound; the
+  water stays. There is no crafting-grid refill.
+- **What it doesn't do.** It doesn't put out burning entities, cool anything
+  or change the gas: a fire whose zone still has the O₂ and heat can light
+  again (FIRE-010).
