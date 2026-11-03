@@ -136,7 +136,7 @@ public final class HeatStationTests {
      */
     @GameTest(template = "empty")
     public static void cont_019_heater_heats_its_room_on_its_battery(GameTestHelper h) {
-        Site s = new Site(h, 20);
+        Site s = new Site(h, 18);
         try {
             BatteryTests.clear(s);
             s.room(0, 4); // interior x 1–3
@@ -274,7 +274,7 @@ public final class HeatStationTests {
      */
     @GameTest(template = "empty")
     public static void s_05_room_beside_lava_warms(GameTestHelper h) {
-        Site s = new Site(h, 22);
+        Site s = new Site(h, 19);
         try {
             s.clear();
             s.room(2, 6); // interior x 3–5; the east wall is x = 6
