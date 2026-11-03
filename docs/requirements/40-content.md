@@ -1373,6 +1373,16 @@ or the zone exceeds 473 K.
 - **Verify:** GameTests check the alarm raises danger 2 for a hotspot and for
   a zone above 473 K.
 
+*2026-11-03: Built ([architecture §11.6](../architecture.md#116-the-area-air-controller)).
+`zas_atmos:fire_alarm` is a wall-mounted life-support part drawing
+`[power] fire_alarm` (1 FE/t, CONT-065) from the controller that covers it.
+While powered it trips when its zone has a hotspot (`Fires.isBurning`) or its
+cell is above 473 K, and the controller reads a tripped alarm as a danger-2
+reading, with CONT-046's fall-off. Checked by
+`cont_044_fire_alarm_raises_danger_2_above_473_k` and
+`cont_044_an_unpowered_fire_alarm_does_nothing`. This stays Accepted until the
+hotspot half has its GameTest, which needs the hotspots' API (FIRE-019).*
+
 #### CONT-045 · Thermostat
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and freezer cover it), 2026-10-30. · Verify: GameTest
 

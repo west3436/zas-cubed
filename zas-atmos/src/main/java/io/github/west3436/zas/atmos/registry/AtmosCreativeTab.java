@@ -62,6 +62,7 @@ public final class AtmosCreativeTab {
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));
         out.accept(AtmosItems.AREA_AIR_CONTROLLER.get());
+        out.accept(AtmosItems.FIRE_ALARM.get());
         out.accept(AtmosItems.GENERATOR.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.FIRELOCK.get());

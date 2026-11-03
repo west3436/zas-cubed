@@ -1810,6 +1810,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `firelock` | The firelock and its lockdown (§11.8) |
+| `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
@@ -2135,7 +2136,8 @@ tick, in order:
    `[controller] breach_drop_kpa` (10) since the last reading to below min1.
    The ambient's pressure is read at the top of the controller's column, which
    is ambient in almost any build; a dimension has one ambient. A door to
-   ordinary outside air is no breach.
+   ordinary outside air is no breach. A **triggered fire alarm** it covers
+   reads as danger 2 too (CONT-044, below).
 6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
    becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
    target.
@@ -2175,6 +2177,22 @@ yet; its GameTests use a stand-in (`gametest.TestParts`).
 
 **Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
 at danger 2. It powers the wall behind it strongly, as a lever does.
+
+**Fire alarms** (CONT-044, package `firealarm`). The fire alarm is a small
+wall box, placed and held up as the controller is. Its `status` property
+(`unpowered`, `normal`, `alarm`) picks its model. Its block entity is an
+`AtmosDevice` and a `PoweredDevice`, a life-support part drawing `[power]
+fire_alarm` (1 FE/t) from the controller that covers it, in its zone or
+linked, as any part. Each atmos tick, while powered, it samples the middle of
+its own block. It is triggered while that cell's zone has a hotspot
+(`Fires.isBurning`, FIRE-019) or the air there is above 473 K; an unresolved
+sample keeps the last answer. The controller covering it reads a triggered
+alarm as a danger-2 reading at its next step (step 5), so the alarm drives it
+as the controller's own danger 2 would: firelocks close, the redstone signal is
+15 and the panel shows danger 2. CONT-046's fall-off applies: 10 s after the
+alarm stops, the controller drops back. An alarm with no controller has no
+power and does nothing. It polls rather than listening for the fire events,
+since it needs the temperature anyway and a poll survives a reload.
 
 **The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
 that controller's position and dimension on the stack. Used on a powered
