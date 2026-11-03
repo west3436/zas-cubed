@@ -1163,8 +1163,10 @@ breath at the eyes, the O₂ minimum, the air meter, gas hazard profiles,
 respiration, and the pressure and temperature hazards with their settings.
 Internals and protection are
 [#36](https://github.com/west3436/zas-cubed/issues/36).*
-The package is `io.github.west3436.zas.life`, server thread only; the client
-runs none of it until LIFE-023.
+The package is `io.github.west3436.zas.life`, server thread only, but for the
+client breathing sync (LIFE-023): the server sends each player its own state
+(`BreathSyncPayload`) when it changes, at most 4 times a second, and
+`ClientBreath` drains the local player's air bar with it on the client.
 
 - **Who breathes** (LIFE-001, LIFE-006). Players, and the entity types in
   `#zas:breathers` (`BreathingRules.BREATHERS`), which ships with the
@@ -1391,8 +1393,10 @@ protection. The fallback answers with it.
 server, `zas` answers with LIFE's verdict
 ([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
 the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
-fluid (LIFE-022). On the client it still answers with vanilla's verdict, until
-LIFE-023. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
+fluid (LIFE-022). On the client it answers for the local player with the
+verdict the server last synced (LIFE-023), without the breath gas, while the
+eyes are where the server last checked them, in a fluid or out; for other
+entities, and before the first sync, with vanilla's. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
 the pressure and temperature hazards, listed as `LOW_PRESSURE`,
 `HIGH_PRESSURE`, `COLD` and `HEAT` for every living entity they harm,
 breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.

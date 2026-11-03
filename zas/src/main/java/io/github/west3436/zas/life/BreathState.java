@@ -23,6 +23,13 @@ public final class BreathState {
     private double carry;
     /** Per gas, the seconds its partial pressure has been at or above each threshold. */
     private final Map<ResourceLocation, double[]> exposure = new HashMap<>();
+    /** For a player, the state last synced to its client (LIFE-023), or null before the first. */
+    private @Nullable BreathSyncPayload sent;
+
+    private long sentAt;
+
+    /** The fewest game ticks between two syncs of a player's breathing state: at most 4 a second. */
+    public static final int SYNC_INTERVAL_TICKS = 5;
 
     /** The verdict of the last check, or null before the first. */
     public @Nullable Breathability verdict() {
@@ -135,5 +142,32 @@ public final class BreathState {
     /** Forgets every gas's exposure, when the entity breathes no gas. */
     void clearExposure() {
         exposure.clear();
+    }
+
+    /** The breathing state to sync to a player's client now: the last verdict without its gas, and the drain. */
+    public BreathSyncPayload syncState() {
+        return BreathSyncPayload.of(verdict, drain);
+    }
+
+    /** The state last synced to the player's client, or null before the first sync (LIFE-023). */
+    public @Nullable BreathSyncPayload sent() {
+        return sent;
+    }
+
+    /**
+     * The state to sync to the player's client at game time {@code now}, if a sync is due, which it
+     * records as sent: the first state, and later one that differs from the last sent, at most once
+     * every {@link #SYNC_INTERVAL_TICKS}. A change held back by the limit goes on a later tick.
+     *
+     * @return the state to send, or null if none is due
+     */
+    public @Nullable BreathSyncPayload syncDue(long now) {
+        BreathSyncPayload current = syncState();
+        if (sent != null && (current.equals(sent) || (now >= sentAt && now - sentAt < SYNC_INTERVAL_TICKS))) {
+            return null;
+        }
+        sent = current;
+        sentAt = now;
+        return current;
     }
 }

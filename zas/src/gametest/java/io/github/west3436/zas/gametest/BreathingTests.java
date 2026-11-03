@@ -13,6 +13,8 @@ import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.Hazard;
+import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
@@ -20,14 +22,18 @@ import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.life.BreathState;
+import io.github.west3436.zas.life.BreathSyncPayload;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.life.EffectLevel;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
 import io.github.west3436.zas.life.LifeDamage;
 import io.github.west3436.zas.life.Respiration;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -64,6 +70,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -956,6 +963,160 @@ public final class BreathingTests {
             int air = pig.getAirSupply();
             pig.baseTick();
             h.assertValueEqual(pig.getAirSupply(), air - 1, "the meter drains after surfacing");
+        }
+        h.succeed();
+    }
+
+    // ---- LIFE-023: the client breathing sync -------------------------------------------
+
+    /**
+     * The synced state carries the verdict without its breath gas, and the drain only while the
+     * player is short of O₂; it survives the network codec unchanged (LIFE-023).
+     */
+    @GameTest(template = "empty")
+    public static void life_023_sync_payload_round_trips(GameTestHelper h) {
+        Breathability verdict = Breathability.builder(BreathReason.LOW_OXYGEN, BreathSource.ATMOSPHERE)
+                .breath(breath(StandardAir.OXYGEN, 8))
+                .hazard(Hazard.TOXIC_GAS)
+                .hazard(Hazard.COLD)
+                .protection(Protection.PRESSURE)
+                .protection(Protection.IMMUNE)
+                .build();
+        BreathSyncPayload hypoxic = BreathSyncPayload.of(verdict, 0.5);
+        h.assertTrue(hypoxic.verdict().breath().isEmpty(), "the breath gas isn't synced");
+        h.assertValueEqual(hypoxic.verdict().hazards(), Set.of(Hazard.TOXIC_GAS, Hazard.COLD), "hazards");
+        h.assertValueEqual(
+                hypoxic.verdict().protection(), Set.of(Protection.PRESSURE, Protection.IMMUNE), "protection");
+        h.assertTrue(hypoxic.hypoxic(), "short of O2");
+        BreathSyncPayload breathing =
+                BreathSyncPayload.of(Breathability.of(BreathReason.BREATHABLE, BreathSource.ATMOSPHERE), 0.5);
+        h.assertValueEqual(breathing.drain(), 0.0, "no drain in breathable air");
+        h.assertValueEqual(BreathSyncPayload.of(null, 1), BreathSyncPayload.NONE, "no verdict");
+        for (BreathSyncPayload p : List.of(hypoxic, breathing, BreathSyncPayload.NONE)) {
+            ByteBuf buf = Unpooled.buffer();
+            BreathSyncPayload.STREAM_CODEC.encode(buf, p);
+            h.assertValueEqual(BreathSyncPayload.STREAM_CODEC.decode(buf), p, "after the codec");
+            h.assertValueEqual(buf.readableBytes(), 0, "bytes left over");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A player's state is synced at its first check, again when it changes, and not while it
+     * stays the same; changes go at most once every 5 ticks, 4 a second (LIFE-023, DATA-005).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_023_player_state_syncs_on_change_at_most_4_a_second(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 218)) {
+            lab.room(0, Map.of());
+            lab.room(6, AIR);
+            h.assertValueEqual(new BreathState().syncDue(0), BreathSyncPayload.NONE, "a fresh state syncs at once");
+            FakePlayer player = lab.player(0);
+            BreathState state = Breathers.tickAt(player, 1000);
+            BreathSyncPayload first = state.sent();
+            h.assertTrue(first != null && first.hypoxic(), "synced at the first check: " + first);
+            h.assertValueEqual(first.drain(), 1.0, "the drain in a vacuum");
+            h.assertTrue(state.syncDue(1001) == null, "nothing new to sync");
+            player.moveTo(Vec3.atBottomCenterOf(lab.r.abs(8, 1, 2)));
+            // At the same game time, so the check counts no seconds and leaves no respiration draw
+            // pending for another test's flush.
+            Breathers.checkAt(player, 1000);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.BREATHABLE, "in the air room");
+            h.assertTrue(state.syncDue(1002) == null, "2 ticks after the last sync");
+            h.assertTrue(state.syncDue(1004) == null, "4 ticks after the last sync");
+            BreathSyncPayload second = state.syncDue(1005);
+            h.assertValueEqual(second, BreathSyncPayload.of(Breathers.verdict(player), 0), "5 ticks after");
+            h.assertTrue(second.verdict().breath().isEmpty(), "no breath gas");
+            h.assertTrue(state.syncDue(1006) == null, "nothing new after");
+        }
+        h.succeed();
+    }
+
+    /**
+     * Fed the server's synced state, the client's breathing hook drains the air bar tick for tick
+     * as the server drains the meter, in a vacuum and at 8 kPa of O₂, and holds it at empty without
+     * drowning, so the bar doesn't jitter (LIFE-023).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_023_client_drains_the_air_bar_as_the_server_does(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 219)) {
+            lab.room(0, Map.of());
+            lab.room(6, Map.of(StandardAir.OXYGEN, 8.0, StandardAir.NITROGEN, 70.0));
+            matchClient(h, lab.mob(EntityType.PIG, 0), lab.mob(EntityType.PIG, 12), 340, "a vacuum");
+            matchClient(h, lab.mob(EntityType.PIG, 6), lab.mob(EntityType.PIG, 18), 640, "8 kPa of O2");
+        }
+        h.succeed();
+    }
+
+    /** Ticks a server-side breather and a stand-in for its client copy, comparing their air each tick. */
+    private static void matchClient(GameTestHelper h, Pig server, Pig client, int ticks, String where) {
+        ClientBreath cb = new ClientBreath();
+        float health = client.getHealth();
+        for (int t = 0; t < ticks; t++) {
+            server.baseTick();
+            if (t == 0) {
+                cb.accept(server.getData(Breathers.STATE).syncState());
+            }
+            clientTick(cb, client);
+            if (client.getAirSupply() != server.getAirSupply()) {
+                throw new GameTestAssertException("in " + where + " at tick " + t + " the client's air is "
+                        + client.getAirSupply() + ", the server's " + server.getAirSupply());
+            }
+        }
+        h.assertTrue(server.getAirSupply() <= 0, "the meter emptied in " + where);
+        h.assertTrue(server.getHealth() < server.getMaxHealth(), "the server dealt hypoxia in " + where);
+        h.assertValueEqual(client.getHealth(), health, "the client deals no damage in " + where);
+    }
+
+    /** What NeoForge's breathing hook does on the client for an entity whose eyes are out of fluids. */
+    private static void clientTick(ClientBreath cb, LivingEntity e) {
+        LivingBreatheEvent b = new LivingBreatheEvent(e, true, 1, 4);
+        cb.breathe(b, false);
+        if (b.canBreathe()) {
+            e.setAirSupply(Math.min(e.getAirSupply() + b.getRefillAirAmount(), e.getMaxAirSupply()));
+        } else {
+            e.setAirSupply(e.getAirSupply() - b.getConsumeAirAmount());
+        }
+        if (e.getAirSupply() <= 0) {
+            LivingDrownEvent d = new LivingDrownEvent(e);
+            cb.drown(d, false);
+            if (!d.isCanceled() && d.isDrowning()) {
+                e.setAirSupply(0);
+            }
+        }
+    }
+
+    /**
+     * The client leaves the hook to vanilla before any sync, in breathable air and with the eyes
+     * in a fluid, and its verdict is the server's only while the eyes are where the server last
+     * checked them (LIFE-023, API-014).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_023_client_leaves_air_and_fluids_to_vanilla(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 220)) {
+            lab.room(0, Map.of());
+            Pig pig = lab.mob(EntityType.PIG, 0);
+            ClientBreath cb = new ClientBreath();
+            h.assertTrue(!cb.breathe(new LivingBreatheEvent(pig, true, 1, 4), false), "before any sync");
+            h.assertValueEqual(cb.verdict(pig), Breathing.vanilla(pig), "the verdict before any sync");
+            cb.accept(BreathSyncPayload.of(Breathability.of(BreathReason.BREATHABLE, BreathSource.ATMOSPHERE), 0));
+            h.assertTrue(!cb.breathe(new LivingBreatheEvent(pig, true, 1, 4), false), "in breathable air");
+            Breathability hypoxic = Breathability.of(BreathReason.LOW_OXYGEN, BreathSource.ATMOSPHERE);
+            cb.accept(BreathSyncPayload.of(hypoxic, 1));
+            LivingBreatheEvent wet = new LivingBreatheEvent(pig, false, 1, 0);
+            h.assertTrue(!cb.breathe(wet, true), "with the eyes in water");
+            h.assertValueEqual(wet.getConsumeAirAmount(), 1, "vanilla's drain in water");
+            pig.setAirSupply(-20);
+            LivingDrownEvent drowning = new LivingDrownEvent(pig);
+            cb.drown(drowning, true);
+            h.assertTrue(!drowning.isCanceled(), "drowning in water stays vanilla's");
+            h.assertValueEqual(cb.verdict(pig), hypoxic, "the server's verdict, out of water");
+            lab.r.set(2, 1, 2, Blocks.WATER.defaultBlockState());
+            lab.r.set(2, 2, 2, Blocks.WATER.defaultBlockState());
+            pig.baseTick();
+            h.assertValueEqual(cb.verdict(pig).source(), BreathSource.FLUID, "vanilla's verdict once in water");
+            cb.clear();
+            h.assertValueEqual(cb.state(), BreathSyncPayload.NONE, "cleared");
         }
         h.succeed();
     }

@@ -580,7 +580,7 @@ breathe the environment.
   player keeps breathing.
 
 #### LIFE-023 · Client breathing sync
-`Must` · `R1` · `Accepted` · Verify: Manual, GameTest · Trace: [neoforge §9](../research/neoforge-1.21.1.md#9-entities)
+`Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: [neoforge §9](../research/neoforge-1.21.1.md#9-entities)
 
 NeoForge's breathing event also fires on the client. The local player's
 breathing state shall therefore be synced, so the client-side air bar matches
@@ -591,6 +591,22 @@ the server without jitter.
   §9](../research/neoforge-1.21.1.md#9-entities)).
 - **Verify:** Manual checks the air bar is steady in a low-O₂ zone; a GameTest
   checks the synced state.
+
+*2026-11-02: Implemented
+([#36](https://github.com/west3436/zas-cubed/issues/36)). The server sends each
+player, and only that player, its breathing state (`BreathSyncPayload`): the
+last check's verdict without the breath gas, and the air drain while it is
+short of O₂. It goes at the first check, then whenever it changes, at most
+once every 5 ticks. On the client, `ClientBreath` runs NeoForge's breathing
+hook for the local player as `Breathers` does on the server: while the server
+finds it short of O₂ and its eyes aren't in a fluid, it drains the bar at the
+synced rate and holds an empty bar without drowning bubbles; otherwise vanilla
+runs, so the bar refills in breathable air and drowns under water as before.
+The server's air value still arrives with the entity data and corrects any
+drift. The `life_023_` GameTests check the codec, the sync's triggers and rate,
+that the client's bar matches the server's tick for tick in a vacuum and at
+8 kPa of O₂, and that air and fluids are left to vanilla. The manual check of
+the bar in game is still to do.*
 
 #### LIFE-022 · Underwater
 `Should` · `R1` · `Accepted` · Verify: GameTest
