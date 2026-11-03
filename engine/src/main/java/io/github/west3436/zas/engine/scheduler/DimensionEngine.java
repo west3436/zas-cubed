@@ -57,7 +57,9 @@ import java.util.TreeSet;
  *   <li>Exchange (CORE-031 to CORE-038, CORE-023, CORE-076).
  *   <li>Heat: conduction through zone boundaries, heat sources and radiation to a vacuum
  *       ({@link Conduction}, HEAT-001 to HEAT-015).
- *   <li>to 8. Hotspots, zone updates and garbage collection: R1, empty for now.
+ *   <li>Hotspots: fires that burn their zone's gas, spread, go out and start ({@link Hotspots},
+ *       FIRE-010 to FIRE-019), with this tick's ignition operations.
+ *   <li>to 8. Zone updates and garbage collection: R1, empty for now.
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
@@ -112,6 +114,9 @@ public final class DimensionEngine {
 
     /** The heat phase, with each zone's cached heat paths (architecture §4.8). */
     private final Conduction conduction;
+
+    /** The hotspot phase (FIRE-010 to FIRE-019). */
+    private final Hotspots hotspots;
 
     private AtmosSnapshot lastSnapshot;
 
@@ -169,7 +174,21 @@ public final class DimensionEngine {
         this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
         this.conduction = new Conduction(graph, mirror, palette, space.naming(), membership);
         graph.setMembershipListener(MembershipListener.both(membership, conduction));
+        this.hotspots = new Hotspots(graph, space, mirror, palette);
         this.lastSnapshot = AtmosSnapshot.empty(registry);
+    }
+
+    /**
+     * Seeds the random draws of hotspot spread (FIRE-016) for this dimension, so two dimensions
+     * don't draw alike (§3.5). Owner thread, before the first tick.
+     */
+    public void setSeed(long seed) {
+        hotspots.setSeed(seed);
+    }
+
+    /** How many hotspots burn, pending ones included. Same thread rule as {@link #graph()}. */
+    public int hotspotCount() {
+        return hotspots.count();
     }
 
     // ---- Queries (owner thread) -----------------------------------------------
@@ -262,6 +281,7 @@ public final class DimensionEngine {
         for (long k : keys) {
             h.add(k);
         }
+        hotspots.hash(h::add);
         return h.value;
     }
 
@@ -353,8 +373,12 @@ public final class DimensionEngine {
         }
         List<OpenAirEvent> events = new ArrayList<>();
         long[] opZone = new long[ops.size()];
+        int ignitionCount = 0;
         for (int i = 0; i < ops.size(); i++) {
-            if (!ops.get(i).kind().isPin()) {
+            GasOp.Kind kind = ops.get(i).kind();
+            if (kind == GasOp.Kind.IGNITE) {
+                ignitionCount++;
+            } else if (!kind.isPin()) {
                 outcomes[i] = apply(ops.get(i), targets[i], events, opZone, i);
             }
         }
@@ -367,8 +391,35 @@ public final class DimensionEngine {
         phases.enter(Phase.HEAT);
         conduction.tick(batch.settings().heat(), batch.settings().exchange().periodSeconds(), ambient);
 
-        // 6-8. R1.
+        // 6. Hotspots (FIRE-010 to FIRE-019).
         phases.enter(Phase.HOTSPOTS);
+        int[] ignitionOps = new int[ignitionCount];
+        long[] ignitionBlocks = new long[ignitionCount];
+        for (int i = 0, k = 0; i < ops.size(); i++) {
+            if (ops.get(i).kind() == GasOp.Kind.IGNITE) {
+                ignitionOps[k] = i;
+                ignitionBlocks[k++] = ops.get(i).block();
+            }
+        }
+        List<FireIntent> fireIntents = new ArrayList<>();
+        List<FireEvent> fireEvents = new ArrayList<>();
+        Hotspots.Ignition[] ignited = hotspots.tick(
+                tick,
+                batch.settings().exchange().periodSeconds(),
+                batch.settings().hotspots(),
+                batch.settings().fire(),
+                ignitionBlocks,
+                fireIntents,
+                fireEvents);
+        for (int k = 0; k < ignitionCount; k++) {
+            int i = ignitionOps[k];
+            outcomes[i] = ignitionOutcome(ops.get(i), ignited[k]);
+            if (ignited[k].status() == OpOutcome.IgnitionStatus.IGNITED) {
+                opZone[i] = ignited[k].zone().id();
+            }
+        }
+
+        // 7-8. R1.
         phases.enter(Phase.ZONE_UPDATES);
         phases.enter(Phase.GARBAGE_COLLECTION);
 
@@ -423,9 +474,35 @@ public final class DimensionEngine {
                 buffered.size(),
                 heldBlocks(),
                 graph.nextZoneId(),
-                flows(batch.settings().airflowKpa()));
+                flows(batch.settings().airflowKpa()),
+                fireIntents,
+                fireEvents,
+                hotspots.table());
         phases.finished();
         return result;
+    }
+
+    /** The outcome of an ignition operation (FIRE-014). */
+    private OpOutcome ignitionOutcome(GasOp op, Hotspots.Ignition found) {
+        double[] none = new double[registry.size()];
+        long zone = found.zone() == null ? 0 : found.zone().id();
+        OpOutcome.Outcome outcome = switch (found.status()) {
+            case IGNITED, BURNING, NOT_FLAMMABLE, NO_SPACE -> OpOutcome.Outcome.ZONE;
+            case OPEN -> OpOutcome.Outcome.AMBIENT;
+            case PAUSED -> OpOutcome.Outcome.UNRESOLVED;
+        };
+        double temperature = found.zone() == null
+                ? graph.ambient().temperature()
+                : found.zone().mixture().temperature();
+        return new OpOutcome(
+                op.seq(),
+                outcome,
+                zone,
+                none,
+                temperature,
+                -1,
+                0,
+                new OpOutcome.Ignition(found.status(), found.block()));
     }
 
     // ---- Airflow (FLOW-001, FLOW-006) --------------------------------------------------
@@ -494,6 +571,7 @@ public final class DimensionEngine {
             for (long seq : c.opSeqs()) {
                 requeued.add(lastZoneOps.get(seq));
             }
+            hotspots.restore(c.zoneIds());
         }
         return requeued;
     }
@@ -931,7 +1009,8 @@ public final class DimensionEngine {
         Target[] targets = new Target[ops.size()];
         for (int i = 0; i < ops.size(); i++) {
             GasOp op = ops.get(i);
-            if (op.kind() == GasOp.Kind.UNPIN) {
+            if (op.kind() == GasOp.Kind.UNPIN || op.kind() == GasOp.Kind.IGNITE) {
+                // An ignition looks at its position and the neighbours in the hotspot phase.
                 targets[i] = new Target(Route.NONE, CellSpace.NO_CELL);
                 continue;
             }
@@ -1559,7 +1638,8 @@ public final class DimensionEngine {
                 out.cells,
                 out.faces,
                 out.unresolved,
-                out.truncated || (out.unresolvedFull() && !queue.isEmpty()));
+                out.truncated || (out.unresolvedFull() && !queue.isEmpty()),
+                hotspots.debug(regions));
     }
 
     /** A cell's index among the cells of its block, in {@link CellSpace#forEachCellAt} order. */

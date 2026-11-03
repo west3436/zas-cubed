@@ -45,7 +45,11 @@ public record DebugView(
 
     /** A view without hotspots. */
     public DebugView(
-            long tick, List<CellEntry> cells, List<FaceEntry> faces, List<UnresolvedEntry> unresolved, boolean truncated) {
+            long tick,
+            List<CellEntry> cells,
+            List<FaceEntry> faces,
+            List<UnresolvedEntry> unresolved,
+            boolean truncated) {
         this(tick, cells, faces, unresolved, truncated, List.of());
     }
 

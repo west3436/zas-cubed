@@ -145,7 +145,8 @@ public final class SectionMirror implements SectionLookup {
         if (s == null) {
             return -1;
         }
-        return s.geometryId(SectionKeys.blockX(block) & 15, SectionKeys.blockY(block) & 15, SectionKeys.blockZ(block) & 15);
+        return s.geometryId(
+                SectionKeys.blockX(block) & 15, SectionKeys.blockY(block) & 15, SectionKeys.blockZ(block) & 15);
     }
 
     private void index(SectionSnapshot s) {

@@ -33,7 +33,7 @@ import java.util.Objects;
  *     with their openings (FLOW-001); empty with airflow off
  * @param fireIntents gas-fire blocks to place or remove (FIRE-018), in the order they arose
  * @param fireEvents zones that caught fire or stopped burning (API-031), in zone id order
- * @param hotspots how many hotspots burn after the tick (FIRE-011)
+ * @param hotspots the hotspots burning after the tick (FIRE-011, API-055)
  */
 public record Result(
         long tick,
@@ -50,7 +50,7 @@ public record Result(
         List<FlowEdge> flows,
         List<FireIntent> fireIntents,
         List<FireEvent> fireEvents,
-        int hotspots) {
+        HotspotTable hotspots) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
@@ -63,6 +63,7 @@ public record Result(
         flows = List.copyOf(flows);
         fireIntents = List.copyOf(fireIntents);
         fireEvents = List.copyOf(fireEvents);
+        Objects.requireNonNull(hotspots, "hotspots");
     }
 
     @Override

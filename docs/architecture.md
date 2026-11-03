@@ -1174,6 +1174,89 @@ releases 283 kJ less heat (CO's own heat of combustion, FIRE-003), so the
 carbon burned is the same and the heat falls to match. A CH₄ burn takes the
 same reductions off per mole of its carbon (`oxygenSaved`, `heatLost`).
 
+### Hotspots
+
+*Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):
+the engine side.* Hotspots are per-cell fires that burn their zone's gas. They
+live on the worker, in phase 6 of the atmos tick (§3.2), in
+`engine.scheduler.Hotspots`.
+
+- **Every hotspot is a block.** A hotspot is a vanilla fire block in a zone
+  (FIRE-019) or a `zas:gas_fire` block (FIRE-018). The geometry palette flags
+  both (`Geometry.FLAG_FIRE`, `FLAG_GAS_FIRE`), so lighting or removing one is
+  a geometry change. The change hook sends it to the worker like any other
+  block edit, and no fire mixin is needed. The mirror keeps an index of
+  flagged positions per section (`SectionMirror.flagged`), so the phase never
+  scans sections. Each tick starts by bringing the hotspots in line with the
+  mirror:
+  - every flagged block in a zone is a hotspot;
+  - a hotspot whose block is gone is dropped;
+  - a gas fire outside any zone is removed.
+
+  Nothing about hotspots is saved. After a load they come back from the blocks
+  as the zones' sections are mirrored again (DATA-009).
+- **World writes.** A new gas hotspot asks the server thread for its block
+  with a `FireIntent` (place or remove `zas:gas_fire`) in the `Result`. At
+  apply, the server checks the block itself rather than the chunk's block
+  generation (§3.3):
+  - it places a gas fire only in air;
+  - it removes one only where one is.
+
+  A chunk-wide generation would drop every intent in a chunk where anyone is
+  building, and a fire would never place. Until the next tick sees its block,
+  the hotspot is *pending*: it doesn't burn, spread or count as a fire. If the
+  block never appears, the hotspot is dropped, and the position isn't tried
+  for 30 atmos ticks. That happens when the position held something other than
+  air: no-collision blocks such as flowers share air's geometry.
+- **One tick, in order:**
+  1. Sync with the mirror.
+  2. Ignitions:
+     - ignition operations (`GasOp.Kind.IGNITE`, FIRE-014), in sequence order;
+     - standing ignition sources (`FLAG_IGNITION_SOURCE`), in position order;
+     - autoignition (FIRE-010), by zone in id order: an active zone with no
+       hotspot whose gas is flammable and at or above a fuel's autoignition
+       point ignites at its lowest air position.
+
+     An ignition looks at the source's position and its six neighbours. A
+     hotspot in an active zone at any of them means the fire is already there.
+     Otherwise the first of them, in `Face` order after the position itself,
+     that is in an active zone with flammable gas and is air starts a pending
+     hotspot. The operation's outcome says what it found (`OpOutcome.Ignition`):
+     `IGNITED`, `BURNING`, `NOT_FLAMMABLE`, `NO_SPACE`, `OPEN` or `PAUSED`.
+  3. Every active hotspot, in position order, burns a parcel of 375 L per
+     second of its zone's gas (FIRE-011). A gas fire whose gas won't burn goes
+     out instead, and its block is removed (FIRE-017). Whether gas burns
+     includes the fire oxygen threshold (FIRE-030). A vanilla fire is never put
+     out here; that is FIRE-020's, on the server. Without fuel it just burns
+     nothing.
+  4. Every hotspot that burned may spread to each open neighbouring cell that
+     is air, in an active zone with flammable gas (FIRE-016). The chance is
+     `spread_chance` per second, 1 − (1 − p)^dt per tick.
+
+  Hotspots in paused zones keep still.
+- **Chemistry** comes through the `Combustion` interface, carried in
+  `EngineSettings.hotspots` with the spread chance. Until the data-driven
+  reactions land (#41), `SimpleCombustion` stands in: FIRE-003's H₂, CH₄ and
+  CO with O₂, with their flammability limits and autoignition points. Each
+  burn's mole changes go to the ledger as `REACTION`.
+- **Determinism** (§3.5). Hotspots are kept by position in a sorted map. A
+  spread's draw is a SplitMix64 hash of the dimension's seed
+  (`DimensionEngine.setSeed`), the atmos tick, the zone, the hotspot and the
+  target. It needs no shared generator and doesn't depend on the order of the
+  draws.
+- **Rejection** (§3.3). Burning changes zone mixtures, so a burning zone is
+  part of an exchange component and is restored with it. The pipeline drops
+  the intents and fire events of rejected zones. `Hotspots.restore` drops the
+  pending hotspots those intents were for and takes back the zones' fire state
+  (so their events come again), and a rejected ignition runs again.
+- **Published** with the result:
+  - a `HotspotTable` of every hotspot whose block is there, with its zone,
+    with rejected zones answered from the previous table;
+  - the `FireEvent`s: a zone's first hotspot (`IGNITED`) and its last one going
+    out (`EXTINGUISHED`), named by zone id (API-031);
+  - the hotspots inside the debug overlay's regions, in `DebugView`
+    (CLIENT-013).
+
 ### Life support (breathing)
 
 *Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34),

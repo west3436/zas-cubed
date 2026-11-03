@@ -44,7 +44,8 @@ public final class SimpleCombustion implements Combustion {
         this.carbonDioxide = registry.indexOf("zas:carbon_dioxide");
         for (int i = 0; i < FUELS.length; i++) {
             int f = registry.indexOf(FUELS[i].id());
-            boolean products = (FUELS[i].water() == 0 || water >= 0) && (FUELS[i].carbonDioxide() == 0 || carbonDioxide >= 0);
+            boolean products =
+                    (FUELS[i].water() == 0 || water >= 0) && (FUELS[i].carbonDioxide() == 0 || carbonDioxide >= 0);
             fuel[i] = products ? f : -1;
         }
     }

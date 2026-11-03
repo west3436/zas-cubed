@@ -49,7 +49,11 @@ public record EngineSettings(
 
     /** Settings with the default hotspots. */
     public EngineSettings(
-            ExchangeSettings exchange, boolean checkConservation, HeatSettings heat, double airflowKpa, FireSettings fire) {
+            ExchangeSettings exchange,
+            boolean checkConservation,
+            HeatSettings heat,
+            double airflowKpa,
+            FireSettings fire) {
         this(exchange, checkConservation, heat, airflowKpa, fire, HotspotSettings.DEFAULT);
     }
 
