@@ -283,6 +283,34 @@ The GameTests are `StationTests.s_02_hull_breach`,
 `StationTests.s_08_breathing_gear`. GUI textures for the heater, recharger and
 tank screens are still to draw ([#185](https://github.com/west3436/zas-cubed/issues/185)).
 
+*2026-11-03: S-03 and S-04 pass end to end.* The scope was all of
+[#41](https://github.com/west3436/zas-cubed/issues/41), [#42](https://github.com/west3436/zas-cubed/issues/42) and [#43](https://github.com/west3436/zas-cubed/issues/43), plus API-019, API-020 and API-031.
+The owner added the igniter (CONT-105), the fire alarm (CONT-044) and the fire
+extinguisher, which moved from R2 to R1 as a `Could` (CONT-037). The owner also
+decided that the fuel generator never touches the air: it uses no O₂, makes no
+CO₂ or heat, and never starts a Hardcore zone (D-35, with dated notes on
+FIRE-021, FIRE-024, FIRE-025, FIRE-027, HEAT-007, CONT-067 and CORE-056). Every
+PR merged once CI passed. The owner's in-game checks come afterwards, in one
+condensed combined test world.
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Shared fire chemistry | [#188](https://github.com/west3436/zas-cubed/pull/188) | FIRE-030; FIRE-005's CO share | None |
+| Reactions | [#190](https://github.com/west3436/zas-cubed/pull/190), [#193](https://github.com/west3436/zas-cubed/pull/193), [#196](https://github.com/west3436/zas-cubed/pull/196) | FIRE-001 to FIRE-006, FIRE-031; API-019, API-020 | None |
+| Vanilla fire and fuels | [#194](https://github.com/west3436/zas-cubed/pull/194), [#197](https://github.com/west3436/zas-cubed/pull/197) | FIRE-020 to FIRE-022, FIRE-024, FIRE-025, FIRE-027; HEAT-007; CONT-067 | Fire can still burn away a block whose cell lacks O₂ at a zone's edge (M4 skipped). Vanilla's fire-spread check and campfire lighting aren't hooked |
+| Hotspots and the gas fire | [#191](https://github.com/west3436/zas-cubed/pull/191), [#202](https://github.com/west3436/zas-cubed/pull/202), [#206](https://github.com/west3436/zas-cubed/pull/206) | FIRE-010, FIRE-011, FIRE-013, FIRE-016 to FIRE-019; DATA-009's hotspot part | CLIENT-013 waits for the owner's look at the gas fire |
+| Fire API | [#203](https://github.com/west3436/zas-cubed/pull/203) | API-031; API-055 to API-058 added as *Draft* | The owner's review of API-055 to API-058 |
+| Ignition sources | [#189](https://github.com/west3436/zas-cubed/pull/189) | FIRE-014, FIRE-015; API-053 added as *Draft* | The owner's review of API-053 |
+| Igniter | [#192](https://github.com/west3436/zas-cubed/pull/192) | CONT-105, FIRE-006's GameTest | None |
+| Fire alarm | [#199](https://github.com/west3436/zas-cubed/pull/199) | CONT-044 | None |
+| Fire extinguisher | [#195](https://github.com/west3436/zas-cubed/pull/195), [#198](https://github.com/west3436/zas-cubed/pull/198), [#204](https://github.com/west3436/zas-cubed/pull/204) | CONT-037; D-74 (its sprite stays at vg's 32 × 32) | No recipe yet, so creative only. No spray particle or in-use pose |
+| S-03 and S-04 GameTests | [#205](https://github.com/west3436/zas-cubed/pull/205) | S-03, S-04 | None |
+| `geo_010` flake | [#207](https://github.com/west3436/zas-cubed/pull/207) | None | Closes [#159](https://github.com/west3436/zas-cubed/issues/159) |
+
+The GameTests are `FireStationTests.s_03_gas_leak_in_a_sealed_workshop`,
+`FireScenarioTests.s_04_room_fire_suffocates_and_rekindles_under_hardcore` and
+`s_04_room_fire_stays_vanilla_under_normal`. FIRE-012 stays in R2.
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -380,10 +408,13 @@ _Updated 2026-11-03._
    #160, #161, #163; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
    Per-world preset copies (#139) went in with it.
 4. **Widen out scenario by scenario:** ~~S-02, S-05 and S-08~~ *done
-   2026-11-03 (#167 to #177, #180, #182, #183; see
+   2026-11-03 (#167 to #177, #180, #182, #183)*. ~~S-03 and S-04 (fire)~~
+   *done 2026-11-03 (#188 to #199, #202 to #207; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
-   by the owner's choice, **S-03 and S-04 (fire)**, then S-11 and S-13, on the
-   rest of #34, #47, #48, #50 and #52 (pumps, filters and scrubbers).
+   S-11 and S-13, on the rest of #34, #47, #48, #50 and #52 (pumps, filters
+   and scrubbers).
+   - From the fire round: the owner's review of API-053 and API-055 to
+     API-058, a recipe for the extinguisher, and CLIENT-013's look check.
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      airflow particles and sound (#184), magnetic boots (#186) and insulating
      station walls (#179).

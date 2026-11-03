@@ -489,3 +489,6 @@ zone.*
 
 #### FIRE-023 · Extinguishing
 `Should` · `R1` · `Rejected` — covered by FIRE-017, FIRE-020 and FIRE-030 plus vanilla water; the extinguisher is CONT-037 (R2), 2026-10-30.
+
+*Note 2026-11-03:* the owner moved the extinguisher, CONT-037, into R1, and it is
+built on API-057. This requirement stays rejected.
