@@ -8,10 +8,13 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
 import io.github.west3436.zas.engine.conservation.ConservationLedger;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
+import io.github.west3436.zas.engine.reaction.ReactionResult;
+import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.zone.Edge;
 import io.github.west3436.zas.engine.zone.MembershipListener;
 import io.github.west3436.zas.engine.zone.Zone;
@@ -57,7 +60,10 @@ import java.util.TreeSet;
  *   <li>Exchange (CORE-031 to CORE-038, CORE-023, CORE-076).
  *   <li>Heat: conduction through zone boundaries, heat sources and radiation to a vacuum
  *       ({@link Conduction}, HEAT-001 to HEAT-015).
- *   <li>to 8. Hotspots, zone updates and garbage collection: R1, empty for now.
+ *   <li>Hotspots: R1, empty for now.
+ *   <li>Zone updates: each zone's reactions that don't need ignition ({@link ReactionSet#react},
+ *       FIRE-001).
+ *   <li>Garbage collection: R1, empty for now.
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
@@ -367,9 +373,14 @@ public final class DimensionEngine {
         phases.enter(Phase.HEAT);
         conduction.tick(batch.settings().heat(), batch.settings().exchange().periodSeconds(), ambient);
 
-        // 6-8. R1.
+        // 6. Hotspots (R1).
         phases.enter(Phase.HOTSPOTS);
+
+        // 7. Zone updates: reactions (FIRE-001).
         phases.enter(Phase.ZONE_UPDATES);
+        reactions(batch.settings());
+
+        // 8. Garbage collection (R1).
         phases.enter(Phase.GARBAGE_COLLECTION);
 
         ConservationReport report = batch.settings().checkConservation() ? graph.checkConservation(tick) : null;
@@ -1200,6 +1211,31 @@ public final class DimensionEngine {
             }
         }
         return all;
+    }
+
+    // ---- 7. Zone updates (FIRE-001) ---------------------------------------------------------
+
+    /**
+     * Phase 7: each zone's reactions that don't need ignition (FIRE-001), in id order. Paused zones
+     * keep their state (GEO-035). The moles each reaction changes are recorded under {@link
+     * LedgerCategory#REACTION} (CORE-073), and a zone that reacted wakes its edges.
+     */
+    private void reactions(EngineSettings settings) {
+        ReactionSet set = settings.reactions();
+        if (set.isEmpty()) {
+            return;
+        }
+        double seconds = settings.exchange().periodSeconds();
+        for (Zone z : graph.zones()) {
+            if (z.isPaused()) {
+                continue;
+            }
+            ReactionResult r = set.react(z.mixture(), seconds, settings.fire());
+            if (r.reacted()) {
+                graph.ledger().record(LedgerCategory.REACTION, r.moles());
+                graph.markChanged(z);
+            }
+        }
     }
 
     // ---- Components (architecture §3.3) -------------------------------------------------

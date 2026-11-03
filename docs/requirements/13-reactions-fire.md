@@ -40,7 +40,8 @@ Definitions are read from `data/<ns>/zas/reaction/*.json`, documented in
 [datapacks.md](../datapacks.md#reactions), and compiled against the server's
 gases at start and on `/reload` (architecture §5, Reactions). Checked by the
 `fire_001_` tests in `ReactionFormatTest` (zas) and `ReactionSetTest` (engine).
-Running reactions zone-wide is phase 7, which comes with FIRE-004.*
+Zones run their reactions that don't need ignition in phase 7 (ZONE_UPDATES),
+checked by `ZoneReactionsTest`.*
 
 #### FIRE-006 · Reactions requiring ignition
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-57 · Depends: FIRE-001, FIRE-014
@@ -91,7 +92,7 @@ these limits and autoignition points. Checked by the `fire_003_` tests in
 `ReactionSetTest`. In game they burn once hotspots do (FIRE-011).*
 
 #### FIRE-005 · Incomplete combustion
-`Should` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-49, LIFE-041
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-49, LIFE-041
 
 When CH₄ or a solid fuel burns at an O₂ fraction below 0.18, a share of its
 carbon shall form CO instead of CO₂, rising linearly from 0 at 0.18 to all of
@@ -106,11 +107,16 @@ gives the CO share and the reduced O₂ and heat, and furnaces, campfires, fires
 and the generator burn with it (FIRE-025). The share starts at
 `[fire] incomplete_below_fraction` (0.18). Checked by
 `fire_005_half_the_carbon_forms_co_at_0_16` (Unit) and
-`fire_005_furnace_in_low_oxygen_makes_co` (GameTest). This stays Accepted until
-CH₄'s half is built with the reactions (#41).*
+`fire_005_furnace_in_low_oxygen_makes_co` (GameTest).*
+
+*2026-11-03: CH₄'s part is implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)):
+the shipped methane combustion has an incomplete form, CH₄ + 1.5 O₂ → CO +
+2 H₂O at 519 kJ/mol, blended in by the CO share. Checked by
+`fire_005_half_the_methane_carbon_forms_co_at_an_oxygen_fraction_of_016`. With
+the solid-fuel half above, FIRE-005 is Implemented.*
 
 #### FIRE-004 · Non-combustion examples
-`Could` · `R1` · `Accepted` · Verify: Unit
+`Could` · `R1` · `Implemented` · Verify: Unit
 
 Ship at least one non-combustion reaction to exercise the framework, such as
 N₂O thermal decomposition.
@@ -118,6 +124,12 @@ N₂O thermal decomposition.
 - **Rationale:** Inferred: a non-combustion reaction proves the framework
   isn't fire-only.
 - **Verify:** A Unit test runs N₂O decomposition above its threshold.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`data/zas/zas/reaction/nitrous_oxide_decomposition.json`: N₂O → N₂ + ½ O₂,
+82.05 kJ/mol released, above 850 K, at an Arrhenius rate (about 1 % a second
+at 1,000 K, 250 kJ/mol). The rate is chosen for play, not fitted. Checked by
+`fire_004_nitrous_oxide_decomposes_above_its_threshold`.*
 
 ## Oxygen
 

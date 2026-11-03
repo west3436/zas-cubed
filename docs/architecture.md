@@ -1224,7 +1224,10 @@ way.
   reload: they are rules, not state. `DimensionAtmos` puts the set in each
   batch's `EngineSettings.reactions`, so one atmos tick sees one set.
 - **Two steps.** `ReactionSet.react(mixture, seconds, fire)` runs the reactions
-  that don't need ignition over a whole mixture, for phase 7 (ZONE_UPDATES).
+  that don't need ignition over a whole mixture. In phase 7 (ZONE_UPDATES) the
+  worker runs it on every zone that isn't paused, in id order, over the atmos
+  period, so N₂O decomposition (FIRE-004) happens wherever a zone is hot
+  enough.
   `ReactionSet.burn(mixture, parcelLitres, ignition, fire)` runs those that do
   (FIRE-006), to completion, on the gas in a parcel of the mixture, for phase 6
   (HOTSPOTS) and containers: 375 L per second (`PARCEL_LITRES_PER_SECOND`,
