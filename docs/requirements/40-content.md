@@ -1027,9 +1027,18 @@ until it has been vented.
   and comes off once vented.
 
 #### CONT-037 · Fire extinguisher
-`Could` · `R2` · `Deferred` — recorded during the FIRE review; R1 relies on removing O₂ and vanilla water, 2026-10-30. · Verify: GameTest
+`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, D-74
 
 A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
+
+- **Rationale:** vg: vg has a handheld fire extinguisher, whose sprite ZAS³
+  uses (D-74). Removing the O₂ and vanilla water also put fires out, but not
+  from a few blocks away.
+- **Verify:** A GameTest checks that spraying an extinguisher puts out a
+  vanilla fire block and a gas fire hotspot it is aimed at.
+- **Changed 2026-11-03 (the owner, for the fire round):** moved from R2
+  (`Deferred`) to R1. It was recorded during the FIRE review, when R1 relied
+  on removing the O₂ and vanilla water.
 
 ## Area air controllers and firelocks
 
@@ -1650,15 +1659,20 @@ NeoForge's furnace fuel data map, except fuels that leave an item behind (a lava
 bucket), which the one slot has nowhere to put. A coal block burns for 800 s and
 a stick for 5 s (`cont_066_generator_burns_any_furnace_fuel_by_its_burn_time`).*
 
-#### CONT-067 · Generator is a lit fuel block
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
+#### CONT-067 · Generator doesn't use the air
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
 
-The generator shall count as a lit fuel-burning block for FIRE-021, FIRE-024,
-FIRE-025 and HEAT-007.
+The generator shall burn its fuel without using the air, as vg's P.A.C.M.A.N.
+does. It uses no O₂, emits no CO₂, CO or heat, runs in a vacuum, and isn't in
+`#zas:combustion`, so it is no zone trigger.
 
-- **Rationale:** Decision: D-35.
-- **Verify:** A GameTest checks a running generator in a zone uses O₂, emits
-  CO₂ and heat, and forms a zone under Hardcore.
+- **Rationale:** Decision: D-35, as changed by the owner on 2026-11-03.
+- **Verify:** A GameTest checks a running generator in a sealed zone changes
+  no gas and runs in a vacuum. Another checks that lighting one under Hardcore
+  forms no zone.
+- **Changed 2026-11-03 (the owner, D-35):** the generator no longer counts as
+  a lit fuel-burning block for FIRE-021, FIRE-024, FIRE-025 and HEAT-007.
+  "It's unrealistic but it's how it works in SS13."
 
 *2026-11-01: for CORE-056 and FIRE-024 the generator counts as combustion
 through data, with nothing added to the API
@@ -1674,6 +1688,18 @@ Normal triggers (CORE-055).*
 ([#52](https://github.com/west3436/zas-cubed/issues/52)), and `core_056_lit_generator_forms_a_zone_under_hardcore` checks it
 forms a zone under Hardcore and not under Normal. This stays Accepted until
 FIRE-021 and HEAT-007 make lit fuel blocks use O₂, emit CO₂ and heat.*
+
+*2026-11-03: Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)). `zas_atmos` ships the generator's 10 kW
+profile (`data/zas_atmos/zas/fuel_profile/generator.json`), and the framework
+burns it as any lit fuel block. Checked by
+`cont_067_running_generator_uses_o2_and_makes_co2_and_heat` and
+`core_056_lit_generator_forms_a_zone_under_hardcore`.*
+
+*2026-11-03: Changed by the owner and implemented. `zas_atmos` no longer ships
+the generator's fuel profile or lists it in `#zas:combustion`. Checked by
+`cont_067_running_generator_changes_no_gas`,
+`cont_067_generator_runs_in_a_vacuum` and
+`core_056_lit_generator_forms_no_zone_under_hardcore`.*
 
 #### CONT-062 · Controller power buffer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-34, D-68

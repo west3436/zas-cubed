@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryOverride.Target;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,7 +82,7 @@ public final class IgnitionSources {
     public static void register(IEventBus gameBus) {
         gameBus.addListener((AddReloadListenerEvent e) -> e.addListener(new Loader()));
         gameBus.addListener(IgnitionSources::onTagsUpdated);
-        EngineLink.setStandingSources(IgnitionSources::isStanding);
+        Geometries.setIgnitionSources(IgnitionSources::isStanding);
     }
 
     // ---- lookups (any thread) ----

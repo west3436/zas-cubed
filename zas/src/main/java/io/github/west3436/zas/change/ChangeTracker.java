@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.ChunkGenerations;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.DirtySections;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.ignition.IgnitionEvents;
@@ -36,7 +37,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <ul>
  *   <li>bumps the chunk's block generation ({@link ChunkGenerations}), on every write;
  *   <li>if the geometry id changed, marks the position in the dimension's {@link DirtySections};
- *       a write that keeps the geometry id (stone to cobblestone, air to a torch) stops there
+ *       a write that keeps the geometry id (stone to cobblestone, air to a redstone torch) stops there
  *       (GEO-011);
  *   <li>if the write starts a Hardcore zone trigger that is active, a fire or a lit furnace
  *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
@@ -122,6 +123,7 @@ public final class ChangeTracker {
         IgnitionEvents.onBlockWrite(level, pos, now);
         if (level.getServer().isSameThread()) {
             dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers);
+            Burners.onBlockWrite(level, pos, old, now);
         } else {
             OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged, triggers));
         }

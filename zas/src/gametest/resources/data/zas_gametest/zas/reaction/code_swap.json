@@ -1,0 +1,5 @@
+{
+  "type": "zas_gametest:swap",
+  "parameters": {"fraction": 0.25},
+  "catalysts": [{"gas": "zas_gametest:plain_gas"}]
+}

@@ -87,6 +87,10 @@ public final class DimensionPipeline {
      * @param changedChunks the chunks whose saved atmosphere changed with this apply, ascending:
      *     those of zones whose published state changed, appeared or went away, and those of
      *     records the worker took in; the platform marks them for saving (DATA-002)
+     * @param fireIntents gas-fire blocks to place or remove (FIRE-018), without those of rejected
+     *     zones
+     * @param fireEvents zones that caught fire or stopped burning (API-031), without rejected
+     *     zones
      */
     public record Applied(
             long tick,
@@ -96,7 +100,9 @@ public final class DimensionPipeline {
             int requeued,
             ConservationReport conservation,
             Throwable fault,
-            long[] changedChunks) {}
+            long[] changedChunks,
+            List<FireIntent> fireIntents,
+            List<FireEvent> fireEvents) {}
 
     private final DimensionScheduler scheduler;
     private final World world;
@@ -140,6 +146,9 @@ public final class DimensionPipeline {
     private final Map<Long, Long> settling = new ConcurrentHashMap<>();
 
     private volatile AtmosSnapshot published;
+
+    /** The hotspots of the last applied tick (API-055). Written on the server thread, read on any. */
+    private volatile HotspotTable hotspots = HotspotTable.EMPTY;
 
     /**
      * @param scheduler the dimension's scheduler
@@ -296,6 +305,19 @@ public final class DimensionPipeline {
     }
 
     /**
+     * Queues an ignition at a position for the next batch (FIRE-014): a flammable zone in the
+     * position's cell or a neighbouring one starts burning there, in the hotspot phase. It never
+     * forms a zone, and it isn't saved with its chunk.
+     *
+     * @return its sequence number
+     */
+    public long ignite(long block, String source) {
+        long seq = nextSeq++;
+        enqueue(GasOp.ignite(seq, block, source));
+        return seq;
+    }
+
+    /**
      * Queues a saved addition again, under a new sequence number (DATA-011). Its outcome has no
      * caller to go to.
      *
@@ -327,6 +349,7 @@ public final class DimensionPipeline {
             case REMOVE -> remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
             case PIN -> pin(op.block(), op.sub(), op.source());
             case UNPIN -> unpin(op.source());
+            case IGNITE -> ignite(op.block(), op.source());
             case ADD_HEAT, REMOVE_HEAT ->
                 heat(
                         op.block(),
@@ -574,6 +597,11 @@ public final class DimensionPipeline {
 
     // ---- Apply --------------------------------------------------------------------
 
+    /** The hotspots burning after the last applied atmos tick (FIRE-011, API-055). Any thread. */
+    public HotspotTable hotspots() {
+        return hotspots;
+    }
+
     /**
      * The flow edges of the last applied atmos tick (FLOW-001): empty with airflow off. Any
      * thread.
@@ -597,7 +625,8 @@ public final class DimensionPipeline {
         long tick = closedTick;
         Result result = scheduler.await();
         if (result == null) {
-            return new Applied(tick, List.of(), List.of(), 0, 0, null, scheduler.fault(), new long[0]);
+            return new Applied(
+                    tick, List.of(), List.of(), 0, 0, null, scheduler.fault(), new long[0], List.of(), List.of());
         }
         List<Integer> rejectedIndices = new ArrayList<>();
         List<Long> rejectedZones = new ArrayList<>();
@@ -651,6 +680,20 @@ public final class DimensionPipeline {
             changed.add(SectionKeys.chunkOfBlockKey(b));
         }
         nextZoneId = result.nextZoneId();
+        Set<Long> rejectedSet = new HashSet<>(rejectedZones);
+        List<FireIntent> intents = new ArrayList<>();
+        for (FireIntent i : result.fireIntents()) {
+            if (!rejectedSet.contains(i.zoneId())) {
+                intents.add(i);
+            }
+        }
+        List<FireEvent> fireEvents = new ArrayList<>();
+        for (FireEvent e : result.fireEvents()) {
+            if (!rejectedSet.contains(e.zoneId())) {
+                fireEvents.add(e);
+            }
+        }
+        hotspots = result.hotspots().withRejected(hotspots, rejectedSet);
         published = snapshot;
         flows = result.flows();
         flowsTick = result.tick();
@@ -666,7 +709,9 @@ public final class DimensionPipeline {
                 requeued,
                 result.conservation(),
                 null,
-                toArray(changed));
+                toArray(changed),
+                intents,
+                fireEvents);
     }
 
     /** The chunks of zones whose published state differs between two tables. */

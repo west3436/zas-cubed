@@ -61,9 +61,23 @@ final class Sim {
     }
 
     Sim(TestWorld world, Executor executor, Classifier.Factory classifier, GeometryPalette palette) {
+        this(world, executor, classifier, palette, REGISTRY);
+    }
+
+    /** A world with other gases; {@link #moles} and the helpers using it then don't apply. */
+    Sim(TestWorld world, GeometryPalette palette, GasRegistry registry) {
+        this(world, null, EnclosureClassifier.FACTORY, palette, registry);
+    }
+
+    Sim(
+            TestWorld world,
+            Executor executor,
+            Classifier.Factory classifier,
+            GeometryPalette palette,
+            GasRegistry registry) {
         this.world = world;
         this.engine = new DimensionEngine(
-                REGISTRY,
+                registry,
                 CONFIG,
                 classifier,
                 palette,

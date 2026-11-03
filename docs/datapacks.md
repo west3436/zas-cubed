@@ -6,9 +6,9 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
 [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
-[airflow class tags](#airflow-classes) and [ignition sources](#ignition-sources).
-The rest of OPS-002's list (reactions, thermal properties, fuel, protection
-data, the other entity tags) arrives with its features in R1. Every format
+[airflow class tags](#airflow-classes), [reactions](#reactions) and
+[ignition sources](#ignition-sources). The rest of OPS-002's list (fuel, the
+other entity tags) arrives with its features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -369,6 +369,183 @@ data/<namespace>/zas/thermal/<path>.json
   `/reload`. Heat data is part of a block's geometry, so a change rebuilds the
   zones as a geometry change does.
 
+## Fuel profiles
+
+How hard each fuel-burning block burns (FIRE-025). The blocks that burn are
+those in `#zas:combustion` ([Block tags](#block-tags)), and a profile gives
+their power:
+
+```
+data/<namespace>/zas/fuel_profile/<path>.json
+```
+
+```json
+{
+  "blocks": ["minecraft:furnace", "minecraft:smoker", "#minecraft:campfires"],
+  "watts": 5000
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `watts` | number | yes | The power, in W, 0 to 10,000,000 |
+| `burning_on` | list of strings | no | For fire: block ids or `#` tags of the block the fire burns on. The profile applies only to a fire burning on one of them (FIRE-022) |
+
+- **Burned as carbon.** A block burns `watts` as carbon, C + O₂ → CO₂ at 394
+  kJ/mol, so 5 kW uses about 0.0127 mol of O₂ a second and makes as much
+  CO₂. It also adds its power to its zone as heat (HEAT-007). Below an O₂
+  fraction of 0.18 part of the carbon forms CO instead, all of it at the fire
+  threshold, with less heat (FIRE-005,
+  [config](config.md#server-zas-servertoml)).
+- **Where.** Only in a zone. A burning block outside zones changes nothing. A
+  block below the fire oxygen threshold (FIRE-030) doesn't burn: a fire goes
+  out, a furnace pauses and a campfire goes out.
+- **Which profile.** A profile whose `burning_on` matches beats one without.
+  Then a profile naming the block directly beats one matching it through a
+  tag, and between equals the file whose id sorts last wins. A fire burns on
+  the block below it, or, with air below, the first flammable block next to
+  it.
+- **Shipped profiles,** in `data/zas/zas/fuel_profile/`:
+
+  | File | Blocks | Power |
+  |---|---|---|
+  | `furnace.json` | furnace, smoker, `#minecraft:campfires` | 5 kW |
+  | `blast_furnace.json` | blast furnace | 10 kW |
+  | `fire.json` | `#minecraft:fire` | 10 kW |
+
+  `zas_atmos`'s fuel generator has none: it doesn't use the air (D-35,
+  CONT-067).
+- **A modded fuel block** needs both: a place in `#zas:combustion` with a
+  boolean `lit` property, and a profile. A block in the tag without a profile
+  forms zones under Hardcore but uses no O₂.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** profiles load when the server starts and reload with
+  `/reload`.
+
+## Reactions
+
+Gas reactions are data (FIRE-001, D-05, D-08). Each file defines one reaction:
+
+```
+data/<namespace>/zas/reaction/<path>.json   →   reaction id <namespace>:<path>
+```
+
+```json
+{
+  "reactants": { "zas:methane": 1, "zas:oxygen": 2 },
+  "products": { "zas:carbon_dioxide": 1, "zas:water_vapor": 2 },
+  "enthalpy": -802000,
+  "requires_ignition": true,
+  "flammability": {
+    "fuel": "zas:methane",
+    "lower": 0.05,
+    "upper": 0.15,
+    "autoignition": 810
+  },
+  "sources": {
+    "enthalpy": "where the value comes from"
+  }
+}
+```
+
+The reaction as written happens some number of times per step, its *extent*
+in mol. Each mol of extent consumes the reactants' coefficients in mol,
+produces the products' and releases −`enthalpy` J of heat into the gas.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `type` | string | no | `zas:standard` (the default), or the id of a reaction type a mod implements in code (API-020) |
+| `reactants` | object | yes, for `zas:standard` | Gas id → mol per mol of extent, each above 0. At least one |
+| `products` | object | no | Gas id → mol per mol of extent, each above 0 |
+| `enthalpy` | number | yes, for `zas:standard` | ΔH in J per mol of extent: negative releases heat, as in chemistry |
+| `min_temperature` | number | no | The least temperature it happens at, K. Default 0 |
+| `max_temperature` | number | no | The greatest, K, above `min_temperature`. Default none |
+| `concentrations` | list | no | Objects `{"gas", "min", "max"}`: the gas's mole fraction of the mixture must be from `min` (default 0) to `max` (default 1) |
+| `catalysts` | list | no | Objects `{"gas", "min"}`: the gas must be present, at a mole fraction of at least `min` (default 0), and isn't consumed |
+| `requires_ignition` | boolean | no | Whether it needs an ignition source in or next to the cell (FIRE-006). Default false |
+| `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture, 0 to 1), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
+| `rate` | object | no | How fast it goes (CORE-046): `per_second` (k, above 0), `activation_energy` (Ea in J/mol, default 0) and `reference_temperature` (K, default 298.15). Without one it goes as far as its reactants allow in one step. Not allowed with `requires_ignition` |
+| `incomplete_combustion` | object | no | Another form, with its own `reactants`, `products` and `enthalpy`, blended in by the share of carbon that forms CO when the O₂ fraction is low (FIRE-005) |
+| `parameters` | any | no | Only for a code type: passed to it as it loads, and checked by it |
+| `sources` | object | no | Citations by field name, as for gases; the game doesn't read them |
+
+**Reaction types in code** (API-020). A mod registers a type with
+`Reactions.registerType(id, type)` during setup; a definition names it in
+`type` and gives it `parameters`:
+
+```json
+{
+  "type": "examplemod:catalytic_converter",
+  "parameters": { "efficiency": 0.8 },
+  "min_temperature": 500,
+  "catalysts": [{ "gas": "zas:oxygen" }]
+}
+```
+
+- The definition's conditions (temperatures, concentrations, catalysts,
+  ignition, flammability) still decide whether it runs; the type works out its
+  own amounts, so `reactants`, `products`, `enthalpy`, `rate` and
+  `incomplete_combustion` aren't allowed with it.
+- Its change is scaled back like any other reaction's when it asks for more
+  than there is.
+- A `type` no mod registers, or `parameters` the type rejects, skips the file
+  with an error naming the field.
+- A type that throws, or that consumes or produces a gas the server doesn't
+  define, changes nothing that step and is logged at most once a minute; the
+  simulation carries on.
+
+**How reactions run.**
+
+- **Every condition is read at the start of a step,** from the whole mixture:
+  temperatures, mole fractions, catalysts, flammability limits and, for a
+  fire, the oxygen threshold.
+- **A reaction without `requires_ignition`** runs in every zone each atmos
+  tick. With a `rate`, a step of dt seconds goes 1 − e^(−k·dt) of the way to
+  using up its limiting reactant, with k = `per_second` ·
+  e^(−Ea/R·(1/T − 1/Tref)) at the zone's temperature. Without one it uses up
+  its limiting reactant at once.
+- **A reaction with `requires_ignition`** never runs zone-wide. It burns in a
+  hotspot's or a container's parcel, 375 L per second of the gas (FIRE-011,
+  FIRE-031), and uses up its limiting reactant in that parcel. It burns where
+  an ignition source is (a hotspot is one), or where the gas is at or above its
+  `autoignition`.
+- **Competing reactions share** (FIRE-002). When reactions together want more
+  of a gas than there is, each one that wants it is scaled back by the worst
+  ratio among its own reactants. A reaction competing with no other runs in
+  full. Products are added after every reaction has consumed.
+- **The heat goes into the gas.** The thermal energy, Σ cᵢnᵢ·T, plus the heat
+  released gives the new temperature at the products' heat capacities (CORE-003).
+  An endothermic reaction never cools the gas below the temperature floor.
+
+**Shipped reactions**, in `data/zas/zas/reaction/`. The combustion
+(FIRE-003) needs ignition and burns with O₂ to H₂O vapour and CO₂:
+
+| File | Reaction | Enthalpy | Flammability limits | Autoignition |
+|---|---|---|---|---|
+| `hydrogen_combustion.json` | H₂ + ½ O₂ → H₂O | −242 kJ/mol | 4–75 % H₂ | 858 K |
+| `methane_combustion.json` | CH₄ + 2 O₂ → CO₂ + 2 H₂O | −802 kJ/mol | 5–15 % CH₄ | 810 K |
+| `carbon_monoxide_combustion.json` | CO + ½ O₂ → CO₂ | −283 kJ/mol | 12.5–74 % CO | 882 K |
+
+- **Methane's incomplete form** (FIRE-005) is CH₄ + 1.5 O₂ → CO + 2 H₂O,
+  −519 kJ/mol. Below an O₂ fraction of 0.18 (`[fire]` in the server config) a
+  share of the carbon burns this way, rising linearly to all of it at the fire
+  threshold, 0.14: half at 0.16.
+- **`nitrous_oxide_decomposition.json`** (FIRE-004) runs in zones without
+  ignition: N₂O → N₂ + ½ O₂, −82.05 kJ/mol, above 850 K, at `per_second`
+  0.012 at 1,000 K with an activation energy of 250 kJ/mol. That is about 1 %
+  a second at 1,000 K and 1.8 per second at 1,200 K.
+
+- A pack replaces a shipped reaction with a file of the same id, and can't
+  remove one except by replacing it with one whose conditions never hold.
+- A definition naming a gas the server doesn't define is skipped with an error
+  when the server starts (or on `/reload`).
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** at server start and on `/reload`; the next atmos tick
+  uses the new reactions.
+
 ## Zone boundaries
 
 Blocks in the block tag `zas:zone_boundary` pass gas but keep the zones on
@@ -410,7 +587,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
-| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns |
+| `#zas:combustion` | `#minecraft:fire` (fire, soul fire; `zas:gas_fire` is in `#minecraft:fire` but never counts here, since it burns zone gas, not a fuel), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
 | `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. `zas_atmos`'s igniter is in it. See [Ignition sources](#ignition-sources) |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
@@ -419,9 +596,10 @@ A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
 from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
-[config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
-`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property, and
-`zas_atmos`'s firelock joins `#zas:zone_boundary`.
+[config.md](config.md#the-preset-and-its-options)). A mod's fuel block joins
+`#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins
+`#zas:zone_boundary`. `zas_atmos`'s generator isn't in `#zas:combustion`: it
+doesn't use the air (D-35, CONT-067).
 
 ## Ignition sources
 
@@ -470,7 +648,7 @@ nothing.
 
   | File | Type | What |
   |---|---|---|
-  | `fire.json` | `block` | `#minecraft:fire` (fire, soul fire) |
+  | `fire.json` | `block` | fire and soul fire. Not all of `#minecraft:fire`, which holds `zas:gas_fire`: a gas fire is a hotspot already, and spreads by FIRE-016's odds |
   | `lava.json` | `block` | lava and lava cauldrons |
   | `campfire.json` | `block` | `#minecraft:campfires` with `lit` true |
   | `torch.json` | `block` | torches and soul torches, standing or on a wall |

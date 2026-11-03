@@ -30,9 +30,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * FE it makes through the FE capability, to an area air controller next to it (CONT-062) or any
  * other mod's FE block.
  *
- * <p>Its {@link #LIT} property is true while it burns. The block is in {@code #zas:combustion}, so
- * the framework's change hook sees it being lit as it sees a furnace: a zone trigger under Hardcore
- * (CORE-056, FIRE-024), and a lit fuel block for FIRE-021 and HEAT-007 once those are built.
+ * <p>Its {@link #LIT} property is true while it burns. It burns its fuel without using the air, as
+ * vg's P.A.C.M.A.N. does (D-35, CONT-067): it isn't in {@code #zas:combustion} and has no fuel
+ * profile, so it uses no O₂, makes no CO₂, CO or heat, runs in a vacuum and is no zone trigger.
  */
 public class GeneratorBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<GeneratorBlock> CODEC = simpleCodec(GeneratorBlock::new);

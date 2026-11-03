@@ -12,8 +12,8 @@ the requirements (D-68, D-69).
 
 Art follows D-67: vanilla JSON models on the 1/16-block grid, textures at 16
 pixels per block (the exceptions are the wrench's 32×32 sprite, D-70,
-the filter's and mixer's tops, D-71, and the larger crafting components,
-D-72), flat
+the filter's and mixer's tops, D-71, the larger crafting components,
+D-72, and the fire extinguisher's 32×32 sprite, D-74), flat
 sprites for handheld items, and the standard armor
 texture layout for wearables. Sources and licensing follow D-26 and D-39, with
 each asset's provenance in `CREDITS` (NFR-045). Where each texture comes from,
@@ -164,6 +164,7 @@ one suit share their layer files.
 | `zas_atmos:wrench` | Wrench | Should | CONT-035 | Flat sprite, vg's own at 32×32 (D-70). Quickly takes pipes apart, and connects portables to connector ports and disconnects them. CONT-035 and CONT-083 need updating to match. |
 | `zas_atmos:crowbar` | Crowbar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. A crowbar, not a halligan bar (the owner's choice of 2026-11-01). |
 | `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (D-68). |
+| `zas_atmos:fire_extinguisher` | Fire extinguisher | Could | CONT-037 | Flat sprite, vg's own at 32×32, centred (D-74). Puts out hotspots and fire blocks. Moved from R2 by the owner, 2026-11-03. |
 
 **Batteries.** Portables run on these (D-69), and so can other mods' batteries
 in the `zas_atmos:batteries` tag (CONT-112). The three tiers follow vg's power
@@ -212,7 +213,7 @@ All are done (2026-11-02).
 | Blocks (`zas`) | 1 | – | – | – | 1 |
 | Blocks (`zas_atmos`) | 13 | 9 | 1 | 8 | 31 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
-| Items (`zas_atmos`) | 18 | 5 | – | – | 23 |
+| Items (`zas_atmos`) | 18 | 5 | 1 | – | 24 |
 | Crafting components (`zas_atmos`) | 15 | 4 | – | – | 19 |
 
 *2026-11-02: R1 now has crafting components of its own (D-72). Its recipes
@@ -253,7 +254,6 @@ moved to R1 (above).
 | Pipe layer manifold | Block | CONT R2 column | vg joins pipe layers with manifolds and adapters ([vg §1](research/vg-atmos-content.md#1-pipe-networks)). R2 may need one or both. Pipe layers were to reuse the multipart block, so they need another design (D-68). |
 | Pipe layer adapter | Block | CONT R2 column | See the manifold. |
 | Gas miner | Block | CONT R2 column | Creative only. |
-| Fire extinguisher | Item | CONT-037 | |
 | TTV signaler | Item | CONT-104 | Attaches to the tank transfer valve. |
 | TTV proximity trigger | Item | CONT-104 | Attaches to the tank transfer valve. |
 | Mekanism bridge port | Block | MEK-012 | |
