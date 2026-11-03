@@ -93,8 +93,11 @@ public final class Airflow {
     /** The step along the flow at which {@link #crawl} looks for an opening, blocks. */
     private static final double CRAWL_STEP = 0.25;
 
-    /** The heights above the player's feet at which it looks: the floor, and a slab up. */
-    private static final double[] CRAWL_RISE = {0, 0.5};
+    /**
+     * The heights above the player's feet at which it looks for room to crawl: level with them, a
+     * slab up, and a block up, for a hole in a wall above the floor.
+     */
+    private static final double[] CRAWL_RISE = {0, 0.5, 1};
 
     private static final Map<ResourceKey<Level>, LevelState> STATES = new HashMap<>();
 
@@ -228,9 +231,10 @@ public final class Airflow {
     /**
      * Puts a player in the swimming pose while airflow carries it into an opening too low to stand
      * in, and lets it up once it can stand (FLOW-019). It wants the pose when the flow has a
-     * horizontal part and, within {@code reach} ahead along it, the standing box hits a block where
-     * the swimming box fits; once it has the pose, it keeps it while the player can't stand where
-     * it is. The pose is forced ({@link Player#setForcedPose}) only when nothing else forces one,
+     * horizontal part and, within {@code reach} ahead along it, the player can't stand but the
+     * swimming box fits, level with its feet or up to a block above them (the flow, aimed at the
+     * opening, lifts it); once it has the pose, it keeps it while the player can't stand where it
+     * is. The pose is forced ({@link Player#setForcedPose}) only when nothing else forces one,
      * and only the pose it forced is let up.
      *
      * @param flow the flow's velocity at the player ({@link #flowAt}), or null for none
@@ -259,7 +263,12 @@ public final class Airflow {
         return false;
     }
 
-    /** Whether, within reach ahead along the flow, the player could crawl but not stand. */
+    /**
+     * Whether, within reach ahead along the flow, there is a place the player can't stand at its
+     * own height, but where, at that height or up to a block above, it could crawl and still not
+     * stand: a hole level with its feet, or one in the wall above, which the flow lifts it into.
+     * A passage two blocks high, or a step up, doesn't count, as it could stand there.
+     */
     private static boolean lowOpeningAhead(Player player, Vec3 flow, double reach) {
         double h = Math.sqrt(flow.x * flow.x + flow.z * flow.z);
         if (h < 1e-6) {
@@ -269,8 +278,12 @@ public final class Airflow {
         double dz = flow.z / h;
         Vec3 at = player.position();
         for (double t = CRAWL_STEP; t <= reach + 1e-9; t += CRAWL_STEP) {
+            Vec3 ahead = at.add(dx * t, 0, dz * t);
+            if (fits(player, Pose.STANDING, ahead)) {
+                continue;
+            }
             for (double rise : CRAWL_RISE) {
-                Vec3 p = at.add(dx * t, rise, dz * t);
+                Vec3 p = ahead.add(0, rise, 0);
                 if (!fits(player, Pose.STANDING, p) && fits(player, Pose.SWIMMING, p)) {
                     return true;
                 }
