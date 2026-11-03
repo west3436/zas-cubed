@@ -425,7 +425,7 @@ uncovered part of the face (GEO-003, GEO-004).
   before any query and at the end of each server tick. A chunk's dirty bits
   are dropped when it unloads.
 - **Locality filter (GEO-011).** In the hook, a write that keeps the geometry
-  id (stone to cobblestone, air to a torch) sets no dirty bit. At batch close
+  id (stone to cobblestone, air to a redstone torch) sets no dirty bit. At batch close
   the scheduler drains with the set of sections that hold zoned cells, border
   a zone, or contain a pending classification, and only those are
   snapshotted (`ChangeTracker.drain(level, interest)`). All other dirty bits
@@ -1178,8 +1178,10 @@ load. Detection is change-driven; nothing scans the world:
 
 A position whose last ignition hasn't been applied isn't sent again, so an
 explosion chain or a redstone clock queues at most one per position per atmos
-tick. *Not yet wired:* the predicate and the ignite call go through
-`EngineLink` until the hotspot engine lands.
+tick. One-off sources go through `AtmosService.ignite`, which completes when
+the ignition is applied. Fire and soul fire are standing sources, but not
+`zas:gas_fire`, though it is in `#minecraft:fire`: a gas fire is a hotspot
+already, and spreads by FIRE-016's odds.
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the

@@ -320,11 +320,11 @@ public final class ChangeTrackingTests {
                 "stone and cobblestone should share a geometry");
         check(
                 h,
-                Geometries.geometryId(AIR) == Geometries.geometryId(Blocks.TORCH.defaultBlockState()),
-                "air and a torch should share a geometry");
+                Geometries.geometryId(AIR) == Geometries.geometryId(Blocks.REDSTONE_TORCH.defaultBlockState()),
+                "air and a redstone torch should share a geometry");
         long before = blockGeneration(h, solid);
         h.setBlock(solid, Blocks.COBBLESTONE);
-        h.setBlock(open, Blocks.TORCH);
+        h.setBlock(open, Blocks.REDSTONE_TORCH); // a torch is an ignition source (FIRE-014), so flagged
         h.setBlock(solid, Blocks.COBBLESTONE); // no change at all
         check(h, blockGeneration(h, solid) != before, "the block generation should still change");
         List<BlockPos> changed = takeDirty(h);

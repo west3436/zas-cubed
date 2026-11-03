@@ -1,4 +1,4 @@
 {
   "type": "block",
-  "blocks": ["#minecraft:fire"]
+  "blocks": ["minecraft:fire", "minecraft:soul_fire"]
 }

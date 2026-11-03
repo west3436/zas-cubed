@@ -37,7 +37,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <ul>
  *   <li>bumps the chunk's block generation ({@link ChunkGenerations}), on every write;
  *   <li>if the geometry id changed, marks the position in the dimension's {@link DirtySections};
- *       a write that keeps the geometry id (stone to cobblestone, air to a torch) stops there
+ *       a write that keeps the geometry id (stone to cobblestone, air to a redstone torch) stops there
  *       (GEO-011);
  *   <li>if the write starts a Hardcore zone trigger that is active, a fire or a lit furnace
  *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
