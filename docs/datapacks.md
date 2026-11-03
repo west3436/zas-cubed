@@ -468,7 +468,33 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
 | `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture, 0 to 1), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
 | `rate` | object | no | How fast it goes (CORE-046): `per_second` (k, above 0), `activation_energy` (Ea in J/mol, default 0) and `reference_temperature` (K, default 298.15). Without one it goes as far as its reactants allow in one step. Not allowed with `requires_ignition` |
 | `incomplete_combustion` | object | no | Another form, with its own `reactants`, `products` and `enthalpy`, blended in by the share of carbon that forms CO when the O₂ fraction is low (FIRE-005) |
+| `parameters` | any | no | Only for a code type: passed to it as it loads, and checked by it |
 | `sources` | object | no | Citations by field name, as for gases; the game doesn't read them |
+
+**Reaction types in code** (API-020). A mod registers a type with
+`Reactions.registerType(id, type)` during setup; a definition names it in
+`type` and gives it `parameters`:
+
+```json
+{
+  "type": "examplemod:catalytic_converter",
+  "parameters": { "efficiency": 0.8 },
+  "min_temperature": 500,
+  "catalysts": [{ "gas": "zas:oxygen" }]
+}
+```
+
+- The definition's conditions (temperatures, concentrations, catalysts,
+  ignition, flammability) still decide whether it runs; the type works out its
+  own amounts, so `reactants`, `products`, `enthalpy`, `rate` and
+  `incomplete_combustion` aren't allowed with it.
+- Its change is scaled back like any other reaction's when it asks for more
+  than there is.
+- A `type` no mod registers, or `parameters` the type rejects, skips the file
+  with an error naming the field.
+- A type that throws, or that consumes or produces a gas the server doesn't
+  define, changes nothing that step and is logged at most once a minute; the
+  simulation carries on.
 
 **How reactions run.**
 

@@ -397,6 +397,160 @@ class ReactionSetTest {
         assertEquals(3 - 3 * ratio, m.moles(CH4), EPS);
     }
 
+    // ---- FIRE-031: combustion in containers ----------------------------------------------------
+
+    /** A tank of 2 H2 to 1 O2 in N2, at 1,000 kPa. */
+    private static GasMixture tank(double litres, double temperature) {
+        double total = 1000 * litres / (8.314462618 * temperature);
+        return mixture(litres, temperature, H2, total * 0.2, O2, total * 0.3, N2, total * 0.5);
+    }
+
+    @Test
+    void fire_031_a_70_l_tank_burns_completely_in_one_tick() {
+        GasMixture m = tank(70, 293.15);
+        double h2 = m.moles(H2);
+        ReactionResult r = COMBUSTION.applyStandalone(m, 1, true, FIRE);
+        assertEquals(0, m.moles(H2));
+        assertEquals(h2, m.moles(H2O), EPS);
+        assertEquals(242_000 * h2, r.heat(), 1e-6);
+        assertTrue(m.temperature() > 1500, "T " + m.temperature());
+    }
+
+    @Test
+    void fire_031_a_1000_l_canister_burns_375_l() {
+        GasMixture m = tank(1000, 293.15);
+        double h2 = m.moles(H2);
+        COMBUSTION.applyStandalone(m, 1, true, FIRE);
+        assertEquals(h2 * (1 - 0.375), m.moles(H2), EPS);
+        assertEquals(h2 * 0.375, m.moles(H2O), EPS);
+
+        // Two seconds burn 750 L in one parcel.
+        GasMixture two = tank(1000, 293.15);
+        COMBUSTION.applyStandalone(two, 2, true, FIRE);
+        assertEquals(h2 * (1 - 0.75), two.moles(H2), EPS);
+    }
+
+    @Test
+    void fire_031_a_container_ignites_by_a_source_or_by_autoignition() {
+        assertFalse(COMBUSTION.applyStandalone(tank(70, 293.15), 1, false, FIRE).reacted());
+        assertTrue(COMBUSTION.applyStandalone(tank(70, 900), 1, false, FIRE).reacted());
+        assertFalse(COMBUSTION.applyStandalone(tank(70, 800), 1, false, FIRE).reacted());
+    }
+
+    @Test
+    void fire_031_a_container_needs_the_fire_oxygen_threshold() {
+        // 10 % H2, 12 % O2: the fraction is below 0.14 however high the pressure.
+        GasMixture lean = mixture(70, 293.15, H2, 2.9, O2, 3.5, N2, 22.6);
+        assertFalse(COMBUSTION.applyStandalone(lean, 1, true, FIRE).reacted());
+    }
+
+    @Test
+    void fire_031_a_standalone_step_also_runs_zone_reactions() {
+        ReactionSet set = Chemistry.compile(
+                Chemistry.HYDROGEN,
+                zoneWide(
+                        "test:slow",
+                        Map.of("zas:nitrous_oxide", 1.0),
+                        ReactionConditions.NONE,
+                        Optional.of(ReactionRate.constant(0.1))));
+        GasMixture m = tank(70, 293.15);
+        m.setMoles(N2O, 1);
+        ReactionResult r = set.applyStandalone(m, 1, true, FIRE);
+        assertEquals(2, r.reactions());
+        assertEquals(0, m.moles(H2));
+        assertEquals(Math.exp(-0.1), m.moles(N2O), 1e-12);
+    }
+
+    // ---- API-020: code-defined reactions (the engine's side) -----------------------------------
+
+    private static ReactionDefinition code(String id, ReactionConditions conditions, CodeReaction code) {
+        return new ReactionDefinition(
+                id,
+                "test:code",
+                Map.of(),
+                Map.of(),
+                0,
+                conditions,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(code));
+    }
+
+    @Test
+    void api_020_a_code_reaction_changes_the_mixture_as_it_asks() {
+        ReactionSet set = Chemistry.compile(code("test:half", ReactionConditions.NONE, in -> {
+            double[] consumed = new double[in.moles().length];
+            double[] produced = new double[in.moles().length];
+            consumed[N2O] = in.available()[N2O] / 2;
+            produced[N2] = consumed[N2O];
+            return new CodeReaction.Change(consumed, produced, 500);
+        }));
+        GasMixture m = mixture(1000, 300, N2O, 2, O2, 1);
+        double energy = m.heatCapacity() * m.temperature();
+        ReactionResult r = set.react(m, 1, FIRE);
+        assertEquals(1, m.moles(N2O), EPS);
+        assertEquals(1, m.moles(N2), EPS);
+        assertEquals(500, r.heat());
+        assertEquals(energy + 500, m.heatCapacity() * m.temperature(), 1e-6);
+    }
+
+    @Test
+    void api_020_a_code_reaction_asking_for_more_than_there_is_is_scaled_to_fit() {
+        ReactionSet set = Chemistry.compile(code("test:greedy", ReactionConditions.NONE, in -> {
+            double[] consumed = new double[in.moles().length];
+            double[] produced = new double[in.moles().length];
+            consumed[N2O] = 4;
+            produced[N2] = 4;
+            return new CodeReaction.Change(consumed, produced, 0);
+        }));
+        GasMixture m = mixture(1000, 300, N2O, 2);
+        set.react(m, 1, FIRE);
+        assertEquals(0, m.moles(N2O));
+        assertEquals(2, m.moles(N2), EPS);
+    }
+
+    @Test
+    void api_020_a_failing_code_reaction_is_skipped_and_logged_once() {
+        List<String> log = new ArrayList<>();
+        ReactionSet set = Chemistry.compile(
+                code("test:broken", ReactionConditions.NONE, in -> {
+                    throw new IllegalStateException("boom");
+                }),
+                code(
+                        "test:negative",
+                        ReactionConditions.NONE,
+                        in -> new CodeReaction.Change(new double[in.moles().length], new double[] {-1}, 0)),
+                instant("test:fine", Map.of("zas:nitrous_oxide", 1.0), Map.of("zas:nitrogen", 1.0)));
+        io.github.west3436.zas.engine.gas.GasConfig config =
+                io.github.west3436.zas.engine.gas.GasConfig.DEFAULT.withLog(log::add);
+        for (int i = 0; i < 3; i++) {
+            GasMixture m = new GasMixture(REGISTRY, config, 1000, 300);
+            m.setMoles(N2O, 1);
+            ReactionResult r = set.react(m, 1, FIRE);
+            assertEquals(1, r.reactions());
+            assertEquals(1, m.moles(N2), EPS);
+        }
+        assertEquals(2, log.size(), log.toString());
+        assertTrue(log.get(0).contains("test:broken") && log.get(0).contains("boom"), log.get(0));
+        assertTrue(log.get(1).contains("test:negative"), log.get(1));
+    }
+
+    @Test
+    void api_020_a_code_reaction_runs_only_where_its_conditions_hold() {
+        int[] calls = {0};
+        ReactionSet set = Chemistry.compile(code(
+                "test:hot",
+                new ReactionConditions(1000, Double.POSITIVE_INFINITY, List.of(), List.of(), false, Optional.empty()),
+                in -> {
+                    calls[0]++;
+                    return null;
+                }));
+        assertFalse(set.react(mixture(1000, 300, N2O, 1), 1, FIRE).reacted());
+        assertEquals(0, calls[0]);
+        assertFalse(set.react(mixture(1000, 1100, N2O, 1), 1, FIRE).reacted());
+        assertEquals(1, calls[0]);
+    }
+
     private static ReactionDefinition instant(String id, Map<String, Double> reactants, Map<String, Double> products) {
         return ReactionDefinition.standard(
                 id, reactants, products, 0, ReactionConditions.NONE, Optional.empty(), Optional.empty());

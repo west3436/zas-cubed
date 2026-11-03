@@ -157,7 +157,7 @@ carried to the worker in `EngineSettings.fire`. Vanilla fire, fuel blocks
 (GameTest: 13 % O₂ at 1 atm, and pure O₂ at 9 kPa).*
 
 #### FIRE-031 · Combustion in containers
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, FIRE-011 · Depends: API-019
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, FIRE-011 · Depends: API-019
 
 A standalone mixture (API-019) that ignites, by autoignition (FIRE-010) or a
 given ignition source, shall burn as one hotspot whose parcel is 375 L per
@@ -171,6 +171,12 @@ completely in one atmos tick.
 
 *2026-10-31: the parcel changed from 0.375 of the container's volume to an
 absolute 375 L, so a TTV detonates before its tank ruptures (S-13, D-59).*
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`Reactions.applyStandalone` (API-019) burns 375 L per second of the mixture,
+or all of it if smaller, when given an ignition source or above a fuel's
+autoignition temperature, and not below the fire oxygen threshold. Checked by
+the `fire_031_` tests in `ReactionSetTest`.*
 
 ## Gas fire
 

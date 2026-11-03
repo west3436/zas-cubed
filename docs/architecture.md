@@ -1254,6 +1254,31 @@ way.
   records it under `LedgerCategory.REACTION` (CORE-073).
 - **Determinism.** Reactions are visited in id order and nothing reads a clock
   or a random source (§3.5).
+- **Standalone mixtures** (API-019, FIRE-031).
+  `ReactionSet.applyStandalone(mixture, seconds, ignition, fire)` is a burn of
+  375 L per second of the mixture followed by a react over the time.
+  `Reactions.applyStandalone` in the API reaches it through the provider's
+  `zas.reaction.StandaloneReactions`, which copies the API mixture into an
+  engine one on the server's gas registry and back. A gas the server doesn't
+  define stays aside, only adding its heat capacity (the API default), so the
+  temperature is right. It reads only the compiled set and the fire settings,
+  both immutable, so any thread may call it.
+- **Types in code** (API-020). The engine knows a code reaction only as a
+  `CodeReaction`: given the mixture's moles, the amounts its definition may
+  use, the temperature, volume, step and ignition, it returns what it consumes
+  and produces and the heat. The fair allocation scales that whole change like
+  a standard reaction's extent. Mods implement the API's `ReactionType`
+  instead, registered in the static `Reactions` registry; `ReactionCodecs` binds
+  the definition's `parameters` to the type at load (`withParameters`) and wraps
+  the result in `zas.reaction.ApiReactionType`, which converts between gas
+  indices and ids.
+- **Fault isolation** (§3.6). A code reaction runs on the atmos worker inside
+  the step, so a mod's bug must not fault the dimension. `ApiReactionType`
+  catches a `RuntimeException` or `LinkageError`, and rejects a change naming a
+  gas the server doesn't define; either way that reaction changes nothing that
+  step, and it logs at most once a minute. The engine guards `CodeReaction`s
+  the same way (once per compiled set), and also rejects a change with a
+  negative or non-finite amount.
 
 ### Hotspots
 
