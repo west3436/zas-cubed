@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
@@ -25,6 +26,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -32,7 +34,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A canister's block entity (CONT-017, CONT-084): a 1,000 L network node, joined to a connector
  * port's network when it stands on one (CONT-083). With its valve open, it releases its network's
- * gas into its cell's zone, up to the release pressure.
+ * gas into its cell's zone, up to the release pressure. A gas tank held against it is filled the
+ * same way, to the release pressure (CONT-039).
  *
  * <p>Mined with the right tool, it keeps its gas: the item carries it as {@link
  * AtmosComponents#GAS}, and placing the item puts it back. Broken in creative, its gas is
@@ -110,6 +113,40 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
     public void setReleasePressure(double kPa) {
         releasePressure = CanisterRelease.clamp(kPa);
         setChanged();
+    }
+
+    /**
+     * Fills a gas tank held against the canister (CONT-039): from its network, to the release
+     * pressure as a release into a room is (CONT-084), but against the tank's volume. The gas mixes
+     * into the tank conserving thermal energy.
+     *
+     * @param tank the tank's stack, changed in place
+     * @return the moles moved, 0 if the tank is at or above the release pressure or the canister
+     */
+    public double fillTank(ItemStack tank) {
+        if (!(tank.getItem() instanceof GasTankItem)) {
+            return 0;
+        }
+        GasStore gas = network().gas();
+        if (gas.isEmpty()) {
+            return 0;
+        }
+        GasMixture in = GasTankItem.contents(tank);
+        double n = CanisterRelease.moles(
+                gas.totalMoles(),
+                gas.volume(),
+                in.totalMoles(),
+                in.volume(),
+                in.pressure(),
+                gas.temperature(),
+                releasePressure);
+        if (n < PipeBlockEntity.MIN_FLOW) {
+            return 0;
+        }
+        GasParcel out = gas.takeFraction(n / gas.totalMoles());
+        GasTankItem.add(tank, out);
+        setChanged();
+        return out.totalMoles();
     }
 
     /** Called when the canister is about to drop as an item carrying its gas. */

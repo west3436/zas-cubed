@@ -37,6 +37,31 @@ class DevicePowerTest {
         assertNull(p.source());
     }
 
+    /**
+     * CONT-113: a lease supplied while the device drew nothing is power, but not paid-for power, so a
+     * recharger given a battery mid-lease waits for a paid supply before it charges.
+     */
+    @Test
+    void cont_113_power_supplied_at_no_cost_is_not_paid_for() {
+        long[] clock = {1000};
+        int[] draw = {0};
+        DevicePower p = new DevicePower(PowerPriority.AUXILIARY, () -> draw[0], () -> clock[0]);
+        assertFalse(p.paidFor(), "before any supply");
+        p.supply(new Object());
+        draw[0] = 40;
+        assertTrue(p.isPowered());
+        assertFalse(p.paidFor(), "a lease taken at no cost");
+
+        clock[0] += AtmosTicks.PERIOD;
+        p.supply(new Object());
+        assertTrue(p.paidFor(), "a lease paid for");
+        clock[0] += DevicePower.LEASE_TICKS;
+        assertFalse(p.paidFor(), "after the lease");
+
+        p.setTestPowered(true);
+        assertTrue(p.paidFor(), "test-powered");
+    }
+
     @Test
     void cont_065_draw_is_per_game_tick_and_never_negative() {
         int[] draw = {10};

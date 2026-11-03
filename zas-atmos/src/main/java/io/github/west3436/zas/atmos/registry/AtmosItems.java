@@ -1,11 +1,19 @@
 package io.github.west3436.zas.atmos.registry;
 
+import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.GearMaterials;
+import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import java.util.List;
+import java.util.Map;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DoubleHighBlockItem;
 import net.minecraft.world.item.Item;
@@ -30,14 +38,102 @@ public final class AtmosItems {
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
     public static final DeferredItem<BlockItem> GENERATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.GENERATOR);
 
+    public static final DeferredItem<BlockItem> HEATER = ITEMS.registerSimpleBlockItem(AtmosBlocks.HEATER);
+
     public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
             ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
 
     /** Forces firelocks open or shut (CONT-094). */
     public static final DeferredItem<CrowbarItem> CROWBAR = ITEMS.registerItem("crowbar", CrowbarItem::new);
 
+    public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
+
+    // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
+
+    public static final DeferredItem<BatteryItem> BATTERY =
+            ITEMS.registerItem("battery", p -> new BatteryItem(100_000, p));
+    public static final DeferredItem<BatteryItem> HIGH_CAPACITY_BATTERY =
+            ITEMS.registerItem("high_capacity_battery", p -> new BatteryItem(1_000_000, p));
+    public static final DeferredItem<BatteryItem> SUPER_CAPACITY_BATTERY =
+            ITEMS.registerItem("super_capacity_battery", p -> new BatteryItem(2_000_000, p));
+
+    /** The batteries, smallest first. */
+    public static List<DeferredItem<BatteryItem>> batteries() {
+        return List.of(BATTERY, HIGH_CAPACITY_BATTERY, SUPER_CAPACITY_BATTERY);
+    }
+
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
+
+    // ---- Breathing gear (S-08) ----
+
+    /**
+     * An O2 tank (CONT-030): 70 L of O2, new at about 6 atm (17.5 mol). It has no recipe: an empty
+     * tank filled with O2 from a canister becomes one (CONT-039, {@link GasTankItem#ofItsKind}).
+     */
+    public static final DeferredItem<GasTankItem> OXYGEN_TANK = ITEMS.registerItem(
+            "oxygen_tank",
+            p -> new GasTankItem(
+                    p.component(AtmosComponents.GAS.get(), oxygen(17.5)), 70, GasTankItem.OXYGEN_DISTRIBUTION_KPA));
+
+    /**
+     * An emergency O2 tank (CONT-030): 2 L, crafted empty and filled from a canister (CONT-039). The
+     * creative tab has one filled with O2 at 3 atm ({@link #emergencyFill()}).
+     */
+    public static final DeferredItem<GasTankItem> EMERGENCY_OXYGEN_TANK = ITEMS.registerItem(
+            "emergency_oxygen_tank", p -> new GasTankItem(p, 2, GasTankItem.OXYGEN_DISTRIBUTION_KPA));
+
+    /** An air tank (CONT-030): 70 L of air, new at 6 atm. Like the O2 tank, it is made by filling. */
+    public static final DeferredItem<GasTankItem> AIR_TANK = ITEMS.registerItem(
+            "air_tank",
+            p -> new GasTankItem(
+                    p.component(
+                            AtmosComponents.GAS.get(),
+                            GasTankItem.fill(
+                                    Map.of(
+                                            StandardAir.NITROGEN, StandardAir.NITROGEN_FRACTION,
+                                            StandardAir.OXYGEN, StandardAir.OXYGEN_FRACTION),
+                                    6 * StandardAir.PRESSURE,
+                                    70)),
+                    70,
+                    GasTankItem.AIR_DISTRIBUTION_KPA));
+
+    /** The empty tank (CONT-030): 70 L, crafted empty and filled from a canister (CONT-039). */
+    public static final DeferredItem<GasTankItem> EMPTY_TANK =
+            ITEMS.registerItem("empty_tank", p -> new GasTankItem(p, 70, GasTankItem.OXYGEN_DISTRIBUTION_KPA));
+
+    /** The breath mask (CONT-031): seals the breathing, for internals. */
+    public static final DeferredItem<SuitItem> BREATH_MASK = ITEMS.registerItem(
+            "breath_mask",
+            p -> new SuitItem(GearMaterials.BREATH_MASK, ArmorItem.Type.HELMET, p, SuitItem.Rating.MASK, false));
+
+    /** The softsuit (CONT-032): its helmet seals the breathing, and its chestplate has a tank slot (CONT-090). */
+    public static final DeferredItem<SuitItem> SOFTSUIT_HELMET = ITEMS.registerItem(
+            "softsuit_helmet",
+            p -> new SuitItem(GearMaterials.SOFTSUIT, ArmorItem.Type.HELMET, p, SuitItem.Rating.softsuit(true), false));
+
+    public static final DeferredItem<SuitItem> SOFTSUIT_CHESTPLATE = ITEMS.registerItem(
+            "softsuit_chestplate",
+            p -> new SuitItem(
+                    GearMaterials.SOFTSUIT, ArmorItem.Type.CHESTPLATE, p, SuitItem.Rating.softsuit(false), true));
+
+    public static final DeferredItem<SuitItem> SOFTSUIT_LEGGINGS = ITEMS.registerItem(
+            "softsuit_leggings",
+            p -> new SuitItem(
+                    GearMaterials.SOFTSUIT, ArmorItem.Type.LEGGINGS, p, SuitItem.Rating.softsuit(false), false));
+
+    public static final DeferredItem<SuitItem> SOFTSUIT_BOOTS = ITEMS.registerItem(
+            "softsuit_boots",
+            p -> new SuitItem(GearMaterials.SOFTSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.softsuit(false), false));
+
+    /** A filled emergency O2 tank's gas: O2 at 3 atm in 2 L (CONT-030). */
+    public static GasParcel emergencyFill() {
+        return GasTankItem.fill(Map.of(StandardAir.OXYGEN, 1.0), 3 * StandardAir.PRESSURE, 2);
+    }
+
+    private static GasParcel oxygen(double moles) {
+        return new GasParcel(Map.of(StandardAir.OXYGEN, moles), GasTankItem.FILL_K);
+    }
 
     // Crafting components, after vg's stock parts (D-72). Every one is crafted from vanilla
     // materials, so the content they go into still is (CONT-051). The recipes and the progression

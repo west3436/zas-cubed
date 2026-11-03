@@ -24,7 +24,8 @@ public final class RecipeTests {
     private RecipeTests() {}
 
     /**
-     * Every item the content mod registers today has a recipe. Items still to come bring theirs:
+     * Every item the content mod registers today has a recipe, but the O2 and air tanks, which are
+     * made by filling an empty tank (CONT-039). Items still to come bring theirs:
      * their recipes ship already and load once the item exists (docs/crafting.md).
      */
     private static List<Item> craftable() {
@@ -37,8 +38,18 @@ public final class RecipeTests {
                 AtmosItems.AREA_AIR_CONTROLLER.get(),
                 AtmosItems.GENERATOR.get(),
                 AtmosItems.FIRELOCK.get(),
+                AtmosItems.HEATER.get(),
+                AtmosItems.RECHARGER.get(),
                 AtmosItems.MULTITOOL.get(),
-                AtmosItems.CROWBAR.get()));
+                AtmosItems.CROWBAR.get(),
+                AtmosItems.EMPTY_TANK.get(),
+                AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
+                AtmosItems.BREATH_MASK.get(),
+                AtmosItems.SOFTSUIT_HELMET.get(),
+                AtmosItems.SOFTSUIT_CHESTPLATE.get(),
+                AtmosItems.SOFTSUIT_LEGGINGS.get(),
+                AtmosItems.SOFTSUIT_BOOTS.get()));
+        AtmosItems.batteries().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
         return items;
     }

@@ -1,11 +1,14 @@
 package io.github.west3436.zas.atmos.canister;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -100,6 +103,29 @@ public class CanisterBlock extends BaseEntityBlock implements PipeConnector {
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
+        if (stack.getItem() instanceof GasTankItem) {
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof CanisterBlockEntity canister) {
+                double moved = canister.fillTank(stack);
+                if (moved > 0) {
+                    ItemStack kind = GasTankItem.ofItsKind(stack);
+                    if (kind != stack) {
+                        player.setItemInHand(hand, kind);
+                    }
+                }
+                player.displayClientMessage(
+                        moved > 0
+                                ? Component.translatable(
+                                        "item.zas_atmos.gas_tank.filled",
+                                        String.format(Locale.ROOT, "%.2f", moved),
+                                        String.format(
+                                                Locale.ROOT,
+                                                "%.0f",
+                                                GasTankItem.contents(stack).pressure()))
+                                : Component.translatable("item.zas_atmos.gas_tank.not_filled"),
+                        true);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!(stack.getItem() instanceof DyeItem dye)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }

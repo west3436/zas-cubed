@@ -175,5 +175,13 @@
   "commands.zas.preset.overridden": "Overrode %s with %s under either preset",
   "commands.zas.preset.cleared": "%s follows the preset again, now %s",
   "commands.zas.preset.copied": "This world had no server config of its own, so it now has one: %s. The shared config/zas-server.toml, which other worlds read, is unchanged",
-  "commands.zas.preset.not_overridden": "%s isn't overridden; it follows the preset"
+  "commands.zas.preset.not_overridden": "%s isn't overridden; it follows the preset",
+
+  "key.categories.zas": "Atmospherics",
+  "key.zas.toggle_internals": "Toggle internals",
+  "message.zas.internals.on": "Internals on: breathing from the tank at %s kPa",
+  "message.zas.internals.off": "Internals off",
+  "message.zas.internals.no_seal": "Internals on, but nothing seals your breathing: wear a mask or a helmet",
+  "message.zas.internals.no_tank": "Internals on, but you have no tank",
+  "message.zas.internals.empty": "Internals on, but the tank can't deliver: it is empty or set to 0 kPa"
 }

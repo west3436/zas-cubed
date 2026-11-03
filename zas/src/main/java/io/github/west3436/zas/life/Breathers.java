@@ -243,7 +243,9 @@ public final class Breathers {
         } else {
             state.clearExposure();
         }
-        if (breath.isPresent()
+        if (a.internals() != null) {
+            Internals.breathe(level, entity, a.internals().supply(), seconds);
+        } else if (breath.isPresent()
                 && sample != null
                 && sample.state() == AtmosphereState.ZONED
                 && sample.zone().isPresent()) {

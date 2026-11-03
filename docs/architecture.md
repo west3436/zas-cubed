@@ -1161,8 +1161,8 @@ dimension's totals before and after each tick. It is on in tests and fuzzing
 [#35](https://github.com/west3436/zas-cubed/issues/35)): who breathes, the
 breath at the eyes, the O₂ minimum, the air meter, gas hazard profiles,
 respiration, and the pressure and temperature hazards with their settings.
-Internals and protection are
-[#36](https://github.com/west3436/zas-cubed/issues/36).*
+*Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
+protection and internals.*
 The package is `io.github.west3436.zas.life`, server thread only, but for the
 client breathing sync (LIFE-023): the server sends each player its own state
 (`BreathSyncPayload`) when it changes, at most 4 times a second, and
@@ -1271,6 +1271,21 @@ client breathing sync (LIFE-023): the server sends each player its own state
   hit, so invulnerability ticks from another source mustn't swallow it, and
   protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
   `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
+- **Internals** (LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046).
+  `Internals` holds the switch, a saved entity attachment kept through death,
+  which a player toggles with a keybind (`Internals.TogglePayload`, client to
+  server; the answer goes to the action bar). An entity breathes from its
+  internals while they are on, its breathing is sealed, and the first internal
+  supply found delivers: in an armor slot, the chestplate's first (a suit's
+  tank slot), then the offhand, then the hotbar or a mob's main hand, then its
+  own life support. An `IInternalSupply` (API-022) delivers while its pressure
+  is at least its distribution pressure, and the breath is its mixture scaled
+  to that pressure. `BreathingRules.assess` then judges the O₂ and toxic gases
+  of that breath, with source `INTERNALS` and `SEALED_BREATHING` listed, and
+  the pressure and temperature of the air around as before. Each check draws
+  P_dist × 0.0625 L / (R · T) mol per second charged, turns up to respiration's
+  O₂ for those seconds into CO₂, and adds the rest at the eyes through
+  `addForLife`, in place of respiration's draw from the zone.
 - **Respiration** (LIFE-005, LIFE-042). A check adds the O₂ the breather used
   since the last, `respiration_multiplier` × 1 mol per hour, to its zone's
   draw. Breathing outside a zone (the ambient, a paused zone, an unresolved
@@ -1402,8 +1417,8 @@ the pressure and temperature hazards, listed as `LOW_PRESSURE`,
 breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
 *Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
 and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
-for the conditions. **Not yet built:** breathing from internals (LIFE-021,
-API-022) and gas filtering, so no verdict lists `SEALED_BREATHING` or
+for the conditions, and breathing from internals, listed as `SEALED_BREATHING`
+with source `INTERNALS`. **Not yet built:** gas filtering, so no verdict lists
 `GAS_FILTERING`.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
@@ -1600,16 +1615,18 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister item's `zas_atmos:gas`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank` and a battery's `zas_atmos:energy`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
-| `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `tool` | The multitool (§11.6) and the crowbar (§11.8) |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -1672,6 +1689,7 @@ the cell in front of its grille).
 | Provider | `DeviceTicker.loaded(level)`, then `instanceof PoweredDevice` and `Atmospheres.at(level, d.airPoint()).zone()` | Finds the parts it covers |
 | Provider | `power.drawPerAtmosTick()`, then `power.supply(this)` | Pays draw × 20 FE from its own store for one atmos tick, then powers the device for `DevicePower.LEASE_TICKS` (40) game ticks |
 | Provider | `power.suppliedThisAtmosTick()` | True if another provider (or this one, through a link) already paid this atmos tick |
+| Device | `power.paidFor()` | True while a lease supplied at a draw above 0 lasts, or under test power. A device whose draw rises mid-lease, such as a recharger given a battery, does work only on paid-for power |
 
 - **Leases, not switches.** Each supply powers the device for two atmos ticks
   from the call, so the device and the provider can step in any order. When
@@ -1825,7 +1843,65 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
-- **GUIs** (CONT-074). Using a canister or vent with an empty hand opens its
+- **Heater** (CONT-019, CONT-087, D-73), in `.heater`.
+  - A portable floor machine, not a full block, so it stands in its room's
+    cell and gas passes around it. Its front faces the player who places it.
+    It has no pipe connection and isn't a controller's part: it doesn't
+    implement `PoweredDevice`, so no area air controller powers, orders or
+    lists it, and a link to it is dropped.
+  - It runs on the battery in its one slot (`Batteries.Slot`, CONT-112).
+    Its setpoint (293–573 K, default 293.15 K) is for its room: the zone of
+    its `point()`, the air above it in its own cell. Each atmos tick, while
+    on, it reads that zone and adds heat to it through API-013's
+    `HeatMutations.add`: `HeaterMath.heat` gives the least of `[power]
+    heater_watts` (5,000 W) over the step and what brings the zone to the
+    setpoint, from its heat capacity (`GasProperties.heatCapacity`). Once
+    the room is at or above the setpoint it adds nothing; it never cools.
+    With no zone there (open air, unresolved or paused) it does nothing.
+  - It pays its battery `HeaterMath.energy`: `[power] heater` FE/t (60) over
+    the step at full power, and in proportion below it, rounded up. With
+    too little charge it adds the heat the charge pays for, then stops. One
+    heat mutation is outstanding at a time (`readyToStep`), so each step
+    reads the room after the last one landed.
+  - **How close it holds a room.** Each step tops the room up to the
+    setpoint, and the walls take their loss away before the next. In S-05's
+    GameTest, a wool-walled 3 × 3 × 3 room in vacuum losing about 420 W, with
+    about 23 kJ/K of air, stays within about 0.02 K under a 303 K setpoint
+    and never passes it. A heater can't hold a room that loses more than its
+    power: a stone room in vacuum loses about 5 kW, so insulating walls
+    ([#179](https://github.com/west3436/zas-cubed/issues/179)) are the
+    remedy, not a stronger heater.
+  - Its block state's `lit` shows the `heater_on` model while it heats.
+    Broken, it drops its battery. Its GUI has an on/off switch, ±1 and
+    ±10 K setpoint buttons and the battery slot, and shows the setpoint
+    beside the room's temperature (or that it has no room), its status
+    (heating, with the watts; at the setpoint; no room; no battery; the
+    battery is empty) and the battery's charge. The menu syncs the room's
+    temperature in tenths of a kelvin, −1 for no room, and the battery's FE
+    and capacity in 16-bit halves.
+- **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
+  100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
+  the `zas_atmos:energy` component and expose it as
+  `Capabilities.EnergyStorage.ITEM` (NeoForge's `ComponentEnergyStorage`,
+  which takes and gives up to the whole capacity at once), so any mod's
+  charger or machine can use them. The durability bar and tooltip show the
+  charge, and the item model's `zas_atmos:charge` property (0, 0.5, 1)
+  picks the empty, `_partial` and `_full` models. `Batteries.isBattery`
+  accepts any item in the `zas_atmos:batteries` tag with the FE item
+  capability; a heater's or recharger's `Batteries.Slot` takes only those,
+  one at a time. The creative tab holds an empty and a full copy of each.
+- **Recharger** (CONT-113), in `.battery`. A floor plate holding one
+  battery, and a controller's part like the vent, through its zone or a
+  link, in the auxiliary group. While it holds a battery with room for more
+  it draws `[power] recharger` FE/t (40); otherwise 0. Each atmos tick it
+  puts `[power] recharger_rate` FE/t (28) over the step into the battery,
+  but only on paid-for power (`paidFor()`), so a lease it got while it drew
+  nothing charges nothing. Its block state's `battery` and `charge` (0–4,
+  by `RechargerBlock.gauge`) pick the `recharger` and `recharger_0` to
+  `recharger_4` models. Broken, it drops its battery. Its GUI has the
+  battery slot and no buttons, and shows its status (charging, full, no
+  power, no battery) and the battery's charge.
+- **GUIs** (CONT-074). Using a canister, vent, heater or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
@@ -1946,8 +2022,11 @@ framework's `AtmosService.tickNow`. For that, and for the preset, the
 borrowed vacuum ambient and the published zones' pins, the `gametest` source
 set compiles against `:zas` and `:engine`. `main` still compiles against
 `zas-api` alone (CONT-095). The stand-ins in `gametest.TestParts` are a test
-vent, scrubber, pump and heater, one per priority group, and a test FE block.
-Like `TestDevice`, they never reach the jar.
+vent, scrubber, pump and heater, one per priority group (the test heater
+predates the heater running on a battery, D-73, and stands for any
+auxiliary part), a test FE block, and two test FE items, one of which
+`gametest.BatteryTestPack` adds to the battery tag (CONT-112). Like
+`TestDevice`, they never reach the jar.
 
 ### 11.7 Controller power
 
@@ -1963,8 +2042,8 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   `power.PowerFeed`, which is pure and unit-tested. Groups are served in
   `PowerPriority` order. Within a group, each part whose `drawPerAtmosTick()`
   fits what is left is paid and supplied. If any part of a group misses out,
-  the later groups get nothing that tick, so a cheap heater never runs while
-  a vent starves. A part drawing nothing is always supplied.
+  the later groups get nothing that tick, so a cheap recharger never runs
+  while a vent starves. A part drawing nothing is always supplied.
 - **The generator** (`power.GeneratorBlock`, `GeneratorBlockEntity`,
   CONT-061, CONT-066, CONT-067). It is a plain ticking block entity, not an
   `AtmosDevice`. Each game tick while it burns it makes `[power]
@@ -2034,3 +2113,30 @@ airlock is not built.*
   and the lockdown.
 - **Cost.** Each firelock scans its level's loaded devices for controllers
   once a second, as a controller scans for its parts (§11.6).
+
+### 11.9 Breathing gear (CONT-030 to CONT-032, CONT-039, CONT-090)
+
+The gear gives ZAS³ its life support through `ILifeSupport.ITEM` (API-022),
+registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
+([Life support](#life-support-breathing)).
+
+- **Tanks** (`GasTankItem`). One class for the O₂, emergency O₂, air and empty
+  tanks, each with its volume and default distribution pressure. The gas is the
+  stack's `zas_atmos:gas`, as a canister item's; the O₂ and air tanks come
+  filled by default, the empty and emergency tanks empty. A tank's life support
+  is only an internal supply, which reads and changes the stack it is asked of.
+  Using a held tank opens `TankScreen`, which sends `TankSettings` (hand and
+  button id) to the server; the server checks both and clamps the pressure to
+  0–304 kPa (LIFE-044).
+- **Filling** (CONT-039). `CanisterBlock.useItemOn` with a tank calls
+  `CanisterBlockEntity.fillTank`: `CanisterRelease.moles` against the tank's
+  volume and pressure, taken from the canister's network and mixed into the
+  tank through a `GasStore`. A 70 L tank then becomes the kind of its contents
+  (`GasTankItem.ofItsKind`), keeping its components.
+- **Mask and suit** (`SuitItem`). Armor items whose life support is a fixed
+  rating: the breath mask only seals; each softsuit piece protects from 0 to
+  1 atm and 0 to 500 K, and the helmet seals. They have no durability.
+- **Tank slot** (CONT-090). The chestplate keeps one tank in
+  `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
+  right-clicks in an inventory, as a bundle's contents are. Its life support's
+  internal supply is that tank, written back to the chestplate after each draw.

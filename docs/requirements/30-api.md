@@ -573,13 +573,20 @@ honoured (LIFE-020, LIFE-025). Sealed breathing is read
 (`WornProtection.sealedBreathing`) for the internals still to come. An
 entity's airflow resistance, the highest of its pieces' and its own, can be
 read (`WornProtection.airflowResistance`), and airflow applies it (FLOW-012).
-Gas filtering is carried for the gas mask but not applied. Breathable gas from
-an internal supply comes with internals. It stays Accepted until those are
-honoured. `life_020_suited_and_helmetless_players_in_vacuum`,
+Gas filtering is carried for the gas mask but not applied. It stays Accepted
+until those are honoured. `life_020_suited_and_helmetless_players_in_vacuum`,
 `life_025_partial_suits_at_450_k` and
 `life_026_capability_and_data_items_protect` check the test item and test
 entity, and `api_022_airflow_resistance_is_the_highest_worn` checks the
 resistance.*
+
+*2026-11-02: Breathable gas from an internal supply is honoured
+([#36](https://github.com/west3436/zas-cubed/issues/36)): `internalSupply()`
+returns an `IInternalSupply` (its contents, its distribution pressure and a
+draw), which internals breathe from (LIFE-021, LIFE-028). Sealed breathing now
+gates internals. `life_028_the_first_tank_found` checks a test tank item and a
+test entity's own tank. Gas filtering (CONT-088) and airflow resistance
+(FLOW-012) are still to be applied, so it stays Accepted.*
 
 #### API-027 · Accessory slots
 `Could` · `R2` · `Deferred` — moved to R2: an accessory mod is an optional dependency outside the API (API-003), 2026-10-30. · Verify: GameTest

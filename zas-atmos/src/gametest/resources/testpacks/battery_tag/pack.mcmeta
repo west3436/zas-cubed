@@ -1,0 +1,6 @@
+{
+  "pack": {
+    "description": "Adds a test FE item to zas_atmos:batteries, for the CONT-112 GameTest",
+    "pack_format": 48
+  }
+}

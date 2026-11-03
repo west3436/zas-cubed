@@ -1,0 +1,202 @@
+package io.github.west3436.zas.atmos.battery;
+
+import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.power.DevicePower;
+import io.github.west3436.zas.atmos.power.PowerPriority;
+import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import java.util.Locale;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+
+/**
+ * The recharger's block entity (CONT-113): an area air controller's part, powered like a vent
+ * through its zone or a link, in the last priority group (CONT-064). While it holds a battery that
+ * isn't full it draws {@code [power] recharger} FE/t (40) and puts {@code [power] recharger_rate}
+ * FE/t (28) into the battery; full, empty-handed or unpowered, it draws and does nothing.
+ *
+ * <p>It charges only on power paid for, so a lease its controller gave it while it drew nothing
+ * charges nothing ({@link DevicePower#paidFor}).
+ */
+public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, MenuProvider {
+    /** What the recharger did at its last atmos tick, for its GUI. */
+    public enum Status {
+        /** Its slot is empty. */
+        NO_BATTERY,
+        /** Its battery is full. */
+        FULL,
+        /** Its battery isn't full, and no controller powers it. */
+        UNPOWERED,
+        /** Charging its battery. */
+        CHARGING;
+
+        /** The status with this ordinal, or {@link #NO_BATTERY}. */
+        public static Status of(int ordinal) {
+            return ordinal >= 0 && ordinal < values().length ? values()[ordinal] : NO_BATTERY;
+        }
+
+        /** Its GUI line's translation key. */
+        public String key() {
+            return "gui.zas_atmos.recharger.status." + name().toLowerCase(Locale.ROOT);
+        }
+    }
+
+    private final Batteries.Slot battery = new Batteries.Slot(this::batteryChanged);
+    private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
+    private Status status = Status.NO_BATTERY;
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case RechargerMenu.DATA_STATUS -> status.ordinal();
+                case RechargerMenu.DATA_ENERGY_LO -> energy() & 0xFFFF;
+                case RechargerMenu.DATA_ENERGY_HI -> energy() >>> 16;
+                case RechargerMenu.DATA_CAPACITY_LO -> capacity() & 0xFFFF;
+                case RechargerMenu.DATA_CAPACITY_HI -> capacity() >>> 16;
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {}
+
+        @Override
+        public int getCount() {
+            return RechargerMenu.DATA_COUNT;
+        }
+    };
+
+    public RechargerBlockEntity(BlockPos pos, BlockState state) {
+        super(AtmosBlockEntities.RECHARGER.get(), pos, state);
+    }
+
+    /** Its battery slot. */
+    public Batteries.Slot battery() {
+        return battery;
+    }
+
+    /** The FE in its battery; 0 with none. */
+    public int energy() {
+        IEnergyStorage e = battery.energy();
+        return e == null ? 0 : e.getEnergyStored();
+    }
+
+    /** Its battery's capacity, FE; 0 with none. */
+    public int capacity() {
+        IEnergyStorage e = battery.energy();
+        return e == null ? 0 : e.getMaxEnergyStored();
+    }
+
+    /** What it did at its last atmos tick. */
+    public Status status() {
+        return status;
+    }
+
+    /** Whether it holds a battery with room for more charge. */
+    public boolean chargeable() {
+        IEnergyStorage e = battery.energy();
+        return e != null && e.receiveEnergy(1, true) > 0;
+    }
+
+    private int currentDraw() {
+        return chargeable() ? AtmosServerConfig.get(AtmosServerConfig.RECHARGER_DRAW) : 0;
+    }
+
+    @Override
+    public DevicePower power() {
+        return power;
+    }
+
+    /** Its own cell: the recharger stands in its room. */
+    @Override
+    public Vec3 airPoint() {
+        return new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 15 / 16.0, worldPosition.getZ() + 0.5);
+    }
+
+    @Override
+    protected void atmosTick(ServerLevel level) {
+        IEnergyStorage e = battery.energy();
+        if (e == null) {
+            status = Status.NO_BATTERY;
+        } else if (e.receiveEnergy(1, true) <= 0) {
+            status = Status.FULL;
+        } else if (!paid()) {
+            status = Status.UNPOWERED;
+        } else {
+            int rate = AtmosServerConfig.get(AtmosServerConfig.RECHARGER_RATE);
+            if (e.receiveEnergy(rate * AtmosTicks.PERIOD, false) > 0) {
+                setChanged();
+            }
+            status = Status.CHARGING;
+        }
+        showCharge(level);
+    }
+
+    /** Whether it has power to charge with: paid for, or any power at all when it is set to draw nothing. */
+    private boolean paid() {
+        return power.paidFor() || (AtmosServerConfig.get(AtmosServerConfig.RECHARGER_DRAW) == 0 && power.isPowered());
+    }
+
+    private void batteryChanged() {
+        setChanged();
+        if (level instanceof ServerLevel server) {
+            showCharge(server);
+        }
+    }
+
+    /** Sets the block's battery and gauge properties from the battery. */
+    private void showCharge(ServerLevel level) {
+        BlockState state = getBlockState();
+        if (!state.hasProperty(RechargerBlock.BATTERY)) {
+            return;
+        }
+        boolean has = battery.energy() != null;
+        int gauge = has ? RechargerBlock.gauge(energy(), capacity()) : 0;
+        if (state.getValue(RechargerBlock.BATTERY) != has || state.getValue(RechargerBlock.CHARGE) != gauge) {
+            level.setBlock(
+                    worldPosition,
+                    state.setValue(RechargerBlock.BATTERY, has).setValue(RechargerBlock.CHARGE, gauge),
+                    Block.UPDATE_CLIENTS);
+        }
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        battery.save(tag, registries);
+        power.save(tag);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        battery.load(tag, registries);
+        power.load(tag);
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.zas_atmos.recharger");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new RechargerMenu(id, inventory, battery, data, ContainerLevelAccess.create(level, worldPosition));
+    }
+}
