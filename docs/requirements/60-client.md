@@ -22,12 +22,21 @@ breathing (LIFE-021), or while they hold an analyzer (CONT-034).
 - **Verify:** Manual check that the HUD appears at a warning, with a sealed
   helmet and with an analyzer, and hides otherwise.
 
+*2026-11-02: The warning part is built
+([#38](https://github.com/west3436/zas-cubed/issues/38)): the HUD shows while
+any reading is at warning or worse, and hides otherwise and with the rest of
+the GUI (F1). Nothing seals breathing or analyzes gas yet, so the sealed
+helmet and analyzer parts wait for them, and this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Accepted` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
 The HUD shall show pressure, O₂ partial pressure, temperature and toxins, each
 at a warning or danger level. Toxin levels are read from the hazard profiles
-(LIFE-004), so addon gases get indicators without code. Defaults:
+(LIFE-004), so addon gases get indicators without code. Each level is judged
+on what reaches the player through its protection: the effective pressure
+(LIFE-020), the O₂ and gases in its breath, and the temperature unless its
+thermal protection takes all temperature damage there (LIFE-025). Defaults:
 
 | Reading | Warning | Danger |
 |---|---|---|
@@ -42,6 +51,23 @@ at a warning or danger level. Toxin levels are read from the hazard profiles
   inside the damage band, and dangers match LIFE.
 - **Verify:** A GameTest checks the synced warning level at each threshold;
   Manual checks the display.
+- **Changed 2026-11-02 (the owner, in the HUD alerts work):** levels are
+  judged on what reaches the player through its protection, as vg's are, so a
+  danger is where LIFE harms it and a sealed suit in vacuum shows no pressure
+  alert.
+
+*2026-11-02: Built ([#38](https://github.com/west3436/zas-cubed/issues/38)).
+Each reading at warning or worse shows vg's screen-alert icon for it, in a
+column at the right edge of the screen, with the reading beside it in the
+display units (CLIENT-006): yellow for a warning, red for a danger. The toxin
+alert names the gas with the worst level. A hazard that is off in the
+dimension has no alert (LIFE-031), and a creative or spectator player none
+(LIFE-037). The temperature warnings follow the comfort band, 20 K inside it.
+`client_008_levels_at_each_threshold`,
+`client_008_rooms_sync_their_alerts`,
+`client_008_suits_hide_what_does_not_reach_the_player` and
+`client_008_hazards_off_and_creative_have_no_alerts` (GameTests) pass. It
+stays Accepted until the owner checks the display by hand.*
 
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028
@@ -62,6 +88,12 @@ its colour.
 - **Rationale:** Inferred: colour-blind players must be able to tell warning
   from danger.
 - **Verify:** Manual check with a colour-blindness filter.
+
+*2026-11-02: Built ([#38](https://github.com/west3436/zas-cubed/issues/38)).
+Low and high pressure, and cold and heat, have different icons, and every
+danger icon flashes with vg's two-frame animation while warnings stay still.
+O₂ and toxins have one icon each, so for them the flashing is the cue. It
+stays Accepted until the owner checks it by hand.*
 
 ## Effects
 
