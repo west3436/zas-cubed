@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.tool;
 
+import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.LinkedHashMap;
 import java.util.List;

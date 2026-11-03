@@ -67,7 +67,7 @@ public final class HotspotTests {
 
     /** The test's own area, apart from every other test's; chunk-aligned. */
     private static Rooms rooms(GameTestHelper h, int index) {
-        return new Rooms(h, h.getLevel(), new BlockPos(12288 + 256 * index, 100, -12288));
+        return new Rooms(h, h.getLevel(), new BlockPos(12288 + 256 * index, 100, 12288));
     }
 
     /** Partial pressures, kPa: {@code h2} of hydrogen's share of 1 atm, air for the rest. */

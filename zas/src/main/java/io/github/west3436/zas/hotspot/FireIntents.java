@@ -3,9 +3,11 @@ package io.github.west3436.zas.hotspot;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.scheduler.FireIntent;
 import java.util.List;
+import java.util.function.LongConsumer;
 import java.util.function.LongPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,13 +23,38 @@ public final class FireIntents {
     private FireIntents() {}
 
     /**
+     * Puts out every fire block in a box, now (API-057): {@code zas:gas_fire} and vanilla fire, in
+     * loaded chunks. The box is assumed small.
+     *
+     * @param removed told the position ({@link BlockPos#asLong}) of each block removed
+     * @return how many blocks were removed
+     */
+    public static int extinguish(ServerLevel level, BlockPos from, BlockPos to, LongConsumer removed) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(from, to)) {
+            if (!level.isLoaded(p)) {
+                continue;
+            }
+            BlockState here = level.getBlockState(p);
+            if ((here.is(HotspotBlocks.GAS_FIRE.get()) || here.getBlock() instanceof BaseFireBlock)
+                    && level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL)) {
+                removed.accept(p.asLong());
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
      * Places and removes gas fires as the intents ask, in their order, in loaded chunks only.
      *
      * @param loaded whether a chunk ({@link net.minecraft.world.level.ChunkPos#toLong}) is loaded, as
      *     the atmosphere sees it
+     * @param blocked whether a gas fire may not be placed at a position ({@link BlockPos#asLong}):
+     *     one put out since the tick's batch closed (API-057)
      * @return how many blocks changed
      */
-    public static int apply(ServerLevel level, List<FireIntent> intents, LongPredicate loaded) {
+    public static int apply(ServerLevel level, List<FireIntent> intents, LongPredicate loaded, LongPredicate blocked) {
         if (intents.isEmpty()) {
             return 0;
         }
@@ -40,7 +67,8 @@ public final class FireIntents {
             BlockPos pos = BlockPos.of(i.block());
             BlockState here = level.getBlockState(pos);
             boolean done = switch (i.kind()) {
-                case PLACE -> here.isAir() && level.setBlock(pos, gasFire, Block.UPDATE_ALL);
+                case PLACE ->
+                    here.isAir() && !blocked.test(i.block()) && level.setBlock(pos, gasFire, Block.UPDATE_ALL);
                 case REMOVE ->
                     here.is(HotspotBlocks.GAS_FIRE.get())
                             && level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
