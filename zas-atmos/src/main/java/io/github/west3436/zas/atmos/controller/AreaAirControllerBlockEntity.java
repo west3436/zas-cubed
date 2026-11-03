@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
@@ -55,7 +56,8 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *       forms its zone then (CONT-110). It unpins when removed.
  *   <li>Pays its own draw; without it, it is unpowered and does nothing else.
  *   <li>Rates its zone's air (CONT-040) and updates its danger level (CONT-046). A breach is danger
- *       2 at once ({@link BreachAlarm}, CONT-043).
+ *       2 at once ({@link BreachAlarm}, CONT-043), and so is a triggered fire alarm it covers
+ *       ({@link FireAlarmBlockEntity}, CONT-044).
  *   <li>Finds the parts in its zone and those linked to it (CONT-042), powers them in priority order
  *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041).
  *   <li>When it reaches danger 2, steps the firelocks it covers at once, so they close in the same
@@ -85,6 +87,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     private Optional<ZoneId> coveredZone = Optional.empty();
     private final BreachAlarm breachCheck = new BreachAlarm();
     private boolean breach;
+    private boolean fire;
 
     public AreaAirControllerBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.AREA_AIR_CONTROLLER.get(), pos, state);
@@ -124,6 +127,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             danger.reset();
             breachCheck.reset();
             breach = false;
+            fire = false;
             parts = describe(covered, new boolean[covered.size()]);
             setStatus(level, ControllerStatus.UNPOWERED);
             return;
@@ -144,6 +148,10 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                     breached ? ambientPressure(level) : Double.NaN,
                     AtmosServerConfig.get(AtmosServerConfig.BREACH_DROP_KPA));
             if (breach) {
+                worst = 2;
+            }
+            fire = fireAlarmed(covered);
+            if (fire) {
                 worst = 2;
             }
             danger.update(worst);
@@ -297,6 +305,23 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     /** Whether its last reading was a breach (CONT-043). */
     public boolean breach() {
         return breach;
+    }
+
+    /**
+     * Whether a fire alarm it covers was triggered at its last reading (CONT-044): a covered
+     * alarm, in its zone or linked, that is powered and saw a fire or heat at its own last step.
+     */
+    public boolean fire() {
+        return fire;
+    }
+
+    private static boolean fireAlarmed(List<PoweredDevice> covered) {
+        for (PoweredDevice d : covered) {
+            if (d instanceof FireAlarmBlockEntity alarm && alarm.triggered()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether it is powered and at danger 2, so the firelocks it covers close (CONT-043). */

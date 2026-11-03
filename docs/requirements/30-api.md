@@ -537,6 +537,11 @@ immutable), `Fires.isBurning(level, zone)` and `Fires.isHotspot(level, pos)`.
 Provider methods with defaults; the fallback finds none. Checked by
 `api_055_fallback_has_no_fire` (Unit) and `api_055_hotspot_queries` (GameTest).*
 
+*2026-11-03: a new gas fire counts from the atmos tick after the one that
+placed it, the first to see its block: when an ignition's future completes,
+`isHotspot` is still false at its block, and the `FireIgnitedEvent` comes with
+the next tick. The javadoc of `Fires.ignite` and `Fires.isHotspot` says so.*
+
 #### API-056 · Ignition through the API
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-014, API-016, API-045 · Depends: API-009
 
@@ -604,11 +609,9 @@ last 30 atmos ticks.
   checks the result and that no block changed.
 
 *2026-11-03: implemented for review ([#42](https://github.com/west3436/zas-cubed/issues/42)).
-`IgnitionOutcome.NO_SPACE`. One gap is left for review: a non-air block whose
-geometry the palette shares with air (one with no collision and no flags, such
-as a flower) counts as air to the engine, so an ignition there reports
-`IGNITED`, the server refuses the gas fire block, the hotspot is dropped at the
-next tick and the position isn't tried for 30 ticks.
+`IgnitionOutcome.NO_SPACE`. A block that isn't air but has air's
+geometry, such as a lever or a flower, isn't plain air: its geometry carries
+`FLAG_OCCUPIED` (FIRE-018), so an ignition there lights an air neighbour.
 Checked by `api_058_ignition_names_a_hotspot_only_when_burning` (Unit) and
 `api_058_no_space` (GameTest).*
 

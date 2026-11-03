@@ -69,6 +69,10 @@ public final class Fires {
     /**
      * Whether a block position is a hotspot (API-055).
      *
+     * <p>A new gas fire is a hotspot once an atmos tick has seen its block: false when the {@link
+     * #ignite} future that placed it completes, true from the next atmos tick. The same goes for
+     * {@link #hotspots} and {@link #isBurning}.
+     *
      * <p>Thread: any.
      *
      * @param level the level
@@ -85,6 +89,11 @@ public final class Fires {
      * FIRE-014): if a zone there has gas that would burn, a fire starts at the position, or else
      * at the first of its six neighbours in that zone where a fire block can go. A fire already
      * burning at any of them is reported, not doubled. It never forms a zone.
+     *
+     * <p>When the future completes with {@link IgnitionOutcome#IGNITED}, the gas fire block is
+     * already placed, but the fire isn't a hotspot yet: {@link #isHotspot}, {@link #hotspots} and
+     * {@link #isBurning} see it from the next atmos tick, which is also when the zone's {@link
+     * io.github.west3436.zas.api.event.FireIgnitedEvent} fires if it wasn't burning before.
      *
      * <p>Thread: server thread only.
      *
