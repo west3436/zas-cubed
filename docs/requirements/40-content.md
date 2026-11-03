@@ -1027,7 +1027,7 @@ until it has been vented.
   and comes off once vented.
 
 #### CONT-037 · Fire extinguisher
-`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, D-74
+`Could` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, D-74
 
 A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 
@@ -1039,6 +1039,11 @@ A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 - **Changed 2026-11-03 (the owner, for the fire round):** moved from R2
   (`Deferred`) to R1. It was recorded during the FIRE review, when R1 relied
   on removing the O₂ and vanilla water.
+
+*2026-11-03: Implemented ([#198](https://github.com/west3436/zas-cubed/pull/198)).
+The extinguisher sprays while use is held, 5 blocks ahead, and refills at
+water. `cont_037_extinguisher_puts_out_fire_it_is_aimed_at` and
+`cont_037_extinguisher_puts_out_a_gas_fire_hotspot` (GameTest).*
 
 ## Area air controllers and firelocks
 
