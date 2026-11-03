@@ -29,6 +29,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -42,9 +43,10 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
- * Airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009, FLOW-011 to FLOW-014, FLOW-017):
- * pressure differences push entities towards the lower-pressure side of each opening between
- * zones, or between a zone and the open air.
+ * Airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009, FLOW-011 to FLOW-014, FLOW-017 to
+ * FLOW-019): pressure differences push entities towards the lower-pressure side of each opening
+ * between zones, or between a zone and the open air. Creative players and spectators are never
+ * moved ({@link #exempt}, FLOW-018).
  *
  * <p>Each atmos tick the engine exports the edges whose difference reaches the lowest class
  * threshold, with their openings ({@link DimensionPipeline#flows}); here they become a {@link
@@ -66,6 +68,10 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       When the flow first takes hold
  *       of a player, the server also sends a one-off impulse ({@link AirflowImpulsePayload},
  *       FLOW-009).
+ *   <li><b>Crawling</b>: a player the flow carries towards an opening too low to stand in is put
+ *       in the swimming pose, so the flow carries it through, and let up once it can stand
+ *       ({@link #crawl}, FLOW-019). Both sides do it: the server first, from further off, so it
+ *       never refuses the client's move into the opening.
  * </ul>
  */
 public final class Airflow {
@@ -78,7 +84,22 @@ public final class Airflow {
     /** The zone of an entity whose atmosphere is unresolved: airflow leaves it alone. */
     private static final long UNRESOLVED = Long.MIN_VALUE + 1;
 
+    /** How far ahead along the flow the server looks for an opening to crawl into, blocks. */
+    static final double SERVER_CRAWL_REACH = 1.5;
+
+    /** How far ahead the client looks: less than the server, so the server crawls first. */
+    static final double CLIENT_CRAWL_REACH = 1.0;
+
+    /** The step along the flow at which {@link #crawl} looks for an opening, blocks. */
+    private static final double CRAWL_STEP = 0.25;
+
+    /** The heights above the player's feet at which it looks: the floor, and a slab up. */
+    private static final double[] CRAWL_RISE = {0, 0.5};
+
     private static final Map<ResourceKey<Level>, LevelState> STATES = new HashMap<>();
+
+    /** The players the server has put in the swimming pose (FLOW-019). Server thread. */
+    private static final Set<UUID> CRAWLING = new HashSet<>();
 
     /** For GameTests: takes every payload instead of the network; null sends normally. */
     private static volatile BiConsumer<ServerPlayer, CustomPacketPayload> sendHook;
@@ -110,7 +131,10 @@ public final class Airflow {
                 AirflowReceiver.CLIENT.tick(p);
             }
         });
-        gameBus.addListener((ServerStoppedEvent e) -> STATES.clear());
+        gameBus.addListener((ServerStoppedEvent e) -> {
+            STATES.clear();
+            CRAWLING.clear();
+        });
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -121,6 +145,14 @@ public final class Airflow {
     }
 
     // ---- The push, shared by the server and the client ------------------------------------
+
+    /**
+     * Whether airflow never moves an entity, whatever it holds or wears (FLOW-018): a spectator, or
+     * a player in creative mode.
+     */
+    public static boolean exempt(Entity e) {
+        return e.isSpectator() || e instanceof Player p && p.isCreative();
+    }
 
     /**
      * Whether airflow leaves an entity where it is (FLOW-004): a leashed mob, a rider (it moves with
@@ -162,7 +194,7 @@ public final class Airflow {
      */
     public static Vec3 apply(
             Entity e, FlowField field, long zone, double threshold, FlowSettings settings, double resistance) {
-        if (field.isEmpty() || anchored(e)) {
+        if (field.isEmpty() || exempt(e) || anchored(e)) {
             return null;
         }
         Vec3 c = e.getBoundingBox().getCenter();
@@ -175,6 +207,81 @@ public final class Airflow {
         e.setDeltaMovement(v.add(dv));
         e.hasImpulse = true;
         return dv;
+    }
+
+    /**
+     * The flow's velocity at an entity's centre, as it would be pushed from rest at once: the
+     * direction airflow carries it and the speed it would reach. Null where it isn't carried: it is
+     * exempt or anchored, or no opening within range reaches its threshold.
+     */
+    public static Vec3 flowAt(
+            Entity e, FlowField field, long zone, double threshold, FlowSettings settings, double resistance) {
+        if (field.isEmpty() || exempt(e) || anchored(e)) {
+            return null;
+        }
+        Vec3 c = e.getBoundingBox().getCenter();
+        FlowSettings onset = new FlowSettings(settings.range(), settings.speedAtOneAtm(), settings.maxSpeed(), 1);
+        double[] d = field.push(c.x, c.y, c.z, 0, 0, 0, zone, threshold, onset, resistance);
+        return d == null ? null : new Vec3(d[0], d[1], d[2]);
+    }
+
+    /**
+     * Puts a player in the swimming pose while airflow carries it into an opening too low to stand
+     * in, and lets it up once it can stand (FLOW-019). It wants the pose when the flow has a
+     * horizontal part and, within {@code reach} ahead along it, the standing box hits a block where
+     * the swimming box fits; once it has the pose, it keeps it while the player can't stand where
+     * it is. The pose is forced ({@link Player#setForcedPose}) only when nothing else forces one,
+     * and only the pose it forced is let up.
+     *
+     * @param flow the flow's velocity at the player ({@link #flowAt}), or null for none
+     * @param crawling whether this put the player in the pose and hasn't let it up
+     * @param reach how far ahead to look, blocks
+     * @return whether this has the player in the pose now
+     */
+    public static boolean crawl(Player player, Vec3 flow, boolean crawling, double reach) {
+        Pose forced = player.getForcedPose();
+        if (crawling && forced != Pose.SWIMMING) {
+            crawling = false;
+        }
+        boolean want = flow != null && lowOpeningAhead(player, flow, reach);
+        if (want || (crawling && !fits(player, Pose.STANDING, player.position()))) {
+            if (forced == null) {
+                // At once, not at the player's next tick: the server checks the next move with it.
+                player.setForcedPose(Pose.SWIMMING);
+                player.setPose(Pose.SWIMMING);
+                return true;
+            }
+            return crawling;
+        }
+        if (crawling) {
+            player.setForcedPose(null);
+        }
+        return false;
+    }
+
+    /** Whether, within reach ahead along the flow, the player could crawl but not stand. */
+    private static boolean lowOpeningAhead(Player player, Vec3 flow, double reach) {
+        double h = Math.sqrt(flow.x * flow.x + flow.z * flow.z);
+        if (h < 1e-6) {
+            return false;
+        }
+        double dx = flow.x / h;
+        double dz = flow.z / h;
+        Vec3 at = player.position();
+        for (double t = CRAWL_STEP; t <= reach + 1e-9; t += CRAWL_STEP) {
+            for (double rise : CRAWL_RISE) {
+                Vec3 p = at.add(dx * t, rise, dz * t);
+                if (!fits(player, Pose.STANDING, p) && fits(player, Pose.SWIMMING, p)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean fits(Player player, Pose pose, Vec3 at) {
+        AABB box = player.getDimensions(pose).makeBoundingBox(at).deflate(1.0E-7);
+        return player.level().noCollision(player, box);
     }
 
     /**
@@ -212,6 +319,7 @@ public final class Airflow {
             if (st != null) {
                 end(level, st);
             }
+            crawlPlayers(level, null, null, FlowField.EMPTY, null);
             return;
         }
         if (st == null) {
@@ -230,6 +338,45 @@ public final class Airflow {
         st.inRange = 0;
         if (!st.field.isEmpty()) {
             pushEntities(level, d, table, st, settings);
+        }
+        crawlPlayers(level, d, table, st.field, settings);
+    }
+
+    /** Puts the level's players carried into low openings in the swimming pose (FLOW-019). */
+    private static void crawlPlayers(
+            ServerLevel level, DimensionAtmos d, AtmosSnapshot table, FlowField field, FlowSettings s) {
+        if (field.isEmpty() && CRAWLING.isEmpty()) {
+            return;
+        }
+        for (ServerPlayer player : level.players()) {
+            crawlPlayer(level, d, table, field, s, player);
+        }
+    }
+
+    private static void crawlPlayer(
+            ServerLevel level,
+            DimensionAtmos d,
+            AtmosSnapshot table,
+            FlowField field,
+            FlowSettings s,
+            ServerPlayer player) {
+        UUID id = player.getUUID();
+        Vec3 flow = null;
+        AirflowClass cls = AirflowClass.of(player);
+        if (!field.isEmpty() && cls != AirflowClass.IMMUNE && !exempt(player)) {
+            long zone = zoneOf(level, d, table, player.getBoundingBox().getCenter());
+            if (zone != UNRESOLVED) {
+                flow = flowAt(player, field, zone, cls.threshold(), s, resistance(player));
+            }
+        }
+        boolean was = CRAWLING.contains(id);
+        if (flow == null && !was) {
+            return;
+        }
+        if (crawl(player, flow, was, SERVER_CRAWL_REACH)) {
+            CRAWLING.add(id);
+        } else {
+            CRAWLING.remove(id);
         }
     }
 
@@ -315,7 +462,7 @@ public final class Airflow {
         UUID id = player.getUUID();
         AirflowClass cls = AirflowClass.of(player);
         Vec3 c = player.getBoundingBox().getCenter();
-        long zone = st.field.isEmpty() || cls == AirflowClass.IMMUNE || player.isSpectator()
+        long zone = st.field.isEmpty() || cls == AirflowClass.IMMUNE || exempt(player)
                 ? UNRESOLVED
                 : zoneOf(level, d, table, c);
         List<FlowField.Opening> near = zone == UNRESOLVED
@@ -393,6 +540,23 @@ public final class Airflow {
             return;
         }
         syncPlayer(level, d, d.pipeline().published(), st, AirflowConfig.settings(), player);
+    }
+
+    /**
+     * For GameTests: one game tick of the server's crawl (FLOW-019) for a player the level doesn't
+     * list, such as a {@link FakePlayer}, with the level's current field. Server thread.
+     *
+     * @return whether the server has the player in the swimming pose
+     */
+    public static boolean crawlForTest(ServerLevel level, ServerPlayer player) {
+        AtmosService service = AtmosService.current();
+        DimensionAtmos d = service == null ? null : service.dimension(level);
+        LevelState st = STATES.get(level.dimension());
+        if (d == null || d.pipeline() == null || st == null) {
+            return false;
+        }
+        crawlPlayer(level, d, d.pipeline().published(), st.field, AirflowConfig.settings(), player);
+        return CRAWLING.contains(player.getUUID());
     }
 
     /** For GameTests: every payload goes to {@code hook} instead of the network; null ends it. */

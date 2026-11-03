@@ -1053,7 +1053,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 |---|---|---|---|
 | Hazards and breathing | published snapshot, point lookup by entity eye position (API-015), life-support capabilities | staggered per entity (LIFE-007, LIFE-033), capped per tick (LIFE-038) | LIFE, D-27, D-47 |
 | Respiration and photosynthesis | queue ops with source attribution | per breather or crop on its own cadence, aggregated per zone per atmos tick | LIFE-005, CONT-053 |
-| Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-017 |
+| Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
@@ -1141,8 +1141,14 @@ client pushes its own player with the same `Airflow.apply` from
 flow's speed when it first takes hold (FLOW-009). An entity's airflow
 resistance r (FLOW-012, `WornProtection.airflowResistance`) scales the flow's
 speed where it is by (1 − r); a player's is worked out on the server and sent
-with its openings, as protection data isn't on the client. Impact damage
-(FLOW-005) and block damage (FLOW-007) aren't done.
+with its openings, as protection data isn't on the client. Creative players
+and spectators are never moved and are sent nothing (`Airflow.exempt`,
+FLOW-018). A player the flow carries towards an opening too low to stand in
+has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
+through: the server looks 1.5 blocks ahead along the flow each game tick and
+the client 1, so the server's smaller box is in place before the client's move
+into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
+aren't done.
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
