@@ -1,0 +1,4 @@
+{
+  "blocks": ["minecraft:furnace", "minecraft:smoker", "#minecraft:campfires"],
+  "watts": 5000
+}

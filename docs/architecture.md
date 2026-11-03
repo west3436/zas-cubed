@@ -1175,6 +1175,39 @@ releases 283 kJ less heat (CO's own heat of combustion, FIRE-003), so the
 carbon burned is the same and the heat falls to match. A CH₄ burn takes the
 same reductions off per mole of its carbon (`oxygenSaved`, `heatLost`).
 
+*Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)):*
+vanilla fire and fuel blocks, in `io.github.west3436.zas.fire`.
+
+- **The air a fire burns in** (`FireAir`, FIRE-030, FIRE-020): the point is
+  resolved as the API resolves one (§6.5). It reads the published zone there,
+  or outside zones the dimension's ambient (an unresolved region reads as the
+  ambient too), so a vacuum dimension can't sustain fire. A full block such as
+  a furnace takes the point just inside its front face, which resolves to the
+  open cell in front of it. Server thread; a client always says yes.
+- **Mixins** (§7): M2 puts out a fire whose cell fails the threshold at the
+  head of its tick. M3 stops flint and steel, fire charges and dispensers
+  lighting one. M4 stops a fire burning away a neighbouring block whose own
+  cell fails it. M5 skips the tick of a furnace that burns or has fuel while
+  its front cell fails it, so its fuel, burn time and cooking progress wait for
+  O₂. M6 puts out a campfire whose cell fails it.
+- **Fuel profiles** (`FuelProfiles`, FIRE-025): datapack files giving a
+  block's power, read when a block burns. For a fire, a profile whose
+  `burning_on` matches the block the fire burns on wins (FIRE-022).
+- **Burning** (`Burners`, FIRE-021, FIRE-022, FIRE-005, HEAT-007): the burning
+  states of `#zas:combustion` are tracked per level and chunk. The change hook
+  reports a position starting or stopping to burn, and each chunk is scanned
+  when it loads (sections whose palette has none are skipped). Every atmos
+  period, each tracked block is checked against the threshold. A fire that
+  fails it is removed, which is what puts out soul fire, which never ticks. A
+  block that passes it, in an unpaused zone, burns its profile for the period
+  as carbon. The burns are summed per zone and sent as a removal of O₂ under
+  the ledger's `REACTION` category, which never forms a zone. When it is
+  applied, CO₂ and CO at the zone's temperature and the heat (API-013's heat
+  operation) are queued in proportion to the O₂ actually removed. So the
+  products land one atmos tick after the O₂ leaves, and a zone short of O₂
+  gets only what burned. The generator (CONT-067) burns through this with
+  nothing in `zas_atmos` but its tag, its `lit` property and its profile.
+
 ### Reactions
 
 *Implemented in part ([#41](https://github.com/west3436/zas-cubed/issues/41)):*
@@ -1686,11 +1719,11 @@ because STARTUP config is too late for block classes.
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
 | M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, and record a Hardcore zone trigger the write starts | GEO-010, GEO-011, GEO-012, CORE-056 | **S1**, GameTests |
-| M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable | Fire inside a zone without enough O₂ goes out; burning consumes O₂ | FIRE-020, FIRE-022, FIRE-023, FIRE-030 | research only |
-| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` | No ignition without enough O₂ | FIRE-020, FIRE-014 | research only |
-| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` and `FireBlock#canCatchFire(BlockGetter, BlockPos, Direction)` | `@WrapMethod` / `@ModifyReturnValue` | Fire spread depends on O₂ | FIRE-016, FIRE-020 | research only |
-| M5 | `AbstractFurnaceBlockEntity#serverTick` (static) plus a `litTime` `@Accessor` | `@Inject` HEAD, cancellable | Lit furnaces consume O₂ and pause without it | FIRE-021, FIRE-027, HEAT-007 | research only |
-| M6 | `CampfireBlock#canLight` and `CampfireBlockEntity#cookTick` | `@ModifyReturnValue`, `@Inject` | Campfires need O₂, and go out (`dowse`) without it | FIRE-021, FIRE-027 | research only |
+| M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable (`FireBlockMixin`) | A fire whose cell fails the fire oxygen threshold goes out; its O₂ use is the burning service's | FIRE-020, FIRE-030 | GameTests (`fire_020_`, `fire_030_`) |
+| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-014 | GameTests (`fire_020_`) |
+| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020 | applied; no GameTest of its own |
+| M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027 | GameTests (`fire_027_`) |
+| M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027 | GameTests (`fire_027_`) |
 | M7 | `PalettedContainer` internals (palette, storage) | `@Accessor` | Optional fast section decode, about 10× faster than `get()` | CORE-047 (worker side) | proposed (S5) |
 
 Not mixins:
@@ -1703,12 +1736,14 @@ Not mixins:
 - **The Ad Astra adapter** uses Ad Astra's own events and ticks (SPACE-016,
   to be proved in S6).
 - **Client rendering** uses NeoForge render events.
-- **Candles and soul fire** are found by scanning zones (no ticking hook).
+- **Lit fuel blocks' O₂ use and soul fire** go through the burning service
+  (§5, *Fire chemistry and fuel blocks*), which tracks burning blocks through
+  the change hook (M1) and chunk loads. Candles aren't combustion.
 
-M2–M6 are new compared with the S1 spike, but their targets were verified in
-the official 1.21.1 mappings during research
-([neoforge §10](research/neoforge-1.21.1.md#10-fire--furnaces)). Each needs a
-GameTest in R1 (E3).
+M2–M6 are new compared with the S1 spike. Their targets were verified in the
+official 1.21.1 mappings during research
+([neoforge §10](research/neoforge-1.21.1.md#10-fire--furnaces)) and they were
+built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 
 ## 8. Testing strategy
 

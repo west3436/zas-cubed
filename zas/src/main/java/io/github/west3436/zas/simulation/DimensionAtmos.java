@@ -392,6 +392,13 @@ public final class DimensionAtmos {
      * the ambient takes or supplies it all at once (ENV-007, HEAT-010).
      */
     CompletableFuture<HeatResult> heat(BlockPos pos, int sub, boolean add, double joules, SourceId source) {
+        // CORE-055: an API call may form a zone in an enclosed, unzoned area, under either preset.
+        return heat(pos, sub, add, joules, source, ZoneTrigger.API_CALLS.active());
+    }
+
+    /** A change of heat that forms a zone only if {@code triggers}. */
+    CompletableFuture<HeatResult> heat(
+            BlockPos pos, int sub, boolean add, double joules, SourceId source, boolean triggers) {
         CompletableFuture<HeatResult> future = new CompletableFuture<>();
         if (isFaulted()) {
             future.completeExceptionally(faulted());
@@ -406,7 +413,7 @@ public final class DimensionAtmos {
                     Ambients.ambient(level.dimension()).temperature()));
             return future;
         }
-        long seq = pl.heat(pos.asLong(), sub, add, joules, ZoneTrigger.API_CALLS.active(), source.toString());
+        long seq = pl.heat(pos.asLong(), sub, add, joules, triggers, source.toString());
         heats.put(seq, future);
         return future;
     }
