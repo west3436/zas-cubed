@@ -12,14 +12,19 @@ import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasRegistry;
+import io.github.west3436.zas.engine.reaction.ReactionConditions;
+import io.github.west3436.zas.engine.reaction.ReactionDefinition;
+import io.github.west3436.zas.engine.reaction.ReactionSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
 /**
  * Hotspots (FIRE-010, FIRE-011, FIRE-014, FIRE-016, FIRE-017, FIRE-019, DATA-009, API-031) through
- * the whole pipeline, with {@link SimpleCombustion} burning H₂. The test plays the server thread:
+ * the whole pipeline, burning H₂ with FIRE-003's hydrogen combustion. The test plays the server thread:
  * after each apply it places and removes gas fires as the intents ask, checking the block first.
  */
 class HotspotTest {
@@ -33,6 +38,22 @@ class HotspotTest {
     static final int O2 = REGISTRY.indexOf("zas:oxygen");
     static final int H2 = REGISTRY.indexOf("zas:hydrogen");
     static final int H2O = REGISTRY.indexOf("zas:water_vapor");
+
+    /** FIRE-003's hydrogen combustion, as the built-in datapack defines it. */
+    static final ReactionSet REACTIONS = ReactionSet.compile(
+            REGISTRY,
+            List.of(ReactionDefinition.standard(
+                    "zas:hydrogen_combustion",
+                    Map.of("zas:hydrogen", 1.0, "zas:oxygen", 0.5),
+                    Map.of("zas:water_vapor", 1.0),
+                    -242_000,
+                    ReactionConditions.combustion(
+                            new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.04, 0.75, 858)),
+                    Optional.empty(),
+                    Optional.empty())),
+            (d, why) -> {
+                throw new AssertionError(why);
+            });
 
     private static final GeometryPalette.Builder BUILDER = GeometryPalette.builder();
     static final int FIRE = BUILDER.intern(Geometry.AIR.withFlags(Geometry.FLAG_FIRE));
@@ -52,7 +73,7 @@ class HotspotTest {
 
         FireSim(Ambient ambient, double spreadChance) {
             sim = new Sim(new TestWorld(ambient), PALETTE, REGISTRY).withoutHeat();
-            sim.settings = sim.settings.withHotspots(new HotspotSettings(spreadChance, new SimpleCombustion(REGISTRY)));
+            sim.settings = sim.settings.withReactions(REACTIONS).withHotspots(new HotspotSettings(spreadChance));
         }
 
         DimensionPipeline.Applied step() {
@@ -308,9 +329,9 @@ class HotspotTest {
     /** With a 2 s period, a per-second chance of 0.5 spreads with 1 − 0.5² = 0.75 per tick. */
     @Test
     void fire_016_chance_per_second() {
-        assertEquals(0.75, new HotspotSettings(0.5, Combustion.NONE).chanceIn(2), 1e-12);
-        assertEquals(0.5, new HotspotSettings(0.5, Combustion.NONE).chanceIn(1), 1e-12);
-        assertEquals(0, new HotspotSettings(0, Combustion.NONE).chanceIn(1));
+        assertEquals(0.75, new HotspotSettings(0.5).chanceIn(2), 1e-12);
+        assertEquals(0.5, new HotspotSettings(0.5).chanceIn(1), 1e-12);
+        assertEquals(0, new HotspotSettings(0).chanceIn(1));
     }
 
     /** With a spread chance of 1, a fire reaches every cell of a flammable room. */

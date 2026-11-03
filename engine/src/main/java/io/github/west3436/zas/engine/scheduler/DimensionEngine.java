@@ -406,8 +406,7 @@ public final class DimensionEngine {
         Hotspots.Ignition[] ignited = hotspots.tick(
                 tick,
                 batch.settings().exchange().periodSeconds(),
-                batch.settings().hotspots(),
-                batch.settings().fire(),
+                batch.settings(),
                 ignitionBlocks,
                 fireIntents,
                 fireEvents);

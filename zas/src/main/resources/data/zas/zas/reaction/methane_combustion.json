@@ -1,0 +1,22 @@
+{
+  "reactants": {
+    "zas:methane": 1,
+    "zas:oxygen": 2
+  },
+  "products": {
+    "zas:carbon_dioxide": 1,
+    "zas:water_vapor": 2
+  },
+  "enthalpy": -802000,
+  "requires_ignition": true,
+  "flammability": {
+    "fuel": "zas:methane",
+    "lower": 0.05,
+    "upper": 0.15,
+    "autoignition": 810
+  },
+  "sources": {
+    "enthalpy": "FIRE-003 (docs/requirements/13-reactions-fire.md): 802 kJ/mol, the heat of combustion with the water as vapour. From standard enthalpies of formation at 298.15 K, CO2(g) -393.522 plus 2 x H2O(g) -241.826 less CH4(g) -74.873 kJ/mol gives -802.30 kJ/mol: NIST-JANAF Thermochemical Tables C-095, H-064 and C-067, https://janaf.nist.gov/",
+    "flammability": "FIRE-003 (docs/requirements/13-reactions-fire.md): flammability limits in air 5-15 %, autoignition 810 K"
+  }
+}

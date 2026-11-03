@@ -18,7 +18,7 @@ chemistry (D-03, D-08, D-49).
 ## Reactions
 
 #### FIRE-001 · Data-driven reactions
-`Must` · `R1` · `Accepted` · Verify: Unit, Inspect · Trace: D-05, D-08
+`Must` · `R1` · `Implemented` · Verify: Unit, Inspect · Trace: D-05, D-08
 
 Reactions shall be defined in datapacks. Each definition specifies:
 - reactant and product stoichiometry
@@ -35,6 +35,13 @@ Reaction types implemented in code are API-020.
 - **Verify:** Unit tests load test definitions with every field; Inspect the
   documented format.
 
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+Definitions are read from `data/<ns>/zas/reaction/*.json`, documented in
+[datapacks.md](../datapacks.md#reactions), and compiled against the server's
+gases at start and on `/reload` (architecture §5, Reactions). Checked by the
+`fire_001_` tests in `ReactionFormatTest` (zas) and `ReactionSetTest` (engine).
+Running reactions zone-wide is phase 7, which comes with FIRE-004.*
+
 #### FIRE-006 · Reactions requiring ignition
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-57 · Depends: FIRE-001, FIRE-014
 
@@ -46,7 +53,7 @@ or next to the reacting cell, in addition to its other activation conditions.
   waits until an igniter fires.
 
 #### FIRE-002 · Fair allocation of reactants
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
 
 When reactions compete for the same reactant, only the competing reactions
 shall be scaled back. This fixes ZAS's global scaling.
@@ -57,8 +64,12 @@ shall be scaled back. This fixes ZAS's global scaling.
 - **Verify:** Unit tests run competing and independent reactions and check
   only the competing ones are scaled.
 
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+Each reaction is scaled by the worst shortfall among its own reactants. Checked
+by the `fire_002_` tests in `ReactionSetTest`.*
+
 #### FIRE-003 · Built-in combustion
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: S-03, D-49
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: S-03, D-49
 
 ZAS³ shall ship these combustion reactions with O₂, using real stoichiometry
 and producing H₂O and CO₂:
@@ -72,6 +83,12 @@ and producing H₂O and CO₂:
 - **Rationale:** Decision: D-49 (real chemistry); the values are standard
   reference data.
 - **Verify:** Unit tests burn each fuel and check products and heat released.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+Shipped in `data/zas/zas/reaction/` as reactions that need ignition, with
+these limits and autoignition points. Checked by the `fire_003_` tests in
+`ReactionFormatTest`, which burn the shipped files with the shipped gases, and
+`ReactionSetTest`. In game they burn once hotspots do (FIRE-011).*
 
 #### FIRE-005 · Incomplete combustion
 `Should` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-49, LIFE-041

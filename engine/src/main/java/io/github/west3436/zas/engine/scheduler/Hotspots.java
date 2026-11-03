@@ -7,6 +7,9 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.gas.GasMixture;
+import io.github.west3436.zas.engine.reaction.Flammability;
+import io.github.west3436.zas.engine.reaction.ReactionResult;
+import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
@@ -39,7 +42,8 @@ import java.util.TreeMap;
  * <p><b>One tick</b>, in order: sync with the mirror; ignitions (operations in sequence order, then
  * ignition-source blocks, {@link Geometry#FLAG_IGNITION_SOURCE}, in position order, then
  * autoignition by zone in id order); every active hotspot in position order burns a parcel of
- * {@link HotspotSettings#PARCEL_LITRES_PER_SECOND} litres per second of its zone's gas, or goes out
+ * {@link ReactionSet#PARCEL_LITRES_PER_SECOND} litres per second of its zone's gas with the
+ * batch's reactions ({@link ReactionSet#burn}), or goes out
  * if the gas won't burn; then every hotspot that burned may spread to each open neighbouring cell
  * that could hold a fire. Vanilla fire never goes out here: putting it out without O₂ is FIRE-020's.
  * Hotspots in paused zones keep still (GEO-035).
@@ -95,7 +99,7 @@ final class Hotspots {
 
     // This tick's settings.
     private long tick;
-    private Combustion chemistry = Combustion.NONE;
+    private ReactionSet reactions = ReactionSet.EMPTY;
     private FireSettings fireSettings = FireSettings.DEFAULT;
     private List<FireIntent> intents = new ArrayList<>();
 
@@ -151,7 +155,7 @@ final class Hotspots {
      *
      * @param tick the atmos tick
      * @param seconds the atmos period
-     * @param settings this tick's hotspot settings
+     * @param settings this tick's settings: hotspot spread, reactions and the fire oxygen threshold
      * @param fireSettings this tick's fire oxygen threshold (FIRE-030)
      * @param ignitions the positions of this tick's ignition operations, in sequence order
      * @param out receives the world writes asked for
@@ -161,14 +165,13 @@ final class Hotspots {
     Ignition[] tick(
             long tick,
             double seconds,
-            HotspotSettings settings,
-            FireSettings fireSettings,
+            EngineSettings settings,
             long[] ignitions,
             List<FireIntent> out,
             List<FireEvent> events) {
         this.tick = tick;
-        this.chemistry = settings.combustion();
-        this.fireSettings = fireSettings;
+        this.reactions = settings.reactions();
+        this.fireSettings = settings.fire();
         this.intents = out;
         burningBefore = burning;
 
@@ -188,7 +191,7 @@ final class Hotspots {
         autoignite();
 
         List<long[]> burned = burn(seconds);
-        spread(burned, settings.chanceIn(seconds));
+        spread(burned, settings.hotspots().chanceIn(seconds));
 
         TreeMap<Long, Long> now = new TreeMap<>();
         for (Hotspot h : byBlock.values()) {
@@ -295,7 +298,8 @@ final class Hotspots {
                 if (h != null) {
                     return new Ignition(OpOutcome.IgnitionStatus.BURNING, here, z);
                 }
-                if (!flammable.computeIfAbsent(z.id(), id -> chemistry.flammable(z.mixture(), fireSettings))) {
+                if (!flammable.computeIfAbsent(
+                        z.id(), id -> flammability(z.mixture()).flammable())) {
                     if (rank(status) < rank(OpOutcome.IgnitionStatus.NOT_FLAMMABLE)) {
                         status = OpOutcome.IgnitionStatus.NOT_FLAMMABLE;
                         at = z;
@@ -341,7 +345,7 @@ final class Hotspots {
                 continue;
             }
             GasMixture m = z.mixture();
-            if (!(m.temperature() >= chemistry.autoignition(m, fireSettings))) {
+            if (!flammability(m).ignitesAt(m.temperature())) {
                 continue;
             }
             long[] lowest = {Long.MAX_VALUE};
@@ -366,7 +370,7 @@ final class Hotspots {
      * @return the hotspots that burned, as {block, cell, zone id}, in position order
      */
     private List<long[]> burn(double seconds) {
-        double litres = HotspotSettings.PARCEL_LITRES_PER_SECOND * seconds;
+        double litres = ReactionSet.PARCEL_LITRES_PER_SECOND * seconds;
         List<long[]> burned = new ArrayList<>();
         for (Hotspot h : new ArrayList<>(byBlock.values())) {
             if (h.pending()) {
@@ -382,18 +386,25 @@ final class Hotspots {
                 continue;
             }
             GasMixture m = z.mixture();
-            if (!chemistry.flammable(m, fireSettings)) {
+            if (!flammability(m).flammable()) {
                 if (h.gas()) {
                     goOut(h, z.id());
                 }
                 continue;
             }
-            double[] change = chemistry.burn(m, litres, fireSettings);
-            graph.ledger().record(LedgerCategory.REACTION, change);
+            ReactionResult r = reactions.burn(m, litres, true, fireSettings);
+            if (r.reacted()) {
+                graph.ledger().record(LedgerCategory.REACTION, r.moles());
+            }
             graph.markChanged(z);
             burned.add(new long[] {h.block(), cell, z.id()});
         }
         return burned;
+    }
+
+    /** Whether a zone's gas can burn, and its autoignition point, with this tick's reactions. */
+    private Flammability flammability(GasMixture m) {
+        return reactions.isEmpty() ? Flammability.NONE : reactions.flammability(m, fireSettings);
     }
 
     private void goOut(Hotspot h, long zoneId) {
@@ -428,7 +439,8 @@ final class Hotspots {
                 if (z == null || z.isPaused() || !placeable(to)) {
                     continue;
                 }
-                if (!flammable.computeIfAbsent(z.id(), id -> chemistry.flammable(z.mixture(), fireSettings))) {
+                if (!flammable.computeIfAbsent(
+                        z.id(), id -> flammability(z.mixture()).flammable())) {
                     continue;
                 }
                 if (draw(seed, tick, zoneId, from, to) < chance) {

@@ -1,0 +1,21 @@
+{
+  "reactants": {
+    "zas:hydrogen": 1,
+    "zas:oxygen": 0.5
+  },
+  "products": {
+    "zas:water_vapor": 1
+  },
+  "enthalpy": -242000,
+  "requires_ignition": true,
+  "flammability": {
+    "fuel": "zas:hydrogen",
+    "lower": 0.04,
+    "upper": 0.75,
+    "autoignition": 858
+  },
+  "sources": {
+    "enthalpy": "FIRE-003 (docs/requirements/13-reactions-fire.md): 242 kJ/mol, the heat of combustion with the water as vapour. It is minus the standard enthalpy of formation of H2O(g), -241.826 kJ/mol at 298.15 K: NIST-JANAF Thermochemical Tables, table H-064, https://janaf.nist.gov/tables/H-064.html",
+    "flammability": "FIRE-003 (docs/requirements/13-reactions-fire.md): flammability limits in air 4-75 %, autoignition 858 K"
+  }
+}
