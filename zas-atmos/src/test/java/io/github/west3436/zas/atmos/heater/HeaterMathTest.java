@@ -33,34 +33,37 @@ class HeaterMathTest {
         }
     }
 
-    /** CONT-087: a large network well below its target takes the full power; a small one only what it needs. */
+    /** CONT-087: a large zone well below its setpoint takes the full power; a small one only what it needs. */
     @Test
     void cont_087_limited_or_exact() {
-        assertEquals(5000, HeaterMath.heat(1e6, 293.15, 303, 1, W), 0, "a large network");
+        assertEquals(5000, HeaterMath.heat(1e6, 293.15, 303, 1, W), 0, "a large zone");
         assertEquals(20.8 * 10, HeaterMath.heat(20.8, 293, 303, 1, W), 1e-9, "1 mol of N2, 10 K below");
         assertEquals(10_000, HeaterMath.heat(1e6, 293.15, 303, 2, W), 0, "two seconds");
         assertEquals(2000, HeaterMath.heat(1e6, 293.15, 303, 1, 2000), 0, "a configured 2 kW");
         assertEquals(0, HeaterMath.heat(1e6, 293.15, 303, 1, 0), 0, "a configured 0 W");
-        assertEquals(0, HeaterMath.heat(0, 293, 303, 1, W), 0, "an empty network");
+        assertEquals(0, HeaterMath.heat(0, 293, 303, 1, W), 0, "an empty zone");
         assertEquals(0, HeaterMath.heat(100, 310, 303, 1, W), 0, "above the target: a heater never cools");
     }
 
     /**
-     * CONT-019: in a room, the target is the network temperature at which the room and the
-     * network, mixed, reach the setpoint, capped at 573 K; there is none once the room is there.
+     * CONT-087: the battery pays the full draw, 60 FE/t over the step, at full power, and in
+     * proportion below it, rounded up; nothing for no heat.
      */
     @Test
-    void cont_019_room_target() {
-        // A room of 20 kJ/K, 2 K short, over a network of 1 kJ/K: 40 K above the setpoint.
-        assertEquals(343, HeaterMath.roomTarget(20_000, 301, 1000, 303), 1e-9, "the target");
-        // Mixed, they come to the setpoint exactly.
-        double mixed = (20_000 * 301 + 1000 * 343) / 21_000.0;
-        assertEquals(303, mixed, 1e-9, "the mix");
-        assertEquals(HeaterMath.MAX_GAS, HeaterMath.roomTarget(20_000, 250, 1000, 303), 0, "capped at 573 K");
-        assertEquals(0, HeaterMath.roomTarget(20_000, 303, 1000, 303), 0, "a room at the setpoint");
-        assertEquals(0, HeaterMath.roomTarget(20_000, 310, 1000, 303), 0, "a room above it");
-        assertEquals(0, HeaterMath.roomTarget(20_000, 290, 0, 303), 0, "an empty network");
-        assertEquals(303, HeaterMath.roomTarget(0, 290, 1000, 303), 0, "an empty room");
+    void cont_087_draw_in_proportion() {
+        assertEquals(1200, HeaterMath.energy(5000, 1, W, 60, 20), "full power over 20 ticks");
+        assertEquals(600, HeaterMath.energy(2500, 1, W, 60, 20), "half power");
+        assertEquals(1, HeaterMath.energy(1e-6, 1, W, 60, 20), "a trace of heat costs 1 FE");
+        assertEquals(0, HeaterMath.energy(0, 1, W, 60, 20), "no heat");
+        assertEquals(1200, HeaterMath.energy(9000, 1, W, 60, 20), "capped at the full draw");
+        assertEquals(0, HeaterMath.energy(5000, 1, W, 0, 20), "a configured draw of 0");
+        assertEquals(0, HeaterMath.energy(5000, 1, 0, 60, 20), "a configured 0 W");
+        Random random = new Random(19);
+        for (int i = 0; i < 10_000; i++) {
+            double joules = W * random.nextDouble();
+            int fe = HeaterMath.energy(joules, 1, W, 60, 20);
+            assertTrue(fe >= 1200 * joules / W - 1e-6 && fe <= 1200 * joules / W + 1, "not in proportion: " + fe);
+        }
     }
 
     /** CONT-019: the setpoint is clamped to 293–573 K. */

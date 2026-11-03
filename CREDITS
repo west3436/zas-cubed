@@ -90,6 +90,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/heater.json
 origin: original
 notes: The heater's four facings, heating and idle, with the existing heater and heater_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/recharger.json
+origin: original
+notes: The recharger's four facings: empty with the existing recharger model, and holding a battery with recharger_0 to recharger_4 by its charge.
+
 path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_vent.json
 origin: original
 notes: GameTest stand-in for a vent (dev runs only), shown with the existing vent model.
@@ -1318,7 +1322,7 @@ notes: vg's full overlay (green), in the charge window every tier shares; layer1
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/battery.json
 origin: original
-notes: A flat item model for the battery, empty.
+notes: A flat item model for the battery, empty; its overrides pick battery_partial and battery_full by the zas_atmos:charge property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/battery_partial.json
 origin: original
@@ -1330,7 +1334,7 @@ notes: The battery full: its sprite with battery_charge_full.png as layer1.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/high_capacity_battery.json
 origin: original
-notes: A flat item model for the high-capacity battery, empty.
+notes: A flat item model for the high-capacity battery, empty; its overrides pick the _partial and _full models by the zas_atmos:charge property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/high_capacity_battery_partial.json
 origin: original
@@ -1342,7 +1346,7 @@ notes: The high-capacity battery full: its sprite with battery_charge_full.png a
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacity_battery.json
 origin: original
-notes: A flat item model for the super-capacity battery, empty.
+notes: A flat item model for the super-capacity battery, empty; its overrides pick the _partial and _full models by the zas_atmos:charge property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/super_capacity_battery_partial.json
 origin: original
@@ -2517,3 +2521,70 @@ origin: original
 notes: A flat item model for the bluespace crystal sprite.
 
 # End of crafting components.
+
+# HUD alerts (CLIENT-008), from vg's screen alarms.
+path: zas/src/main/resources/assets/zas/textures/gui/hud/oxygen.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_oxy
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/toxins.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_tox
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/pressure_low_warning.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_pressure-1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/pressure_low_danger.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_pressure-2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/pressure_high_warning.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_pressure1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/pressure_high_danger.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_pressure2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/temperature_cold_warning.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_temp-2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/temperature_cold_danger.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_temp-4
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/temperature_hot_warning.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_temp2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/temperature_hot_danger.png
+origin: vgstation13
+source: icons/mob/screen_alarms.dmi
+state: carbon_temp4
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, as vg's animation.

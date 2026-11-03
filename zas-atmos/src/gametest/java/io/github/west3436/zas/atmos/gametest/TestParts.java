@@ -10,11 +10,13 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -26,6 +28,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.energy.ComponentEnergyStorage;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
@@ -38,8 +41,14 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *   <li>{@code zas_atmos:test_scrubber}: life support, 15 FE/t, takes scrubber orders;
  *   <li>{@code zas_atmos:test_pump}: gas handling, 20 FE/t;
  *   <li>{@code zas_atmos:test_heater}: auxiliary, 60 FE/t;
- *   <li>{@code zas_atmos:test_battery}: an FE block holding 100,000 FE that gives it to any side.
+ *   <li>{@code zas_atmos:test_battery}: an FE block holding 100,000 FE that gives it to any side;
+ *   <li>{@code zas_atmos:test_fe_item} and {@code zas_atmos:test_untagged_fe_item}: FE items holding
+ *       up to 50,000 FE, another mod's battery as far as ZAS³ can tell. The first is added to the
+ *       {@code zas_atmos:batteries} tag by {@link BatteryTestPack}; the second never is (CONT-112).
  * </ul>
+ *
+ * The {@code test_heater} stand-in predates the heater running on a battery (D-73): it is kept as a
+ * generic auxiliary part for CONT-064's priority tests.
  *
  * Each part has no collision, so its block is a cell like air, and its air point is the middle of
  * its own block. The battery is a full block, so it can stand in a wall.
@@ -72,6 +81,22 @@ public final class TestParts {
 
     public static final int BATTERY_FE = 100_000;
 
+    /** What each test FE item holds. */
+    public static final int FE_ITEM_CAPACITY = 50_000;
+
+    private static Item feItem;
+    private static Item untaggedFeItem;
+
+    /** An FE item the test pack adds to the battery tag. */
+    public static Item feItem() {
+        return feItem;
+    }
+
+    /** An FE item in no tag. */
+    public static Item untaggedFeItem() {
+        return untaggedFeItem;
+    }
+
     private static Block battery;
     private static BlockEntityType<Battery> batteryType;
 
@@ -100,11 +125,23 @@ public final class TestParts {
             batteryType = BlockEntityType.Builder.of(Battery::new, battery).build(null);
             helper.register(ZasAtmosMod.id("test_battery"), batteryType);
         });
+        event.register(Registries.ITEM, helper -> {
+            feItem = new Item(new Item.Properties().stacksTo(1));
+            helper.register(ZasAtmosMod.id("test_fe_item"), feItem);
+            untaggedFeItem = new Item(new Item.Properties().stacksTo(1));
+            helper.register(ZasAtmosMod.id("test_untagged_fe_item"), untaggedFeItem);
+        });
     }
 
     @SubscribeEvent
     static void capabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, batteryType, (be, side) -> be.store);
+        event.registerItem(
+                Capabilities.EnergyStorage.ITEM,
+                (stack, context) -> new ComponentEnergyStorage(
+                        stack, AtmosComponents.ENERGY.get(), FE_ITEM_CAPACITY, FE_ITEM_CAPACITY, FE_ITEM_CAPACITY),
+                feItem,
+                untaggedFeItem);
     }
 
     private static Part create(Kind k, BlockPos pos, BlockState state) {

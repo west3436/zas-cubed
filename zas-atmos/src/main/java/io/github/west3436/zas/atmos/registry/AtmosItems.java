@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
@@ -44,6 +45,22 @@ public final class AtmosItems {
 
     /** Forces firelocks open or shut (CONT-094). */
     public static final DeferredItem<CrowbarItem> CROWBAR = ITEMS.registerItem("crowbar", CrowbarItem::new);
+
+    public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
+
+    // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
+
+    public static final DeferredItem<BatteryItem> BATTERY =
+            ITEMS.registerItem("battery", p -> new BatteryItem(100_000, p));
+    public static final DeferredItem<BatteryItem> HIGH_CAPACITY_BATTERY =
+            ITEMS.registerItem("high_capacity_battery", p -> new BatteryItem(1_000_000, p));
+    public static final DeferredItem<BatteryItem> SUPER_CAPACITY_BATTERY =
+            ITEMS.registerItem("super_capacity_battery", p -> new BatteryItem(2_000_000, p));
+
+    /** The batteries, smallest first. */
+    public static List<DeferredItem<BatteryItem>> batteries() {
+        return List.of(BATTERY, HIGH_CAPACITY_BATTERY, SUPER_CAPACITY_BATTERY);
+    }
 
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);

@@ -65,6 +65,11 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.GENERATOR.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.FIRELOCK.get());
+        out.accept(AtmosItems.RECHARGER.get());
+        AtmosItems.batteries().forEach(b -> {
+            out.accept(b.get());
+            out.accept(b.get().full());
+        });
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());

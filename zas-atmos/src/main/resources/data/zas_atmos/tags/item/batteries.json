@@ -1,0 +1,7 @@
+{
+  "values": [
+    "zas_atmos:battery",
+    "zas_atmos:high_capacity_battery",
+    "zas_atmos:super_capacity_battery"
+  ]
+}

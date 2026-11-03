@@ -4,15 +4,16 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.mutation.HeatMutations;
+import io.github.west3436.zas.api.mutation.HeatResult;
+import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.gas.GasStore;
-import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
-import io.github.west3436.zas.atmos.pipe.PipeVolumes;
-import io.github.west3436.zas.atmos.power.DevicePower;
-import io.github.west3436.zas.atmos.power.PowerPriority;
-import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -27,35 +28,38 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 
 /**
- * A heater's block entity (CONT-019, CONT-087): a node with a port buffer (200 L) that heats its
- * whole network's gas, by at most {@code [power] heater_watts} (5 kW). Vents on the same network
- * carry the heat into a room.
+ * A heater's block entity (CONT-019, CONT-087): a portable that heats the zone it stands in, on a
+ * battery in its slot (CONT-112, D-73).
  *
- * <p>Its setpoint, 293–573 K, is for the room: the zone its {@link #airPoint} is in. Each atmos tick
- * it reads that zone and heats its network's gas toward {@link HeaterMath#roomTarget}, as hot as the
- * room needs, up to 573 K, and adds nothing once the room is at or above the setpoint. With no zone
- * there (open air, unresolved or paused) it heats its network's gas toward the setpoint instead. It
- * never cools.
+ * <p>Each atmos tick, while it is on and has charge, it reads the zone at its {@link #point()} and
+ * adds heat to it through API-013's heat mutation: what brings the zone to its setpoint (293–573 K),
+ * but at most {@code [power] heater_watts} (5 kW) over the tick, and nothing at or above the
+ * setpoint. With no zone there (open air, unresolved or paused) it does nothing. It never cools.
  *
- * <p>It runs only while switched on and powered (CONT-060), drawing {@code [power] heater} FE/t
- * (60, CONT-087) whenever it is on, in the auxiliary group (CONT-064): an area air controller
- * powers it after its vents. Its point for a controller's zone (CONT-068) is the air above it, in
- * its own block's cell.
+ * <p>It draws from its battery only while it heats: {@code [power] heater} FE/t (60) at full power,
+ * and in proportion below it. With too little charge left it adds what the charge pays for, then
+ * stops. It isn't a controller's part: no area air controller powers, orders or lists it.
  *
- * <p>It changes only its network's gas, which the content mod holds, so it calls no API mutation.
+ * <p>One heat mutation is outstanding at a time, so each step reads the zone after the last one
+ * landed.
  */
-public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, MenuProvider {
+public class HeaterBlockEntity extends AtmosDevice implements MenuProvider {
+    /** Who the heat comes from, in the conservation ledger. */
+    public static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "heater");
+
     private static final String ON = "On";
     private static final String SETPOINT = "Setpoint";
 
-    private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
+    private final Batteries.Slot battery = new Batteries.Slot(this::setChanged);
     private boolean on;
     private double setpoint = HeaterMath.DEFAULT_SETPOINT;
     private HeaterStatus status = HeaterStatus.OFF;
     private double watts;
     private double room = Double.NaN;
+    private CompletableFuture<HeatResult> pending;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -63,11 +67,13 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
             return switch (index) {
                 case HeaterMenu.DATA_ON -> on ? 1 : 0;
                 case HeaterMenu.DATA_SETPOINT -> tenths(setpoint);
-                case HeaterMenu.DATA_NETWORK -> tenths(networkTemperature());
-                case HeaterMenu.DATA_STATUS -> status.ordinal();
-                case HeaterMenu.DATA_POWERED -> power.isPowered() ? 1 : 0;
-                case HeaterMenu.DATA_WATTS -> (int) Math.round(watts);
                 case HeaterMenu.DATA_ROOM -> Double.isNaN(room) ? HeaterMenu.NO_ROOM : tenths(room);
+                case HeaterMenu.DATA_STATUS -> status.ordinal();
+                case HeaterMenu.DATA_WATTS -> (int) Math.round(watts);
+                case HeaterMenu.DATA_ENERGY_LO -> energy() & 0xFFFF;
+                case HeaterMenu.DATA_ENERGY_HI -> energy() >>> 16;
+                case HeaterMenu.DATA_CAPACITY_LO -> capacity() & 0xFFFF;
+                case HeaterMenu.DATA_CAPACITY_HI -> capacity() >>> 16;
                 default -> 0;
             };
         }
@@ -82,7 +88,7 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
     };
 
     public HeaterBlockEntity(BlockPos pos, BlockState state) {
-        super(AtmosBlockEntities.HEATER.get(), pos, state, PipeVolumes.PORT);
+        super(AtmosBlockEntities.HEATER.get(), pos, state);
     }
 
     /** A temperature in tenths of a kelvin, capped to fit menu data's shorts. */
@@ -90,9 +96,21 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         return (int) Math.max(0, Math.min(Short.MAX_VALUE, Math.round(kelvin * 10)));
     }
 
-    /** What the heater draws now: its configured draw while on (CONT-087). */
-    private int currentDraw() {
-        return on ? AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW) : 0;
+    /** Its battery slot. */
+    public Batteries.Slot battery() {
+        return battery;
+    }
+
+    /** The FE in its battery; 0 with none. */
+    public int energy() {
+        IEnergyStorage e = battery.energy();
+        return e == null ? 0 : e.getEnergyStored();
+    }
+
+    /** Its battery's capacity, FE; 0 with none. */
+    public int capacity() {
+        IEnergyStorage e = battery.energy();
+        return e == null ? 0 : e.getMaxEnergyStored();
     }
 
     /** Whether it is switched on. */
@@ -127,52 +145,42 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         return status;
     }
 
-    /** The heat it put into its network at its last step, as a power in W. */
+    /** The heat it added at its last step, as a power in W. */
     public double watts() {
         return watts;
     }
 
-    /** Whether it is running: on and powered. */
-    public boolean running() {
-        return on && power.isPowered();
-    }
-
-    @Override
-    public DevicePower power() {
-        return power;
-    }
-
-    /** The air above the heater, in its block's cell. */
-    @Override
-    public Vec3 airPoint() {
-        return new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 15 / 16.0, worldPosition.getZ() + 0.5);
-    }
-
     /**
-     * The temperature of the room it regulates, the zone at its air point, as of its last step;
-     * NaN when there was none or it was off. Server side.
+     * The temperature of its room, the zone at its point, as of its last step; NaN when there was
+     * none or it was off. Server side.
      */
     public double roomTemperature() {
         return room;
     }
 
-    /** Its network's gas temperature, K; 0 if removed. Server side. */
-    public double networkTemperature() {
-        return isRemoved() ? 0 : network().gas().temperature();
+    /** Where it reads and heats: the air above it, in its own block's cell. */
+    public Vec3 point() {
+        return new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 15 / 16.0, worldPosition.getZ() + 0.5);
+    }
+
+    @Override
+    public boolean readyToStep() {
+        return pending == null || pending.isDone();
     }
 
     @Override
     protected void atmosTick(ServerLevel level) {
+        pending = null;
         watts = 0;
         room = Double.NaN;
-        if (!on) {
-            status = HeaterStatus.OFF;
-        } else {
-            AtmosphereSample air = Atmospheres.at(level, airPoint());
+        if (on) {
+            AtmosphereSample air = Atmospheres.at(level, point());
             if (air.state() == AtmosphereState.ZONED) {
                 room = air.temperature();
             }
-            status = power.isPowered() ? heat(network().gas(), air) : HeaterStatus.UNPOWERED;
+            status = heat(level, air);
+        } else {
+            status = HeaterStatus.OFF;
         }
         boolean lit = status == HeaterStatus.HEATING;
         BlockState state = getBlockState();
@@ -181,30 +189,39 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         }
     }
 
-    /** One step's heating of the network's gas, for the room at its air point or without one. */
-    private HeaterStatus heat(GasStore net, AtmosphereSample air) {
-        double c = net.heatCapacity();
-        if (net.isEmpty() || !(c > 0)) {
-            return HeaterStatus.NETWORK_EMPTY;
+    /** One step's heating of its room. */
+    private HeaterStatus heat(ServerLevel level, AtmosphereSample air) {
+        IEnergyStorage energy = battery.energy();
+        if (energy == null) {
+            return HeaterStatus.NO_BATTERY;
         }
-        double target;
         if (Double.isNaN(room)) {
-            target = setpoint;
-        } else if (room >= setpoint) {
+            return HeaterStatus.NO_ROOM;
+        }
+        if (room >= setpoint) {
             return HeaterStatus.AT_SETPOINT;
-        } else {
-            target = HeaterMath.roomTarget(
-                    GasProperties.heatCapacity(air.mixture().moles()), room, c, setpoint);
         }
         double maxWatts = AtmosServerConfig.get(AtmosServerConfig.HEATER_WATTS);
-        double joules = HeaterMath.heat(c, net.temperature(), target, AtmosTicks.SECONDS, maxWatts);
+        double c = GasProperties.heatCapacity(air.mixture().moles());
+        double joules = HeaterMath.heat(c, room, setpoint, AtmosTicks.SECONDS, maxWatts);
         if (joules <= 0) {
-            if (Double.isNaN(room)) {
-                return HeaterStatus.AT_SETPOINT;
-            }
-            return target >= HeaterMath.MAX_GAS ? HeaterStatus.AT_LIMIT : HeaterStatus.CARRYING;
+            return HeaterStatus.AT_SETPOINT;
         }
-        net.setTemperature(Math.min(target, net.temperature() + joules / c));
+        int cost = HeaterMath.energy(
+                joules,
+                AtmosTicks.SECONDS,
+                maxWatts,
+                AtmosServerConfig.get(AtmosServerConfig.HEATER_DRAW),
+                AtmosTicks.PERIOD);
+        if (cost > 0) {
+            int paid = energy.extractEnergy(cost, false);
+            if (paid <= 0) {
+                return HeaterStatus.BATTERY_EMPTY;
+            }
+            setChanged();
+            joules *= (double) paid / cost;
+        }
+        pending = HeatMutations.add(level, point(), joules, SOURCE);
         watts = joules / AtmosTicks.SECONDS;
         return HeaterStatus.HEATING;
     }
@@ -214,7 +231,7 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         super.saveAdditional(tag, registries);
         tag.putBoolean(ON, on);
         tag.putDouble(SETPOINT, setpoint);
-        power.save(tag);
+        battery.save(tag, registries);
     }
 
     @Override
@@ -224,7 +241,7 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
         setpoint = tag.contains(SETPOINT)
                 ? HeaterMath.clampSetpoint(tag.getDouble(SETPOINT))
                 : HeaterMath.DEFAULT_SETPOINT;
-        power.load(tag);
+        battery.load(tag, registries);
     }
 
     @Override
@@ -234,6 +251,6 @@ public class HeaterBlockEntity extends PipeNodeEntity implements PoweredDevice, 
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new HeaterMenu(id, data, ContainerLevelAccess.create(level, worldPosition), this);
+        return new HeaterMenu(id, inventory, battery, data, ContainerLevelAccess.create(level, worldPosition), this);
     }
 }

@@ -673,34 +673,50 @@ yet.*
 #### CONT-018 · Portable pump and scrubber
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
 
-A portable pump and a portable scrubber, as blocks that run on a battery in a
-slot (CONT-112), shall work on the room or on a held tank.
+The portables, a portable pump, a portable scrubber, a heater and a freezer
+(CONT-019), shall be blocks that run on a battery in a slot (CONT-112) and
+work on their own on the zone they stand in. No area air controller shall
+power, order or list them. The portable pump and scrubber shall also work on
+a held tank.
 
 - **Rationale:** vg: vg's portable pump and scrubber, which act on the room or
   a held tank ([vg
   §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)); the
-  battery follows D-69.
+  battery follows D-69, and the heater and freezer joining them D-73.
 - **Verify:** A GameTest checks each works on a room and on a held tank, and
-  stops when its battery is empty.
+  stops when its battery is empty, and that a controller in its room doesn't
+  power or list it.
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177)):** "heaters, air conditioners,
+  scrubbers, and pumps are all portable devices on battery power which
+  shouldn't link with any AACs; they should simply work independently on
+  battery power to modify the zone they occupy." The heater and the freezer
+  (the air conditioner) are portables too, and no portable is a
+  controller's part (D-73). Wall-mounted scrubbers stay controller parts
+  (CONT-015).
 
 *2026-11-01: the portables run on a battery instead of their own FE buffer,
 whose charging was left open by D-68 (D-69).*
 
-#### CONT-019 · Heater and freezer
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, S-05
+*2026-11-02: Built for the heater only (CONT-019), so this stays Accepted
+until the portable pump, portable scrubber and freezer exist.*
 
-A heater shall hold the zone its air point is in at a setpoint (293–573 K):
-it shall heat its network gas as hot as the zone needs, up to 573 K, and add
-no heat once the zone is at or above the setpoint. With no zone at its air
-point, it shall move its network gas toward the setpoint. A freezer
-(73–293 K) shall move its network gas toward a setpoint.
+#### CONT-019 · Heater and freezer
+`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, D-73, S-05
+
+A heater (293–573 K) and a freezer (73–293 K) shall be portables
+(CONT-018), each running on a battery in a slot (CONT-112), that hold the
+zone they stand in at a setpoint. A heater shall add heat to that zone, and a
+freezer take heat from it, until the zone reaches the setpoint, and neither
+shall take it past the setpoint. With no zone where it stands, it shall do
+nothing.
 
 - **Rationale:** vg: vg's heater and freezer ranges ([vg
-  §2](../research/vg-atmos-content.md#2-devices)).
-- **Verify:** A GameTest checks a heater holds a room at its setpoint, within
-  0.5 K and never above it, and brings its network gas to the setpoint with no
-  zone at its air point; and that a freezer brings its network gas to a
-  setpoint.
+  §2](../research/vg-atmos-content.md#2-devices)). Portables on batteries:
+  D-73.
+- **Verify:** A GameTest checks a heater on a battery holds a room at its
+  setpoint, within 0.5 K and never above it, and stops when its battery is
+  empty; and that a freezer holds a room at its setpoint, never below it.
 - **Changed 2026-11-02 (the owner, reviewing
   [#177](https://github.com/west3436/zas-cubed/pull/177)):** the heater
   regulates the room. Its setpoint is the temperature of the zone its air
@@ -710,20 +726,29 @@ point, it shall move its network gas toward the setpoint. A freezer
   oscillate. When its air point isn't zoned (open air, unresolved or
   paused), it moves its own gas toward the setpoint. Its GUI shows the room's
   temperature beside the setpoint. The freezer was not part of this change.
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177), again):** the heater and the
+  freezer, which is the air conditioner, are portables on battery power that
+  link with no area air controller and work on their own on the zone they
+  stand in (D-73). The heater has no pipe: it heats its room directly, and
+  does nothing with no zone where it stands. This replaces the piped heater
+  of the change above, which heated its network's gas for vents to carry in.
 
 *2026-11-02: Built for the heater only, so this stays Accepted; the freezer
-is out of this round's scope (S-05 needs only the heater). The heater heats
-its network's gas toward the temperature at which the room and the network,
-mixed, would be at the setpoint, up to 573 K (architecture §11.5). Checked by
-`cont_019_room_target` (Unit),
-`cont_019_heater_heats_its_network_to_the_setpoint` and
+is out of this round's scope (S-05 needs only the heater). The heater adds
+the heat that brings its room to the setpoint, up to `[power] heater_watts`,
+through the heat mutation (API-013), and holds a wool room in vacuum within
+about 0.02 K under it (architecture §11.5). Checked by
+`cont_087_never_more_than_5_kw` (Unit),
+`cont_019_heater_heats_its_room_on_its_battery`,
+`cont_019_a_controller_leaves_a_heater_in_its_room_alone` and
 `s_05_heater_holds_a_room_at_its_setpoint` (GameTest).*
 
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Accepted` · Verify: Unit
 
 A heater or freezer shall move up to 5 kW toward its setpoint, drawing
-60 FE/t.
+60 FE/t from its battery while it works.
 
 - **Rationale:** Inferred: vg's thermomachines have no real power limit ([vg
   §2](../research/vg-atmos-content.md#2-devices)); 5 kW is a gameplay value
@@ -735,14 +760,17 @@ A heater or freezer shall move up to 5 kW toward its setpoint, drawing
   than a heater can make up, such as stone in vacuum, the owner asked for
   insulating walls instead: station walls and reinforced station walls
   ([#179](https://github.com/west3436/zas-cubed/issues/179)).
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177), again):** the draw is from the
+  heater's or freezer's own battery, not a controller (D-73).
 
 *2026-11-02: Built for the heater only, so this stays Accepted until the
 freezer exists. The heater moves at most `[power] heater_watts`, 5,000 W, and
-draws `[power] heater`, 60 FE/t, while on, in the auxiliary power group.
-Checked by
-`cont_087_never_more_than_5_kw` and `cont_087_limited_or_exact` (Unit),
-`cont_019_heater_heats_its_network_to_the_setpoint` and
-`cont_087_a_controller_powers_a_heater_in_its_zone` (GameTest).*
+draws from its battery only while it heats: `[power] heater`, 60 FE/t, at
+full power, and in proportion below it. With too little charge it adds what
+the charge pays for, then stops. Checked by `cont_087_never_more_than_5_kw`,
+`cont_087_limited_or_exact` and `cont_087_draw_in_proportion` (Unit) and
+`cont_019_heater_heats_its_room_on_its_battery` (GameTest).*
 
 #### CONT-105 · Igniter
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016
@@ -1674,12 +1702,16 @@ another room, it is powered by that controller and blows.*
 
 When a controller's buffer can't meet demand, it shall power devices in
 priority order: life support (vents, scrubbers) first, then pumps, filters and
-mixers, then heaters, freezers, igniters, rechargers and gas production.
-Devices that miss out stop until power returns.
+mixers, then igniters, rechargers and gas production. Devices that miss out
+stop until power returns.
 
 - **Rationale:** Decision: D-34.
 - **Verify:** A GameTest starves a controller's buffer and checks vents and
   scrubbers keep running while lower priorities stop.
+- **Changed 2026-11-02 (the owner, reviewing
+  [#177](https://github.com/west3436/zas-cubed/pull/177)):** heaters and freezers leave the
+  last group: they are portables on batteries, which no controller powers
+  (D-73).
 
 *2026-10-31: added igniters to the last group (CONT-105, D-57).*
 
@@ -1697,7 +1729,7 @@ itself and the vent but not a pump powers the vent and leaves the pump off
 (`StationTests.cont_069_a_real_vent_runs_only_on_a_controller`). This stays Accepted until it is checked with the scrubber.*
 
 #### CONT-111 · Batteries
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
 
 There shall be three batteries, holding 100,000 FE (battery), 1,000,000 FE
 (high-capacity battery) and 2,000,000 FE (super-capacity battery) through the
@@ -1714,8 +1746,14 @@ FE item capability, so other mods' chargers and machines can use them.
 
 *2026-11-01: Accepted by the owner as written.*
 
+*2026-11-02: Implemented ([#177](https://github.com/west3436/zas-cubed/pull/177)). Each battery keeps its
+charge in an item component and takes or gives up to its whole capacity at
+once through the FE item capability; the creative tab has an empty and a full
+copy of each. Checked by `cont_111_batteries_fill_to_their_capacity`
+(GameTest).*
+
 #### CONT-112 · Battery tag
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69 · Depends: CONT-111
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69 · Depends: CONT-111
 
 A portable's battery slot and the recharger (CONT-113) shall accept any item
 in the `zas_atmos:batteries` item tag that exposes the FE item capability, and
@@ -1730,8 +1768,13 @@ other mods' batteries and energy tablets to it.
 
 *2026-11-01: Accepted by the owner as written.*
 
+*2026-11-02: Implemented ([#177](https://github.com/west3436/zas-cubed/pull/177)). A test data pack adds a
+test FE item to the tag; the heater runs from it and the recharger charges
+it, and both slots refuse an FE item outside the tag and an item with no FE
+(`cont_112_the_tag_decides_what_is_a_battery`, GameTest).*
+
 #### CONT-113 · Recharger
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers) · Depends: CONT-068, CONT-112
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers) · Depends: CONT-068, CONT-112
 
 A recharger shall hold one battery (CONT-112) and charge it at 28 FE/t,
 drawing 40 FE/t from its controller (CONT-068): 70 % of what it draws reaches
@@ -1746,6 +1789,15 @@ the battery.
   drawing 40 FE/t, and stops when the battery is full or its power is cut.
 
 *2026-11-01: Accepted by the owner as written.*
+
+*2026-11-02: Implemented ([#177](https://github.com/west3436/zas-cubed/pull/177)). The recharger is a
+controller's part in the last group (CONT-064), through its zone or a link,
+and draws only while its battery has room; it charges only on power its
+controller paid for. `[power] recharger` (40) and `[power] recharger_rate`
+(28) set the rates. Checked by `cont_113_power_supplied_at_no_cost_is_not_paid_for`
+(Unit) and `cont_113_a_recharger_charges_at_28_drawing_40` (GameTest), whose
+power cut is a room whose controller has no FE, since a GameTest's lease
+outlasts its single game tick.*
 
 #### CONT-063 · Cable sharing a block with pipes
 `Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable, 2026-11-01.

@@ -38,6 +38,8 @@ public final class RecipeTests {
                 AtmosItems.AREA_AIR_CONTROLLER.get(),
                 AtmosItems.GENERATOR.get(),
                 AtmosItems.FIRELOCK.get(),
+                AtmosItems.HEATER.get(),
+                AtmosItems.RECHARGER.get(),
                 AtmosItems.MULTITOOL.get(),
                 AtmosItems.CROWBAR.get(),
                 AtmosItems.EMPTY_TANK.get(),
@@ -47,6 +49,7 @@ public final class RecipeTests {
                 AtmosItems.SOFTSUIT_CHESTPLATE.get(),
                 AtmosItems.SOFTSUIT_LEGGINGS.get(),
                 AtmosItems.SOFTSUIT_BOOTS.get()));
+        AtmosItems.batteries().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
         return items;
     }

@@ -1294,6 +1294,36 @@ client breathing sync (LIFE-023): the server sends each player its own state
   change the verdict, and a higher-priority one's `canBreathe = false` survives:
   the handler only ever sets it to false.
 
+### Atmosphere HUD
+
+*Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
+helmet and analyzer triggers of CLIENT-001 and the internals indicator
+(CLIENT-009) wait for internals and the analyzer.*
+
+- **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
+  gets none, a warning or a danger, judged on what reaches the player through
+  its protection, so a danger is where LIFE harms it: the effective pressure
+  (LIFE-020), the O₂ and each toxic gas in its breath, and the exposure
+  temperature unless its thermal protection takes all temperature damage
+  there. Pressure and temperature are signed, low and cold negative. A hazard
+  that is off in the dimension has no alert, and an exempt player none at all.
+  The level comes from `BreathingRules.assess`, the same assessment a breath
+  check makes.
+- **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
+  entity id, each player's state is worked out and sent to that player only if
+  a level, the worst toxic gas, or a shown value at its display resolution has
+  changed since the last send. A reading with no alert carries no value, so in
+  normal air nothing is sent. While the atmosphere at the eyes is unresolved
+  the last state stands. The last send is kept in an unsaved player
+  attachment, so a respawned player gets its state at once.
+- **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
+  the status effects draws one alert per reading in a column at the right edge
+  of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
+  in the client's display units, yellow for a warning, red for a danger. Danger
+  icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
+  The state is cleared on logout.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)
@@ -1579,7 +1609,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure` and a suit chestplate's `zas_atmos:suit_tank`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank` and a battery's `zas_atmos:energy`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -1589,6 +1619,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1652,6 +1683,7 @@ the cell in front of its grille).
 | Provider | `DeviceTicker.loaded(level)`, then `instanceof PoweredDevice` and `Atmospheres.at(level, d.airPoint()).zone()` | Finds the parts it covers |
 | Provider | `power.drawPerAtmosTick()`, then `power.supply(this)` | Pays draw × 20 FE from its own store for one atmos tick, then powers the device for `DevicePower.LEASE_TICKS` (40) game ticks |
 | Provider | `power.suppliedThisAtmosTick()` | True if another provider (or this one, through a link) already paid this atmos tick |
+| Device | `power.paidFor()` | True while a lease supplied at a draw above 0 lasts, or under test power. A device whose draw rises mid-lease, such as a recharger given a battery, does work only on paid-for power |
 
 - **Leases, not switches.** Each supply powers the device for two atmos ticks
   from the call, so the device and the provider can step in any order. When
@@ -1805,49 +1837,65 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
-- **Heater** (CONT-019, CONT-087), in `.heater`.
-  - A floor machine, not a full block, so it stands in its room's cell and
-    gas passes around it. Its front faces the player who places it, and a
-    pipe joins only its back. It holds a 200 L port buffer.
-  - Its setpoint (293–573 K, default 293.15 K) is for its room: the zone its
-    `airPoint` is in. Each atmos tick, while on and powered, it reads that
-    zone and heats its whole network's gas toward `HeaterMath.roomTarget`,
-    the temperature at which the room's gas and the network's, fully mixed,
-    would be at the setpoint: the setpoint plus the room's shortfall times
-    the room's heat capacity over the network's, capped at 573 K. So the
-    colder and larger the room, the hotter the gas, and the heat the network
-    holds above the setpoint is never more than the room still needs, which
-    keeps the vents from carrying the room past it. Once the room is at or
-    above the setpoint it adds nothing. With no zone at its air point (open
-    air, unresolved or paused) it heats the network's gas toward the setpoint
-    itself. `HeaterMath.heat` gives the least of `[power] heater_watts`
-    (5,000 W) over the step and what brings the gas to its target. It never
-    cools, and an empty network gets nothing. It changes only the network's
-    `GasStore`, so it calls no API mutation; vents on the network carry the
-    heat into the room, by blowing heated gas in while another vent siphons
-    the room's gas out.
-  - **How close it holds a room.** The room settles just under the
-    setpoint, by its heat loss over the circulation's heat flow times one
-    plus the room-to-network heat capacity ratio. In S-05's GameTest, a
-    wool-walled 3 × 3 × 3 room in vacuum losing about 420 W, with about
-    8 mol/s circulating, settles about 0.12 K under a 303 K setpoint, steady,
-    and never passes it. A heater can't hold a room that loses more than its power:
-    a stone room in vacuum loses about 5 kW, so insulating walls
-    ([#179](https://github.com/west3436/zas-cubed/issues/179)) are
-    the remedy, not a stronger heater.
-  - It draws `[power] heater` FE/t (60) whenever it is on, in the auxiliary
-    group, so a short controller powers its vents first (CONT-064). Its
-    `airPoint`, for a controller's zone (CONT-068), is the air above it, in
-    its own cell.
-  - Its block state's `lit` shows the `heater_on` model while it heats. Its
-    GUI has an on/off switch and ±1 and ±10 K setpoint buttons, and shows
-    the setpoint beside the room's temperature (or that it has no room and
-    heats its own gas), the network gas's temperature, its status (heating,
-    with the watts; at the setpoint; the network already holds the heat the
-    room needs; the network is at its 573 K limit; no power; empty network)
-    and its power. The menu syncs the room's temperature in tenths of a
-    kelvin, −1 for no room.
-- **GUIs** (CONT-074). Using a canister, vent or heater with an empty hand opens its
+- **Heater** (CONT-019, CONT-087, D-73), in `.heater`.
+  - A portable floor machine, not a full block, so it stands in its room's
+    cell and gas passes around it. Its front faces the player who places it.
+    It has no pipe connection and isn't a controller's part: it doesn't
+    implement `PoweredDevice`, so no area air controller powers, orders or
+    lists it, and a link to it is dropped.
+  - It runs on the battery in its one slot (`Batteries.Slot`, CONT-112).
+    Its setpoint (293–573 K, default 293.15 K) is for its room: the zone of
+    its `point()`, the air above it in its own cell. Each atmos tick, while
+    on, it reads that zone and adds heat to it through API-013's
+    `HeatMutations.add`: `HeaterMath.heat` gives the least of `[power]
+    heater_watts` (5,000 W) over the step and what brings the zone to the
+    setpoint, from its heat capacity (`GasProperties.heatCapacity`). Once
+    the room is at or above the setpoint it adds nothing; it never cools.
+    With no zone there (open air, unresolved or paused) it does nothing.
+  - It pays its battery `HeaterMath.energy`: `[power] heater` FE/t (60) over
+    the step at full power, and in proportion below it, rounded up. With
+    too little charge it adds the heat the charge pays for, then stops. One
+    heat mutation is outstanding at a time (`readyToStep`), so each step
+    reads the room after the last one landed.
+  - **How close it holds a room.** Each step tops the room up to the
+    setpoint, and the walls take their loss away before the next. In S-05's
+    GameTest, a wool-walled 3 × 3 × 3 room in vacuum losing about 420 W, with
+    about 23 kJ/K of air, stays within about 0.02 K under a 303 K setpoint
+    and never passes it. A heater can't hold a room that loses more than its
+    power: a stone room in vacuum loses about 5 kW, so insulating walls
+    ([#179](https://github.com/west3436/zas-cubed/issues/179)) are the
+    remedy, not a stronger heater.
+  - Its block state's `lit` shows the `heater_on` model while it heats.
+    Broken, it drops its battery. Its GUI has an on/off switch, ±1 and
+    ±10 K setpoint buttons and the battery slot, and shows the setpoint
+    beside the room's temperature (or that it has no room), its status
+    (heating, with the watts; at the setpoint; no room; no battery; the
+    battery is empty) and the battery's charge. The menu syncs the room's
+    temperature in tenths of a kelvin, −1 for no room, and the battery's FE
+    and capacity in 16-bit halves.
+- **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
+  100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
+  the `zas_atmos:energy` component and expose it as
+  `Capabilities.EnergyStorage.ITEM` (NeoForge's `ComponentEnergyStorage`,
+  which takes and gives up to the whole capacity at once), so any mod's
+  charger or machine can use them. The durability bar and tooltip show the
+  charge, and the item model's `zas_atmos:charge` property (0, 0.5, 1)
+  picks the empty, `_partial` and `_full` models. `Batteries.isBattery`
+  accepts any item in the `zas_atmos:batteries` tag with the FE item
+  capability; a heater's or recharger's `Batteries.Slot` takes only those,
+  one at a time. The creative tab holds an empty and a full copy of each.
+- **Recharger** (CONT-113), in `.battery`. A floor plate holding one
+  battery, and a controller's part like the vent, through its zone or a
+  link, in the auxiliary group. While it holds a battery with room for more
+  it draws `[power] recharger` FE/t (40); otherwise 0. Each atmos tick it
+  puts `[power] recharger_rate` FE/t (28) over the step into the battery,
+  but only on paid-for power (`paidFor()`), so a lease it got while it drew
+  nothing charges nothing. Its block state's `battery` and `charge` (0–4,
+  by `RechargerBlock.gauge`) pick the `recharger` and `recharger_0` to
+  `recharger_4` models. Broken, it drops its battery. Its GUI has the
+  battery slot and no buttons, and shows its status (charging, full, no
+  power, no battery) and the battery's charge.
+- **GUIs** (CONT-074). Using a canister, vent, heater or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
@@ -1957,8 +2005,11 @@ framework's `AtmosService.tickNow`. For that, and for the preset, the
 borrowed vacuum ambient and the published zones' pins, the `gametest` source
 set compiles against `:zas` and `:engine`. `main` still compiles against
 `zas-api` alone (CONT-095). The stand-ins in `gametest.TestParts` are a test
-vent, scrubber, pump and heater, one per priority group, and a test FE block.
-Like `TestDevice`, they never reach the jar.
+vent, scrubber, pump and heater, one per priority group (the test heater
+predates the heater running on a battery, D-73, and stands for any
+auxiliary part), a test FE block, and two test FE items, one of which
+`gametest.BatteryTestPack` adds to the battery tag (CONT-112). Like
+`TestDevice`, they never reach the jar.
 
 ### 11.7 Controller power
 
@@ -1974,8 +2025,8 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   `power.PowerFeed`, which is pure and unit-tested. Groups are served in
   `PowerPriority` order. Within a group, each part whose `drawPerAtmosTick()`
   fits what is left is paid and supplied. If any part of a group misses out,
-  the later groups get nothing that tick, so a cheap heater never runs while
-  a vent starves. A part drawing nothing is always supplied.
+  the later groups get nothing that tick, so a cheap recharger never runs
+  while a vent starves. A part drawing nothing is always supplied.
 - **The generator** (`power.GeneratorBlock`, `GeneratorBlockEntity`,
   CONT-061, CONT-066, CONT-067). It is a plain ticking block entity, not an
   `AtmosDevice`. Each game tick while it burns it makes `[power]

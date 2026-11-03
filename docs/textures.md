@@ -71,7 +71,7 @@ The heater and freezer are now portables (below).
 | `zas_atmos:canister` | Canister | Must | CONT-017 | Block model | Valve open and closed. Coloured as vg's canisters, and players dye them, so it needs a texture for each colour ([below](#content-mod-zas_atmos-creative-canisters)). Survival canisters are crafted empty (CONT-086); the filled ones are below. |
 | `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
-| `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. Now a portable that heats the room, not piped gas, so CONT-019 needs rewording. 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
+| `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. A portable on a battery that heats the room, not piped gas (D-73). 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
 | `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. The heater's size, in white. |
 | `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It shows the tanks it holds, standing on two shelves of five, each tinted by its kind (the owner's choices of 2026-11-02). |
 
@@ -225,7 +225,12 @@ These need textures too, but aren't in the tables above:
   (CONT-049), and the TTV's timer
 - the HUD: readings and the internals indicator (CLIENT-001, CLIENT-008,
   CLIENT-009). Each warning needs a shape or flashing cue as well as a colour
-  (CLIENT-014).
+  (CLIENT-014). The alerts are done: they're vg's screen-alert icons from
+  `icons/mob/screen_alarms.dmi` (`carbon_oxy`, `carbon_tox`,
+  `carbon_pressure±1/±2`, `carbon_temp±2/±4`), Crops at 32×32 in
+  `zas/textures/gui/hud/`, with animated states' frames stacked downward. vg
+  took its screen-alert framework from /tg/station (CC BY-SA 3.0). The
+  internals indicator is still to do.
 - airflow particles (CLIENT-003)
 
 ## Later releases (R2)
