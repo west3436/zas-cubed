@@ -414,8 +414,8 @@ data/<namespace>/zas/fuel_profile/<path>.json
   | `blast_furnace.json` | blast furnace | 10 kW |
   | `fire.json` | `#minecraft:fire` | 10 kW |
 
-  `zas_atmos` ships `data/zas_atmos/zas/fuel_profile/generator.json`: the
-  fuel generator, 10 kW.
+  `zas_atmos`'s fuel generator has none: it doesn't use the air (D-35,
+  CONT-067).
 - **A modded fuel block** needs both: a place in `#zas:combustion` with a
   boolean `lit` property, and a profile. A block in the tag without a profile
   forms zones under Hardcore but uses no O₂.
@@ -569,9 +569,10 @@ A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
 from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
-[config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
-`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property, and
-`zas_atmos`'s firelock joins `#zas:zone_boundary`.
+[config.md](config.md#the-preset-and-its-options)). A mod's fuel block joins
+`#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins
+`#zas:zone_boundary`. `zas_atmos`'s generator isn't in `#zas:combustion`: it
+doesn't use the air (D-35, CONT-067).
 
 ## Hazard profiles
 

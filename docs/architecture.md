@@ -1204,8 +1204,8 @@ vanilla fire and fuel blocks, in `io.github.west3436.zas.fire`.
   applied, CO₂ and CO at the zone's temperature and the heat (API-013's heat
   operation) are queued in proportion to the O₂ actually removed. So the
   products land one atmos tick after the O₂ leaves, and a zone short of O₂
-  gets only what burned. The generator (CONT-067) burns through this with
-  nothing in `zas_atmos` but its tag, its `lit` property and its profile.
+  gets only what burned. `zas_atmos`'s generator isn't in the tag and has no
+  profile: it doesn't use the air (D-35, CONT-067).
 
 ### Reactions
 
@@ -2242,10 +2242,10 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   for that times its burn time over coal's 1,600 ticks. It
   offers the store through an extract-only FE capability, and its fuel slot
   through an item handler, so hoppers can feed it. Its `lit` property is true
-  while it burns. The block is in `#zas:combustion`
-  (`data/zas/tags/block/combustion.json` in `zas_atmos`), so the framework's
-  change hook treats lighting it as combustion (CORE-056, FIRE-024), with
-  nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
+  while it burns. Like vg's P.A.C.M.A.N., it never touches the air
+  (D-35, CONT-067): it isn't in `#zas:combustion` and has no fuel profile, so
+  lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
+  no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
 
 ### 11.8 Firelocks
