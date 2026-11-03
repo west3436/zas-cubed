@@ -10,6 +10,8 @@ import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
+import io.github.west3436.zas.ignition.IgnitionEvents;
+import io.github.west3436.zas.ignition.IgnitionSources;
 import io.github.west3436.zas.hud.AtmosHud;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.Internals;
@@ -33,6 +35,8 @@ public final class ZasMod {
         Geometries.register(NeoForge.EVENT_BUS);
         ChangeTracker.register(NeoForge.EVENT_BUS);
         TriggerStates.register(NeoForge.EVENT_BUS);
+        IgnitionSources.register(NeoForge.EVENT_BUS);
+        IgnitionEvents.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);

@@ -1,0 +1,4 @@
+{
+  "type": "block",
+  "blocks": ["minecraft:torch", "minecraft:wall_torch", "minecraft:soul_torch", "minecraft:soul_wall_torch"]
+}
