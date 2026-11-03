@@ -299,8 +299,8 @@ condensed combined test world.
 | Reactions | [#190](https://github.com/west3436/zas-cubed/pull/190), [#193](https://github.com/west3436/zas-cubed/pull/193), [#196](https://github.com/west3436/zas-cubed/pull/196) | FIRE-001 to FIRE-006, FIRE-031; API-019, API-020 | None |
 | Vanilla fire and fuels | [#194](https://github.com/west3436/zas-cubed/pull/194), [#197](https://github.com/west3436/zas-cubed/pull/197) | FIRE-020 to FIRE-022, FIRE-024, FIRE-025, FIRE-027; HEAT-007; CONT-067 | Fire can still burn away a block whose cell lacks O₂ at a zone's edge (M4 skipped). Vanilla's fire-spread check and campfire lighting aren't hooked |
 | Hotspots and the gas fire | [#191](https://github.com/west3436/zas-cubed/pull/191), [#202](https://github.com/west3436/zas-cubed/pull/202), [#206](https://github.com/west3436/zas-cubed/pull/206) | FIRE-010, FIRE-011, FIRE-013, FIRE-016 to FIRE-019; DATA-009's hotspot part | CLIENT-013 waits for the owner's look at the gas fire |
-| Fire API | [#203](https://github.com/west3436/zas-cubed/pull/203) | API-031; API-055 to API-058 added as *Draft* | The owner's review of API-055 to API-058 |
-| Ignition sources | [#189](https://github.com/west3436/zas-cubed/pull/189) | FIRE-014, FIRE-015; API-053 added as *Draft* | The owner's review of API-053 |
+| Fire API | [#203](https://github.com/west3436/zas-cubed/pull/203) | API-031; API-055 to API-058 added, accepted by the owner and *Implemented* | None |
+| Ignition sources | [#189](https://github.com/west3436/zas-cubed/pull/189) | FIRE-014, FIRE-015; API-053 added, accepted by the owner and *Implemented* | None |
 | Igniter | [#192](https://github.com/west3436/zas-cubed/pull/192) | CONT-105, FIRE-006's GameTest | None |
 | Fire alarm | [#199](https://github.com/west3436/zas-cubed/pull/199) | CONT-044 | None |
 | Fire extinguisher | [#195](https://github.com/west3436/zas-cubed/pull/195), [#198](https://github.com/west3436/zas-cubed/pull/198), [#204](https://github.com/west3436/zas-cubed/pull/204) | CONT-037; D-74 (its sprite stays at vg's 32 × 32) | No recipe yet, so creative only. No spray particle or in-use pose |
@@ -413,8 +413,8 @@ _Updated 2026-11-03._
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
    S-11 and S-13, on the rest of #34, #47, #48, #50 and #52 (pumps, filters
    and scrubbers).
-   - From the fire round: the owner's review of API-053 and API-055 to
-     API-058, a recipe for the extinguisher, and CLIENT-013's look check.
+   - From the fire round: a recipe for the extinguisher, and CLIENT-013's
+     look check.
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      airflow particles and sound (#184), magnetic boots (#186) and insulating
      station walls (#179).

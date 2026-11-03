@@ -7,7 +7,8 @@ the [README](README.md#writing-rules). API-019 was added and accepted on
 on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)); the
 owner accepted both on 2026-11-03. API-053, the ignition source tag, and
 API-055 to API-058, the fire API, were added as Draft on 2026-11-03
-([#42](https://github.com/west3436/zas-cubed/issues/42)).
+([#42](https://github.com/west3436/zas-cubed/issues/42)); the owner accepted all
+five the same day.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -519,7 +520,7 @@ The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 ticks.*
 
 #### API-055 · Hotspot queries
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
 
 The API shall give a zone's hotspots, whether a zone is burning and whether a
 block position is a hotspot, from any thread, as of the last applied atmos
@@ -543,7 +544,7 @@ placed it, the first to see its block: when an ignition's future completes,
 the next tick. The javadoc of `Fires.ignite` and `Fires.isHotspot` says so.*
 
 #### API-056 · Ignition through the API
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-014, API-016, API-045 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-014, API-016, API-045 · Depends: API-009
 
 The API shall let a mod ignite the gas at a block position from the server
 thread. The ignition is applied in the next atmos tick and its result,
@@ -569,7 +570,7 @@ fire block is placed. It is FIRE-014's entry point, the same one that
 `api_056_ignite_through_the_api` (GameTest).*
 
 #### API-057 · Extinguishing
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: CONT-037, FIRE-018, FIRE-019, API-045 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: CONT-037, FIRE-018, FIRE-019, API-045 · Depends: API-009
 
 The API shall let a mod put out every fire in a box of at most 4,096 blocks,
 from the server thread: the gas fires and vanilla fire blocks in it go at once,
@@ -593,7 +594,7 @@ itself (FIRE-010). The fire extinguisher (CONT-037) calls it. Checked by
 `api_057_extinguish_stops_a_fire_in_flight`.*
 
 #### API-058 · No space for a fire
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: FIRE-014, FIRE-018 · Depends: API-056
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-014, FIRE-018 · Depends: API-056
 
 An ignition in a flammable zone shall report that there is no space when
 neither the position nor any neighbour in the zone could hold a fire block,
@@ -745,7 +746,7 @@ and their result cached until `markDirty` (GEO-014).
 `Must` · `R1` · `Rejected` — duplicate of ENV-004, 2026-10-30.
 
 #### API-053 · Ignition source tag
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: FIRE-014, FIRE-015, CONT-105
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-014, FIRE-015, CONT-105
 
 Blocks in the block tag `#zas:ignition_sources` shall be ignition sources
 (FIRE-014) while they are there. A block with a boolean `lit` property shall
