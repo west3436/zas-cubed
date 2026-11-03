@@ -281,6 +281,16 @@ air, where vanilla fire can't survive.
 fire intents, which the server applies only to air (architecture §5).
 `fire_018_gas_fire_burns_in_mid_air` checks it.*
 
+*2026-11-03: a block that isn't air but that gas passes as it passes air (a
+lever, redstone wire, a rail, a flower, grass, a fluid) has its own geometry,
+air's with `FLAG_OCCUPIED`, so the engine never asks for a gas fire there. An
+ignition at one lights an air neighbour, and spread passes it by. Before, the
+engine asked for the block, the server refused it and the ignition reported a
+fire that never burned. `fire_018_ignition_at_a_lever_lights_the_air_beside_it`
+and `fire_018_spread_skips_flowers` check it, and
+`fire_018_passable_blocks_leave_the_zone_as_air_does` checks such blocks leave
+a zone's gas and volume as air does.*
+
 #### FIRE-019 · Vanilla fire in zones is a hotspot
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-49
 

@@ -12,6 +12,7 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Geometry;
+import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.scheduler.HotspotSettings;
 import io.github.west3436.zas.engine.scheduler.HotspotTable;
 import io.github.west3436.zas.engine.scheduler.OpOutcome;
@@ -29,7 +30,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -500,6 +503,133 @@ public final class HotspotTests {
             double h2 = r.zone(2, 2, 2).mixture().moles(H2);
             r.tick();
             h.assertTrue(r.zone(2, 2, 2).mixture().moles(H2) < h2, "it doesn't burn after the reload");
+            empty(r, 0);
+        });
+        h.succeed();
+    }
+
+    // ---- FIRE-018: passable blocks ---------------------------------------------------------
+
+    /** Blocks gas passes as it passes air, but that aren't air: no gas fire can go there. */
+    private static final BlockState LEVER =
+            Blocks.LEVER.defaultBlockState().setValue(LeverBlock.FACE, AttachFace.FLOOR);
+
+    private static final BlockState POPPY = Blocks.POPPY.defaultBlockState();
+
+    /**
+     * FIRE-018: a block that isn't air but has air's geometry is flagged occupied, with air's cell;
+     * air itself isn't.
+     */
+    @GameTest(template = "empty")
+    public static void fire_018_passable_blocks_are_flagged_occupied(GameTestHelper h) {
+        var table = Geometries.table();
+        for (BlockState s : new BlockState[] {
+            LEVER,
+            POPPY,
+            Blocks.REDSTONE_WIRE.defaultBlockState(),
+            Blocks.RAIL.defaultBlockState(),
+            Blocks.STONE_BUTTON.defaultBlockState(),
+            Blocks.SHORT_GRASS.defaultBlockState()
+        }) {
+            Geometry g = table.geometry(s);
+            h.assertTrue(g.hasFlag(Geometry.FLAG_OCCUPIED), "not occupied: " + s);
+            h.assertValueEqual(g.cells(), Geometry.AIR.cells(), "the cell of " + s);
+            h.assertValueEqual(g.coverage(), Geometry.AIR.coverage(), "the coverage of " + s);
+        }
+        for (BlockState s :
+                new BlockState[] {Rooms.AIR, Blocks.CAVE_AIR.defaultBlockState(), Blocks.VOID_AIR.defaultBlockState()
+                }) {
+            h.assertValueEqual(Geometries.geometryId(s), GeometryPalette.AIR_ID, "the geometry of " + s);
+        }
+        h.assertFalse(
+                table.geometry(Blocks.STONE_SLAB.defaultBlockState()).hasFlag(Geometry.FLAG_OCCUPIED),
+                "a slab is occupied");
+        h.succeed();
+    }
+
+    /**
+     * FIRE-018, FIRE-014: an ignition at a lever in a hydrogen room lights the air beside it, not
+     * the lever's cell, and the room burns.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_018_ignition_at_a_lever_lights_the_air_beside_it(GameTestHelper h) {
+        with(0, true, () -> {
+            Rooms r = rooms(h, 11);
+            hydrogenRoom(r, 0);
+            BlockPos lever = r.abs(2, 1, 2);
+            r.set(2, 1, 2, LEVER);
+            Ignited i = ignite(r, lever);
+            h.assertValueEqual(i.status(), OpOutcome.IgnitionStatus.IGNITED, "the ignition");
+            h.assertTrue(
+                    i.hotspot() != null && i.hotspot().distManhattan(lever) == 1,
+                    "the fire isn't beside the lever: " + i.hotspot());
+            h.assertTrue(gasFire(r, i.hotspot()), "no gas fire beside the lever");
+            h.assertTrue(r.level.getBlockState(lever) == LEVER, "the lever changed");
+            r.tick();
+            h.assertTrue(r.zone(2, 2, 2).mixture().moles(H2O) > 0, "the room didn't burn: no water");
+            r.set(2, 1, 2, Rooms.AIR);
+            empty(r, 0);
+        });
+        h.succeed();
+    }
+
+    /**
+     * FIRE-018, FIRE-016: a fire spreads past flowers, not into them. A gas fire whose four
+     * neighbours are poppies, at a spread chance of 1, lights none of them; once one is picked, the
+     * fire spreads there at the next tick, so the engine never refused that cell.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_018_spread_skips_flowers(GameTestHelper h) {
+        with(1, false, () -> {
+            Rooms r = rooms(h, 12);
+            room(r, 0, 5, 1, 5, StandardAir.TEMPERATURE, hydrogenInAir(0.10));
+            int[][] around = {{2, 3}, {4, 3}, {3, 2}, {3, 4}};
+            for (int[] c : around) {
+                r.set(c[0], 0, c[1], Blocks.DIRT.defaultBlockState());
+                r.set(c[0], 1, c[1], POPPY);
+            }
+            r.set(3, 1, 3, HotspotBlocks.GAS_FIRE.get().defaultBlockState());
+            r.ticks(2);
+            h.assertTrue(gasFire(r, r.abs(3, 1, 3)), "the fire went out");
+            h.assertTrue(hotspots(r).zoneAt(r.abs(3, 1, 3).asLong()) != 0, "the fire isn't a hotspot");
+            for (int[] c : around) {
+                h.assertTrue(
+                        r.level.getBlockState(r.abs(c[0], 1, c[1])) == POPPY, "a poppy went at " + c[0] + ", " + c[1]);
+            }
+            r.set(4, 1, 3, Rooms.AIR);
+            r.tick();
+            h.assertTrue(gasFire(r, r.abs(4, 1, 3)), "the fire didn't spread where the poppy was");
+            for (int[] c : around) {
+                r.set(c[0], 1, c[1], Rooms.AIR);
+            }
+            empty(r, 0);
+        });
+        h.succeed();
+    }
+
+    /**
+     * FIRE-018: placing passable blocks in a zone leaves it as it was: the same zone, volume and
+     * gas.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_018_passable_blocks_leave_the_zone_as_air_does(GameTestHelper h) {
+        with(0, false, () -> {
+            Rooms r = rooms(h, 13);
+            ZoneInfo before = room(r, 0, 3, 3, 3, StandardAir.TEMPERATURE, hydrogenInAir(0));
+            r.set(1, 0, 1, Blocks.DIRT.defaultBlockState());
+            r.set(1, 1, 1, POPPY);
+            r.set(2, 1, 2, LEVER);
+            r.set(3, 1, 3, Blocks.REDSTONE_WIRE.defaultBlockState());
+            r.set(3, 1, 1, Blocks.RAIL.defaultBlockState());
+            r.ticks(3);
+            ZoneInfo after = r.zone(2, 2, 2);
+            h.assertValueEqual(after.id(), before.id(), "the zone");
+            h.assertValueEqual(after.volume(), before.volume(), "its volume");
+            r.close(after.mixture().totalMoles(), before.mixture().totalMoles(), "its gas");
+            h.assertValueEqual(r.zone(1, 1, 1).id(), before.id(), "the poppy's cell's zone");
+            for (BlockPos p : BlockPos.betweenClosed(r.abs(1, 1, 1), r.abs(3, 1, 3))) {
+                r.level.setBlockAndUpdate(p, Rooms.AIR);
+            }
             empty(r, 0);
         });
         h.succeed();

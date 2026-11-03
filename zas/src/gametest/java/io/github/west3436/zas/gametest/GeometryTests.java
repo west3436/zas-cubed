@@ -360,7 +360,10 @@ public final class GeometryTests {
         check(h, !expected.equals(Geometry.SOLID), "scaffolding's empty-context shape isn't a full block");
 
         Geometry powderSnow = geometry(Blocks.POWDER_SNOW.defaultBlockState());
-        check(h, powderSnow.equals(Geometry.AIR), "powder snow has an empty collision shape in an empty context");
+        check(
+                h,
+                powderSnow.equals(Geometry.AIR.withFlags(Geometry.FLAG_OCCUPIED)),
+                "powder snow has an empty collision shape in an empty context, and isn't air");
         h.succeed();
     }
 }

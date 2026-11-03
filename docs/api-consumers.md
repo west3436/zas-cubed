@@ -169,8 +169,10 @@ boolean burning = Fires.isBurning(level, zone);
   a zone hot enough lights again by itself.
 - **Events:** `FireIgnitedEvent` when a zone's first hotspot appears and
   `FireExtinguishedEvent` when its last goes, on the server thread, once per
-  zone (API-031). A new gas fire's zone catches fire the atmos tick after the
-  ignition.
+  zone (API-031).
+- **Timing.** When an ignition's future completes, its gas fire block is
+  placed, but the queries and the event see the fire only from the next atmos
+  tick, the first to see the block: until then `isHotspot` is false there.
 - **Without ZAS³** there are no hotspots, an ignition completes at once with
   `ABSENT` and `extinguish` removes nothing.
 

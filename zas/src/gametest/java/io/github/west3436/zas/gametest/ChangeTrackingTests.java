@@ -311,8 +311,8 @@ public final class ChangeTrackingTests {
         BlockPos solid = new BlockPos(2, 2, 2);
         BlockPos open = new BlockPos(5, 2, 5);
         h.setBlock(solid, STONE);
-        h.setBlock(open.below(), STONE);
-        h.setBlock(open, AIR);
+        h.setBlock(open.below(), Blocks.DIRT);
+        h.setBlock(open, Blocks.POPPY);
         reset(h);
         check(
                 h,
@@ -320,11 +320,12 @@ public final class ChangeTrackingTests {
                 "stone and cobblestone should share a geometry");
         check(
                 h,
-                Geometries.geometryId(AIR) == Geometries.geometryId(Blocks.TORCH.defaultBlockState()),
-                "air and a torch should share a geometry");
+                Geometries.geometryId(Blocks.POPPY.defaultBlockState())
+                        == Geometries.geometryId(Blocks.DANDELION.defaultBlockState()),
+                "a poppy and a dandelion should share a geometry");
         long before = blockGeneration(h, solid);
         h.setBlock(solid, Blocks.COBBLESTONE);
-        h.setBlock(open, Blocks.TORCH);
+        h.setBlock(open, Blocks.DANDELION);
         h.setBlock(solid, Blocks.COBBLESTONE); // no change at all
         check(h, blockGeneration(h, solid) != before, "the block generation should still change");
         List<BlockPos> changed = takeDirty(h);

@@ -1368,7 +1368,15 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
     (CLIENT-013).
 - **On the server.**
   - `GeometryDerivation` flags every `BaseFireBlock` state `FLAG_FIRE` and
-    `zas:gas_fire` `FLAG_GAS_FIRE`; neither depends on datapacks.
+    `zas:gas_fire` `FLAG_GAS_FIRE`; neither depends on datapacks. Every other
+    state that isn't air but has air's geometry (a lever, redstone wire, a
+    rail, a flower, grass, a fluid) gets air's geometry with `FLAG_OCCUPIED`,
+    one palette id for all of them. Gas treats it as air; the flag only makes
+    it a different id from `AIR_ID`, so a hotspot's "could a gas fire go here"
+    (plain air, which the server's `isAir()` agrees with) passes it by. An
+    ignition at such a block lights an air neighbour, and spread skips it.
+    Placing or removing one is now a geometry change, as a torch's is, which
+    costs a mirrored section update but leaves the zone as it was.
     `Geometries.setIgnitionSources(Predicate<BlockState>)` names the standing
     sources (FIRE-014, FIRE-015). The predicate is asked of every state on the
     server thread whenever the table is rebuilt, which is on every data load
