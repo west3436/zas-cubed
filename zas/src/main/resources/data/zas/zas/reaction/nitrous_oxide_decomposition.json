@@ -1,0 +1,21 @@
+{
+  "reactants": {
+    "zas:nitrous_oxide": 1
+  },
+  "products": {
+    "zas:nitrogen": 1,
+    "zas:oxygen": 0.5
+  },
+  "enthalpy": -82050,
+  "min_temperature": 850,
+  "rate": {
+    "per_second": 0.012,
+    "activation_energy": 250000,
+    "reference_temperature": 1000
+  },
+  "sources": {
+    "enthalpy": "Minus the standard enthalpy of formation of N2O(g), 82.05 kJ/mol at 298.15 K (N2 and O2 are 0): NIST-JANAF Thermochemical Tables, table N-026, https://janaf.nist.gov/tables/N-026.html",
+    "rate": "Chosen for play, not fitted to measured kinetics: about 1 % a second at 1,000 K, rising steeply with temperature through an activation energy of 250 kJ/mol, the order of the energy of N2O's thermal decomposition to N2 and O. At 1,200 K k is about 1.8 per second",
+    "min_temperature": "Below about 850 K the rate is negligible (under 1e-4 per second), so the reaction isn't tried"
+  }
+}
