@@ -611,29 +611,6 @@ public final class DimensionEngine {
     // ---- 1. Paused zones and storage (architecture §4.5, §4.6) ----------------------------
 
     /** A chunk the zones rebuilt from saved shares were waiting for has loaded. */
-    /**
-     * Phase 7: each zone's reactions that don't need ignition (FIRE-001), in id order. Paused zones
-     * keep their state (GEO-035). The moles each reaction changes are recorded under {@link
-     * LedgerCategory#REACTION} (CORE-073), and a zone that reacted wakes its edges.
-     */
-    private void reactions(EngineSettings settings) {
-        ReactionSet set = settings.reactions();
-        if (set.isEmpty()) {
-            return;
-        }
-        double seconds = settings.exchange().periodSeconds();
-        for (Zone z : graph.zones()) {
-            if (z.isPaused()) {
-                continue;
-            }
-            ReactionResult r = set.react(z.mixture(), seconds, settings.fire());
-            if (r.reacted()) {
-                graph.ledger().record(LedgerCategory.REACTION, r.moles());
-                graph.markChanged(z);
-            }
-        }
-    }
-
     private void chunkArrived(long chunk) {
         for (Map.Entry<Long, long[]> e : missingChunks.entrySet()) {
             long[] waiting = e.getValue();
@@ -1234,6 +1211,31 @@ public final class DimensionEngine {
             }
         }
         return all;
+    }
+
+    // ---- 7. Zone updates (FIRE-001) ---------------------------------------------------------
+
+    /**
+     * Phase 7: each zone's reactions that don't need ignition (FIRE-001), in id order. Paused zones
+     * keep their state (GEO-035). The moles each reaction changes are recorded under {@link
+     * LedgerCategory#REACTION} (CORE-073), and a zone that reacted wakes its edges.
+     */
+    private void reactions(EngineSettings settings) {
+        ReactionSet set = settings.reactions();
+        if (set.isEmpty()) {
+            return;
+        }
+        double seconds = settings.exchange().periodSeconds();
+        for (Zone z : graph.zones()) {
+            if (z.isPaused()) {
+                continue;
+            }
+            ReactionResult r = set.react(z.mixture(), seconds, settings.fire());
+            if (r.reacted()) {
+                graph.ledger().record(LedgerCategory.REACTION, r.moles());
+                graph.markChanged(z);
+            }
+        }
     }
 
     // ---- Components (architecture §3.3) -------------------------------------------------
