@@ -18,20 +18,30 @@ import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.heat.HeatSettings;
+import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.geometry.Geometries;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.BlockHitResult;
@@ -52,6 +62,8 @@ public final class FirelockTests {
     private static final String BATCH = "zas_atmos_firelock";
     private static final ResourceLocation CO2 = ControllerPreset.CO2;
     private static final ResourceLocation N2 = StandardAir.NITROGEN;
+    private static final ResourceKey<Level> VACUUM =
+            ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("zas_gametest", "vacuum"));
 
     private FirelockTests() {}
 
@@ -190,8 +202,10 @@ public final class FirelockTests {
             double a1 = s.zone(2, 2, 2).mixture().pressure();
             double b1 = s.zone(6, 2, 2).mixture().pressure();
             s.cycles(3, f);
-            s.close(s.zone(2, 2, 2).mixture().pressure(), a1, 1e-9, "A behind the closed firelock");
-            s.close(s.zone(6, 2, 2).mixture().pressure(), b1, 1e-9, "B behind the closed firelock");
+            // Heat moves the rooms' pressures a little through their walls; gas through the firelock
+            // would move them by kilopascals.
+            s.close(s.zone(2, 2, 2).mixture().pressure(), a1, 0.05, "A behind the closed firelock");
+            s.close(s.zone(6, 2, 2).mixture().pressure(), b1, 0.05, "B behind the closed firelock");
             h.assertValueEqual(s.zone(2, 2, 2).cellCount(), 29, "A's cells once closed");
             h.assertValueEqual(s.zone(6, 2, 2).cellCount(), 27, "B's cells once closed");
             player.discard();
@@ -326,30 +340,118 @@ public final class FirelockTests {
     }
 
     /**
-     * A part in room B linked to A's controller makes that controller cover B, so it closes a
-     * firelock between B and a room C that has no controller (CONT-043, CONT-042). Here B and C
-     * share the wall at x = 4 and A is a room apart at x 10–14.
+     * A link covers only the firelock linked (CONT-043, changed 2026-11-02 by the owner): a part
+     * in room B linked to a controller in room C doesn't bring B's firelock under it, but linking
+     * the firelock itself does. The multitool links it from its upper half, and doesn't open or
+     * close it. B and the room behind the firelock share the wall at x = 4; C is apart, at x 10–14.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_043_a_link_covers_the_part_s_room(GameTestHelper h) {
+    public static void cont_043_a_link_covers_only_the_linked_firelock(GameTestHelper h) {
         Site s = new Site(h, 23);
         run(h, s, () -> {
             FirelockBlockEntity f = rooms(s);
             s.room(10, 14);
-            AreaAirControllerBlockEntity a = controller(s, 12);
+            AreaAirControllerBlockEntity c = controller(s, 12);
             TestParts.Vent vent =
                     s.place(6, 1, 3, TestParts.Kind.VENT.block().defaultBlockState(), TestParts.Vent.class);
-            s.cycles(2, a, f);
-            s.addKpa(12, 2, 2, CO2, 20);
-            s.cycle(a, f);
-            h.assertValueEqual(a.danger(), 2, "A's danger");
-            h.assertTrue(open(s), "A closed a firelock it doesn't cover");
-
+            s.cycles(2, c, f);
             ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
-            MultitoolItem.select(tool, s.level, a.getBlockPos());
+            MultitoolItem.select(tool, s.level, c.getBlockPos());
             MultitoolItem.link(tool, s.level, vent.getBlockPos());
-            s.cycle(a, f);
-            h.assertFalse(open(s), "A, linked to a part in B, didn't close B's firelock");
+            s.addKpa(12, 2, 2, CO2, 20);
+            s.cycle(c, vent, f);
+            h.assertValueEqual(c.danger(), 2, "C's danger");
+            h.assertTrue(vent.power().isPowered(), "the linked vent has no power");
+            h.assertTrue(open(s), "C, linked to a vent in B, closed B's firelock");
+
+            // Link the firelock, from its upper half, as a click with the multitool does.
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            player.setItemInHand(InteractionHand.MAIN_HAND, tool);
+            BlockPos upper = s.abs(4, 2, 2);
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(upper), Direction.WEST, upper, false);
+            h.assertValueEqual(
+                    s.level.getBlockState(upper).useItemOn(tool, s.level, player, InteractionHand.MAIN_HAND, hit),
+                    ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION,
+                    "the firelock's answer to the multitool");
+            tool.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+            h.assertTrue(c.links().contains(f.getBlockPos()), "the firelock's lower half isn't linked: " + c.links());
+            h.assertTrue(open(s), "the multitool opened or closed the firelock");
+            s.cycle(c, vent, f);
+            h.assertFalse(open(s), "C didn't close the firelock linked to it");
+            h.assertTrue(f.closedByAlarm(), "closed, but not by the alarm");
+            player.discard();
+        });
+    }
+
+    // ---- The breach alarm (CONT-043) -------------------------------------------------------
+
+    /**
+     * In a vacuum, a breach in room A alarms A's controller at once, at the first atmos tick that
+     * sees it, though A still holds nearly 1 atm, and the firelock to B closes in that same atmos
+     * tick: the controller steps it, without the firelock's own step (CONT-043, changed
+     * 2026-11-02 by the owner). B keeps its air.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_firelock_breach")
+    public static void cont_043_a_breach_to_space_closes_the_firelock_at_once(GameTestHelper h) {
+        ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
+        if (end == null) {
+            throw new GameTestAssertException("no End");
+        }
+        Ambient vacuum = Ambients.ambient(VACUUM);
+        h.assertTrue(vacuum.isVacuum(), "zas_gametest:vacuum isn't a vacuum");
+        Site s = new Site(h, end, 33);
+        Ambients.overrideForTest(Level.END, vacuum);
+        try {
+            run(h, s, () -> {
+                FirelockBlockEntity f = rooms(s);
+                AreaAirControllerBlockEntity a = controller(s, 2);
+                for (int x : new int[] {2, 6}) {
+                    s.addKpa(x, 2, 2, N2, 79);
+                    s.addKpa(x, 2, 2, StandardAir.OXYGEN, 21);
+                }
+                s.cycles(3, a, f);
+                h.assertValueEqual(a.danger(), 0, "A's danger before the breach");
+                h.assertTrue(open(s), "the firelock closed before the breach");
+
+                s.set(2, 2, 4, Site.AIR); // a hole in A's south wall
+                s.tick(); // the framework sees it
+                h.assertTrue(s.zone(2, 2, 2).breached(), "A isn't breached");
+                double aKpa = s.zone(2, 2, 2).mixture().pressure();
+                a.step(); // the controller alone: no step of the firelock's own
+                h.assertTrue(a.breach(), "the controller didn't see the breach, with A at " + aKpa + " kPa");
+                h.assertValueEqual(a.danger(), 2, "A's danger on the breach");
+                h.assertFalse(open(s), "the firelock didn't close as the controller alarmed");
+                h.assertTrue(f.closedByAlarm(), "closed, but not by the alarm");
+                double b0 = s.zone(6, 2, 2).mixture().pressure();
+                h.assertTrue(b0 > 95, "B lost too much before the firelock closed: " + b0 + " kPa");
+                s.cycles(3, a, f);
+                s.close(s.zone(6, 2, 2).mixture().pressure(), b0, 0.5, "B behind the closed firelock");
+            });
+        } finally {
+            Ambients.overrideForTest(Level.END, null);
+        }
+    }
+
+    /**
+     * In the Overworld, opening room A to the outside air doesn't alarm its controller: the ambient
+     * isn't below the preset's pressure min2, and A's pressure doesn't fall (CONT-043).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_043_a_door_to_outside_air_does_not_alarm(GameTestHelper h) {
+        Site s = new Site(h, 27);
+        run(h, s, () -> {
+            FirelockBlockEntity f = rooms(s);
+            AreaAirControllerBlockEntity a = controller(s, 2);
+            s.cycles(2, a, f);
+            h.assertValueEqual(a.danger(), 0, "A's danger");
+            s.set(2, 2, 4, Site.AIR);
+            s.set(2, 1, 4, Site.AIR); // a doorway in A's south wall
+            s.tick();
+            h.assertTrue(s.zone(2, 2, 2).breached(), "A isn't open to the outside");
+            s.cycles(3, a, f);
+            h.assertFalse(a.breach(), "a door to the outside air counted as a breach");
+            h.assertValueEqual(a.danger(), 0, "A's danger with its door open");
+            h.assertTrue(open(s), "the firelock closed");
         });
     }
 
