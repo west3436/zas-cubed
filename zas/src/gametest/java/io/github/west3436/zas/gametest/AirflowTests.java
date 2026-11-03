@@ -28,11 +28,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -40,7 +42,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017).
+ * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017 to
+ * FLOW-019).
  *
  * <p>Each test runs within one game tick, so nothing moves the entities between the push and the
  * check: it drives atmos ticks itself, then one game tick of airflow ({@link Airflow#step}), and
@@ -65,6 +68,7 @@ public final class AirflowTests {
         final Rooms r;
         final List<Entity> entities = new ArrayList<>();
         private final List<Runnable> restore = new ArrayList<>();
+        private int holeY = Y;
 
         Site(GameTestHelper h, int index) {
             this.h = h;
@@ -81,6 +85,12 @@ public final class AirflowTests {
          * hole in its east wall and runs atmos ticks until airflow has openings.
          */
         void breach() {
+            breach(Y);
+        }
+
+        /** {@link #breach()} with the hole at area y {@code y}: 1 is level with the room's floor. */
+        void breach(int y) {
+            holeY = y;
             r.clear(0, 48);
             r.box(0, 0, HOLE_X, 6);
             r.settle(GasMutations.remove(
@@ -89,7 +99,7 @@ public final class AirflowTests {
                     Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
                     Rooms.source("airflow")));
             h.assertTrue(r.zoned(10, Y, Z), "the room didn't zone");
-            r.set(HOLE_X, Y, Z, Rooms.AIR);
+            r.set(HOLE_X, y, Z, Rooms.AIR);
             for (int i = 0; i < 6 && !hasOpenings(); i++) {
                 r.tick();
                 Airflow.step(r.level);
@@ -99,8 +109,8 @@ public final class AirflowTests {
 
         boolean hasOpenings() {
             for (FlowField.Opening o : Airflow.field(r.level).openings()) {
-                if (Math.abs(o.hx() - r.abs(HOLE_X, Y, Z).getX()) <= 2
-                        && o.hy() == r.abs(0, Y, 0).getY()
+                if (Math.abs(o.hx() - r.abs(HOLE_X, holeY, Z).getX()) <= 2
+                        && o.hy() == r.abs(0, holeY, 0).getY()
                         && o.hz() == r.abs(0, 0, Z).getZ()) {
                     return true;
                 }
@@ -149,6 +159,17 @@ public final class AirflowTests {
             FakePlayer p = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_airflow"));
             Vec3 at = r.point(0, Y, Z).add(x, 0, 0);
             p.moveTo(at.x, at.y - p.getBbHeight() / 2, at.z);
+            p.setDeltaMovement(Vec3.ZERO);
+            return p;
+        }
+
+        /**
+         * A player standing on the hole's floor level, east of it in line with it, its centre
+         * {@code d} blocks from the hole's east face.
+         */
+        FakePlayer standing(BlockPos hole, double d) {
+            FakePlayer p = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_airflow"));
+            p.moveTo(hole.getX() + 1 + d, hole.getY(), hole.getZ() + 0.5);
             p.setDeltaMovement(Vec3.ZERO);
             return p;
         }
@@ -482,6 +503,121 @@ public final class AirflowTests {
             h.assertTrue(impulses[0] != null, "no impulse for the plain player");
             close(h, impulses[1].vx(), impulses[0].vx() / 2, "the suited player's impulse");
             h.assertTrue(impulses[2] == null, "the anvil-shod player got an impulse: " + impulses[2]);
+        }
+        h.succeed();
+    }
+
+    /**
+     * Creative players and spectators beside a breach aren't moved (FLOW-018): the push leaves them
+     * still, and the server sends them neither the openings nor the impulse, while a survival
+     * player beside them gets both.
+     */
+    @GameTest(template = "empty")
+    public static void flow_018_creative_players_and_spectators_aren_t_moved(GameTestHelper h) {
+        try (Site s = new Site(h, 118)) {
+            s.breach();
+            FlowSettings settings = AirflowConfig.settings();
+            FlowField field = Airflow.field(s.r.level);
+            double mob = AirflowClass.MOB.threshold();
+            h.assertTrue(s.difference() >= mob, "the breach is too weak: " + s.difference());
+            FakePlayer survival = s.player(HOLE_X + 3);
+            FakePlayer creative = s.player(HOLE_X + 3);
+            h.assertTrue(creative.setGameMode(GameType.CREATIVE), "the player didn't go creative");
+            FakePlayer spectator = s.player(HOLE_X + 3);
+            h.assertTrue(spectator.setGameMode(GameType.SPECTATOR), "the player didn't go spectator");
+            h.assertTrue(Airflow.exempt(creative) && Airflow.exempt(spectator), "the exemption");
+            h.assertFalse(Airflow.exempt(survival), "the survival player is exempt");
+
+            Airflow.apply(survival, field, FlowField.ANY_ZONE, mob, settings);
+            Airflow.apply(creative, field, FlowField.ANY_ZONE, mob, settings);
+            Airflow.apply(spectator, field, FlowField.ANY_ZONE, mob, settings);
+            h.assertTrue(vx(survival) < 0, "the survival player didn't move");
+            h.assertValueEqual(creative.getDeltaMovement(), Vec3.ZERO, "the creative player");
+            h.assertValueEqual(spectator.getDeltaMovement(), Vec3.ZERO, "the spectator");
+            h.assertTrue(Airflow.flowAt(creative, field, FlowField.ANY_ZONE, mob, settings, 0) == null, "flowAt");
+
+            Map<ServerPlayer, List<CustomPacketPayload>> sent = new HashMap<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) ->
+                    sent.computeIfAbsent(to, k -> new ArrayList<>()).add(p));
+            for (FakePlayer p : List.of(survival, creative, spectator)) {
+                Airflow.syncForTest(s.r.level, p);
+            }
+            List<CustomPacketPayload> toSurvival = sent.getOrDefault(survival, List.of());
+            h.assertTrue(
+                    toSurvival.stream()
+                            .anyMatch(p -> p instanceof AirflowSyncPayload x
+                                    && !x.openings().isEmpty()),
+                    "the survival player wasn't sent the breach: " + toSurvival);
+            h.assertTrue(
+                    toSurvival.stream().anyMatch(p -> p instanceof AirflowImpulsePayload),
+                    "the survival player got no impulse");
+            h.assertTrue(sent.getOrDefault(creative, List.of()).isEmpty(), "sent to the creative player");
+            h.assertTrue(sent.getOrDefault(spectator, List.of()).isEmpty(), "sent to the spectator");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A player airflow carries towards a hole one block high is put in the swimming pose, by the
+     * server from 1.5 blocks off and by its client from 1 block, and let up once it can stand
+     * (FLOW-019). A player in the open, or a creative one, isn't; nor is one whose pose something
+     * else forces.
+     */
+    @GameTest(template = "empty")
+    public static void flow_019_a_player_carried_into_a_low_hole_crawls(GameTestHelper h) {
+        try (Site s = new Site(h, 119)) {
+            s.breach(1);
+            h.assertTrue(s.difference() >= AirflowClass.MOB.threshold(), "the breach is too weak: " + s.difference());
+            BlockPos hole = s.r.abs(HOLE_X, 1, Z);
+
+            // The server, 1.3 blocks from the hole's far face.
+            FakePlayer server = s.standing(hole, 1.3);
+            h.assertTrue(Airflow.crawlForTest(s.r.level, server), "the server didn't crawl the player");
+            h.assertValueEqual(server.getForcedPose(), Pose.SWIMMING, "the server's forced pose");
+            h.assertValueEqual(server.getPose(), Pose.SWIMMING, "the server's pose");
+
+            // Inside the hole, it stays down even with no flow; out in the open, it is let up.
+            server.moveTo(hole.getX() + 0.5, hole.getY(), hole.getZ() + 0.5);
+            h.assertTrue(Airflow.crawl(server, null, true, 1.5), "the player stood up in the hole");
+            server.moveTo(hole.getX() + 5.5, hole.getY(), hole.getZ() + 0.5);
+            h.assertFalse(Airflow.crawlForTest(s.r.level, server), "the player kept crawling in the open");
+            h.assertTrue(server.getForcedPose() == null, "the forced pose wasn't let up");
+
+            // Too far off, in creative, or with a pose something else forces: no crawl.
+            FakePlayer far = s.standing(hole, 3.5);
+            h.assertFalse(Airflow.crawlForTest(s.r.level, far), "the player crawled 3.5 blocks off");
+            FakePlayer creative = s.standing(hole, 1.3);
+            h.assertTrue(creative.setGameMode(GameType.CREATIVE), "the player didn't go creative");
+            h.assertFalse(Airflow.crawlForTest(s.r.level, creative), "the creative player crawled");
+            FakePlayer sleeper = s.standing(hole, 1.3);
+            sleeper.setForcedPose(Pose.SLEEPING);
+            h.assertFalse(Airflow.crawlForTest(s.r.level, sleeper), "crawled over another forced pose");
+            h.assertValueEqual(sleeper.getForcedPose(), Pose.SLEEPING, "the other forced pose");
+
+            // The client, from the synced openings: 1.5 blocks off it waits, 1 block off it crawls.
+            List<AirflowSyncPayload> syncs = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (p instanceof AirflowSyncPayload x) {
+                    syncs.add(x);
+                }
+            });
+            FakePlayer local = s.standing(hole, 1.6);
+            Airflow.syncForTest(s.r.level, local);
+            h.assertTrue(!syncs.isEmpty() && !syncs.getLast().openings().isEmpty(), "no openings were sent");
+            AirflowReceiver client = new AirflowReceiver();
+            client.accept(syncs.getLast());
+            client.tick(local);
+            h.assertFalse(client.crawling(), "the client crawled 1.6 blocks off");
+            local.moveTo(hole.getX() + 1.9, hole.getY(), hole.getZ() + 0.5);
+            local.setDeltaMovement(Vec3.ZERO);
+            client.tick(local);
+            h.assertTrue(client.crawling(), "the client didn't crawl 0.9 blocks off");
+            h.assertValueEqual(local.getForcedPose(), Pose.SWIMMING, "the client's forced pose");
+            client.accept(AirflowSyncPayload.none(s.r.level.dimension().location()));
+            local.moveTo(hole.getX() + 5.5, hole.getY(), hole.getZ() + 0.5);
+            client.tick(local);
+            h.assertFalse(client.crawling(), "the client kept crawling after airflow ended");
+            h.assertTrue(local.getForcedPose() == null, "the client's forced pose wasn't let up");
         }
         h.succeed();
     }

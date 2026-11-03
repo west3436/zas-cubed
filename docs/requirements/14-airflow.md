@@ -110,11 +110,28 @@ stands. The thresholds are `[airflow] light_threshold_kpa`, `mob_threshold_kpa`
 and `heavy_threshold_kpa`.*
 
 #### FLOW-018 · Entities airflow never moves
-`Should` · `R1` · `Draft` · Verify: Inspect, GameTest · Trace: FLOW-003
+`Should` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: FLOW-003
 
-Entities in the `zas:airflow/immune` tag, and non-living entities in no airflow
-class tag, shall not be moved by airflow. The default tag holds the ender
-dragon.
+Entities in the `zas:airflow/immune` tag, non-living entities in no airflow
+class tag, players in creative mode and spectators shall not be moved by
+airflow. The default tag holds the ender dragon.
+
+- **Rationale:** Some entities shouldn't be thrown about: a boss that would
+  leave its arena, and a player building or watching in creative or spectator
+  mode, who would be dragged away from what they're working on.
+- **Verify:** Inspect the shipped tag; a GameTest checks a creative player and
+  a spectator beside a breach aren't moved while a survival player is.
+- **Changed 2026-11-02 (the owner, reviewing the round's combined test):**
+  creative players aren't moved by airflow, and spectators are exempt too. The
+  requirement was Draft; the owner's change accepts it.
+
+*2026-11-02: Implemented. `AirflowClass` gives the tagged and the untagged
+non-living entities the immune class, which no difference moves; the
+`flow_011_classes_move_at_their_thresholds` GameTest checks the ender dragon is
+immune. `Airflow.exempt` spares creative players and spectators: the server
+sends them neither the openings nor the impulse, and the client's push leaves
+them alone. The `flow_018_creative_players_and_spectators_aren_t_moved`
+GameTest checks both, beside a survival player who is moved.*
 
 #### FLOW-004 · Anchoring
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -291,6 +308,36 @@ every game tick with the same code the server uses for other entities. The
 openings lapse if no update comes for two atmos periods plus a second. The
 GameTest above runs a player through the client's path; the rubber-banding
 check is Manual.*
+
+#### FLOW-019 · Crawling through low openings
+`Must` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: FLOW-017
+
+When airflow carries a player into an opening too low to stand in, such as a
+hole one block high, the player shall take the swimming (crawling) pose, and
+the flow shall keep carrying them through it. They stand again once there is
+room.
+
+- **Rationale:** A player standing can't fit through a one-block hole, so
+  without it the flow pins them against the wall beside the hole instead of
+  carrying them out.
+- **Verify:** A GameTest checks a player carried towards a one-block hole is
+  put in the swimming pose on both the server's and the client's path, and let
+  up in the open; Manual checks a player is carried through such a hole.
+- **Changed 2026-11-02 (the owner, reviewing the round's combined test):** new.
+  The owner, on a breach through a one-block hole: "It was only a 1-block hole
+  so I got stuck. The player should switch to the 'swimming' model and be
+  forced out the hole."
+
+*2026-11-02: Built. Each game tick the server, and the client for its own
+player, takes the flow's direction at the player; if within reach ahead along
+it the standing box would hit a block where the swimming box fits, the player's
+pose is forced to swimming. It stays forced while the player can't stand where
+it is, and is let up after. The server looks 1.5 blocks ahead and the client 1,
+so the server's box is already the swimming one when the client moves into the
+hole; otherwise the server would refuse the move and pull the player back. A
+pose something else forces is left alone, and creative players and spectators
+are exempt (FLOW-018). The `flow_019_a_player_carried_into_a_low_hole_crawls`
+GameTest checks both paths; being carried through is the Manual check.*
 
 #### FLOW-008 · Feedback
 `Should` · `R1` · `Rejected` — duplicate of CLIENT-003, 2026-10-30.

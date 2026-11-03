@@ -25,6 +25,7 @@ public final class AirflowReceiver {
     private double resistance;
     private ResourceLocation dimension;
     private int ticksLeft;
+    private boolean crawling;
 
     /** Takes a payload in place of the last; one with no openings ends airflow. Client thread. */
     public void accept(AirflowSyncPayload p) {
@@ -41,6 +42,7 @@ public final class AirflowReceiver {
         field = FlowField.EMPTY;
         ticksLeft = 0;
         dimension = null;
+        crawling = false;
     }
 
     /** Whether it holds airflow that hasn't lapsed. */
@@ -49,19 +51,29 @@ public final class AirflowReceiver {
     }
 
     /**
-     * One game tick for the player: pushes it if it is in the dimension the openings are from.
+     * One game tick for the player: pushes it if it is in the dimension the openings are from, and
+     * puts it in the swimming pose to crawl into an opening too low to stand in, or lets it up
+     * ({@link Airflow#crawl}, FLOW-019).
      *
      * @return the change of velocity, or null for none
      */
     public Vec3 tick(Player player) {
-        if (!active()) {
+        if (!active() || !player.level().dimension().location().equals(dimension)) {
+            if (ticksLeft > 0) {
+                ticksLeft--;
+            }
+            crawling = Airflow.crawl(player, null, crawling, Airflow.CLIENT_CRAWL_REACH);
             return null;
         }
         ticksLeft--;
-        if (!player.level().dimension().location().equals(dimension)) {
-            return null;
-        }
+        Vec3 flow = Airflow.flowAt(player, field, FlowField.ANY_ZONE, threshold, settings, resistance);
+        crawling = Airflow.crawl(player, flow, crawling, Airflow.CLIENT_CRAWL_REACH);
         return Airflow.apply(player, field, FlowField.ANY_ZONE, threshold, settings, resistance);
+    }
+
+    /** Whether this has its player in the swimming pose, to crawl into a low opening (FLOW-019). */
+    public boolean crawling() {
+        return crawling;
     }
 
     static void handleSync(AirflowSyncPayload payload, IPayloadContext context) {

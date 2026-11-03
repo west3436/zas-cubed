@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -13,13 +14,13 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -53,9 +54,12 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *       that cell has no zone or a zone it hasn't pinned, so a room sealed after it was placed
  *       forms its zone then (CONT-110). It unpins when removed.
  *   <li>Pays its own draw; without it, it is unpowered and does nothing else.
- *   <li>Rates its zone's air (CONT-040) and updates its danger level (CONT-046).
+ *   <li>Rates its zone's air (CONT-040) and updates its danger level (CONT-046). A breach is danger
+ *       2 at once ({@link BreachAlarm}, CONT-043).
  *   <li>Finds the parts in its zone and those linked to it (CONT-042), powers them in priority order
  *       (CONT-064, CONT-068) and commands its vents and scrubbers for its mode (CONT-041).
+ *   <li>When it reaches danger 2, steps the firelocks it covers at once, so they close in the same
+ *       atmos tick (CONT-043).
  * </ol>
  */
 public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider {
@@ -78,8 +82,9 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     private double[] values = new double[0];
     private int[] ratings = new int[0];
     private List<Part> parts = List.of();
-    private Set<ZoneId> coveredZones = Set.of();
-    private Set<BlockPos> coveredCells = Set.of();
+    private Optional<ZoneId> coveredZone = Optional.empty();
+    private final BreachAlarm breachCheck = new BreachAlarm();
+    private boolean breach;
 
     public AreaAirControllerBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.AREA_AIR_CONTROLLER.get(), pos, state);
@@ -106,6 +111,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     @Override
     protected void atmosTick(ServerLevel level) {
+        boolean wasAlarming = alarming();
         pull(level);
         sample = Atmospheres.at(level, airPoint());
         keepPinned(level);
@@ -113,9 +119,11 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         long own = (long) AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
         powered = buffer.take(own);
         List<PoweredDevice> covered = covered(level);
-        coverage(level);
+        coverage();
         if (!powered) {
             danger.reset();
+            breachCheck.reset();
+            breach = false;
             parts = describe(covered, new boolean[covered.size()]);
             setStatus(level, ControllerStatus.UNPOWERED);
             return;
@@ -128,8 +136,20 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             for (int r : ratings) {
                 worst = Math.max(worst, r);
             }
+            boolean breached = breached(level);
+            breach = breachCheck.check(
+                    preset.pressure(),
+                    sample.pressure(),
+                    breached,
+                    breached ? ambientPressure(level) : Double.NaN,
+                    AtmosServerConfig.get(AtmosServerConfig.BREACH_DROP_KPA));
+            if (breach) {
+                worst = 2;
+            }
             danger.update(worst);
             mode = mode.after(sample.pressure(), preset);
+        } else {
+            breachCheck.reset();
         }
 
         // Orders first, then the bill: a part's draw follows its order (a vent draws nothing while
@@ -147,6 +167,35 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         boolean[] supplied = feed(covered);
         parts = describe(covered, supplied);
         setStatus(level, ControllerStatus.of(danger.level()));
+        if (!wasAlarming && alarming()) {
+            // The firelocks it covers close now, not at their own steps up to an atmos tick later.
+            FirelockBlockEntity.alarmRaised(level, this);
+        }
+    }
+
+    /** Whether its zone has an edge to the ambient, as of the last atmos tick. */
+    private boolean breached(ServerLevel level) {
+        if (sample.state() != AtmosphereState.ZONED && sample.state() != AtmosphereState.PAUSED) {
+            return false;
+        }
+        return sample.zone()
+                .flatMap(id -> Atmospheres.zone(level, id))
+                .map(ZoneInfo::breached)
+                .orElse(false);
+    }
+
+    /**
+     * The dimension's ambient pressure, read at the top of the controller's column, which is open
+     * to the ambient in almost every build; NaN if that cell isn't ambient. A dimension has one
+     * ambient, so any ambient cell reads the same.
+     */
+    private double ambientPressure(ServerLevel level) {
+        BlockPos top = new BlockPos(
+                getBlockPos().getX(),
+                level.getMaxBuildHeight() - 1,
+                getBlockPos().getZ());
+        AtmosphereSample at = Atmospheres.at(level, top);
+        return at.state() == AtmosphereState.AMBIENT ? at.pressure() : Double.NaN;
     }
 
     /** Takes FE from every block next to it that gives it (CONT-062). */
@@ -198,7 +247,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /** The parts in its zone and those linked to it, in the order they joined the schedule. */
     private List<PoweredDevice> covered(ServerLevel level) {
-        links.removeIf(p -> level.isLoaded(p) && !(level.getBlockEntity(p) instanceof PoweredDevice));
+        links.removeIf(p -> level.isLoaded(p) && !linkable(level.getBlockEntity(p)));
         Optional<ZoneId> zone = sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED
                 ? sample.zone()
                 : Optional.empty();
@@ -215,40 +264,39 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return out;
     }
 
-    /**
-     * Records what the controller covers, for firelocks (CONT-043): its own zone, and for each part
-     * linked to it, the zone at the part's air point, or that cell itself where it isn't zoned.
-     */
-    private void coverage(ServerLevel level) {
-        Set<ZoneId> zones = new HashSet<>();
-        Set<BlockPos> cells = new HashSet<>();
-        if (sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED) {
-            sample.zone().ifPresent(zones::add);
-        }
-        for (BlockPos link : links) {
-            if (level.isLoaded(link) && level.getBlockEntity(link) instanceof PoweredDevice d) {
-                AtmosphereSample at = Atmospheres.at(level, d.airPoint());
-                if (at.zone().isPresent()) {
-                    zones.add(at.zone().get());
-                } else {
-                    cells.add(BlockPos.containing(d.airPoint()));
-                }
-            }
-        }
-        coveredZones = Set.copyOf(zones);
-        coveredCells = Set.copyOf(cells);
+    /** What can be linked with the multitool: a powered part (CONT-042) or a firelock (CONT-043). */
+    public static boolean linkable(BlockEntity be) {
+        return be instanceof PoweredDevice || be instanceof FirelockBlockEntity;
+    }
+
+    /** Records the zone the controller covers for firelocks (CONT-043): its own, as of this step. */
+    private void coverage() {
+        coveredZone = sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED
+                ? sample.zone()
+                : Optional.empty();
     }
 
     /**
-     * Whether the controller covers a cell (CONT-043): the cell is in its zone or in the zone of a
-     * part linked to it, or, unzoned, is a linked part's air point. As of its last step.
+     * Whether the controller covers a firelock (CONT-043): the firelock is linked to it with the
+     * multitool, or the cell on either side is in its zone. A link covers that firelock only, not
+     * the room of a linked part. As of its last step.
      *
-     * @param sample the cell's reading
-     * @param cell the cell
+     * @param firelock the firelock's lower half
+     * @param front the reading in front of its panel
+     * @param back the reading behind it
      */
-    public boolean covers(AtmosphereSample sample, BlockPos cell) {
-        Optional<ZoneId> zone = sample.zone();
-        return zone.isPresent() ? coveredZones.contains(zone.get()) : coveredCells.contains(cell);
+    public boolean covers(BlockPos firelock, AtmosphereSample front, AtmosphereSample back) {
+        return links.contains(firelock) || inCoveredZone(front) || inCoveredZone(back);
+    }
+
+    private boolean inCoveredZone(AtmosphereSample side) {
+        return coveredZone.isPresent()
+                && side.zone().filter(coveredZone.get()::equals).isPresent();
+    }
+
+    /** Whether its last reading was a breach (CONT-043). */
+    public boolean breach() {
+        return breach;
     }
 
     /** Whether it is powered and at danger 2, so the firelocks it covers close (CONT-043). */

@@ -260,8 +260,9 @@ both windows gives each an ambient edge, and the 27-cell room keeps a smaller
 fraction of its pressure after 1 s than the 1,000-cell one. An item in the
 room is carried towards the window. A player there is sent the openings and
 the onset impulse, and the client's path pushes it towards the window. The
-controller's alarm closes the firelock, and the second room then holds its
-air. Once the breached room is below 10 kPa, a player without a helmet takes 1
+controller sees the breach at its first step after it and alarms at once,
+which closes the firelock in the same step, so the second room keeps over
+90 kPa of its air (as at 20 °C) and then holds it. Once the breached room is below 10 kPa, a player without a helmet takes 1
 HP/s of decompression, and hypoxia damage once its air meter is empty.*
 
 ## Questions

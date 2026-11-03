@@ -537,8 +537,8 @@ public final class StationTests {
      *   <li>pushes an item and an unanchored player in A towards the window: the player through
      *       the client's path, from the openings the server sends it, with the onset impulse
      *       (FLOW-001, FLOW-009, FLOW-017);
-     *   <li>leaves A's controller alarming, which closes the firelock, and B then holds its air
-     *       (CONT-043);
+     *   <li>sets A's controller alarming at its first step after the breach, which closes the
+     *       firelock in the same step, so B keeps nearly all its air and then holds it (CONT-043);
      *   <li>and an unsuited player in what's left of A takes decompression damage and, once its air
      *       meter is empty, hypoxia damage (LIFE-003, LIFE-008, LIFE-010).
      * </ul>
@@ -663,10 +663,10 @@ public final class StationTests {
                     client.tick(drifting) != null && drifting.getDeltaMovement().z > 0,
                     "the player's client didn't push it to the breach: " + drifting.getDeltaMovement());
 
-            // The controller alarms and closes the firelock; B then holds its air.
-            for (int i = 0; i < 60 && firelockOpen(s); i++) {
-                second.run();
-            }
+            // The controller alarms at its first step after the breach, and the firelock closes
+            // in that same step; B then holds its air.
+            second.run();
+            h.assertTrue(c.breach(), "the controller didn't see the breach");
             h.assertFalse(
                     firelockOpen(s),
                     "the controller didn't close the firelock: danger " + c.danger() + ", alarming " + c.alarming()
@@ -675,8 +675,8 @@ public final class StationTests {
                             + c.lastPin());
             h.assertTrue(firelock.closedByAlarm(), "the firelock closed, but not by the alarm");
             second.run();
-            double b = s.zone(8, 2, 2).mixture().pressure();
-            h.assertTrue(b > 50, "B lost too much before the firelock closed: " + b + " kPa");
+            double b = at20(s.zone(8, 2, 2));
+            h.assertTrue(b > 90, "B lost too much before the firelock closed: " + b + " kPa at 20 °C");
             double bMoles = s.zone(8, 2, 2).mixture().totalMoles();
             for (int i = 0; i < 5; i++) {
                 second.run();
