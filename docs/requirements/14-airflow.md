@@ -329,15 +329,23 @@ room.
   forced out the hole."
 
 *2026-11-02: Built. Each game tick the server, and the client for its own
-player, takes the flow's direction at the player; if within reach ahead along
-it the standing box would hit a block where the swimming box fits, the player's
-pose is forced to swimming. It stays forced while the player can't stand where
-it is, and is let up after. The server looks 1.5 blocks ahead and the client 1,
-so the server's box is already the swimming one when the client moves into the
-hole; otherwise the server would refuse the move and pull the player back. A
-pose something else forces is left alone, and creative players and spectators
-are exempt (FLOW-018). The `flow_019_a_player_carried_into_a_low_hole_crawls`
-GameTest checks both paths; being carried through is the Manual check.*
+player, takes the flow's direction at the player. If within reach ahead along
+it there is a place where the player can't stand at its own height, but where,
+level with its feet or up to a block higher, the swimming box fits and the
+standing box still doesn't, the player's pose is forced to swimming. That is a
+hole level with the floor, or one in the wall a block up, such as a window,
+which the flow, aimed at the hole, lifts the player into. A doorway two blocks
+high or a step up doesn't count. The pose stays forced while the player can't
+stand where it is, and is let up after. The server looks 1.5 blocks ahead and
+the client 1, so the server's box is already the swimming one when the client
+moves into the hole; otherwise the server would refuse the move and pull the
+player back. A pose something else forces is left alone, and creative players
+and spectators are exempt (FLOW-018). The
+`flow_019_a_player_carried_into_a_low_hole_crawls` GameTest checks both paths
+for a hole level with the floor, and
+`flow_019_a_player_crawls_into_a_hole_above_the_floor` checks a hole a block up,
+and a doorway, which doesn't trigger it; being carried through is the Manual
+check.*
 
 #### FLOW-008 · Feedback
 `Should` · `R1` · `Rejected` — duplicate of CLIENT-003, 2026-10-30.
