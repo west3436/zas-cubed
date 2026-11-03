@@ -773,7 +773,7 @@ the charge pays for, then stops. Checked by `cont_087_never_more_than_5_kw`,
 `cont_019_heater_heats_its_room_on_its_battery` (GameTest).*
 
 #### CONT-105 · Igniter
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016
 
 A placeable igniter block shall, while it receives a redstone signal and is
 powered, be an ignition source (FIRE-014) in its cell. A flammable mixture in
@@ -786,6 +786,12 @@ active (CONT-065). (vg's igniter is a floor machine that exposes its tile to a
   H₂–air zone, and that it doesn't without power or signal.
 
 *2026-10-31: draw raised from 10 to 20 FE/t (D-59).*
+
+*2026-11-03: Implemented ([#192](https://github.com/west3436/zas-cubed/pull/192)).
+`zas_atmos:igniter` is in `#zas:ignition_sources` (API-053) and counts as a
+source while `lit`, which it is while it has a signal and its draw is paid
+(`[power] igniter`, AUXILIARY). `cont_105_igniter_sparks_with_signal_and_power`
+and `cont_105_igniter_lights_a_flammable_zone` check it.*
 
 ## Wearables and tools
 

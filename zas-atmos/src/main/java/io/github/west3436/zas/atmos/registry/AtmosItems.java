@@ -49,6 +49,7 @@ public final class AtmosItems {
     public static final DeferredItem<CrowbarItem> CROWBAR = ITEMS.registerItem("crowbar", CrowbarItem::new);
 
     public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
+    public static final DeferredItem<BlockItem> IGNITER = ITEMS.registerSimpleBlockItem(AtmosBlocks.IGNITER);
 
     // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
 

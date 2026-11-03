@@ -24,6 +24,9 @@ public final class AtmosServerConfig {
     /** The recharger's draw from its controller while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_DRAW;
 
+    /** The igniter's draw from its controller while it gets a redstone signal, in FE/t (CONT-105). */
+    public static final ModConfigSpec.IntValue IGNITER_DRAW;
+
     /** What the recharger puts into its battery while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_RATE;
 
@@ -62,6 +65,8 @@ public final class AtmosServerConfig {
                 .defineInRange("recharger", 40, 0, 100_000);
         RECHARGER_RATE = builder.comment("What a recharger puts into its battery while it charges, in FE/t (CONT-113)")
                 .defineInRange("recharger_rate", 28, 0, 100_000);
+        IGNITER_DRAW = builder.comment("Igniter, from its controller while it gets a redstone signal (CONT-105)")
+                .defineInRange("igniter", 20, 0, 100_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")

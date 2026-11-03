@@ -45,6 +45,7 @@
   "item.zas_atmos.micro_laser": "Micro-Laser",
   "item.zas_atmos.console_screen": "Console Screen",
   "item.zas_atmos.igniter_assembly": "Igniter Assembly",
+  "block.zas_atmos.igniter": "Igniter",
   "item.zas_atmos.timer_assembly": "Timer Assembly",
   "item.zas_atmos.ansible_crystal": "Ansible Crystal",
   "item.zas_atmos.subspace_ansible": "Subspace Ansible",
