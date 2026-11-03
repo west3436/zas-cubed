@@ -31,7 +31,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * hazards' comfort band, switches, scales and per-dimension overrides (LIFE-011, LIFE-031,
  * LIFE-036) under {@code [hazards]} ({@link HazardConfig}); each armor slot's coverage (LIFE-024)
  * under {@code [protection]} ({@link ProtectionConfig}); airflow (FLOW) under {@code [airflow]}
- * ({@link AirflowConfig}); the permission level of the {@code /zas} commands (OPS-011) under
+ * ({@link AirflowConfig}); the fire oxygen threshold (FIRE-030) under {@code [fire]} ({@link
+ * FireConfig}); the permission level of the {@code /zas} commands (OPS-011) under
  * {@code [commands]}; and the
  * periodic profiling log (OPS-012) under {@code [profiling]}. The sharing table and thresholds join
  * this file as their features land.
@@ -161,6 +162,7 @@ public final class ZasServerConfig {
         HazardConfig.define(builder);
         ProtectionConfig.define(builder);
         AirflowConfig.define(builder);
+        FireConfig.define(builder);
         builder.push("commands");
         PERMISSION_LEVEL = builder.comment(
                         "The permission level every /zas command needs: 0 everyone, 2 operators (the",
