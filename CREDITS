@@ -82,6 +82,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/generator.json
 origin: original
 notes: The generator's four facings, lit and unlit.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/fire_alarm.json
+origin: original
+notes: The fire alarm's four facings and its unpowered, normal and alarm models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/firelock.json
 origin: original
 notes: The firelock's four facings, two halves, and closed, locked-down and open models.
