@@ -811,7 +811,8 @@ public final class BreathingTests {
             lab.respiration(3600); // 1 mol/s
             Pig pig = lab.mob(EntityType.PIG, 0);
             Pig outside = lab.mob(EntityType.PIG, lab.r.level, Vec3.atBottomCenterOf(lab.r.abs(8, 1, 2)));
-            // Send what other tests' breathers drew this atmos period first, so only these remain.
+            // Sends the draws of other tests' breathers in the overworld, so the flush below holds
+            // only this test's: nothing else runs between the two.
             Respiration.flush(lab.r.level);
             long t0 = lab.r.level.getGameTime();
             Breathers.checkAt(pig, t0);

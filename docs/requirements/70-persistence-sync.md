@@ -190,6 +190,16 @@ pressure).
 - **Verify:** A GameTest records state packets during a slow pressure change
   and checks rate and triggers; Bench measures bytes.
 
+*2026-11-02: The HUD state is built this way
+([#38](https://github.com/west3436/zas-cubed/issues/38)). Every 5 game ticks a
+player's state is worked out and sent to it alone if a level, the worst toxic
+gas, or a shown value at its resolution changed. A reading with no alert
+carries no value, so normal air sends nothing; a state is 21 to about 40
+bytes. `data_014_hud_syncs_on_change_at_most_4_a_second`,
+`data_014_values_resend_at_their_resolution` and
+`data_014_payload_round_trips` (GameTests) pass. There's no bench yet, and
+LIFE-023's breathing sync is separate, so this stays Accepted.*
+
 #### DATA-015 · Airflow sync
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005
 
