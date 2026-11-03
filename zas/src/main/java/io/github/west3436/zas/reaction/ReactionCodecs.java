@@ -1,7 +1,12 @@
 package io.github.west3436.zas.reaction;
 
+import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.west3436.zas.api.reaction.ReactionType;
+import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.reaction.CodeReaction;
 import io.github.west3436.zas.engine.reaction.ReactionConditions;
@@ -35,7 +40,8 @@ public final class ReactionCodecs {
             "requires_ignition",
             "flammability",
             "rate",
-            "incomplete_combustion");
+            "incomplete_combustion",
+            "parameters");
 
     private static final Codec<Map<String, Double>> COEFFICIENTS = Codec.unboundedMap(Codec.STRING, Codec.DOUBLE);
 
@@ -86,6 +92,8 @@ public final class ReactionCodecs {
      * A definition file's content; the id comes from the file's path. The nested objects are built
      * as they are read, so a value out of range fails the read, naming its field.
      *
+     * @param parameters a code type's parameters (API-020), passed to {@link
+     *     ReactionType#withParameters}
      * @param sources citations of the file's values, by field name (CORE-015); the game doesn't
      *     read them
      */
@@ -102,6 +110,7 @@ public final class ReactionCodecs {
             Optional<ReactionConditions.FlammabilityLimits> flammability,
             Optional<ReactionRate> rate,
             Optional<ReactionDefinition.Stoichiometry> incomplete,
+            Optional<Dynamic<?>> parameters,
             Map<String, String> sources) {
         public static final Codec<Body> CODEC = RecordCodecBuilder.create(i -> i.group(
                         DatapackErrors.optionalField(Codec.STRING, "type", ReactionDefinition.STANDARD)
@@ -126,6 +135,8 @@ public final class ReactionCodecs {
                         DatapackErrors.optionalField(RATE, "rate").forGetter(Body::rate),
                         DatapackErrors.optionalField(STOICHIOMETRY, "incomplete_combustion")
                                 .forGetter(Body::incomplete),
+                        DatapackErrors.optionalField(Codec.PASSTHROUGH, "parameters")
+                                .forGetter(Body::parameters),
                         DatapackErrors.optionalField(
                                         Codec.unboundedMap(Codec.STRING, Codec.STRING), "sources", Map.of())
                                 .forGetter(Body::sources))
@@ -136,17 +147,39 @@ public final class ReactionCodecs {
         }
 
         /**
-         * The definition with this body and an id.
+         * The definition with this body and an id. A code type (API-020) is looked up among the
+         * types registered with {@link Reactions#registerType} and given the body's parameters.
          *
          * @param id the reaction id
-         * @param code the implementation of the body's type, if it names a code type (API-020)
-         * @throws IllegalArgumentException if a value is out of range or the fields contradict
-         *     each other; the message starts with the field at fault (OPS-008)
+         * @throws IllegalArgumentException if a value is out of range, the fields contradict each
+         *     other, or the type isn't registered or rejects the parameters; the message starts
+         *     with the field at fault (OPS-008)
          */
-        public ReactionDefinition toDefinition(ResourceLocation id, Optional<CodeReaction> code) {
+        public ReactionDefinition toDefinition(ResourceLocation id) {
             boolean standard = type.equals(ReactionDefinition.STANDARD);
             if (standard && enthalpy.isEmpty()) {
                 throw new IllegalArgumentException("enthalpy: is required");
+            }
+            if (standard && parameters.isPresent()) {
+                throw new IllegalArgumentException("parameters: only a reaction type implemented in code takes them");
+            }
+            Optional<CodeReaction> code = Optional.empty();
+            ResourceLocation typeId = standard ? null : ResourceLocation.tryParse(type);
+            Optional<ReactionType> registered = typeId == null ? Optional.empty() : Reactions.type(typeId);
+            if (registered.isPresent()) {
+                ReactionType bound;
+                try {
+                    bound = registered
+                            .orElseThrow()
+                            .withParameters(
+                                    parameters.orElseGet(() -> new Dynamic<>(JsonOps.INSTANCE, new JsonObject())));
+                } catch (RuntimeException e) {
+                    throw new IllegalArgumentException("parameters: " + e.getMessage(), e);
+                }
+                if (bound == null) {
+                    throw new IllegalArgumentException("parameters: the type " + type + " gave no reaction for them");
+                }
+                code = Optional.of(new ApiReactionType(id.toString(), typeId, bound));
             }
             ReactionConditions conditions = new ReactionConditions(
                     minTemperature.orElse(0.0),
@@ -156,15 +189,7 @@ public final class ReactionCodecs {
                     requiresIgnition,
                     flammability);
             return new ReactionDefinition(
-                    id.toString(),
-                    type,
-                    reactants,
-                    products,
-                    enthalpy.orElse(0.0),
-                    conditions,
-                    rate,
-                    incomplete,
-                    standard ? Optional.empty() : code);
+                    id.toString(), type, reactants, products, enthalpy.orElse(0.0), conditions, rate, incomplete, code);
         }
 
         /** The names in {@code sources} that aren't fields of the format, in order; they are ignored. */

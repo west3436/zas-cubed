@@ -157,6 +157,34 @@ public final class ReactionSet {
     }
 
     /**
+     * Reacts a mixture held outside the world for a time step (API-019, FIRE-031), as a zone's atmos
+     * tick would: first {@link #burn}, as one hotspot whose parcel is {@link
+     * #PARCEL_LITRES_PER_SECOND} times the seconds, if it ignites by the source or by autoignition;
+     * then {@link #react} over the whole mixture.
+     *
+     * @param mixture the mixture, changed in place; its registry must be this set's
+     * @param seconds the step's length
+     * @param ignition whether an ignition source acts on it
+     * @param fire the fire oxygen threshold and incomplete-combustion settings
+     * @return both steps' changes together
+     */
+    public ReactionResult applyStandalone(GasMixture mixture, double seconds, boolean ignition, FireSettings fire) {
+        ReactionResult burned = burn(mixture, PARCEL_LITRES_PER_SECOND * seconds, ignition, fire);
+        ReactionResult reacted = react(mixture, seconds, fire);
+        if (!burned.reacted()) {
+            return reacted;
+        }
+        if (!reacted.reacted()) {
+            return burned;
+        }
+        double[] moles = burned.moles().clone();
+        for (int i = 0; i < moles.length; i++) {
+            moles[i] += reacted.moles()[i];
+        }
+        return new ReactionResult(moles, burned.heat() + reacted.heat(), burned.reactions() + reacted.reactions());
+    }
+
+    /**
      * Whether a mixture can catch fire, and at what temperature by itself (FIRE-010, FIRE-014,
      * FIRE-017): see {@link Flammability}.
      *
