@@ -22,6 +22,7 @@
   "gui.zas_atmos.vent.unpowered": "No power",
   "gui.zas_atmos.vent.cycle": "Off / blow / siphon",
   "block.zas_atmos.area_air_controller": "Area Air Controller",
+  "block.zas_atmos.fire_alarm": "Fire Alarm",
   "block.zas_atmos.generator": "Generator",
   "item.zas_atmos.multitool": "Multitool",
   "item.zas_atmos.multitool.selected": "Selected the area air controller at %s",
