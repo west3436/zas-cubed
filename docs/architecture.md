@@ -1178,7 +1178,7 @@ load. Detection is change-driven; nothing scans the world:
 
 A position whose last ignition hasn't been applied isn't sent again, so an
 explosion chain or a redstone clock queues at most one per position per atmos
-tick. One-off sources go through `AtmosService.ignite`, which completes when
+tick. One-off sources go through `Fires.ignite` (API-056), which completes when
 the ignition is applied. Fire and soul fire are standing sources, but not
 `zas:gas_fire`, though it is in `#minecraft:fire`: a gas fire is a hotspot
 already, and spreads by FIRE-016's odds.
@@ -1315,8 +1315,8 @@ way.
 
 ### Hotspots
 
-*Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)); the
-API (API-031, API-055 to API-058) comes separately.* Hotspots are per-cell fires
+*Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)), with
+its API in §6.7.* Hotspots are per-cell fires
 that burn their zone's gas. They live on the worker, in phase 6 of the atmos
 tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
 `zas.hotspot`.
@@ -1416,8 +1416,14 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
     `TriggerStates` leaves it out of `#zas:combustion`, which takes in
     `#minecraft:fire`, so `Burners` never burns it as carbon.
   - `DimensionAtmos` applies the result's `FireIntent`s first in the apply
-    (`FireIntents`), in loaded chunks only. It then completes the ignitions
-    (`DimensionAtmos.ignite`, an `Ignited`) and other outcomes.
+    (`FireIntents`), in loaded chunks only, then posts the fire events
+    (API-031). It then completes the ignitions (`DimensionAtmos.ignite`, an
+    `Ignited`) and other outcomes.
+  - `DimensionAtmos.extinguish` (API-057) removes the fire blocks in a box at
+    once. While a batch is in flight it also keeps the box with that batch's
+    number, and that batch's apply places no gas fire inside it: the batch
+    closed before the spray, so its intents don't know of it. The next batch
+    has seen the spray in the mirror. The boxes are dropped at every apply.
   - The seed is the world seed mixed with the dimension id. The spread chance
     is `[fire] spread_chance`.
 - **Vanilla fire and `Burners`.** A vanilla fire in a zone is worked on twice,
@@ -1616,6 +1622,7 @@ helmet and analyzer triggers of CLIENT-001 and the internals indicator
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
+| `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
@@ -1716,6 +1723,9 @@ fallback, and a provider without it, give 16 kPa.
   paused, resumed) are emitted by the worker as records in `Result`. The
   server thread turns them into events at apply, so they never fire for
   rejected work.
+- Fire events (API-031), `FireIgnitedEvent` and `FireExtinguishedEvent`, are
+  the result's `FireEvent`s, posted at apply after the gas fire blocks change
+  (§6.7).
 - Hazard-tick events (API-033) fire from the hazard service and may modify the
   hazard before it applies.
 - Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
@@ -1794,6 +1804,30 @@ controller is to pin its room's zone, forming it if needed (CONT-110).
   dimension, which has no zones, a pin completes `OPEN` at once.
 - **Commands.** `/zas pin` and `/zas unpin` call the API, and `/zas zone`
   lists a zone's owners ([commands](commands.md#zone-pins-ops-017)).
+
+### 6.7 Fire (API-031, API-055 to API-058)
+
+*Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)); API-055
+to API-058 are Draft.* `api.fire.Fires` is the hotspots' API (§5, Hotspots).
+
+- **Queries** (API-055) read the dimension's last published `HotspotTable`, so
+  they answer from any thread as of the last applied atmos tick (API-046). A
+  pending gas hotspot, whose block the tick hasn't seen yet, isn't in it.
+- **Ignition** (API-056) is FIRE-014's entry point: an `IGNITE` op queued like
+  a mutation, run in phase 6, its `Ignited` mapped to an `Ignition` at apply,
+  after the tick's gas fire blocks are placed. `NO_SPACE` (API-058) is the
+  engine's: a flammable zone at the position or a neighbour, none of whose
+  candidate blocks is plain air without a hotspot or a recent refusal.
+- **Extinguishing** (API-057) is done on the server thread at once, by
+  `FireIntents.extinguish`, with the in-flight guard of §5. The box is capped
+  at `Fires.MAX_EXTINGUISH_BLOCKS` (16³) so a call stays cheap.
+- **Events** (API-031) are per zone, not per hotspot: the engine compares the
+  zones burning before and after each tick. A merge or split that carries a
+  fire into a zone with another id ends the old zone's fire and starts the new
+  one's in the same tick. A rejected zone's events are dropped and come again
+  when the work is redone (§3.3).
+- **Without ZAS³** the fallback finds no hotspots, completes an ignition with
+  `ABSENT` at once and puts out nothing.
 
 ## 7. Mixin inventory
 
@@ -2443,9 +2477,8 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   face is in that block's cell, and a box around it would reach behind a
   one-block wall. Where the line meets a block, the 3 × 3 × 3 cells around the one
   in front of the face it meets join the spray, so a fire on a floor or wall
-  the user aims at goes out. Each box goes to `Fires.extinguish` (zas-api's
-  `fire` package; until that is on main, a stand-in with the same signature in
-  `tool`), which removes the gas fires and vanilla fire blocks in it; the
+  the user aims at goes out. Each box goes to zas-api's `Fires.extinguish`
+  (API-057), which removes the gas fires and vanilla fire blocks in it; the
   engine drops a removed gas fire's hotspot at its next tick.
 - **Sound.** Each spray plays vanilla's `block.fire.extinguish` quietly at the
   user, with a high pitch; a spray that put something out also plays it as

@@ -1,7 +1,7 @@
 package io.github.west3436.zas.ignition;
 
+import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.mutation.SourceId;
-import io.github.west3436.zas.simulation.AtmosService;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -25,9 +25,10 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The one-off ignition sources (FIRE-014, FIRE-015): each, when it happens, asks the engine to
- * ignite the mixture at its position or a neighbouring cell of its zone. The engine decides whether
- * there is anything flammable there; nothing here reads gas.
+ * The one-off ignition sources (FIRE-014, FIRE-015): each, when it happens, asks the engine
+ * through {@link Fires#ignite} (API-056) to ignite the mixture at its position or a neighbouring
+ * cell of its zone. The engine decides whether there is anything flammable there; nothing here
+ * reads gas.
  *
  * <ul>
  *   <li><b>Item use</b> ({@code item_use}, flint and steel): the item used on a block, once the
@@ -102,12 +103,8 @@ public final class IgnitionEvents {
         if (watcher != null) {
             watcher.accept(new Strike(level, at, source));
         }
-        AtmosService service = AtmosService.current();
-        if (service == null) {
-            waiting.remove(key);
-            return;
-        }
-        service.ignite(level, at, new SourceId(source)).whenComplete((r, e) -> {
+        // Completes at once, and so frees the position at once, if no atmos service is running.
+        Fires.ignite(level, at, new SourceId(source)).whenComplete((r, e) -> {
             Set<Long> s = IN_FLIGHT.get(level);
             if (s != null) {
                 s.remove(key);

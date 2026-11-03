@@ -143,6 +143,37 @@ ZonePins.unpin(level, owner);
   server thread at the next atmos tick. Pins are saved with their zone.
 - **Without ZAS³** a pin completes at once with `ABSENT`.
 
+## Fire
+
+A fire in a zone burns as hotspots, one per block: a vanilla fire block in the
+zone, or a `zas:gas_fire` block in mid-air (FIRE-018, FIRE-019). Each burns the
+zone's flammable gas. `Fires` finds them, starts them and puts them out
+(API-055 to API-058, Draft until the owner's review).
+
+```java
+// Ignite the gas at a block, say from your igniter (server thread):
+Fires.ignite(level, pos, SourceId.of("mymod", "igniter")).thenAccept(ignition -> {
+    // ignition.outcome(): IGNITED or BURNING (ignition.hotspot() is the fire),
+    // NOT_FLAMMABLE, NO_SPACE, OPEN, PAUSED or ABSENT
+});
+// Put out every fire in a box of up to 4,096 blocks, now (server thread):
+int removed = Fires.extinguish(level, pos.offset(-1, -1, -1), pos.offset(1, 1, 1));
+// Ask, from any thread:
+boolean burning = Fires.isBurning(level, zone);
+```
+
+- **An ignition** tries the block, then its six neighbours, and starts a fire
+  at the first that is plain air in a zone whose gas will burn. `NO_SPACE`
+  means the zone would burn but none of them is plain air.
+- **Putting out** a fire leaves the gas, so a fire nearby can spread back and
+  a zone hot enough lights again by itself.
+- **Events:** `FireIgnitedEvent` when a zone's first hotspot appears and
+  `FireExtinguishedEvent` when its last goes, on the server thread, once per
+  zone (API-031). A new gas fire's zone catches fire the atmos tick after the
+  ignition.
+- **Without ZAS³** there are no hotspots, an ignition completes at once with
+  `ABSENT` and `extinguish` removes nothing.
+
 ## Versioning and the compatibility check
 
 The API has its own semver, separate from the mod version (API-002). `check`,
