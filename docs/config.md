@@ -55,6 +55,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). The fuel generator doesn't use the air (CONT-067) |
 | `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030) |
 | `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
+| `[fire] spread_chance` | `0.3` | The chance per second, 0 to 1, that a gas fire spreads to each neighbouring cell of its zone that is air and whose gas can burn (FIRE-016) |
 | `[protection] head_coverage`, `chest_coverage`, `legs_coverage`, `feet_coverage` | `0.3`, `0.4`, `0.2`, `0.1` | The share of the body each armor slot covers, 0 to 1 (LIFE-024). Worn pieces rated for the pressure or temperature add up their slots' shares to the coverage c: (1 − c⁵) of the pressure difference from 1 atm and (1 − c) of temperature damage still reach the wearer (LIFE-020, LIFE-025). The defaults add up to 1 |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |

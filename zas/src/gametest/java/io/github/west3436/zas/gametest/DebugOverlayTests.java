@@ -475,16 +475,41 @@ public final class DebugOverlayTests {
     }
 
     /**
-     * The hotspot layer is carried, but nothing makes hotspots before fire (R1), so it is empty
+     * The hotspot layer marks each hotspot with its zone's temperature: a vanilla fire in a zone is
+     * one (FIRE-019). Without fire the layer is empty, and other layers carry no hotspots
      * (CLIENT-013).
      */
-    @GameTest(template = "empty")
-    public static void client_013_hotspot_layer_empty_before_fire(GameTestHelper h) {
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void client_013_hotspot_layer_marks_hotspots(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
         BlockPos o = area(5);
-        DebugOverlayPayload p = roundTrip(DebugOverlay.build(h.getLevel(), o, o, DebugLayer.HOTSPOTS.bit()));
-        h.assertTrue(p.has(DebugLayer.HOTSPOTS), "the hotspot layer is off");
-        h.assertTrue(p.hotspots().isEmpty(), "hotspots without fire: " + p.hotspots());
-        h.assertTrue(p.probe().isEmpty(), "probe sent without its layer");
+        shell(level, o, o.offset(4, 4, 4));
+        BlockPos fire = o.offset(2, 1, 2);
+        zoneWith(h, fire.above(), 1100, "client_013");
+        watch(h, fire);
+        try {
+            DebugOverlayPayload none = roundTrip(DebugOverlay.build(level, fire, fire, DebugLayer.HOTSPOTS.bit()));
+            h.assertTrue(none.has(DebugLayer.HOTSPOTS), "the hotspot layer is off");
+            h.assertTrue(none.hotspots().isEmpty(), "hotspots without fire: " + none.hotspots());
+            h.assertTrue(none.probe().isEmpty(), "probe sent without its layer");
+            level.setBlockAndUpdate(fire, Blocks.FIRE.defaultBlockState());
+            tick(h);
+            tick(h);
+            DebugOverlayPayload p = roundTrip(DebugOverlay.build(level, fire, fire, DebugLayer.HOTSPOTS.bit()));
+            h.assertValueEqual(p.hotspots().size(), 1, "hotspots");
+            DebugOverlayPayload.Hotspot spot = p.hotspots().get(0);
+            h.assertValueEqual(List.of(spot.dx(), spot.dy(), spot.dz()), List.of(0, 0, 0), "where");
+            double t = Atmospheres.zoneAt(level, fire.above())
+                    .orElseThrow()
+                    .mixture()
+                    .temperature();
+            near(h, spot.temperature(), t, "its temperature");
+            DebugOverlayPayload zones = roundTrip(DebugOverlay.build(level, fire, fire, DebugLayer.ZONES.bit()));
+            h.assertTrue(zones.hotspots().isEmpty(), "hotspots sent without their layer");
+        } finally {
+            unwatch(h);
+            level.setBlockAndUpdate(fire, AIR);
+        }
         h.succeed();
     }
 }

@@ -181,7 +181,7 @@ the `fire_031_` tests in `ReactionSetTest`.*
 ## Gas fire
 
 #### FIRE-010 · Autoignition
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-03
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-03
 
 A mixture within a fuel's flammability limits shall ignite when it is above
 that fuel's autoignition temperature.
@@ -191,6 +191,10 @@ that fuel's autoignition temperature.
   points (FIRE-003).
 - **Verify:** A GameTest checks an H₂–air zone ignites at 900 K and not at 800
   K.
+
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). A zone with no hotspot whose gas is
+flammable at or above a fuel's autoignition point starts a gas fire at its lowest
+free position. `fire_010_hydrogen_autoignites_at_900_k_not_800_k` checks it.*
 
 #### FIRE-014 · Ignition sources
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-03, D-49
@@ -215,7 +219,7 @@ by default.
   redstone doesn't ignite by default.
 
 #### FIRE-011 · Hotspot burn rate
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-03, D-20
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-03, D-20
 
 A hotspot shall burn a parcel of its zone's gas of 0.375 cell volumes per
 second (ZAS's 0.75 per 2 s).
@@ -225,8 +229,13 @@ second (ZAS's 0.75 per 2 s).
 - **Verify:** A Unit test checks the parcel size; a GameTest checks a
   hotspot's fuel use per second.
 
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). Each hotspot burns
+`ReactionSet.PARCEL_LITRES_PER_SECOND` (375 L) of its zone per second with the
+server's reactions. `HotspotTest.fire_011_*` checks the parcel and
+`fire_011_hotspot_burns_375_litres_a_second` the fuel used.*
+
 #### FIRE-016 · Hotspot spread
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-03
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-03
 
 A hotspot shall spread to adjacent combustible cells with a configurable
 per-second probability.
@@ -236,8 +245,13 @@ per-second probability.
 - **Verify:** A GameTest runs many trials and checks the spread rate matches
   the configured probability.
 
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). `[fire] spread_chance` (default 0.3)
+is the chance per second for each open neighbouring cell that is air and whose gas
+can burn; draws are seeded per dimension (§3.5).
+`fire_016_spread_matches_the_configured_chance` checks 400 trials.*
+
 #### FIRE-017 · Hotspots go out
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-04
 
 A hotspot shall go out when its cell fails the fire oxygen threshold (FIRE-030)
 or has no fuel left.
@@ -247,8 +261,13 @@ or has no fuel left.
 - **Verify:** A GameTest checks a sealed fire goes out once O₂ falls below the
   threshold (S-04), and when the fuel is used up.
 
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). A gas fire whose zone's gas can no
+longer burn, for want of O₂ (FIRE-030) or fuel, goes out and its block is
+removed; a vanilla fire is left to FIRE-020. `fire_017_gas_fire_goes_out_without_oxygen`
+and `fire_017_gas_fire_goes_out_without_fuel` check both.*
+
 #### FIRE-018 · Gas-fire block
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-49
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-49
 
 A hotspot with no vanilla fire block shall be shown as a `zas:gas_fire` block:
 no collision, emits light, and damages entities as fire does. It burns in mid
@@ -258,8 +277,12 @@ air, where vanilla fire can't survive.
 - **Verify:** A GameTest checks a mid-air hotspot shows the block, which gives
   light, has no collision and damages entities.
 
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). The engine asks for the block with
+fire intents, which the server applies only to air (architecture §5).
+`fire_018_gas_fire_burns_in_mid_air` checks it.*
+
 #### FIRE-019 · Vanilla fire in zones is a hotspot
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-49
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-49
 
 A vanilla fire block in a zone shall count as a hotspot.
 
@@ -267,8 +290,13 @@ A vanilla fire block in a zone shall count as a hotspot.
 - **Verify:** A GameTest checks a vanilla fire in a zone burns zone gas as a
   hotspot.
 
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). Fire blocks carry a geometry flag, so
+the engine sees them through the change hook, with no FireBlock mixin. A vanilla
+fire burns the zone's flammable gas as a hotspot; the carbon of what it burns on
+is FIRE-022's (`Burners`). `fire_019_vanilla_fire_burns_zone_gas` checks it.*
+
 #### FIRE-013 · Fire damage
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 Entities in a hotspot shall be damaged and set alight as vanilla fire does.
 
@@ -277,6 +305,10 @@ Entities in a hotspot shall be damaged and set alight as vanilla fire does.
   players expect.
 - **Verify:** A GameTest checks an entity in a hotspot is damaged and set
   alight.
+
+*2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). `zas:gas_fire` hurts and sets alight
+as vanilla fire does, and is in `#minecraft:fire`; a vanilla fire is vanilla's
+own. `fire_013_entity_in_gas_fire_is_hurt_and_set_alight` checks it.*
 
 #### FIRE-012 · Rapid combustion
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; S-03 only needs the burn to raise pressure), 2026-10-30. · Verify: GameTest

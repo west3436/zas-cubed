@@ -56,7 +56,7 @@ public record ProfileReport(
      * @param zones zones
      * @param edges edges between zones and to the ambient
      * @param activeEdges edges that aren't sleeping (CORE-033)
-     * @param hotspots hotspots; always 0 until fire lands (R1)
+     * @param hotspots hotspots, pending ones included (FIRE-010 to FIRE-019)
      * @param pendingClassifications operations waiting for classification (GEO-028)
      * @param pausedZones paused zones (GEO-030)
      * @param mirroredSections sections in the worker's mirror (architecture §4.3)
@@ -124,7 +124,7 @@ public record ProfileReport(
                             engine.graph().zoneCount(),
                             edges,
                             active,
-                            0,
+                            engine.hotspotCount(),
                             engine.bufferedOps().size(),
                             pausedZones,
                             engine.mirror().size());
