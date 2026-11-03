@@ -1,0 +1,5 @@
+{
+  "blocks": ["#minecraft:fire"],
+  "burning_on": ["#zas_gametest:fire_022_fuel"],
+  "watts": 20000
+}

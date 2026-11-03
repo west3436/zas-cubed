@@ -1651,7 +1651,7 @@ bucket), which the one slot has nowhere to put. A coal block burns for 800 s and
 a stick for 5 s (`cont_066_generator_burns_any_furnace_fuel_by_its_burn_time`).*
 
 #### CONT-067 · Generator is a lit fuel block
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
 
 The generator shall count as a lit fuel-burning block for FIRE-021, FIRE-024,
 FIRE-025 and HEAT-007.
@@ -1674,6 +1674,12 @@ Normal triggers (CORE-055).*
 ([#52](https://github.com/west3436/zas-cubed/issues/52)), and `core_056_lit_generator_forms_a_zone_under_hardcore` checks it
 forms a zone under Hardcore and not under Normal. This stays Accepted until
 FIRE-021 and HEAT-007 make lit fuel blocks use O₂, emit CO₂ and heat.*
+
+*2026-11-03: Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)). `zas_atmos` ships the generator's 10 kW
+profile (`data/zas_atmos/zas/fuel_profile/generator.json`), and the framework
+burns it as any lit fuel block. Checked by
+`cont_067_running_generator_uses_o2_and_makes_co2_and_heat` and
+`core_056_lit_generator_forms_a_zone_under_hardcore`.*
 
 #### CONT-062 · Controller power buffer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-34, D-68

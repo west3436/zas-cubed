@@ -162,6 +162,59 @@ public final class GeneratorTests {
         }
     }
 
+    /**
+     * A running generator in a zone burns its fuel profile, 10 kW of carbon (FIRE-025): in 10 s it
+     * uses 0.254 mol of O₂, makes as much CO₂ and adds 100 kJ of heat (CONT-067, FIRE-021,
+     * HEAT-007). Conduction is off, so the temperature moves only by what burns.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_controller")
+    public static void cont_067_running_generator_uses_o2_and_makes_co2_and_heat(GameTestHelper h) {
+        Site s = new Site(h, 60);
+        ZasServerConfig.overrideHeatForTest(io.github.west3436.zas.engine.heat.HeatSettings.OFF);
+        try {
+            s.clear();
+            s.room(0, 4);
+            GeneratorBlockEntity g = generator(s, 2, 1, 2);
+            // Forms the room's zone, which takes in the ambient air, with some more O2.
+            s.settle(io.github.west3436.zas.api.mutation.GasMutations.add(
+                    s.level,
+                    s.point(2, 2, 2),
+                    new io.github.west3436.zas.api.gas.GasParcel(
+                            java.util.Map.of(io.github.west3436.zas.api.gas.StandardAir.OXYGEN, 10.0), 293.15),
+                    Site.SOURCE));
+            g.fuel().insertItem(0, new ItemStack(Items.COAL), false);
+            g.serverTick();
+            h.assertTrue(lit(s), "unlit with coal in it");
+            var before = s.zone(2, 2, 2);
+            var sent = io.github.west3436.zas.fire.Burners.burn(s.level, 10, p -> p.equals(s.abs(2, 1, 2)));
+            var burn = sent.get(before.id().value());
+            h.assertTrue(burn != null, "the generator didn't burn in its zone");
+            s.settle(burn);
+            s.tick();
+            var after = s.zone(2, 2, 2);
+            double carbon = 10_000.0 * 10 / 394_000;
+            var co2 = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+            s.close(
+                    before.mixture().moles(io.github.west3436.zas.api.gas.StandardAir.OXYGEN)
+                            - after.mixture().moles(io.github.west3436.zas.api.gas.StandardAir.OXYGEN),
+                    carbon,
+                    1e-9,
+                    "O2 used");
+            s.close(after.mixture().moles(co2) - before.mixture().moles(co2), carbon, 1e-9, "CO2 made");
+            double c = io.github.west3436.zas.api.gas.GasProperties.heatCapacity(
+                    after.mixture().moles());
+            s.close(
+                    after.mixture().temperature() - before.mixture().temperature(),
+                    100_000 / c,
+                    1e-6,
+                    "temperature rise");
+            h.succeed();
+        } finally {
+            ZasServerConfig.overrideHeatForTest(null);
+            s.clear();
+        }
+    }
+
     private static boolean lit(Site s) {
         BlockState state = s.level.getBlockState(s.abs(2, 1, 2));
         return state.is(AtmosBlocks.GENERATOR.get()) && state.getValue(GeneratorBlock.LIT);

@@ -369,6 +369,61 @@ data/<namespace>/zas/thermal/<path>.json
   `/reload`. Heat data is part of a block's geometry, so a change rebuilds the
   zones as a geometry change does.
 
+## Fuel profiles
+
+How hard each fuel-burning block burns (FIRE-025). The blocks that burn are
+those in `#zas:combustion` ([Block tags](#block-tags)), and a profile gives
+their power:
+
+```
+data/<namespace>/zas/fuel_profile/<path>.json
+```
+
+```json
+{
+  "blocks": ["minecraft:furnace", "minecraft:smoker", "#minecraft:campfires"],
+  "watts": 5000
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `watts` | number | yes | The power, in W, 0 to 10,000,000 |
+| `burning_on` | list of strings | no | For fire: block ids or `#` tags of the block the fire burns on. The profile applies only to a fire burning on one of them (FIRE-022) |
+
+- **Burned as carbon.** A block burns `watts` as carbon, C + O₂ → CO₂ at 394
+  kJ/mol, so 5 kW uses about 0.0127 mol of O₂ a second and makes as much
+  CO₂. It also adds its power to its zone as heat (HEAT-007). Below an O₂
+  fraction of 0.18 part of the carbon forms CO instead, all of it at the fire
+  threshold, with less heat (FIRE-005,
+  [config](config.md#server-zas-servertoml)).
+- **Where.** Only in a zone. A burning block outside zones changes nothing. A
+  block below the fire oxygen threshold (FIRE-030) doesn't burn: a fire goes
+  out, a furnace pauses and a campfire goes out.
+- **Which profile.** A profile whose `burning_on` matches beats one without.
+  Then a profile naming the block directly beats one matching it through a
+  tag, and between equals the file whose id sorts last wins. A fire burns on
+  the block below it, or, with air below, the first flammable block next to
+  it.
+- **Shipped profiles,** in `data/zas/zas/fuel_profile/`:
+
+  | File | Blocks | Power |
+  |---|---|---|
+  | `furnace.json` | furnace, smoker, `#minecraft:campfires` | 5 kW |
+  | `blast_furnace.json` | blast furnace | 10 kW |
+  | `fire.json` | `#minecraft:fire` | 10 kW |
+
+  `zas_atmos` ships `data/zas_atmos/zas/fuel_profile/generator.json`: the
+  fuel generator, 10 kW.
+- **A modded fuel block** needs both: a place in `#zas:combustion` with a
+  boolean `lit` property, and a profile. A block in the tag without a profile
+  forms zones under Hardcore but uses no O₂.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** profiles load when the server starts and reload with
+  `/reload`.
+
 ## Zone boundaries
 
 Blocks in the block tag `zas:zone_boundary` pass gas but keep the zones on
@@ -410,7 +465,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
-| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns |
+| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
