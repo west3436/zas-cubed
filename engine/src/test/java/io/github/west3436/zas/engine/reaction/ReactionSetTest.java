@@ -138,11 +138,21 @@ class ReactionSetTest {
 
     @Test
     void fire_001_a_fuel_outside_its_flammability_limits_does_not_burn() {
-        assertFalse(COMBUSTION.burn(fuelInAir(1000, 293.15, H2, 0.03), 1000, true, FIRE).reacted());
-        assertFalse(COMBUSTION.burn(fuelInAir(1000, 293.15, H2, 0.80), 1000, true, FIRE).reacted());
-        assertFalse(COMBUSTION.flammability(fuelInAir(1000, 293.15, H2, 0.03), FIRE).flammable());
-        assertTrue(COMBUSTION.burn(fuelInAir(1000, 293.15, H2, 0.04), 1000, true, FIRE).reacted());
-        assertTrue(COMBUSTION.burn(fuelInAir(1000, 293.15, H2, 0.75), 1000, true, FIRE).reacted());
+        assertFalse(COMBUSTION
+                .burn(fuelInAir(1000, 293.15, H2, 0.03), 1000, true, FIRE)
+                .reacted());
+        // Above the upper limit, in pure O2 so the oxygen threshold is met.
+        assertFalse(COMBUSTION
+                .burn(mixture(1000, 293.15, H2, 0.80 * 41.6, O2, 0.20 * 41.6), 1000, true, FIRE)
+                .reacted());
+        assertFalse(
+                COMBUSTION.flammability(fuelInAir(1000, 293.15, H2, 0.03), FIRE).flammable());
+        assertTrue(COMBUSTION
+                .burn(fuelInAir(1000, 293.15, H2, 0.04), 1000, true, FIRE)
+                .reacted());
+        assertTrue(COMBUSTION
+                .burn(mixture(1000, 293.15, H2, 0.75 * 41.6, O2, 0.25 * 41.6), 1000, true, FIRE)
+                .reacted());
     }
 
     @Test
@@ -154,8 +164,8 @@ class ReactionSetTest {
 
         // Air at 30 kPa: 21 % O2 but only 6.3 kPa of it.
         GasMixture thin = fuelInAir(1000, 293.15, H2, 0.10);
-        GasMixture low = mixture(1000, 293.15, H2, thin.moles(H2) * 0.3, O2, thin.moles(O2) * 0.3, N2,
-                thin.moles(N2) * 0.3);
+        GasMixture low =
+                mixture(1000, 293.15, H2, thin.moles(H2) * 0.3, O2, thin.moles(O2) * 0.3, N2, thin.moles(N2) * 0.3);
         assertFalse(COMBUSTION.burn(low, 1000, true, FIRE).reacted());
     }
 
@@ -170,8 +180,9 @@ class ReactionSetTest {
     @Test
     void fire_001_temperature_limits() {
         ReactionSet set = Chemistry.compile(zoneWide(
-                "test:between", Map.of("zas:nitrous_oxide", 1.0), new ReactionConditions(
-                        500, 1000, List.of(), List.of(), false, Optional.empty()),
+                "test:between",
+                Map.of("zas:nitrous_oxide", 1.0),
+                new ReactionConditions(500, 1000, List.of(), List.of(), false, Optional.empty()),
                 Optional.empty()));
         assertFalse(set.react(mixture(1000, 400, N2O, 1), 1, FIRE).reacted());
         assertTrue(set.react(mixture(1000, 600, N2O, 1), 1, FIRE).reacted());
@@ -219,7 +230,9 @@ class ReactionSetTest {
     @Test
     void fire_001_a_rate_is_per_second_and_first_order() {
         ReactionSet set = Chemistry.compile(zoneWide(
-                "test:slow", Map.of("zas:nitrous_oxide", 1.0), ReactionConditions.NONE,
+                "test:slow",
+                Map.of("zas:nitrous_oxide", 1.0),
+                ReactionConditions.NONE,
                 Optional.of(ReactionRate.constant(0.1))));
         GasMixture once = mixture(1000, 300, N2O, 1);
         set.react(once, 2, FIRE);
@@ -279,45 +292,49 @@ class ReactionSetTest {
                 REGISTRY,
                 List.of(unknown, Chemistry.HYDROGEN, Chemistry.HYDROGEN),
                 (d, why) -> skipped.add(d.id() + ": " + why));
-        assertEquals(List.of("zas:hydrogen_combustion"), set.definitions().stream()
-                .map(ReactionDefinition::id)
-                .toList());
+        assertEquals(
+                List.of("zas:hydrogen_combustion"),
+                set.definitions().stream().map(ReactionDefinition::id).toList());
         assertEquals(
                 List.of(
-                        "zas:hydrogen_combustion: duplicate reaction id zas:hydrogen_combustion",
-                        "test:unknown: no such gas: test:unobtainium"),
+                        "test:unknown: no such gas: test:unobtainium",
+                        "zas:hydrogen_combustion: duplicate reaction id zas:hydrogen_combustion"),
                 skipped);
     }
 
     @Test
     void fire_001_invalid_definitions_are_rejected_naming_the_field() {
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ReactionDefinition.standard(
-                "test:negative",
-                Map.of("zas:oxygen", -1.0),
-                Map.of(),
-                0,
-                ReactionConditions.NONE,
-                Optional.empty(),
-                Optional.empty()));
+        IllegalArgumentException e = assertThrows(
+                IllegalArgumentException.class,
+                () -> ReactionDefinition.standard(
+                        "test:negative",
+                        Map.of("zas:oxygen", -1.0),
+                        Map.of(),
+                        0,
+                        ReactionConditions.NONE,
+                        Optional.empty(),
+                        Optional.empty()));
         assertTrue(e.getMessage().startsWith("reactants:"), e.getMessage());
-        e = assertThrows(IllegalArgumentException.class, () -> ReactionDefinition.standard(
-                "test:ignited_rate",
-                Map.of("zas:hydrogen", 1.0),
-                Map.of(),
-                0,
-                ReactionConditions.combustion(new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.1, 0.5,
-                        Double.POSITIVE_INFINITY)),
-                Optional.of(ReactionRate.constant(1)),
-                Optional.empty()));
+        e = assertThrows(
+                IllegalArgumentException.class,
+                () -> ReactionDefinition.standard(
+                        "test:ignited_rate",
+                        Map.of("zas:hydrogen", 1.0),
+                        Map.of(),
+                        0,
+                        ReactionConditions.combustion(new ReactionConditions.FlammabilityLimits(
+                                "zas:hydrogen", 0.1, 0.5, Double.POSITIVE_INFINITY)),
+                        Optional.of(ReactionRate.constant(1)),
+                        Optional.empty()));
         assertTrue(e.getMessage().startsWith("rate:"), e.getMessage());
-        assertThrows(IllegalArgumentException.class, () -> new ReactionConditions.FlammabilityLimits(
-                "zas:hydrogen", 0.5, 0.4, 800));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.5, 0.4, 800));
     }
 
     @Test
     void fire_001_a_mixture_of_other_gases_is_refused() {
-        GasMixture other = new GasMixture(
-                io.github.west3436.zas.engine.gas.GasRegistry.EMPTY, 1000, 300);
+        GasMixture other = new GasMixture(io.github.west3436.zas.engine.gas.GasRegistry.EMPTY, 1000, 300);
         assertThrows(IllegalArgumentException.class, () -> COMBUSTION.burn(other, 1000, true, FIRE));
     }
 
@@ -387,7 +404,7 @@ class ReactionSetTest {
 
     private static ReactionDefinition zoneWide(
             String id, Map<String, Double> reactants, ReactionConditions conditions, Optional<ReactionRate> rate) {
-        return ReactionDefinition.standard(id, reactants, Map.of("zas:nitrogen", 1.0), 0, conditions, rate,
-                Optional.empty());
+        return ReactionDefinition.standard(
+                id, reactants, Map.of("zas:nitrogen", 1.0), 0, conditions, rate, Optional.empty());
     }
 }

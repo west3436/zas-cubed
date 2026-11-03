@@ -47,7 +47,8 @@ final class ReactionLoader extends SimpleJsonResourceReloadListener {
         try {
             var result = ReactionCodecs.Body.CODEC.parse(JsonOps.INSTANCE, json);
             if (result.error().isPresent()) {
-                DatapackErrors.skip(KIND, ReactionCodecs.DIRECTORY, id, result.error().get().message());
+                DatapackErrors.skip(
+                        KIND, ReactionCodecs.DIRECTORY, id, result.error().get().message());
                 return Optional.empty();
             }
             ReactionCodecs.Body body = result.getOrThrow();

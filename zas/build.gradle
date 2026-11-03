@@ -43,7 +43,23 @@ tasks.matching { it.name == 'runGameTestServer' }.configureEach {
     }
 }
 
+// Unit tests of the mod's pure logic, such as datapack formats (FIRE-001). Minecraft's classes are
+// on the test classpath, but the game is never bootstrapped.
+neoForge {
+    addModdingDependenciesTo(sourceSets.test)
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped datapack, which tests read as files.
+    systemProperty 'zas.resources', file('src/main/resources').absolutePath
+}
+
 dependencies {
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     implementation project(':engine')
     implementation project(':compat-adastra')
     implementation project(':zas-api')

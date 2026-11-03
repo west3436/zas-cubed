@@ -41,8 +41,7 @@ public record ReactionConditions(
                     "min_temperature: must be finite and not negative, got " + minTemperature);
         }
         if (!(maxTemperature > minTemperature)) {
-            throw new IllegalArgumentException(
-                    "max_temperature: must be above min_temperature, got " + maxTemperature);
+            throw new IllegalArgumentException("max_temperature: must be above min_temperature, got " + maxTemperature);
         }
     }
 

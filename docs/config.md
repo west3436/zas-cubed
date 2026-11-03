@@ -52,6 +52,9 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
 | `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
 | `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
+| `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces, campfires and the fuel generator (FIRE-030) |
+| `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030) |
+| `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
 | `[protection] head_coverage`, `chest_coverage`, `legs_coverage`, `feet_coverage` | `0.3`, `0.4`, `0.2`, `0.1` | The share of the body each armor slot covers, 0 to 1 (LIFE-024). Worn pieces rated for the pressure or temperature add up their slots' shares to the coverage c: (1 − c⁵) of the pressure difference from 1 atm and (1 − c) of temperature damage still reach the wearer (LIFE-020, LIFE-025). The defaults add up to 1 |
 | `[commands] permission_level` | `2` | The permission level every `/zas` command needs, 0 to 4 (OPS-011) |
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
@@ -65,7 +68,8 @@ atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
 finds every wall's paths again), the thread mode when a dimension's simulation
 starts, `[breathing]`, `[hazards]` and `[protection]` from each entity's next
 check, `[airflow]` from the next game tick (which differences the engine
-reports, from the next atmos tick), and `[commands]` and `[profiling]` at once.
+reports, from the next atmos tick), `[fire]` from the next check (for gas
+fires, the next atmos tick), and `[commands]` and `[profiling]` at once.
 OPS-016's guarantee that every server
 setting applies without a restart is R1.
 

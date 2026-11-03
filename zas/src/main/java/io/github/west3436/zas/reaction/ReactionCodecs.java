@@ -39,21 +39,19 @@ public final class ReactionCodecs {
 
     private static final Codec<Map<String, Double>> COEFFICIENTS = Codec.unboundedMap(Codec.STRING, Codec.DOUBLE);
 
-    private static final Codec<ReactionConditions.Concentration> CONCENTRATION =
-            RecordCodecBuilder.create(i -> i.group(
-                            DatapackErrors.field(Codec.STRING, "gas").forGetter(ReactionConditions.Concentration::gas),
-                            DatapackErrors.optionalField(Codec.DOUBLE, "min", 0.0)
-                                    .forGetter(ReactionConditions.Concentration::min),
-                            DatapackErrors.optionalField(Codec.DOUBLE, "max", 1.0)
-                                    .forGetter(ReactionConditions.Concentration::max))
-                    .apply(i, ReactionConditions.Concentration::new));
+    private static final Codec<ReactionConditions.Concentration> CONCENTRATION = RecordCodecBuilder.create(i -> i.group(
+                    DatapackErrors.field(Codec.STRING, "gas").forGetter(ReactionConditions.Concentration::gas),
+                    DatapackErrors.optionalField(Codec.DOUBLE, "min", 0.0)
+                            .forGetter(ReactionConditions.Concentration::min),
+                    DatapackErrors.optionalField(Codec.DOUBLE, "max", 1.0)
+                            .forGetter(ReactionConditions.Concentration::max))
+            .apply(i, ReactionConditions.Concentration::new));
 
-    private static final Codec<ReactionConditions.Concentration> CATALYST =
-            RecordCodecBuilder.create(i -> i.group(
-                            DatapackErrors.field(Codec.STRING, "gas").forGetter(ReactionConditions.Concentration::gas),
-                            DatapackErrors.optionalField(Codec.DOUBLE, "min", 0.0)
-                                    .forGetter(ReactionConditions.Concentration::min))
-                    .apply(i, (gas, min) -> new ReactionConditions.Concentration(gas, min, 1)));
+    private static final Codec<ReactionConditions.Concentration> CATALYST = RecordCodecBuilder.create(i -> i.group(
+                    DatapackErrors.field(Codec.STRING, "gas").forGetter(ReactionConditions.Concentration::gas),
+                    DatapackErrors.optionalField(Codec.DOUBLE, "min", 0.0)
+                            .forGetter(ReactionConditions.Concentration::min))
+            .apply(i, (gas, min) -> new ReactionConditions.Concentration(gas, min, 1)));
 
     private static final Codec<ReactionConditions.FlammabilityLimits> FLAMMABILITY =
             RecordCodecBuilder.create(i -> i.group(
@@ -75,15 +73,14 @@ public final class ReactionCodecs {
                             .forGetter(ReactionRate::referenceTemperature))
             .apply(i, ReactionRate::new));
 
-    private static final Codec<ReactionDefinition.Stoichiometry> STOICHIOMETRY =
-            RecordCodecBuilder.create(i -> i.group(
-                            DatapackErrors.field(COEFFICIENTS, "reactants")
-                                    .forGetter(ReactionDefinition.Stoichiometry::reactants),
-                            DatapackErrors.field(COEFFICIENTS, "products")
-                                    .forGetter(ReactionDefinition.Stoichiometry::products),
-                            DatapackErrors.field(Codec.DOUBLE, "enthalpy")
-                                    .forGetter(ReactionDefinition.Stoichiometry::enthalpy))
-                    .apply(i, ReactionDefinition.Stoichiometry::new));
+    private static final Codec<ReactionDefinition.Stoichiometry> STOICHIOMETRY = RecordCodecBuilder.create(i -> i.group(
+                    DatapackErrors.field(COEFFICIENTS, "reactants")
+                            .forGetter(ReactionDefinition.Stoichiometry::reactants),
+                    DatapackErrors.field(COEFFICIENTS, "products")
+                            .forGetter(ReactionDefinition.Stoichiometry::products),
+                    DatapackErrors.field(Codec.DOUBLE, "enthalpy")
+                            .forGetter(ReactionDefinition.Stoichiometry::enthalpy))
+            .apply(i, ReactionDefinition.Stoichiometry::new));
 
     /**
      * A definition file's content; the id comes from the file's path. The nested objects are built
@@ -124,7 +121,8 @@ public final class ReactionCodecs {
                                 .forGetter(Body::catalysts),
                         DatapackErrors.optionalField(Codec.BOOL, "requires_ignition", false)
                                 .forGetter(Body::requiresIgnition),
-                        DatapackErrors.optionalField(FLAMMABILITY, "flammability").forGetter(Body::flammability),
+                        DatapackErrors.optionalField(FLAMMABILITY, "flammability")
+                                .forGetter(Body::flammability),
                         DatapackErrors.optionalField(RATE, "rate").forGetter(Body::rate),
                         DatapackErrors.optionalField(STOICHIOMETRY, "incomplete_combustion")
                                 .forGetter(Body::incomplete),

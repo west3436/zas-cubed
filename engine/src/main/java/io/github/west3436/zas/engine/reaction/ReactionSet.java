@@ -50,6 +50,7 @@ public final class ReactionSet {
     private final Compiled[] zoneWide;
     /** Reactions that need ignition, in id order. */
     private final Compiled[] ignited;
+
     private final int oxygen;
 
     private ReactionSet(GasRegistry registry, List<Compiled> compiled) {
@@ -192,7 +193,12 @@ public final class ReactionSet {
     private static final int NO = 2;
 
     private ReactionResult step(
-            GasMixture mixture, Compiled[] reactions, double share, double seconds, boolean ignition, FireSettings fire) {
+            GasMixture mixture,
+            Compiled[] reactions,
+            double share,
+            double seconds,
+            boolean ignition,
+            FireSettings fire) {
         int n = registry.size();
         double temperature = mixture.temperature();
         int fireOk = UNKNOWN;
@@ -280,8 +286,7 @@ public final class ReactionSet {
         return new ReactionResult(delta, heat, active.size());
     }
 
-    private Active standardStep(
-            Compiled c, GasMixture mixture, double[] available, double seconds, FireSettings fire) {
+    private Active standardStep(Compiled c, GasMixture mixture, double[] available, double seconds, FireSettings fire) {
         double[] nu = c.nu;
         double[] mu = c.mu;
         double heat = c.heat;
@@ -309,13 +314,7 @@ public final class ReactionSet {
         CodeReaction.Change change;
         try {
             change = c.code.compute(new CodeReaction.Input(
-                    registry,
-                    moles,
-                    available.clone(),
-                    mixture.temperature(),
-                    mixture.volume(),
-                    seconds,
-                    ignition));
+                    registry, moles, available.clone(), mixture.temperature(), mixture.volume(), seconds, ignition));
         } catch (RuntimeException | LinkageError e) {
             c.fail(mixture, "threw " + e);
             return null;
@@ -344,8 +343,10 @@ public final class ReactionSet {
                     + " for " + n + " gases";
         }
         for (int i = 0; i < n; i++) {
-            if (!(change.consumed()[i] >= 0) || !(change.produced()[i] >= 0)
-                    || !Double.isFinite(change.consumed()[i]) || !Double.isFinite(change.produced()[i])) {
+            if (!(change.consumed()[i] >= 0)
+                    || !(change.produced()[i] >= 0)
+                    || !Double.isFinite(change.consumed()[i])
+                    || !Double.isFinite(change.produced()[i])) {
                 return "returned a negative or non-finite amount";
             }
         }
@@ -391,11 +392,13 @@ public final class ReactionSet {
         final double[] mu;
         /** J released per mol of extent. */
         final double heat;
+
         final double[] nuIncomplete;
         final double[] muIncomplete;
         final double heatIncomplete;
         /** Reactant indices, for a quick test that every reactant is there. */
         final int[] reactants;
+
         final boolean fire;
         final int fuel;
         final double lower;
@@ -430,14 +433,10 @@ public final class ReactionSet {
                     .toArray();
             ReactionConditions cond = def.conditions();
             this.fire = cond.flammability().isPresent();
-            this.fuel = cond.flammability()
-                    .map(f -> registry.indexOf(f.fuel()))
-                    .orElse(-1);
+            this.fuel = cond.flammability().map(f -> registry.indexOf(f.fuel())).orElse(-1);
             this.lower = cond.flammability().map(f -> f.lower()).orElse(0.0);
             this.upper = cond.flammability().map(f -> f.upper()).orElse(1.0);
-            this.autoignition = cond.flammability()
-                    .map(f -> f.autoignition())
-                    .orElse(Double.POSITIVE_INFINITY);
+            this.autoignition = cond.flammability().map(f -> f.autoignition()).orElse(Double.POSITIVE_INFINITY);
             this.concentrationGas = cond.concentrations().stream()
                     .mapToInt(c -> registry.indexOf(c.gas()))
                     .toArray();
