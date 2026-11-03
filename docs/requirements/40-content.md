@@ -1372,7 +1372,7 @@ firelock. `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
 (GameTest).*
 
 #### CONT-044 · Fire alarm
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, FIRE-019
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, FIRE-019
 
 A fire alarm shall raise danger 2 for its zone when a hotspot is in its zone
 or the zone exceeds 473 K.
@@ -1391,6 +1391,10 @@ reading, with CONT-046's fall-off. Checked by
 `cont_044_fire_alarm_raises_danger_2_above_473_k` and
 `cont_044_an_unpowered_fire_alarm_does_nothing`. This stays Accepted until the
 hotspot half has its GameTest, which needs the hotspots' API (FIRE-019).*
+
+*2026-11-03: Implemented. With the fire API on main (API-055),
+`cont_044_fire_alarm_raises_danger_2_for_a_hotspot` checks a vanilla fire in a
+room well below 473 K trips the alarm and raises its controller to danger 2.*
 
 #### CONT-045 · Thermostat
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and freezer cover it), 2026-10-30. · Verify: GameTest

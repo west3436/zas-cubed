@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -18,6 +19,7 @@ import java.util.Map;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -123,6 +125,44 @@ public final class FireAlarmTests {
             s.cycle(c, alarm);
             h.assertFalse(c.fire(), "the controller still sees a fire");
             h.assertValueEqual(c.danger(), 0, "the controller after 10 lower readings");
+        });
+    }
+
+    /**
+     * A powered fire alarm whose zone has a hotspot raises its controller to danger 2, though the
+     * room is far below 473 K: a vanilla fire on netherrack in room B is a hotspot (FIRE-019,
+     * {@code Fires.isBurning}). Once the fire is out the alarm stops (CONT-044).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_044_fire_alarm_raises_danger_2_for_a_hotspot(GameTestHelper h) {
+        Site s = new Site(h, 64);
+        run(h, s, () -> {
+            Rooms r = build(s);
+            AreaAirControllerBlockEntity c = r.controller();
+            FireAlarmBlockEntity alarm = r.alarm();
+            s.cycles(2, c, alarm);
+            h.assertValueEqual(c.danger(), 0, "the controller before the fire");
+
+            s.set(8, 0, 2, Blocks.NETHERRACK.defaultBlockState());
+            s.set(8, 1, 2, Blocks.FIRE.defaultBlockState());
+            s.tick();
+            var zone = s.zone(8, 2, 2);
+            h.assertTrue(Fires.isBurning(s.level, zone.id()), "the room with a fire isn't burning");
+            h.assertTrue(
+                    zone.mixture().temperature() < 400,
+                    "the room is hot: " + zone.mixture().temperature());
+            s.cycles(2, c, alarm);
+            h.assertTrue(alarm.triggered(), "the alarm didn't trip for the hotspot");
+            h.assertValueEqual(status(alarm), FireAlarmStatus.ALARM, "the alarm's model with a fire");
+            h.assertTrue(c.fire(), "the controller didn't see the alarm");
+            h.assertValueEqual(c.danger(), 2, "the controller with a fire");
+            h.assertTrue(c.alarming(), "the controller isn't alarming its firelocks");
+
+            s.set(8, 1, 2, Site.AIR);
+            s.tick();
+            h.assertFalse(Fires.isBurning(s.level, zone.id()), "the room still burns once the fire is out");
+            s.cycle(c, alarm);
+            h.assertFalse(alarm.triggered(), "the alarm still tripped once the fire is out");
         });
     }
 
