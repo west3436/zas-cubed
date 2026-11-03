@@ -622,6 +622,29 @@ public final class AirflowTests {
         h.succeed();
     }
 
+    /**
+     * A player carried towards a hole one block high in a wall, one block above the floor it
+     * stands on, crawls too, for the flow to lift it in (FLOW-019); widened to a doorway two blocks
+     * high from the floor, the hole is one it can walk through, and it doesn't.
+     */
+    @GameTest(template = "empty")
+    public static void flow_019_a_player_crawls_into_a_hole_above_the_floor(GameTestHelper h) {
+        try (Site s = new Site(h, 120)) {
+            s.breach();
+            h.assertTrue(s.difference() >= AirflowClass.MOB.threshold(), "the breach is too weak: " + s.difference());
+            BlockPos floor = s.r.abs(HOLE_X, Y - 1, Z);
+            FakePlayer below = s.standing(floor, 1.3);
+            h.assertTrue(Airflow.crawlForTest(s.r.level, below), "the player under the hole didn't crawl");
+            h.assertValueEqual(below.getPose(), Pose.SWIMMING, "the pose under the hole");
+
+            s.r.set(HOLE_X, Y - 1, Z, Rooms.AIR);
+            FakePlayer door = s.standing(floor, 1.3);
+            h.assertFalse(Airflow.crawlForTest(s.r.level, door), "the player crawled into a doorway");
+            h.assertTrue(door.getForcedPose() == null, "a forced pose at the doorway");
+        }
+        h.succeed();
+    }
+
     private static void close(GameTestHelper h, double actual, double expected, String what) {
         h.assertTrue(Math.abs(actual - expected) <= 1e-9, what + ": expected " + expected + ", got " + actual);
     }
