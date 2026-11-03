@@ -4,6 +4,7 @@ import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.flow.FlowEdge;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -113,6 +114,8 @@ public final class DimensionPipeline {
     private Map<Long, Long> generationsAtClose = Map.of();
     private long closedTick = Long.MIN_VALUE;
     private int lastBatchSections;
+    private volatile List<FlowEdge> flows = List.of();
+    private volatile long flowsTick = Long.MIN_VALUE;
 
     // Persistence (architecture §4.5).
     /** Records of chunks that loaded since the last batch. */
@@ -572,6 +575,19 @@ public final class DimensionPipeline {
     // ---- Apply --------------------------------------------------------------------
 
     /**
+     * The flow edges of the last applied atmos tick (FLOW-001): empty with airflow off. Any
+     * thread.
+     */
+    public List<FlowEdge> flows() {
+        return flows;
+    }
+
+    /** The atmos tick {@link #flows} came from, or {@link Long#MIN_VALUE} before the first. Any thread. */
+    public long flowsTick() {
+        return flowsTick;
+    }
+
+    /**
      * Collects the in-flight result, waiting for the worker if needed, checks it against the
      * world and publishes it (CORE-069, CORE-070).
      *
@@ -636,6 +652,8 @@ public final class DimensionPipeline {
         }
         nextZoneId = result.nextZoneId();
         published = snapshot;
+        flows = result.flows();
+        flowsTick = result.tick();
         // After publishing, so a reader that sees a chunk settled sees its zones.
         settling.values().removeIf(t -> t <= result.tick());
         mirrored = result.mirroredSections();

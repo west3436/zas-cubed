@@ -1,0 +1,22 @@
+{
+  "values": [
+    "minecraft:item",
+    "minecraft:experience_orb",
+    "#minecraft:arrows",
+    {
+      "id": "#minecraft:impact_projectiles",
+      "required": false
+    },
+    "minecraft:potion",
+    "minecraft:experience_bottle",
+    "minecraft:ender_pearl",
+    "minecraft:eye_of_ender",
+    "minecraft:snowball",
+    "minecraft:egg",
+    "minecraft:trident",
+    "minecraft:fishing_bobber",
+    "minecraft:llama_spit",
+    "minecraft:wind_charge",
+    "minecraft:breeze_wind_charge"
+  ]
+}

@@ -19,6 +19,15 @@ public final class Edge {
     int direct;
     boolean sleeping;
     boolean removed;
+    /** Counts changes to its connections, for the cache of {@link ZoneGraph#openings}. */
+    int version;
+    /** The cached openings, and the versions and cap they were searched at. */
+    long[][] openings;
+
+    int openingsMax;
+    int openingsVersion;
+    int openingsAVersion;
+    int openingsBVersion;
 
     /** @param b the other zone, or null for an ambient edge */
     Edge(Zone a, Zone b) {

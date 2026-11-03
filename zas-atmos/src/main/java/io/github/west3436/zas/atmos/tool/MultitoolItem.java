@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.tool;
 
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
+import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -18,12 +19,14 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The multitool links parts to an area air controller by hand (CONT-042, CONT-068): use it on a
- * controller to select it, then on a part to link it to that controller, or unlink it if it is
- * linked. Use it on nothing while sneaking to clear the selection. The selection is kept on the
- * stack, as the controller's position and dimension.
+ * controller to select it, then on a part or a firelock to link it to that controller, or unlink
+ * it if it is linked. A linked part is powered and commanded; a linked firelock closes when the
+ * controller alarms (CONT-043). Use it on nothing while sneaking to clear the selection. The
+ * selection is kept on the stack, as the controller's position and dimension.
  */
 public class MultitoolItem extends Item {
     private static final String CONTROLLER = "Controller";
@@ -42,6 +45,15 @@ public class MultitoolItem extends Item {
             if (level instanceof ServerLevel) {
                 select(context.getItemInHand(), level, context.getClickedPos());
                 tell(player, Component.translatable("item.zas_atmos.multitool.selected", pos(context.getClickedPos())));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        BlockState state = level.getBlockState(context.getClickedPos());
+        if (state.getBlock() instanceof FirelockBlock) {
+            // Either half: the firelock is its lower half (CONT-043).
+            if (level instanceof ServerLevel server) {
+                BlockPos lower = FirelockBlock.lower(state, context.getClickedPos());
+                tell(player, link(context.getItemInHand(), server, lower));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }

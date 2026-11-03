@@ -5,7 +5,8 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
-[hazard profiles](#hazard-profiles) and the [breathers tag](#breathers).
+[hazard profiles](#hazard-profiles), the [breathers tag](#breathers) and the
+[airflow class tags](#airflow-classes).
 The rest of OPS-002's list (reactions, thermal properties, fuel, protection
 data, the other entity tags) arrives with its features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
@@ -418,7 +419,8 @@ placed. A crop growing or a lit furnace turning doesn't count. The tags apply
 from the next block change after `/reload`. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
 [config.md](config.md#the-preset-and-its-options)). A mod's fuel block, such as
-`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property.
+`zas_atmos`'s generator, joins `#zas:combustion` with a `lit` property, and
+`zas_atmos`'s firelock joins `#zas:zone_boundary`.
 
 ## Hazard profiles
 
@@ -611,6 +613,37 @@ shipped file by providing the same path.
 armor piece, and the turtle shell, heat protection up to 400 K. They get no
 cold or pressure protection and no seal, so they can't be used with internals
 (LIFE-027).
+
+## Airflow classes
+
+Airflow moves an entity once the pressure difference at an opening near it
+reaches its class's threshold (FLOW-003, FLOW-011), set in the server config's
+`[airflow]` section. The class comes from four entity type tags, looked at in
+this order:
+
+```
+data/zas/tags/entity_type/airflow/immune.json   never moved
+data/zas/tags/entity_type/airflow/heavy.json    85 kPa
+data/zas/tags/entity_type/airflow/light.json    20 kPa
+data/zas/tags/entity_type/airflow/mob.json      65 kPa
+```
+
+A living entity in none of them is a mob; any other entity in none of them,
+such as a painting or a display entity, is never moved. The shipped tags:
+
+- **light:** items, XP orbs, `#minecraft:arrows`, `#minecraft:impact_projectiles`,
+  thrown potions, bottles o' enchanting, ender pearls, eyes of ender, snowballs,
+  eggs, tridents, fishing bobbers, llama spit and wind charges.
+- **mob:** players.
+- **heavy:** every minecart, boats, chest boats and armor stands.
+- **immune:** the ender dragon.
+
+Packs add to them the usual way; the tags apply from the next game tick after
+`/reload`.
+
+A worn item's `airflow_resistance` r ([Protection](#protection)) scales the
+push on its wearer by (1 − r), whatever the class: at 1 the wearer isn't moved
+(FLOW-012).
 
 ## Damage types
 

@@ -951,6 +951,9 @@ temperature, each listed gas, and all other gases combined.
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
 - **Verify:** A GameTest steps a zone's readings through each band and checks
   the danger level.
+- **Changed 2026-11-02 (the owner, reviewing the round's combined test):** a
+  breach also sends the controller to danger 2 at once, before any reading
+  reaches its bounds (CONT-043).
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
@@ -1066,7 +1069,7 @@ into the wall behind the panel, as a lever's does
 (`cont_040_danger_follows_the_readings`).*
 
 #### CONT-042 · Room model
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-68
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-68
 
 By default, an area air controller shall control the devices in its zone. The
 multitool can also link parts to it by hand, for example across a firelock.
@@ -1083,6 +1086,11 @@ point is in its zone, and the parts linked to it with the multitool, which
 `cont_068_controller_powers_its_zone_and_its_links` checks with stand-in parts
 across a stone wall. This stays Accepted until it is checked across a
 firelock (CONT-043).*
+
+*2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
+(GameTest) links a real vent in the room across a firelock: it is powered from
+the controller's buffer, follows its orders, and is listed as linked, not in
+the zone.*
 
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
@@ -1136,23 +1144,79 @@ it is in the zone, linked or both, and whether it has power. This stays
 Accepted until the manual check.*
 
 #### CONT-043 · Firelock
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02, GEO-007
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02, GEO-007
 
 A firelock shall be a zone-boundary door (tagged `zas:zone_boundary`) that
-closes when any area air controller covering either side reaches danger 2. A
-controller covers a side if its zone or its links include the cell on that
-side.
+closes when any area air controller covering it reaches danger 2. A
+controller covers a firelock if the cell on either side is in its zone, or if
+the firelock is linked to it with the multitool; linking another part doesn't
+cover that part's room. A controller shall reach danger 2 as soon as its zone
+is breached to an ambient at or below its preset's pressure min2, as space
+is, or its pressure falls fast, so that the firelocks it covers close within
+about 1 s of the breach. Opening its zone to ambient air above min2 shall not
+alarm it.
 
 - **Rationale:** vg: vg firedoors close when an alarm on either side reaches
   danger 2 ([vg
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
-- **Verify:** A GameTest raises a controller to danger 2 on each side and
-  checks the firelock closes.
+  The owner set the link rule and the breach alarm (below).
+- **Verify:** GameTests raise a controller to danger 2 on each side and check
+  the firelock closes; check a linked firelock closes and a linked part's
+  room's firelock doesn't; breach a room to a vacuum and check the firelock
+  closes in the atmos tick its controller first sees the breach; and open a
+  room to Overworld air and check nothing alarms. A Unit test checks each
+  breach rule.
+- **Changed 2026-11-02 (the owner, reviewing the round's combined test):**
+  - **A link covers only the device linked.** "This is mainly so that a
+    player may setup a controller in one room and link it to devices in
+    another room without having to access it such as a tank carrying
+    high-pressure hot gasses." A controller covers firelocks in its own zone
+    and each firelock linked to it; firelocks can be linked.
+  - **A breach alarms at once.** "The firelock was too slow to react so both
+    rooms got vented." The controller alarms on the breach, not when the
+    falling pressure reaches min2. The 5 s re-close after an opening during
+    the alarm stays.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), the standalone 1 × 2 firelock only
+(architecture §11.8). A controller covers a side if the side's cell is in its
+zone, or in the zone of a part linked to it (or, unzoned, is that part's air
+point). Its panel seals one face, which is its boundary face, so its cells
+join the room behind it. While the alarm holds, an opening by hand or with a
+crowbar closes again after 5 s, as vg's firedoors do ([vg
+§3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
+`FirelockTests` (GameTest): `cont_043_firelock_is_a_zone_boundary_on_its_panel_face`,
+`cont_043_controller_at_danger_2_on_either_side_closes_and_reopens` (a
+controller on each side in turn), `cont_043_an_opening_during_the_alarm_closes_after_5_s`
+and `cont_043_a_link_covers_the_part_s_room`.*
+
+*2026-11-02: The owner's changes are implemented:*
+
+- **Links.** The multitool links a firelock from either half (the link is its
+  lower half), and using it on a firelock doesn't open or close it. The
+  controller covers its own zone and its linked firelocks only.
+- **The breach alarm** (`BreachAlarm`). It is for presets with a pressure
+  min2, so not Vacuum. A reading is danger 2 when either holds:
+  - the zone has an edge to the ambient, and the ambient's pressure is at or
+    below min2 (81 kPa for Human). It is read at the top of the controller's
+    column; a dimension has one ambient.
+  - the pressure fell by `[controller] breach_drop_kpa` (10 kPa) since the
+    last reading, to below min1 (91 kPa for Human).
+- **Closing at once.** The controller steps the firelocks it covers in the
+  atmos tick its alarm starts, so they close then, not at their own steps.
+  That is within an atmos tick of the framework seeing the breach: at most
+  about 2 s after the block breaks, and usually 1 s.
+- **Tests.** `cont_043_a_link_covers_only_the_linked_firelock` replaces
+  `cont_043_a_link_covers_the_part_s_room`.
+  `cont_043_a_breach_to_space_closes_the_firelock_at_once` breaches a room in
+  the vacuum End: its controller alarms with the room still near 1 atm, the
+  firelock closes in that step, and the next room keeps over 95 kPa.
+  `cont_043_a_door_to_outside_air_does_not_alarm` checks the Overworld case,
+  and `BreachAlarmTest` (Unit) both rules.
+
 #### CONT-092 · Firelock reopening
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 A firelock closed by a controller shall reopen once no controller covering
 either side is at danger 2.
@@ -1164,8 +1228,14 @@ either side is at danger 2.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
+*2026-11-02: Implemented. A firelock closed by hand doesn't reopen, and one
+that is locked down (CONT-093) waits for the lockdown to end before it
+reopens, so it never opens onto a vacuum by itself.
+`cont_043_controller_at_danger_2_on_either_side_closes_and_reopens` and
+`cont_092_a_locked_down_firelock_waits_to_reopen` (GameTest).*
+
 #### CONT-093 · Firelock lockdown
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 A closed firelock shall lock down while the pressure difference across it is
 at least 25 kPa, or either side is at least 323.15 K (50 °C) or at most
@@ -1176,14 +1246,24 @@ at least 25 kPa, or either side is at least 323.15 K (50 °C) or at most
 - **Verify:** GameTests check lockdown at each threshold and that a locked
   firelock refuses to open by hand.
 
+*2026-11-02: Implemented. The warning is the locked-down model and a message
+on the action bar naming the reason. `LockdownTest` (Unit) checks each
+threshold from both sides; `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
+(GameTest) checks 24.4 and 25.1 kPa, 323 and 323.15 K and 273.15 K, and the
+refusal.*
+
 #### CONT-094 · Forcing firelocks
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 A tool shall force a firelock open, even in lockdown.
 
 - **Rationale:** vg: vg lets crew with access force firelocks; in Minecraft a
   tool stands in for access.
 - **Verify:** A GameTest checks the tool opens a locked-down firelock.
+
+*2026-11-02: Implemented. The tool is the crowbar; it also shuts an open
+firelock. `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
+(GameTest).*
 
 #### CONT-044 · Fire alarm
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, FIRE-019
@@ -1520,7 +1600,7 @@ cables push. It gives none out
 (`cont_062_buffer_fills_from_fe_blocks_next_to_it`).*
 
 #### CONT-068 · Wireless feed to parts
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-32, D-34, D-68
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-34, D-68
 
 An area air controller shall power, from its buffer, every atmospherics part
 that draws FE (CONT-065) in its zone or linked to it with the multitool
@@ -1539,6 +1619,10 @@ atmos tick at a time (architecture §11.7).
 `cont_068_controller_powers_its_zone_and_its_links` checks it with stand-in
 parts in its zone and linked across a wall. This stays Accepted until it is
 checked with real parts across a firelock.*
+
+*2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
+(GameTest) checks a real vent linked across a firelock runs from the
+controller's buffer.*
 
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68

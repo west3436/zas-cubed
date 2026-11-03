@@ -48,7 +48,9 @@ final class Harness implements AutoCloseable {
     final DimensionScheduler scheduler;
     final DimensionPipeline pipeline;
     final int periodTicks;
-    final EngineSettings settings;
+    /** The settings each batch carries; a bench may change them between steps. */
+    EngineSettings settings;
+
     private final ExecutorService pool;
     private final AtomicLong lastWorkerNanos = new AtomicLong();
     private final AtomicInteger workerRuns = new AtomicInteger();

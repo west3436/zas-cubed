@@ -1053,7 +1053,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 |---|---|---|---|
 | Hazards and breathing | published snapshot, point lookup by entity eye position (API-015), life-support capabilities | staggered per entity (LIFE-007, LIFE-033), capped per tick (LIFE-038) | LIFE, D-27, D-47 |
 | Respiration and photosynthesis | queue ops with source attribution | per breather or crop on its own cadence, aggregated per zone per atmos tick | LIFE-005, CONT-053 |
-| Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-017 |
+| Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
@@ -1115,6 +1115,40 @@ combustion and planting are read by the change hook when a trigger starts
 (§4.2, #64). Options whose feature hasn't landed are declared with the
 requirement they wait for.
 `/zas preset` shows and changes them (commands.md).
+
+*Implemented in part ([#44](https://github.com/west3436/zas-cubed/issues/44)):*
+airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009 to FLOW-011, FLOW-013,
+FLOW-014, FLOW-017). The batch carries the least difference airflow needs
+(`EngineSettings.airflowKpa`: the lowest class threshold, or infinity where
+airflow is off). After the exchange, the worker lists every awake edge at or
+above it as a `FlowEdge`, with the sides' pressures and up to 256 openings,
+each a pair of cell ids, in the `Result`. `ZoneGraph.openings` finds an edge's
+openings by scanning the smaller zone (an ambient edge's only zone) and keeps
+them on the edge until its connections or either zone's cells change, so a
+steady breach costs nothing to export. The pipeline publishes them with the
+snapshot (`DimensionPipeline.flows`). The force model is pure and in the engine
+(`engine.flow.FlowField`): openings bucketed by 16-block section, and a push
+that picks the fastest flow reaching a point and closes part of the gap to it.
+On the server (`io.github.west3436.zas.airflow.Airflow`) each game tick
+rebuilds the field when a new atmos tick lands, finds the entities in boxes
+around the sections with openings, and pushes at most `max_entities_per_tick`
+of them, in turns, each at its class's threshold, in its own zone (point
+resolution, §6.5), skipping anchored entities and unresolved atmospheres.
+Players are never pushed by the server: at each atmos tick each player near
+airflow gets an `AirflowSyncPayload` of the openings beside its zone, and the
+client pushes its own player with the same `Airflow.apply` from
+`PlayerTickEvent.Pre`; an `AirflowImpulsePayload` brings the player up to the
+flow's speed when it first takes hold (FLOW-009). An entity's airflow
+resistance r (FLOW-012, `WornProtection.airflowResistance`) scales the flow's
+speed where it is by (1 − r); a player's is worked out on the server and sent
+with its openings, as protection data isn't on the client. Creative players
+and spectators are never moved and are sent nothing (`Airflow.exempt`,
+FLOW-018). A player the flow carries towards an opening too low to stand in
+has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
+through: the server looks 1.5 blocks ahead along the flow each game tick and
+the client 1, so the server's smaller box is in place before the client's move
+into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
+aren't done.
 
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
@@ -1221,7 +1255,8 @@ client breathing sync (LIFE-023): the server sends each player its own state
   - **Sealed breathing** comes from the head slot or the entity itself
     (`WornProtection.sealedBreathing`), for internals.
   - **Airflow resistance** is the highest of the pieces' and the entity's own
-    (`WornProtection.airflowResistance`), for FLOW-012 to read.
+    (`WornProtection.airflowResistance`), which scales airflow's push
+    (FLOW-012).
   - **Gas filtering** is carried but not yet applied.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
@@ -1249,6 +1284,36 @@ client breathing sync (LIFE-023): the server sends each player its own state
   and only set the event's fields, so a lower-priority listener sees and can
   change the verdict, and a higher-priority one's `canBreathe = false` survives:
   the handler only ever sets it to false.
+
+### Atmosphere HUD
+
+*Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
+helmet and analyzer triggers of CLIENT-001 and the internals indicator
+(CLIENT-009) wait for internals and the analyzer.*
+
+- **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
+  gets none, a warning or a danger, judged on what reaches the player through
+  its protection, so a danger is where LIFE harms it: the effective pressure
+  (LIFE-020), the O₂ and each toxic gas in its breath, and the exposure
+  temperature unless its thermal protection takes all temperature damage
+  there. Pressure and temperature are signed, low and cold negative. A hazard
+  that is off in the dimension has no alert, and an exempt player none at all.
+  The level comes from `BreathingRules.assess`, the same assessment a breath
+  check makes.
+- **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
+  entity id, each player's state is worked out and sent to that player only if
+  a level, the worst toxic gas, or a shown value at its display resolution has
+  changed since the last send. A reading with no alert carries no value, so in
+  normal air nothing is sent. While the atmosphere at the eyes is unresolved
+  the last state stands. The last send is kept in an unsaved player
+  attachment, so a respawned player gets its state at once.
+- **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
+  the status effects draws one alert per reading in a column at the right edge
+  of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
+  in the client's display units, yellow for a warning, red for a danger. Danger
+  icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
+  The state is cleared on logout.
 
 ## 6. API module
 
@@ -1463,8 +1528,9 @@ because STARTUP config is too late for block classes.
 Not mixins:
 
 - **Breathing** uses `LivingBreatheEvent` and `LivingDrownEvent`.
-- **Airflow** uses `push` and `hurtMarked` for impulses, and the synced flow
-  field for continuous force.
+- **Airflow** sets entities' velocity with `hasImpulse` on the server, and
+  sends players the openings near them and a one-off impulse, which their
+  client applies.
 - **Torches** use the ignition-source config.
 - **The Ad Astra adapter** uses Ad Astra's own events and ticks (SPACE-016,
   to be proved in S6).
@@ -1541,6 +1607,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent` | The connector port, canister and vent, with their menus (§11.5) |
+| `firelock` | The firelock and its lockdown (§11.8) |
+| `tool` | The multitool (§11.6) and the crowbar (§11.8) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -1797,7 +1865,14 @@ tick, in order:
    no bounds, so the filler gas isn't one of "the rest".
 5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
    reading at once, and falls after 10 readings in a row below it (10 s) to
-   the highest of those readings.
+   the highest of those readings. A **breach** reads as danger 2 at once
+   (`BreachAlarm`, CONT-043), for a preset with a pressure min2. It is a
+   breach when the zone has an edge to the ambient and the ambient's pressure
+   is at or below min2, as space is, or when the pressure fell by
+   `[controller] breach_drop_kpa` (10) since the last reading to below min1.
+   The ambient's pressure is read at the top of the controller's column, which
+   is ambient in almost any build; a dimension has one ambient. A door to
+   ordinary outside air is no breach.
 6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
    becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
    target.
@@ -1807,6 +1882,10 @@ tick, in order:
    with its own position as the order's `sender`, and each `ScrubberControl`
    the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
    come first because a part's draw follows its order.
+8. **Closes its firelocks at once.** In the step its alarm starts, it steps
+   each loaded firelock it covers that isn't alarmed yet
+   (`FirelockBlockEntity.alarmRaised`), so the firelocks close in that atmos
+   tick, not at their own steps up to a second later (§11.8).
 
 **Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
 Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the
@@ -1902,3 +1981,56 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   change hook treats lighting it as combustion (CORE-056, FIRE-024), with
   nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
+
+### 11.8 Firelocks
+
+*Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
+`.firelock`: the standalone firelock only. A firelock over a door or an
+airlock is not built.*
+
+- **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
+  placed and broken as a door is: the item places both halves, either half
+  going takes the other, and only the lower half drops the item. Its
+  properties are `facing` (the way its passage runs), `half`, `open` and
+  `locked`, which picks the existing closed, locked-down and open models.
+  Redstone doesn't move it. It is in `#zas:zone_boundary`
+  (`data/zas/tags/block/zone_boundary.json` in `zas_atmos`).
+- **Its geometry.** The model draws the panel in the middle of the block,
+  which would seal no face, and the framework picks a boundary's faces from
+  the faces a block seals in one state but not the other (§4.7). So the
+  closed collision shape fills the passage from the face in front of it up to
+  the far side of the visible panel. Closed, it seals that one face; open, the
+  frame and lintel seal only the side faces and the top. The front face is
+  the boundary, in both states: the firelock's cells join the room behind it,
+  and opening or closing it never splits a zone (GEO-044). The outline shape
+  is the model's.
+- **Its work** (`FirelockBlockEntity`, an `AtmosDevice` on the lower half),
+  each atmos tick. It reads the cells in front of the panel and behind it. A
+  side that reads as unresolved changes nothing that step.
+  - **Alarm** (CONT-043). It is alarmed while a loaded, powered area air
+    controller at danger 2 covers it. A controller covers a firelock when
+    the cell on either side is in its own zone, or when the firelock itself
+    is linked to it with the multitool (from either half; the link is the
+    lower half). Linking a part in another room doesn't bring that room's
+    firelocks under the controller. The controller records its zone at each
+    step (`AreaAirControllerBlockEntity.covers`, `alarming`).
+  - **Closing.** When the alarm starts, an open firelock closes and records
+    that the alarm closed it. The controller steps it in the atmos tick its
+    alarm starts (§11.6, step 8), so a breach closes it within an atmos tick
+    of the framework seeing the breach. While the alarm holds, an opening by
+    hand or with a crowbar lasts `RECLOSE_STEPS` (5) atmos ticks, then the
+    alarm closes it again.
+  - **Reopening** (CONT-092). Once no covering controller is at danger 2, a
+    firelock the alarm closed opens, unless it is locked down: it then opens
+    when the lockdown ends. One closed by hand stays closed.
+  - **Lockdown** (CONT-093, `Lockdown`). A closed firelock is locked down
+    while the pressure difference across it is at least 25 kPa, or either
+    side is at least 323.15 K or at most 273.15 K. Its `locked` state shows
+    the warning model. By hand it then refuses to open and tells the player
+    why on the action bar.
+- **The crowbar** (`tool.CrowbarItem`, CONT-094). Used on either half, it
+  opens a closed firelock, locked down or not, and closes an open one.
+- **Saved:** the alarm, whether the alarm closed it, the re-close countdown
+  and the lockdown.
+- **Cost.** Each firelock scans its level's loaded devices for controllers
+  once a second, as a controller scans for its parts (§11.6).

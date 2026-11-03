@@ -2,6 +2,7 @@ package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.flow.FlowEdge;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +29,8 @@ import java.util.Objects;
  *     saved with their chunks (DATA-010)
  * @param nextZoneId the id the next new zone gets, saved per dimension so ids are never reused
  *     (CORE-026)
+ * @param flows the active edges whose pressure difference reached the batch's airflow threshold,
+ *     with their openings (FLOW-001); empty with airflow off
  */
 public record Result(
         long tick,
@@ -40,7 +43,8 @@ public record Result(
         long[] requestedSections,
         int bufferedOps,
         long[] heldBlocks,
-        long nextZoneId) {
+        long nextZoneId,
+        List<FlowEdge> flows) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
@@ -50,6 +54,7 @@ public record Result(
         mirroredSections = mirroredSections.clone();
         requestedSections = requestedSections.clone();
         heldBlocks = heldBlocks.clone();
+        flows = List.copyOf(flows);
     }
 
     @Override
