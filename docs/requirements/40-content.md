@@ -1027,9 +1027,18 @@ until it has been vented.
   and comes off once vented.
 
 #### CONT-037 · Fire extinguisher
-`Could` · `R2` · `Deferred` — recorded during the FIRE review; R1 relies on removing O₂ and vanilla water, 2026-10-30. · Verify: GameTest
+`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, D-74
 
 A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
+
+- **Rationale:** vg: vg has a handheld fire extinguisher, whose sprite ZAS³
+  uses (D-74). Removing the O₂ and vanilla water also put fires out, but not
+  from a few blocks away.
+- **Verify:** A GameTest checks that spraying an extinguisher puts out a
+  vanilla fire block and a gas fire hotspot it is aimed at.
+- **Changed 2026-11-03 (the owner, for the fire round):** moved from R2
+  (`Deferred`) to R1. It was recorded during the FIRE review, when R1 relied
+  on removing the O₂ and vanilla water.
 
 ## Area air controllers and firelocks
 
