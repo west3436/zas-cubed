@@ -51,6 +51,13 @@ public record Geometry(
     /** The geometry comes from a datapack override, not the collision shape (GEO-005). */
     public static final int FLAG_OVERRIDE = 1;
 
+    /**
+     * The position holds a block, not air, that gas passes as it passes air: a flower, a lever,
+     * redstone wire, a rail. Its cell is the same as air's; the flag only keeps a gas fire from
+     * being asked for there, since the server places one only on air (FIRE-018).
+     */
+    public static final int FLAG_OCCUPIED = 1 << 1;
+
     /** The bit of the first {@link #boundaryFlag}; the six follow in {@link Face} order. */
     private static final int BOUNDARY_SHIFT = 8;
 

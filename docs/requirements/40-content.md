@@ -1027,7 +1027,7 @@ until it has been vented.
   and comes off once vented.
 
 #### CONT-037 · Fire extinguisher
-`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, D-74
+`Could` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, D-74
 
 A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 
@@ -1039,6 +1039,11 @@ A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 - **Changed 2026-11-03 (the owner, for the fire round):** moved from R2
   (`Deferred`) to R1. It was recorded during the FIRE review, when R1 relied
   on removing the O₂ and vanilla water.
+
+*2026-11-03: Implemented ([#198](https://github.com/west3436/zas-cubed/pull/198)).
+The extinguisher sprays while use is held, 5 blocks ahead, and refills at
+water. `cont_037_extinguisher_puts_out_fire_it_is_aimed_at` and
+`cont_037_extinguisher_puts_out_a_gas_fire_hotspot` (GameTest).*
 
 ## Area air controllers and firelocks
 
@@ -1372,7 +1377,7 @@ firelock. `cont_093_lockdown_refuses_the_hand_and_a_crowbar_forces_it`
 (GameTest).*
 
 #### CONT-044 · Fire alarm
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-018, FIRE-019
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, FIRE-019
 
 A fire alarm shall raise danger 2 for its zone when a hotspot is in its zone
 or the zone exceeds 473 K.
@@ -1381,6 +1386,20 @@ or the zone exceeds 473 K.
   §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
 - **Verify:** GameTests check the alarm raises danger 2 for a hotspot and for
   a zone above 473 K.
+
+*2026-11-03: Built ([architecture §11.6](../architecture.md#116-the-area-air-controller)).
+`zas_atmos:fire_alarm` is a wall-mounted life-support part drawing
+`[power] fire_alarm` (1 FE/t, CONT-065) from the controller that covers it.
+While powered it trips when its zone has a hotspot (`Fires.isBurning`) or its
+cell is above 473 K, and the controller reads a tripped alarm as a danger-2
+reading, with CONT-046's fall-off. Checked by
+`cont_044_fire_alarm_raises_danger_2_above_473_k` and
+`cont_044_an_unpowered_fire_alarm_does_nothing`. This stays Accepted until the
+hotspot half has its GameTest, which needs the hotspots' API (FIRE-019).*
+
+*2026-11-03: Implemented. With the fire API on main (API-055),
+`cont_044_fire_alarm_raises_danger_2_for_a_hotspot` checks a vanilla fire in a
+room well below 473 K trips the alarm and raises its controller to danger 2.*
 
 #### CONT-045 · Thermostat
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and freezer cover it), 2026-10-30. · Verify: GameTest

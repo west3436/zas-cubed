@@ -1,12 +1,25 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.fire.Fires;
+import io.github.west3436.zas.api.fire.Ignition;
+import io.github.west3436.zas.api.gas.GasMixture;
+import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
+import io.github.west3436.zas.config.FireConfig;
+import io.github.west3436.zas.engine.scheduler.HotspotSettings;
 import io.github.west3436.zas.gametest.TestPlayers;
+import java.util.Map;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.item.ItemStack;
@@ -28,6 +41,12 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class ExtinguisherTests {
     private static final String BATCH = "zas_atmos_extinguisher";
     private static final BlockState FIRE = Blocks.FIRE.defaultBlockState();
+    private static final ResourceLocation GAS_FIRE = ResourceLocation.fromNamespaceAndPath("zas", "gas_fire");
+    private static final ResourceLocation H2 = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
+    private static final ResourceLocation CO2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+    private static final ResourceLocation H2O = ResourceLocation.fromNamespaceAndPath("zas", "water_vapor");
+    private static final ResourceLocation N2 = StandardAir.NITROGEN;
+    private static final ResourceLocation O2 = StandardAir.OXYGEN;
 
     private ExtinguisherTests() {}
 
@@ -137,6 +156,60 @@ public final class ExtinguisherTests {
         } finally {
             s.clear();
         }
+    }
+
+    /**
+     * A gas fire: in a sealed 3 × 3 × 3 room of 10 % hydrogen in air, an ignition in the middle
+     * air cell lights a {@code zas:gas_fire} there, a hotspot. One spray at it from inside the room
+     * removes the block at once, and the engine drops the hotspot with the next atmos tick, so the
+     * zone no longer burns. Spread is off, so the fire stays in the one cell until the spray.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_037_extinguisher_puts_out_a_gas_fire_hotspot(GameTestHelper h) {
+        Site s = new Site(h, 74);
+        FireConfig.overrideHotspotsForTest(new HotspotSettings(0));
+        try {
+            s.clear();
+            s.room(0, 4);
+            Vec3 at = s.point(2, 2, 2);
+            Map<ResourceLocation, Double> everything = Map.of(N2, 1e6, O2, 1e6, H2, 1e6, CO2, 1e6, H2O, 1e6);
+            s.settle(GasMutations.remove(s.level, at, everything, Site.SOURCE));
+            double perKpa = s.zone(2, 2, 2).volume() / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+            double atm = StandardAir.PRESSURE;
+            Map<ResourceLocation, Double> moles =
+                    Map.of(H2, 0.10 * atm * perKpa, N2, 0.90 * 0.79 * atm * perKpa, O2, 0.90 * 0.21 * atm * perKpa);
+            s.settle(GasMutations.add(s.level, at, new GasParcel(moles, StandardAir.TEMPERATURE), Site.SOURCE));
+            ZoneId zone = s.zone(2, 2, 2).id();
+
+            BlockPos middle = s.abs(2, 2, 2);
+            Ignition lit = s.settle(Fires.ignite(s.level, middle, Site.SOURCE));
+            h.assertTrue(lit.burning(), "the room didn't light: " + lit.outcome());
+            h.assertValueEqual(lit.hotspot().orElse(null), middle, "the hotspot");
+            h.assertTrue(gasFire(s, middle), "no gas fire block at the hotspot");
+            s.tick(); // the hotspot table is published with the atmos tick after the one that lit it
+            h.assertTrue(gasFire(s, middle), "the gas fire went out by itself");
+            h.assertTrue(Fires.isHotspot(s.level, middle), "the fire isn't a hotspot");
+
+            FakePlayer p = holder(s, "zas_cont_037_gas", 1, 2, Vec3.atCenterOf(middle));
+            p.getMainHandItem().use(s.level, p, InteractionHand.MAIN_HAND);
+            h.assertTrue(p.isUsingItem(), "the player isn't using the extinguisher");
+            sprayTick(p);
+            h.assertFalse(gasFire(s, middle), "the gas fire block stayed");
+            h.assertTrue(Fires.isBurning(s.level, zone), "the hotspot went before an atmos tick");
+            s.tick();
+            h.assertFalse(Fires.isHotspot(s.level, middle), "still a hotspot after the atmos tick");
+            h.assertFalse(Fires.isBurning(s.level, zone), "the zone still burns after the atmos tick");
+            s.settle(GasMutations.remove(s.level, at, everything, Site.SOURCE));
+            h.succeed();
+        } finally {
+            FireConfig.overrideHotspotsForTest(null);
+            s.clear();
+        }
+    }
+
+    private static boolean gasFire(Site s, BlockPos pos) {
+        return GAS_FIRE.equals(
+                BuiltInRegistries.BLOCK.getKey(s.level.getBlockState(pos).getBlock()));
     }
 
     /**
