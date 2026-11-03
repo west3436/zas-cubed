@@ -250,6 +250,20 @@ with no harm. Until there is a gas mixer, a canister on a port can't send a
 measured share of one gas through a vent, so the O₂ is dosed with a canister's
 valve.*
 
+*2026-11-02: S-02's R1 plan passes on the S-02 branch, which stacks the
+firelock and airflow PRs, as `StationTests.s_02_hull_breach` in the End with
+the vacuum ambient. The S-01 room has a window in its south wall, a powered
+Human controller on its north wall, and an open firelock in its east wall to a
+second 3 × 3 × 3 room; a 1,000-cell room elsewhere has a window too. Breaking
+both windows gives each an ambient edge, and the 27-cell room keeps a smaller
+fraction of its pressure after 1 s than the 1,000-cell one. An item in the
+room is carried towards the window. A player there is sent the openings and
+the onset impulse, and the client's path pushes it towards the window. The
+controller sees the breach at its first step after it and alarms at once,
+which closes the firelock in the same step, so the second room keeps over
+90 kPa of its air (as at 20 °C) and then holds it. Once the breached room is below 10 kPa, a player without a helmet takes 1
+HP/s of decompression, and hypoxia damage once its air meter is empty.*
+
 ## Questions
 
 ### Resolved (2026-10-30)
