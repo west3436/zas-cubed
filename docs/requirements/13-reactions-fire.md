@@ -44,7 +44,7 @@ Zones run their reactions that don't need ignition in phase 7 (ZONE_UPDATES),
 checked by `ZoneReactionsTest`.*
 
 #### FIRE-006 · Reactions requiring ignition
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-57 · Depends: FIRE-001, FIRE-014
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-57 · Depends: FIRE-001, FIRE-014
 
 A reaction definition may require an ignition source (FIRE-014, FIRE-015) in
 or next to the reacting cell, in addition to its other activation conditions.
@@ -52,6 +52,11 @@ or next to the reacting cell, in addition to its other activation conditions.
 - **Rationale:** Decision: D-57.
 - **Verify:** A Unit test and a GameTest check a reaction requiring ignition
   waits until an igniter fires.
+
+*2026-11-03: Implemented ([#192](https://github.com/west3436/zas-cubed/pull/192)).
+`fire_006_a_reaction_requiring_ignition_waits_for_a_source` (Unit) and
+`fire_006_reaction_requiring_ignition_waits_for_the_igniter` (GameTest) check
+it.*
 
 #### FIRE-002 · Fair allocation of reactants
 `Should` · `R1` · `Implemented` · Verify: Unit · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
