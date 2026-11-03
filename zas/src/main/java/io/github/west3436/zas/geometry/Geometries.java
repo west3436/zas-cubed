@@ -105,6 +105,11 @@ public final class Geometries {
         ignitionSources = predicate;
     }
 
+    /** The ignition-source predicate set last; none is a source before one is set. Any thread. */
+    public static Predicate<BlockState> ignitionSources() {
+        return ignitionSources;
+    }
+
     /**
      * Rebuilds the table now from the current overrides, tags and ignition sources, as a data load
      * would: for a GameTest that changed one of them. A dimension whose palette changes gets a new

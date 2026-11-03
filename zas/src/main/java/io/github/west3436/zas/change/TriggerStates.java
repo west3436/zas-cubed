@@ -2,6 +2,7 @@ package io.github.west3436.zas.change;
 
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.config.ZoneTrigger;
+import io.github.west3436.zas.hotspot.GasFireBlock;
 import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -138,8 +139,15 @@ public final class TriggerStates {
         byStateId = table;
     }
 
-    /** Marks a block's burning states: all of them without a {@code lit} property, else the lit ones. */
+    /**
+     * Marks a block's burning states: all of them without a {@code lit} property, else the lit ones.
+     * {@code zas:gas_fire} never is, though {@code #minecraft:fire} brings it into the tag: it is a
+     * hotspot burning its zone's gas (FIRE-018), not a block burning carbon, and only ever in a zone.
+     */
     private static void markBurning(byte[] table, Block block) {
+        if (block instanceof GasFireBlock) {
+            return;
+        }
         Property<?> lit = block.getStateDefinition().getProperty("lit");
         for (BlockState state : block.getStateDefinition().getPossibleStates()) {
             if (!(lit instanceof BooleanProperty b) || state.getValue(b)) {

@@ -561,7 +561,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
-| `#zas:combustion` | `#minecraft:fire` (fire, soul fire), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
+| `#zas:combustion` | `#minecraft:fire` (fire, soul fire; `zas:gas_fire` is in `#minecraft:fire` but never counts here, since it burns zone gas, not a fuel), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
 | `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 

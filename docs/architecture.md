@@ -1258,10 +1258,11 @@ way.
 
 ### Hotspots
 
-*Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):
-the engine side.* Hotspots are per-cell fires that burn their zone's gas. They
-live on the worker, in phase 6 of the atmos tick (§3.2), in
-`engine.scheduler.Hotspots`.
+*Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)); the
+API (API-031, API-055 to API-058) comes separately.* Hotspots are per-cell fires
+that burn their zone's gas. They live on the worker, in phase 6 of the atmos
+tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
+`zas.hotspot`.
 
 - **Every hotspot is a block.** A hotspot is a vanilla fire block in a zone
   (FIRE-019) or a `zas:gas_fire` block (FIRE-018). The geometry palette flags
@@ -1340,6 +1341,35 @@ live on the worker, in phase 6 of the atmos tick (§3.2), in
     out (`EXTINGUISHED`), named by zone id (API-031);
   - the hotspots inside the debug overlay's regions, in `DebugView`
     (CLIENT-013).
+- **On the server.**
+  - `GeometryDerivation` flags every `BaseFireBlock` state `FLAG_FIRE` and
+    `zas:gas_fire` `FLAG_GAS_FIRE`; neither depends on datapacks.
+    `Geometries.setIgnitionSources(Predicate<BlockState>)` names the standing
+    sources (FIRE-014, FIRE-015). The predicate is asked of every state on the
+    server thread whenever the table is rebuilt, which is on every data load
+    once tags are bound, at `EventPriority.LOW` so a listener resolving its own
+    tags at normal priority is done first. Those states get
+    `FLAG_IGNITION_SOURCE`. A palette change replaces each dimension's engine,
+    as any geometry change does (§4.5).
+  - `zas:gas_fire` (`GasFireBlock`) has no collision and no outline, light 15,
+    and vanilla fire's `entityInside` (FIRE-013). It needs no support, has no
+    item and drops nothing. Adjacent gas fires skip the faces between them, so
+    a burning room shows no grid. It is in `#minecraft:fire`, so mobs path
+    around it and an entity leaving it burns on as from vanilla fire.
+    `TriggerStates` leaves it out of `#zas:combustion`, which takes in
+    `#minecraft:fire`, so `Burners` never burns it as carbon.
+  - `DimensionAtmos` applies the result's `FireIntent`s first in the apply
+    (`FireIntents`), in loaded chunks only. It then completes the ignitions
+    (`DimensionAtmos.ignite`, an `Ignited`) and other outcomes.
+  - The seed is the world seed mixed with the dimension id. The spread chance
+    is `[fire] spread_chance`.
+- **Vanilla fire and `Burners`.** A vanilla fire in a zone is worked on twice,
+  for two different fuels. `Burners` (FIRE-022) burns the carbon of the block
+  it burns on: O₂ to CO₂ and CO at its fuel profile's power. The hotspot burns
+  the zone's flammable gas: its parcel with the reactions, which in a zone of
+  plain air is nothing. Both use the zone's O₂, as two fires in one room do,
+  and FIRE-020's going out without O₂ stays with `Burners` and the M2 tick.
+  The hotspot never removes a vanilla fire.
 
 ### Life support (breathing)
 
