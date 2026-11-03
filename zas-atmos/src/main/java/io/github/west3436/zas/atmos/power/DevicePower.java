@@ -41,6 +41,7 @@ public final class DevicePower {
     private final LongSupplier clock;
     private long poweredUntil = Long.MIN_VALUE;
     private Object source;
+    private int suppliedDraw;
     private boolean testPowered;
 
     /**
@@ -77,6 +78,7 @@ public final class DevicePower {
      */
     public void supply(Object provider) {
         source = Objects.requireNonNull(provider, "provider");
+        suppliedDraw = draw();
         poweredUntil = clock.getAsLong() + LEASE_TICKS;
     }
 
@@ -91,6 +93,15 @@ public final class DevicePower {
      */
     public boolean suppliedThisAtmosTick() {
         return poweredUntil != Long.MIN_VALUE && clock.getAsLong() < poweredUntil - LEASE_TICKS + AtmosTicks.PERIOD;
+    }
+
+    /**
+     * Whether the device has power that was paid for: it is test-powered, or its lease came from a
+     * supply made while it drew more than nothing. A device whose draw rises during a lease taken at
+     * no cost, such as a recharger given a battery, waits for a paid one before it does work.
+     */
+    public boolean paidFor() {
+        return testPowered || (clock.getAsLong() < poweredUntil && suppliedDraw > 0);
     }
 
     /** Who supplied the device last, while its lease lasts; null otherwise, and when test-powered alone. */

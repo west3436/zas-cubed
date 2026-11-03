@@ -4,18 +4,16 @@ package io.github.west3436.zas.atmos.heater;
 public enum HeaterStatus {
     /** Switched off. */
     OFF,
-    /** Switched on, with no power (CONT-060). */
-    UNPOWERED,
-    /** Heating its network's gas. */
+    /** Switched on, with no battery. */
+    NO_BATTERY,
+    /** Switched on, with an empty battery. */
+    BATTERY_EMPTY,
+    /** Its cell isn't in a zone: open air, unresolved or paused. */
+    NO_ROOM,
+    /** Heating its room. */
     HEATING,
-    /** Its room, or with no room its network's gas, is at or above the setpoint. */
-    AT_SETPOINT,
-    /** Its network holds no gas to heat. */
-    NETWORK_EMPTY,
-    /** Its room is below the setpoint, but the network's gas already holds the heat the room needs. */
-    CARRYING,
-    /** Its room is below the setpoint, and the network's gas is at {@link HeaterMath#MAX_GAS}. */
-    AT_LIMIT;
+    /** Its room is at or above the setpoint. */
+    AT_SETPOINT;
 
     /** The status with this ordinal, or {@link #OFF}. */
     public static HeaterStatus of(int ordinal) {

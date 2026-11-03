@@ -10,6 +10,6 @@ public enum PowerPriority {
     LIFE_SUPPORT,
     /** Pumps, filters and mixers. */
     GAS_HANDLING,
-    /** Heaters, freezers, igniters, rechargers and gas production. */
+    /** Igniters, rechargers and gas production. Heaters and freezers run on batteries instead (D-73). */
     AUXILIARY
 }

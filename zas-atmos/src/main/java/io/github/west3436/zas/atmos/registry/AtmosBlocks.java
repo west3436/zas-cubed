@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
@@ -47,6 +48,10 @@ public final class AtmosBlocks {
 
     /** The heater (CONT-019). */
     public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
+
+    /** The recharger (CONT-113). */
+    public static final DeferredBlock<RechargerBlock> RECHARGER =
+            BLOCKS.registerBlock("recharger", RechargerBlock::new, metal());
 
     private AtmosBlocks() {}
 

@@ -1,0 +1,154 @@
+{
+  "variants": {
+    "battery=false,charge=0,facing=north": {
+      "model": "zas_atmos:block/recharger"
+    },
+    "battery=false,charge=1,facing=north": {
+      "model": "zas_atmos:block/recharger"
+    },
+    "battery=false,charge=2,facing=north": {
+      "model": "zas_atmos:block/recharger"
+    },
+    "battery=false,charge=3,facing=north": {
+      "model": "zas_atmos:block/recharger"
+    },
+    "battery=false,charge=4,facing=north": {
+      "model": "zas_atmos:block/recharger"
+    },
+    "battery=true,charge=0,facing=north": {
+      "model": "zas_atmos:block/recharger_0"
+    },
+    "battery=true,charge=1,facing=north": {
+      "model": "zas_atmos:block/recharger_1"
+    },
+    "battery=true,charge=2,facing=north": {
+      "model": "zas_atmos:block/recharger_2"
+    },
+    "battery=true,charge=3,facing=north": {
+      "model": "zas_atmos:block/recharger_3"
+    },
+    "battery=true,charge=4,facing=north": {
+      "model": "zas_atmos:block/recharger_4"
+    },
+    "battery=false,charge=0,facing=east": {
+      "model": "zas_atmos:block/recharger",
+      "y": 90
+    },
+    "battery=false,charge=1,facing=east": {
+      "model": "zas_atmos:block/recharger",
+      "y": 90
+    },
+    "battery=false,charge=2,facing=east": {
+      "model": "zas_atmos:block/recharger",
+      "y": 90
+    },
+    "battery=false,charge=3,facing=east": {
+      "model": "zas_atmos:block/recharger",
+      "y": 90
+    },
+    "battery=false,charge=4,facing=east": {
+      "model": "zas_atmos:block/recharger",
+      "y": 90
+    },
+    "battery=true,charge=0,facing=east": {
+      "model": "zas_atmos:block/recharger_0",
+      "y": 90
+    },
+    "battery=true,charge=1,facing=east": {
+      "model": "zas_atmos:block/recharger_1",
+      "y": 90
+    },
+    "battery=true,charge=2,facing=east": {
+      "model": "zas_atmos:block/recharger_2",
+      "y": 90
+    },
+    "battery=true,charge=3,facing=east": {
+      "model": "zas_atmos:block/recharger_3",
+      "y": 90
+    },
+    "battery=true,charge=4,facing=east": {
+      "model": "zas_atmos:block/recharger_4",
+      "y": 90
+    },
+    "battery=false,charge=0,facing=south": {
+      "model": "zas_atmos:block/recharger",
+      "y": 180
+    },
+    "battery=false,charge=1,facing=south": {
+      "model": "zas_atmos:block/recharger",
+      "y": 180
+    },
+    "battery=false,charge=2,facing=south": {
+      "model": "zas_atmos:block/recharger",
+      "y": 180
+    },
+    "battery=false,charge=3,facing=south": {
+      "model": "zas_atmos:block/recharger",
+      "y": 180
+    },
+    "battery=false,charge=4,facing=south": {
+      "model": "zas_atmos:block/recharger",
+      "y": 180
+    },
+    "battery=true,charge=0,facing=south": {
+      "model": "zas_atmos:block/recharger_0",
+      "y": 180
+    },
+    "battery=true,charge=1,facing=south": {
+      "model": "zas_atmos:block/recharger_1",
+      "y": 180
+    },
+    "battery=true,charge=2,facing=south": {
+      "model": "zas_atmos:block/recharger_2",
+      "y": 180
+    },
+    "battery=true,charge=3,facing=south": {
+      "model": "zas_atmos:block/recharger_3",
+      "y": 180
+    },
+    "battery=true,charge=4,facing=south": {
+      "model": "zas_atmos:block/recharger_4",
+      "y": 180
+    },
+    "battery=false,charge=0,facing=west": {
+      "model": "zas_atmos:block/recharger",
+      "y": 270
+    },
+    "battery=false,charge=1,facing=west": {
+      "model": "zas_atmos:block/recharger",
+      "y": 270
+    },
+    "battery=false,charge=2,facing=west": {
+      "model": "zas_atmos:block/recharger",
+      "y": 270
+    },
+    "battery=false,charge=3,facing=west": {
+      "model": "zas_atmos:block/recharger",
+      "y": 270
+    },
+    "battery=false,charge=4,facing=west": {
+      "model": "zas_atmos:block/recharger",
+      "y": 270
+    },
+    "battery=true,charge=0,facing=west": {
+      "model": "zas_atmos:block/recharger_0",
+      "y": 270
+    },
+    "battery=true,charge=1,facing=west": {
+      "model": "zas_atmos:block/recharger_1",
+      "y": 270
+    },
+    "battery=true,charge=2,facing=west": {
+      "model": "zas_atmos:block/recharger_2",
+      "y": 270
+    },
+    "battery=true,charge=3,facing=west": {
+      "model": "zas_atmos:block/recharger_3",
+      "y": 270
+    },
+    "battery=true,charge=4,facing=west": {
+      "model": "zas_atmos:block/recharger_4",
+      "y": 270
+    }
+  }
+}

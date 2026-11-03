@@ -10,7 +10,7 @@ import java.util.List;
  *
  * <p>Groups are served in priority order: life support, then gas handling, then the rest. Within a
  * group, parts are served in the order given, and each part whose cost fits what is left is
- * powered. If any part of a group misses out, the groups after it get nothing, so a cheap heater
+ * powered. If any part of a group misses out, the groups after it get nothing, so a cheap recharger
  * never runs while a vent is starved. A part that draws nothing now is always powered, at no
  * cost. Pure: no world access, so it is unit-tested.
  */

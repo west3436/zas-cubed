@@ -2,5 +2,19 @@
   "parent": "item/generated",
   "textures": {
     "layer0": "zas_atmos:item/super_capacity_battery"
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "zas_atmos:charge": 0.5
+      },
+      "model": "zas_atmos:item/super_capacity_battery_partial"
+    },
+    {
+      "predicate": {
+        "zas_atmos:charge": 1
+      },
+      "model": "zas_atmos:item/super_capacity_battery_full"
+    }
+  ]
 }

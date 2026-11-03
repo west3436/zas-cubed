@@ -1,9 +1,9 @@
 package io.github.west3436.zas.atmos.heater;
 
 import com.mojang.serialization.MapCodec;
-import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -23,13 +23,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * A heater (CONT-019): a floor machine that heats its pipe network's gas toward a setpoint. Its
- * front faces the player who places it, and a pipe joins it only on its back. Its {@link #LIT}
- * property is true while it heats.
+ * A heater (CONT-019): a portable floor machine that heats the zone it stands in toward a setpoint,
+ * on a battery (D-73). Its front faces the player who places it. Its {@link #LIT} property is true
+ * while it heats. Broken, it drops its battery.
  *
  * <p>It isn't a full block: gas passes around it, so it stands in its room's cell.
  */
-public class HeaterBlock extends BaseEntityBlock implements PipeConnector {
+public class HeaterBlock extends BaseEntityBlock {
     public static final MapCodec<HeaterBlock> CODEC = simpleCodec(HeaterBlock::new);
 
     /** The way the front faces. */
@@ -61,11 +61,6 @@ public class HeaterBlock extends BaseEntityBlock implements PipeConnector {
     }
 
     @Override
-    public boolean pipeConnects(BlockState self, Direction face, BlockState neighbour) {
-        return face == self.getValue(FACING).getOpposite();
-    }
-
-    @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return defaultBlockState()
                 .setValue(FACING, context.getHorizontalDirection().getOpposite());
@@ -89,6 +84,15 @@ public class HeaterBlock extends BaseEntityBlock implements PipeConnector {
             player.openMenu(heater);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof HeaterBlockEntity be) {
+            Containers.dropItemStack(
+                    level, pos.getX(), pos.getY(), pos.getZ(), be.battery().battery());
+        }
+        super.onRemove(state, level, pos, newState, moved);
     }
 
     @Override
