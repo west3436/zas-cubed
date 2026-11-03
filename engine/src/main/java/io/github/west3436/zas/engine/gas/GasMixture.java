@@ -387,6 +387,52 @@ public final class GasMixture {
         return joules;
     }
 
+    // ---- Reactions (FIRE-001) -----------------------------------------------
+
+    /**
+     * Applies a reaction's change: adds {@code delta[i]} moles of each gas, which may be negative,
+     * and releases {@code joules} of heat into the mixture, conserving energy. The thermal energy
+     * before, C·T, plus the heat gives the temperature at the new composition's heat capacity
+     * (CORE-003), so the heat of reaction raises the temperature according to the products' heat
+     * capacities. A gas taken a rounding error below zero becomes zero. The temperature never falls
+     * below {@link GasConfig#temperatureFloor()} because of an endothermic change, unless it was
+     * already lower. Returns false, changing nothing, if rejected: a delta of the wrong length, a
+     * non-finite value, an amount that would go clearly negative, or a result that overflows.
+     *
+     * @param delta the change in moles per gas, indexed like the registry
+     * @param joules the heat released, in J; negative for an endothermic change
+     */
+    public boolean applyReaction(double[] delta, double joules) {
+        if (delta.length != moles.length || !Double.isFinite(joules)) {
+            return reject("applyReaction", "delta of length " + delta.length + ", heat " + joules + " J");
+        }
+        double[] next = new double[moles.length];
+        double rawCapacity = 0;
+        double total = 0;
+        for (int i = 0; i < moles.length; i++) {
+            double n = moles[i] + delta[i];
+            if (!Double.isFinite(n) || n < -1e-9 * Math.max(1, moles[i])) {
+                return reject("applyReaction", "amount " + n + " of " + gasId(i));
+            }
+            next[i] = Math.max(0, n);
+            rawCapacity += registry.molarHeatCapacity(i) * next[i];
+            total += next[i];
+        }
+        double energy = heatCapacity() * temperature + joules;
+        double t = energy / Math.max(rawCapacity, config.heatCapacityFloor());
+        double lowest = Math.min(temperature, config.temperatureFloor());
+        if (!(t >= lowest)) {
+            t = lowest;
+        }
+        if (!validTemperature(t) || !finiteDerived(total, rawCapacity, t, volume)) {
+            return reject("applyReaction", "the result overflows");
+        }
+        System.arraycopy(next, 0, moles, 0, moles.length);
+        temperature = t;
+        pruneAndRecount();
+        return true;
+    }
+
     // ---- Equivalence (CORE-006) ---------------------------------------------
 
     /** The equivalence test with this mixture's configured tolerances. */

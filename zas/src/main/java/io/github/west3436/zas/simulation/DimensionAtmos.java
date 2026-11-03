@@ -31,6 +31,7 @@ import io.github.west3436.zas.engine.scheduler.DimensionEngine;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.DimensionScheduler;
 import io.github.west3436.zas.engine.scheduler.EnclosureClassifier;
+import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.scheduler.EngineSettings;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.GeometryAudit;
@@ -45,6 +46,7 @@ import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
 import io.github.west3436.zas.provider.PointResolver;
+import io.github.west3436.zas.reaction.ServerReactions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -828,13 +830,21 @@ public final class DimensionAtmos {
 
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
-     * with the openings exported for airflow (FLOW-001, FLOW-014).
+     * with the openings exported for airflow (FLOW-001, FLOW-014) and the server's reactions
+     * (FIRE-001).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()).withVenting(ZasServerConfig.venting());
         return new EngineSettings(exchange, ZasServerConfig.conservationChecker(), ZasServerConfig.heat())
-                .withAirflow(AirflowConfig.exportKpa(dimension().location()));
+                .withAirflow(AirflowConfig.exportKpa(dimension().location()))
+                .withReactions(reactions());
+    }
+
+    /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */
+    private ReactionSet reactions() {
+        ReactionSet set = ServerReactions.current();
+        return set.registry().equals(registry) ? set : ReactionSet.EMPTY;
     }
 
     // ---- Commands and the profiler ------------------------------------------------------
