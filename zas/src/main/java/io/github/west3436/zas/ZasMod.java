@@ -8,8 +8,11 @@ import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.fire.Burners;
+import io.github.west3436.zas.fire.FuelProfiles;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
+import io.github.west3436.zas.hotspot.HotspotBlocks;
 import io.github.west3436.zas.hud.AtmosHud;
 import io.github.west3436.zas.ignition.IgnitionEvents;
 import io.github.west3436.zas.ignition.IgnitionSources;
@@ -17,6 +20,7 @@ import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
+import io.github.west3436.zas.reaction.ServerReactions;
 import io.github.west3436.zas.simulation.AtmosService;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -32,12 +36,14 @@ public final class ZasMod {
         // Installed while constructing, so consumers ordered AFTER zas see it
         // in their own constructors (architecture §6.2).
         ZasApiProviderImpl.install(NeoForge.EVENT_BUS);
+        HotspotBlocks.register(modBus);
         Geometries.register(NeoForge.EVENT_BUS);
         ChangeTracker.register(NeoForge.EVENT_BUS);
         TriggerStates.register(NeoForge.EVENT_BUS);
         IgnitionSources.register(NeoForge.EVENT_BUS);
         IgnitionEvents.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
+        ServerReactions.register(NeoForge.EVENT_BUS);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);
         ZasClientConfig.register(container);
@@ -49,5 +55,7 @@ public final class ZasMod {
         Airflow.register(modBus, NeoForge.EVENT_BUS);
         Internals.register(modBus);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
+        FuelProfiles.register(NeoForge.EVENT_BUS);
+        Burners.register(NeoForge.EVENT_BUS);
     }
 }

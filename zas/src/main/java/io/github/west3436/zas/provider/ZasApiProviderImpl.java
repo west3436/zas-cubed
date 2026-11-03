@@ -19,6 +19,7 @@ import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -31,6 +32,8 @@ import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.persistence.AtmosPersistence;
+import io.github.west3436.zas.reaction.ServerReactions;
+import io.github.west3436.zas.reaction.StandaloneReactions;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.Collections;
@@ -244,6 +247,15 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     @Override
     public int atmosPeriodTicks() {
         return ZasServerConfig.scheduler().periodTicks();
+    }
+
+    /**
+     * The running server's reactions on a standalone mixture (API-019, FIRE-031), with the
+     * configured fire oxygen threshold; unchanged when no server runs in this JVM.
+     */
+    @Override
+    public GasMixture applyStandalone(GasMixture mixture, double seconds, boolean ignition) {
+        return StandaloneReactions.apply(mixture, seconds, ignition, ServerReactions.current(), FireConfig.settings());
     }
 
     /** A registry's tags as the API's id sets, built once per registry. */

@@ -175,6 +175,14 @@ public final class AtmosService {
     }
 
     /**
+     * Queues an ignition at a position for the next atmos tick (FIRE-014): a flammable zone in the
+     * position's cell or a neighbouring one starts burning there.
+     */
+    public CompletableFuture<Ignited> ignite(ServerLevel level, BlockPos pos, SourceId source) {
+        return dimensionFor(level).ignite(pos, source);
+    }
+
+    /**
      * Queues a pin of the zone at sub-cell {@code sub} of a position, or with -1 its largest cell,
      * for the next atmos tick (API-017, API-050).
      */
@@ -200,6 +208,28 @@ public final class AtmosService {
     public CompletableFuture<MutationResult> removeForLife(
             ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
         return dimensionFor(level).remove(pos, sub, moles, source, LedgerCategory.LIFE, false);
+    }
+
+    /**
+     * A fuel block's or fire's products (FIRE-021, FIRE-022): an addition recorded under {@link
+     * LedgerCategory#REACTION} that never forms a zone, so burning changes only zones that exist
+     * (combustion forms zones only through the Hardcore trigger, CORE-056).
+     */
+    public CompletableFuture<MutationResult> addForCombustion(
+            ServerLevel level, BlockPos pos, int sub, GasParcel gas, SourceId source) {
+        return dimensionFor(level).add(pos, sub, gas, source, LedgerCategory.REACTION, false);
+    }
+
+    /** A fuel block's or fire's O₂, as {@link #addForCombustion}: under REACTION, never forming a zone. */
+    public CompletableFuture<MutationResult> removeForCombustion(
+            ServerLevel level, BlockPos pos, int sub, Map<ResourceLocation, Double> moles, SourceId source) {
+        return dimensionFor(level).remove(pos, sub, moles, source, LedgerCategory.REACTION, false);
+    }
+
+    /** The heat a fuel block or fire releases (HEAT-007, API-013's operation), never forming a zone. */
+    public CompletableFuture<HeatResult> heatForCombustion(
+            ServerLevel level, BlockPos pos, int sub, double joules, SourceId source) {
+        return dimensionFor(level).heat(pos, sub, true, joules, source, false);
     }
 
     // ---- Ticking ------------------------------------------------------------------------

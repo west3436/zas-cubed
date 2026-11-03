@@ -183,7 +183,8 @@ Reports, for the dimension:
 
 `reset` clears the dimension's window of atmos ticks.
 
-Phases that arrive in R1 (heat, hotspots, reactions) report 0 until then.
+A phase with nothing to do (no heat paths, no hotspots, no reactions) reports
+about 0.
 
 ### Periodic log
 
@@ -204,7 +205,7 @@ The layers draw within 2 chunks of you, refreshed once per atmos tick:
 - `zones`: each zone's cells, tinted by zone id, with its pressure and temperature. Paused zones are grey, unresolved regions magenta.
 - `edges`: each open face out of a zone, coloured by kind (zone direct cyan, zone boundary blue, ambient direct red, ambient boundary orange), with each edge's pressure difference.
 - `cells`: the seal mask (red) and sub-cells (one colour each) of the block under your crosshair.
-- `hotspots`: hotspots. There are none until fire arrives in R1.
+- `hotspots`: each burning hotspot, vanilla fire or gas fire, as an orange box labelled with its zone's temperature.
 
 Labels use the units in `zas-client.toml` ([config.md](config.md)). Only players who switched the overlay on are sent its data.
 

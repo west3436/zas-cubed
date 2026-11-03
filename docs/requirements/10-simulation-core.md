@@ -853,13 +853,14 @@ With the Normal preset, these operations shall trigger a zone:
 
 With the Hardcore preset, these operations shall trigger a zone, in addition
 to the Normal triggers (CORE-055):
-- combustion: fires, lit furnaces and campfires, and the ZAS³ fuel generator
-  (FIRE-024)
+- combustion: fires, and lit furnaces and campfires (FIRE-024)
 - planting in an enclosed area (CONT-053)
 
 - **Rationale:** Decision: D-13, D-14, D-33 and D-35.
-- **Verify:** GameTests under Hardcore check a lit furnace, the generator and
-  planting in a sealed room each form a zone.
+- **Verify:** GameTests under Hardcore check a lit furnace and planting in a
+  sealed room each form a zone.
+- **Changed 2026-11-03 (the owner, D-35):** the ZAS³ fuel generator is no
+  trigger: it doesn't use the air (CONT-067).
 
 *2026-11-01: Built except for the generator, which doesn't exist yet, so this
 stays Accepted ([#64](https://github.com/west3436/zas-cubed/issues/64)).
@@ -883,7 +884,7 @@ the same triggers in the open form none, that none form under Normal, that each
 option's override switches its trigger, that only a starting trigger counts,
 and that a trigger in a zone changes nothing. The generator joins through data,
 not the API: it lists itself in `#zas:combustion` and has a boolean `lit`
-property (CONT-067). `core_056_a_tagged_fuel_block_forms_a_zone_like_the_generator`
+property (CONT-067). `core_056_a_tagged_fuel_block_of_another_mod_forms_a_zone`
 checks that path with a redstone lamp standing in. CONT-067's GameTest with the
 real generator completes this Verify.*
 
@@ -892,6 +893,12 @@ property (CONT-067, [#52](https://github.com/west3436/zas-cubed/issues/52)).
 `core_056_lit_generator_forms_a_zone_under_hardcore` checks a lit generator
 forms a zone in a sealed room under Hardcore, and that unlit, or lit under
 Normal, it forms none.*
+
+*2026-11-03: the generator left `#zas:combustion` (D-35, CONT-067, changed by
+the owner); `core_056_lit_generator_forms_no_zone_under_hardcore` checks it
+forms no zone. A fuel block of another mod still joins through the tag, as
+`core_056_a_tagged_fuel_block_of_another_mod_forms_a_zone` (renamed from
+`…_like_the_generator`) checks.*
 
 #### CORE-052 · Zone garbage collection
 `Should` · `R1` · `Accepted` · Verify: GameTest

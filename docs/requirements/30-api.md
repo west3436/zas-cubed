@@ -368,7 +368,7 @@ eyes are where the server last checked them; for other entities, and before
 the first sync, with vanilla's. Still Accepted, for internals and suits.*
 
 #### API-019 · Standalone mixture reactions
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 
 The API shall offer a call that applies reactions (FIRE-001, API-020) and
 combustion (FIRE-031) to a standalone mixture of a given volume over a given
@@ -379,6 +379,15 @@ world state and may be called from any thread.
 - **Verify:** Unit tests react a test mixture at several volumes and times,
   compare it with the same reaction in a zone, and call it from a worker
   thread.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`Reactions.applyStandalone(mixture, seconds, ignition)` burns the mixture's
+ignition reactions in a 375 L-per-second parcel (FIRE-031), then runs its zone
+reactions for the time, and returns a new mixture; a gas the server doesn't
+define is carried through and only absorbs heat. Without ZAS³ it returns the
+mixture unchanged. Checked by the `api_019_` tests in `StandaloneReactionsTest`
+(zas), `ZoneReactionsTest` (engine, against a zone) and `ReactionsTest`
+(zas-api).*
 
 #### API-017 · Zone pins
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-052
@@ -510,7 +519,7 @@ ticks.*
 ## Extension points
 
 #### API-020 · Code-defined reactions
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: FIRE-001
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-001
 
 The API shall let mods register reaction types implemented in code, which
 datapack reaction definitions can reference. Datapack gases and reactions
@@ -521,6 +530,15 @@ themselves are CORE-010 and FIRE-001.
   §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
 - **Verify:** A GameTest registers a test reaction type, references it from a
   datapack, and checks it runs in a zone.
+
+*2026-11-03: Implemented ([#41](https://github.com/west3436/zas-cubed/issues/41)).
+`Reactions.registerType(id, type)` registers a `ReactionType`; a definition
+names it in `type` and passes it `parameters` ([datapacks.md](../datapacks.md#reactions)).
+The definition's conditions still apply, and the type's change is scaled to
+what the zone has (FIRE-002). A type that throws or asks for a gas the server
+doesn't define changes nothing and is logged at most once a minute (§3.6).
+Checked by `api_020_a_code_reaction_type_runs_in_a_zone` (GameTest) and the
+`api_020_` tests in `CodeTypesTest` (zas) and `ReactionSetTest` (engine).*
 
 #### API-021 · Gas handler capability
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-12

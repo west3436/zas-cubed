@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.ChunkGenerations;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.DirtySections;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.ignition.IgnitionEvents;
@@ -122,6 +123,7 @@ public final class ChangeTracker {
         IgnitionEvents.onBlockWrite(level, pos, now);
         if (level.getServer().isSameThread()) {
             dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers);
+            Burners.onBlockWrite(level, pos, old, now);
         } else {
             OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged, triggers));
         }

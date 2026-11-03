@@ -10,6 +10,7 @@ import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
+import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,10 @@ public final class AtmosItems {
 
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
+
+    /** Puts out the fires it is aimed at (CONT-037). */
+    public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =
+            ITEMS.registerItem("fire_extinguisher", FireExtinguisherItem::new);
 
     // ---- Breathing gear (S-08) ----
 

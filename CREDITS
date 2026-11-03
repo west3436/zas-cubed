@@ -56,6 +56,10 @@
 path: zas/src/main/resources/assets/zas/lang/en_us.json
 origin: original
 
+path: zas/src/main/resources/assets/zas/blockstates/gas_fire.json
+origin: original
+notes: gas_fire.json and gas_fire_1.json at random, so neighbouring gas fires don't flicker in step.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/lang/en_us.json
 origin: original
 
@@ -204,6 +208,17 @@ notes: vg's sprite as it is, at 32x32 (D-70).
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
 origin: original
 notes: A handheld item model for the wrench sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/fire_extinguisher.png
+origin: vgstation13
+source: icons/obj/items.dmi
+state: fire_extinguisher0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's sprite as it is (14x22), centred in a 32x32 texture (D-74).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/fire_extinguisher.json
+origin: original
+notes: A flat item model for the fire extinguisher sprite.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_cap.png
 origin: vgstation13

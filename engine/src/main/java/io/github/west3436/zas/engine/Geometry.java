@@ -70,6 +70,21 @@ public record Geometry(
     /** The geometry depends on position and is computed per position (GEO-043). */
     public static final int FLAG_POSITIONAL = 1 << 4;
 
+    /**
+     * The block is a vanilla fire (fire, soul fire): in a zone it is a hotspot (FIRE-019). The
+     * flag makes lighting and putting out a fire a geometry change, so the worker sees it.
+     */
+    public static final int FLAG_FIRE = 1 << 5;
+
+    /** The block is {@code zas:gas_fire}, which shows a hotspot (FIRE-018, DATA-009). */
+    public static final int FLAG_GAS_FIRE = 1 << 6;
+
+    /**
+     * The block is a standing ignition source, such as a torch or lava (FIRE-014, FIRE-015): a
+     * flammable zone in its cell or a neighbouring cell ignites.
+     */
+    public static final int FLAG_IGNITION_SOURCE = 1 << 7;
+
     private static final List<FaceMask> NO_MASKS =
             List.of(FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY);
     private static final List<FaceMask> ALL_MASKS =

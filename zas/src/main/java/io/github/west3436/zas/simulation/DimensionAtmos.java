@@ -26,6 +26,7 @@ import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
+import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.DimensionEngine;
@@ -43,9 +44,11 @@ import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.hotspot.FireIntents;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
 import io.github.west3436.zas.provider.PointResolver;
+import io.github.west3436.zas.reaction.ServerReactions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -180,6 +183,8 @@ public final class DimensionAtmos {
 
     /** The futures of queued heat mutations (API-013), by sequence number. */
     private final Map<Long, CompletableFuture<HeatResult>> heats = new TreeMap<>();
+    /** Ignitions waiting for their atmos tick, by sequence number (FIRE-014). */
+    private final Map<Long, CompletableFuture<Ignited>> ignitions = new TreeMap<>();
 
     DimensionAtmos(ServerLevel level, Executor workers) {
         this.level = level;
@@ -387,6 +392,13 @@ public final class DimensionAtmos {
      * the ambient takes or supplies it all at once (ENV-007, HEAT-010).
      */
     CompletableFuture<HeatResult> heat(BlockPos pos, int sub, boolean add, double joules, SourceId source) {
+        // CORE-055: an API call may form a zone in an enclosed, unzoned area, under either preset.
+        return heat(pos, sub, add, joules, source, ZoneTrigger.API_CALLS.active());
+    }
+
+    /** A change of heat that forms a zone only if {@code triggers}. */
+    CompletableFuture<HeatResult> heat(
+            BlockPos pos, int sub, boolean add, double joules, SourceId source, boolean triggers) {
         CompletableFuture<HeatResult> future = new CompletableFuture<>();
         if (isFaulted()) {
             future.completeExceptionally(faulted());
@@ -401,8 +413,29 @@ public final class DimensionAtmos {
                     Ambients.ambient(level.dimension()).temperature()));
             return future;
         }
-        long seq = pl.heat(pos.asLong(), sub, add, joules, ZoneTrigger.API_CALLS.active(), source.toString());
+        long seq = pl.heat(pos.asLong(), sub, add, joules, triggers, source.toString());
         heats.put(seq, future);
+        return future;
+    }
+
+    /**
+     * Queues an ignition at a position for the next atmos tick (FIRE-014): a flammable zone in the
+     * position's cell or a neighbouring one starts burning there, as a hotspot. It never forms a
+     * zone. In an excluded dimension there are no zones, so it completes at once as open.
+     */
+    public CompletableFuture<Ignited> ignite(BlockPos pos, SourceId source) {
+        CompletableFuture<Ignited> future = new CompletableFuture<>();
+        if (isFaulted()) {
+            future.completeExceptionally(faulted());
+            return future;
+        }
+        ensureEngine();
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            future.complete(Ignited.OPEN);
+            return future;
+        }
+        ignitions.put(pl.ignite(pos.asLong(), source.toString()), future);
         return future;
     }
 
@@ -687,12 +720,17 @@ public final class DimensionAtmos {
         Map<Long, CompletableFuture<PinResult>> movedPins = new TreeMap<>();
         Map<Long, CompletableFuture<Void>> movedUnpins = new TreeMap<>();
         Map<Long, CompletableFuture<HeatResult>> movedHeats = new TreeMap<>();
+        Map<Long, CompletableFuture<Ignited>> movedIgnitions = new TreeMap<>();
         for (GasOp op : carried) {
             Pending p = pending.remove(op.seq());
             CompletableFuture<PinResult> pin = pins.remove(op.seq());
             CompletableFuture<Void> unpin = unpins.remove(op.seq());
             CompletableFuture<HeatResult> heat = heats.remove(op.seq());
+            CompletableFuture<Ignited> ignition = ignitions.remove(op.seq());
             long seq = pipeline.resubmit(remap(op, oldRegistry));
+            if (ignition != null) {
+                movedIgnitions.put(seq, ignition);
+            }
             if (heat != null) {
                 movedHeats.put(seq, heat);
             }
@@ -715,12 +753,17 @@ public final class DimensionAtmos {
         for (CompletableFuture<HeatResult> f : heats.values()) {
             f.completeExceptionally(new CancellationException("the gas geometry changed"));
         }
+        for (CompletableFuture<Ignited> f : ignitions.values()) {
+            f.completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
         pins.clear();
         unpins.clear();
         heats.clear();
+        ignitions.clear();
         pins.putAll(movedPins);
         unpins.putAll(movedUnpins);
         heats.putAll(movedHeats);
+        ignitions.putAll(movedIgnitions);
         // Anything left under the old engine's numbers has no operation to complete it.
         List<Pending> orphans = new ArrayList<>();
         pending.entrySet().removeIf(e -> {
@@ -738,7 +781,7 @@ public final class DimensionAtmos {
 
     /** An operation with its amounts indexed by the current gas registry instead of {@code from}. */
     private GasOp remap(GasOp op, GasRegistry from) {
-        if (from == registry || op.kind().isPin() || op.kind().isHeat()) {
+        if (from == registry || op.kind().isPin() || op.kind().isHeat() || op.kind() == GasOp.Kind.IGNITE) {
             return op;
         }
         double[] moles = new double[registry.size()];
@@ -784,6 +827,9 @@ public final class DimensionAtmos {
                 ambient,
                 settings(ZasServerConfig.scheduler()));
         engine.setPhaseListener(profiler.listener);
+        // Hotspot spread draws (§3.5): the same world and dimension spread the same way.
+        engine.setSeed(
+                level.getSeed() ^ (long) dimension().location().toString().hashCode() * 0x9E3779B97F4A7C15L);
         DimensionData data = DimensionData.of(level);
         engine.reserveZoneIds(data.nextZoneId());
         DimensionScheduler scheduler =
@@ -829,15 +875,23 @@ public final class DimensionAtmos {
 
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
-     * with the openings exported for airflow (FLOW-001, FLOW-014) and the fire oxygen threshold
-     * (FIRE-030).
+     * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
+     * (FIRE-030), the server's reactions (FIRE-001) and the hotspot spread (FIRE-016).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()).withVenting(ZasServerConfig.venting());
         return new EngineSettings(exchange, ZasServerConfig.conservationChecker(), ZasServerConfig.heat())
                 .withAirflow(AirflowConfig.exportKpa(dimension().location()))
-                .withFire(FireConfig.settings());
+                .withFire(FireConfig.settings())
+                .withReactions(reactions())
+                .withHotspots(FireConfig.hotspots());
+    }
+
+    /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */
+    private ReactionSet reactions() {
+        ReactionSet set = ServerReactions.current();
+        return set.registry().equals(registry) ? set : ReactionSet.EMPTY;
     }
 
     // ---- Commands and the profiler ------------------------------------------------------
@@ -1062,6 +1116,8 @@ public final class DimensionAtmos {
         }
         DimensionData.of(level).raiseNextZoneId(pl.nextZoneId());
         completeChecks(a.conservation());
+        // Gas fires first, so an ignition's caller finds its block (FIRE-018).
+        FireIntents.apply(level, a.fireIntents(), this::isChunkLoaded);
         for (OpenAirEvent e : a.events()) {
             Pending p = pending.get(e.seq());
             SourceId source = p != null ? p.source() : SourceId.of("zas", "unknown");
@@ -1089,6 +1145,12 @@ public final class DimensionAtmos {
                 unpin.complete(null);
                 continue;
             }
+            CompletableFuture<Ignited> ignition = ignitions.remove(o.seq());
+            if (ignition != null) {
+                OpOutcome.Ignition i = o.ignition();
+                ignition.complete(i == null ? Ignited.OPEN : ignited(i, o.zoneId()));
+                continue;
+            }
             CompletableFuture<HeatResult> heat = heats.remove(o.seq());
             if (heat != null) {
                 // A paused region with no zone has no temperature to report.
@@ -1097,6 +1159,11 @@ public final class DimensionAtmos {
             }
         }
         return true;
+    }
+
+    private static Ignited ignited(OpOutcome.Ignition i, long zoneId) {
+        boolean at = i.status() == OpOutcome.IgnitionStatus.IGNITED || i.status() == OpOutcome.IgnitionStatus.BURNING;
+        return new Ignited(i.status(), at ? BlockPos.of(i.block()) : null, zoneId);
     }
 
     private void completeChecks(ConservationReport report) {
@@ -1255,9 +1322,11 @@ public final class DimensionAtmos {
         List<CompletableFuture<?>> waiting = new ArrayList<>(pins.values());
         waiting.addAll(unpins.values());
         waiting.addAll(heats.values());
+        waiting.addAll(ignitions.values());
         pins.clear();
         unpins.clear();
         heats.clear();
+        ignitions.clear();
         waiting.forEach(f -> f.completeExceptionally(why));
     }
 }

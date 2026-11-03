@@ -1097,7 +1097,8 @@ geometry within 6 blocks of their eyes for the crosshair. The client draws
 paused zones grey and unresolved cells magenta. Nothing is sent to anyone else (DATA-005). The
 renderer is in `io.github.west3436.zas.client`, loaded through a
 `@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
-Hotspots are a FIRE concept (R1), so their list stays empty for now.
+Hotspots come from the last atmos tick's `DebugView`, each with its zone's
+published temperature (CLIENT-013).
 
 *Implemented (#37):* the atmosphere preset (OPS-007, OPS-014, OPS-015). Every
 service above reads its preset-controlled settings from one registry,
@@ -1203,6 +1204,227 @@ also in `[fire]`), rising linearly to all of the carbon at the threshold. Each m
 releases 283 kJ less heat (CO's own heat of combustion, FIRE-003), so the
 carbon burned is the same and the heat falls to match. A CH₄ burn takes the
 same reductions off per mole of its carbon (`oxygenSaved`, `heatLost`).
+
+*Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)):*
+vanilla fire and fuel blocks, in `io.github.west3436.zas.fire`.
+
+- **The air a fire burns in** (`FireAir`, FIRE-030, FIRE-020): the point is
+  resolved as the API resolves one (§6.5). It reads the published zone there,
+  or outside zones the dimension's ambient (an unresolved region reads as the
+  ambient too), so a vacuum dimension can't sustain fire. A full block such as
+  a furnace takes the point just inside its front face, which resolves to the
+  open cell in front of it. Server thread; a client always says yes.
+- **Mixins** (§7): M2 puts out a fire whose cell fails the threshold at the
+  head of its tick. M3 stops flint and steel, fire charges and dispensers
+  lighting one. M4 stops a fire burning away a neighbouring block whose own
+  cell fails it. M5 skips the tick of a furnace that burns or has fuel while
+  its front cell fails it, so its fuel, burn time and cooking progress wait for
+  O₂. M6 puts out a campfire whose cell fails it.
+- **Fuel profiles** (`FuelProfiles`, FIRE-025): datapack files giving a
+  block's power, read when a block burns. For a fire, a profile whose
+  `burning_on` matches the block the fire burns on wins (FIRE-022).
+- **Burning** (`Burners`, FIRE-021, FIRE-022, FIRE-005, HEAT-007): the burning
+  states of `#zas:combustion` are tracked per level and chunk. The change hook
+  reports a position starting or stopping to burn, and each chunk is scanned
+  when it loads (sections whose palette has none are skipped). Every atmos
+  period, each tracked block is checked against the threshold. A fire that
+  fails it is removed, which is what puts out soul fire, which never ticks. A
+  block that passes it, in an unpaused zone, burns its profile for the period
+  as carbon. The burns are summed per zone and sent as a removal of O₂ under
+  the ledger's `REACTION` category, which never forms a zone. When it is
+  applied, CO₂ and CO at the zone's temperature and the heat (API-013's heat
+  operation) are queued in proportion to the O₂ actually removed. So the
+  products land one atmos tick after the O₂ leaves, and a zone short of O₂
+  gets only what burned. `zas_atmos`'s generator isn't in the tag and has no
+  profile: it doesn't use the air (D-35, CONT-067).
+
+### Reactions
+
+*Implemented in part ([#41](https://github.com/west3436/zas-cubed/issues/41)):*
+gas reactions are data ([datapacks](datapacks.md#reactions), FIRE-001), and
+reacting a mixture is a pure function in the engine, so the worker's zones and
+hotspots and a standalone container (API-019, FIRE-031) all react gas the same
+way.
+
+- **Loading.** `zas.reaction.ReactionLoader` reads
+  `data/<ns>/zas/reaction/*.json` into engine `ReactionDefinition`s.
+  `ServerReactions` compiles them against the running server's gases into an
+  immutable `engine.reaction.ReactionSet` when the server starts and on each
+  `/reload`; a definition naming an undefined gas is skipped then, with an
+  error naming its file (OPS-008). Unlike gases, reactions take effect on
+  reload: they are rules, not state. `DimensionAtmos` puts the set in each
+  batch's `EngineSettings.reactions`, so one atmos tick sees one set.
+- **Two steps.** `ReactionSet.react(mixture, seconds, fire)` runs the reactions
+  that don't need ignition over a whole mixture. In phase 7 (ZONE_UPDATES) the
+  worker runs it on every zone that isn't paused, in id order, over the atmos
+  period, so N₂O decomposition (FIRE-004) happens wherever a zone is hot
+  enough.
+  `ReactionSet.burn(mixture, parcelLitres, ignition, fire)` runs those that do
+  (FIRE-006), to completion, on the gas in a parcel of the mixture, for phase 6
+  (HOTSPOTS) and containers: 375 L per second (`PARCEL_LITRES_PER_SECOND`,
+  FIRE-011). A reaction that needs ignition burns if a source is present or the
+  gas is at or above its autoignition temperature. One with flammability
+  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), and
+  its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
+  `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
+  fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
+- **One step.** Every condition is read from the mixture at the start. Each
+  reaction's extent is worked out alone: as far as its limiting reactant
+  allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
+  (FIRE-002): for each gas, if the reactions together want more than there
+  is, the ratio of what there is to what they want; each reaction is scaled by
+  the worst ratio among its own reactants, so one that competes with nothing
+  keeps its extent, unlike ZAS's single global scale. Products are added after
+  all reactions consume. `GasMixture.applyReaction(delta, joules)` then sets the
+  moles and the temperature from C·T + Q at the new heat capacity, so the heat
+  of reaction goes into temperature through the products' C<sub>v</sub>
+  (CORE-003). Because the parcel shares the mixture's temperature, burning in
+  place is exactly taking the parcel out, burning it and mixing it back, and no
+  separate parcel mixture is made (so its pruning can't escape the ledger).
+- **Conservation.** A step returns the change in moles per gas; the caller
+  records it under `LedgerCategory.REACTION` (CORE-073).
+- **Determinism.** Reactions are visited in id order and nothing reads a clock
+  or a random source (§3.5).
+- **Standalone mixtures** (API-019, FIRE-031).
+  `ReactionSet.applyStandalone(mixture, seconds, ignition, fire)` is a burn of
+  375 L per second of the mixture followed by a react over the time.
+  `Reactions.applyStandalone` in the API reaches it through the provider's
+  `zas.reaction.StandaloneReactions`, which copies the API mixture into an
+  engine one on the server's gas registry and back. A gas the server doesn't
+  define stays aside, only adding its heat capacity (the API default), so the
+  temperature is right. It reads only the compiled set and the fire settings,
+  both immutable, so any thread may call it.
+- **Types in code** (API-020). The engine knows a code reaction only as a
+  `CodeReaction`: given the mixture's moles, the amounts its definition may
+  use, the temperature, volume, step and ignition, it returns what it consumes
+  and produces and the heat. The fair allocation scales that whole change like
+  a standard reaction's extent. Mods implement the API's `ReactionType`
+  instead, registered in the static `Reactions` registry; `ReactionCodecs` binds
+  the definition's `parameters` to the type at load (`withParameters`) and wraps
+  the result in `zas.reaction.ApiReactionType`, which converts between gas
+  indices and ids.
+- **Fault isolation** (§3.6). A code reaction runs on the atmos worker inside
+  the step, so a mod's bug must not fault the dimension. `ApiReactionType`
+  catches a `RuntimeException` or `LinkageError`, and rejects a change naming a
+  gas the server doesn't define; either way that reaction changes nothing that
+  step, and it logs at most once a minute. The engine guards `CodeReaction`s
+  the same way (once per compiled set), and also rejects a change with a
+  negative or non-finite amount.
+
+### Hotspots
+
+*Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)); the
+API (API-031, API-055 to API-058) comes separately.* Hotspots are per-cell fires
+that burn their zone's gas. They live on the worker, in phase 6 of the atmos
+tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
+`zas.hotspot`.
+
+- **Every hotspot is a block.** A hotspot is a vanilla fire block in a zone
+  (FIRE-019) or a `zas:gas_fire` block (FIRE-018). The geometry palette flags
+  both (`Geometry.FLAG_FIRE`, `FLAG_GAS_FIRE`), so lighting or removing one is
+  a geometry change. The change hook sends it to the worker like any other
+  block edit, and no fire mixin is needed. The mirror keeps an index of
+  flagged positions per section (`SectionMirror.flagged`), so the phase never
+  scans sections. Each tick starts by bringing the hotspots in line with the
+  mirror:
+  - every flagged block in a zone is a hotspot;
+  - a hotspot whose block is gone is dropped;
+  - a gas fire outside any zone is removed.
+
+  Nothing about hotspots is saved. After a load they come back from the blocks
+  as the zones' sections are mirrored again (DATA-009).
+- **World writes.** A new gas hotspot asks the server thread for its block
+  with a `FireIntent` (place or remove `zas:gas_fire`) in the `Result`. At
+  apply, the server checks the block itself rather than the chunk's block
+  generation (§3.3):
+  - it places a gas fire only in air;
+  - it removes one only where one is.
+
+  A chunk-wide generation would drop every intent in a chunk where anyone is
+  building, and a fire would never place. Until the next tick sees its block,
+  the hotspot is *pending*: it doesn't burn, spread or count as a fire. If the
+  block never appears, the hotspot is dropped, and the position isn't tried
+  for 30 atmos ticks. That happens when the position held something other than
+  air: no-collision blocks such as flowers share air's geometry.
+- **One tick, in order:**
+  1. Sync with the mirror.
+  2. Ignitions:
+     - ignition operations (`GasOp.Kind.IGNITE`, FIRE-014), in sequence order;
+     - standing ignition sources (`FLAG_IGNITION_SOURCE`), in position order;
+     - autoignition (FIRE-010), by zone in id order: an active zone with no
+       hotspot whose gas is flammable and at or above a fuel's autoignition
+       point ignites at its lowest air position.
+
+     An ignition looks at the source's position and its six neighbours. A
+     hotspot in an active zone at any of them means the fire is already there.
+     Otherwise the first of them, in `Face` order after the position itself,
+     that is in an active zone with flammable gas and is air starts a pending
+     hotspot. The operation's outcome says what it found (`OpOutcome.Ignition`):
+     `IGNITED`, `BURNING`, `NOT_FLAMMABLE`, `NO_SPACE`, `OPEN` or `PAUSED`.
+  3. Every active hotspot, in position order, burns a parcel of 375 L per
+     second of its zone's gas (FIRE-011). A gas fire whose gas won't burn goes
+     out instead, and its block is removed (FIRE-017). Whether gas burns
+     includes the fire oxygen threshold (FIRE-030). A vanilla fire is never put
+     out here; that is FIRE-020's, on the server. Without fuel it just burns
+     nothing.
+  4. Every hotspot that burned may spread to each open neighbouring cell that
+     is air, in an active zone with flammable gas (FIRE-016). The chance is
+     `spread_chance` per second, 1 − (1 − p)^dt per tick.
+
+  Hotspots in paused zones keep still.
+- **Chemistry** is the batch's reactions (`EngineSettings.reactions`, see
+  Reactions above). Whether a zone's gas can burn, and its autoignition point,
+  come from `ReactionSet.flammability`, and a hotspot burns its parcel with
+  `ReactionSet.burn(mixture, 375 L × dt, ignition = true, fire)`. Each burn's
+  mole changes go to the ledger as `REACTION`. With no reactions loaded,
+  nothing is flammable, so nothing ignites, and fire blocks burn nothing.
+  The spread chance is in `EngineSettings.hotspots`.
+- **Determinism** (§3.5). Hotspots are kept by position in a sorted map. A
+  spread's draw is a SplitMix64 hash of the dimension's seed
+  (`DimensionEngine.setSeed`), the atmos tick, the zone, the hotspot and the
+  target. It needs no shared generator and doesn't depend on the order of the
+  draws.
+- **Rejection** (§3.3). Burning changes zone mixtures, so a burning zone is
+  part of an exchange component and is restored with it. The pipeline drops
+  the intents and fire events of rejected zones. `Hotspots.restore` drops the
+  pending hotspots those intents were for and takes back the zones' fire state
+  (so their events come again), and a rejected ignition runs again.
+- **Published** with the result:
+  - a `HotspotTable` of every hotspot whose block is there, with its zone,
+    with rejected zones answered from the previous table;
+  - the `FireEvent`s: a zone's first hotspot (`IGNITED`) and its last one going
+    out (`EXTINGUISHED`), named by zone id (API-031);
+  - the hotspots inside the debug overlay's regions, in `DebugView`
+    (CLIENT-013).
+- **On the server.**
+  - `GeometryDerivation` flags every `BaseFireBlock` state `FLAG_FIRE` and
+    `zas:gas_fire` `FLAG_GAS_FIRE`; neither depends on datapacks.
+    `Geometries.setIgnitionSources(Predicate<BlockState>)` names the standing
+    sources (FIRE-014, FIRE-015). The predicate is asked of every state on the
+    server thread whenever the table is rebuilt, which is on every data load
+    once tags are bound, at `EventPriority.LOW` so a listener resolving its own
+    tags at normal priority is done first. Those states get
+    `FLAG_IGNITION_SOURCE`. A palette change replaces each dimension's engine,
+    as any geometry change does (§4.5).
+  - `zas:gas_fire` (`GasFireBlock`) has no collision and no outline, light 15,
+    and vanilla fire's `entityInside` (FIRE-013). It needs no support, has no
+    item and drops nothing. Adjacent gas fires skip the faces between them, so
+    a burning room shows no grid. It is in `#minecraft:fire`, so mobs path
+    around it and an entity leaving it burns on as from vanilla fire.
+    `TriggerStates` leaves it out of `#zas:combustion`, which takes in
+    `#minecraft:fire`, so `Burners` never burns it as carbon.
+  - `DimensionAtmos` applies the result's `FireIntent`s first in the apply
+    (`FireIntents`), in loaded chunks only. It then completes the ignitions
+    (`DimensionAtmos.ignite`, an `Ignited`) and other outcomes.
+  - The seed is the world seed mixed with the dimension id. The spread chance
+    is `[fire] spread_chance`.
+- **Vanilla fire and `Burners`.** A vanilla fire in a zone is worked on twice,
+  for two different fuels. `Burners` (FIRE-022) burns the carbon of the block
+  it burns on: O₂ to CO₂ and CO at its fuel profile's power. The hotspot burns
+  the zone's flammable gas: its parcel with the reactions, which in a zone of
+  plain air is nothing. Both use the zone's O₂, as two fires in one room do,
+  and FIRE-020's going out without O₂ stays with `Burners` and the M2 tick.
+  The hotspot never removes a vanilla fire.
 
 ### Life support (breathing)
 
@@ -1582,11 +1804,11 @@ because STARTUP config is too late for block classes.
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
 | M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, and record a Hardcore zone trigger the write starts | GEO-010, GEO-011, GEO-012, CORE-056 | **S1**, GameTests |
-| M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable | Fire inside a zone without enough O₂ goes out; burning consumes O₂ | FIRE-020, FIRE-022, FIRE-023, FIRE-030 | research only |
-| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` | No ignition without enough O₂ | FIRE-020, FIRE-014 | research only |
-| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` and `FireBlock#canCatchFire(BlockGetter, BlockPos, Direction)` | `@WrapMethod` / `@ModifyReturnValue` | Fire spread depends on O₂ | FIRE-016, FIRE-020 | research only |
-| M5 | `AbstractFurnaceBlockEntity#serverTick` (static) plus a `litTime` `@Accessor` | `@Inject` HEAD, cancellable | Lit furnaces consume O₂ and pause without it | FIRE-021, FIRE-027, HEAT-007 | research only |
-| M6 | `CampfireBlock#canLight` and `CampfireBlockEntity#cookTick` | `@ModifyReturnValue`, `@Inject` | Campfires need O₂, and go out (`dowse`) without it | FIRE-021, FIRE-027 | research only |
+| M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable (`FireBlockMixin`) | A fire whose cell fails the fire oxygen threshold goes out; its O₂ use is the burning service's | FIRE-020, FIRE-030 | GameTests (`fire_020_`, `fire_030_`) |
+| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-014 | GameTests (`fire_020_`) |
+| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020 | applied; no GameTest of its own |
+| M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027 | GameTests (`fire_027_`) |
+| M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027 | GameTests (`fire_027_`) |
 | M7 | `PalettedContainer` internals (palette, storage) | `@Accessor` | Optional fast section decode, about 10× faster than `get()` | CORE-047 (worker side) | proposed (S5) |
 
 Not mixins:
@@ -1599,12 +1821,14 @@ Not mixins:
 - **The Ad Astra adapter** uses Ad Astra's own events and ticks (SPACE-016,
   to be proved in S6).
 - **Client rendering** uses NeoForge render events.
-- **Candles and soul fire** are found by scanning zones (no ticking hook).
+- **Lit fuel blocks' O₂ use and soul fire** go through the burning service
+  (§5, *Fire chemistry and fuel blocks*), which tracks burning blocks through
+  the change hook (M1) and chunk loads. Candles aren't combustion.
 
-M2–M6 are new compared with the S1 spike, but their targets were verified in
-the official 1.21.1 mappings during research
-([neoforge §10](research/neoforge-1.21.1.md#10-fire--furnaces)). Each needs a
-GameTest in R1 (E3).
+M2–M6 are new compared with the S1 spike. Their targets were verified in the
+official 1.21.1 mappings during research
+([neoforge §10](research/neoforge-1.21.1.md#10-fire--furnaces)) and they were
+built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 
 ## 8. Testing strategy
 
@@ -1664,7 +1888,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank` and a battery's `zas_atmos:energy`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy` and a fire extinguisher's `zas_atmos:charges`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -1672,7 +1896,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `firelock` | The firelock and its lockdown (§11.8) |
-| `tool` | The multitool (§11.6) and the crowbar (§11.8) |
+| `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
@@ -2104,10 +2328,10 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   for that times its burn time over coal's 1,600 ticks. It
   offers the store through an extract-only FE capability, and its fuel slot
   through an item handler, so hoppers can feed it. Its `lit` property is true
-  while it burns. The block is in `#zas:combustion`
-  (`data/zas/tags/block/combustion.json` in `zas_atmos`), so the framework's
-  change hook treats lighting it as combustion (CORE-056, FIRE-024), with
-  nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
+  while it burns. Like vg's P.A.C.M.A.N., it never touches the air
+  (D-35, CONT-067): it isn't in `#zas:combustion` and has no fuel profile, so
+  lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
+  no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
 
 ### 11.8 Firelocks
@@ -2189,3 +2413,35 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+
+### 11.10 The fire extinguisher (CONT-037)
+
+`tool.FireExtinguisherItem`, one to a stack, with vg's sprite (D-74).
+
+- **Spraying.** Using it starts a held use, as a bow's. While the use is held,
+  every `SPRAY_INTERVAL` (4) ticks it sprays once and uses one of its
+  `CHARGES` (100) charges, so a full one sprays for 20 s. The server works out
+  each spray from the user's eye and look direction; the client only starts and
+  stops the use. The spray follows the look up to `REACH` (5) blocks, or to the
+  first block with collision it meets, so a wall or glass stops it while fire
+  and water don't. Along that line it takes the cell every half block: the cell
+  alone within `NARROW` (2) blocks of the eye, and the 3 × 3 × 3 cells around
+  it beyond. The samples stop short of the block the line meets: a point on its
+  face is in that block's cell, and a box around it would reach behind a
+  one-block wall. Where the line meets a block, the 3 × 3 × 3 cells around the one
+  in front of the face it meets join the spray, so a fire on a floor or wall
+  the user aims at goes out. Each box goes to `Fires.extinguish` (zas-api's
+  `fire` package; until that is on main, a stand-in with the same signature in
+  `tool`), which removes the gas fires and vanilla fire blocks in it; the
+  engine drops a removed gas fire's hotspot at its next tick.
+- **Sound.** Each spray plays vanilla's `block.fire.extinguish` quietly at the
+  user, with a high pitch; a spray that put something out also plays it as
+  vanilla's dowsed fire does, at the spray's end. Empty, it clicks
+  (`block.dispenser.fail`) and says so on the action bar.
+- **Charges.** In the stack's `zas_atmos:charges` (a new stack is full), shown
+  on the item bar in water blue and in the tooltip. Using it on a water source
+  block while it isn't full refills it, with the bucket's fill sound; the
+  water stays. There is no crafting-grid refill.
+- **What it doesn't do.** It doesn't put out burning entities, cool anything
+  or change the gas: a fire whose zone still has the O₂ and heat can light
+  again (FIRE-010).
