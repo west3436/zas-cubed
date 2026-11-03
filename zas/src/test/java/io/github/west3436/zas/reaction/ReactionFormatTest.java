@@ -283,17 +283,17 @@ class ReactionFormatTest {
         assertEquals(energy + r.heat(), m.heatCapacity() * m.temperature(), 1e-6, fuelId);
     }
 
-    private static ReactionSet shippedSet(GasRegistry gases) throws IOException {
+    static ReactionSet shippedSet(GasRegistry gases) throws IOException {
         return ReactionSet.compile(gases, shippedReactions(), (d, why) -> {
             throw new AssertionError(d.id() + ": " + why);
         });
     }
 
-    private static Optional<ReactionDefinition> parse(String json) {
+    static Optional<ReactionDefinition> parse(String json) {
         return ReactionLoader.parse(ID, JsonParser.parseString(json));
     }
 
-    private static void assertSkipped(String json, String messageStart) {
+    static void assertSkipped(String json, String messageStart) {
         DatapackErrors.beginLoad(ReactionLoader.KIND);
         assertEquals(Optional.empty(), parse(json), json);
         List<DatapackErrors.Problem> problems = DatapackErrors.recent().stream()
@@ -310,7 +310,7 @@ class ReactionFormatTest {
         return Path.of(System.getProperty("zas.resources")).resolve("data/zas/zas");
     }
 
-    private static GasRegistry shippedGases() throws IOException {
+    static GasRegistry shippedGases() throws IOException {
         List<GasDefinition> defs = new ArrayList<>();
         for (Path file : jsonFiles(resources().resolve("gas"))) {
             JsonElement json = JsonParser.parseString(Files.readString(file));
@@ -321,7 +321,7 @@ class ReactionFormatTest {
         return GasRegistry.of(defs);
     }
 
-    private static List<ReactionDefinition> shippedReactions() throws IOException {
+    static List<ReactionDefinition> shippedReactions() throws IOException {
         List<ReactionDefinition> defs = new ArrayList<>();
         for (Path file : jsonFiles(resources().resolve("reaction"))) {
             JsonElement json = JsonParser.parseString(Files.readString(file));

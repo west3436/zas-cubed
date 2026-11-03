@@ -52,7 +52,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
 | `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
 | `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
-| `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces, campfires and the fuel generator (FIRE-030) |
+| `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). The fuel generator doesn't use the air (CONT-067) |
 | `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030) |
 | `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
 | `[fire] spread_chance` | `0.3` | The chance per second, 0 to 1, that a gas fire spreads to each neighbouring cell of its zone that is air and whose gas can burn (FIRE-016) |
@@ -139,7 +139,7 @@ warning in the log.
 | Option | Normal | Hardcore | Meaning |
 |---|---|---|---|
 | `ambient_variant` | `NORMAL` | `HARDCORE` | Which variant of each dimension's ambient applies (ENV-010): Hardcore's Nether is hot and CO₂-rich and its End thin (ENV-002, ENV-012) |
-| `combustion_forms_zones` | `false` | `true` | Whether a fire starting, or a furnace, campfire or the fuel generator being lit, forms a zone in an enclosed, unzoned area: the blocks in `#zas:combustion` (CORE-056, FIRE-024) |
+| `combustion_forms_zones` | `false` | `true` | Whether a fire starting, or a furnace or campfire being lit, forms a zone in an enclosed, unzoned area: the blocks in `#zas:combustion` (CORE-056, FIRE-024) |
 | `planting_forms_zones` | `false` | `true` | Whether placing a crop, sapling or leaves forms a zone in an enclosed, unzoned area: the blocks in `#zas:plants` (CORE-056, CONT-053) |
 | `block_pressure_damage` | `false` | `true` | Whether a pressure difference breaks blocks in `zas:pressure_fragile`, such as glass (FLOW-007, FLOW-016) |
 | `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a lit crop or sapling in a zone makes from CO₂ at light 15, in mol/h (CONT-057) |

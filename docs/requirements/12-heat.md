@@ -229,6 +229,10 @@ operation, without forming a zone, once the O₂ it burned is removed (FIRE-021)
 Checked by `fire_021_lit_fuel_blocks_use_o2_at_their_profile` and
 `cont_067_running_generator_uses_o2_and_makes_co2_and_heat`.*
 
+*2026-11-03: the ZAS³ fuel generator adds no heat: it doesn't use the air
+(D-35, CONT-067, changed by the owner). `fire_021_lit_fuel_blocks_use_o2_at_their_profile`
+checks the vanilla blocks.*
+
 #### HEAT-004 · Radiative loss to vacuum
 `Should` · `R1` · `Implemented` · Verify: Unit · Trace: D-07, D-48
 

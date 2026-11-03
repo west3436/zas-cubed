@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.reaction.ReactionConditions;
 import io.github.west3436.zas.engine.reaction.ReactionDefinition;
@@ -57,6 +58,28 @@ class ZoneReactionsTest {
         // The heat went into the gas: C·T + Q at the new heat capacity.
         double energy = (n2 * 20.8 + o2 * 21.0) * before.temperature() + 1000 * reacted;
         assertEquals(energy / (after.moles(N2) * 20.8 + after.moles(O2) * 21.0), after.temperature(), 1e-9);
+    }
+
+    @Test
+    void api_019_a_standalone_mixture_reacts_as_a_zone_does() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        sim.settings = sim.settings.withHeat(HeatSettings.OFF);
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        sim.add(1, 65, 1, 30, 10);
+        sim.step();
+        ZoneView before = sim.zoneAt(1, 65, 1);
+        GasMixture standalone = new GasMixture(Sim.REGISTRY, before.volume(), before.temperature());
+        standalone.setMoles(N2, before.moles(N2));
+        standalone.setMoles(O2, before.moles(O2));
+
+        sim.settings = sim.settings.withReactions(SET);
+        sim.step();
+        ZoneView zone = sim.zoneAt(1, 65, 1);
+        SET.applyStandalone(standalone, sim.settings.exchange().periodSeconds(), false, sim.settings.fire());
+
+        assertEquals(zone.moles(O2), standalone.moles(O2), 1e-12);
+        assertEquals(zone.moles(N2), standalone.moles(N2), 1e-12);
+        assertEquals(zone.temperature(), standalone.temperature(), 1e-9);
     }
 
     @Test

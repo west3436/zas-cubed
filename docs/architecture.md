@@ -1205,8 +1205,8 @@ vanilla fire and fuel blocks, in `io.github.west3436.zas.fire`.
   applied, CO₂ and CO at the zone's temperature and the heat (API-013's heat
   operation) are queued in proportion to the O₂ actually removed. So the
   products land one atmos tick after the O₂ leaves, and a zone short of O₂
-  gets only what burned. The generator (CONT-067) burns through this with
-  nothing in `zas_atmos` but its tag, its `lit` property and its profile.
+  gets only what burned. `zas_atmos`'s generator isn't in the tag and has no
+  profile: it doesn't use the air (D-35, CONT-067).
 
 ### Reactions
 
@@ -1255,6 +1255,31 @@ way.
   records it under `LedgerCategory.REACTION` (CORE-073).
 - **Determinism.** Reactions are visited in id order and nothing reads a clock
   or a random source (§3.5).
+- **Standalone mixtures** (API-019, FIRE-031).
+  `ReactionSet.applyStandalone(mixture, seconds, ignition, fire)` is a burn of
+  375 L per second of the mixture followed by a react over the time.
+  `Reactions.applyStandalone` in the API reaches it through the provider's
+  `zas.reaction.StandaloneReactions`, which copies the API mixture into an
+  engine one on the server's gas registry and back. A gas the server doesn't
+  define stays aside, only adding its heat capacity (the API default), so the
+  temperature is right. It reads only the compiled set and the fire settings,
+  both immutable, so any thread may call it.
+- **Types in code** (API-020). The engine knows a code reaction only as a
+  `CodeReaction`: given the mixture's moles, the amounts its definition may
+  use, the temperature, volume, step and ignition, it returns what it consumes
+  and produces and the heat. The fair allocation scales that whole change like
+  a standard reaction's extent. Mods implement the API's `ReactionType`
+  instead, registered in the static `Reactions` registry; `ReactionCodecs` binds
+  the definition's `parameters` to the type at load (`withParameters`) and wraps
+  the result in `zas.reaction.ApiReactionType`, which converts between gas
+  indices and ids.
+- **Fault isolation** (§3.6). A code reaction runs on the atmos worker inside
+  the step, so a mod's bug must not fault the dimension. `ApiReactionType`
+  catches a `RuntimeException` or `LinkageError`, and rejects a change naming a
+  gas the server doesn't define; either way that reaction changes nothing that
+  step, and it logs at most once a minute. The engine guards `CodeReaction`s
+  the same way (once per compiled set), and also rejects a change with a
+  negative or non-finite amount.
 
 ### Hotspots
 
@@ -2273,10 +2298,10 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   for that times its burn time over coal's 1,600 ticks. It
   offers the store through an extract-only FE capability, and its fuel slot
   through an item handler, so hoppers can feed it. Its `lit` property is true
-  while it burns. The block is in `#zas:combustion`
-  (`data/zas/tags/block/combustion.json` in `zas_atmos`), so the framework's
-  change hook treats lighting it as combustion (CORE-056, FIRE-024), with
-  nothing added to the API. Its GUI (`GeneratorMenu`) has one fuel slot that
+  while it burns. Like vg's P.A.C.M.A.N., it never touches the air
+  (D-35, CONT-067): it isn't in `#zas:combustion` and has no fuel profile, so
+  lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
+  no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE.
 
 ### 11.8 Firelocks

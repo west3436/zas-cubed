@@ -10,14 +10,22 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.change.TriggerStates;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.environment.Ambients;
 import java.util.List;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -163,12 +171,12 @@ public final class GeneratorTests {
     }
 
     /**
-     * A running generator in a zone burns its fuel profile, 10 kW of carbon (FIRE-025): in 10 s it
-     * uses 0.254 mol of O₂, makes as much CO₂ and adds 100 kJ of heat (CONT-067, FIRE-021,
-     * HEAT-007). Conduction is off, so the temperature moves only by what burns.
+     * A running generator never touches the air (D-35, CONT-067): in a sealed zone it uses no O₂,
+     * makes no CO₂ and adds no heat, and the burning step doesn't track it. Conduction is off, so
+     * nothing else moves the temperature.
      */
     @GameTest(template = "empty", batch = "zas_atmos_controller")
-    public static void cont_067_running_generator_uses_o2_and_makes_co2_and_heat(GameTestHelper h) {
+    public static void cont_067_running_generator_changes_no_gas(GameTestHelper h) {
         Site s = new Site(h, 60);
         ZasServerConfig.overrideHeatForTest(io.github.west3436.zas.engine.heat.HeatSettings.OFF);
         try {
@@ -185,33 +193,62 @@ public final class GeneratorTests {
             g.fuel().insertItem(0, new ItemStack(Items.COAL), false);
             g.serverTick();
             h.assertTrue(lit(s), "unlit with coal in it");
+            h.assertFalse(
+                    io.github.west3436.zas.fire.Burners.tracks(s.level, s.abs(2, 1, 2)), "the burning step tracks it");
             var before = s.zone(2, 2, 2);
             var sent = io.github.west3436.zas.fire.Burners.burn(s.level, 10, p -> p.equals(s.abs(2, 1, 2)));
-            var burn = sent.get(before.id().value());
-            h.assertTrue(burn != null, "the generator didn't burn in its zone");
-            s.settle(burn);
-            s.tick();
+            h.assertTrue(sent.isEmpty(), "the generator burned the zone's O2");
+            for (int i = 0; i < 3; i++) {
+                for (int t = 0; t < 20; t++) {
+                    g.serverTick();
+                }
+                s.tick();
+            }
+            h.assertTrue(lit(s), "the generator went out");
             var after = s.zone(2, 2, 2);
-            double carbon = 10_000.0 * 10 / 394_000;
-            var co2 = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
-            s.close(
-                    before.mixture().moles(io.github.west3436.zas.api.gas.StandardAir.OXYGEN)
-                            - after.mixture().moles(io.github.west3436.zas.api.gas.StandardAir.OXYGEN),
-                    carbon,
-                    1e-9,
-                    "O2 used");
-            s.close(after.mixture().moles(co2) - before.mixture().moles(co2), carbon, 1e-9, "CO2 made");
-            double c = io.github.west3436.zas.api.gas.GasProperties.heatCapacity(
-                    after.mixture().moles());
-            s.close(
-                    after.mixture().temperature() - before.mixture().temperature(),
-                    100_000 / c,
-                    1e-6,
-                    "temperature rise");
+            h.assertValueEqual(after.mixture().moles(), before.mixture().moles(), "the zone's gas");
+            s.close(after.mixture().temperature(), before.mixture().temperature(), 1e-9, "the zone's temperature");
             h.succeed();
         } finally {
             ZasServerConfig.overrideHeatForTest(null);
             s.clear();
+        }
+    }
+
+    /**
+     * A generator runs in a vacuum (D-35, CONT-067): in the End with the test datapack's vacuum
+     * ambient, a coal lights it and it makes 40 FE per game tick.
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_controller")
+    public static void cont_067_generator_runs_in_a_vacuum(GameTestHelper h) {
+        ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
+        if (end == null) {
+            throw new GameTestAssertException("no End");
+        }
+        Ambient vacuum = Ambients.ambient(ResourceKey.create(
+                Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("zas_gametest", "vacuum")));
+        h.assertTrue(vacuum.isVacuum(), "zas_gametest:vacuum isn't a vacuum");
+        Site s = new Site(h, end, 61);
+        Ambients.overrideForTest(Level.END, vacuum);
+        try {
+            s.clear();
+            s.set(2, 0, 2, Site.STONE);
+            GeneratorBlockEntity g = generator(s, 2, 1, 2);
+            g.fuel().insertItem(0, new ItemStack(Items.COAL), false);
+            g.serverTick();
+            h.assertTrue(lit(s), "unlit with coal in it, in a vacuum");
+            int left = g.burnLeft();
+            int energy = g.energy().getEnergyStored();
+            for (int t = 0; t < 20; t++) {
+                g.serverTick();
+            }
+            h.assertValueEqual(g.burnLeft(), left - 20, "burn time in a vacuum");
+            h.assertValueEqual(g.energy().getEnergyStored(), energy + 20 * 40, "FE made in a vacuum");
+            h.assertTrue(lit(s), "the generator went out in a vacuum");
+            h.succeed();
+        } finally {
+            s.clear();
+            Ambients.overrideForTest(Level.END, null);
         }
     }
 
@@ -221,41 +258,29 @@ public final class GeneratorTests {
     }
 
     /**
-     * Under Hardcore, lighting the generator in a sealed room forms a zone there, as a lit furnace
-     * does; unlit, or lit under Normal, it forms none (CORE-056, CONT-067). The generator is in
-     * {@code #zas:combustion} and its {@code lit} states are the burning ones.
+     * Lighting the generator in a sealed room forms no zone, even under Hardcore (CORE-056,
+     * CONT-067): it never touches the air, so it isn't in {@code #zas:combustion}.
      */
     @GameTest(template = "empty", batch = "zas_atmos_core_056")
-    public static void core_056_lit_generator_forms_a_zone_under_hardcore(GameTestHelper h) {
+    public static void core_056_lit_generator_forms_no_zone_under_hardcore(GameTestHelper h) {
         Site s = new Site(h, 10);
         AtmospherePreset before = ZasServerConfig.preset();
         try {
             BlockState unlit = AtmosBlocks.GENERATOR.get().defaultBlockState();
-            h.assertTrue(TriggerStates.isCombustion(unlit.setValue(GeneratorBlock.LIT, true)), "lit isn't combustion");
+            h.assertFalse(TriggerStates.isCombustion(unlit.setValue(GeneratorBlock.LIT, true)), "lit is combustion");
             h.assertFalse(TriggerStates.isCombustion(unlit), "unlit is combustion");
             s.clear();
             s.room(0, 4);
-            s.room(6, 10);
             s.ticks(2);
-
-            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
-            GeneratorBlockEntity normal = generator(s, 8, 1, 2);
-            normal.fuel().insertItem(0, new ItemStack(Items.COAL), false);
-            normal.serverTick();
-            s.ticks(3);
-            h.assertValueEqual(
-                    Atmospheres.at(s.level, s.abs(8, 2, 2)).state(), AtmosphereState.AMBIENT, "lit under Normal");
 
             ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
             GeneratorBlockEntity g = generator(s, 2, 1, 2);
-            s.ticks(3);
-            h.assertValueEqual(
-                    Atmospheres.at(s.level, s.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "unlit under Hardcore");
             g.fuel().insertItem(0, new ItemStack(Items.COAL), false);
             g.serverTick();
+            h.assertTrue(lit(s), "unlit with coal in it");
             s.ticks(3);
-            h.assertTrue(s.zoned(2, 2, 2), "lit under Hardcore formed no zone");
-            h.assertValueEqual(s.zone(2, 2, 2).cellCount(), 27, "cells of the lit generator's room");
+            h.assertValueEqual(
+                    Atmospheres.at(s.level, s.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "lit under Hardcore");
             h.succeed();
         } finally {
             ZasServerConfig.setPreset(before);

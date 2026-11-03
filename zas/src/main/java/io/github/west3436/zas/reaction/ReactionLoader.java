@@ -52,7 +52,7 @@ final class ReactionLoader extends SimpleJsonResourceReloadListener {
                 return Optional.empty();
             }
             ReactionCodecs.Body body = result.getOrThrow();
-            out = Optional.of(body.toDefinition(id, Optional.empty()));
+            out = Optional.of(body.toDefinition(id));
             for (String name : body.unknownSources()) {
                 DatapackErrors.warn(
                         KIND,

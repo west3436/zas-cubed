@@ -1650,15 +1650,20 @@ NeoForge's furnace fuel data map, except fuels that leave an item behind (a lava
 bucket), which the one slot has nowhere to put. A coal block burns for 800 s and
 a stick for 5 s (`cont_066_generator_burns_any_furnace_fuel_by_its_burn_time`).*
 
-#### CONT-067 · Generator is a lit fuel block
+#### CONT-067 · Generator doesn't use the air
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35
 
-The generator shall count as a lit fuel-burning block for FIRE-021, FIRE-024,
-FIRE-025 and HEAT-007.
+The generator shall burn its fuel without using the air, as vg's P.A.C.M.A.N.
+does. It uses no O₂, emits no CO₂, CO or heat, runs in a vacuum, and isn't in
+`#zas:combustion`, so it is no zone trigger.
 
-- **Rationale:** Decision: D-35.
-- **Verify:** A GameTest checks a running generator in a zone uses O₂, emits
-  CO₂ and heat, and forms a zone under Hardcore.
+- **Rationale:** Decision: D-35, as changed by the owner on 2026-11-03.
+- **Verify:** A GameTest checks a running generator in a sealed zone changes
+  no gas and runs in a vacuum. Another checks that lighting one under Hardcore
+  forms no zone.
+- **Changed 2026-11-03 (the owner, D-35):** the generator no longer counts as
+  a lit fuel-burning block for FIRE-021, FIRE-024, FIRE-025 and HEAT-007.
+  "It's unrealistic but it's how it works in SS13."
 
 *2026-11-01: for CORE-056 and FIRE-024 the generator counts as combustion
 through data, with nothing added to the API
@@ -1680,6 +1685,12 @@ profile (`data/zas_atmos/zas/fuel_profile/generator.json`), and the framework
 burns it as any lit fuel block. Checked by
 `cont_067_running_generator_uses_o2_and_makes_co2_and_heat` and
 `core_056_lit_generator_forms_a_zone_under_hardcore`.*
+
+*2026-11-03: Changed by the owner and implemented. `zas_atmos` no longer ships
+the generator's fuel profile or lists it in `#zas:combustion`. Checked by
+`cont_067_running_generator_changes_no_gas`,
+`cont_067_generator_runs_in_a_vacuum` and
+`core_056_lit_generator_forms_no_zone_under_hardcore`.*
 
 #### CONT-062 · Controller power buffer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-34, D-68

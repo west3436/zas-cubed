@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.life.Breathability;
@@ -285,5 +286,24 @@ public interface ZasApiProvider {
     @AnyThread
     default int atmosPeriodTicks() {
         return Atmospheres.DEFAULT_PERIOD_TICKS;
+    }
+
+    /**
+     * Applies the server's reactions to a standalone mixture (API-019, FIRE-031), for {@link
+     * io.github.west3436.zas.api.reaction.Reactions#applyStandalone}.
+     *
+     * <p>The default is the fallback's answer: the mixture unchanged, as there are no reactions. It
+     * is there for the same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param mixture the gas
+     * @param seconds the time step, already checked
+     * @param ignition whether an ignition source acts on the gas
+     * @return the gas after the step
+     */
+    @AnyThread
+    default GasMixture applyStandalone(GasMixture mixture, double seconds, boolean ignition) {
+        return mixture;
     }
 }

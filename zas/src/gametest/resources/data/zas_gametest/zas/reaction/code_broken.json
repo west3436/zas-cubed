@@ -1,0 +1,4 @@
+{
+  "type": "zas_gametest:broken",
+  "catalysts": [{"gas": "zas_gametest:plain_gas"}]
+}

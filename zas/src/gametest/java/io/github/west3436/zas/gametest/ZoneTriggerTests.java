@@ -254,11 +254,11 @@ public final class ZoneTriggerTests {
 
     /**
      * A fuel block of another mod counts once its data adds it to {@code #zas:combustion} with a
-     * {@code lit} property, as the fuel generator will (CONT-067): a redstone lamp stands in for
-     * it. Lit, it forms a zone under Hardcore; unlit, or under Normal, it doesn't (CORE-056).
+     * {@code lit} property: a redstone lamp stands in for it. Lit, it forms a zone under Hardcore;
+     * unlit, or under Normal, it doesn't (CORE-056).
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
-    public static void core_056_a_tagged_fuel_block_forms_a_zone_like_the_generator(GameTestHelper h) {
+    public static void core_056_a_tagged_fuel_block_of_another_mod_forms_a_zone(GameTestHelper h) {
         Rooms r = rooms(h, 7);
         Case lamp = new Case("a lit redstone lamp", STONE, lit(Blocks.REDSTONE_LAMP));
         build(r, List.of(lamp, lamp), false);
