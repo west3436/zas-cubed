@@ -20,21 +20,43 @@ import java.util.Objects;
  * @param unresolved unzoned cells inside a region that belong to a region left unresolved because
  *     it reaches unloaded chunks (GEO-024, GEO-026)
  * @param truncated whether a cap left entries out
+ * @param hotspots the hotspots inside a region, in position order (CLIENT-013)
  */
 public record DebugView(
-        long tick, List<CellEntry> cells, List<FaceEntry> faces, List<UnresolvedEntry> unresolved, boolean truncated) {
+        long tick,
+        List<CellEntry> cells,
+        List<FaceEntry> faces,
+        List<UnresolvedEntry> unresolved,
+        boolean truncated,
+        List<HotspotEntry> hotspots) {
 
     /** The {@link FaceEntry#other()} of a face onto the ambient. Zone ids start at 1. */
     public static final long AMBIENT = 0;
 
     /** No regions asked for, or nothing in them. */
-    public static final DebugView EMPTY = new DebugView(-1, List.of(), List.of(), List.of(), false);
+    public static final DebugView EMPTY = new DebugView(-1, List.of(), List.of(), List.of(), false, List.of());
 
     public DebugView {
         cells = List.copyOf(cells);
         faces = List.copyOf(faces);
         unresolved = List.copyOf(unresolved);
+        hotspots = List.copyOf(hotspots);
     }
+
+    /** A view without hotspots. */
+    public DebugView(
+            long tick, List<CellEntry> cells, List<FaceEntry> faces, List<UnresolvedEntry> unresolved, boolean truncated) {
+        this(tick, cells, faces, unresolved, truncated, List.of());
+    }
+
+    /**
+     * One hotspot (CLIENT-013).
+     *
+     * @param block its position ({@link SectionKeys#block})
+     * @param zone its zone's id
+     * @param gas whether it is a gas fire ({@code zas:gas_fire}) rather than a vanilla fire block
+     */
+    public record HotspotEntry(long block, long zone, boolean gas) {}
 
     /**
      * One zoned cell.

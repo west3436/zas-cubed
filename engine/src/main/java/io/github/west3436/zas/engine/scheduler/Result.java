@@ -31,6 +31,9 @@ import java.util.Objects;
  *     (CORE-026)
  * @param flows the active edges whose pressure difference reached the batch's airflow threshold,
  *     with their openings (FLOW-001); empty with airflow off
+ * @param fireIntents gas-fire blocks to place or remove (FIRE-018), in the order they arose
+ * @param fireEvents zones that caught fire or stopped burning (API-031), in zone id order
+ * @param hotspots how many hotspots burn after the tick (FIRE-011)
  */
 public record Result(
         long tick,
@@ -44,7 +47,10 @@ public record Result(
         int bufferedOps,
         long[] heldBlocks,
         long nextZoneId,
-        List<FlowEdge> flows) {
+        List<FlowEdge> flows,
+        List<FireIntent> fireIntents,
+        List<FireEvent> fireEvents,
+        int hotspots) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
@@ -55,6 +61,8 @@ public record Result(
         requestedSections = requestedSections.clone();
         heldBlocks = heldBlocks.clone();
         flows = List.copyOf(flows);
+        fireIntents = List.copyOf(fireIntents);
+        fireEvents = List.copyOf(fireEvents);
     }
 
     @Override

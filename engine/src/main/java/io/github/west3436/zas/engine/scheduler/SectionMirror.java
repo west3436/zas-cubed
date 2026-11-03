@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.IntPredicate;
 
 /**
  * The worker's decoded copies of the sections it needs (architecture §4.3): sections holding or
@@ -22,6 +24,12 @@ public final class SectionMirror implements SectionLookup {
     private final Set<Long> unavailable = new HashSet<>();
     private final int minSectionY;
     private final int maxSectionY;
+
+    /** Which geometry ids {@link #flagged} lists; none until {@link #indexFlagged} is called. */
+    private IntPredicate flaggedIds = id -> false;
+
+    /** Per mirrored section with flagged positions, those positions' block keys, ascending. */
+    private final TreeMap<Long, long[]> flagged = new TreeMap<>();
 
     /**
      * @param minSectionY the dimension's lowest section y
@@ -102,17 +110,87 @@ public final class SectionMirror implements SectionLookup {
         }
     }
 
+    /**
+     * Keeps an index of the mirrored positions whose geometry id {@code ids} accepts, such as fire
+     * blocks and ignition sources (FIRE-019, FIRE-014), so the hotspot phase finds them without
+     * scanning sections. Sections already mirrored are indexed now.
+     */
+    void indexFlagged(IntPredicate ids) {
+        flaggedIds = ids;
+        flagged.clear();
+        for (SectionSnapshot s : sections.values()) {
+            index(s);
+        }
+    }
+
+    /** The block keys ({@link SectionKeys#block}) of every flagged mirrored position, ascending. */
+    long[] flagged() {
+        int n = 0;
+        for (long[] blocks : flagged.values()) {
+            n += blocks.length;
+        }
+        long[] out = new long[n];
+        int i = 0;
+        for (long[] blocks : flagged.values()) {
+            System.arraycopy(blocks, 0, out, i, blocks.length);
+            i += blocks.length;
+        }
+        Arrays.sort(out);
+        return out;
+    }
+
+    /** The geometry id at a block position ({@link SectionKeys#block}), or -1 if its section isn't mirrored. */
+    int geometryAt(long block) {
+        SectionSnapshot s = sections.get(SectionKeys.sectionOfBlockKey(block));
+        if (s == null) {
+            return -1;
+        }
+        return s.geometryId(SectionKeys.blockX(block) & 15, SectionKeys.blockY(block) & 15, SectionKeys.blockZ(block) & 15);
+    }
+
+    private void index(SectionSnapshot s) {
+        long key = s.key();
+        if (s.isUniform() && !flaggedIds.test(s.geometryId(0))) {
+            flagged.remove(key);
+            return;
+        }
+        long[] found = null;
+        int n = 0;
+        for (int i = 0; i < SectionSnapshot.SIZE; i++) {
+            if (flaggedIds.test(s.geometryId(i))) {
+                if (found == null) {
+                    found = new long[16];
+                } else if (n == found.length) {
+                    found = Arrays.copyOf(found, n * 2);
+                }
+                found[n++] = SectionKeys.block(
+                        SectionKeys.x(key) * 16 + (i & 15),
+                        SectionKeys.y(key) * 16 + (i >> 8),
+                        SectionKeys.z(key) * 16 + ((i >> 4) & 15));
+            }
+        }
+        if (n == 0) {
+            flagged.remove(key);
+        } else {
+            long[] blocks = Arrays.copyOf(found, n);
+            Arrays.sort(blocks);
+            flagged.put(key, blocks);
+        }
+    }
+
     // ---- Changes (the engine's geometry phase) ----------------------------------
 
     /** Stores a snapshot, returning the one it replaced or null. */
     SectionSnapshot put(SectionSnapshot snapshot) {
         unavailable.remove(snapshot.key());
         unloadedChunks.remove(SectionKeys.chunkOf(snapshot.key()));
+        index(snapshot);
         return sections.put(snapshot.key(), snapshot);
     }
 
     void remove(long key) {
         sections.remove(key);
+        flagged.remove(key);
     }
 
     void chunkLoaded(long chunk) {

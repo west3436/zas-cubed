@@ -14,12 +14,17 @@ import java.util.Objects;
  * @param heat conduction and radiation settings (HEAT); they use the exchange's period
  * @param airflowKpa the least pressure difference, kPa, at which an edge's openings are exported
  *     with the tick's result for airflow (FLOW-001); {@link Double#POSITIVE_INFINITY} exports none
+ * @param hotspots hotspot spread and chemistry (FIRE-011, FIRE-016)
  */
 public record EngineSettings(
-        ExchangeSettings exchange, boolean checkConservation, HeatSettings heat, double airflowKpa) {
-    /** The default exchange and heat at a 1 s period, with the checker and airflow off. */
-    public static final EngineSettings DEFAULT =
-            new EngineSettings(ExchangeSettings.DEFAULT, false, HeatSettings.DEFAULT, Double.POSITIVE_INFINITY);
+        ExchangeSettings exchange,
+        boolean checkConservation,
+        HeatSettings heat,
+        double airflowKpa,
+        HotspotSettings hotspots) {
+    /** The default exchange and heat at a 1 s period, with the checker and airflow off and nothing burning. */
+    public static final EngineSettings DEFAULT = new EngineSettings(
+            ExchangeSettings.DEFAULT, false, HeatSettings.DEFAULT, Double.POSITIVE_INFINITY, HotspotSettings.DEFAULT);
 
     public EngineSettings {
         Objects.requireNonNull(exchange, "exchange");
@@ -27,6 +32,12 @@ public record EngineSettings(
         if (Double.isNaN(airflowKpa) || airflowKpa < 0) {
             throw new IllegalArgumentException("airflowKpa must be >= 0: " + airflowKpa);
         }
+        Objects.requireNonNull(hotspots, "hotspots");
+    }
+
+    /** Settings with the default hotspots. */
+    public EngineSettings(ExchangeSettings exchange, boolean checkConservation, HeatSettings heat, double airflowKpa) {
+        this(exchange, checkConservation, heat, airflowKpa, HotspotSettings.DEFAULT);
     }
 
     /** Settings with the default heat and airflow off. */
@@ -42,19 +53,24 @@ public record EngineSettings(
     /** These settings for an atmos period of {@code periodTicks} game ticks of 50 ms. */
     public EngineSettings withPeriodTicks(int periodTicks) {
         return new EngineSettings(
-                exchange.withPeriod(SchedulerSettings.seconds(periodTicks)), checkConservation, heat, airflowKpa);
+                exchange.withPeriod(SchedulerSettings.seconds(periodTicks)), checkConservation, heat, airflowKpa, hotspots);
     }
 
     public EngineSettings withConservationCheck(boolean on) {
-        return new EngineSettings(exchange, on, heat, airflowKpa);
+        return new EngineSettings(exchange, on, heat, airflowKpa, hotspots);
     }
 
     public EngineSettings withHeat(HeatSettings settings) {
-        return new EngineSettings(exchange, checkConservation, settings, airflowKpa);
+        return new EngineSettings(exchange, checkConservation, settings, airflowKpa, hotspots);
     }
 
     /** These settings exporting the openings of edges at or above {@code kpa} (FLOW-001). */
     public EngineSettings withAirflow(double kpa) {
-        return new EngineSettings(exchange, checkConservation, heat, kpa);
+        return new EngineSettings(exchange, checkConservation, heat, kpa, hotspots);
+    }
+
+    /** These settings with other hotspot settings (FIRE-011, FIRE-016). */
+    public EngineSettings withHotspots(HotspotSettings settings) {
+        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, settings);
     }
 }
