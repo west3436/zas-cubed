@@ -4,7 +4,8 @@
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). API-019 was added and accepted on
 2026-10-31 (D-57). API-050 was added as Draft on 2026-11-01 (D-68), and API-051 and API-052
-on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)).
+on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)); the
+owner accepted both on 2026-11-03.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -463,7 +464,7 @@ reports `OPEN`. The `api_050_` Unit tests also cover a vacuum room, a pin that
 waits for its section and a rejected tick.*
 
 #### API-051 · Gas heat capacities
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CORE-003, CONT-008, CONT-095 · Depends: API-009
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-003, CONT-008, CONT-095 · Depends: API-009
 
 The API shall give each gas's molar heat capacity from the server's gas
 definitions, and a documented default for a gas the server doesn't define.
@@ -483,8 +484,11 @@ definitions, and a documented default for a gas the server doesn't define.
 values (API-009). Checked by `GasPropertiesTest` (Unit) and
 `api_051_heat_capacities_come_from_the_gas_definitions` (GameTest).*
 
+*2026-11-03: accepted by the owner in the S-02/S-05/S-08 round's review,
+20.8 J/(mol·K) default included.*
+
 #### API-052 · Atmos period
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CORE-041 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-041 · Depends: API-009
 
 The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 
@@ -498,6 +502,10 @@ The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 `Atmospheres.periodTicks()`. Checked by
 `api_052_fallback_period_is_20_ticks` (Unit) and
 `api_052_period_is_the_servers` (GameTest).*
+
+*2026-11-03: accepted by the owner in the S-02/S-05/S-08 round's review.
+`zas_atmos`'s devices don't read it yet: they still step every 20 game
+ticks.*
 
 ## Extension points
 

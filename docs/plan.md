@@ -241,15 +241,47 @@ it merged as [#160](https://github.com/west3436/zas-cubed/pull/160).
 
 | Item | PR | Requirements | Left |
 |---|---|---|---|
-| Breathing | [#151](https://github.com/west3436/zas-cubed/pull/151) | The #34 breathing subset; LIFE-048 added and *Implemented* | The air bar flickers while the server drains it, and the owner saw it "always": LIFE-023, client breathing sync ([#36](https://github.com/west3436/zas-cubed/issues/36)) |
-| Pipe networks | [#152](https://github.com/west3436/zas-cubed/pull/152) | The #47 subset; CONT-114 (dyed pipes) added, changed by the owner so mined pipes keep their dye, and *Implemented* | Mole-weighted mixing until the API has heat capacities, which the owner requires before release ([#157](https://github.com/west3436/zas-cubed/issues/157)). Open ends need art that reads as open, then particles ([#164](https://github.com/west3436/zas-cubed/issues/164)) |
+| Breathing | [#151](https://github.com/west3436/zas-cubed/pull/151) | The #34 breathing subset; LIFE-048 added and *Implemented* | ~~The air bar flickers while the server drains it, and the owner saw it "always": LIFE-023, client breathing sync ([#36](https://github.com/west3436/zas-cubed/issues/36))~~ *Fixed by [#170](https://github.com/west3436/zas-cubed/pull/170) (2026-11-03).* |
+| Pipe networks | [#152](https://github.com/west3436/zas-cubed/pull/152) | The #47 subset; CONT-114 (dyed pipes) added, changed by the owner so mined pipes keep their dye, and *Implemented* | ~~Mole-weighted mixing until the API has heat capacities, which the owner requires before release ([#157](https://github.com/west3436/zas-cubed/issues/157)).~~ *Energy-conserving since [#167](https://github.com/west3436/zas-cubed/pull/167).* Open ends need art that reads as open, then particles ([#164](https://github.com/west3436/zas-cubed/issues/164)) |
 | Canister, connector port, vent | [#156](https://github.com/west3436/zas-cubed/pull/156) | The #48 subset | The owner changed it so a canister broken in creative destroys its gas. The vent GUI now shows its network's pressure and why it is idle. A controlled vent's GUI is locked (owner) |
-| Area air controller and generator | [#155](https://github.com/west3436/zas-cubed/pull/155) | The #50 and #52 subset | The generator burns any furnace fuel (owner), scaled to coal. A vent's first order doesn't yet name its controller (the sender position on `VentOrder`). GUI textures for the controller and generator screens are still to draw. The power-lease GameTest clock gap ([#162](https://github.com/west3436/zas-cubed/issues/162)) |
+| Area air controller and generator | [#155](https://github.com/west3436/zas-cubed/pull/155) | The #50 and #52 subset | The generator burns any furnace fuel (owner), scaled to coal. ~~A vent's first order doesn't yet name its controller (the sender position on `VentOrder`).~~ *Fixed by [#166](https://github.com/west3436/zas-cubed/pull/166).* GUI textures for the controller and generator screens are still to draw ([#185](https://github.com/west3436/zas-cubed/issues/185)). The power-lease GameTest clock gap ([#162](https://github.com/west3436/zas-cubed/issues/162)) |
 | Zone pins | [#149](https://github.com/west3436/zas-cubed/pull/149) | API-050; OPS-017 added and *Implemented* | None |
 | Per-world preset copy | [#161](https://github.com/west3436/zas-cubed/pull/161) | Closes [#139](https://github.com/west3436/zas-cubed/issues/139) | None |
 | Loading rooms read as unresolved | [#154](https://github.com/west3436/zas-cubed/pull/154), [#163](https://github.com/west3436/zas-cubed/pull/163) | API-010 | Flaky `geo_010_piston` and `geo_010_fluid` ([#159](https://github.com/west3436/zas-cubed/issues/159)). Open-air additions under test-driven ticks ([#158](https://github.com/west3436/zas-cubed/issues/158)) |
 
 The S-01 GameTest is `StationTests.s_01_pressurise_station`.
+
+*2026-11-03: S-02, S-05 and S-08 pass end to end.* The owner's scope was each
+scenario's subset of its issues: a standalone 1 × 2 firelock and the crowbar,
+no door or airlock variants; the heater but no freezer; the softsuit, four
+tanks and the breath mask, but no gas mask, hardsuit, magnetic boots or tank
+failure. During the round's review the owner made heaters, air conditioners,
+portable scrubbers and pumps battery portables that never link to an area air
+controller (CONT-018, CONT-019, CONT-064 and CONT-087 stay *Accepted* with
+dated notes). So the round also brought the batteries and the recharger. The
+owner played the round in one combined test world over two sessions, then it
+merged as [#183](https://github.com/west3436/zas-cubed/pull/183).
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Heat capacities and energy-conserving pipe mixing | [#167](https://github.com/west3436/zas-cubed/pull/167) | API-051 and API-052 added, accepted by the owner and *Implemented* | `zas_atmos`'s devices still step every 20 game ticks, not every atmos period |
+| Hazards | [#169](https://github.com/west3436/zas-cubed/pull/169) | The #35 subset | Each temperature hazard deals only its highest tier, not the sum (as built) |
+| Conduction and radiation | [#172](https://github.com/west3436/zas-cubed/pull/172) | #39; HEAT-004 | Insulating station walls ([#179](https://github.com/west3436/zas-cubed/issues/179)) |
+| Heat sources | [#175](https://github.com/west3436/zas-cubed/pull/175) | #40 without HEAT-007; API-013 | Paused regions void or supply heat; ice never warms (as built) |
+| Life support and worn protection | [#176](https://github.com/west3436/zas-cubed/pull/176) | API-022 in part; LIFE-020, LIFE-024 to LIFE-027 | API-022's gas filtering |
+| Firelock and crowbar | [#168](https://github.com/west3436/zas-cubed/pull/168) | CONT-043 (changed by the owner: a breach alarms the controller at once, so firelocks shut within about 2 s, and a link covers only the device linked), CONT-092 to CONT-094; CONT-042 and CONT-068 | Firelocks over doors and airlocks |
+| Airflow | [#171](https://github.com/west3436/zas-cubed/pull/171) | The #44 subset; FLOW-018 (changed by the owner: creative players and spectators are exempt) and FLOW-019 (crawling through low holes, owner) added and *Implemented* | Particles and sound (CLIENT-003, [#184](https://github.com/west3436/zas-cubed/issues/184)). Magnetic boots for FLOW-012 ([#186](https://github.com/west3436/zas-cubed/issues/186)) |
+| S-02 GameTest | [#173](https://github.com/west3436/zas-cubed/pull/173) | S-02 | None |
+| Client breathing sync | [#170](https://github.com/west3436/zas-cubed/pull/170) | LIFE-023 | None |
+| Battery heater, batteries, recharger | [#177](https://github.com/west3436/zas-cubed/pull/177) | CONT-111 to CONT-113 *Implemented*; CONT-018, CONT-019, CONT-064, CONT-087 changed by the owner | The air conditioner, portable scrubber and portable pump are battery portables in the text only. The air conditioner will hold its room the heater's way, with `HeatMutations.remove` (owner, 2026-11-03) |
+| Internals, tanks, breath mask, softsuit | [#182](https://github.com/west3436/zas-cubed/pull/182) | LIFE-002, LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046, CONT-030, CONT-032, CONT-039 *Implemented*; CONT-031 and CONT-090 in part | The hardsuit halves (CONT-036) |
+| Shared test player | [#174](https://github.com/west3436/zas-cubed/pull/174), [#180](https://github.com/west3436/zas-cubed/pull/180) | None | None |
+
+The GameTests are `StationTests.s_02_hull_breach`,
+`HeatStationTests.s_05_heater_holds_a_room_at_its_setpoint` (with
+`s_05_room_in_vacuum_cools` and `s_05_room_beside_lava_warms`) and
+`StationTests.s_08_breathing_gear`. GUI textures for the heater, recharger and
+tank screens are still to draw ([#185](https://github.com/west3436/zas-cubed/issues/185)).
 
 | Track | Area | Notes |
 |---|---|---|
@@ -330,7 +362,7 @@ The S-01 GameTest is `StationTests.s_01_pressurise_station`.
 
 ## Immediate next steps
 
-_Updated 2026-11-02._
+_Updated 2026-11-03._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -347,12 +379,14 @@ _Updated 2026-11-02._
 3. ~~**S-01 end to end**~~ *Done 2026-11-02* (#149, #151, #152, #154 to #156,
    #160, #161, #163; see [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).
    Per-world preset copies (#139) went in with it.
-4. **Widen out scenario by scenario:** S-02 to S-05, S-08, S-11 and S-13, on
-   the rest of #34, #47, #48, #50 and #52 (pumps, filters, scrubbers,
-   firelocks, batteries and the recharger).
-   - Carried over from S-01: the vent order's sender, client breathing sync
-     (LIFE-023, #36), heat capacities before release (#157), and art for open
-     pipe ends (#164) and the controller and generator screens.
+4. **Widen out scenario by scenario:** ~~S-02, S-05 and S-08~~ *done
+   2026-11-03 (#167 to #177, #180, #182, #183; see
+   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
+   by the owner's choice, **S-03 and S-04 (fire)**, then S-11 and S-13, on the
+   rest of #34, #47, #48, #50 and #52 (pumps, filters and scrubbers).
+   - Carried over: art for open pipe ends (#164), GUI textures (#185),
+     airflow particles and sound (#184), magnetic boots (#186) and insulating
+     station walls (#179).
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
      ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved
