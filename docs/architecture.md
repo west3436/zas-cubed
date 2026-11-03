@@ -1174,6 +1174,51 @@ releases 283 kJ less heat (CO's own heat of combustion, FIRE-003), so the
 carbon burned is the same and the heat falls to match. A CH₄ burn takes the
 same reductions off per mole of its carbon (`oxygenSaved`, `heatLost`).
 
+### Reactions
+
+*Implemented in part ([#41](https://github.com/west3436/zas-cubed/issues/41)):*
+gas reactions are data ([datapacks](datapacks.md#reactions), FIRE-001), and
+reacting a mixture is a pure function in the engine, so the worker's zones and
+hotspots and a standalone container (API-019, FIRE-031) all react gas the same
+way.
+
+- **Loading.** `zas.reaction.ReactionLoader` reads
+  `data/<ns>/zas/reaction/*.json` into engine `ReactionDefinition`s.
+  `ServerReactions` compiles them against the running server's gases into an
+  immutable `engine.reaction.ReactionSet` when the server starts and on each
+  `/reload`; a definition naming an undefined gas is skipped then, with an
+  error naming its file (OPS-008). Unlike gases, reactions take effect on
+  reload: they are rules, not state. `DimensionAtmos` puts the set in each
+  batch's `EngineSettings.reactions`, so one atmos tick sees one set.
+- **Two steps.** `ReactionSet.react(mixture, seconds, fire)` runs the reactions
+  that don't need ignition over a whole mixture, for phase 7 (ZONE_UPDATES).
+  `ReactionSet.burn(mixture, parcelLitres, ignition, fire)` runs those that do
+  (FIRE-006), to completion, on the gas in a parcel of the mixture, for phase 6
+  (HOTSPOTS) and containers: 375 L per second (`PARCEL_LITRES_PER_SECOND`,
+  FIRE-011). A reaction that needs ignition burns if a source is present or the
+  gas is at or above its autoignition temperature. One with flammability
+  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), and
+  its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
+  `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
+  fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
+- **One step.** Every condition is read from the mixture at the start. Each
+  reaction's extent is worked out alone: as far as its limiting reactant
+  allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
+  (FIRE-002): for each gas, if the reactions together want more than there
+  is, the ratio of what there is to what they want; each reaction is scaled by
+  the worst ratio among its own reactants, so one that competes with nothing
+  keeps its extent, unlike ZAS's single global scale. Products are added after
+  all reactions consume. `GasMixture.applyReaction(delta, joules)` then sets the
+  moles and the temperature from C·T + Q at the new heat capacity, so the heat
+  of reaction goes into temperature through the products' C<sub>v</sub>
+  (CORE-003). Because the parcel shares the mixture's temperature, burning in
+  place is exactly taking the parcel out, burning it and mixing it back, and no
+  separate parcel mixture is made (so its pruning can't escape the ledger).
+- **Conservation.** A step returns the change in moles per gas; the caller
+  records it under `LedgerCategory.REACTION` (CORE-073).
+- **Determinism.** Reactions are visited in id order and nothing reads a clock
+  or a random source (§3.5).
+
 ### Life support (breathing)
 
 *Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34),
