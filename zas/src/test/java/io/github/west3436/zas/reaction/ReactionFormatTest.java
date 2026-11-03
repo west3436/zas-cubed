@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.zas.engine.fire.CarbonCombustion;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasMixture;
@@ -147,7 +148,11 @@ class ReactionFormatTest {
         ReactionSet set = ReactionSet.compile(gases, shippedReactions(), (d, why) -> skipped.add(d.id() + ": " + why));
         assertEquals(List.of(), skipped);
         assertEquals(
-                List.of("zas:carbon_monoxide_combustion", "zas:hydrogen_combustion", "zas:methane_combustion"),
+                List.of(
+                        "zas:carbon_monoxide_combustion",
+                        "zas:hydrogen_combustion",
+                        "zas:methane_combustion",
+                        "zas:nitrous_oxide_decomposition"),
                 set.definitions().stream().map(ReactionDefinition::id).toList());
 
         // fuel, its fraction in air, heat per mol, then the products per mol of fuel
@@ -160,8 +165,10 @@ class ReactionFormatTest {
     void fire_003_the_shipped_flammability_limits_and_autoignition_points() throws IOException {
         Map<String, ReactionConditions.FlammabilityLimits> limits = new java.util.TreeMap<>();
         for (ReactionDefinition d : shippedReactions()) {
-            d.conditions().flammability().ifPresent(f -> limits.put(f.fuel(), f));
-            assertTrue(d.conditions().requiresIgnition(), d.id());
+            d.conditions().flammability().ifPresent(f -> {
+                limits.put(f.fuel(), f);
+                assertTrue(d.conditions().requiresIgnition(), d.id());
+            });
         }
         assertEquals(
                 new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.04, 0.75, 858), limits.get("zas:hydrogen"));
@@ -170,6 +177,80 @@ class ReactionFormatTest {
         assertEquals(
                 new ReactionConditions.FlammabilityLimits("zas:carbon_monoxide", 0.125, 0.74, 882),
                 limits.get("zas:carbon_monoxide"));
+    }
+
+    @Test
+    void fire_004_nitrous_oxide_decomposes_above_its_threshold() throws IOException {
+        GasRegistry gases = shippedGases();
+        ReactionSet set = shippedSet(gases);
+        int n2o = gases.indexOf("zas:nitrous_oxide");
+        int n2 = gases.indexOf("zas:nitrogen");
+        int o2 = gases.indexOf("zas:oxygen");
+
+        // Below its 850 K threshold nothing happens, however long.
+        for (double t : new double[] {293.15, 800}) {
+            GasMixture cold = new GasMixture(gases, 1000, t);
+            cold.setMoles(n2o, 10);
+            assertFalse(set.react(cold, 60, FireSettings.DEFAULT).reacted(), t + " K");
+            assertEquals(10, cold.moles(n2o));
+        }
+
+        // Above it: N2O -> N2 + 1/2 O2 at the shipped Arrhenius rate, releasing 82.05 kJ/mol.
+        GasMixture hot = new GasMixture(gases, 1000, 1100);
+        hot.setMoles(n2o, 10);
+        double energy = hot.heatCapacity() * hot.temperature();
+        ReactionResult r = set.react(hot, 1, FireSettings.DEFAULT);
+        double k = new ReactionRate(0.012, 250_000, 1000).at(1100);
+        double reacted = 10 * -Math.expm1(-k);
+        assertTrue(reacted > 0.5 && reacted < 10, "reacted " + reacted);
+        assertEquals(10 - reacted, hot.moles(n2o), 1e-9);
+        assertEquals(reacted, hot.moles(n2), 1e-9);
+        assertEquals(reacted / 2, hot.moles(o2), 1e-9);
+        assertEquals(82_050 * reacted, r.heat(), 1e-6);
+        assertEquals(energy + r.heat(), hot.heatCapacity() * hot.temperature(), 1e-6);
+        assertTrue(hot.temperature() > 1100);
+    }
+
+    @Test
+    void fire_005_half_the_methane_carbon_forms_co_at_an_oxygen_fraction_of_016() throws IOException {
+        GasRegistry gases = shippedGases();
+        ReactionSet set = shippedSet(gases);
+        int ch4 = gases.indexOf("zas:methane");
+        int o2 = gases.indexOf("zas:oxygen");
+        int n2 = gases.indexOf("zas:nitrogen");
+        int co = gases.indexOf("zas:carbon_monoxide");
+        int co2 = gases.indexOf("zas:carbon_dioxide");
+        double total = 41.6;
+        GasMixture m = new GasMixture(gases, 1000, 293.15);
+        m.setMoles(ch4, total * 0.07);
+        m.setMoles(o2, total * 0.16);
+        m.setMoles(n2, total * 0.77);
+        double methane = m.moles(ch4);
+        double oxygen = m.moles(o2);
+
+        ReactionResult r = set.burn(m, 1000, true, FireSettings.DEFAULT);
+
+        assertEquals(0, m.moles(ch4));
+        assertEquals(methane / 2, m.moles(co), 1e-9);
+        assertEquals(methane / 2, m.moles(co2), 1e-9);
+        // Half a mol less O2 and 283 kJ less heat per mol of carbon that forms CO.
+        assertEquals(oxygen - methane * (2 - CarbonCombustion.oxygenSaved(0.5)), m.moles(o2), 1e-9);
+        assertEquals(methane * (802_000 - CarbonCombustion.heatLost(0.5)), r.heat(), 1e-6);
+    }
+
+    @Test
+    void fire_005_methane_burns_completely_at_018_and_above() throws IOException {
+        GasRegistry gases = shippedGases();
+        ReactionSet set = shippedSet(gases);
+        int ch4 = gases.indexOf("zas:methane");
+        int o2 = gases.indexOf("zas:oxygen");
+        int n2 = gases.indexOf("zas:nitrogen");
+        GasMixture m = new GasMixture(gases, 1000, 293.15);
+        m.setMoles(ch4, 41.6 * 0.07);
+        m.setMoles(o2, 41.6 * 0.18);
+        m.setMoles(n2, 41.6 * 0.75);
+        set.burn(m, 1000, true, FireSettings.DEFAULT);
+        assertEquals(0, m.moles(gases.indexOf("zas:carbon_monoxide")));
     }
 
     private static void burns(
@@ -200,6 +281,12 @@ class ReactionFormatTest {
                 (gas, n) -> assertEquals(n * burned, m.moles(gases.indexOf(gas)), 1e-9, fuelId + " -> " + gas));
         assertEquals(heatPerMol * burned, r.heat(), 1e-6, fuelId);
         assertEquals(energy + r.heat(), m.heatCapacity() * m.temperature(), 1e-6, fuelId);
+    }
+
+    private static ReactionSet shippedSet(GasRegistry gases) throws IOException {
+        return ReactionSet.compile(gases, shippedReactions(), (d, why) -> {
+            throw new AssertionError(d.id() + ": " + why);
+        });
     }
 
     private static Optional<ReactionDefinition> parse(String json) {

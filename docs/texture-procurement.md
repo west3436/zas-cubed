@@ -15,11 +15,11 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   at 32 px, so each face is redrawn at 16 px per block (D-67). The filter's
   and mixer's tops are the exception: vg's own boxes, cut out at 32×32
   (D-71).
-- **10 of the 23 items' sprites can be cropped.** vg draws many items at
+- **10 of the 24 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
   ones are redrawn to fill the 16 px slot, not at half size (the owner's pick
-  for the atmos analyzer). The wrench is the exception: it's vg's own sprite
-  at 32×32 (D-70).
+  for the atmos analyzer). The wrench and the fire extinguisher are the
+  exceptions: they're vg's own sprites at 32×32 (D-70, D-74).
 - **Worn textures are redrawn** onto Minecraft's armor layout from vg's
   four-direction worn sprites.
 - **The 19 crafting components are vg's own sprites,** cropped to 16×16
@@ -38,7 +38,7 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 |---|---|---|---|---|
 | Crop | 2 | – | 12 | – |
 | Redraw | 28 | 17 | 15 | 8 files |
-| As is | – | – | 1 | – |
+| As is | – | – | 2 | – |
 | Original | 2 | – | – | – |
 
 The item sprites include the 5 blocks whose item is a flat sprite. The
@@ -50,7 +50,7 @@ canister counts once under Blocks, and its 17 colours separately.
 |---|---|---|
 | **Crop** | A vg item sprite fits in 16×16 px, or is within 2 px of it. It's cut out of its 32 px frame, trimmed to fit, and touched up. Also the filter's and mixer's tops, vg's boxes cut out as they are (D-71). | `vgstation13` |
 | **Redraw** | Any other texture with a vg sprite: every block face, and item sprites larger than 16 px. It's drawn at 16 px per block from the sprite's shapes, markings and colours. | `vgstation13` |
-| **As is** | vg's sprite unchanged, at its own size. The wrench (D-70) and the larger crafting components (D-72, [§6.5](#65-crafting-components)). | `vgstation13` |
+| **As is** | vg's sprite unchanged, at its own size. The wrench (D-70), the fire extinguisher (D-74) and the larger crafting components (D-72, [§6.5](#65-crafting-components)). | `vgstation13` |
 | **Original** | No usable vg sprite. | `original` |
 | **Other** | A fallback only, for a texture that's hard to draw from scratch (D-62). | `other` |
 
@@ -102,8 +102,8 @@ it isn't used.
 ## 5. Style
 
 - **16 px per block,** on the 1/16-block grid (D-67). No higher resolutions,
-  except vg's wrench sprite at 32×32 (D-70), and the filter's and mixer's
-  boxes, vg's own at 2 texels a pixel (D-71). A block taller than a block,
+  except vg's wrench and fire extinguisher sprites at 32×32 (D-70, D-74), and
+  the filter's and mixer's boxes, vg's own at 2 texels a pixel (D-71). A block taller than a block,
   like the 26 px canister, uses a 32×32 texture, still at 16 px per block.
 - **vg's colours with a vanilla finish** (style A, the owner's pick in the
   pilot): no black outlines on block faces, flat colour with one light and
@@ -266,6 +266,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:wrench` | `icons/obj/items.dmi` | `wrench` | 23×22 | As is | Done in the pilot: vg's sprite unchanged, at 32×32 and not mirrored (D-70). |
 | `zas_atmos:crowbar` | `icons/obj/items.dmi` | `crowbar` | 27×21 | Redraw | Done in batch 2: redrawn at 45° to fill the slot's width. |
 | `zas_atmos:multitool` | `icons/obj/device.dmi` | `multitool` | 9×17 | Crop | Done in batch 4: cut to 16 px tall. |
+| `zas_atmos:fire_extinguisher` | `icons/obj/items.dmi` | `fire_extinguisher0` | 14×22 | As is | Added 2026-11-03 when the owner moved CONT-037 to R1. Done in wave 6: vg's sprite unchanged, centred in a 32×32 texture (D-74). vg's `fire_extinguisher1` (safety off) differs only in the hose's angle and isn't used. The sprite is unchanged since vg's first commit of items.dmi (662c082, 2010), so it has no Goon or NC source. |
 | `zas_atmos:battery` | `icons/obj/power.dmi` | `cell`, `cell-o1`, `cell-o2` | 11×8 | Crop | The overlays show the charge. Done in batch 4: grey, as it is. The overlays, yellow part charged and green full, are shared by all three tiers. |
 | `zas_atmos:high_capacity_battery` | `icons/obj/power.dmi` | `hcell` | 11×8 | Crop | vg's high- and super-capacity cells look much alike. Recolour them so the tiers are easy to tell apart. Done in batch 4: red, as it is. |
 | `zas_atmos:super_capacity_battery` | `icons/obj/power.dmi` | `scell` | 11×8 | Crop | Done in batch 4: in the blues of vg's ultra cell, `ucell`, keeping `scell`'s two stripes. |
