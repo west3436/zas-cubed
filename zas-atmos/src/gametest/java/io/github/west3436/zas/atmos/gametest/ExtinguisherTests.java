@@ -104,6 +104,42 @@ public final class ExtinguisherTests {
     }
 
     /**
+     * Aimed straight at a one-block stone wall 2.5 blocks from the eye, level and due east, the spray
+     * stops at the wall: a fire on the floor right behind it keeps burning. The look is exact, so the
+     * line meets the wall's face at a sample point, which is the case where a box around the wall's
+     * own cell would reach behind it.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_037_extinguisher_stops_at_a_wall(GameTestHelper h) {
+        Site s = new Site(h, 73);
+        try {
+            floor(s);
+            for (int y = 1; y <= 4; y++) {
+                for (int z = 0; z <= 6; z++) {
+                    s.set(4, y, z, Site.STONE);
+                }
+            }
+            s.set(5, 1, 2, FIRE);
+            h.assertTrue(fire(s, 5, 1, 2), "the fire didn't light");
+
+            // Due east and level, set as angles so the look is exactly +x.
+            FakePlayer p = holder(s, "zas_cont_037_wall_hit", 1, 2, Vec3.ZERO);
+            p.setYRot(-90);
+            p.setXRot(0);
+            ItemStack stack = p.getMainHandItem();
+            stack.use(s.level, p, InteractionHand.MAIN_HAND);
+            h.assertTrue(p.isUsingItem(), "the player isn't using the extinguisher");
+            sprayTick(p);
+            h.assertValueEqual(
+                    FireExtinguisherItem.charges(stack), FireExtinguisherItem.CHARGES - 1, "charges after a spray");
+            h.assertTrue(fire(s, 5, 1, 2), "the spray reached the fire behind the wall");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /**
      * It sprays every 4 ticks of a held use, a charge each; when the last charge is gone the use
      * stops with the next spray, and using it again does nothing.
      */

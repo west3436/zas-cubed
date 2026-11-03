@@ -50,6 +50,9 @@ public class FireExtinguisherItem extends Item {
     /** How far apart along the spray's line it samples cells, in blocks. */
     private static final double STEP = 0.5;
 
+    /** How far short of the block the line meets the last sample is, at least, in blocks. */
+    private static final double HIT_MARGIN = 1e-3;
+
     /** The bar's colour: vanilla's water blue. */
     private static final int BAR = 0x3F76E4;
 
@@ -125,14 +128,17 @@ public class FireExtinguisherItem extends Item {
         Vec3 look = user.getLookAngle();
         BlockHitResult hit = level.clip(new ClipContext(
                 eye, eye.add(look.scale(REACH)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, user));
-        double reach =
-                hit.getType() == HitResult.Type.MISS ? REACH : hit.getLocation().distanceTo(eye);
+        boolean blocked = hit.getType() == HitResult.Type.BLOCK;
+        double reach = blocked ? hit.getLocation().distanceTo(eye) : REACH;
+        // Samples stop short of the block the line meets: a point on its face is in that block's
+        // cell, and a box around it would reach the cell behind a one-block wall.
+        double last = blocked ? reach - HIT_MARGIN : reach;
         Map<BlockPos, Integer> boxes = new LinkedHashMap<>();
-        for (double d = STEP; d <= reach; d += STEP) {
+        for (double d = STEP; d <= last; d += STEP) {
             boxes.merge(BlockPos.containing(eye.add(look.scale(d))), d < NARROW ? 0 : 1, Math::max);
         }
         Vec3 end = eye.add(look.scale(reach));
-        if (hit.getType() == HitResult.Type.BLOCK) {
+        if (blocked) {
             boxes.merge(hit.getBlockPos().relative(hit.getDirection()), 1, Math::max);
         }
         int out = 0;

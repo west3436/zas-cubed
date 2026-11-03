@@ -2340,7 +2340,9 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   first block with collision it meets, so a wall or glass stops it while fire
   and water don't. Along that line it takes the cell every half block: the cell
   alone within `NARROW` (2) blocks of the eye, and the 3 × 3 × 3 cells around
-  it beyond. Where the line meets a block, the 3 × 3 × 3 cells around the one
+  it beyond. The samples stop short of the block the line meets: a point on its
+  face is in that block's cell, and a box around it would reach behind a
+  one-block wall. Where the line meets a block, the 3 × 3 × 3 cells around the one
   in front of the face it meets join the spray, so a fire on a floor or wall
   the user aims at goes out. Each box goes to `Fires.extinguish` (zas-api's
   `fire` package; until that is on main, a stand-in with the same signature in
