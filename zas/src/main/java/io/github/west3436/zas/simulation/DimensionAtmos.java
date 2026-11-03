@@ -2,6 +2,8 @@ package io.github.west3436.zas.simulation;
 
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.event.FireExtinguishedEvent;
+import io.github.west3436.zas.api.event.FireIgnitedEvent;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.HeatResult;
@@ -34,8 +36,10 @@ import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.DimensionScheduler;
 import io.github.west3436.zas.engine.scheduler.EnclosureClassifier;
 import io.github.west3436.zas.engine.scheduler.EngineSettings;
+import io.github.west3436.zas.engine.scheduler.FireEvent;
 import io.github.west3436.zas.engine.scheduler.GasOp;
 import io.github.west3436.zas.engine.scheduler.GeometryAudit;
+import io.github.west3436.zas.engine.scheduler.HotspotTable;
 import io.github.west3436.zas.engine.scheduler.OpOutcome;
 import io.github.west3436.zas.engine.scheduler.OpenAirEvent;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
@@ -119,6 +123,9 @@ public final class DimensionAtmos {
     private GeometryPalette palette;
     private long nextAtmosTick = 1;
     private long closedAtGameTick = Long.MIN_VALUE;
+    /** How many batches have closed: the number of the one in flight, if any. */
+    private long closedBatches;
+
     private final Map<Long, Pending> pending = new TreeMap<>();
     private long nextExcludedSeq = -1;
     private List<Long> excludedInFlight = List.of();
@@ -185,6 +192,13 @@ public final class DimensionAtmos {
     private final Map<Long, CompletableFuture<HeatResult>> heats = new TreeMap<>();
     /** Ignitions waiting for their atmos tick, by sequence number (FIRE-014). */
     private final Map<Long, CompletableFuture<Ignited>> ignitions = new TreeMap<>();
+    /**
+     * The boxes put out (API-057) while a batch was in flight, with the number of that batch: a gas
+     * fire it asks for in one isn't placed, since it didn't see the spray. Cleared at each apply.
+     */
+    private final List<Sprayed> extinguished = new ArrayList<>();
+
+    private record Sprayed(BoundingBox box, long batch) {}
 
     DimensionAtmos(ServerLevel level, Executor workers) {
         this.level = level;
@@ -437,6 +451,25 @@ public final class DimensionAtmos {
         }
         ignitions.put(pl.ignite(pos.asLong(), source.toString()), future);
         return future;
+    }
+
+    /**
+     * Puts out every fire block in a box, now (API-057). A gas fire the batch in flight asks for in
+     * the box isn't placed. Server thread.
+     *
+     * @return how many fire blocks were removed
+     */
+    public int extinguish(BlockPos from, BlockPos to) {
+        if (isInFlight()) {
+            extinguished.add(new Sprayed(BoundingBox.fromCorners(from, to), closedBatches));
+        }
+        return FireIntents.extinguish(level, from, to, block -> {});
+    }
+
+    /** The hotspots of the last applied atmos tick; none while the dimension has no engine. Any thread (API-055). */
+    public HotspotTable hotspots() {
+        DimensionPipeline p = pipeline;
+        return p == null ? HotspotTable.EMPTY : p.hotspots();
     }
 
     private IllegalStateException faulted() {
@@ -1016,6 +1049,7 @@ public final class DimensionAtmos {
         ensureEngine();
         DimensionPipeline p = pipeline;
         closedAtGameTick = gameTick;
+        closedBatches++;
         // Taken every batch, so triggers in an excluded or faulted dimension don't pile up.
         List<ChangeTracker.Trigger> triggers = ChangeTracker.drainTriggers(level);
         if (p == null) {
@@ -1117,7 +1151,31 @@ public final class DimensionAtmos {
         DimensionData.of(level).raiseNextZoneId(pl.nextZoneId());
         completeChecks(a.conservation());
         // Gas fires first, so an ignition's caller finds its block (FIRE-018).
-        FireIntents.apply(level, a.fireIntents(), this::isChunkLoaded);
+        List<BoundingBox> sprayed = new ArrayList<>();
+        for (Sprayed s : extinguished) {
+            if (s.batch() == closedBatches) {
+                sprayed.add(s.box());
+            }
+        }
+        extinguished.clear();
+        FireIntents.apply(level, a.fireIntents(), this::isChunkLoaded, block -> {
+            BlockPos p = BlockPos.of(block);
+            for (BoundingBox box : sprayed) {
+                if (box.isInside(p)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        // API-031, after the blocks: a listener finds the fire's blocks as the event says.
+        for (FireEvent e : a.fireEvents()) {
+            ZoneId zone = new ZoneId(e.zoneId());
+            BlockPos at = BlockPos.of(e.block());
+            NeoForge.EVENT_BUS.post(
+                    e.kind() == FireEvent.Kind.IGNITED
+                            ? new FireIgnitedEvent(level, zone, at)
+                            : new FireExtinguishedEvent(level, zone, at));
+        }
         for (OpenAirEvent e : a.events()) {
             Pending p = pending.get(e.seq());
             SourceId source = p != null ? p.source() : SourceId.of("zas", "unknown");

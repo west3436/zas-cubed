@@ -182,6 +182,11 @@ public final class AtmosService {
         return dimensionFor(level).ignite(pos, source);
     }
 
+    /** Puts out every fire block in a box of a level, now (API-057). */
+    public int extinguish(ServerLevel level, BlockPos from, BlockPos to) {
+        return dimensionFor(level).extinguish(from, to);
+    }
+
     /**
      * Queues a pin of the zone at sub-cell {@code sub} of a position, or with -1 its largest cell,
      * for the next atmos tick (API-017, API-050).
