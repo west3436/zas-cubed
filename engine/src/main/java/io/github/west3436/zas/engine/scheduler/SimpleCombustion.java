@@ -1,17 +1,17 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 
 /**
  * A stand-in for the data-driven reactions (FIRE-001, FIRE-003, #41) until they land: FIRE-003's
- * three fuels burning with O₂ to H₂O and CO₂, their flammability limits in air and autoignition
- * points, and FIRE-030's oxygen threshold. Hotspots use it through {@link Combustion}; the
- * reactions replace it.
+ * three fuels burning with O₂ to H₂O and CO₂, with their flammability limits in air and their
+ * autoignition points. Hotspots use it through {@link Combustion}; the reactions replace it.
  *
  * <p>A fuel is within its limits when its mole fraction of the whole mixture is. A parcel burns
  * each such fuel in turn, as far as the parcel's O₂ goes, and the heat goes into the whole
- * mixture.
+ * mixture. Nothing burns where the fire oxygen threshold fails (FIRE-030).
  */
 public final class SimpleCombustion implements Combustion {
     /** One fuel: what it burns to, per mol of fuel. */
@@ -31,45 +31,27 @@ public final class SimpleCombustion implements Combustion {
         new Fuel("zas:carbon_monoxide", 0.125, 0.74, 882, 283_000, 0.5, 0, 1),
     };
 
-    private final double minOxygenFraction;
-    private final double minOxygenKpa;
     private final int[] fuel;
     private final int oxygen;
     private final int water;
     private final int carbonDioxide;
 
-    /**
-     * @param registry the gases; fuels or products it lacks are left out
-     * @param minOxygenFraction the least O₂ mole fraction a fire needs (FIRE-030)
-     * @param minOxygenKpa the least O₂ partial pressure a fire needs, kPa (FIRE-030)
-     */
-    public SimpleCombustion(GasRegistry registry, double minOxygenFraction, double minOxygenKpa) {
-        this.minOxygenFraction = minOxygenFraction;
-        this.minOxygenKpa = minOxygenKpa;
+    /** @param registry the gases; fuels whose products it lacks are left out */
+    public SimpleCombustion(GasRegistry registry) {
         this.fuel = new int[FUELS.length];
-        for (int i = 0; i < FUELS.length; i++) {
-            fuel[i] = registry.indexOf(FUELS[i].id());
-        }
-        this.oxygen = registry.indexOf("zas:oxygen");
+        this.oxygen = registry.indexOf(FireSettings.OXYGEN);
         this.water = registry.indexOf("zas:water_vapor");
         this.carbonDioxide = registry.indexOf("zas:carbon_dioxide");
-    }
-
-    /** With FIRE-030's defaults: an O₂ fraction of 0.14 and 10 kPa. */
-    public SimpleCombustion(GasRegistry registry) {
-        this(registry, 0.14, 10);
-    }
-
-    private boolean oxygenEnough(GasMixture m) {
-        if (oxygen < 0 || m.totalMoles() <= 0) {
-            return false;
+        for (int i = 0; i < FUELS.length; i++) {
+            int f = registry.indexOf(FUELS[i].id());
+            boolean products = (FUELS[i].water() == 0 || water >= 0) && (FUELS[i].carbonDioxide() == 0 || carbonDioxide >= 0);
+            fuel[i] = products ? f : -1;
         }
-        return m.moles(oxygen) / m.totalMoles() >= minOxygenFraction && m.partialPressure(oxygen) >= minOxygenKpa;
     }
 
-    private boolean burns(int i, GasMixture m) {
+    private boolean within(int i, GasMixture m) {
         int f = fuel[i];
-        if (f < 0 || (FUELS[i].water() > 0 && water < 0) || (FUELS[i].carbonDioxide() > 0 && carbonDioxide < 0)) {
+        if (f < 0 || m.isEmpty()) {
             return false;
         }
         double share = m.moles(f) / m.totalMoles();
@@ -77,12 +59,12 @@ public final class SimpleCombustion implements Combustion {
     }
 
     @Override
-    public boolean flammable(GasMixture mixture) {
-        if (!oxygenEnough(mixture)) {
+    public boolean flammable(GasMixture mixture, FireSettings fire) {
+        if (!fire.sustains(mixture)) {
             return false;
         }
         for (int i = 0; i < FUELS.length; i++) {
-            if (burns(i, mixture)) {
+            if (within(i, mixture)) {
                 return true;
             }
         }
@@ -90,13 +72,13 @@ public final class SimpleCombustion implements Combustion {
     }
 
     @Override
-    public double autoignition(GasMixture mixture) {
+    public double autoignition(GasMixture mixture, FireSettings fire) {
         double lowest = Double.POSITIVE_INFINITY;
-        if (!oxygenEnough(mixture)) {
+        if (!fire.sustains(mixture)) {
             return lowest;
         }
         for (int i = 0; i < FUELS.length; i++) {
-            if (burns(i, mixture)) {
+            if (within(i, mixture)) {
                 lowest = Math.min(lowest, FUELS[i].autoignition());
             }
         }
@@ -104,20 +86,20 @@ public final class SimpleCombustion implements Combustion {
     }
 
     @Override
-    public double[] burn(GasMixture mixture, double litres) {
+    public double[] burn(GasMixture mixture, double litres, FireSettings fire) {
         double[] change = new double[mixture.registry().size()];
-        if (!flammable(mixture)) {
+        if (!flammable(mixture, fire)) {
             return change;
         }
         double share = Math.min(1, litres / mixture.volume());
         double o2 = mixture.moles(oxygen) * share;
-        boolean[] within = new boolean[FUELS.length];
+        boolean[] burns = new boolean[FUELS.length];
         for (int i = 0; i < FUELS.length; i++) {
-            within[i] = burns(i, mixture);
+            burns[i] = within(i, mixture);
         }
         double heat = 0;
         for (int i = 0; i < FUELS.length && o2 > 0; i++) {
-            if (!within[i]) {
+            if (!burns[i]) {
                 continue;
             }
             Fuel f = FUELS[i];
@@ -125,19 +107,18 @@ public final class SimpleCombustion implements Combustion {
             if (!(burned > 0)) {
                 continue;
             }
-            double usedO2 = Math.min(burned * f.oxygen(), mixture.moles(oxygen));
+            double usedFuel = mixture.removeGas(fuel[i], burned);
+            double usedO2 = mixture.removeGas(oxygen, usedFuel * f.oxygen());
             o2 -= usedO2;
-            change[fuel[i]] -= mixture.removeGas(fuel[i], burned);
-            change[oxygen] -= mixture.removeGas(oxygen, usedO2);
-            if (f.water() > 0) {
-                mixture.addMoles(water, burned * f.water());
-                change[water] += burned * f.water();
+            change[fuel[i]] -= usedFuel;
+            change[oxygen] -= usedO2;
+            if (f.water() > 0 && mixture.addMoles(water, usedFuel * f.water())) {
+                change[water] += usedFuel * f.water();
             }
-            if (f.carbonDioxide() > 0) {
-                mixture.addMoles(carbonDioxide, burned * f.carbonDioxide());
-                change[carbonDioxide] += burned * f.carbonDioxide();
+            if (f.carbonDioxide() > 0 && mixture.addMoles(carbonDioxide, usedFuel * f.carbonDioxide())) {
+                change[carbonDioxide] += usedFuel * f.carbonDioxide();
             }
-            heat += burned * f.heat();
+            heat += usedFuel * f.heat();
         }
         if (heat > 0) {
             mixture.addThermalEnergy(heat);

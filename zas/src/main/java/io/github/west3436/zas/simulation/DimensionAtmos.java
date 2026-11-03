@@ -13,6 +13,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.change.SectionCapture;
 import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.Ambient;
@@ -828,13 +829,15 @@ public final class DimensionAtmos {
 
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
-     * with the openings exported for airflow (FLOW-001, FLOW-014).
+     * with the openings exported for airflow (FLOW-001, FLOW-014) and the fire oxygen threshold
+     * (FIRE-030).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
                 ExchangeSettings.DEFAULT.withPeriod(timing.periodSeconds()).withVenting(ZasServerConfig.venting());
         return new EngineSettings(exchange, ZasServerConfig.conservationChecker(), ZasServerConfig.heat())
-                .withAirflow(AirflowConfig.exportKpa(dimension().location()));
+                .withAirflow(AirflowConfig.exportKpa(dimension().location()))
+                .withFire(FireConfig.settings());
     }
 
     // ---- Commands and the profiler ------------------------------------------------------

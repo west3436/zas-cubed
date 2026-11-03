@@ -1,5 +1,6 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.gas.GasMixture;
 
 /**
@@ -14,17 +15,17 @@ public interface Combustion {
     /** Nothing burns. */
     Combustion NONE = new Combustion() {
         @Override
-        public boolean flammable(GasMixture mixture) {
+        public boolean flammable(GasMixture mixture, FireSettings fire) {
             return false;
         }
 
         @Override
-        public double autoignition(GasMixture mixture) {
+        public double autoignition(GasMixture mixture, FireSettings fire) {
             return Double.POSITIVE_INFINITY;
         }
 
         @Override
-        public double[] burn(GasMixture mixture, double litres) {
+        public double[] burn(GasMixture mixture, double litres, FireSettings fire) {
             return new double[mixture.registry().size()];
         }
     };
@@ -33,13 +34,14 @@ public interface Combustion {
      * Whether a fuel in the mixture is within its flammability limits and the mixture meets the
      * fire oxygen threshold (FIRE-003, FIRE-030).
      */
-    boolean flammable(GasMixture mixture);
+    boolean flammable(GasMixture mixture, FireSettings fire);
 
     /**
      * The lowest autoignition temperature, in K, among the fuels within their flammability limits,
-     * or {@link Double#POSITIVE_INFINITY} if none is (FIRE-010).
+     * or {@link Double#POSITIVE_INFINITY} if none is or the mixture fails the fire oxygen threshold
+     * (FIRE-010).
      */
-    double autoignition(GasMixture mixture);
+    double autoignition(GasMixture mixture, FireSettings fire);
 
     /**
      * Burns a parcel of {@code litres} of the mixture, or all of it if it is smaller, in place: the
@@ -48,5 +50,5 @@ public interface Combustion {
      *
      * @return the change of each gas, in mol, indexed by the mixture's registry
      */
-    double[] burn(GasMixture mixture, double litres);
+    double[] burn(GasMixture mixture, double litres, FireSettings fire);
 }
