@@ -1097,7 +1097,8 @@ geometry within 6 blocks of their eyes for the crosshair. The client draws
 paused zones grey and unresolved cells magenta. Nothing is sent to anyone else (DATA-005). The
 renderer is in `io.github.west3436.zas.client`, loaded through a
 `@Mod(dist = Dist.CLIENT)` entry point, and draws on `RenderLevelStageEvent`.
-Hotspots are a FIRE concept (R1), so their list stays empty for now.
+Hotspots come from the last atmos tick's `DebugView`, each with its zone's
+published temperature (CLIENT-013).
 
 *Implemented (#37):* the atmosphere preset (OPS-007, OPS-014, OPS-015). Every
 service above reads its preset-controlled settings from one registry,

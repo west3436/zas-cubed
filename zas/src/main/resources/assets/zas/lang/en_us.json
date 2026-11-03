@@ -1,4 +1,5 @@
 {
+  "block.zas.gas_fire": "Gas Fire",
   "commands.zas.debug.off": "Debug overlay off",
   "commands.zas.debug.on": "Debug overlay: %s",
   "debug.zas.cell": "%s: %s sub-cells, %s L",

@@ -56,6 +56,10 @@
 path: zas/src/main/resources/assets/zas/lang/en_us.json
 origin: original
 
+path: zas/src/main/resources/assets/zas/blockstates/gas_fire.json
+origin: original
+notes: gas_fire.json and gas_fire_1.json at random, so neighbouring gas fires don't flicker in step.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/lang/en_us.json
 origin: original
 

@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.hotspot.GasFireBlock;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -12,6 +13,7 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -26,6 +28,11 @@ import org.slf4j.Logger;
  * deduplicated into a palette, so each block state costs one derivation at most (GEO-040). The
  * shape-derived table doesn't depend on datapacks, so it is computed once per game session and
  * reused on every reload.
+ *
+ * <p>Fire blocks are flagged here too, since which blocks are fire doesn't depend on datapacks
+ * either: vanilla fire ({@link BaseFireBlock}) with {@link Geometry#FLAG_FIRE} (FIRE-019) and
+ * {@code zas:gas_fire} with {@link Geometry#FLAG_GAS_FIRE} (FIRE-018), so the engine's hotspots see
+ * them come and go through the change hook (architecture §5).
  */
 public final class GeometryDerivation {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -95,6 +102,14 @@ public final class GeometryDerivation {
         return t;
     }
 
+    /** The hotspot flags of a state: {@link Geometry#FLAG_GAS_FIRE}, {@link Geometry#FLAG_FIRE} or none. */
+    static int fireFlags(BlockState state) {
+        if (state.getBlock() instanceof GasFireBlock) {
+            return Geometry.FLAG_GAS_FIRE;
+        }
+        return state.getBlock() instanceof BaseFireBlock ? Geometry.FLAG_FIRE : 0;
+    }
+
     private static GeometryTable deriveAll() {
         long start = System.nanoTime();
         int maxId = -1;
@@ -124,6 +139,10 @@ public final class GeometryDerivation {
                     LOGGER.warn("Couldn't derive the geometry of {}; treating it as solid", state, e);
                 }
                 id = GeometryPalette.SOLID_ID;
+            }
+            int fire = fireFlags(state);
+            if (fire != 0) {
+                id = palette.intern(palette.geometry(id).withFlags(fire));
             }
             byStateId[Block.getId(state)] = id;
         }

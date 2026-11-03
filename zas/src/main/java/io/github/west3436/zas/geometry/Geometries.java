@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.minecraft.Util;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,6 +23,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
@@ -34,8 +36,10 @@ import org.slf4j.Logger;
  *
  * <p>Lifecycle: overrides and heat data are read on every server data load (start and {@code
  * /reload}). Once tags are bound ({@link TagsUpdatedEvent}, server side), they and the {@link
- * #ZONE_BOUNDARY} tag are resolved to blocks on the server thread and the table is rebuilt on a
- * background thread. {@link #table()} waits for that build, and the server-started handler waits
+ * #ZONE_BOUNDARY} tag are resolved to blocks, and the {@linkplain #setIgnitionSources ignition-source
+ * predicate} is asked of every state, on the server thread, and the table is rebuilt on a
+ * background thread. That listener runs at {@link EventPriority#LOW}, so a mod that resolves its
+ * own tags at normal priority, as the ignition sources do, has its new answers in by then. {@link #table()} waits for that build, and the server-started handler waits
  * for it too, so it is ready before the first atmos tick.
  */
 public final class Geometries {
@@ -52,13 +56,14 @@ public final class Geometries {
     private static volatile List<GeometryOverride> testOverrides = List.of();
     private static volatile List<ThermalData> thermal = List.of();
     private static volatile CompletableFuture<GeometryTable> current;
+    private static volatile Predicate<BlockState> ignitionSources = state -> false;
 
     private Geometries() {}
 
     /** Registers the lifecycle listeners on the game event bus. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener(Geometries::onAddReloadListeners);
-        gameBus.addListener(Geometries::onTagsUpdated);
+        gameBus.addListener(EventPriority.LOW, Geometries::onTagsUpdated);
         gameBus.addListener(Geometries::onServerStarted);
     }
 
@@ -88,6 +93,28 @@ public final class Geometries {
         return table().geometryId(state);
     }
 
+    /**
+     * Sets which block states are standing ignition sources (FIRE-014, FIRE-015): the table flags
+     * them {@link Geometry#FLAG_IGNITION_SOURCE}, and the engine's hotspots ignite flammable gas at
+     * and next to them each atmos tick. The predicate is asked of every state on the server thread
+     * each time the table is rebuilt: on every server data load, once tags are bound. It may read
+     * tags. Setting it doesn't rebuild the table; a GameTest calls {@link #rebuildForTest}. Any
+     * thread, normally once at mod construction.
+     */
+    public static void setIgnitionSources(Predicate<BlockState> predicate) {
+        ignitionSources = predicate;
+    }
+
+    /**
+     * Rebuilds the table now from the current overrides, tags and ignition sources, as a data load
+     * would: for a GameTest that changed one of them. A dimension whose palette changes gets a new
+     * engine at its next batch. Server thread, since tags are read here.
+     */
+    public static void rebuildForTest() {
+        current = CompletableFuture.completedFuture(
+                build(resolve(allOverrides()), boundaryBlocks(), resolveThermal(thermal), sourceStates()));
+    }
+
     static void setOverrides(List<GeometryOverride> loaded) {
         overrides = List.copyOf(loaded);
     }
@@ -103,8 +130,7 @@ public final class Geometries {
      */
     public static void overrideForTest(List<GeometryOverride> extra) {
         testOverrides = List.copyOf(extra);
-        current = CompletableFuture.completedFuture(
-                build(resolve(allOverrides()), boundaryBlocks(), resolveThermal(thermal)));
+        rebuildForTest();
     }
 
     private static List<GeometryOverride> allOverrides() {
@@ -129,7 +155,9 @@ public final class Geometries {
         Map<Block, GeometryOverride> byBlock = resolve(allOverrides());
         List<Block> boundaries = boundaryBlocks();
         Map<Block, double[]> heat = resolveThermal(thermal);
-        current = CompletableFuture.supplyAsync(() -> build(byBlock, boundaries, heat), Util.backgroundExecutor());
+        int[] sources = sourceStates();
+        current = CompletableFuture.supplyAsync(
+                () -> build(byBlock, boundaries, heat, sources), Util.backgroundExecutor());
     }
 
     private static void onServerStarted(ServerStartedEvent event) {
@@ -140,6 +168,29 @@ public final class Geometries {
                 t.palette().size(),
                 t.overriddenStates(),
                 t.boundaryStates());
+    }
+
+    /**
+     * The ids of the states the ignition-source predicate accepts, ascending. Asked on the thread
+     * that bound the tags; a predicate that throws counts as no source, and is logged once.
+     */
+    static int[] sourceStates() {
+        Predicate<BlockState> predicate = ignitionSources;
+        List<Integer> ids = new ArrayList<>();
+        boolean logged = false;
+        for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
+            try {
+                if (predicate.test(state)) {
+                    ids.add(Block.getId(state));
+                }
+            } catch (RuntimeException e) {
+                if (!logged) {
+                    LOGGER.warn("The ignition-source predicate failed for {}; treating it as no source", state, e);
+                    logged = true;
+                }
+            }
+        }
+        return ids.stream().mapToInt(Integer::intValue).sorted().toArray();
     }
 
     /** The blocks tagged {@link #ZONE_BOUNDARY}, in registry order. Read on the thread that bound the tags. */
@@ -254,12 +305,12 @@ public final class Geometries {
     /**
      * The derived table with the overrides applied, then the zone boundaries marked: each tagged
      * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
-     * block's heat data added to its states' geometries.
+     * block's heat data added to its states' geometries; then the ignition sources flagged.
      */
     private static GeometryTable build(
-            Map<Block, GeometryOverride> byBlock, List<Block> boundaries, Map<Block, double[]> heat) {
+            Map<Block, GeometryOverride> byBlock, List<Block> boundaries, Map<Block, double[]> heat, int[] sources) {
         GeometryTable derived = GeometryDerivation.derived();
-        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty()) {
+        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty() && sources.length == 0) {
             return derived;
         }
         GeometryPalette.Builder palette = derived.palette().toBuilder();
@@ -298,6 +349,12 @@ public final class Geometries {
                     byStateId[stateId] =
                             palette.intern(palette.geometry(byStateId[stateId]).withThermal(u, t));
                 }
+            }
+        }
+        for (int stateId : sources) {
+            if (stateId >= 0 && stateId < byStateId.length) {
+                byStateId[stateId] =
+                        palette.intern(palette.geometry(byStateId[stateId]).withFlags(Geometry.FLAG_IGNITION_SOURCE));
             }
         }
         return new GeometryTable(palette.build(), byStateId, derived.distinctShapes(), overridden, marked);
