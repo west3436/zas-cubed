@@ -19,11 +19,13 @@ import net.minecraft.world.level.block.state.BlockState;
  * architecture §11.8). It reads the cells on its two sides, in front of the panel and behind it.
  *
  * <ul>
- *   <li><b>The alarm.</b> It is alarmed while any area air controller covering either side is at
- *       danger 2. A controller covers a side if the side's cell is in its zone, or in the zone (or,
- *       unzoned, the cell) of a part linked to it ({@link AreaAirControllerBlockEntity#covers}).
- *   <li><b>Closing</b> (CONT-043). When the alarm starts, an open firelock closes. While it lasts,
- *       a firelock opened by hand or forced open closes again after {@link #RECLOSE_STEPS} s.
+ *   <li><b>The alarm.</b> It is alarmed while any area air controller covering it is at danger 2.
+ *       A controller covers it if the cell on either side is in its zone, or if the firelock itself
+ *       is linked to it with the multitool ({@link AreaAirControllerBlockEntity#covers}).
+ *   <li><b>Closing</b> (CONT-043). When the alarm starts, an open firelock closes. The controller
+ *       steps it at once ({@link #alarmRaised}), so it closes in the atmos tick the controller
+ *       alarms. While the alarm lasts, a firelock opened by hand or forced open closes again after
+ *       {@link #RECLOSE_STEPS} s.
  *   <li><b>Reopening</b> (CONT-092). Once the alarm ends, a firelock the alarm closed opens again,
  *       unless it is locked down; it then opens when the lockdown ends. One closed by hand stays
  *       closed.
@@ -71,7 +73,7 @@ public class FirelockBlockEntity extends AtmosDevice {
             return;
         }
         boolean was = alarm;
-        alarm = alarmed(level, a, front) || alarmed(level, b, back);
+        alarm = alarmed(level, a, b);
         boolean open = state.getValue(FirelockBlock.OPEN);
         if (alarm && open) {
             if (!was || reclose == 0) {
@@ -100,14 +102,37 @@ public class FirelockBlockEntity extends AtmosDevice {
         closedByAlarm = true;
     }
 
-    /** Whether any loaded controller at danger 2 covers this side. */
-    private static boolean alarmed(ServerLevel level, AtmosphereSample side, BlockPos cell) {
+    /** Whether any loaded controller at danger 2 covers this firelock. */
+    private boolean alarmed(ServerLevel level, AtmosphereSample front, AtmosphereSample back) {
         for (AtmosDevice d : DeviceTicker.loaded(level)) {
-            if (d instanceof AreaAirControllerBlockEntity c && c.alarming() && c.covers(side, cell)) {
+            if (d instanceof AreaAirControllerBlockEntity c && c.alarming() && c.covers(getBlockPos(), front, back)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Called by a controller whose alarm has just started: each loaded firelock it covers that
+     * isn't alarmed yet steps now, so it closes in the same atmos tick rather than at its own step,
+     * up to an atmos tick later (CONT-043).
+     *
+     * @param level the level
+     * @param controller the controller now at danger 2
+     */
+    public static void alarmRaised(ServerLevel level, AreaAirControllerBlockEntity controller) {
+        for (AtmosDevice d : DeviceTicker.loaded(level)) {
+            if (d instanceof FirelockBlockEntity f && !f.alarm && f.coveredBy(level, controller)) {
+                f.step();
+            }
+        }
+    }
+
+    private boolean coveredBy(ServerLevel level, AreaAirControllerBlockEntity controller) {
+        if (isRemoved() || !level.isLoaded(getBlockPos()) || !(getBlockState().getBlock() instanceof FirelockBlock)) {
+            return false;
+        }
+        return controller.covers(getBlockPos(), Atmospheres.at(level, front()), Atmospheres.at(level, back()));
     }
 
     /**

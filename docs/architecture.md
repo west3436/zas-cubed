@@ -1795,7 +1795,14 @@ tick, in order:
    no bounds, so the filler gas isn't one of "the rest".
 5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
    reading at once, and falls after 10 readings in a row below it (10 s) to
-   the highest of those readings.
+   the highest of those readings. A **breach** reads as danger 2 at once
+   (`BreachAlarm`, CONT-043), for a preset with a pressure min2. It is a
+   breach when the zone has an edge to the ambient and the ambient's pressure
+   is at or below min2, as space is, or when the pressure fell by
+   `[controller] breach_drop_kpa` (10) since the last reading to below min1.
+   The ambient's pressure is read at the top of the controller's column, which
+   is ambient in almost any build; a dimension has one ambient. A door to
+   ordinary outside air is no breach.
 6. **Switches mode by itself** where the mode says so (CONT-041): Cycle
    becomes Fill below 5 % of 1 atm, and Fill becomes Scrubbing at 95 % of the
    target.
@@ -1805,6 +1812,10 @@ tick, in order:
    with its own position as the order's `sender`, and each `ScrubberControl`
    the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
    come first because a part's draw follows its order.
+8. **Closes its firelocks at once.** In the step its alarm starts, it steps
+   each loaded firelock it covers that isn't alarmed yet
+   (`FirelockBlockEntity.alarmRaised`), so the firelocks close in that atmos
+   tick, not at their own steps up to a second later (§11.8).
 
 **Presets** (`ControllerPreset`, CONT-047). Human and Vacuum are shipped.
 Vacuum keeps Human's gas maxima, sets pressure to –/–/1/5 kPa, and drops the
@@ -1927,15 +1938,18 @@ airlock is not built.*
   each atmos tick. It reads the cells in front of the panel and behind it. A
   side that reads as unresolved changes nothing that step.
   - **Alarm** (CONT-043). It is alarmed while a loaded, powered area air
-    controller at danger 2 covers either side. A controller covers a cell in
-    its own zone, or in the zone of a part linked to it with the multitool,
-    or, where that part's air point is unzoned, that very cell. The
-    controller records what it covers at each step
-    (`AreaAirControllerBlockEntity.covers`, `alarming`).
+    controller at danger 2 covers it. A controller covers a firelock when
+    the cell on either side is in its own zone, or when the firelock itself
+    is linked to it with the multitool (from either half; the link is the
+    lower half). Linking a part in another room doesn't bring that room's
+    firelocks under the controller. The controller records its zone at each
+    step (`AreaAirControllerBlockEntity.covers`, `alarming`).
   - **Closing.** When the alarm starts, an open firelock closes and records
-    that the alarm closed it. While the alarm holds, an opening by hand or
-    with a crowbar lasts `RECLOSE_STEPS` (5) atmos ticks, then the alarm
-    closes it again.
+    that the alarm closed it. The controller steps it in the atmos tick its
+    alarm starts (§11.6, step 8), so a breach closes it within an atmos tick
+    of the framework seeing the breach. While the alarm holds, an opening by
+    hand or with a crowbar lasts `RECLOSE_STEPS` (5) atmos ticks, then the
+    alarm closes it again.
   - **Reopening** (CONT-092). Once no covering controller is at danger 2, a
     firelock the alarm closed opens, unless it is locked down: it then opens
     when the lockdown ends. One closed by hand stays closed.
