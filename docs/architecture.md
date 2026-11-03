@@ -1155,6 +1155,25 @@ change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
 (NFR-010) and optional in game.
 
+### Fire chemistry and fuel blocks
+
+*Implemented in part ([#43](https://github.com/west3436/zas-cubed/issues/43)):*
+the chemistry every fire shares is pure and in the engine, so the worker's
+hotspots and reactions and the server's vanilla fire and fuel blocks use the
+same rules. `engine.fire.FireSettings` is the fire oxygen threshold (FIRE-030):
+an O₂ fraction of at least 0.14 and an O₂ partial pressure of at least 10 kPa,
+the `[fire]` section of the server config (`FireConfig`), carried to the worker
+in `EngineSettings.fire` so one atmos tick sees one threshold. It tests a
+fraction and a partial pressure, a `GasMixture`, or partial pressures by
+registry index as a published zone or an ambient gives them.
+`engine.fire.CarbonCombustion` burns carbon (FIRE-025: C + O₂ → CO₂, 394
+kJ/mol, so a power fixes the carbon, O₂ and CO₂ per second) with FIRE-005's CO
+share: 0 at an O₂ fraction of 0.18 (`FireSettings.incompleteBelowFraction`,
+also in `[fire]`), rising linearly to all of the carbon at the threshold. Each mole of carbon that forms CO uses half a mole less O₂ and
+releases 283 kJ less heat (CO's own heat of combustion, FIRE-003), so the
+carbon burned is the same and the heat falls to match. A CH₄ burn takes the
+same reductions off per mole of its carbon (`oxygenSaved`, `heatLost`).
+
 ### Life support (breathing)
 
 *Implemented in part ([#34](https://github.com/west3436/zas-cubed/issues/34),
