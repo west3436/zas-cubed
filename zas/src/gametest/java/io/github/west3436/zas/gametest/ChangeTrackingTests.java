@@ -41,6 +41,13 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * <p>Each test owns the dirty positions inside its own area: it clears them first with {@link
  * ChangeTracker#drainWithin}, so tests running side by side don't see each other's changes. Only
  * the test in batch {@code geo_012_drain} drains a whole level, so it runs alone.
+ *
+ * <p>Every atmos batch close drains the whole level too. The scheduler's own, at the end of the
+ * server tick, comes after the tests' checks of that tick, but a test that runs an atmos tick
+ * itself ({@code AtmosService.tickNow}, as the {@link Rooms} tests do) closes one in the middle of
+ * the tests' turn. A test that waits for the world to change a block over later ticks and then
+ * checks it is dirty, such as one that waits for a fluid, runs in batch {@link #WORLD_BATCH}, apart
+ * from those tests: there, only the end-of-tick close drains, and always after its check.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -48,6 +55,10 @@ public final class ChangeTrackingTests {
     private ChangeTrackingTests() {}
 
     private static final String AREA = "geo_010_area";
+
+    /** The batch of the tests that wait for the world to change a block (see the class comment). */
+    private static final String WORLD_BATCH = "geo_010_world";
+
     private static final BlockState STONE = Blocks.STONE.defaultBlockState();
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
 
@@ -192,7 +203,7 @@ public final class ChangeTrackingTests {
     }
 
     /** A piston pushing a block into an empty position. */
-    @GameTest(template = AREA, timeoutTicks = 100)
+    @GameTest(template = AREA, timeoutTicks = 100, batch = WORLD_BATCH)
     public static void geo_010_piston(GameTestHelper h) {
         BlockPos piston = new BlockPos(2, 2, 4);
         BlockPos block = piston.east();
@@ -234,7 +245,7 @@ public final class ChangeTrackingTests {
     }
 
     /** Flowing water meets lava and turns it to stone, cobblestone or obsidian. */
-    @GameTest(template = AREA, timeoutTicks = 200)
+    @GameTest(template = AREA, timeoutTicks = 200, batch = WORLD_BATCH)
     public static void geo_010_fluid(GameTestHelper h) {
         // A basin: floor at y = 1, rim at y = 2 around x 0–6, z 0–4.
         for (int x = 0; x <= 6; x++) {
