@@ -1248,6 +1248,36 @@ runs none of it until LIFE-023.
   change the verdict, and a higher-priority one's `canBreathe = false` survives:
   the handler only ever sets it to false.
 
+### Atmosphere HUD
+
+*Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
+helmet and analyzer triggers of CLIENT-001 and the internals indicator
+(CLIENT-009) wait for internals and the analyzer.*
+
+- **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
+  gets none, a warning or a danger, judged on what reaches the player through
+  its protection, so a danger is where LIFE harms it: the effective pressure
+  (LIFE-020), the O₂ and each toxic gas in its breath, and the exposure
+  temperature unless its thermal protection takes all temperature damage
+  there. Pressure and temperature are signed, low and cold negative. A hazard
+  that is off in the dimension has no alert, and an exempt player none at all.
+  The level comes from `BreathingRules.assess`, the same assessment a breath
+  check makes.
+- **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
+  entity id, each player's state is worked out and sent to that player only if
+  a level, the worst toxic gas, or a shown value at its display resolution has
+  changed since the last send. A reading with no alert carries no value, so in
+  normal air nothing is sent. While the atmosphere at the eyes is unresolved
+  the last state stands. The last send is kept in an unsaved player
+  attachment, so a respawned player gets its state at once.
+- **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
+  the status effects draws one alert per reading in a column at the right edge
+  of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
+  in the client's display units, yellow for a warning, red for a danger. Danger
+  icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
+  The state is cleared on logout.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)

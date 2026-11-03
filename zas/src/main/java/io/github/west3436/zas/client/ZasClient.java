@@ -2,6 +2,7 @@ package io.github.west3436.zas.client;
 
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.debug.ClientDebugOverlay;
+import io.github.west3436.zas.hud.ClientAtmosHud;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -17,6 +18,10 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class ZasClient {
     public ZasClient(IEventBus modBus) {
         NeoForge.EVENT_BUS.addListener((RenderLevelStageEvent e) -> DebugOverlayRenderer.render(e));
-        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientDebugOverlay.clear());
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> {
+            ClientDebugOverlay.clear();
+            ClientAtmosHud.clear();
+        });
+        modBus.addListener(AtmosHudRenderer::registerLayer);
     }
 }

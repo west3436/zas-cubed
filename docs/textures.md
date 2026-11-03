@@ -225,7 +225,12 @@ These need textures too, but aren't in the tables above:
   (CONT-049), and the TTV's timer
 - the HUD: readings and the internals indicator (CLIENT-001, CLIENT-008,
   CLIENT-009). Each warning needs a shape or flashing cue as well as a colour
-  (CLIENT-014).
+  (CLIENT-014). The alerts are done: they're vg's screen-alert icons from
+  `icons/mob/screen_alarms.dmi` (`carbon_oxy`, `carbon_tox`,
+  `carbon_pressure±1/±2`, `carbon_temp±2/±4`), Crops at 32×32 in
+  `zas/textures/gui/hud/`, with animated states' frames stacked downward. vg
+  took its screen-alert framework from /tg/station (CC BY-SA 3.0). The
+  internals indicator is still to do.
 - airflow particles (CLIENT-003)
 
 ## Later releases (R2)
