@@ -10,7 +10,8 @@ import net.neoforged.bus.api.Event;
 /**
  * A zone caught fire (API-031): its first hotspot appeared ({@link
  * io.github.west3436.zas.api.fire.Fires}). Fired once per zone, not per hotspot; it is fired again
- * only after the zone has gone out ({@link FireExtinguishedEvent}).
+ * only after the zone has gone out ({@link FireExtinguishedEvent}). A hotspot counts once an atmos
+ * tick sees its block, so a zone set alight by an ignition catches fire in the tick after it.
  *
  * <p>Zones are named by id, so a fire that a merge or split carries into a zone with another id goes
  * out in the old zone and catches in the new one, in the same atmos tick.
