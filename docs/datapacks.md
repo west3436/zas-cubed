@@ -5,10 +5,10 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
-[hazard profiles](#hazard-profiles), the [breathers tag](#breathers) and the
-[airflow class tags](#airflow-classes).
-The rest of OPS-002's list (reactions, thermal properties, fuel, protection
-data, the other entity tags) arrives with its features in R1. Every format
+[hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
+[airflow class tags](#airflow-classes) and [reactions](#reactions).
+The rest of OPS-002's list (fuel, the other entity tags) arrives with its
+features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -423,6 +423,93 @@ data/<namespace>/zas/fuel_profile/<path>.json
   ([Invalid files](#invalid-files)).
 - **When it applies:** profiles load when the server starts and reload with
   `/reload`.
+
+## Reactions
+
+Gas reactions are data (FIRE-001, D-05, D-08). Each file defines one reaction:
+
+```
+data/<namespace>/zas/reaction/<path>.json   →   reaction id <namespace>:<path>
+```
+
+```json
+{
+  "reactants": { "zas:methane": 1, "zas:oxygen": 2 },
+  "products": { "zas:carbon_dioxide": 1, "zas:water_vapor": 2 },
+  "enthalpy": -802000,
+  "requires_ignition": true,
+  "flammability": {
+    "fuel": "zas:methane",
+    "lower": 0.05,
+    "upper": 0.15,
+    "autoignition": 810
+  },
+  "sources": {
+    "enthalpy": "where the value comes from"
+  }
+}
+```
+
+The reaction as written happens some number of times per step, its *extent*
+in mol. Each mol of extent consumes the reactants' coefficients in mol,
+produces the products' and releases −`enthalpy` J of heat into the gas.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `type` | string | no | `zas:standard` (the default), or the id of a reaction type a mod implements in code (API-020) |
+| `reactants` | object | yes, for `zas:standard` | Gas id → mol per mol of extent, each above 0. At least one |
+| `products` | object | no | Gas id → mol per mol of extent, each above 0 |
+| `enthalpy` | number | yes, for `zas:standard` | ΔH in J per mol of extent: negative releases heat, as in chemistry |
+| `min_temperature` | number | no | The least temperature it happens at, K. Default 0 |
+| `max_temperature` | number | no | The greatest, K, above `min_temperature`. Default none |
+| `concentrations` | list | no | Objects `{"gas", "min", "max"}`: the gas's mole fraction of the mixture must be from `min` (default 0) to `max` (default 1) |
+| `catalysts` | list | no | Objects `{"gas", "min"}`: the gas must be present, at a mole fraction of at least `min` (default 0), and isn't consumed |
+| `requires_ignition` | boolean | no | Whether it needs an ignition source in or next to the cell (FIRE-006). Default false |
+| `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture, 0 to 1), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
+| `rate` | object | no | How fast it goes (CORE-046): `per_second` (k, above 0), `activation_energy` (Ea in J/mol, default 0) and `reference_temperature` (K, default 298.15). Without one it goes as far as its reactants allow in one step. Not allowed with `requires_ignition` |
+| `incomplete_combustion` | object | no | Another form, with its own `reactants`, `products` and `enthalpy`, blended in by the share of carbon that forms CO when the O₂ fraction is low (FIRE-005) |
+| `sources` | object | no | Citations by field name, as for gases; the game doesn't read them |
+
+**How reactions run.**
+
+- **Every condition is read at the start of a step,** from the whole mixture:
+  temperatures, mole fractions, catalysts, flammability limits and, for a
+  fire, the oxygen threshold.
+- **A reaction without `requires_ignition`** runs in every zone each atmos
+  tick. With a `rate`, a step of dt seconds goes 1 − e^(−k·dt) of the way to
+  using up its limiting reactant, with k = `per_second` ·
+  e^(−Ea/R·(1/T − 1/Tref)) at the zone's temperature. Without one it uses up
+  its limiting reactant at once.
+- **A reaction with `requires_ignition`** never runs zone-wide. It burns in a
+  hotspot's or a container's parcel, 375 L per second of the gas (FIRE-011,
+  FIRE-031), and uses up its limiting reactant in that parcel. It burns where
+  an ignition source is (a hotspot is one), or where the gas is at or above its
+  `autoignition`.
+- **Competing reactions share** (FIRE-002). When reactions together want more
+  of a gas than there is, each one that wants it is scaled back by the worst
+  ratio among its own reactants. A reaction competing with no other runs in
+  full. Products are added after every reaction has consumed.
+- **The heat goes into the gas.** The thermal energy, Σ cᵢnᵢ·T, plus the heat
+  released gives the new temperature at the products' heat capacities (CORE-003).
+  An endothermic reaction never cools the gas below the temperature floor.
+
+**Shipped reactions** (FIRE-003), in `data/zas/zas/reaction/`. Each needs
+ignition and burns with O₂ to H₂O vapour and CO₂:
+
+| File | Reaction | Enthalpy | Flammability limits | Autoignition |
+|---|---|---|---|---|
+| `hydrogen_combustion.json` | H₂ + ½ O₂ → H₂O | −242 kJ/mol | 4–75 % H₂ | 858 K |
+| `methane_combustion.json` | CH₄ + 2 O₂ → CO₂ + 2 H₂O | −802 kJ/mol | 5–15 % CH₄ | 810 K |
+| `carbon_monoxide_combustion.json` | CO + ½ O₂ → CO₂ | −283 kJ/mol | 12.5–74 % CO | 882 K |
+
+- A pack replaces a shipped reaction with a file of the same id, and can't
+  remove one except by replacing it with one whose conditions never hold.
+- A definition naming a gas the server doesn't define is skipped with an error
+  when the server starts (or on `/reload`).
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** at server start and on `/reload`; the next atmos tick
+  uses the new reactions.
 
 ## Zone boundaries
 

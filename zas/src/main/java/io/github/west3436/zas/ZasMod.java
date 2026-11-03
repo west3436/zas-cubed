@@ -17,6 +17,7 @@ import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
+import io.github.west3436.zas.reaction.ServerReactions;
 import io.github.west3436.zas.simulation.AtmosService;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -36,6 +37,7 @@ public final class ZasMod {
         ChangeTracker.register(NeoForge.EVENT_BUS);
         TriggerStates.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
+        ServerReactions.register(NeoForge.EVENT_BUS);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);
         ZasClientConfig.register(container);
