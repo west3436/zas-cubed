@@ -4,6 +4,10 @@
   "package": "io.github.west3436.zas.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AbstractFurnaceBlockEntityMixin",
+    "BaseFireBlockMixin",
+    "CampfireBlockEntityMixin",
+    "FireBlockMixin",
     "LevelChunkMixin"
   ],
   "injectors": {

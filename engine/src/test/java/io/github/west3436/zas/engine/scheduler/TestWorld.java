@@ -57,6 +57,12 @@ final class TestWorld implements DimensionPipeline.World {
         return this;
     }
 
+    /** The geometry id at a position. */
+    int get(int x, int y, int z) {
+        short[] a = sections.get(SectionKeys.sectionOfBlock(x, y, z));
+        return a == null ? background : a[SectionKeys.index(x & 15, y & 15, z & 15)];
+    }
+
     TestWorld box(int x0, int y0, int z0, int x1, int y1, int z1, int id) {
         for (int x = x0; x <= x1; x++) {
             for (int y = y0; y <= y1; y++) {

@@ -215,7 +215,7 @@ snow use the fallback and the ice keeps 2.2. Until fluids seal (GEO-006,
 beyond a wall. `heat_016_default_heat_sources` (GameTest) checks every state.*
 
 #### HEAT-007 · Lit fuel blocks
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-35 · Depends: FIRE-025
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35 · Depends: FIRE-025
 
 While lit, a fuel-burning block in a zone shall add its profile's power
 (FIRE-025) to the zone as heat.
@@ -223,6 +223,11 @@ While lit, a fuel-burning block in a zone shall add its profile's power
 - **Rationale:** Decision: D-35 and D-49.
 - **Verify:** A GameTest checks a lit furnace raises a zone's thermal energy
   by its profile power.
+
+*2026-11-03: Implemented ([#43](https://github.com/west3436/zas-cubed/issues/43)). The heat is added through API-013's heat
+operation, without forming a zone, once the O₂ it burned is removed (FIRE-021).
+Checked by `fire_021_lit_fuel_blocks_use_o2_at_their_profile` and
+`cont_067_running_generator_uses_o2_and_makes_co2_and_heat`.*
 
 #### HEAT-004 · Radiative loss to vacuum
 `Should` · `R1` · `Implemented` · Verify: Unit · Trace: D-07, D-48

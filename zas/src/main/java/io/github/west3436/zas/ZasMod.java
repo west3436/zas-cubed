@@ -8,6 +8,8 @@ import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.fire.Burners;
+import io.github.west3436.zas.fire.FuelProfiles;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.hud.AtmosHud;
@@ -47,5 +49,7 @@ public final class ZasMod {
         Airflow.register(modBus, NeoForge.EVENT_BUS);
         Internals.register(modBus);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
+        FuelProfiles.register(NeoForge.EVENT_BUS);
+        Burners.register(NeoForge.EVENT_BUS);
     }
 }

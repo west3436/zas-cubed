@@ -17,7 +17,9 @@ import java.util.Objects;
  * @param airflowKpa the least pressure difference, kPa, at which an edge's openings are exported
  *     with the tick's result for airflow (FLOW-001); {@link Double#POSITIVE_INFINITY} exports none
  * @param fire the fire oxygen threshold (FIRE-030)
- * @param reactions the server's reactions (FIRE-001), compiled against the engine's gases
+ * @param reactions the server's reactions (FIRE-001), compiled against the engine's gases; hotspots
+ *     burn with them (FIRE-011)
+ * @param hotspots hotspot spread (FIRE-016)
  */
 public record EngineSettings(
         ExchangeSettings exchange,
@@ -25,10 +27,11 @@ public record EngineSettings(
         HeatSettings heat,
         double airflowKpa,
         FireSettings fire,
-        ReactionSet reactions) {
+        ReactionSet reactions,
+        HotspotSettings hotspots) {
     /**
-     * The default exchange, heat and fire threshold at a 1 s period, with the checker, airflow and
-     * reactions off.
+     * The default exchange, heat, fire threshold and hotspot spread at a 1 s period, with the
+     * checker, airflow and reactions off.
      */
     public static final EngineSettings DEFAULT = new EngineSettings(
             ExchangeSettings.DEFAULT,
@@ -36,16 +39,29 @@ public record EngineSettings(
             HeatSettings.DEFAULT,
             Double.POSITIVE_INFINITY,
             FireSettings.DEFAULT,
-            ReactionSet.EMPTY);
+            ReactionSet.EMPTY,
+            HotspotSettings.DEFAULT);
 
     public EngineSettings {
         Objects.requireNonNull(exchange, "exchange");
         Objects.requireNonNull(heat, "heat");
         Objects.requireNonNull(fire, "fire");
         Objects.requireNonNull(reactions, "reactions");
+        Objects.requireNonNull(hotspots, "hotspots");
         if (Double.isNaN(airflowKpa) || airflowKpa < 0) {
             throw new IllegalArgumentException("airflowKpa must be >= 0: " + airflowKpa);
         }
+    }
+
+    /** Settings with the default hotspot spread. */
+    public EngineSettings(
+            ExchangeSettings exchange,
+            boolean checkConservation,
+            HeatSettings heat,
+            double airflowKpa,
+            FireSettings fire,
+            ReactionSet reactions) {
+        this(exchange, checkConservation, heat, airflowKpa, fire, reactions, HotspotSettings.DEFAULT);
     }
 
     /** Settings with reactions off. */
@@ -81,29 +97,35 @@ public record EngineSettings(
                 heat,
                 airflowKpa,
                 fire,
-                reactions);
+                reactions,
+                hotspots);
     }
 
     public EngineSettings withConservationCheck(boolean on) {
-        return new EngineSettings(exchange, on, heat, airflowKpa, fire, reactions);
+        return new EngineSettings(exchange, on, heat, airflowKpa, fire, reactions, hotspots);
     }
 
     public EngineSettings withHeat(HeatSettings settings) {
-        return new EngineSettings(exchange, checkConservation, settings, airflowKpa, fire, reactions);
+        return new EngineSettings(exchange, checkConservation, settings, airflowKpa, fire, reactions, hotspots);
     }
 
     /** These settings exporting the openings of edges at or above {@code kpa} (FLOW-001). */
     public EngineSettings withAirflow(double kpa) {
-        return new EngineSettings(exchange, checkConservation, heat, kpa, fire, reactions);
+        return new EngineSettings(exchange, checkConservation, heat, kpa, fire, reactions, hotspots);
     }
 
     /** These settings with a fire oxygen threshold (FIRE-030). */
     public EngineSettings withFire(FireSettings settings) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, settings, reactions);
+        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, settings, reactions, hotspots);
     }
 
     /** These settings with a set of reactions (FIRE-001). */
     public EngineSettings withReactions(ReactionSet set) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, set);
+        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, set, hotspots);
+    }
+
+    /** These settings with hotspot spread settings (FIRE-016). */
+    public EngineSettings withHotspots(HotspotSettings settings) {
+        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, reactions, settings);
     }
 }
