@@ -10,6 +10,7 @@ import io.github.west3436.zas.simulation.AtmosService;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -92,21 +93,41 @@ public final class Respiration {
         }
         drawn.forEach((zone, d) -> {
             PointResolver.Cell cell = PointResolver.resolve(level, d.point);
-            CompletableFuture<GasParcel> exhaled = service.removeForLife(
-                            level, cell.pos(), cell.sub(), Map.of(StandardAir.OXYGEN, d.moles), SOURCE)
-                    .thenApply(r -> {
-                        double o2 = r.moved().moles().getOrDefault(StandardAir.OXYGEN, 0.0);
-                        if (r.outcome() != MutationOutcome.ZONE || !(o2 > 0)) {
-                            return GasParcel.EMPTY;
-                        }
-                        GasParcel co2 = new GasParcel(
-                                Map.of(CARBON_DIOXIDE, o2), r.moved().temperature());
-                        service.addForLife(level, cell.pos(), cell.sub(), co2, SOURCE);
-                        return r.moved();
-                    });
-            sent.put(zone, exhaled);
+            sent.put(
+                    zone,
+                    turn(service, level, cell.pos(), cell.sub(), StandardAir.OXYGEN, CARBON_DIOXIDE, d.moles, SOURCE));
         });
         return sent;
+    }
+
+    /**
+     * Turns one gas of a zone into the same moles of another (LIFE-005, CONT-053): {@code moles} of
+     * {@code from} are removed, and when the removal is applied, the moles actually removed come back
+     * as {@code to} at the temperature they left at, so a zone short of {@code from} gets only as much
+     * as it lost. Both are recorded under LIFE and never form a zone.
+     *
+     * @return the removal, completing with the gas removed, or nothing outside a zone
+     */
+    static CompletableFuture<GasParcel> turn(
+            AtmosService service,
+            ServerLevel level,
+            BlockPos pos,
+            int sub,
+            ResourceLocation from,
+            ResourceLocation to,
+            double moles,
+            SourceId source) {
+        return service.removeForLife(level, pos, sub, Map.of(from, moles), source)
+                .thenApply(r -> {
+                    double removed = r.moved().moles().getOrDefault(from, 0.0);
+                    if (r.outcome() != MutationOutcome.ZONE || !(removed > 0)) {
+                        return GasParcel.EMPTY;
+                    }
+                    GasParcel made =
+                            new GasParcel(Map.of(to, removed), r.moved().temperature());
+                    service.addForLife(level, pos, sub, made, source);
+                    return r.moved();
+                });
     }
 
     /** Forgets every draw, when the server stops. */

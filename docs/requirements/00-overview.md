@@ -296,6 +296,16 @@ open, the room airs out to 20 % O₂, and a fire lit again burns on. Under
 Normal the room stays unzoned, its air stays the ambient, and the fire burns
 as vanilla's does.*
 
+*2026-11-04: S-11's plan passes, as
+`PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and_lit_crops_make_o2`
+and `s_11_normal_greenhouse_stays_unzoned`. The greenhouse is a sealed
+3 × 3 × 3 glass box on farmland, open to the sky above it, planted with 9 wheat.
+Under Hardcore the planting forms a zone of the ambient air, which holds no CO₂,
+so the plants wait. Once CO₂ is added, one pass at noon turns 9 plants' worth at
+light 15 into the same moles of O₂. Under Normal the same planting leaves the
+greenhouse unzoned, and `cont_053_under_normal_plants_act_in_a_zone_that_exists`
+checks that the plants act once CO₂ from the API has formed a zone there.*
+
 ## Questions
 
 ### Resolved (2026-10-30)

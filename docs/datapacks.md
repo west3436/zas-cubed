@@ -645,13 +645,16 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 | Tag | Holds by default | Used for |
 |---|---|---|
 | `#zas:combustion` | `#minecraft:fire` (fire, soul fire; `zas:gas_fire` is in `#minecraft:fire` but never counts here, since it burns zone gas, not a fuel), furnace, blast furnace, smoker, `#minecraft:campfires` | Under Hardcore, a block here starting to burn in an enclosed, unzoned area forms a zone (CORE-056, FIRE-024). A block with a boolean `lit` property burns while it is `true`; one without, such as fire, always burns. In a zone, a burning block uses O₂ at its [fuel profile](#fuel-profiles)'s power (FIRE-021) |
-| `#zas:plants` | `#minecraft:crops`, `#minecraft:saplings`, `#minecraft:leaves` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). Photosynthesis (CONT-053) reads the same tag |
+| `#zas:plants` | `#zas:crop_plants`, `#zas:leaf_plants` | Under Hardcore, placing one in an enclosed, unzoned area forms a zone (CORE-056). In a zone, one in the light turns CO₂ into O₂ (CONT-053) |
+| `#zas:crop_plants` | `#minecraft:crops`, `#minecraft:saplings` | Plants that make O₂ at `crop_photosynthesis_rate` (CONT-057), as does a block added straight to `#zas:plants` |
+| `#zas:leaf_plants` | `#minecraft:leaves` | Plants that make O₂ at `leaf_photosynthesis_rate` (CONT-057) |
 | `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. `zas_atmos`'s igniter is in it. See [Ignition sources](#ignition-sources) |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
 
 A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
-from the next block change after `/reload`. Whether each trigger is on is the
+from the next block change after `/reload`, and photosynthesis reads the plants
+in its zones again at its next pass. Whether each trigger is on is the
 preset's (`combustion_forms_zones`, `planting_forms_zones`,
 [config.md](config.md#the-preset-and-its-options)). A mod's fuel block joins
 `#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins

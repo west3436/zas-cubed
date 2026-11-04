@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.heater;
 
 import io.github.west3436.zas.atmos.portable.PortableMenu;
+import java.util.List;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerData;
@@ -8,6 +9,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.SlotItemHandler;
 
 /**
  * A thermomachine's GUI (CONT-019, CONT-074): on or off, its setpoint beside its room's temperature,
@@ -62,9 +64,7 @@ public abstract class ThermoMachineMenu extends PortableMenu {
                 type,
                 id,
                 inventory,
-                battery,
-                BATTERY_X,
-                BATTERY_Y,
+                List.of(new SlotItemHandler(battery, 0, BATTERY_X, BATTERY_Y)),
                 INVENTORY_Y,
                 data,
                 DATA_COUNT,

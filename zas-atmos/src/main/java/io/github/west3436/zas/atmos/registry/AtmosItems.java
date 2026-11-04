@@ -9,6 +9,7 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
+import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
@@ -37,6 +38,7 @@ public final class AtmosItems {
             ITEMS.registerItem("canister", p -> new CanisterItem(AtmosBlocks.CANISTER.get(), p));
     public static final DeferredItem<BlockItem> VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.VENT);
     public static final DeferredItem<BlockItem> SCRUBBER = ITEMS.registerSimpleBlockItem(AtmosBlocks.SCRUBBER);
+    public static final DeferredItem<BlockItem> PASSIVE_VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.PASSIVE_VENT);
     public static final DeferredItem<BlockItem> AREA_AIR_CONTROLLER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
     public static final DeferredItem<BlockItem> FIRE_ALARM = ITEMS.registerSimpleBlockItem(AtmosBlocks.FIRE_ALARM);
@@ -46,6 +48,9 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> AIR_CONDITIONER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AIR_CONDITIONER);
+
+    public static final DeferredItem<PortableGasItem> PORTABLE_SCRUBBER =
+            ITEMS.registerItem("portable_scrubber", p -> new PortableGasItem(AtmosBlocks.PORTABLE_SCRUBBER.get(), p));
 
     public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
             ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
