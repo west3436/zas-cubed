@@ -702,8 +702,11 @@ whose charging was left open by D-68 (D-69).*
 *2026-11-02: Built for the heater only (CONT-019), so this stays Accepted
 until the portable pump, portable scrubber and freezer exist.*
 
+*2026-11-04: The freezer exists, as the air conditioner (CONT-019), so this
+stays Accepted until the portable pump and scrubber exist.*
+
 #### CONT-019 · Heater and freezer
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-05, D-73, S-05
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
 
 A heater (293–573 K) and a freezer (73–293 K) shall be portables
 (CONT-018), each running on a battery in a slot (CONT-112), that hold the
@@ -745,8 +748,20 @@ about 0.02 K under it (architecture §11.5). Checked by
 `cont_019_a_controller_leaves_a_heater_in_its_room_alone` and
 `s_05_heater_holds_a_room_at_its_setpoint` (GameTest).*
 
+*2026-11-04: Implemented
+([#48](https://github.com/west3436/zas-cubed/issues/48)). The freezer is the
+air conditioner (D-73). It takes the heat that brings its room down to the
+setpoint, up to `[power] air_conditioner_watts`, through the heat mutation
+(API-013), and adds nothing below the setpoint. A stone room in the Overworld
+warms through its walls, and it holds such a room within 0.5 K above a 288 K
+setpoint and never below it (architecture §11.5). Checked by
+`cont_087_never_more_than_5_kw_and_never_below_the_setpoint` (Unit),
+`cont_019_air_conditioner_cools_its_room_on_its_battery`,
+`cont_019_air_conditioner_holds_a_room_at_its_setpoint` and
+`cont_019_a_controller_leaves_an_air_conditioner_in_its_room_alone` (GameTest).*
+
 #### CONT-087 · Thermomachine power
-`Should` · `R1` · `Accepted` · Verify: Unit
+`Should` · `R1` · `Implemented` · Verify: Unit
 
 A heater or freezer shall move up to 5 kW toward its setpoint, drawing
 60 FE/t from its battery while it works.
@@ -772,6 +787,14 @@ full power, and in proportion below it. With too little charge it adds what
 the charge pays for, then stops. Checked by `cont_087_never_more_than_5_kw`,
 `cont_087_limited_or_exact` and `cont_087_draw_in_proportion` (Unit) and
 `cont_019_heater_heats_its_room_on_its_battery` (GameTest).*
+
+*2026-11-04: Implemented
+([#48](https://github.com/west3436/zas-cubed/issues/48)). The air conditioner
+moves at most `[power] air_conditioner_watts`, 5,000 W, and draws
+`[power] air_conditioner`, 60 FE/t, the same way. Checked by
+`cont_087_never_more_than_5_kw_and_never_below_the_setpoint` and
+`cont_087_limited_or_exact` (Unit, `AirConditionerMathTest`) and
+`cont_019_air_conditioner_cools_its_room_on_its_battery` (GameTest).*
 
 #### CONT-105 · Igniter
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016

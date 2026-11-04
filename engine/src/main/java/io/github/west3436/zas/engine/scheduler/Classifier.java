@@ -53,6 +53,15 @@ public interface Classifier {
     }
 
     /**
+     * Whether a classification waiting for sections concerns a zone: the zone opens onto the region
+     * being classified. A zone rebuilt from its saved shares stays paused while this holds. The
+     * default treats any waiting classification as the zone's.
+     */
+    default boolean hasPendingFor(long zone) {
+        return hasPending();
+    }
+
+    /**
      * Unzoned cells known to lie in regions left unresolved because they reach unloaded chunks
      * (GEO-024, GEO-026), such as the seeds of breaches held until those chunks load. For the
      * debug overlay (CLIENT-005), which shows those regions; the default knows of none.

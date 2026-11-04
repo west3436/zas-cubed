@@ -192,7 +192,7 @@ player is looking at.
 a chest, plus stairs, a wall, a door, a trapdoor and scaffolding.*
 
 #### CLIENT-013 · Debug hotspots
-`Must` · `R0` · `Accepted` · Verify: Manual · Depends: CLIENT-005
+`Must` · `R0` · `Implemented` · Verify: Manual · Depends: CLIENT-005
 
 The overlay shall mark hotspots.
 
@@ -203,6 +203,9 @@ The overlay shall mark hotspots.
 *2026-10-31: The overlay has a hotspot layer (#98), but nothing produces
 hotspots before FIRE (R1), so this stays Accepted until it can be checked
 during a gas fire.*
+
+*2026-11-04: Implemented. The owner checked it during a gas fire in the fire
+round's test world.*
 
 ## Units and language
 

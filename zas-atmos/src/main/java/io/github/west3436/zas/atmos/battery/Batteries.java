@@ -14,7 +14,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 /**
  * What counts as a battery (CONT-112): an item in the {@code zas_atmos:batteries} tag that exposes
  * the FE item capability. The tag holds ZAS³'s three batteries (CONT-111); a pack can add other mods'
- * FE items to it. A heater's battery slot and the recharger's take only these.
+ * FE items to it. A portable's battery slot and the recharger's take only these.
  */
 public final class Batteries {
     /** The battery tag. */

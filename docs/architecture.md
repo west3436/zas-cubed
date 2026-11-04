@@ -749,7 +749,8 @@ the lever if the per-cell cost ever matters.
   GEO-025, GEO-026), together with its saved held positions, so changes made
   while it was stored apply. Saved cells that are no longer cells are left
   out, and their gas stays in the zone (CORE-022). The zone stays paused until
-  that classification finishes.
+  that classification finishes. A classification that another zone is waiting
+  on doesn't hold it.
 - **Records not yet taken in are kept.** A record the worker hasn't confirmed
   (its batch isn't applied yet), or that no engine has taken (the dimension is
   excluded, or its engine doesn't exist yet), is written back as it is.
@@ -1939,6 +1940,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
+| `scrubber` | What a scrubber takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`), for every device that scrubs (CONT-015, CONT-079 to CONT-081) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
@@ -1946,6 +1948,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
+| `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -2199,6 +2202,25 @@ the cell in front of its grille).
     battery is empty) and the battery's charge. The menu syncs the room's
     temperature in tenths of a kelvin, −1 for no room, and the battery's FE
     and capacity in 16-bit halves.
+  - What it shares with the air conditioner, below, is in
+    `ThermoMachineBlockEntity`, `ThermoMachineMenu`, `ThermoStatus` and
+    `ThermoMachineScreen`, and what it shares with every portable in the
+    `.portable` package: `PortableBlock` (facing, `lit`, shape, opening the GUI,
+    dropping the battery), `PortableDevice` (the battery slot, the switch, the
+    `point()`) and `PortableMenu`.
+- **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
+  in `.heater`. The heater's mirror, the same size and on the same code. Its
+  setpoint runs from 73 to 293 K (default 293 K). Each atmos tick, while on, it
+  takes heat from its room through API-013's `HeatMutations.remove`:
+  `AirConditionerMath.cool` gives the least of `[power] air_conditioner_watts`
+  (5,000 W) over the step and what brings the zone down to the setpoint, and
+  nothing at or below it, so it never heats. The heat it takes leaves the world.
+  It pays its battery `HeaterMath.energy` with `[power] air_conditioner` FE/t
+  (60). `lit` shows the `air_conditioner_on` model while it cools. Walls warmer
+  than the room bring it back up between steps, so a room is held just above
+  the setpoint, the way a heater holds its room just under it; in the GameTest,
+  a stone room in the Overworld 5 K under the ambient stays within 0.5 K above a
+  288 K setpoint and never goes below it.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as
@@ -2208,7 +2230,7 @@ the cell in front of its grille).
   charge, and the item model's `zas_atmos:charge` property (0, 0.5, 1)
   picks the empty, `_partial` and `_full` models. `Batteries.isBattery`
   accepts any item in the `zas_atmos:batteries` tag with the FE item
-  capability; a heater's or recharger's `Batteries.Slot` takes only those,
+  capability; a portable's or recharger's `Batteries.Slot` takes only those,
   one at a time. The creative tab holds an empty and a full copy of each.
 - **Recharger** (CONT-113), in `.battery`. A floor plate holding one
   battery, and a controller's part like the vent, through its zone or a
@@ -2231,7 +2253,7 @@ the cell in front of its grille).
   (`data/zas/tags/block/ignition_sources.json`), so the framework counts it as
   a standing ignition source while `lit` is true (API-053, §5), with nothing
   added to the API. `lit` picks the `igniter_on` model. No GUI.
-- **GUIs** (CONT-074). Using a canister, vent, heater or recharger with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
