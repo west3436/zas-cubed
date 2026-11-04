@@ -286,6 +286,41 @@ public final class PersistenceTests {
     }
 
     /**
+     * A rebuilt zone waits only for what its own surface opens onto. Another zone's breach, still
+     * fetching sections elsewhere in the dimension, doesn't keep it paused (GEO-033, #209).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_033_rebuilt_zone_doesnt_wait_for_another_zones_breach(GameTestHelper h) {
+        Rooms other = fourChunks(h, h.getLevel(), 243, 60);
+        // A sealed shaft above the other room, rising past the sections kept mirrored around a zone.
+        // Opening the ceiling into it makes the fill ask for a section it lacks.
+        for (int y = 5; y <= 40; y++) {
+            for (int x = 14; x <= 16; x++) {
+                for (int z = 14; z <= 16; z++) {
+                    boolean inside = x == 15 && z == 15 && y < 40;
+                    other.set(x, y, z, inside ? Rooms.AIR : Rooms.STONE);
+                }
+            }
+        }
+        other.tick();
+        Rooms r = fourChunks(h, h.getLevel(), 244, 60);
+        ZoneInfo before = r.zone(12, 2, 12);
+        DimensionAtmos d = r.dimension();
+        Map<ChunkPos, byte[]> saved = new LinkedHashMap<>();
+        for (ChunkPos c : chunks(r)) {
+            saved.put(c, d.simulateUnload(c));
+        }
+        r.tick();
+        saved.forEach(d::simulateLoad);
+        other.set(15, 4, 15, Rooms.AIR);
+        r.tick();
+        ZoneInfo after = Atmospheres.zone(r.level, before.id())
+                .orElseThrow(() -> new GameTestAssertException("the zone wasn't rebuilt under its id"));
+        h.assertFalse(after.paused(), "the rebuilt zone is paused");
+        h.succeed();
+    }
+
+    /**
      * The same with the server's own atmos ticks: from the load until its zone is back, the room is
      * sampled at every game tick and never reads as the ambient (API-010, #153).
      */

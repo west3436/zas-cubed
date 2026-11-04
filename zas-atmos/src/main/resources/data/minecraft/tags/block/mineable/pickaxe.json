@@ -10,6 +10,7 @@
     "zas_atmos:generator",
     "zas_atmos:firelock",
     "zas_atmos:heater",
+    "zas_atmos:air_conditioner",
     "zas_atmos:recharger",
     "zas_atmos:igniter",
     "zas_atmos:manual_valve",

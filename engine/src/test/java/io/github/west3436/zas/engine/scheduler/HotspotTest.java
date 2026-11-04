@@ -353,7 +353,8 @@ class HotspotTest {
 
     /**
      * A gas fire goes out once its zone's hydrogen falls below the flammability limit, and the
-     * server is asked to remove its block; the zone's fire event goes out with it.
+     * server is asked to remove its block; the zone's fire event goes out with it. With no heat lost,
+     * its own heat widens the limit (FIRE-032) until the limit's floor is what stops it.
      */
     @Test
     void fire_017_goes_out_without_fuel() {
@@ -363,12 +364,12 @@ class HotspotTest {
         f.steps(2);
         assertEquals(1, f.hotspots().size());
         long zone = f.zone().id();
-        for (int i = 0; i < 40 && f.hotspots().size() > 0; i++) {
+        for (int i = 0; i < 400 && f.hotspots().size() > 0; i++) {
             f.step();
         }
-        assertEquals(0, f.hotspots().size(), "out once the hydrogen is under 4 %");
+        assertEquals(0, f.hotspots().size(), "out once the hydrogen is under its limit");
         double share = f.zone().moles(H2) / f.zone().totalMoles();
-        assertTrue(share < 0.04 && share > 0.03, "share left: " + share);
+        assertTrue(share < 0.001 && share > 0.0009, "share left: " + share);
         assertEquals(AIR, f.sim.world.get(1, 65, 1), "its block is removed");
         assertEquals(
                 FireEvent.Kind.EXTINGUISHED, f.events.get(f.events.size() - 1).kind());

@@ -5,6 +5,8 @@ import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
@@ -18,8 +20,11 @@ import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -249,6 +254,38 @@ public class GasTankItem extends Item {
                 return Optional.of(supply(stack, () -> {}));
             }
         };
+    }
+
+    // ---- Atmos ticks --------------------------------------------------------------------------
+
+    /**
+     * One atmos tick of a tank, wherever it is: its gas reacts (CONT-100). Whatever carries a tank
+     * calls this once per atmos tick ({@link AtmosTicks#due}): the tank itself while it is in a
+     * player's inventory or dropped, and a suit or a tank transfer valve for the tanks inside it. A
+     * tank anywhere else, such as a chest, waits until it is carried again (architecture §11.9).
+     *
+     * @param tank the tank's stack, changed in place
+     * @param level the level it is in
+     * @param holder the entity carrying it: the player, or the dropped item
+     * @return whether the stack changed, so that a holder of a copy knows to write it back
+     */
+    public static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
+        return ContainerReactions.react(tank, ((GasTankItem) tank.getItem()).volume);
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
+        if (level instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+            atmosTick(stack, server, entity);
+        }
+    }
+
+    @Override
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        if (entity.level() instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+            atmosTick(stack, server, entity);
+        }
+        return false;
     }
 
     // ---- Use and tooltip --------------------------------------------------------------------

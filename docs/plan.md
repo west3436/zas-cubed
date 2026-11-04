@@ -188,7 +188,7 @@ Each remaining one waits on R1 work:
 |---|---|
 | [#27](https://github.com/west3436/zas-cubed/issues/27) boundaries and paused zones | GEO-035 stays *Accepted*: its Verify needs a breathing player (LIFE) and a device (CONT), both R1. The API query part passes (`geo_035_queries_see_last_known_state`). |
 | [#29](https://github.com/west3436/zas-cubed/issues/29) persistence | DATA-001 also lists zone pins (API-018) and dimension pauses (OPS-005), and DATA-009 lists hotspots (FIRE): none exist yet. Membership, mixtures, temperatures, held changes and queued additions persist. |
-| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. *2026-11-01: GEO-007 is in ([#133](https://github.com/west3436/zas-cubed/pull/133)), and the overlay needed no change. CLIENT-011 is Implemented after the owner's check of the boundary colours; #31 waits only on CLIENT-013.* |
+| [#31](https://github.com/west3436/zas-cubed/issues/31) debug rendering | The overlay merged in [#98](https://github.com/west3436/zas-cubed/pull/98) and passed the owner's manual test; CLIENT-005 and CLIENT-012 are Implemented. CLIENT-011's boundary edges need GEO-007 and CLIENT-013 needs hotspots from FIRE, both R1. *2026-11-01: GEO-007 is in ([#133](https://github.com/west3436/zas-cubed/pull/133)), and the overlay needed no change. CLIENT-011 is Implemented after the owner's check of the boundary colours; #31 waits only on CLIENT-013.* *2026-11-04: CLIENT-013 is Implemented after the owner's look at a gas fire, which closes #31.* |
 
 ### Phase E: R1 feature tracks (in parallel once R0 is done)
 
@@ -298,7 +298,7 @@ condensed combined test world.
 | Shared fire chemistry | [#188](https://github.com/west3436/zas-cubed/pull/188) | FIRE-030; FIRE-005's CO share | None |
 | Reactions | [#190](https://github.com/west3436/zas-cubed/pull/190), [#193](https://github.com/west3436/zas-cubed/pull/193), [#196](https://github.com/west3436/zas-cubed/pull/196) | FIRE-001 to FIRE-006, FIRE-031; API-019, API-020 | None |
 | Vanilla fire and fuels | [#194](https://github.com/west3436/zas-cubed/pull/194), [#197](https://github.com/west3436/zas-cubed/pull/197) | FIRE-020 to FIRE-022, FIRE-024, FIRE-025, FIRE-027; HEAT-007; CONT-067 | Fire can still burn away a block whose cell lacks O₂ at a zone's edge (M4 skipped). Vanilla's fire-spread check and campfire lighting aren't hooked |
-| Hotspots and the gas fire | [#191](https://github.com/west3436/zas-cubed/pull/191), [#202](https://github.com/west3436/zas-cubed/pull/202), [#206](https://github.com/west3436/zas-cubed/pull/206) | FIRE-010, FIRE-011, FIRE-013, FIRE-016 to FIRE-019; DATA-009's hotspot part | CLIENT-013 waits for the owner's look at the gas fire |
+| Hotspots and the gas fire | [#191](https://github.com/west3436/zas-cubed/pull/191), [#202](https://github.com/west3436/zas-cubed/pull/202), [#206](https://github.com/west3436/zas-cubed/pull/206) | FIRE-010, FIRE-011, FIRE-013, FIRE-016 to FIRE-019; DATA-009's hotspot part; CLIENT-013, after the owner's look at the gas fire (2026-11-04) | None |
 | Fire API | [#203](https://github.com/west3436/zas-cubed/pull/203) | API-031; API-055 to API-058 added, accepted by the owner and *Implemented* | None |
 | Ignition sources | [#189](https://github.com/west3436/zas-cubed/pull/189) | FIRE-014, FIRE-015; API-053 added, accepted by the owner and *Implemented* | None |
 | Igniter | [#192](https://github.com/west3436/zas-cubed/pull/192) | CONT-105, FIRE-006's GameTest | None |
@@ -413,8 +413,7 @@ _Updated 2026-11-03._
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
    S-11 and S-13, on the rest of #47, #48, #50 and #52 (pumps, filters
    and scrubbers).
-   - From the fire round: a recipe for the extinguisher, and CLIENT-013's
-     look check.
+   - From the fire round: a recipe for the extinguisher.
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      airflow particles and sound (#57), magnetic boots (#49) and insulating
      station walls (#179).

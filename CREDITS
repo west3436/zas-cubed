@@ -98,6 +98,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/heater.json
 origin: original
 notes: The heater's four facings, heating and idle, with the existing heater and heater_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/air_conditioner.json
+origin: original
+notes: The air conditioner's four facings, cooling and idle, with the existing air_conditioner and air_conditioner_on models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/recharger.json
 origin: original
 notes: The recharger's four facings: empty with the existing recharger model, and holding a battery with recharger_0 to recharger_4 by its charge.
