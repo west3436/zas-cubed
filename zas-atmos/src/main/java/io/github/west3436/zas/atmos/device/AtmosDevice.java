@@ -52,9 +52,21 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     @Override
     public final void step() {
         if (!isRemoved() && level instanceof ServerLevel server && server.isLoaded(worldPosition)) {
-            atmosTick(server);
+            beforeAtmosTick(server);
+            if (!isRemoved()) {
+                atmosTick(server);
+            }
         }
     }
+
+    /**
+     * Runs before each {@link #atmosTick}, for what every device of a kind does whatever its own
+     * step is: a network node's share of its network's atmos tick (CONT-100). The default does
+     * nothing. It may remove the block entity, and {@link #atmosTick} is then skipped.
+     *
+     * @param level the level, a server level
+     */
+    protected void beforeAtmosTick(ServerLevel level) {}
 
     /** The current game tick, as {@link AtmosTicks#now}; only on the server. */
     protected long now() {
