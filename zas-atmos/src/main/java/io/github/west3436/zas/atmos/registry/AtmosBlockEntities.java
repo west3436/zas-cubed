@@ -15,6 +15,7 @@ import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
+import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -58,6 +59,11 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<ScrubberBlockEntity>> SCRUBBER = BLOCK_ENTITIES.register(
             "scrubber",
             () -> BlockEntityType.Builder.of(ScrubberBlockEntity::new, AtmosBlocks.SCRUBBER.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<PassiveVentBlockEntity>> PASSIVE_VENT = BLOCK_ENTITIES.register(
+            "passive_vent",
+            () -> BlockEntityType.Builder.of(PassiveVentBlockEntity::new, AtmosBlocks.PASSIVE_VENT.get())
                     .build(null));
 
     public static final Supplier<BlockEntityType<AreaAirControllerBlockEntity>> AREA_AIR_CONTROLLER =

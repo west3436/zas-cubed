@@ -2112,8 +2112,9 @@ the cell in front of its grille).
 - **Connections.** A block that pipes join implements `PipeConnector`, which
   says on which faces it offers a connection; two neighbours are connected
   when both offer one on their shared face. A pipe offers every face, a cap
-  only the face it points at, a vent or scrubber only its back (CONT-014,
-  CONT-015), a connector port only its bottom, plus its top for a canister
+  only the face it points at, a vent, passive vent or scrubber only its back
+  (CONT-014, CONT-015, CONT-016), a connector port only its bottom, plus its
+  top for a canister
   (CONT-083), and a valve its two flanges (CONT-010). Gas passes a connection
   unless one side shuts it (`carriesGas`), as a shut valve does:
   `PipeConnector.connected` decides a pipe's arms and open ends, and `joined`
@@ -2265,6 +2266,15 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
+- **Passive vent** (CONT-016), in `.vent`.
+  - Shaped like the vent: a full block whose grille faces any of six ways,
+    facing the player who places it, with a pipe only on its back. It has a
+    400 L buffer in its network, no power, no settings and no GUI.
+  - While its network and the cell in front of the grille differ by more than
+    0.5 kPa, each atmos tick it makes an open pipe end's exchange with that
+    cell (`PipeBlockEntity.openEndFlow`, CONT-004), on one `ZonePort`. Each gas
+    moves by its own gap, so a mixture spreads both ways. Within 0.5 kPa nothing
+    moves, whatever the gases.
 - **Scrubber** (CONT-015, CONT-079 to CONT-081), in `.scrubber`.
   - Shaped like the vent: a full block whose grille faces any of six ways,
     facing the player who places it, with a pipe only on its back. Its 200 L

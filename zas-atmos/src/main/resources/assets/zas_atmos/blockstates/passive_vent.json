@@ -1,0 +1,26 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "zas_atmos:block/passive_vent"
+    },
+    "facing=east": {
+      "model": "zas_atmos:block/passive_vent",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "zas_atmos:block/passive_vent",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "zas_atmos:block/passive_vent",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "zas_atmos:block/passive_vent_vertical"
+    },
+    "facing=down": {
+      "model": "zas_atmos:block/passive_vent_vertical",
+      "x": 180
+    }
+  }
+}
