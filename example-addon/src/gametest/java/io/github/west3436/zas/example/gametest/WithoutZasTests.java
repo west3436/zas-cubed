@@ -111,6 +111,13 @@ public final class WithoutZasTests {
         h.succeed();
     }
 
+    /** With no preset, a container's explosion breaks no blocks (API-059). */
+    @GameTest(template = "empty")
+    public static void s_12_container_explosions_break_no_blocks(GameTestHelper h) {
+        h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "containerExplosionsBreakBlocks");
+        h.succeed();
+    }
+
     /** Adding and removing gas complete at once as ABSENT, moving nothing. */
     @GameTest(template = "empty")
     public static void s_12_mutations_complete_absent(GameTestHelper h) {
