@@ -22,6 +22,11 @@ import java.util.Set;
  * (HEAT-015); {@code sourceTemperature} is the fixed temperature of a heat-source block (HEAT-003),
  * or NaN.
  *
+ * <p><b>Fire</b> (FIRE-033, FIRE-034). {@code igniteOdds} is a flammable block's vanilla ignite odds,
+ * 0 if it isn't flammable, and {@code ignitionTemperature} the gas temperature in K it catches fire
+ * at, or NaN for the configured one. The worker needs them per block, so they are here, as heat data
+ * is.
+ *
  * @param coverage six masks, indexed by {@link Face#ordinal()}
  * @param cells the cells, possibly none (a solid block)
  * @param flags {@code FLAG_*} bits
@@ -30,6 +35,8 @@ import java.util.Set;
  * @param partitions the pairs of cells with solid between them
  * @param transmittance U in W/(m²·K), positive, or NaN for the fallback
  * @param sourceTemperature the heat source's temperature in K, or NaN if the block isn't one
+ * @param igniteOdds the block's vanilla ignite odds, or 0 if it isn't flammable
+ * @param ignitionTemperature the temperature in K it catches fire at, or NaN for the configured one
  */
 public record Geometry(
         List<FaceMask> coverage,
@@ -38,7 +45,9 @@ public record Geometry(
         List<FaceMask> through,
         List<Partition> partitions,
         double transmittance,
-        double sourceTemperature) {
+        double sourceTemperature,
+        int igniteOdds,
+        double ignitionTemperature) {
     /** The gas volume of a whole position, in litres (A-02). */
     public static final double FULL_VOLUME = 1000.0;
 
@@ -123,6 +132,25 @@ public record Geometry(
             throw new IllegalArgumentException(
                     "source temperature must be finite and not negative, or NaN: " + sourceTemperature);
         }
+        if (igniteOdds < 0) {
+            throw new IllegalArgumentException("ignite odds must not be negative: " + igniteOdds);
+        }
+        if (!Double.isNaN(ignitionTemperature) && !(ignitionTemperature >= 0 && Double.isFinite(ignitionTemperature))) {
+            throw new IllegalArgumentException(
+                    "ignition temperature must be finite and not negative, or NaN: " + ignitionTemperature);
+        }
+    }
+
+    /** A geometry that isn't flammable. */
+    public Geometry(
+            List<FaceMask> coverage,
+            List<Cell> cells,
+            int flags,
+            List<FaceMask> through,
+            List<Partition> partitions,
+            double transmittance,
+            double sourceTemperature) {
+        this(coverage, cells, flags, through, partitions, transmittance, sourceTemperature, 0, Double.NaN);
     }
 
     /**
@@ -218,7 +246,16 @@ public record Geometry(
     public Geometry withFlags(int flag) {
         return (flags | flag) == flags
                 ? this
-                : new Geometry(coverage, cells, flags | flag, through, partitions, transmittance, sourceTemperature);
+                : new Geometry(
+                        coverage,
+                        cells,
+                        flags | flag,
+                        through,
+                        partitions,
+                        transmittance,
+                        sourceTemperature,
+                        igniteOdds,
+                        ignitionTemperature);
     }
 
     /**
@@ -227,7 +264,21 @@ public record Geometry(
      */
     public Geometry withThermal(double u, double source) {
         int f = Double.isNaN(source) ? flags & ~FLAG_HEAT_SOURCE : flags | FLAG_HEAT_SOURCE;
-        return new Geometry(coverage, cells, f, through, partitions, u, source);
+        return new Geometry(coverage, cells, f, through, partitions, u, source, igniteOdds, ignitionTemperature);
+    }
+
+    /** Whether the block can catch fire (FIRE-033, FIRE-034). */
+    public boolean isFlammable() {
+        return igniteOdds > 0;
+    }
+
+    /**
+     * This geometry with fire data (FIRE-033, FIRE-034): vanilla ignite odds, or 0 if it isn't
+     * flammable, and a temperature it catches fire at, or NaN for the configured one.
+     */
+    public Geometry withIgnition(int odds, double temperature) {
+        return new Geometry(
+                coverage, cells, flags, through, partitions, transmittance, sourceTemperature, odds, temperature);
     }
 
     /**
