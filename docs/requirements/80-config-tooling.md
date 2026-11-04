@@ -237,6 +237,13 @@ unchanged shared file and a reload of it, and `ops_007_preset_save_target`
 checks where each kind of world saves. So Verify's per-world part is covered;
 OPS-007 stays Accepted for the options still waiting.*
 
+*2026-11-04: photosynthesis rates are wired (CONT-057,
+[#51](https://github.com/west3436/zas-cubed/issues/51)): each pass reads
+`crop_photosynthesis_rate` and `leaf_photosynthesis_rate`, and
+`cont_057_rates_at_light_15_and_7_under_each_preset` and
+`cont_057_each_rate_is_configured_on_its_own` check them under both presets and
+with overrides. Still waiting: block pressure damage and container explosions.*
+
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
 

@@ -446,6 +446,11 @@ uncovered part of the face (GEO-003, GEO-004).
   a zone, at the cell a mutation at the block's centre resolves to (§6.5), and
   skips cells the published table already zones. From there it is like any
   zone-forming operation (§4.3).
+- **Plant changes (CONT-053).** A write that makes a position a plant or stops
+  it being one, whatever the preset, goes into a third per-section bitset, which
+  photosynthesis drains once a period and filters by the sections it keeps
+  plants for (§5, [Photosynthesis](#photosynthesis-cont-053-cont-057)). A crop
+  growing isn't one. Any other write costs the same two array reads again.
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
   saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
@@ -1052,7 +1057,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Service | Input | Cadence | Requirements |
 |---|---|---|---|
 | Hazards and breathing | published snapshot, point lookup by entity eye position (API-015), life-support capabilities | staggered per entity (LIFE-007, LIFE-033), capped per tick (LIFE-038) | LIFE, D-27, D-47 |
-| Respiration and photosynthesis | queue ops with source attribution | per breather or crop on its own cadence, aggregated per zone per atmos tick | LIFE-005, CONT-053 |
+| Respiration and photosynthesis | queue ops with source attribution | respiration per breather on its own cadence; photosynthesis a pass over the known plants, spread across game ticks; both aggregated per zone per atmos tick | LIFE-005, CONT-053 |
 | Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
@@ -1587,6 +1592,88 @@ client breathing sync (LIFE-023): the server sends each player its own state
   change the verdict, and a higher-priority one's `canBreathe = false` survives:
   the handler only ever sets it to false.
 
+### Photosynthesis (CONT-053, CONT-057)
+
+*Implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)):*
+`life.Photosynthesis` turns CO₂ into the same moles of O₂ for the lit plants in
+a zone, and `life.PhotosynthesisRates` holds the arithmetic.
+
+**Where it lives.** It is in `zas`, beside respiration, and adds no API. It reads
+the two rates from `PresetOptions`, the plants from `TriggerStates` and the
+change hook, and it changes gas with `AtmosService.removeForLife` and
+`addForLife`, the ledger's `LIFE` category, which never form a zone (CORE-051).
+All of those are the framework's. In `zas_atmos` (CONT-095) it would need API for
+each, and `GasMutations` wouldn't do for the gas: it forms a zone under Normal
+(CORE-055), and S-11's greenhouse stays unzoned there. It also holds no block or
+item of its own, only behaviour for vanilla and tagged blocks.
+
+**Finding plants.** The plants are indexed per section, a 4096-bit set, for the
+sections the worker mirrors (§4.3): those holding or bordering zoned cells. No
+zoned cell is read to find a plant, and nothing depends on the size of the
+loaded world (NFR-003).
+
+- A section is read once, when it joins the mirror. Its palette answers first
+  (`LevelChunkSection#maybeHas`), so a section with no plant costs one palette
+  check and is remembered as having none. A section whose palette holds one has
+  its 4096 states read, at most 16 sections per pass. The rest wait for the next
+  pass, so a big zone loading starts its plants late instead of stalling a tick.
+- After that it follows writes: the change hook marks each position that becomes
+  a plant or stops being one (§4.2), and the bits are drained once a period. A
+  crop growing or leaves updating their distance don't mark anything.
+- A section leaves the index when it leaves the mirror or its chunk unloads.
+  `/reload` empties the index, since the tags may have changed.
+
+**The pass.** Each period the known plants are walked once, spread over the
+period's game ticks a section at a time, as devices are (D-31). A plant counts if
+its zone is unpaused and holds CO₂ and light reaches it. A full block has no cell
+of its own, so leaves, until GEO-009 makes them permeable, count towards their
+first zoned neighbour. Light levels are summed as integers per zone, one sum per
+rate. At the period's end each zone gets one removal of CO₂, and when that is
+applied the moles actually removed come back as O₂ at the removed gas's
+temperature, sharing `Respiration.turn`. So a zone stops when its CO₂ runs out,
+and O₂ arrives one atmos tick after the CO₂ leaves, as CO₂ does for a breather.
+The rates and the period are read when the pass is sent, so a preset change or
+an override takes effect at once.
+
+**Light** is what a player reads: the brighter of block light and sky light less
+`ServerLevel#getSkyDarken`, from 0 to 15. Sky light passes glass, so a greenhouse
+slows at night to 4/15 of its noon rate unless a lamp lights it. A plant that dims
+light, such as leaves, reads at most 14 at its own position, so for those the
+brightest neighbour counts too. Tags pick the rate: `#zas:leaf_plants` at the leaf
+rate, anything else in `#zas:plants` at the crop rate.
+
+**Cost** (NFR-001, NFR-002). Measured on the development machine while other
+builds ran, in a temporary GameTest timing `stepNow` over 60 passes and taking the
+median, with 12,700 wheat and 12,700 leaves in 12 zones:
+
+| Work | When | Measured |
+|---|---|---|
+| The hook's two array reads for a write | every block write | 2 to 3 ns |
+| Bringing the index up to date and listing sections, with few plants | once per period | 15 to 35 µs, with 117 to 355 mirrored sections and no trend between them |
+| Palette check of a section joining with no plant | once per section | not timed: a look through the section's palette, a handful of entries |
+| Reading a section's 4096 states | once per section, 16 per pass at most | about 25 µs, so at most 0.4 ms in a game tick |
+| Walking a crop: one zone lookup, one light read | once per period | about 55 ns |
+| Walking a leaf block: zone lookups for it and its neighbours, up to 7 light reads | once per period | about 125 ns |
+
+That whole test came to 2.4 ms per period, which the spreading turns into about
+0.12 ms per game tick against NFR-001's 2 ms average. A section packed with 4096
+leaves is the most one game tick walks: about 0.5 ms against NFR-002's 10 ms. A
+greenhouse of 100 crops costs about 6 µs per period on top. A world with no plants
+pays the first two rows only: at most 35 µs per period at the section counts S-10
+reaches, or under 2 µs per game tick. Like respiration's sends, this runs in a
+server tick listener outside `AtmosService.tickNanos`, so the profiler's atmos
+time doesn't count it.
+
+Rejected:
+
+- Scanning zoned cells every atmos tick: S-10's 40,000 cells would be read once a
+  second to find what rarely changes.
+- Tracking plants across the loaded world, as `Burners` does for fires: leaves are
+  everywhere, so the index would follow the loaded world's size, not the zones'
+  (NFR-003). Burning blocks are rare enough for that; plants aren't.
+- Hooking random ticks: the rate would depend on `randomTickSpeed` and on chance,
+  and leaves far from players would stop, so CONT-057's rates couldn't hold.
+
 ### Atmosphere HUD
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
@@ -1847,7 +1934,7 @@ because STARTUP config is too late for block classes.
 
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
-| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, and record a Hardcore zone trigger the write starts | GEO-010, GEO-011, GEO-012, CORE-056 | **S1**, GameTests |
+| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, record a Hardcore zone trigger the write starts, and note a plant appearing or going | GEO-010, GEO-011, GEO-012, CORE-056, CONT-053 | **S1**, GameTests |
 | M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable (`FireBlockMixin`) | A fire whose cell fails the fire oxygen threshold goes out; its O₂ use is the burning service's | FIRE-020, FIRE-030 | GameTests (`fire_020_`, `fire_030_`) |
 | M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-014 | GameTests (`fire_020_`) |
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020 | applied; no GameTest of its own |

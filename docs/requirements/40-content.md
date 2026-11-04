@@ -1473,7 +1473,7 @@ pipes join it only at the water inlet on its back.
   join only the water inlet on the back.
 
 #### CONT-053 · Photosynthesis
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33, D-13, S-11
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
 
 Inside a zone, plants (data-driven by block tag: crops, saplings, leaves,
 etc.) shall turn CO₂ into an equal number of moles of O₂ while lit, limited by
@@ -1491,8 +1491,19 @@ Hardcore placing one in an enclosed, unzoned area forms a zone. Photosynthesis
 reads the same tag. CONT-057's two rates can tell leaves apart by
 `#minecraft:leaves`, or split the tag into two that it includes.*
 
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)),
+in `zas`, beside respiration, whose non-triggering `LIFE` mutations it shares; the
+design and its cost are in
+[architecture.md](../architecture.md#photosynthesis-cont-053-cont-057). The tag
+is split: `#zas:plants` holds `#zas:crop_plants` and `#zas:leaf_plants`. Light is
+what a player reads, block light or sky light less the day's darkening, so a glass
+greenhouse slows at night. `cont_053_lit_crops_stop_when_co2_runs_out` checks equal
+moles, the stop and the `LIFE` ledger, and `PhotosynthesisTests` also covers a
+plant in the dark, a paused zone, the zones plants act in under each preset, and
+how plants are found and followed.*
+
 #### CONT-057 · Photosynthesis rates
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-33, S-11
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-33, S-11
 
 Rates shall be configurable per tag and scale linearly with light level, from
 0 at light 0. Defaults at light 15 follow the preset (OPS-007), so that a
@@ -1512,6 +1523,14 @@ LIFE-042):
 *2026-10-31: defaults lowered from 0.002 and 0.001 mol/s (one crop supplied
 about 7 breathers) and made preset-dependent, at the user's request before
 the baseline (D-61).*
+
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)).
+The options are `crop_photosynthesis_rate`, for `#zas:crop_plants` and anything
+else in `#zas:plants`, and `leaf_photosynthesis_rate`, for `#zas:leaf_plants`
+([config.md](../config.md#the-preset-and-its-options)). The arithmetic is
+`PhotosynthesisRatesTest`, and `cont_057_rates_at_light_15_and_7_under_each_preset`
+checks the table in the world for wheat, a sapling and leaves. Leaves dim their own
+position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
 `Must` · `R1` · `Accepted` · Verify: Inspect

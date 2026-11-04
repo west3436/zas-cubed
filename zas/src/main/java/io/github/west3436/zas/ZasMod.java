@@ -18,6 +18,7 @@ import io.github.west3436.zas.ignition.IgnitionEvents;
 import io.github.west3436.zas.ignition.IgnitionSources;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.Internals;
+import io.github.west3436.zas.life.Photosynthesis;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.provider.ZasApiProviderImpl;
 import io.github.west3436.zas.reaction.ServerReactions;
@@ -54,6 +55,7 @@ public final class ZasMod {
         Breathers.register(modBus, NeoForge.EVENT_BUS);
         Airflow.register(modBus, NeoForge.EVENT_BUS);
         Internals.register(modBus);
+        Photosynthesis.register(NeoForge.EVENT_BUS);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
         FuelProfiles.register(NeoForge.EVENT_BUS);
         Burners.register(NeoForge.EVENT_BUS);

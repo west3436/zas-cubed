@@ -1,7 +1,6 @@
 {
   "values": [
-    "#minecraft:crops",
-    "#minecraft:saplings",
-    "#minecraft:leaves"
+    "#zas:crop_plants",
+    "#zas:leaf_plants"
   ]
 }

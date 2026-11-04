@@ -80,7 +80,10 @@ public final class PresetOptions {
             "FLOW-007, FLOW-016",
             "FLOW-007");
 
-    /** O2 a lit crop or sapling in a zone makes from CO2 at light 15, in mol/h (CONT-057, D-61). */
+    /**
+     * O2 a lit crop or sapling in a zone makes from CO2 at light 15, in mol/h (CONT-057, D-61): the
+     * rate of every block of {@code #zas:plants} outside {@code #zas:leaf_plants}.
+     */
     public static final PresetOption<Double> CROP_PHOTOSYNTHESIS_RATE = new PresetOption<>(
             "crop_photosynthesis_rate",
             PresetOption.number(0, 100, "mol/h"),
@@ -88,9 +91,12 @@ public final class PresetOptions {
             0.0625,
             "The O2 a lit crop or sapling in a zone makes from CO2 at light 15, in mol/h; it scales" + " with light",
             "CONT-057",
-            "CONT-057");
+            null);
 
-    /** O2 a lit leaf block in a zone makes from CO2 at light 15, in mol/h (CONT-057, D-61). */
+    /**
+     * O2 a lit leaf block in a zone makes from CO2 at light 15, in mol/h (CONT-057, D-61): the rate of
+     * the blocks of {@code #zas:leaf_plants}.
+     */
     public static final PresetOption<Double> LEAF_PHOTOSYNTHESIS_RATE = new PresetOption<>(
             "leaf_photosynthesis_rate",
             PresetOption.number(0, 100, "mol/h"),
@@ -98,7 +104,7 @@ public final class PresetOptions {
             0.03125,
             "The O2 a lit leaf block in a zone makes from CO2 at light 15, in mol/h; it scales with light",
             "CONT-057",
-            "CONT-057");
+            null);
 
     /**
      * Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107,
