@@ -134,8 +134,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     }
 
     /**
-     * The loaded nodes this one is connected to, in direction order. A neighbour in an unloaded
-     * chunk isn't reached, and that chunk keeps its share saved.
+     * The loaded nodes this one shares gas with, in direction order. A neighbour in an unloaded chunk
+     * isn't reached, and that chunk keeps its share saved.
      */
     public List<PipeNodeEntity> connectedNodes() {
         List<PipeNodeEntity> out = new ArrayList<>(6);
@@ -148,7 +148,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
             if (!level.isLoaded(next)) {
                 continue;
             }
-            if (PipeConnector.connected(self, d, level.getBlockState(next))
+            if (PipeConnector.joined(self, d, level.getBlockState(next))
                     && level.getBlockEntity(next) instanceof PipeNodeEntity n
                     && !n.isRemoved()) {
                 out.add(n);
@@ -183,16 +183,24 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
         }
     }
 
+    /**
+     * Dissolves this node's network and its neighbours', so the next ones built follow its current
+     * connections: call it after they change. Members keep their shares by volume (CONT-003).
+     */
+    protected void reconnect() {
+        if (network != null) {
+            network.dissolve();
+        }
+        dissolveNeighbours();
+    }
+
     @Override
     public void onLoad() {
         super.onLoad();
         if (level instanceof ServerLevel) {
             unloading = false;
             cellWatch.reset();
-            if (network != null) {
-                network.dissolve();
-            }
-            dissolveNeighbours();
+            reconnect();
         }
     }
 

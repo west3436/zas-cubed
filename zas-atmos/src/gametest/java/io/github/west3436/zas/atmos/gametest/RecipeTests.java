@@ -42,6 +42,8 @@ public final class RecipeTests {
         List<Item> items = new ArrayList<>(List.of(
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get(),
+                AtmosItems.MANUAL_VALVE.get(),
+                AtmosItems.REDSTONE_VALVE.get(),
                 AtmosItems.CONNECTOR_PORT.get(),
                 AtmosItems.CANISTER.get(),
                 AtmosItems.VENT.get(),
