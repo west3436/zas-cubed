@@ -2198,6 +2198,25 @@ the cell in front of its grille).
     battery is empty) and the battery's charge. The menu syncs the room's
     temperature in tenths of a kelvin, −1 for no room, and the battery's FE
     and capacity in 16-bit halves.
+  - What it shares with the air conditioner, below, is in
+    `ThermoMachineBlockEntity`, `ThermoMachineMenu`, `ThermoStatus` and
+    `ThermoMachineScreen`, and what it shares with every portable in the
+    `.portable` package: `PortableBlock` (facing, `lit`, shape, opening the GUI,
+    dropping the battery), `PortableDevice` (the battery slot, the switch, the
+    `point()`) and `PortableMenu`.
+- **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
+  in `.heater`. The heater's mirror, the same size and on the same code. Its
+  setpoint runs from 73 to 293 K (default 293 K). Each atmos tick, while on, it
+  takes heat from its room through API-013's `HeatMutations.remove`:
+  `AirConditionerMath.cool` gives the least of `[power] air_conditioner_watts`
+  (5,000 W) over the step and what brings the zone down to the setpoint, and
+  nothing at or below it, so it never heats. The heat it takes leaves the world.
+  It pays its battery `HeaterMath.energy` with `[power] air_conditioner` FE/t
+  (60). `lit` shows the `air_conditioner_on` model while it cools. Walls warmer
+  than the room bring it back up between steps, so a room is held just above
+  the setpoint, the way a heater holds its room just under it; in the GameTest,
+  a stone room in the Overworld 5 K under the ambient stays within 0.5 K above a
+  288 K setpoint and never goes below it.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as
@@ -2207,7 +2226,7 @@ the cell in front of its grille).
   charge, and the item model's `zas_atmos:charge` property (0, 0.5, 1)
   picks the empty, `_partial` and `_full` models. `Batteries.isBattery`
   accepts any item in the `zas_atmos:batteries` tag with the FE item
-  capability; a heater's or recharger's `Batteries.Slot` takes only those,
+  capability; a portable's or recharger's `Batteries.Slot` takes only those,
   one at a time. The creative tab holds an empty and a full copy of each.
 - **Recharger** (CONT-113), in `.battery`. A floor plate holding one
   battery, and a controller's part like the vent, through its zone or a
@@ -2230,7 +2249,7 @@ the cell in front of its grille).
   (`data/zas/tags/block/ignition_sources.json`), so the framework counts it as
   a standing ignition source while `lit` is true (API-053, §5), with nothing
   added to the API. `lit` picks the `igniter_on` model. No GUI.
-- **GUIs** (CONT-074). Using a canister, vent, heater or recharger with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The

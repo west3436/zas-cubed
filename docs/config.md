@@ -208,6 +208,8 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] heater` | `60` | What a heater draws from its battery while it heats at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers a heater (D-73) |
 | `[power] heater_watts` | `5000` | The most heat a heater adds, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops heaters heating |
+| `[power] air_conditioner` | `60` | What an air conditioner draws from its battery while it cools at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers an air conditioner (D-73) |
+| `[power] air_conditioner_watts` | `5000` | The most heat an air conditioner takes, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops air conditioners cooling |
 | `[power] recharger` | `40` | What a recharger draws from its controller while its battery has room, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] recharger_rate` | `28` | What a recharger puts into its battery, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] igniter` | `20` | What an igniter draws from its controller while it has a redstone signal, in FE/t, 0 to 100,000 (CONT-105) |
