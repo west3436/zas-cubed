@@ -2107,8 +2107,19 @@ the cell in front of its grille).
   ignition source, so it burns only above a fuel's autoignition temperature.
   A new network reacts at its first step, so a rebuild can bring its next
   reaction forward by up to an atmos tick.
-- **Deferred:** pipe bursts (CONT-108) and client smoothing (CONT-070) are not
-  built yet; S-01 needs neither.
+- **Bursts** (CONT-108, `PipeBurst`). A network's atmos tick starts by checking
+  what the last one left, before it reacts. Above 10,132.5 kPa it reads the cell
+  of each segment (a pipe or a cap, not a device's buffer), and picks one of
+  those more than that over their cell with the level's random source. It
+  drains the network, destroys the segment with the game's block-break effects
+  and no drop, and adds the gas to the segment's cell through `GasMutations.add`.
+  There is no explosion. A paused or unresolved cell, or a chunk out of full
+  status, can't burst. Because the check comes first, a reaction that takes a
+  network past the threshold bursts it one atmos tick later, after every member
+  has stepped: a canister on the network, rated lower than a pipe, fails first,
+  rather than being emptied by a burst in the same instant.
+- **Deferred:** client smoothing (CONT-070) is not built yet; S-01 doesn't need
+  it.
 
 ### 11.5 Devices
 

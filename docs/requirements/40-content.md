@@ -195,7 +195,7 @@ Pipes may leak or burst above configurable pressure differentials.
 Leaks and configurable thresholds stay here.*
 
 #### CONT-108 · Pipe burst
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
 
 When a pipe network's pressure exceeds a segment's cell pressure by more than
 10,132.5 kPa (100 atm), one such segment, chosen at random, shall burst that
@@ -207,6 +207,17 @@ that never runs.)
 - **Verify:** A GameTest raises a network to just below and just above 100 atm
   over its room and checks only the second bursts one segment and dumps
   everything, with no explosion.
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+`PipeBurst` checks at the start of a network's atmos tick, on what the last one
+left, so a reaction that takes a network past the threshold bursts it one atmos
+tick later, and a canister on the network fails first. Pipes and caps are
+segments; a device's buffer isn't, so a network with no pipe doesn't burst. A
+segment in a paused or unresolved cell doesn't burst, and a burst pipe drops
+nothing. `PipeBurstTests.cont_108_*` (GameTest) check a room just below and
+just above the threshold, open air, a network with no segment and a burst from
+a reaction; `PipeBurstTest.cont_108_*` (Unit) check the threshold and the choice
+among segments.*
 
 #### CONT-006 · Network cadence
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50

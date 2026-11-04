@@ -86,16 +86,23 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     }
 
     /**
-     * The network's atmos tick, run by the first of its members to step: its mixture reacts through
-     * the API, with no ignition source (CONT-100). A device's own step comes after this, so it sees
-     * the pressure the reaction left.
+     * The network's atmos tick, run by the first of its members to step. It bursts if the last atmos
+     * tick left it overpressured (CONT-108); otherwise its mixture reacts through the API, with no
+     * ignition source (CONT-100). A device's own step comes after this, so it sees the pressure the
+     * reaction left, and a canister on the network, rated lower than a pipe, fails before the pipe
+     * can burst.
      */
     @Override
     protected void beforeAtmosTick(ServerLevel level) {
         PipeNetwork net = network();
-        if (net.startsAtmosTick(this)) {
+        if (net.startsAtmosTick(this) && !PipeBurst.check(level, net)) {
             ContainerReactions.react(net.gas());
         }
+    }
+
+    /** Whether the node is a pipe segment, which can burst (CONT-108). The default is false. */
+    protected boolean isSegment() {
+        return false;
     }
 
     /** The watch on the cell the node acts on, reset when it loads. */
