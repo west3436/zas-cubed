@@ -218,6 +218,7 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] generator_buffer` | `8000` | The generator's own store, in FE, 1,000 to 30,000. It starts no new fuel while the store is full |
 | `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 | `[controller] breach_drop_kpa` | `10.0` | A fall in a controller's zone pressure within one atmos tick, in kPa, 0 to 1,000, that sends it to danger 2 at once, as a breach to space does. It counts only for a preset with a pressure min2, and only once the pressure is below min1. 0 turns it off (CONT-043) |
+| `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
 
 ## Common: `zas-common.toml`
 

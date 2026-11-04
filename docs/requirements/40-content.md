@@ -821,7 +821,7 @@ made by filling (CONT-039); the creative tab also has a filled emergency tank,
 O₂ at 3 atm. `cont_030_tanks` checks each tank's volume and contents.*
 
 #### CONT-038 · Tank failure
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 A tank shall leak above 30 atm, rupture above 40 atm, and explode above 50 atm
 as a vanilla explosion of power (P − 50 atm) / 10 atm.
@@ -836,8 +836,22 @@ as a vanilla explosion of power (P − 50 atm) / 10 atm.
 
 *2026-10-31: the power is capped by CONT-109 (D-59).*
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerFailure` turns a pressure into a verdict, and `TankFailure.check`
+applies it at a position. A leak lets out a tenth of the gas each atmos tick and
+stops at 30 atm. A rupture or an explosion uses the tank up and puts all its gas
+into its cell. It goes by pressure alone, without vg's integrity steps. A tank
+checks once per atmos tick in a player's main slots, armor slots and offhand, in
+a suit's slot in any of those, and on the ground. A tank in a chest, on a mob, in
+an item frame or in a dropped suit doesn't tick and waits until it is carried.
+What leaks goes into the cell at the middle of the holder's body, and the
+explosion is there too. It has no source entity, so it hurts the holder and
+credits nobody. `ContainerFailureTest` (Unit) checks every threshold;
+the `cont_038_` GameTests check each threshold in the world, the formula's power,
+that the holder is hurt under each preset, and failing in each place.*
+
 #### CONT-107 · Container explosions and blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, D-28, D-14
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-28, D-14
 
 Explosions of tanks (CONT-038) and canisters (CONT-102) shall break blocks
 only under the Hardcore preset. Under Normal they damage entities but leave
@@ -847,8 +861,15 @@ blocks intact. Either preset can override it (OPS-007).
 - **Verify:** GameTests explode a tank under each preset and check blocks
   break only under Hardcore.
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerBlast.explode` reads the preset's option through the API (API-059)
+each time. `cont_107_a_tank_breaks_blocks_only_under_hardcore` and
+`cont_107_either_preset_can_override_it` (GameTest).
+`cont_038_a_blast_hurts_the_tanks_holder_under_each_preset` checks the harm.
+Canisters will explode through the same call (CONT-102).*
+
 #### CONT-109 · Container explosion power cap
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
 
 The power of a tank (CONT-038) or canister (CONT-102) explosion shall be capped
 at 16, configurable (TNT is 4).
@@ -856,6 +877,12 @@ at 16, configurable (TNT is 4).
 - **Rationale:** Decision: D-59.
 - **Verify:** A GameTest explodes a tank at a pressure whose formula power
   exceeds 16 and checks the power used is 16.
+
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`[containers] explosion_power_cap` in `zas_atmos-server.toml`, 16 by default and
+0 to 64. `cont_109_a_tanks_power_is_capped_at_16` and
+`cont_109_the_cap_is_configurable` (GameTest), and `ContainerFailureTest` (Unit)
+for the canister's rule.*
 
 #### CONT-103 · Tank transfer valve
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13

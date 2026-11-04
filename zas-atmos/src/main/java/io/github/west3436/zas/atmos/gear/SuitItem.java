@@ -3,13 +3,16 @@ package io.github.west3436.zas.atmos.gear;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickAction;
@@ -19,6 +22,7 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.Level;
 
 /**
  * A piece of breathing gear worn in an armor slot: a softsuit piece (CONT-032) or the breath mask
@@ -156,6 +160,18 @@ public class SuitItem extends ArmorItem {
 
     private static void sound(Player player, boolean in) {
         player.playSound(in ? SoundEvents.BUNDLE_INSERT : SoundEvents.BUNDLE_REMOVE_ONE, 0.8f, 1.0f);
+    }
+
+    /** The tank in the slot steps as a carried tank does, and its stack, a copy, is written back. */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
+        super.inventoryTick(stack, level, entity, slot, selected);
+        if (tankSlot && level instanceof ServerLevel server && AtmosTicks.itemsStepNow(server)) {
+            ItemStack tank = tank(stack);
+            if (tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, server, entity)) {
+                setTank(stack, tank);
+            }
+        }
     }
 
     // ---- Life support ------------------------------------------------------------------------

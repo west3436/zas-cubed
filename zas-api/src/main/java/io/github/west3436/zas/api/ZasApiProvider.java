@@ -291,6 +291,22 @@ public interface ZasApiProvider {
     }
 
     /**
+     * Whether explosions of gas containers break blocks (API-059, CONT-107), for {@link
+     * Atmospheres#containerExplosionsBreakBlocks()}.
+     *
+     * <p>The default is the fallback's answer, false. It is there for the same reason as {@link
+     * #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return true if a container's explosion should break blocks
+     */
+    @AnyThread
+    default boolean containerExplosionsBreakBlocks() {
+        return false;
+    }
+
+    /**
      * Applies the server's reactions to a standalone mixture (API-019, FIRE-031), for {@link
      * io.github.west3436.zas.api.reaction.Reactions#applyStandalone}.
      *

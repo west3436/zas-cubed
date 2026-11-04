@@ -30,4 +30,15 @@ public final class AtmosTicks {
     public static long now(ServerLevel level) {
         return level.getServer().getTickCount();
     }
+
+    /**
+     * Whether items step in this game tick. A tank in an inventory or on the ground is in no
+     * device schedule; it asks here each game tick, and steps once per atmos tick.
+     *
+     * @param level the level it is in
+     * @return true once every {@link #PERIOD} game ticks
+     */
+    public static boolean itemsStepNow(ServerLevel level) {
+        return now(level) % PERIOD == 0;
+    }
 }

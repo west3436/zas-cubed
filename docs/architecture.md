@@ -1943,6 +1943,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
@@ -2486,6 +2487,34 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+- **Tank failure** (CONT-038, CONT-107, CONT-109). `ContainerFailure` turns a
+  pressure into a verdict: nothing, a leak, a rupture or an explosion with its
+  capped power. It is plain arithmetic, unit-tested without the game.
+  `TankFailure.check(level, at, tank, source)` applies a tank's verdict there
+  and then, changing the stack in place.
+  - **When it runs.** Once per atmos tick, through
+    `GasTankItem.atmosTick(tank, level, holder)`: anything that changes the gas
+    by itself goes before the check, so the check sees that pressure in the
+    same tick. `inventoryTick` calls it for a tank in a player's main slots,
+    armor slots or offhand and, through `SuitItem`, for a tank in a suit's slot
+    anywhere in that inventory. `onEntityItemUpdate` calls it for a tank on the
+    ground. Those hooks ask `AtmosTicks.itemsStepNow`, since items aren't in a
+    device schedule. Nothing ticks a tank in a chest, on a mob, in an item
+    frame or in a dropped suit, so it waits until it is carried again.
+  - **Where it fails.** At the middle of its holder's body, or of the item
+    entity (`TankFailure.pointOf`). Gas goes into the cell there through
+    `GasMutations.add`. The middle of the body, not the eyes, because a vanilla
+    explosion skips an entity whose eyes are exactly at its centre.
+  - **The explosion's source.** A carried tank's explosion has none. A vanilla
+    explosion spares its source entity, so naming the holder would leave them
+    unhurt, and damage credited to a player is refused when PvP is off. The
+    stack is used up before the explosion, so a holder it kills doesn't drop
+    the tank.
+  - **Blocks.** `ContainerBlast.explode` asks
+    `Atmospheres.containerExplosionsBreakBlocks()` (API-059) each time. If so,
+    it is a vanilla `BLOCK` explosion, which follows the
+    `blockExplosionDropDecay` game rule; if not, `NONE`, which keeps every block
+    and still hurts entities.
 
 ### 11.10 The fire extinguisher (CONT-037)
 
