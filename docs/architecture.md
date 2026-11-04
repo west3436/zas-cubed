@@ -1940,6 +1940,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
+| `scrubber` | What a scrubber takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`), for every device that scrubs (CONT-015, CONT-079 to CONT-081) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
