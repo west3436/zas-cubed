@@ -2192,8 +2192,10 @@ the cell in front of its grille).
   network past the threshold bursts it one atmos tick later, after every member
   has stepped: a canister on the network, rated lower than a pipe, fails first,
   rather than being emptied by a burst in the same instant.
-- **Deferred:** client smoothing (CONT-070) is not built yet; S-01 doesn't need
-  it.
+- **Client smoothing** (CONT-070). Nothing is built for it. Pump and vent
+  animations are texture animations (`.png.mcmeta`), which the client plays at
+  game tick rate between the devices' 1 s steps. Only the switch between the on
+  and off models waits for a step.
 
 ### 11.5 Devices
 
@@ -2431,6 +2433,13 @@ the cell in front of its grille).
   new, and flows under 10⁻⁴ mol are skipped. It draws `[power] pressure_pump`
   FE/t (20). Its GUI has the switch and ±10 and ±100 kPa buttons, and shows its
   status, target, both pressures and its power.
+- **Volume pump** (CONT-012), in `.pump`. A `PumpBlockEntity` too, set in L/s:
+  `PumpFlow.volumePump` is its set volume at the input's conditions, never more
+  than 100 L. It has no target, so it goes on whatever the output's pressure,
+  until the line bursts (CONT-108); vg's stall at 9,000 kPa over the input isn't
+  asked for. It is set to 100 L/s when new, and draws `[power] volume_pump` FE/t
+  (20). Its GUI has the same layout, with ±1 and ±10 L/s buttons, and says if
+  its rate is 0.
 - **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and

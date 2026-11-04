@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
+import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
@@ -100,6 +101,11 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<PressurePumpBlockEntity>> PRESSURE_PUMP = BLOCK_ENTITIES.register(
             "pressure_pump",
             () -> BlockEntityType.Builder.of(PressurePumpBlockEntity::new, AtmosBlocks.PRESSURE_PUMP.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<VolumePumpBlockEntity>> VOLUME_PUMP = BLOCK_ENTITIES.register(
+            "volume_pump",
+            () -> BlockEntityType.Builder.of(VolumePumpBlockEntity::new, AtmosBlocks.VOLUME_PUMP.get())
                     .build(null));
 
     public static final Supplier<BlockEntityType<ValveBlockEntity>> VALVE = BLOCK_ENTITIES.register(

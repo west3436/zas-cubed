@@ -57,6 +57,12 @@ public final class AtmosMenus {
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
 
+    /** A volume pump's switch and rate (CONT-012). */
+    public static final Supplier<MenuType<PumpMenu>> VOLUME_PUMP = MENUS.register(
+            "volume_pump",
+            () -> new MenuType<>(
+                    (id, inventory) -> new PumpMenu(AtmosMenus.VOLUME_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
     private AtmosMenus() {}
 
     public static void register(IEventBus modBus) {

@@ -5,7 +5,7 @@ import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-/** A pump's GUI (CONT-011): the inline device's, with its setting and four buttons to step it. */
+/** A pump's GUI (CONT-011, CONT-012): the inline device's, with its setting and four buttons to step it. */
 final class PumpScreen extends InlineDeviceScreen<PumpMenu> {
     private static final List<String> PORTS = List.of("gui.zas_atmos.inline.input", "gui.zas_atmos.inline.output");
 
@@ -21,6 +21,11 @@ final class PumpScreen extends InlineDeviceScreen<PumpMenu> {
     /** A pressure pump's: its target, stepped by 10 and 100 kPa. */
     static PumpScreen pressure(PumpMenu menu, Inventory inventory, Component title) {
         return new PumpScreen(menu, inventory, title, "gui.zas_atmos.pump.target", "-100", "-10", "+10", "+100");
+    }
+
+    /** A volume pump's: its rate, stepped by 1 and 10 L/s. */
+    static PumpScreen volume(PumpMenu menu, Inventory inventory, Component title) {
+        return new PumpScreen(menu, inventory, title, "gui.zas_atmos.pump.rate", "-10", "-1", "+1", "+10");
     }
 
     @Override

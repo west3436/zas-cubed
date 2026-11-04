@@ -56,6 +56,7 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> PRESSURE_PUMP =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.PRESSURE_PUMP);
+    public static final DeferredItem<BlockItem> VOLUME_PUMP = ITEMS.registerSimpleBlockItem(AtmosBlocks.VOLUME_PUMP);
 
     public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
