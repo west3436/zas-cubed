@@ -132,6 +132,11 @@ final class Harness implements AutoCloseable {
                 }
 
                 @Override
+                public boolean hasPendingFor(long zone) {
+                    return c.hasPendingFor(zone);
+                }
+
+                @Override
                 public int prefetchRadius() {
                     return c.prefetchRadius();
                 }
