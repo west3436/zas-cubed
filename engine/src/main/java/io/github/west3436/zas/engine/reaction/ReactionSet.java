@@ -120,9 +120,10 @@ public final class ReactionSet {
      * Burns a parcel of a mixture (FIRE-011, FIRE-031): the reactions that need ignition, run to
      * completion on the gas in {@code min(parcelLitres, volume)} litres of it, scaled back where they
      * compete (FIRE-002). A reaction burns if an ignition source is present or the mixture is at or
-     * above its autoignition temperature, its other conditions hold, and, for a fire, the mixture
-     * passes the fire oxygen threshold (FIRE-030). Its incomplete form, if any, is blended in by the
-     * share of carbon that forms CO at the mixture's O₂ fraction (FIRE-005).
+     * above its autoignition temperature, its other conditions hold (flammability limits at the
+     * mixture's temperature, FIRE-032), and, for a fire, the mixture passes the fire oxygen threshold
+     * (FIRE-030). Its incomplete form, if any, is blended in by the share of carbon that forms CO at
+     * the mixture's O₂ fraction (FIRE-005).
      *
      * @param mixture the mixture, changed in place; its registry must be this set's
      * @param parcelLitres the parcel, L: {@link #PARCEL_LITRES_PER_SECOND} times the step's seconds
@@ -429,8 +430,11 @@ public final class ReactionSet {
 
         final boolean fire;
         final int fuel;
-        final double lower;
-        final double upper;
+        /** The fuel's flammability limits; null if it has none. */
+        final ReactionConditions.FlammabilityLimits limits;
+        /** J released per mol of fuel burned, which sets how the limits widen (FIRE-032). */
+        final double heatOfCombustion;
+
         final double autoignition;
         final int[] concentrationGas;
         final double[] concentrationMin;
@@ -462,8 +466,8 @@ public final class ReactionSet {
             ReactionConditions cond = def.conditions();
             this.fire = cond.flammability().isPresent();
             this.fuel = cond.flammability().map(f -> registry.indexOf(f.fuel())).orElse(-1);
-            this.lower = cond.flammability().map(f -> f.lower()).orElse(0.0);
-            this.upper = cond.flammability().map(f -> f.upper()).orElse(1.0);
+            this.limits = cond.flammability().orElse(null);
+            this.heatOfCombustion = fuel >= 0 && nu[fuel] > 0 ? heat / nu[fuel] : 0;
             this.autoignition = cond.flammability().map(f -> f.autoignition()).orElse(Double.POSITIVE_INFINITY);
             this.concentrationGas = cond.concentrations().stream()
                     .mapToInt(c -> registry.indexOf(c.gas()))
@@ -502,9 +506,9 @@ public final class ReactionSet {
             if (total <= 0) {
                 return false;
             }
-            if (fuel >= 0) {
+            if (limits != null) {
                 double x = m.moles(fuel) / total;
-                if (x < lower || x > upper) {
+                if (x < limits.lowerAt(t, heatOfCombustion) || x > limits.upperAt(t, heatOfCombustion)) {
                     return false;
                 }
             }

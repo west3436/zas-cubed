@@ -1271,6 +1271,17 @@ way.
   its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
   `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
   fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
+- **Limits that widen** (FIRE-032). Every check of a fuel's flammability limits
+  goes through `FlammabilityLimits.lowerAt` and `upperAt`, with the mixture's
+  temperature and the reaction's heat per mole of fuel, which the compiled
+  reaction works out once. Both widen by the modified Burgess–Wheeler rule above
+  298 K, and the declared limits hold at and below it. The rule is the
+  statement that a flame at its lower limit reaches about the same temperature
+  however warm its gas started, so its constant is a heat capacity, about
+  31.4 J/(mol·K). A fire's own heat therefore lowers the limit about 1.5 times as
+  fast as it burns the fuel in air (whose C<sub>v</sub> is about 21 J/(mol·K)),
+  so a fire that loses no heat doesn't stop at the declared limit: it goes on to
+  the 0.1 % floor, or to the fire oxygen threshold if that comes first.
 - **One step.** Every condition is read from the mixture at the start. Each
   reaction's extent is worked out alone: as far as its limiting reactant
   allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
