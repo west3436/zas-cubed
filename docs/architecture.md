@@ -1945,6 +1945,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
+| `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
