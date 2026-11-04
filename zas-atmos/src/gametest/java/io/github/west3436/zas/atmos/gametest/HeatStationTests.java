@@ -13,7 +13,7 @@ import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
-import io.github.west3436.zas.atmos.heater.HeaterStatus;
+import io.github.west3436.zas.atmos.heater.ThermoStatus;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.engine.Ambient;
@@ -151,7 +151,7 @@ public final class HeatStationTests {
 
             // Off, it does nothing.
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.OFF, "the new heater's status");
+            h.assertValueEqual(heater.status(), ThermoStatus.OFF, "the new heater's status");
 
             // The GUI: on, setpoint up 10 K; unknown buttons refused.
             h.assertTrue(menu.clickMenuButton(hand, HeaterMenu.TOGGLE), "switching on");
@@ -164,7 +164,7 @@ public final class HeatStationTests {
 
             // On with no battery, it does nothing; the slot refuses coal.
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.NO_BATTERY, "the heater with no battery");
+            h.assertValueEqual(heater.status(), ThermoStatus.NO_BATTERY, "the heater with no battery");
             h.assertValueEqual(
                     heater.battery()
                             .insertItem(0, new ItemStack(Items.COAL), false)
@@ -177,7 +177,7 @@ public final class HeatStationTests {
             double c = GasProperties.heatCapacity(s.zone(2, 2, 2).mixture().moles());
             double before = temperature(s, 2, 2, 2);
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heating heater's status");
+            h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heating heater's status");
             s.close(heater.watts(), HeaterMath.DEFAULT_MAX_WATTS, 1e-9, "the heater's power");
             h.assertValueEqual(heater.energy(), 100_000 - 60 * AtmosTicks.PERIOD, "the battery after a step");
             h.assertTrue(
@@ -212,7 +212,7 @@ public final class HeatStationTests {
             s.close(heater.setpoint(), HeaterMath.MIN_SETPOINT, 0, "the lowest setpoint");
             int charge = heater.energy();
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.AT_SETPOINT, "the status above the setpoint");
+            h.assertValueEqual(heater.status(), ThermoStatus.AT_SETPOINT, "the status above the setpoint");
             h.assertValueEqual(heater.energy(), charge, "the battery above the setpoint");
             h.assertFalse(s.level.getBlockState(heater.getBlockPos()).getValue(HeaterBlock.LIT), "lit at the setpoint");
 
@@ -223,7 +223,7 @@ public final class HeatStationTests {
             s.close(heater.setpoint(), HeaterMath.MAX_SETPOINT, 0, "the highest setpoint");
             BatteryTests.swap(heater.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 300));
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heater on its last 300 FE");
+            h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater on its last 300 FE");
             s.close(
                     heater.watts(),
                     HeaterMath.DEFAULT_MAX_WATTS * 300 / (60.0 * AtmosTicks.PERIOD),
@@ -231,7 +231,7 @@ public final class HeatStationTests {
                     "the power 300 FE pays for");
             h.assertValueEqual(heater.energy(), 0, "the battery after its last step");
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.BATTERY_EMPTY, "the heater on an empty battery");
+            h.assertValueEqual(heater.status(), ThermoStatus.BATTERY_EMPTY, "the heater on an empty battery");
             h.assertValueEqual(heater.watts(), 0.0, "the power on an empty battery");
 
             // In open air it has no room, and leaves its battery alone.
@@ -240,7 +240,7 @@ public final class HeatStationTests {
             outside.setSetpoint(HeaterMath.MAX_SETPOINT);
             outside.setOn(true);
             s.cycle(outside);
-            h.assertValueEqual(outside.status(), HeaterStatus.NO_ROOM, "the heater in open air");
+            h.assertValueEqual(outside.status(), ThermoStatus.NO_ROOM, "the heater in open air");
             h.assertValueEqual(outside.energy(), 100_000, "the battery in open air");
             HeaterMenu outsideMenu = (HeaterMenu) outside.createMenu(2, hand.getInventory(), hand);
             h.assertValueEqual(
@@ -249,7 +249,7 @@ public final class HeatStationTests {
             // Switched off, it stops; broken, it drops its battery.
             h.assertTrue(menu.clickMenuButton(hand, HeaterMenu.TOGGLE), "switching off");
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.OFF, "the switched-off heater");
+            h.assertValueEqual(heater.status(), ThermoStatus.OFF, "the switched-off heater");
             s.set(8, 1, 2, Site.AIR);
             h.assertTrue(
                     !s.level
@@ -386,7 +386,7 @@ public final class HeatStationTests {
             h.assertTrue(
                     lastHighest - lowest < 0.05,
                     "the room swung over the last minute: " + lowest + " K to " + lastHighest + " K");
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heater holding the room");
+            h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater holding the room");
             h.assertTrue(
                     heater.watts() < HeaterMath.DEFAULT_MAX_WATTS,
                     "the heater is at full power: " + heater.watts() + " W");
@@ -399,11 +399,11 @@ public final class HeatStationTests {
             // On 2,000 FE, about 20 s at the walls' loss, it holds the room, then stops.
             BatteryTests.swap(heater.battery(), BatteryTests.charged(AtmosItems.BATTERY.get(), 2000));
             int heated = 0;
-            for (int sec = 0; sec < 120 && heater.status() != HeaterStatus.BATTERY_EMPTY; sec++) {
+            for (int sec = 0; sec < 120 && heater.status() != ThermoStatus.BATTERY_EMPTY; sec++) {
                 s.cycle(heater);
                 heated++;
             }
-            h.assertValueEqual(heater.status(), HeaterStatus.BATTERY_EMPTY, "the heater after 2,000 FE");
+            h.assertValueEqual(heater.status(), ThermoStatus.BATTERY_EMPTY, "the heater after 2,000 FE");
             h.assertValueEqual(heater.energy(), 0, "the battery after it ran out");
             h.assertTrue(heated > 5, "2,000 FE lasted only " + heated + " s");
             double empty = temperature(s, 4, 2, 2);
