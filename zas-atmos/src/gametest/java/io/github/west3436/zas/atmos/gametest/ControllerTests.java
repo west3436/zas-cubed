@@ -319,7 +319,7 @@ public final class ControllerTests {
                 c.setMode(m);
                 s.cycle(c);
                 h.assertValueEqual(vent.last(), m.vent(p).from(c.getBlockPos()), m + ": the vent's order");
-                h.assertValueEqual(scrubber.last(), m.scrubber(p), m + ": the scrubber's order");
+                h.assertValueEqual(scrubber.last(), m.scrubber(p).from(c.getBlockPos()), m + ": the scrubber's order");
             }
             h.assertValueEqual(ControllerMode.SCRUBBING.vent(p), VentOrder.blow(101), "Scrubbing blows to 101 kPa");
 
@@ -327,13 +327,13 @@ public final class ControllerTests {
             s.cycle(c);
             h.assertValueEqual(c.mode(), ControllerMode.CYCLE, "Cycle at 101 kPa");
             h.assertValueEqual(vent.last(), VentOrder.OFF.from(c.getBlockPos()), "Cycle: the vent");
-            h.assertValueEqual(scrubber.last(), ScrubberOrder.PANIC, "Cycle: the scrubber");
+            h.assertValueEqual(scrubber.last(), ScrubberOrder.PANIC.from(c.getBlockPos()), "Cycle: the scrubber");
 
             s.empty(2, 2, 2);
             s.cycle(c);
             h.assertValueEqual(c.mode(), ControllerMode.FILL, "Cycle once the room is empty");
             h.assertValueEqual(vent.last(), VentOrder.blow(101).from(c.getBlockPos()), "Fill: the vent");
-            h.assertValueEqual(scrubber.last(), ScrubberOrder.OFF, "Fill: the scrubber");
+            h.assertValueEqual(scrubber.last(), ScrubberOrder.OFF.from(c.getBlockPos()), "Fill: the scrubber");
 
             s.addKpa(2, 2, 2, StandardAir.NITROGEN, 90);
             s.cycle(c);

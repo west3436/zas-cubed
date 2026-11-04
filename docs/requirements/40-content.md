@@ -375,6 +375,9 @@ stays Accepted until every device's GUI is built.*
 controller controls the vent (CONT-014), on the server, whatever the client
 sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
 
+*2026-11-04: The scrubber's GUI follows the same pattern
+(`ScrubberTests.cont_074_a_scrubbers_gui_is_checked_and_a_controller_wins`).*
+
 #### CONT-010 · Valves
 `Must` · `R1` · `Implemented` · Verify: GameTest
 
@@ -588,7 +591,7 @@ when blowing, and of its zone when siphoning (`VentFlow`).
 siphon tests (GameTest) check a room takes at least four atmos ticks.*
 
 #### CONT-015 · Scrubber
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02
 
 A scrubber shall remove selected gases or gas tags from its zone. The default
 selection is CO₂ and `zas:toxic`. It faces any of six ways, and a pipe joins
@@ -604,8 +607,20 @@ it only on its back, the face opposite its grille.
   is shaped like the vent: it faces any of six ways and takes a pipe only on
   its back.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:scrubber` takes gas from the cell in front of its grille into its
+network, through one `ZonePort` ([architecture
+§11.5](../architecture.md#115-devices)). `GasSelection` holds the gases and gas
+tags it keeps. An area air controller's order sets them, and so does its GUI,
+which has a toggle for each shipped gas and gas tag.
+`ScrubberTests.cont_015_a_scrubber_removes_co2_and_co_and_leaves_o2_and_n2` and
+`cont_015_a_pipe_joins_a_scrubber_only_on_its_back` (GameTest) check the Verify,
+and `GasSelectionTest` (Unit) checks the default. In an open cell it takes from
+the ambient, as a siphoning vent does
+(`cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`).*
+
 #### CONT-079 · Scrubber modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall have three modes: scrubbing (keeps only the selected gases),
 siphon (keeps its whole sample) and panic (siphon at the panic rate).
@@ -614,8 +629,15 @@ siphon (keeps its whole sample) and panic (siphon at the panic rate).
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks each mode's effect on a mixed room.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberTests.cont_079_scrubbing_keeps_only_the_selected_gases`,
+`cont_079_siphon_keeps_its_whole_sample` and
+`cont_079_panic_is_siphon_at_the_panic_rate` (GameTest) each run a step in a
+mixed room and check every gas in the room and the network. A sample's other
+gases are never removed, so "keeps only" is a removal of the kept gases alone.*
+
 #### CONT-080 · Scrubber rate
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 
@@ -625,14 +647,25 @@ A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 - **Verify:** A Unit test checks the sampled volume per second in normal and
   panic modes.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_080_*` (Unit). A sample holds its volume's share of the
+zone's moles, and at most all of them.*
+
 #### CONT-081 · Scrubber stall
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall stop once its buffer reaches 50 atm.
 
 - **Rationale:** vg: vg's 50 atm scrubber stall ([vg
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A Unit test checks a scrubber stops at 50 atm in its buffer.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_081_*` (Unit), and
+`ScrubberTests.cont_081_a_scrubber_stops_at_50_atm_in_its_buffer` (GameTest).
+Its buffer is a network member, so 50 atm is read from its network's one
+mixture (CONT-001). The sample that would pass 50 atm is cut to what reaches
+it.*
 
 #### CONT-016 · Passive vent
 `Could` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
@@ -820,6 +853,11 @@ until the portable pump, portable scrubber and freezer exist.*
 
 *2026-11-04: The freezer exists, as the air conditioner (CONT-019), so this
 stays Accepted until the portable pump and scrubber exist.*
+
+*2026-11-04: The portable scrubber exists. `PortableScrubberTests.cont_018_*`
+(GameTest) check it on a room and on a held tank, stopping when its battery is
+empty, and a controller in its room not powering or listing it. This stays
+Accepted until the portable pump exists.*
 
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
@@ -1026,7 +1064,7 @@ at 16, configurable (TNT is 4).
 for the canister's rule.*
 
 #### CONT-103 · Tank transfer valve
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13
 
 A handheld tank transfer valve shall hold two gas tanks (CONT-030) joined by a
 valve. Opening the valve moves all of the first tank's gas into the second;
@@ -1041,8 +1079,18 @@ It's an item until its timer starts, and an entity once primed (CONT-104).
 - **Changed 2026-11-02 (the owner, in the batch 3 art review):** a TTV is an
   entity only once primed, like primed TNT (CONT-104).
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`zas_atmos:tank_transfer_valve` holds two tanks, fitted by right-clicks in an
+inventory while its valve is closed. Taking a tank off an open valve closes it
+first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
+`cont_103_a_hot_mixture_burns_in_the_tank`,
+`cont_103_without_both_tanks_no_gas_moves`,
+`cont_103_tanks_go_on_and_come_off_in_an_inventory` and
+`cont_103_the_screen_takes_tanks_off` check it. Until CONT-038 is built, a
+TTV's tank fails only by exploding above 50 atm, without leaks or ruptures.*
+
 #### CONT-104 · TTV timer
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
 A TTV's valve shall open by hand, or when a timer set from 0 to 600 s
 (default 10 s) runs out. Starting the timer primes the TTV: it becomes an
@@ -1059,6 +1107,19 @@ timer starts, as in vg. vg's signaler and proximity triggers are R2.
   inventory or as a dropped item.
 
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
+
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+The entity is `zas_atmos:primed_tank_transfer_valve`. A TTV that survives its
+valve opening drops as an item again after 5 s, so a dud doesn't stay forever
+where no one can touch it; the requirement doesn't say, so that is for the owner
+to confirm. `cont_104_the_valve_opens_by_hand`,
+`cont_104_at_0_s_the_valve_opens_when_the_timer_starts`,
+`cont_104_the_valve_opens_when_the_timer_runs_out`,
+`cont_104_a_primed_valve_ticks_in_the_world`,
+`cont_104_a_primed_valve_cant_be_picked_up_or_used`,
+`cont_104_the_timer_is_clamped_to_its_range`,
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
+and `cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -1646,7 +1707,7 @@ pipes join it only at the water inlet on its back.
   join only the water inlet on the back.
 
 #### CONT-053 · Photosynthesis
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33, D-13, S-11
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
 
 Inside a zone, plants (data-driven by block tag: crops, saplings, leaves,
 etc.) shall turn CO₂ into an equal number of moles of O₂ while lit, limited by
@@ -1664,8 +1725,19 @@ Hardcore placing one in an enclosed, unzoned area forms a zone. Photosynthesis
 reads the same tag. CONT-057's two rates can tell leaves apart by
 `#minecraft:leaves`, or split the tag into two that it includes.*
 
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)),
+in `zas`, beside respiration, whose non-triggering `LIFE` mutations it shares; the
+design and its cost are in
+[architecture.md](../architecture.md#photosynthesis-cont-053-cont-057). The tag
+is split: `#zas:plants` holds `#zas:crop_plants` and `#zas:leaf_plants`. Light is
+what a player reads, block light or sky light less the day's darkening, so a glass
+greenhouse slows at night. `cont_053_lit_crops_stop_when_co2_runs_out` checks equal
+moles, the stop and the `LIFE` ledger, and `PhotosynthesisTests` also covers a
+plant in the dark, a paused zone, the zones plants act in under each preset, and
+how plants are found and followed.*
+
 #### CONT-057 · Photosynthesis rates
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-33, S-11
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-33, S-11
 
 Rates shall be configurable per tag and scale linearly with light level, from
 0 at light 0. Defaults at light 15 follow the preset (OPS-007), so that a
@@ -1685,6 +1757,14 @@ LIFE-042):
 *2026-10-31: defaults lowered from 0.002 and 0.001 mol/s (one crop supplied
 about 7 breathers) and made preset-dependent, at the user's request before
 the baseline (D-61).*
+
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)).
+The options are `crop_photosynthesis_rate`, for `#zas:crop_plants` and anything
+else in `#zas:plants`, and `leaf_photosynthesis_rate`, for `#zas:leaf_plants`
+([config.md](../config.md#the-preset-and-its-options)). The arithmetic is
+`PhotosynthesisRatesTest`, and `cont_057_rates_at_light_15_and_7_under_each_preset`
+checks the table in the world for wheat, a sapling and leaves. Leaves dim their own
+position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
 `Must` · `R1` · `Accepted` · Verify: Inspect
@@ -1850,6 +1930,11 @@ mixer`, drawn while on, running or idle. The `FilterMixerTests.cont_060_*`
 GameTests check a controller pays for each while it is on, and that each draws
 nothing while it is off. This stays Accepted until every device's draw is in the
 config.*
+
+*2026-11-04: The scrubber's 15 (30) FE/t are `[power] scrubber` and `[power]
+scrubber_panic`, drawn while it isn't off
+(`ScrubberTests.cont_065_a_scrubber_draws_only_while_on_and_twice_as_much_in_panic`).
+This stays Accepted until every device's draw is in the config.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01

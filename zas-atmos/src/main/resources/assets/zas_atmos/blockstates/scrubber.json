@@ -1,0 +1,92 @@
+{
+  "variants": {
+    "facing=north,mode=off": {
+      "model": "zas_atmos:block/scrubber"
+    },
+    "facing=east,mode=off": {
+      "model": "zas_atmos:block/scrubber",
+      "y": 90
+    },
+    "facing=south,mode=off": {
+      "model": "zas_atmos:block/scrubber",
+      "y": 180
+    },
+    "facing=west,mode=off": {
+      "model": "zas_atmos:block/scrubber",
+      "y": 270
+    },
+    "facing=up,mode=off": {
+      "model": "zas_atmos:block/scrubber_vertical"
+    },
+    "facing=down,mode=off": {
+      "model": "zas_atmos:block/scrubber_vertical",
+      "x": 180
+    },
+    "facing=north,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_on"
+    },
+    "facing=east,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_on",
+      "y": 90
+    },
+    "facing=south,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_on",
+      "y": 180
+    },
+    "facing=west,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_on",
+      "y": 270
+    },
+    "facing=up,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_vertical_on"
+    },
+    "facing=down,mode=scrub": {
+      "model": "zas_atmos:block/scrubber_vertical_on",
+      "x": 180
+    },
+    "facing=north,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_siphon"
+    },
+    "facing=east,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_siphon",
+      "y": 90
+    },
+    "facing=south,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_siphon",
+      "y": 180
+    },
+    "facing=west,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_siphon",
+      "y": 270
+    },
+    "facing=up,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_vertical_siphon"
+    },
+    "facing=down,mode=siphon": {
+      "model": "zas_atmos:block/scrubber_vertical_siphon",
+      "x": 180
+    },
+    "facing=north,mode=panic": {
+      "model": "zas_atmos:block/scrubber_panic"
+    },
+    "facing=east,mode=panic": {
+      "model": "zas_atmos:block/scrubber_panic",
+      "y": 90
+    },
+    "facing=south,mode=panic": {
+      "model": "zas_atmos:block/scrubber_panic",
+      "y": 180
+    },
+    "facing=west,mode=panic": {
+      "model": "zas_atmos:block/scrubber_panic",
+      "y": 270
+    },
+    "facing=up,mode=panic": {
+      "model": "zas_atmos:block/scrubber_vertical_panic"
+    },
+    "facing=down,mode=panic": {
+      "model": "zas_atmos:block/scrubber_vertical_panic",
+      "x": 180
+    }
+  }
+}

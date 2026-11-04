@@ -446,6 +446,11 @@ uncovered part of the face (GEO-003, GEO-004).
   a zone, at the cell a mutation at the block's centre resolves to (§6.5), and
   skips cells the published table already zones. From there it is like any
   zone-forming operation (§4.3).
+- **Plant changes (CONT-053).** A write that makes a position a plant or stops
+  it being one, whatever the preset, goes into a third per-section bitset, which
+  photosynthesis drains once a period and filters by the sections it keeps
+  plants for (§5, [Photosynthesis](#photosynthesis-cont-053-cont-057)). A crop
+  growing isn't one. Any other write costs the same two array reads again.
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
   saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
@@ -1056,7 +1061,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Service | Input | Cadence | Requirements |
 |---|---|---|---|
 | Hazards and breathing | published snapshot, point lookup by entity eye position (API-015), life-support capabilities | staggered per entity (LIFE-007, LIFE-033), capped per tick (LIFE-038) | LIFE, D-27, D-47 |
-| Respiration and photosynthesis | queue ops with source attribution | per breather or crop on its own cadence, aggregated per zone per atmos tick | LIFE-005, CONT-053 |
+| Respiration and photosynthesis | queue ops with source attribution | respiration per breather on its own cadence; photosynthesis a pass over the known plants, spread across game ticks; both aggregated per zone per atmos tick | LIFE-005, CONT-053 |
 | Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` and light vanilla fires | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027, FIRE-033, FIRE-034 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
@@ -1659,6 +1664,88 @@ client breathing sync (LIFE-023): the server sends each player its own state
   change the verdict, and a higher-priority one's `canBreathe = false` survives:
   the handler only ever sets it to false.
 
+### Photosynthesis (CONT-053, CONT-057)
+
+*Implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)):*
+`life.Photosynthesis` turns CO₂ into the same moles of O₂ for the lit plants in
+a zone, and `life.PhotosynthesisRates` holds the arithmetic.
+
+**Where it lives.** It is in `zas`, beside respiration, and adds no API. It reads
+the two rates from `PresetOptions`, the plants from `TriggerStates` and the
+change hook, and it changes gas with `AtmosService.removeForLife` and
+`addForLife`, the ledger's `LIFE` category, which never form a zone (CORE-051).
+All of those are the framework's. In `zas_atmos` (CONT-095) it would need API for
+each, and `GasMutations` wouldn't do for the gas: it forms a zone under Normal
+(CORE-055), and S-11's greenhouse stays unzoned there. It also holds no block or
+item of its own, only behaviour for vanilla and tagged blocks.
+
+**Finding plants.** The plants are indexed per section, a 4096-bit set, for the
+sections the worker mirrors (§4.3): those holding or bordering zoned cells. No
+zoned cell is read to find a plant, and nothing depends on the size of the
+loaded world (NFR-003).
+
+- A section is read once, when it joins the mirror. Its palette answers first
+  (`LevelChunkSection#maybeHas`), so a section with no plant costs one palette
+  check and is remembered as having none. A section whose palette holds one has
+  its 4096 states read, at most 16 sections per pass. The rest wait for the next
+  pass, so a big zone loading starts its plants late instead of stalling a tick.
+- After that it follows writes: the change hook marks each position that becomes
+  a plant or stops being one (§4.2), and the bits are drained once a period. A
+  crop growing or leaves updating their distance don't mark anything.
+- A section leaves the index when it leaves the mirror or its chunk unloads.
+  `/reload` empties the index, since the tags may have changed.
+
+**The pass.** Each period the known plants are walked once, spread over the
+period's game ticks a section at a time, as devices are (D-31). A plant counts if
+its zone is unpaused and holds CO₂ and light reaches it. A full block has no cell
+of its own, so leaves, until GEO-009 makes them permeable, count towards their
+first zoned neighbour. Light levels are summed as integers per zone, one sum per
+rate. At the period's end each zone gets one removal of CO₂, and when that is
+applied the moles actually removed come back as O₂ at the removed gas's
+temperature, sharing `Respiration.turn`. So a zone stops when its CO₂ runs out,
+and O₂ arrives one atmos tick after the CO₂ leaves, as CO₂ does for a breather.
+The rates and the period are read when the pass is sent, so a preset change or
+an override takes effect at once.
+
+**Light** is what a player reads: the brighter of block light and sky light less
+`ServerLevel#getSkyDarken`, from 0 to 15. Sky light passes glass, so a greenhouse
+slows at night to 4/15 of its noon rate unless a lamp lights it. A plant that dims
+light, such as leaves, reads at most 14 at its own position, so for those the
+brightest neighbour counts too. Tags pick the rate: `#zas:leaf_plants` at the leaf
+rate, anything else in `#zas:plants` at the crop rate.
+
+**Cost** (NFR-001, NFR-002). Measured on the development machine while other
+builds ran, in a temporary GameTest timing `stepNow` over 60 passes and taking the
+median, with 12,700 wheat and 12,700 leaves in 12 zones:
+
+| Work | When | Measured |
+|---|---|---|
+| The hook's two array reads for a write | every block write | 2 to 3 ns |
+| Bringing the index up to date and listing sections, with few plants | once per period | 15 to 35 µs, with 117 to 355 mirrored sections and no trend between them |
+| Palette check of a section joining with no plant | once per section | not timed: a look through the section's palette, a handful of entries |
+| Reading a section's 4096 states | once per section, 16 per pass at most | about 25 µs, so at most 0.4 ms in a game tick |
+| Walking a crop: one zone lookup, one light read | once per period | about 55 ns |
+| Walking a leaf block: zone lookups for it and its neighbours, up to 7 light reads | once per period | about 125 ns |
+
+That whole test came to 2.4 ms per period, which the spreading turns into about
+0.12 ms per game tick against NFR-001's 2 ms average. A section packed with 4096
+leaves is the most one game tick walks: about 0.5 ms against NFR-002's 10 ms. A
+greenhouse of 100 crops costs about 6 µs per period on top. A world with no plants
+pays the first two rows only: at most 35 µs per period at the section counts S-10
+reaches, or under 2 µs per game tick. Like respiration's sends, this runs in a
+server tick listener outside `AtmosService.tickNanos`, so the profiler's atmos
+time doesn't count it.
+
+Rejected:
+
+- Scanning zoned cells every atmos tick: S-10's 40,000 cells would be read once a
+  second to find what rarely changes.
+- Tracking plants across the loaded world, as `Burners` does for fires: leaves are
+  everywhere, so the index would follow the loaded world's size, not the zones'
+  (NFR-003). Burning blocks are rare enough for that; plants aren't.
+- Hooking random ticks: the rate would depend on `randomTickSpeed` and on chance,
+  and leaves far from players would stop, so CONT-057's rates couldn't hold.
+
 ### Atmosphere HUD
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
@@ -1919,7 +2006,7 @@ because STARTUP config is too late for block classes.
 
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
-| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, and record a Hardcore zone trigger the write starts | GEO-010, GEO-011, GEO-012, CORE-056 | **S1**, GameTests |
+| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, record a Hardcore zone trigger the write starts, and note a plant appearing or going | GEO-010, GEO-011, GEO-012, CORE-056, CONT-053 | **S1**, GameTests |
 | M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable (`FireBlockMixin`) | A fire whose cell fails the fire oxygen threshold goes out; its O₂ use is the burning service's | FIRE-020, FIRE-030 | GameTests (`fire_020_`, `fire_030_`) |
 | M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-014 | GameTests (`fire_020_`) |
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020 | applied; no GameTest of its own |
@@ -2004,14 +2091,14 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy` and a fire extinguisher's `zas_atmos:charges`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
-| `scrubber` | What a scrubber takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`), for every device that scrubs (CONT-015, CONT-079 to CONT-081) |
+| `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
@@ -2021,8 +2108,9 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
+| `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2107,17 +2195,18 @@ the cell in front of its grille).
 
 - **Nodes.** Every network member is a `PipeNodeEntity`, a device block
   entity with a gas volume (CONT-007): a pipe or a pipe cap holds 70 L, a
-  port buffer or a valve's body 200 L, a vent's buffer 400 L, a canister
-  1,000 L. Device buffers are network members, so a device sees its network's
-  conditions.
+  port buffer such as a scrubber's, or a valve's body, 200 L, a vent's buffer
+  400 L, a canister 1,000 L. Device buffers are network members, so a device
+  sees its network's conditions.
 - **Connections.** A block that pipes join implements `PipeConnector`, which
   says on which faces it offers a connection; two neighbours are connected
   when both offer one on their shared face. A pipe offers every face, a cap
-  only the face it points at, a vent only its back (CONT-014), a connector
-  port only its bottom, plus its top for a canister (CONT-083), and a valve
-  its two flanges (CONT-010). Gas passes a connection unless one side shuts
-  it (`carriesGas`), as a shut valve does: `PipeConnector.connected` decides a
-  pipe's arms and open ends, and `joined` decides who shares a network.
+  only the face it points at, a vent or scrubber only its back (CONT-014,
+  CONT-015), a connector port only its bottom, plus its top for a canister
+  (CONT-083), and a valve its two flanges (CONT-010). Gas passes a connection
+  unless one side shuts it (`carriesGas`), as a shut valve does:
+  `PipeConnector.connected` decides a pipe's arms and open ends, and `joined`
+  decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
 - **Blocks in several networks.** A block entity that pipes join is a
@@ -2273,6 +2362,37 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
+- **Scrubber** (CONT-015, CONT-079 to CONT-081), in `.scrubber`.
+  - Shaped like the vent: a full block whose grille faces any of six ways,
+    facing the player who places it, with a pipe only on its back. Its 200 L
+    port buffer is a network member, so the network's pressure is its buffer's.
+    It acts on the cell in front of the grille, which is also its `airPoint`.
+    In an open cell the air is the ambient, one cell's volume, as for a vent.
+  - Its `ScrubberMode` is off, scrub, siphon or panic. Each atmos tick,
+    `ScrubberMath.take` gives what it takes: the share of each gas that a
+    sample holds, 500 L/s over the zone's volume (1,000 L/s in panic) and at
+    most all of it. Scrubbing keeps only the gases of its `GasSelection`, gases
+    named or in a gas tag, by default CO₂ and `#zas:toxic`. Siphon and panic
+    keep the whole sample. What a sample doesn't keep is never removed, so the
+    change is one `GasMutations.remove` of the kept gases, on one `ZonePort`.
+    The gas reaches the network when the removal completes, at the zone's
+    temperature.
+  - It takes nothing once the network reaches 50 atm, and cuts the sample that
+    would pass 50 atm to what reaches it (CONT-081). A burst needs 100 atm
+    over the cell (CONT-108), so scrubbing alone never bursts a pipe.
+  - It runs only while powered, in the life-support group, drawing `[power]
+    scrubber` FE/t while it scrubs or siphons and `[power] scrubber_panic` in
+    panic. Its block state's `mode` shows what it is doing: its mode while it
+    runs, else off.
+  - **For the area air controller:** the scrubber is a `ScrubberControl`
+    (§11.6), and is controlled as a vent is, with `ScrubberOrder.sender`,
+    `controlled()`, `controller()` and `setByHand`. A scrub order sets the mode
+    and the selection; off and panic keep the selection.
+  - Its GUI shows the mode or the order, a `ScrubberStatus` (off, taking gas, or
+    idle because the air is settling, there is nothing to take, or it has
+    stalled), the network's pressure and its power. It has a mode button and a
+    toggle for each shipped gas and gas tag. A datapack's gas is reached
+    through a tag it joins.
 - **Valves** (CONT-010, CONT-075), in `.valve`.
   - An inline part with a pipe flange at each end of its `axis`, and no power
     or GUI. It takes the axis with the most parts offering it a connection, and
@@ -2341,7 +2461,7 @@ the cell in front of its grille).
     `ThermoMachineBlockEntity`, `ThermoMachineMenu`, `ThermoStatus` and
     `ThermoMachineScreen`, and what it shares with every portable in the
     `.portable` package: `PortableBlock` (facing, `lit`, shape, opening the GUI,
-    dropping the battery), `PortableDevice` (the battery slot, the switch, the
+    dropping what it holds), `PortableDevice` (the battery slot, the switch, the
     `point()`) and `PortableMenu`.
 - **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
   in `.heater`. The heater's mirror, the same size and on the same code. Its
@@ -2356,6 +2476,20 @@ the cell in front of its grille).
   the setpoint, the way a heater holds its room just under it; in the GameTest,
   a stone room in the Overworld 5 K under the ambient stays within 0.5 K above a
   288 K setpoint and never goes below it.
+- **Portable scrubber** (CONT-018, D-73), in `.portable`, on `PortableGasDevice`,
+  the base for a portable that moves gas. It has a 2,000 L store and two slots,
+  a battery and a held tank (`TankSlot`). It works on the held tank if there is
+  one, instead of the room, and otherwise on the zone it stands in, through one
+  `ZonePort` (CONT-072), waiting on `CellWatch` as a vent does. In open air with
+  no tank it does nothing. `PortableScrubberMath` gives what it takes each
+  second: the gases of `GasSelection.DEFAULT` (CO₂ and `zas:toxic`) from a
+  2,500 L sample, through `ScrubberMath`, up to the moles of 150 L of the air,
+  stopping at 50 atm in the store. It pays `[power] portable_scrubber` FE/t (15)
+  only while it moves gas, and moves what the charge pays for when too little is
+  left. The store and a held tank react each atmos tick (CONT-100). The store has
+  no outlet, since a portable has no pipe (D-73). Its item keeps the store's gas
+  when mined, as a canister's does: broken in creative the gas is destroyed, and
+  removed any other way it is released where the portable stood.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as
@@ -2477,7 +2611,7 @@ the cell in front of its grille).
   100 L at its own conditions, and when one can't give what it's asked for, both
   scale by the same factor. An input with a fraction of 0 is never asked for gas,
   so it can be empty. It draws `[power] mixer` FE/t (20).
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, recharger or inline device with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
@@ -2531,10 +2665,10 @@ tick, in order:
    target.
 7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
    whose air point is in its zone, and every part linked to it with the
-   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`,
-   with its own position as the order's `sender`, and each `ScrubberControl`
-   the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
-   come first because a part's draw follows its order.
+   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`
+   and each `ScrubberControl` the mode's `ScrubberOrder`, with its own position
+   as the order's `sender`, then powers them (§11.7), every tick. Orders come
+   first because a part's draw follows its order.
 8. **Closes its firelocks at once.** In the step its alarm starts, it steps
    each loaded firelock it covers that isn't alarmed yet
    (`FirelockBlockEntity.alarmRaised`), so the firelocks close in that atmos
@@ -2560,8 +2694,9 @@ pressure's safe band, min1 to max1 (101 kPa for Human).
 **Device control.** `VentControl` and `ScrubberControl` are the controller's
 side of the vent and scrubber. The vent (#48) implements `VentControl` by
 mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
-blowing with external bound `t` (and internal bound 0). No scrubber exists
-yet; its GameTests use a stand-in (`gametest.TestParts`).
+blowing with external bound `t` (and internal bound 0). The scrubber (§11.5)
+implements `ScrubberControl` by mapping `ScrubberOrder.scrub(gases, tags)` to
+scrubbing that selection, and `PANIC` and `OFF` to those modes.
 
 **Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
 at danger 2. It powers the wall behind it strongly, as a lever does.
@@ -2809,3 +2944,43 @@ is in [crafting.md](crafting.md), and a crafted one is full.
 - **What it doesn't do.** It doesn't put out burning entities, cool anything
   or change the gas: a fire whose zone still has the O₂ and heat can light
   again (FIRE-010).
+
+### 11.11 The tank transfer valve (CONT-103, CONT-104)
+
+Two gas tanks joined by a valve, with a timer: `ttv.TransferValve` holds the
+tanks and the valve and is what the item and the entity share.
+
+- **The valve.** Opening moves all of the first tank's gas into the second,
+  mixing temperatures through `GasTankItem.add`; the second tank's volume
+  doesn't change, so the pressure there is what makes a TTV a bomb. Closing
+  shares the gas between the tanks by volume. Each tank then takes the kind of
+  what it holds (`GasTankItem.ofItsKind`). With a tank missing no gas moves, so
+  the valve's button refuses, and the timer running out only shows the valve
+  open.
+- **The item** (`TransferValveItem`). The tanks are the stack's
+  `zas_atmos:ttv_tanks`, slot 0 the first and slot 1 the second; a working
+  `TransferValve` is read from the stack and saved back. Tanks go on by
+  right-clicks in an inventory, as a bundle's contents do, only while the valve
+  is closed. Taking a tank off an open valve closes it first, so the tank has
+  its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
+  Each atmos tick its tanks react in a player's inventory or on the ground, and
+  a tank that fails destroys the stack.
+- **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
+  the tank screen's pattern. A button sends `TransferValveSettings` (hand and
+  button id); the server refuses an unknown hand or button or a hand holding no
+  TTV, and clamps the timer to 0–600 s.
+- **Primed** (`PrimedTransferValve`). Starting the timer consumes the item and
+  adds the entity at the player's feet, tossed gently the way they face, with
+  primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
+  or hurt, so a timer can't be stopped. It counts its fuse down in game ticks,
+  opens its valve at 0, and at 0 s does so as it is added. Its tanks react every
+  atmos tick, and at once when the valve opens, so a mixture above autoignition
+  burns on the next game tick. A TTV that survives waits `SETTLE_TICKS` (5 s)
+  and drops as an item, valve open and timer setting kept, so a dud can be
+  taken away. It saves its tanks, valve, timer and countdowns.
+- **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which
+  have no block state, so `ModelEvent.RegisterAdditional` loads them: no tanks,
+  one or two, timer running or valve open. Each tank's faces carry a tint index,
+  1 for the first and 2 for the second, tinted by the tank's kind. Clients are
+  sent the tanks and the valve as entity data. The item uses the same tints on
+  its sprite's layers 1 and 2, and `zas_atmos:tanks` picks its sprite.
