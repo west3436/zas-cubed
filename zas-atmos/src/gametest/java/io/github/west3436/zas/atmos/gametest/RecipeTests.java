@@ -54,6 +54,7 @@ public final class RecipeTests {
                 AtmosItems.FIRELOCK.get(),
                 AtmosItems.HEATER.get(),
                 AtmosItems.AIR_CONDITIONER.get(),
+                AtmosItems.PORTABLE_SCRUBBER.get(),
                 AtmosItems.RECHARGER.get(),
                 AtmosItems.MULTITOOL.get(),
                 AtmosItems.CROWBAR.get(),

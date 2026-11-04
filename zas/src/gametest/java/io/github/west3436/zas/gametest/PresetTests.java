@@ -287,8 +287,12 @@ public final class PresetTests {
                     report.contains("  block_pressure_damage = false [preset] (Normal false, Hardcore true), not used"
                             + " yet: waits for FLOW-007"),
                     report);
+            // Photosynthesis reads its rates (CONT-057), so they don't wait either.
             h.assertTrue(
-                    report.contains("  crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625)"),
+                    report.contains("  crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625)\n"),
+                    report);
+            h.assertTrue(
+                    report.contains("  leaf_photosynthesis_rate = 0.0625 [preset] (Normal 0.0625, Hardcore 0.03125)\n"),
                     report);
             h.assertTrue(report.contains("Zone triggers under both presets (CORE-055)"), report);
 
