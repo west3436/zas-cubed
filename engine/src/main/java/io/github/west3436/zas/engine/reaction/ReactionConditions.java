@@ -70,7 +70,9 @@ public record ReactionConditions(
     }
 
     /**
-     * A fuel's flammability limits in air and its autoignition temperature (FIRE-003, FIRE-006).
+     * A fuel's flammability limits in air and its autoignition temperature (FIRE-003, FIRE-006). The
+     * limits are declared for {@link #REFERENCE_TEMPERATURE} and hold at and below it; above it they
+     * widen with the gas's temperature (FIRE-032, {@link #lowerAt}, {@link #upperAt}).
      *
      * @param fuel the fuel gas id
      * @param lower the lower flammability limit, as the fuel's mole fraction of the mixture
@@ -79,6 +81,22 @@ public record ReactionConditions(
      *     ignition source; {@link Double#POSITIVE_INFINITY} if it always needs one
      */
     public record FlammabilityLimits(String fuel, double lower, double upper, double autoignition) {
+        /** The temperature the declared limits are for, K (FIRE-032). */
+        public static final double REFERENCE_TEMPERATURE = 298;
+
+        /**
+         * The lowest a lower limit falls to with temperature, as a mole fraction (FIRE-032): 0.1 %, so
+         * a hot room's fire burns its fuel out and stops instead of chasing the last traces. A limit
+         * declared below it stays where it is.
+         */
+        public static final double LOWER_LIMIT_FLOOR = 0.001;
+
+        /**
+         * The modified Burgess–Wheeler constant, 0.75 percentage points · (kcal/mol) / K, as mole
+         * fraction · (J/mol) / K.
+         */
+        private static final double BURGESS_WHEELER = 0.0075 * 4184;
+
         public FlammabilityLimits {
             Objects.requireNonNull(fuel, "fuel");
             if (!(lower > 0 && lower < 1)) {
@@ -90,6 +108,38 @@ public record ReactionConditions(
             if (!(autoignition > 0)) {
                 throw new IllegalArgumentException("flammability: autoignition must be positive, got " + autoignition);
             }
+        }
+
+        /**
+         * The lower limit at a temperature (FIRE-032).
+         *
+         * @param temperature the gas's temperature, K
+         * @param heatOfCombustion the heat released per mole of fuel, J/mol; without any, the limit
+         *     stays as declared
+         * @return the limit, as a mole fraction: the declared one less the widening, but not below
+         *     {@link #LOWER_LIMIT_FLOOR}
+         */
+        public double lowerAt(double temperature, double heatOfCombustion) {
+            return Math.max(Math.min(lower, LOWER_LIMIT_FLOOR), lower - widening(temperature, heatOfCombustion));
+        }
+
+        /**
+         * The upper limit at a temperature (FIRE-032).
+         *
+         * @param temperature the gas's temperature, K
+         * @param heatOfCombustion the heat released per mole of fuel, J/mol; without any, the limit
+         *     stays as declared
+         * @return the limit, as a mole fraction: the declared one plus the widening, at most 1
+         */
+        public double upperAt(double temperature, double heatOfCombustion) {
+            return Math.min(1, upper + widening(temperature, heatOfCombustion));
+        }
+
+        private static double widening(double temperature, double heatOfCombustion) {
+            if (!(temperature > REFERENCE_TEMPERATURE) || !(heatOfCombustion > 0)) {
+                return 0;
+            }
+            return BURGESS_WHEELER * (temperature - REFERENCE_TEMPERATURE) / heatOfCombustion;
         }
     }
 }
