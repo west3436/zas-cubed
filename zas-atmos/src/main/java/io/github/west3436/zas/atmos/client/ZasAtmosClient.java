@@ -58,6 +58,7 @@ public final class ZasAtmosClient {
     private static void screens(RegisterMenuScreensEvent event) {
         event.register(AtmosMenus.CANISTER.get(), CanisterScreen::new);
         event.register(AtmosMenus.VENT.get(), VentScreen::new);
+        event.register(AtmosMenus.SCRUBBER.get(), ScrubberScreen::new);
         event.register(AtmosMenus.AREA_AIR_CONTROLLER.get(), ControllerScreen::new);
         event.register(AtmosMenus.GENERATOR.get(), GeneratorScreen::new);
         event.register(AtmosMenus.HEATER.get(), ThermoMachineScreen<HeaterMenu>::new);

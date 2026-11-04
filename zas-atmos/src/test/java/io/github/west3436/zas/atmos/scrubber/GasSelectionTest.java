@@ -38,6 +38,17 @@ class GasSelectionTest {
     }
 
     @Test
+    void cont_015_a_toggle_changes_only_its_own_gas_or_tag() {
+        GasSelection on = GasSelection.DEFAULT.toggled(StandardAir.OXYGEN);
+        assertEquals(Set.of(CO2, StandardAir.OXYGEN), on.gases());
+        assertEquals(GasSelection.DEFAULT, on.toggled(StandardAir.OXYGEN));
+        GasSelection off = GasSelection.DEFAULT.toggled(GasTags.TOXIC);
+        assertEquals(Set.of(), off.tags());
+        assertEquals(Set.of(CO2), off.gases());
+        assertEquals(GasSelection.DEFAULT, off.toggled(GasTags.TOXIC));
+    }
+
+    @Test
     void cont_015_a_selection_saves_and_loads() {
         GasSelection s = GasSelection.of(List.of(CO2, StandardAir.OXYGEN), List.of(GasTags.TOXIC, GasTags.OXIDIZER));
         assertEquals(s, GasSelection.load(s.save()));

@@ -7,6 +7,7 @@ import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
+import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -49,6 +50,10 @@ public final class AtmosMenus {
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
             MENUS.register("recharger", () -> new MenuType<>(RechargerMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
+    public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
+            MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

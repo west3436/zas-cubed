@@ -2011,7 +2011,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
-| `scrubber` | What a scrubber takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`), for every device that scrubs (CONT-015, CONT-079 to CONT-081) |
+| `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
@@ -2105,17 +2105,18 @@ the cell in front of its grille).
 
 - **Nodes.** Every network member is a `PipeNodeEntity`, a device block
   entity with a gas volume (CONT-007): a pipe or a pipe cap holds 70 L, a
-  port buffer or a valve's body 200 L, a vent's buffer 400 L, a canister
-  1,000 L. Device buffers are network members, so a device sees its network's
-  conditions.
+  port buffer such as a scrubber's, or a valve's body, 200 L, a vent's buffer
+  400 L, a canister 1,000 L. Device buffers are network members, so a device
+  sees its network's conditions.
 - **Connections.** A block that pipes join implements `PipeConnector`, which
   says on which faces it offers a connection; two neighbours are connected
   when both offer one on their shared face. A pipe offers every face, a cap
-  only the face it points at, a vent only its back (CONT-014), a connector
-  port only its bottom, plus its top for a canister (CONT-083), and a valve
-  its two flanges (CONT-010). Gas passes a connection unless one side shuts
-  it (`carriesGas`), as a shut valve does: `PipeConnector.connected` decides a
-  pipe's arms and open ends, and `joined` decides who shares a network.
+  only the face it points at, a vent or scrubber only its back (CONT-014,
+  CONT-015), a connector port only its bottom, plus its top for a canister
+  (CONT-083), and a valve its two flanges (CONT-010). Gas passes a connection
+  unless one side shuts it (`carriesGas`), as a shut valve does:
+  `PipeConnector.connected` decides a pipe's arms and open ends, and `joined`
+  decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
 - **One mixture.** A `PipeNetwork` is its members and one `GasStore`, whose
@@ -2263,6 +2264,37 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
+- **Scrubber** (CONT-015, CONT-079 to CONT-081), in `.scrubber`.
+  - Shaped like the vent: a full block whose grille faces any of six ways,
+    facing the player who places it, with a pipe only on its back. Its 200 L
+    port buffer is a network member, so the network's pressure is its buffer's.
+    It acts on the cell in front of the grille, which is also its `airPoint`.
+    In an open cell the air is the ambient, one cell's volume, as for a vent.
+  - Its `ScrubberMode` is off, scrub, siphon or panic. Each atmos tick,
+    `ScrubberMath.take` gives what it takes: the share of each gas that a
+    sample holds, 500 L/s over the zone's volume (1,000 L/s in panic) and at
+    most all of it. Scrubbing keeps only the gases of its `GasSelection`, gases
+    named or in a gas tag, by default CO₂ and `#zas:toxic`. Siphon and panic
+    keep the whole sample. What a sample doesn't keep is never removed, so the
+    change is one `GasMutations.remove` of the kept gases, on one `ZonePort`.
+    The gas reaches the network when the removal completes, at the zone's
+    temperature.
+  - It takes nothing once the network reaches 50 atm, and cuts the sample that
+    would pass 50 atm to what reaches it (CONT-081). A burst needs 100 atm
+    over the cell (CONT-108), so scrubbing alone never bursts a pipe.
+  - It runs only while powered, in the life-support group, drawing `[power]
+    scrubber` FE/t while it scrubs or siphons and `[power] scrubber_panic` in
+    panic. Its block state's `mode` shows what it is doing: its mode while it
+    runs, else off.
+  - **For the area air controller:** the scrubber is a `ScrubberControl`
+    (§11.6), and is controlled as a vent is, with `ScrubberOrder.sender`,
+    `controlled()`, `controller()` and `setByHand`. A scrub order sets the mode
+    and the selection; off and panic keep the selection.
+  - Its GUI shows the mode or the order, a `ScrubberStatus` (off, taking gas, or
+    idle because the air is settling, there is nothing to take, or it has
+    stalled), the network's pressure and its power. It has a mode button and a
+    toggle for each shipped gas and gas tag. A datapack's gas is reached
+    through a tag it joins.
 - **Valves** (CONT-010, CONT-075), in `.valve`.
   - An inline part with a pipe flange at each end of its `axis`, and no power
     or GUI. It takes the axis with the most parts offering it a connection, and
@@ -2432,10 +2464,10 @@ tick, in order:
    target.
 7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
    whose air point is in its zone, and every part linked to it with the
-   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`,
-   with its own position as the order's `sender`, and each `ScrubberControl`
-   the mode's `ScrubberOrder`, then powers them (§11.7), every tick. Orders
-   come first because a part's draw follows its order.
+   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`
+   and each `ScrubberControl` the mode's `ScrubberOrder`, with its own position
+   as the order's `sender`, then powers them (§11.7), every tick. Orders come
+   first because a part's draw follows its order.
 8. **Closes its firelocks at once.** In the step its alarm starts, it steps
    each loaded firelock it covers that isn't alarmed yet
    (`FirelockBlockEntity.alarmRaised`), so the firelocks close in that atmos
@@ -2461,8 +2493,9 @@ pressure's safe band, min1 to max1 (101 kPa for Human).
 **Device control.** `VentControl` and `ScrubberControl` are the controller's
 side of the vent and scrubber. The vent (#48) implements `VentControl` by
 mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
-blowing with external bound `t` (and internal bound 0). No scrubber exists
-yet; its GameTests use a stand-in (`gametest.TestParts`).
+blowing with external bound `t` (and internal bound 0). The scrubber (§11.5)
+implements `ScrubberControl` by mapping `ScrubberOrder.scrub(gases, tags)` to
+scrubbing that selection, and `PANIC` and `OFF` to those modes.
 
 **Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
 at danger 2. It powers the wall behind it strongly, as a lever does.
