@@ -58,6 +58,10 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
     public static final DeferredItem<BlockItem> IGNITER = ITEMS.registerSimpleBlockItem(AtmosBlocks.IGNITER);
 
+    public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
+    public static final DeferredItem<BlockItem> REDSTONE_VALVE =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);
+
     // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
 
     public static final DeferredItem<BatteryItem> BATTERY =
