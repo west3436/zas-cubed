@@ -309,6 +309,8 @@ public record DebugOverlayPayload(
                 list(PARTITION).encode(buf, g.partitions());
                 buf.writeDouble(g.transmittance());
                 buf.writeDouble(g.sourceTemperature());
+                VarInt.write(buf, g.igniteOdds());
+                buf.writeDouble(g.ignitionTemperature());
             },
             buf -> {
                 int flags = VarInt.read(buf);
@@ -318,7 +320,9 @@ public record DebugOverlayPayload(
                 List<Geometry.Partition> partitions = list(PARTITION).decode(buf);
                 double u = buf.readDouble();
                 double source = buf.readDouble();
-                return new Geometry(coverage, cells, flags, through, partitions, u, source);
+                int odds = VarInt.read(buf);
+                double ignition = buf.readDouble();
+                return new Geometry(coverage, cells, flags, through, partitions, u, source, odds, ignition);
             });
 
     private static final StreamCodec<ByteBuf, Probe> PROBE = StreamCodec.of(

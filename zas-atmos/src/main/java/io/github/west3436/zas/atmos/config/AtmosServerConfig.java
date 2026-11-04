@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.config;
 
+import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -57,6 +58,9 @@ public final class AtmosServerConfig {
     /** The pressure fall within one atmos tick that alarms a controller at once, in kPa (CONT-043). */
     public static final ModConfigSpec.DoubleValue BREACH_DROP_KPA;
 
+    /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
+    public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -100,6 +104,12 @@ public final class AtmosServerConfig {
                         "A fall in its zone's pressure, in kPa within one atmos tick, that sends a controller to danger 2 at once, as a",
                         "breach does (CONT-043). Only for presets with a pressure min2, and only while the pressure is below min1. 0 turns it off.")
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
+        builder.pop();
+
+        builder.comment("How tanks and canisters fail (CONT-038, CONT-102).").push("containers");
+        EXPLOSION_POWER_CAP = builder.comment(
+                        "The most power a tank's or canister's explosion can have (CONT-109). TNT is 4.")
+                .defineInRange("explosion_power_cap", ContainerFailure.DEFAULT_POWER_CAP, 0.0, 64.0);
         builder.pop();
         SPEC = builder.build();
     }

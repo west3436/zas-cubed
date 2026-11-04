@@ -253,7 +253,7 @@ Atmosphere preset: Normal, 1 of 7 options overridden
   block_pressure_damage = false [preset] (Normal false, Hardcore true), not used yet: waits for FLOW-007
   crop_photosynthesis_rate = 0.125 [preset] (Normal 0.125, Hardcore 0.0625), not used yet: waits for CONT-057
   leaf_photosynthesis_rate = 0.0625 [preset] (Normal 0.0625, Hardcore 0.03125), not used yet: waits for CONT-057
-  container_explosions_break_blocks = false [preset] (Normal false, Hardcore true), not used yet: waits for CONT-107
+  container_explosions_break_blocks = false [preset] (Normal false, Hardcore true)
   Zone triggers under both presets (CORE-055): API calls, which include devices, leaks and /zas gas, and breaches of zones
 ```
 

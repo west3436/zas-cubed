@@ -356,7 +356,11 @@ public final class GeometryTests {
 
         BlockState scaffolding = Blocks.SCAFFOLDING.defaultBlockState();
         Geometry expected = GeometryDerivation.derive(GeometryDerivation.collisionShape(scaffolding));
-        check(h, geometry(scaffolding).equals(expected), "scaffolding should use its empty-context shape");
+        // Scaffolding is flammable, which is data on top of its shape (FIRE-033).
+        check(
+                h,
+                geometry(scaffolding).withIgnition(0, Double.NaN).equals(expected),
+                "scaffolding should use its empty-context shape");
         check(h, !expected.equals(Geometry.SOLID), "scaffolding's empty-context shape isn't a full block");
 
         Geometry powderSnow = geometry(Blocks.POWDER_SNOW.defaultBlockState());

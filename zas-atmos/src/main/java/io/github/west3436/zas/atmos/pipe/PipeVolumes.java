@@ -8,6 +8,9 @@ public final class PipeVolumes {
     /** A device port's buffer, as in vg. */
     public static final double PORT = 200;
 
+    /** A valve's body, one port's buffer, as in vg. */
+    public static final double VALVE = PORT;
+
     /** A vent's buffer: twice a port's, so it can keep up its rate (CONT-078). */
     public static final double VENT = 400;
 

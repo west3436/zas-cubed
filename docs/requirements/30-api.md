@@ -8,7 +8,8 @@ on 2026-11-02 ([#157](https://github.com/west3436/zas-cubed/issues/157)); the
 owner accepted both on 2026-11-03. API-053, the ignition source tag, and
 API-055 to API-058, the fire API, were added as Draft on 2026-11-03
 ([#42](https://github.com/west3436/zas-cubed/issues/42)); the owner accepted all
-five the same day.
+five the same day. API-059, whether container explosions break blocks, was added
+as Draft on 2026-11-04 for CONT-107.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -523,6 +524,24 @@ The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 *2026-11-03: accepted by the owner in the S-02/S-05/S-08 round's review.
 `zas_atmos`'s devices don't read it yet: they still step every 20 game
 ticks.*
+
+#### API-059 · Whether container explosions break blocks
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CONT-107, OPS-007, CONT-095 · Depends: API-009
+
+The API shall say whether explosions of gas containers break blocks: the
+preset's `container_explosions_break_blocks`, with any override, or false
+without ZAS³.
+
+- **Rationale:** Inferred: the content mod may use only the API (CONT-095), and
+  it can't follow the preset (CONT-107) without reading this option.
+- **Verify:** A Unit test checks the fallback's false; a GameTest checks the API
+  follows each preset and an override under either.
+
+*2026-11-04: added for review, with the behaviour built.
+`Atmospheres.containerExplosionsBreakBlocks()`. Checked by
+`api_059_container_explosions_break_no_blocks_without_zas` (Unit),
+`api_059_container_explosions_follow_the_preset` (GameTest) and
+`s_12_container_explosions_break_no_blocks` (GameTest, without ZAS³).*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009

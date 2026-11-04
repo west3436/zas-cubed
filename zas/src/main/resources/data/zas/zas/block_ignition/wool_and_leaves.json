@@ -1,0 +1,4 @@
+{
+  "blocks": ["#minecraft:wool", "#minecraft:wool_carpets", "#minecraft:leaves"],
+  "temperature": 500
+}

@@ -237,6 +237,12 @@ unchanged shared file and a reload of it, and `ops_007_preset_save_target`
 checks where each kind of world saves. So Verify's per-world part is covered;
 OPS-007 stays Accepted for the options still waiting.*
 
+*2026-11-04: container explosions are wired (CONT-107). `zas_atmos` reads
+`container_explosions_break_blocks` through the API (API-059), so it no longer
+waits, and the `cont_107_` GameTests check it under both presets and with
+overrides either way. Still waiting: block pressure damage and photosynthesis
+rates.*
+
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
 
