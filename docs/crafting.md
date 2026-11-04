@@ -1,8 +1,9 @@
 # Crafting
 
-**Status:** approved by the owner, 2026-11-02. Recipes for blocks and items
-that aren't in the mod yet are already shipped, and load once their item
-exists.
+**Status:** approved by the owner, 2026-11-02, except the fire extinguisher's
+recipe, proposed on 2026-11-04 and waiting for the owner's review. Recipes for
+blocks and items that aren't in the mod yet are already shipped, and load once
+their item exists.
 
 This page lists how every ZAS³ Atmospherics block and item is crafted, and
 the order a survival player gets them in (CONT-058). Every recipe uses
@@ -22,6 +23,9 @@ which are themselves made from vanilla materials (CONT-051).
   canister, and the same goes for tanks: you fill an empty tank from a
   canister to get an O₂ tank or an air tank (CONT-039). Neither the O₂ tank
   nor the air tank has a recipe.
+- **A crafted fire extinguisher comes full** (CONT-037). The water bucket in
+  its recipe charges it and the empty bucket comes back. After that it refills
+  at a water source block, not in the crafting grid.
 
 ## Progression
 
@@ -194,5 +198,6 @@ in any arrangement.
 | Wrench | Workshop | `I.I` / `.I.` / `.I.` | `I` iron ingot |
 | Crowbar | Workshop | `.II` / `.I.` / `I..` | `I` iron ingot |
 | Multitool | Workshop | Shapeless | ansible crystal, circuit board, iron ingot |
+| Fire extinguisher | Workshop | `.L.` / `IRI` / `IWI` | `L` lever, `I` iron ingot, `R` red dye, `W` water bucket |
 
 <!-- END GENERATED: recipes -->

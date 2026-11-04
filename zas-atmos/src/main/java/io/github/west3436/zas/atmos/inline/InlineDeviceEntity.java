@@ -3,7 +3,9 @@ package io.github.west3436.zas.atmos.inline;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
+import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipePort;
@@ -168,13 +170,24 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         return Vec3.atCenterOf(worldPosition);
     }
 
+    /**
+     * Each port's turn in its network's atmos tick, as a {@link PipeNodeEntity} takes its own: a
+     * network may hold only ports, with no pipe to run it, and it reacts all the same (CONT-100). This
+     * also rebuilds dissolved networks, so their gas is shared over their new members even while the
+     * device is off.
+     */
+    @Override
+    protected final void beforeAtmosTick(ServerLevel level) {
+        for (PipePort p : ports) {
+            PipeNetwork net = p.network();
+            if (net.startsAtmosTick(p)) {
+                ContainerReactions.react(net.gas());
+            }
+        }
+    }
+
     @Override
     protected final void atmosTick(ServerLevel level) {
-        // Rebuild dissolved networks now, so their gas is shared over their new members even while
-        // the device is off.
-        for (PipePort p : ports) {
-            p.network();
-        }
         boolean running = running();
         BlockState state = getBlockState();
         if (state.hasProperty(InlineDeviceBlock.ON) && state.getValue(InlineDeviceBlock.ON) != running) {

@@ -27,6 +27,7 @@ import java.util.function.Function;
 public final class PipeNetwork {
     private final List<PipeNode> members;
     private final GasStore gas;
+    private final Set<PipeNode> steppedThisTick = Collections.newSetFromMap(new IdentityHashMap<>());
     private boolean valid = true;
 
     private PipeNetwork(List<PipeNode> members, GasStore gas) {
@@ -97,6 +98,25 @@ public final class PipeNetwork {
     /** Whether the network is still in use: false once it has dissolved. */
     public boolean valid() {
         return valid;
+    }
+
+    /**
+     * Records that a member is stepping, and says whether that starts the network's atmos tick. Each
+     * member steps once per atmos tick, at its own place in the period, and the network has no step
+     * of its own, so the first member to step runs it for them all, and the network's next atmos
+     * tick starts when a member steps again (CONT-006). A member that isn't stepping, because its
+     * chunk has left full status, holds nothing up.
+     *
+     * @param node a member, stepping now
+     * @return true if the caller runs the network's atmos tick now
+     */
+    public boolean startsAtmosTick(PipeNode node) {
+        if (steppedThisTick.add(node) && steppedThisTick.size() > 1) {
+            return false;
+        }
+        steppedThisTick.clear();
+        steppedThisTick.add(node);
+        return true;
     }
 
     /**

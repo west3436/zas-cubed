@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
@@ -14,6 +15,7 @@ import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
+import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
@@ -57,6 +59,7 @@ public final class PumpTests {
     private static final String BATCH = "zas_atmos_pumps";
     private static final ResourceLocation N2 = StandardAir.NITROGEN;
     private static final ResourceLocation O2 = StandardAir.OXYGEN;
+    private static final ResourceLocation H2 = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
     private static final double T = StandardAir.TEMPERATURE;
     private static final double R = GasMixture.GAS_CONSTANT;
 
@@ -349,6 +352,72 @@ public final class PumpTests {
         h.assertValueEqual(menu.pressure(PumpBlockEntity.OUTPUT), 40, "the GUI's output");
         s.clear();
         h.succeed();
+    }
+
+    /**
+     * A network of ports alone reacts, with no pipe to run it (CONT-100), whether the pumps are on or
+     * off. Two pumps end to end make one, of two ports and 400 L, and it reacts once per atmos tick
+     * though two members step: a 375 L parcel burns each time, so if each ran it, the hydrogen would
+     * be gone sooner. A lone pump's open end is a network of one port. A port among pipes takes turns
+     * with them, and the network still reacts once.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_100_a_network_of_ports_alone_reacts_once_per_atmos_tick(GameTestHelper h) {
+        Site s = new Site(h, 555);
+        s.clear();
+        PressurePumpBlockEntity first = s.place(2, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        PressurePumpBlockEntity second = s.place(3, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        h.assertTrue(first.output().network() == second.input().network(), "two pumps' facing ports aren't one network");
+        h.assertFalse(first.input().network() == first.output().network(), "a pump joined its own ports");
+        s.close(out(first).volume(), 2 * PipeVolumes.PORT, 1e-9, "the network of two ports");
+
+        GasStore between = out(first);
+        between.add(flammable());
+        for (int round = 1; round <= 2; round++) {
+            GasMixture before = between.mixture();
+            first.step();
+            second.step();
+            assertReacted(h, s, between, before, "two ports, round " + round);
+        }
+
+        // A lone end: one port, one reaction per step.
+        GasStore end = in(first);
+        end.add(flammable());
+        GasMixture lone = end.mixture();
+        first.step();
+        assertReacted(h, s, end, lone, "one port");
+
+        // A port among pipes: a pipe and a port, each stepping in turn, react the network once.
+        s.clear();
+        PressurePumpBlockEntity pump = s.place(4, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        pipe(s, 5, 2, 2);
+        PipeNodeEntity segment = s.entity(5, 2, 2, PipeNodeEntity.class);
+        GasStore mixed = out(pump);
+        s.close(mixed.volume(), PipeVolumes.PORT + PipeVolumes.PIPE, 1e-9, "the network of a port and a pipe");
+        mixed.add(flammable());
+        for (int round = 1; round <= 2; round++) {
+            GasMixture before = mixed.mixture();
+            pump.step();
+            segment.step();
+            assertReacted(h, s, mixed, before, "a port and a pipe, round " + round);
+        }
+        s.clear();
+        h.succeed();
+    }
+
+    /** Hydrogen above its autoignition point, with oxygen to spare. */
+    private static GasParcel flammable() {
+        return new GasParcel(Map.of(H2, 5.0, O2, 10.0, N2, 15.0), 900);
+    }
+
+    /** The store after one atmos tick is exactly what the API says one reaction leaves. */
+    private static void assertReacted(GameTestHelper h, Site s, GasStore gas, GasMixture before, String what) {
+        GasMixture expected = Reactions.applyStandalone(before, 1, false);
+        h.assertTrue(expected != before, what + ": the API says nothing reacts, so the test proves nothing");
+        s.close(gas.temperature(), expected.temperature(), 1e-9, what + ": temperature");
+        for (ResourceLocation id : expected.moles().keySet()) {
+            s.close(gas.moles(id), expected.moles(id), 1e-9, what + ": " + id);
+        }
     }
 
     /**

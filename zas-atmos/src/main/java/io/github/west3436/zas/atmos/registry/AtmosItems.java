@@ -42,6 +42,9 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> HEATER = ITEMS.registerSimpleBlockItem(AtmosBlocks.HEATER);
 
+    public static final DeferredItem<BlockItem> AIR_CONDITIONER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.AIR_CONDITIONER);
+
     public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
             ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
 

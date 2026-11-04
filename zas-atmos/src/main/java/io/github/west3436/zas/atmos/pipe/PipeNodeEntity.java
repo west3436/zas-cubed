@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,19 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
             PipeNetwork.build(this, PipeNode::connectedNodes);
         }
         return network;
+    }
+
+    /**
+     * The network's atmos tick, run by the first of its members to step: its mixture reacts through
+     * the API, with no ignition source (CONT-100). A device's own step comes after this, so it sees
+     * the pressure the reaction left.
+     */
+    @Override
+    protected void beforeAtmosTick(ServerLevel level) {
+        PipeNetwork net = network();
+        if (net.startsAtmosTick(this)) {
+            ContainerReactions.react(net.gas());
+        }
     }
 
     /** The watch on the cell the node acts on, reset when it loads. */
