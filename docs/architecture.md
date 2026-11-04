@@ -2366,10 +2366,23 @@ the cell in front of its grille).
   2,500 L sample, through `ScrubberMath`, up to the moles of 150 L of the air,
   stopping at 50 atm in the store. It pays `[power] portable_scrubber` FE/t (15)
   only while it moves gas, and moves what the charge pays for when too little is
-  left. The store and a held tank react each atmos tick (CONT-100). The store has
-  no outlet, since a portable has no pipe (D-73). Its item keeps the store's gas
-  when mined, as a canister's does: broken in creative the gas is destroyed, and
-  removed any other way it is released where the portable stood.
+  left. The store and a held tank react each atmos tick (CONT-100), and a held
+  tank fails by its pressure where the portable stands, through
+  `TankFailure.check` (CONT-038). The store has no outlet, since a portable has
+  no pipe (D-73). Its item keeps the store's gas when mined, as a canister's
+  does: broken in creative the gas is destroyed, and removed any other way it is
+  released where the portable stood.
+- **Portable pump** (CONT-018, D-73), in `.portable`, also on
+  `PortableGasDevice`, so it works on the same air as the portable scrubber and
+  shares its store, slots and item. It has a direction and a target of 0–4,500
+  kPa (CONT-011), 101.325 kPa when new. Releasing, it fills the air from the
+  store to the target, up to the moles of 150 L of the store a second.
+  Siphoning, it fills the store from the air to the target, with no limit but
+  what the air holds, in the air's proportions. `PortablePumpMath` gets both from
+  `PumpFlow.molesToTarget` and `molesInVolume`, so the target allows for the
+  temperature gas mixes to. It pays `[power] portable_pump` FE/t (20) only while
+  it moves gas. A target above a tank's limits can make a held tank leak or
+  rupture.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as

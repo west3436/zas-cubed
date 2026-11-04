@@ -34,8 +34,8 @@ public final class PortablePumpMath {
      */
     public static double release(double target, GasMixture store, GasMixture air) {
         PumpFlow.Side in = PumpFlow.Side.of(store);
-        double toTarget = PumpFlow.molesToTarget(target, in, PumpFlow.Side.of(air));
-        return Math.max(0, Math.min(toTarget, Math.min(PumpFlow.molesInVolume(RELEASE_LITRES, in), store.totalMoles())));
+        return Math.min(
+                PumpFlow.molesToTarget(target, in, PumpFlow.Side.of(air)), PumpFlow.molesInVolume(RELEASE_LITRES, in));
     }
 
     /**
@@ -47,7 +47,7 @@ public final class PortablePumpMath {
      * @return the moles, never more than the air holds; 0 once the store is at the target
      */
     public static double siphon(double target, GasMixture air, GasMixture store) {
-        double toTarget = PumpFlow.molesToTarget(target, PumpFlow.Side.of(air), PumpFlow.Side.of(store));
-        return Math.max(0, Math.min(toTarget, air.totalMoles()));
+        return Math.min(
+                PumpFlow.molesToTarget(target, PumpFlow.Side.of(air), PumpFlow.Side.of(store)), air.totalMoles());
     }
 }

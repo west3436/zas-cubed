@@ -768,7 +768,7 @@ gas when mined, which is the gas they acquired, not a pre-filled one.
 `cont_086_filled_canisters_are_creative_only` (GameTest) keeps this checked.*
 
 #### CONT-018 · Portable pump and scrubber
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69
 
 The portables, a portable pump, a portable scrubber, a heater and a freezer
 (CONT-019), shall be blocks that run on a battery in a slot (CONT-112) and
@@ -805,6 +805,13 @@ stays Accepted until the portable pump and scrubber exist.*
 (GameTest) check it on a room and on a held tank, stopping when its battery is
 empty, and a controller in its room not powering or listing it. This stays
 Accepted until the portable pump exists.*
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+The portable pump exists, so all four portables do. On a room, on a held tank,
+stopping when the battery is empty, and a controller leaving it alone:
+`PortablePumpTests.cont_018_*` and `PortableScrubberTests.cont_018_*`
+(GameTest). The heater and the air conditioner work only on a room, and are
+checked by `BatteryTests` and `AirConditionerTests.cont_019_*`.*
 
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05

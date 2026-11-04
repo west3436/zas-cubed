@@ -21,7 +21,12 @@ final class PortablePumpScreen extends PortableGasScreen<PortablePumpMenu> {
     protected void init() {
         super.init();
         int top = PortableGasMenu.BATTERY_Y - 1 + 20;
-        button(8, top, 160, Component.translatable("gui.zas_atmos.portable_pump.direction"), PortablePumpMenu.TOGGLE_DIRECTION);
+        button(
+                8,
+                top,
+                160,
+                Component.translatable("gui.zas_atmos.portable_pump.direction"),
+                PortablePumpMenu.TOGGLE_DIRECTION);
         for (int i = 0; i < STEPS.length; i++) {
             button(8 + 41 * i, top + 20, 37, Component.literal(STEPS[i]), PortablePumpMenu.TARGET_DOWN_100 + i);
         }
