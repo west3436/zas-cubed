@@ -355,8 +355,8 @@ public final class PumpTests {
     }
 
     /**
-     * A network of ports alone reacts, with no pipe to run it (CONT-100), whether the pumps are on or
-     * off. Two pumps end to end make one, of two ports and 400 L, and it reacts once per atmos tick
+     * A network of ports alone reacts, with no pipe to run it (CONT-100), even with the pumps off. Two
+     * pumps end to end make one, of two ports and 400 L, and it reacts once per atmos tick
      * though two members step: a 375 L parcel burns each time, so if each ran it, the hydrogen would
      * be gone sooner. A lone pump's open end is a network of one port. A port among pipes takes turns
      * with them, and the network still reacts once.
@@ -367,7 +367,8 @@ public final class PumpTests {
         s.clear();
         PressurePumpBlockEntity first = s.place(2, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
         PressurePumpBlockEntity second = s.place(3, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
-        h.assertTrue(first.output().network() == second.input().network(), "two pumps' facing ports aren't one network");
+        h.assertTrue(
+                first.output().network() == second.input().network(), "two pumps' facing ports aren't one network");
         h.assertFalse(first.input().network() == first.output().network(), "a pump joined its own ports");
         s.close(out(first).volume(), 2 * PipeVolumes.PORT, 1e-9, "the network of two ports");
 
@@ -387,19 +388,23 @@ public final class PumpTests {
         first.step();
         assertReacted(h, s, end, lone, "one port");
 
-        // A port among pipes: a pipe and a port, each stepping in turn, react the network once.
+        // A port among pipes: each member stepping in turn reacts the network once. It holds more than
+        // the parcel, so some is left for the second round.
         s.clear();
         PressurePumpBlockEntity pump = s.place(4, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
-        pipe(s, 5, 2, 2);
-        PipeNodeEntity segment = s.entity(5, 2, 2, PipeNodeEntity.class);
+        for (int x = 5; x <= 7; x++) {
+            pipe(s, x, 2, 2);
+        }
         GasStore mixed = out(pump);
-        s.close(mixed.volume(), PipeVolumes.PORT + PipeVolumes.PIPE, 1e-9, "the network of a port and a pipe");
+        s.close(mixed.volume(), PipeVolumes.PORT + 3 * PipeVolumes.PIPE, 1e-9, "the network of a port and pipes");
         mixed.add(flammable());
         for (int round = 1; round <= 2; round++) {
             GasMixture before = mixed.mixture();
             pump.step();
-            segment.step();
-            assertReacted(h, s, mixed, before, "a port and a pipe, round " + round);
+            for (int x = 5; x <= 7; x++) {
+                s.entity(x, 2, 2, PipeNodeEntity.class).step();
+            }
+            assertReacted(h, s, mixed, before, "a port and pipes, round " + round);
         }
         s.clear();
         h.succeed();
