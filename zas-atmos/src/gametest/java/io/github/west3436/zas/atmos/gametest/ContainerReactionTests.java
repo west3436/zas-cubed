@@ -133,6 +133,34 @@ public final class ContainerReactionTests {
     }
 
     /**
+     * FIRE-035: a container goes by the rule a zone does. At 12 % O₂, a network at 900 K burns all its
+     * hydrogen with no source, and one at 800 K waits.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void fire_035_a_hot_network_below_14_percent_burns(GameTestHelper h) {
+        Area a = new Area(h, 126);
+        a.clear(0, 0, 10, 4);
+        a.place(1, 1, 2, cap(Direction.EAST));
+        a.place(2, 1, 2, cap(Direction.WEST));
+        a.place(6, 1, 2, cap(Direction.EAST));
+        a.place(7, 1, 2, cap(Direction.WEST));
+        PipeNetwork hot = a.<PipeNodeEntity>entity(1, 1, 2).network();
+        PipeNetwork warm = a.<PipeNodeEntity>entity(6, 1, 2).network();
+        hot.gas().add(new GasParcel(Map.of(H2, 1.0, O2, 1.0, N2, 6.33), HOT));
+        warm.gas().add(new GasParcel(Map.of(H2, 1.0, O2, 1.0, N2, 6.33), 800));
+        GasMixture before = hot.gas().mixture();
+        h.assertTrue(before.moles(O2) / before.totalMoles() < 0.14, "the network isn't short of O₂");
+
+        a.step();
+
+        h.assertValueEqual(hot.gas().moles(H2), 0.0, "H2 at 900 K");
+        a.close(hot.gas().moles(H2O), 1.0, "water at 900 K");
+        h.assertValueEqual(warm.gas().moles(H2), 1.0, "H2 at 800 K");
+        h.assertValueEqual(warm.gas().moles(H2O), 0.0, "water at 800 K");
+        h.succeed();
+    }
+
+    /**
      * A canister's gas reacts in its 1,000 L: 37.5 % of it burns per atmos tick (FIRE-031), the
      * parcel being fixed in litres. A canister on a port reacts as one network with the port.
      */

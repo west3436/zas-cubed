@@ -122,8 +122,9 @@ public final class ReactionSet {
      * compete (FIRE-002). A reaction burns if an ignition source is present or the mixture is at or
      * above its autoignition temperature, its other conditions hold (flammability limits at the
      * mixture's temperature, FIRE-032), and, for a fire, the mixture passes the fire oxygen threshold
-     * (FIRE-030). Its incomplete form, if any, is blended in by the share of carbon that forms CO at
-     * the mixture's O₂ fraction (FIRE-005).
+     * (FIRE-030), or only that threshold's partial-pressure floor if the mixture is at or above this
+     * fuel's own autoignition temperature (FIRE-035). Its incomplete form, if any, is blended in by
+     * the share of carbon that forms CO at the mixture's O₂ fraction (FIRE-005).
      *
      * @param mixture the mixture, changed in place; its registry must be this set's
      * @param parcelLitres the parcel, L: {@link #PARCEL_LITRES_PER_SECOND} times the step's seconds
@@ -199,13 +200,14 @@ public final class ReactionSet {
         }
         boolean flammable = false;
         double autoignition = Double.POSITIVE_INFINITY;
-        int fireOk = UNKNOWN;
+        double temperature = mixture.temperature();
+        int oxygenFor = UNKNOWN;
         for (Compiled c : ignited) {
             if (c.fire) {
-                if (fireOk == UNKNOWN) {
-                    fireOk = fire.sustains(mixture) ? YES : NO;
+                if (oxygenFor == UNKNOWN) {
+                    oxygenFor = oxygenFor(mixture, fire);
                 }
-                if (fireOk == NO) {
+                if (!c.hasOxygen(oxygenFor, temperature)) {
                     continue;
                 }
             }
@@ -217,9 +219,22 @@ public final class ReactionSet {
         return flammable ? new Flammability(true, autoignition) : Flammability.NONE;
     }
 
+    /** What a mixture's O₂ allows hasn't been worked out yet. */
     private static final int UNKNOWN = 0;
-    private static final int YES = 1;
-    private static final int NO = 2;
+    /** Below the fire oxygen threshold's partial-pressure floor: no fire burns (FIRE-030). */
+    private static final int NO_FIRE = 1;
+    /** Above the floor but short of the fraction: only a fuel at its autoignition point (FIRE-035). */
+    private static final int HOT_FIRE = 2;
+    /** Passes the whole threshold: any fire burns (FIRE-030). */
+    private static final int ANY_FIRE = 3;
+
+    /** What a mixture's O₂ allows. It is the same for every reaction, so a step works it out once. */
+    private static int oxygenFor(GasMixture mixture, FireSettings fire) {
+        if (fire.sustains(mixture)) {
+            return ANY_FIRE;
+        }
+        return fire.sustainsAutoignited(mixture) ? HOT_FIRE : NO_FIRE;
+    }
 
     private ReactionResult step(
             GasMixture mixture,
@@ -230,7 +245,7 @@ public final class ReactionSet {
             FireSettings fire) {
         int n = registry.size();
         double temperature = mixture.temperature();
-        int fireOk = UNKNOWN;
+        int oxygenFor = UNKNOWN;
         List<Active> active = null;
         double[] available = null;
         for (Compiled c : reactions) {
@@ -241,10 +256,10 @@ public final class ReactionSet {
                 continue;
             }
             if (c.fire) {
-                if (fireOk == UNKNOWN) {
-                    fireOk = fire.sustains(mixture) ? YES : NO;
+                if (oxygenFor == UNKNOWN) {
+                    oxygenFor = oxygenFor(mixture, fire);
                 }
-                if (fireOk == NO) {
+                if (!c.hasOxygen(oxygenFor, temperature)) {
                     continue;
                 }
             }
@@ -493,6 +508,15 @@ public final class ReactionSet {
                 }
             }
             return true;
+        }
+
+        /**
+         * Whether this fire has the O₂ it needs, given what the mixture's O₂ allows. The temperature
+         * is tested against this reaction's own autoignition point, so in a mixture of fuels each
+         * fuel goes by its own (FIRE-035).
+         */
+        boolean hasOxygen(int oxygenFor, double temperature) {
+            return oxygenFor == ANY_FIRE || (oxygenFor == HOT_FIRE && temperature >= autoignition);
         }
 
         /** Whether the conditions other than ignition and the fire oxygen threshold hold. */

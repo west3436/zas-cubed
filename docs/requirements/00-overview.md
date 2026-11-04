@@ -277,6 +277,12 @@ torch ignites it; the step before ignition is at or above 4 % H₂. With the
 valve closed, O₂ falls by more than 5 % while H₂O, the temperature and the
 pressure rise, the pressure past the valve's 125 kPa.*
 
+*2026-11-04: with FIRE-035 (Draft), S-03's fire is past H₂'s 858 K before its O₂
+reaches 14 %, so it burns on. Twenty steps after the valve closes, the workshop
+is at 2,534 K and 979 kPa, with 8.4 % O₂ and H₂ at its 0.1 % floor. Before
+FIRE-035 it had stopped by then at 1,103 K and 454 kPa, with 14.0 % O₂ and 12.3 %
+H₂ left. The plan's checks are unchanged and pass.*
+
 *2026-11-03: S-04's R1 plan passes on the scenario branch, as
 `FireScenarioTests.s_04_room_fire_suffocates_and_rekindles_under_hardcore`
 and `s_04_room_fire_stays_vanilla_under_normal`. The room is a sealed

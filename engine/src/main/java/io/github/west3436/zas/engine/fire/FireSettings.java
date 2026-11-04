@@ -8,9 +8,10 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
  * whether a hotspot, vanilla fire or a lit fuel block, burns only where the O₂ fraction is at least
  * {@code minOxygenFraction} <em>and</em> the O₂ partial pressure is at least {@code minOxygenKpa}.
  * The pressure floor replaces ZAS's one mole per tile, so nothing burns in a thin atmosphere such
- * as the Hardcore End however rich in O₂ it is. Below an O₂ fraction of {@code
- * incompleteBelowFraction}, part of a fuel's carbon forms CO ({@link CarbonCombustion#coShare}).
- * Pure; any thread.
+ * as the Hardcore End however rich in O₂ it is. A gas fire at or above its fuel's autoignition
+ * temperature needs only the pressure floor ({@link #sustainsAutoignited}, FIRE-035). Below an O₂
+ * fraction of {@code incompleteBelowFraction}, part of a fuel's carbon forms CO ({@link
+ * CarbonCombustion#coShare}). Pure; any thread.
  *
  * @param minOxygenFraction the least O₂ mole fraction a fire needs, 0 to 1; default 0.14
  * @param minOxygenKpa the least O₂ partial pressure a fire needs, kPa, not negative; default 10
@@ -57,6 +58,20 @@ public record FireSettings(double minOxygenFraction, double minOxygenKpa, double
             return false;
         }
         return sustains(mixture.moles(oxygen) / mixture.totalMoles(), mixture.partialPressure(oxygen));
+    }
+
+    /**
+     * Whether a gas fire at or above its fuel's autoignition temperature can burn in a mixture
+     * (FIRE-035): it needs the O₂ partial pressure, whatever the fraction. An empty mixture, one in a
+     * registry without O₂, or one with no O₂ in it, can't sustain one. Every other fire uses {@link
+     * #sustains(GasMixture)}.
+     */
+    public boolean sustainsAutoignited(GasMixture mixture) {
+        int oxygen = mixture.registry().indexOf(OXYGEN);
+        if (oxygen < 0 || mixture.isEmpty() || !(mixture.moles(oxygen) > 0)) {
+            return false;
+        }
+        return mixture.partialPressure(oxygen) >= minOxygenKpa;
     }
 
     /**

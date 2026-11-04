@@ -25,8 +25,8 @@ public final class CarbonCombustion {
     /**
      * The share of burning carbon that forms CO rather than CO₂ (FIRE-005): 0 at or above the onset
      * fraction (0.18 by default), rising linearly to 1 at the fire threshold (0.14), and 1 below it
-     * (where nothing should burn). With a threshold at or above the onset, the share is 0 wherever
-     * fire burns.
+     * (where only a gas fire at its fuel's autoignition temperature burns, FIRE-035). With a threshold
+     * at or above the onset, the share is 0 at and above the threshold.
      *
      * @param oxygenFraction the O₂ mole fraction where the carbon burns
      * @param thresholdFraction the fire threshold's O₂ fraction ({@link

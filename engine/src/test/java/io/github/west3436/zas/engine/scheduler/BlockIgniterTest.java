@@ -307,6 +307,21 @@ class BlockIgniterTest {
         assertEquals(expected, (double) lit / trials, 0.7, "cells lit per tick");
     }
 
+    /**
+     * FIRE-035, FIRE-033, FIRE-034: a hot wooden room at 13 % O₂ with hydrogen in it autoignites and
+     * burns, but block ignition keeps FIRE-030 whole: neither the hot gas nor the gas fire lights
+     * anything.
+     */
+    @Test
+    void fire_035_a_hot_gas_fire_below_14_percent_lights_no_block() {
+        Burn b = new Burn(1100, 0.13).room(PLANKS).hydrogen(30);
+        b.steps(30);
+        double water = b.sim.zoneAt(1, 65, 1).mixture().moles(HotspotTest.H2O);
+        assertTrue(water > 0, "the hydrogen didn't burn");
+        assertTrue(b.lit.isEmpty(), "a block caught at 13 % O2");
+        assertEquals(0, b.cached(), "a zone that can't light a block found its faces");
+    }
+
     // ---- FIRE-034: gas fires ---------------------------------------------------------------
 
     /**

@@ -81,6 +81,28 @@ class FireSettingsTest {
         assertFalse(FIRE.sustains(noOxygen, new double[] {100}));
     }
 
+    /** FIRE-035: a fire at autoignition needs the partial pressure, whatever the fraction. */
+    @Test
+    void fire_035_sustains_autoignited_needs_only_the_floor() {
+        assertFalse(FIRE.sustains(mixture(0.87, 0.13, 1.0)), "13 % O₂ fails FIRE-030");
+        assertTrue(FIRE.sustainsAutoignited(mixture(0.87, 0.13, 1.0)), "13 % O₂ at 13 kPa");
+        assertTrue(FIRE.sustainsAutoignited(mixture(0.99, 0.01, 11)), "1 % O₂ at 11 kPa");
+        assertFalse(FIRE.sustainsAutoignited(mixture(0.0, 1.0, 0.09)), "O₂ at 9 kPa");
+        assertFalse(
+                FIRE.withMinOxygenKpa(25).sustainsAutoignited(mixture(0.79, 0.21, 1.0)), "the floor is configurable");
+    }
+
+    /** FIRE-035: no gas, no O₂ in the gas, or no O₂ in the registry is no fire, even with a floor of 0. */
+    @Test
+    void fire_035_sustains_autoignited_needs_some_oxygen() {
+        FireSettings noFloor = FIRE.withMinOxygenKpa(0);
+        assertFalse(noFloor.sustainsAutoignited(new GasMixture(REGISTRY, 2500, 293.15)), "vacuum");
+        assertFalse(noFloor.sustainsAutoignited(mixture(1.0, 0.0, 1.0)), "pure N₂");
+        GasMixture noOxygen = new GasMixture(GasRegistry.of(List.of(REGISTRY.definition(N2))), 2500, 293.15);
+        noOxygen.setMoles(0, 100);
+        assertFalse(noFloor.sustainsAutoignited(noOxygen), "a registry without O₂");
+    }
+
     /** A 2,500 L mixture at 293.15 K with these mole fractions and a total pressure in atm. */
     private static GasMixture mixture(double n2, double o2, double atm) {
         GasMixture m = new GasMixture(REGISTRY, 2500, 293.15);

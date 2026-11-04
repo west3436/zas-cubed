@@ -44,7 +44,8 @@ public final class Reactions {
      *   <li><b>Fire.</b> If the mixture ignites, because {@code ignition} says an ignition source
      *       is present or because it is at or above a fuel's autoignition temperature (FIRE-010),
      *       and it is within that fuel's flammability limits at its temperature (FIRE-032) and passes
-     *       the fire oxygen threshold (FIRE-030), it burns as one hotspot: {@link
+     *       the fire oxygen threshold (FIRE-030), or only that threshold's partial-pressure floor at
+     *       or above that fuel's autoignition temperature (FIRE-035), it burns as one hotspot: {@link
      *       #PARCEL_LITRES_PER_SECOND} times {@code seconds} litres of it, or all of it if it is
      *       smaller. A 70 L tank therefore burns completely in one second.
      *   <li><b>Other reactions,</b> those that need no ignition, run over the whole mixture for

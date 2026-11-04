@@ -222,19 +222,6 @@ class ReactionSetTest {
         assertTrue(m.moles(O2) / m.totalMoles() > 0.14, "O2 ran out first: " + m.moles(O2));
     }
 
-    /**
-     * The room #211 reports: 340 mol of H₂ and 1,208 mol of O₂ in 8,500 mol at about 2,700 K. Its O₂
-     * is only just above the fire oxygen threshold (FIRE-030), so that stops it, not the limit.
-     */
-    @Test
-    void fire_032_a_fire_at_2700_k_short_of_oxygen_stops_at_the_oxygen_threshold() {
-        GasMixture m = mixture(146_000, 2700, H2, 340, O2, 1208, N2, 6952);
-        burnOut(m);
-        double o2 = m.moles(O2) / m.totalMoles();
-        assertTrue(o2 < 0.14 && o2 > 0.139, "O2 fraction left: " + o2);
-        assertTrue(m.moles(H2) < 340 && m.moles(H2) > 280, "H2 left: " + m.moles(H2));
-    }
-
     /** FIRE-010 tests the limits at the gas's temperature, so a lean mix lights by itself when hot. */
     @Test
     void fire_032_a_lean_mixture_autoignites_above_its_autoignition_point() {
@@ -626,6 +613,155 @@ class ReactionSetTest {
         assertEquals(2, r.reactions());
         assertEquals(0, m.moles(H2));
         assertEquals(Math.exp(-0.1), m.moles(N2O), 1e-12);
+    }
+
+    // ---- FIRE-035: a gas fire at autoignition needs only the O₂ floor ---------------------------
+
+    /**
+     * The room #211 reports: 340 mol of H₂ and 1,208 mol of O₂ in 8,500 mol at 2,749 K, its O₂ at
+     * 14.2 %. It burns on past 14 % until its fuel reaches the 0.1 % floor, with O₂ well above 10 kPa,
+     * and every element and all the energy are still there.
+     */
+    @Test
+    void fire_035_the_211_room_burns_past_14_percent_to_the_fuel_floor() {
+        GasMixture m = mixture(146_000, 2749, H2, 340, O2, 1208, N2, 6952);
+        assertEquals(0.142, m.moles(O2) / m.totalMoles(), 0.0005);
+        double energy = m.heatCapacity() * m.temperature();
+        double heat = 0;
+        int parcels = 0;
+        int parcelsTo14 = -1;
+        while (COMBUSTION.flammability(m, FIRE).flammable() && parcels < 20_000) {
+            ReactionResult r = COMBUSTION.burn(m, 375, true, FIRE);
+            assertTrue(r.reacted());
+            heat += r.heat();
+            parcels++;
+            if (parcelsTo14 < 0 && m.moles(O2) / m.totalMoles() < 0.14) {
+                parcelsTo14 = parcels;
+            }
+        }
+        assertFalse(COMBUSTION.burn(m, 375, true, FIRE).reacted());
+
+        double h2 = m.moles(H2) / m.totalMoles();
+        double o2 = m.moles(O2) / m.totalMoles();
+        // Past 14 % after 52 parcels, and at the floor after 1,443: 332 of its 340 mol burned.
+        assertEquals(52, parcelsTo14, 2);
+        assertEquals(1443, parcels, 5);
+        assertTrue(h2 < FLOOR && h2 > FLOOR * 0.99, "H2 fraction left: " + h2);
+        assertEquals(8.31, m.moles(H2), 0.01, "H2 left");
+        assertEquals(0.125, o2, 0.0005, "O2 fraction left");
+        assertEquals(192, m.partialPressure(O2), 1, "O2 partial pressure left");
+        assertEquals(3237, m.temperature(), 1, "temperature");
+
+        assertEquals(340, m.moles(H2) + m.moles(H2O), 1e-6, "hydrogen");
+        assertEquals(2 * 1208, 2 * m.moles(O2) + m.moles(H2O), 1e-6, "oxygen");
+        assertEquals(6952, m.moles(N2), 1e-6, "nitrogen");
+        assertEquals(242_000 * m.moles(H2O), heat, 1e-3, "heat per mole burned");
+        assertEquals(energy + heat, m.heatCapacity() * m.temperature(), 1e-3, "energy");
+    }
+
+    /**
+     * The same room below hydrogen's autoignition point, its O₂ already under 14 %, doesn't burn,
+     * with a source or without: FIRE-030 still holds there. From 858 K it does.
+     */
+    @Test
+    void fire_035_below_autoignition_the_same_mixture_does_not_burn() {
+        for (boolean source : new boolean[] {false, true}) {
+            GasMixture cool = mixture(146_000, 857.9, H2, 340, O2, 1100, N2, 7060);
+            assertTrue(cool.moles(O2) / cool.totalMoles() < 0.14);
+            assertFalse(COMBUSTION.flammability(cool, FIRE).flammable());
+            assertFalse(COMBUSTION.burn(cool, 375, source, FIRE).reacted());
+            assertEquals(340, cool.moles(H2));
+
+            GasMixture hot = mixture(146_000, 858, H2, 340, O2, 1100, N2, 7060);
+            assertTrue(COMBUSTION.flammability(hot, FIRE).ignitesAt(858));
+            assertTrue(COMBUSTION.burn(hot, 375, source, FIRE).reacted());
+        }
+    }
+
+    /** FIRE-030 as it was for a cool mixture: 14 % O₂ burns with a source, and just under doesn't. */
+    @Test
+    void fire_035_a_cool_mixture_keeps_the_oxygen_fraction() {
+        GasMixture at14 = mixture(1000, 293.15, H2, 4, O2, 14, N2, 82);
+        assertTrue(COMBUSTION.flammability(at14, FIRE).flammable());
+        assertTrue(COMBUSTION.burn(at14, 1000, true, FIRE).reacted());
+
+        GasMixture under = mixture(1000, 293.15, H2, 4, O2, 13.9, N2, 82.1);
+        assertFalse(COMBUSTION.flammability(under, FIRE).flammable());
+        assertFalse(COMBUSTION.burn(under, 1000, true, FIRE).reacted());
+    }
+
+    /** The 10 kPa floor stays, however hot the gas. At 1,000 K a mole of O₂ in 1,000 L is 8.3 kPa. */
+    @Test
+    void fire_035_a_hot_fire_keeps_the_partial_pressure_floor() {
+        GasMixture thin = mixture(1000, 1000, H2, 1, O2, 1.08, N2, 20);
+        assertTrue(thin.partialPressure(O2) < 10);
+        assertFalse(COMBUSTION.flammability(thin, FIRE).flammable());
+        assertFalse(COMBUSTION.burn(thin, 1000, true, FIRE).reacted());
+
+        GasMixture enough = mixture(1000, 1000, H2, 1, O2, 1.32, N2, 20);
+        assertTrue(enough.partialPressure(O2) > 10);
+        assertTrue(COMBUSTION.flammability(enough, FIRE).ignitesAt(1000));
+        assertTrue(COMBUSTION.burn(enough, 1000, false, FIRE).reacted());
+
+        // Rich in fuel, a fire burns its O₂ down to the floor and stops there, with H₂ left.
+        GasMixture rich = mixture(1000, 1000, H2, 10, O2, 2, N2, 30);
+        burnOut(rich);
+        assertTrue(rich.partialPressure(O2) < 10, "O2 left: " + rich.partialPressure(O2) + " kPa");
+        assertTrue(rich.moles(H2) / rich.totalMoles() > 0.1, "H2 left: " + rich.moles(H2));
+    }
+
+    /** With a floor of 0, gas with no O₂ at all still doesn't count as flammable. */
+    @Test
+    void fire_035_no_oxygen_is_no_fire() {
+        GasMixture m = mixture(1000, 1000, H2, 5, N2, 20);
+        assertFalse(COMBUSTION.flammability(m, FIRE.withMinOxygenKpa(0)).flammable());
+    }
+
+    /**
+     * Each fuel goes by its own autoignition point. At 850 K, below 14 % O₂, methane (810 K) burns
+     * and hydrogen (858 K) doesn't, with a source or without. At 800 K neither does, at 860 K both.
+     */
+    @Test
+    void fire_035_each_fuel_goes_by_its_own_autoignition_point() {
+        for (boolean source : new boolean[] {false, true}) {
+            GasMixture m = mixture(1000, 850, H2, 1, CH4, 1, O2, 3, N2, 20);
+            assertEquals(1, COMBUSTION.burn(m, 1000, source, FIRE).reactions());
+            assertEquals(0, m.moles(CH4));
+            assertEquals(1, m.moles(H2));
+
+            assertFalse(COMBUSTION
+                    .burn(mixture(1000, 800, H2, 1, CH4, 1, O2, 3, N2, 20), 1000, source, FIRE)
+                    .reacted());
+            assertEquals(
+                    2,
+                    COMBUSTION
+                            .burn(mixture(1000, 860, H2, 1, CH4, 1, O2, 3, N2, 20), 1000, source, FIRE)
+                            .reactions());
+        }
+
+        // Flammable, and igniting at methane's point, not at the lowest of a fuel that can't burn.
+        Flammability both = COMBUSTION.flammability(mixture(1000, 850, H2, 1, CH4, 1, O2, 3, N2, 20), FIRE);
+        assertTrue(both.flammable());
+        assertEquals(810, both.autoignition());
+        assertFalse(COMBUSTION
+                .flammability(mixture(1000, 850, H2, 1, O2, 3, N2, 20), FIRE)
+                .flammable());
+    }
+
+    /** A container follows the same rule (FIRE-031): its 12 % O₂ burns when hot, not when warm. */
+    @Test
+    void fire_035_a_container_follows_the_same_rule() {
+        GasMixture hot = mixture(70, 900, H2, 2.9, O2, 3.5, N2, 22.6);
+        assertTrue(COMBUSTION.applyStandalone(hot, 1, false, FIRE).reacted());
+        assertEquals(0, hot.moles(H2));
+
+        GasMixture warm = mixture(70, 800, H2, 2.9, O2, 3.5, N2, 22.6);
+        assertFalse(COMBUSTION.applyStandalone(warm, 1, true, FIRE).reacted());
+
+        // O₂ under 10 kPa in the tank: not at any temperature.
+        GasMixture thin = mixture(70, 900, H2, 0.05, O2, 0.08, N2, 2);
+        assertTrue(thin.partialPressure(O2) < 10);
+        assertFalse(COMBUSTION.applyStandalone(thin, 1, true, FIRE).reacted());
     }
 
     // ---- API-020: code-defined reactions (the engine's side) -----------------------------------

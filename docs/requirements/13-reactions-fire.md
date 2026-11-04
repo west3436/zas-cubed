@@ -3,8 +3,8 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
-accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033 and FIRE-034 were added as
-Drafts on 2026-11-04.
+accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033, FIRE-034 and FIRE-035 were
+added as Drafts on 2026-11-04.
 
 **Scope.** Covers:
 - gas reactions
@@ -131,6 +131,11 @@ upper at 100 %. At and below 298 K the declared limits shall apply.
 `fire_032_` tests in `ReactionSetTest` and
 `fire_032_sealed_room_burns_below_the_declared_limit_once_hot` (GameTest).*
 
+*2026-11-04: FIRE-035 (Draft) changes one case in the Verify above. A fire at
+2,700 K short of O₂ no longer stops at the fire oxygen threshold: it burns on to
+the floor, or to O₂ at 10 kPa. `fire_035_the_211_room_burns_past_14_percent_to_the_fuel_floor`
+replaces the test that said it stopped.*
+
 #### FIRE-005 · Incomplete combustion
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-49, LIFE-041
 
@@ -196,6 +201,46 @@ carried to the worker in `EngineSettings.fire`. Vanilla fire, fuel blocks
 `fire_030_` Unit tests and `fire_030_fire_goes_out_below_each_limit`
 (GameTest: 13 % O₂ at 1 atm, and pure O₂ at 9 kPa).*
 
+*2026-11-04: FIRE-035 (Draft) lets a gas fire at or above its fuel's
+autoignition temperature burn below the 0.14 fraction, keeping the 10 kPa floor.
+Every other fire keeps this requirement whole.*
+
+#### FIRE-035 · A gas fire at autoignition needs only the O₂ floor
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-031, FIRE-032, [#211](https://github.com/west3436/zas-cubed/issues/211) · Depends: FIRE-010, FIRE-030
+
+A gas fire whose fuel is at or above that fuel's autoignition temperature
+(FIRE-010) shall not need FIRE-030's O₂ fraction, and shall still need its O₂
+partial pressure. In a mixture of fuels, each fuel shall go by its own
+autoignition temperature. A standalone mixture (FIRE-031) shall follow the same
+rule. Vanilla fire, lit fuel blocks, blocks catching fire (FIRE-033, FIRE-034)
+and gas below its fuel's autoignition temperature shall keep FIRE-030 whole.
+
+- **Rationale:** Decision: the coordinator's, at the owner's request, 2026-11-04,
+  for the owner's goal in [#211](https://github.com/west3436/zas-cubed/issues/211)
+  that hot rooms burn their fuel out. With FIRE-030 whole, a room at 2,749 K and
+  14.2 % O₂ stopped with about 300 of its 340 mol of H₂ left.
+- **Verify:** Unit tests check that room burns past 14 % to the fuel's 0.1 % floor
+  with its elements and energy conserved, that the same gas below autoignition
+  under 14 % O₂ doesn't burn with a source or without, that O₂ below 10 kPa stops
+  a fire at any temperature, that at 850 K below 14 % O₂ methane burns and hydrogen
+  doesn't, and that a container goes by the same rule. GameTests check a sealed
+  room at 1,000 K and 12 % O₂ lights itself and burns to the floor, one at 800 K
+  doesn't, one cooled to 800 K goes out with fuel left, a vanilla fire in the hot
+  gas goes out, and a pipe network follows the same rule.
+
+*2026-11-04: Built, and waiting for review. `FireSettings.sustainsAutoignited`, the
+floor alone, and `ReactionSet`, which tests each reaction's own autoignition point
+in `flammability` and in every step, so hotspots and containers (`burn`,
+`applyStandalone`) share the rule. Below 0.14 all of a fuel's carbon forms CO
+(FIRE-005). No new config key: `[fire] oxygen_minimum_kpa` is the floor. The #211
+room burns 332 of its 340 mol of H₂, in 1,443 parcels with one hotspot (52 of them
+to reach 14 %), and stops at 8.3 mol, the 0.1 % floor, with O₂ at 12.5 % and
+192 kPa, at 3,237 K. Checked by the `fire_035_` tests in `FireSettingsTest`,
+`ReactionSetTest`, `BlockIgniterTest` and `StandaloneReactionsTest`, and
+`fire_035_a_hot_room_burns_below_14_percent_and_a_cooler_one_does_not`,
+`fire_035_a_vanilla_fire_in_hot_gas_keeps_the_oxygen_fraction` and
+`fire_035_a_hot_network_below_14_percent_burns` (GameTests).*
+
 #### FIRE-031 · Combustion in containers
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, FIRE-011 · Depends: API-019
 
@@ -217,6 +262,10 @@ absolute 375 L, so a TTV detonates before its tank ruptures (S-13, D-59).*
 or all of it if smaller, when given an ignition source or above a fuel's
 autoignition temperature, and not below the fire oxygen threshold. Checked by
 the `fire_031_` tests in `ReactionSetTest`.*
+
+*2026-11-04: FIRE-035 (Draft) applies to a container as it does to a zone: at or
+above a fuel's autoignition temperature, that fuel needs only the threshold's
+10 kPa floor.*
 
 ## Gas fire
 
@@ -323,6 +372,12 @@ or has no fuel left.
 longer burn, for want of O₂ (FIRE-030) or fuel, goes out and its block is
 removed; a vanilla fire is left to FIRE-020. `fire_017_gas_fire_goes_out_without_oxygen`
 and `fire_017_gas_fire_goes_out_without_fuel` check both.*
+
+*2026-11-04: with FIRE-035 (Draft), a gas fire at or above its fuel's autoignition
+temperature goes out for want of O₂ at the threshold's 10 kPa floor, not at its
+0.14 fraction. Below 0.14 it also goes out if the gas cools below that temperature.
+`fire_017_gas_fire_goes_out_without_oxygen` still goes out at 14 %, because a fire
+lit from 20 °C at 25 % H₂ reaches 14 % before it reaches 858 K.*
 
 #### FIRE-018 · Gas-fire block
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-49
