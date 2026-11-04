@@ -71,6 +71,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -860,7 +861,7 @@ public final class DimensionAtmos {
                 ambient,
                 settings(ZasServerConfig.scheduler()));
         engine.setPhaseListener(profiler.listener);
-        // Hotspot spread draws (§3.5): the same world and dimension spread the same way.
+        // Hotspot spread and block ignition draws (§3.5): the same world and dimension burn the same way.
         engine.setSeed(
                 level.getSeed() ^ (long) dimension().location().toString().hashCode() * 0x9E3779B97F4A7C15L);
         DimensionData data = DimensionData.of(level);
@@ -909,7 +910,8 @@ public final class DimensionAtmos {
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
-     * (FIRE-030), the server's reactions (FIRE-001) and the hotspot spread (FIRE-016).
+     * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), and how blocks
+     * catch fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -918,7 +920,9 @@ public final class DimensionAtmos {
                 .withAirflow(AirflowConfig.exportKpa(dimension().location()))
                 .withFire(FireConfig.settings())
                 .withReactions(reactions())
-                .withHotspots(FireConfig.hotspots());
+                .withHotspots(FireConfig.hotspots())
+                .withBlockIgnition(FireConfig.blockIgnition()
+                        .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)));
     }
 
     /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */

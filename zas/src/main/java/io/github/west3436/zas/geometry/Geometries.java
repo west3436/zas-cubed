@@ -5,6 +5,7 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.fire.BlockIgnitions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,7 +38,8 @@ import org.slf4j.Logger;
  * <p>Lifecycle: overrides and heat data are read on every server data load (start and {@code
  * /reload}). Once tags are bound ({@link TagsUpdatedEvent}, server side), they and the {@link
  * #ZONE_BOUNDARY} tag are resolved to blocks, and the {@linkplain #setIgnitionSources ignition-source
- * predicate} is asked of every state, on the server thread, and the table is rebuilt on a
+ * predicate} and {@linkplain BlockIgnitions#flammableStates flammability} are asked of every state,
+ * on the server thread, and the table is rebuilt on a
  * background thread. That listener runs at {@link EventPriority#LOW}, so a mod that resolves its
  * own tags at normal priority, as the ignition sources do, has its new answers in by then. {@link #table()} waits for that build, and the server-started handler waits
  * for it too, so it is ready before the first atmos tick.
@@ -116,8 +118,12 @@ public final class Geometries {
      * engine at its next batch. Server thread, since tags are read here.
      */
     public static void rebuildForTest() {
-        current = CompletableFuture.completedFuture(
-                build(resolve(allOverrides()), boundaryBlocks(), resolveThermal(thermal), sourceStates()));
+        current = CompletableFuture.completedFuture(build(
+                resolve(allOverrides()),
+                boundaryBlocks(),
+                resolveThermal(thermal),
+                sourceStates(),
+                BlockIgnitions.flammableStates()));
     }
 
     static void setOverrides(List<GeometryOverride> loaded) {
@@ -161,8 +167,9 @@ public final class Geometries {
         List<Block> boundaries = boundaryBlocks();
         Map<Block, double[]> heat = resolveThermal(thermal);
         int[] sources = sourceStates();
+        List<BlockIgnitions.Flammable> flammable = BlockIgnitions.flammableStates();
         current = CompletableFuture.supplyAsync(
-                () -> build(byBlock, boundaries, heat, sources), Util.backgroundExecutor());
+                () -> build(byBlock, boundaries, heat, sources, flammable), Util.backgroundExecutor());
     }
 
     private static void onServerStarted(ServerStartedEvent event) {
@@ -310,12 +317,17 @@ public final class Geometries {
     /**
      * The derived table with the overrides applied, then the zone boundaries marked: each tagged
      * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
-     * block's heat data added to its states' geometries; then the ignition sources flagged.
+     * block's heat data added to its states' geometries; then the ignition sources flagged; then the
+     * flammable states given their odds and ignition temperatures (FIRE-033, FIRE-034).
      */
     private static GeometryTable build(
-            Map<Block, GeometryOverride> byBlock, List<Block> boundaries, Map<Block, double[]> heat, int[] sources) {
+            Map<Block, GeometryOverride> byBlock,
+            List<Block> boundaries,
+            Map<Block, double[]> heat,
+            int[] sources,
+            List<BlockIgnitions.Flammable> flammable) {
         GeometryTable derived = GeometryDerivation.derived();
-        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty() && sources.length == 0) {
+        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty() && sources.length == 0 && flammable.isEmpty()) {
             return derived;
         }
         GeometryPalette.Builder palette = derived.palette().toBuilder();
@@ -360,6 +372,13 @@ public final class Geometries {
             if (stateId >= 0 && stateId < byStateId.length) {
                 byStateId[stateId] =
                         palette.intern(palette.geometry(byStateId[stateId]).withFlags(Geometry.FLAG_IGNITION_SOURCE));
+            }
+        }
+        for (BlockIgnitions.Flammable f : flammable) {
+            int stateId = f.stateId();
+            if (stateId >= 0 && stateId < byStateId.length) {
+                byStateId[stateId] =
+                        palette.intern(palette.geometry(byStateId[stateId]).withIgnition(f.odds(), f.temperature()));
             }
         }
         return new GeometryTable(palette.build(), byStateId, derived.distinctShapes(), overridden, marked);

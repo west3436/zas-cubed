@@ -233,7 +233,7 @@ They are checked differently:
 | Result part | Validated against | When stale |
 |---|---|---|
 | Zone mixtures (an *exchange component*) | lifecycle generation of every chunk the component spans | Reject the component: publish its previous snapshot, and tell the worker in the next batch to restore it from undo and re-queue its operations (CORE-070, CORE-074) |
-| World-write intents (place or remove `zas:gas_fire`, light or extinguish, shatter glass, block damage) | block generation of the target's chunk | Drop the intent. The next tick re-derives it from fresh geometry. |
+| World-write intents (place or remove `zas:gas_fire`, light a vanilla fire, shatter glass, block damage) | block generation of the target's chunk | Drop the intent. The next tick re-derives it from fresh geometry. |
 | Operation outcomes and futures | follow their component | Re-queued with the component |
 | Events | follow their component | Not fired; they reappear when the work is redone |
 
@@ -943,6 +943,9 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   - `sourceTemperature`: the fixed temperature of a heat-source block, or NaN
     (HEAT-003). A source also has `FLAG_HEAT_SOURCE`.
 
+  A geometry also carries fire data, `igniteOdds` and `ignitionTemperature` (§5,
+  *Blocks catching fire*).
+
   `GeometryDeriver` derives the masks and partitions with the rest of the
   geometry, from the same 16³ voxels. A declared geometry (an override) has
   its single cell behind each sealed face. `Geometries` adds U and temperature
@@ -1055,7 +1058,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Hazards and breathing | published snapshot, point lookup by entity eye position (API-015), life-support capabilities | staggered per entity (LIFE-007, LIFE-033), capped per tick (LIFE-038) | LIFE, D-27, D-47 |
 | Respiration and photosynthesis | queue ops with source attribution | per breather or crop on its own cadence, aggregated per zone per atmos tick | LIFE-005, CONT-053 |
 | Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
-| Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027 |
+| Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` and light vanilla fires | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027, FIRE-033, FIRE-034 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
@@ -1352,7 +1355,9 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   apply, the server checks the block itself rather than the chunk's block
   generation (§3.3):
   - it places a gas fire only in air;
-  - it removes one only where one is.
+  - it removes one only where one is;
+  - it lights a vanilla fire (`LIGHT`, *Blocks catching fire* below) only in air
+    or a gas fire.
 
   A chunk-wide generation would drop every intent in a chunk where anyone is
   building, and a fire would never place. Until the next tick sees its block,
@@ -1384,6 +1389,8 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   4. Every hotspot that burned may spread to each open neighbouring cell that
      is air, in an active zone with flammable gas (FIRE-016). The chance is
      `spread_chance` per second, 1 − (1 − p)^dt per tick.
+  5. Flammable blocks catch: from the gas fires that burned (FIRE-034), then from
+     hot zones (FIRE-033). See *Blocks catching fire* below.
 
   Hotspots in paused zones keep still.
 - **Chemistry** is the batch's reactions (`EngineSettings.reactions`, see
@@ -1414,10 +1421,11 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   - `GeometryDerivation` flags every `BaseFireBlock` state `FLAG_FIRE` and
     `zas:gas_fire` `FLAG_GAS_FIRE`; neither depends on datapacks. Every other
     state that isn't air but has air's geometry (a lever, redstone wire, a
-    rail, a flower, grass, a fluid) gets air's geometry with `FLAG_OCCUPIED`,
-    one palette id for all of them. Gas treats it as air; the flag only makes
+    rail, a flower, grass, a fluid) gets air's geometry with `FLAG_OCCUPIED`.
+    Gas treats it as air; the flag only makes
     it a different id from `AIR_ID`, so a hotspot's "could a gas fire go here"
-    (plain air, which the server's `isAir()` agrees with) passes it by. An
+    (plain air, which the server's `isAir()` agrees with) passes it by. A
+    flammable one, such as a flower, differs by its fire data too. An
     ignition at such a block lights an air neighbour, and spread skips it.
     Placing or removing one is now a geometry change, as a torch's is, which
     costs a mirrored section update but leaves the zone as it was.
@@ -1453,6 +1461,58 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   plain air is nothing. Both use the zone's O₂, as two fires in one room do,
   and FIRE-020's going out without O₂ stays with `Burners` and the M2 tick.
   The hotspot never removes a vanilla fire.
+- **Blocks catching fire** (FIRE-033, FIRE-034, Draft;
+  [#212](https://github.com/west3436/zas-cubed/issues/212)):
+  `engine.scheduler.BlockIgniter`, at the end of the phase.
+  - **What the worker knows.** Flammability can't be read off the worker's
+    thread, so it comes with the geometry, like heat data. When the table is
+    rebuilt, `BlockIgnitions.flammableStates` asks every state on the server
+    thread for `isFlammable` and `getFireSpreadSpeed` (which is `FireBlock`'s
+    `igniteOdds`), and `Geometry` carries those odds and any ignition temperature
+    of the block's own from `data/<ns>/zas/block_ignition/` (NaN for the
+    configured one, so the config applies from the next tick with no rebuild).
+    Blocks that differ only in this take separate palette ids, which makes
+    replacing one with the other a geometry change; the GameTest server's palette
+    has 563 geometries with them. A block answering differently by position counts
+    as it does at the origin.
+  - **Hot gas** (FIRE-033). A zone at or above the lowest ignition temperature,
+    `min(block_ignition_temperature, the lowest in the palette)`, whose gas passes
+    FIRE-030, draws for each of its *faces*: a plain air cell of the zone next to a
+    flammable block. A face's chance per second is `odds / 100 × heat`, with `heat`
+    rising from 0.1 at its block's ignition temperature to 1 at 500 K above it, and
+    0 below it. Only plain air can hold the new fire, so the vanilla fire goes in
+    the face's cell.
+  - **Gas fires** (FIRE-034). A gas fire that burned this tick, in gas that still
+    passes FIRE-030, draws for each flammable neighbour at
+    `hotspot_block_ignite_chance × odds / 100`. It asks for the vanilla fire in
+    its own cell, since that may be the only open cell beside the block. The
+    hotspot carries on: the next sync finds a vanilla fire at the position
+    (FIRE-019). A vanilla fire doesn't draw; it has vanilla's own spread.
+  - **Cost.** Only a hot zone looks for flammable blocks, and only a gas fire
+    looks around itself, so a cool zone costs one comparison a tick and an
+    atmosphere with no hot zone and no gas fire costs one pass over the zones.
+    A hot zone's faces are found once, by a walk of its cells reading up to seven
+    geometry ids from the mirror for each, and kept per zone. They are dropped
+    when a cell joins, leaves or resizes in the zone, a block at or next to one of
+    its cells changes, a section arrives in the mirror, or the zone cools below
+    every ignition temperature. So a steady hot zone costs one draw per face a
+    tick, and a change costs it one more walk: burning walls cost a hot zone that
+    walk each tick, which is worth watching only for very large zones. The total
+    of fires lit is bounded by the zone's boundary, as each face's cell holds one.
+  - **On the server.** `FireIntents` lights the fire as flint and steel would,
+    with `BaseFireBlock.getState`, soul fire on soul sand included. It keeps
+    vanilla's limits: `doFireTick` (also passed to the worker in
+    `EngineSettings.blockIgnition`, so nothing is looked for while it is off, and
+    read again at apply, since it may have changed since the batch closed), the
+    fire surviving where it is, no rain, and FIRE-030 through `FireAir`, as M3
+    checks it for flint and steel. A fire in a box sprayed since the batch closed
+    isn't lit (API-057). Once lit it is an ordinary fire: it burns as FIRE-022
+    says, spreads as vanilla's does, and goes out as FIRE-020 says.
+  - **Determinism and rejection** (§3.5, §3.3). Draws hash the dimension's seed,
+    salted apart from spread's, the tick, the zone and the two positions. The
+    faces are found the same whenever they are found, so they aren't in the state
+    hash. A `LIGHT` intent names its zone and is dropped with a rejected component;
+    the redone tick draws again.
 
 ### Life support (breathing)
 
