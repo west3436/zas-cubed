@@ -48,6 +48,7 @@ public final class RecipeTests {
                 AtmosItems.CANISTER.get(),
                 AtmosItems.VENT.get(),
                 AtmosItems.SCRUBBER.get(),
+                AtmosItems.PASSIVE_VENT.get(),
                 AtmosItems.AREA_AIR_CONTROLLER.get(),
                 AtmosItems.GENERATOR.get(),
                 AtmosItems.FIRELOCK.get(),

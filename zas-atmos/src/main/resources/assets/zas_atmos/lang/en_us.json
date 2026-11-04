@@ -8,6 +8,7 @@
   "block.zas_atmos.canister": "Canister",
   "block.zas_atmos.vent": "Vent",
   "block.zas_atmos.scrubber": "Scrubber",
+  "block.zas_atmos.passive_vent": "Passive Vent",
   "gui.zas_atmos.scrubber.cycle": "Off / scrub / siphon / panic",
   "gui.zas_atmos.scrubber.mode.off": "Off",
   "gui.zas_atmos.scrubber.mode.scrub": "Scrubbing",
