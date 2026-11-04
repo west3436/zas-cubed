@@ -36,7 +36,7 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>The network is built lazily, on the server, the first time {@link #network()} is called.
  */
-public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
+public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, PipeHost {
     /** Who removed pipes' gas is released by, for the conservation ledger. */
     public static final SourceId RELEASE = SourceId.of(ZasAtmosMod.MOD_ID, "pipe_release");
 
@@ -80,22 +80,33 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     public PipeNetwork network() {
         if (network == null || !network.valid()) {
             network = null;
-            PipeNetwork.build(this, n -> ((PipeNodeEntity) n).connectedNodes());
+            PipeNetwork.build(this, PipeNode::connectedNodes);
         }
         return network;
     }
 
     /**
-     * The network's atmos tick, run by the first of its members to step: its mixture reacts through
-     * the API, with no ignition source (CONT-100). A device's own step comes after this, so it sees
-     * the pressure the reaction left.
+     * The network's atmos tick, run by the first of its members to step. It bursts if the last atmos
+     * tick left it overpressured (CONT-108); otherwise its mixture reacts through the API, with no
+     * ignition source (CONT-100). A device's own step comes after this, so it sees the pressure the
+     * reaction left, and a canister on the network, rated lower than a pipe, fails before the pipe
+     * can burst.
      */
     @Override
     protected void beforeAtmosTick(ServerLevel level) {
-        PipeNetwork net = network();
-        if (net.startsAtmosTick(this)) {
+        atmosTurn(level, network(), this);
+    }
+
+    /** A member's turn in its network's atmos tick: the first to step runs it for them all. */
+    static void atmosTurn(ServerLevel level, PipeNetwork net, PipeNode node) {
+        if (net.startsAtmosTick(node) && !PipeBurst.check(level, net)) {
             ContainerReactions.react(net.gas());
         }
+    }
+
+    /** Whether the node is a pipe segment, which can burst (CONT-108). The default is false. */
+    protected boolean isSegment() {
+        return false;
     }
 
     /** The watch on the cell the node acts on, reset when it loads. */
@@ -127,27 +138,29 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     }
 
     /**
-     * The loaded nodes this one is connected to, in direction order. A neighbour in an unloaded
-     * chunk isn't reached, and that chunk keeps its share saved.
+     * The loaded nodes this one shares gas with, in direction order. A neighbour in an unloaded chunk
+     * isn't reached, and that chunk keeps its share saved.
      */
-    public List<PipeNodeEntity> connectedNodes() {
-        List<PipeNodeEntity> out = new ArrayList<>(6);
+    @Override
+    public List<PipeNode> connectedNodes() {
+        List<PipeNode> out = new ArrayList<>(6);
         if (level == null) {
             return out;
         }
         BlockState self = level.getBlockState(worldPosition);
         for (Direction d : Direction.values()) {
-            BlockPos next = worldPosition.relative(d);
-            if (!level.isLoaded(next)) {
-                continue;
-            }
-            if (PipeConnector.connected(self, d, level.getBlockState(next))
-                    && level.getBlockEntity(next) instanceof PipeNodeEntity n
-                    && !n.isRemoved()) {
+            PipeNode n = PipeHost.across(level, worldPosition, self, d);
+            if (n != null) {
                 out.add(n);
             }
         }
         return out;
+    }
+
+    /** Every face leads to the one node: this one. */
+    @Override
+    public PipeNode nodeOn(Direction face) {
+        return this;
     }
 
     /**
@@ -169,11 +182,23 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
 
     /** Dissolves the networks of connected neighbours, so they are rebuilt with or without this node. */
     private void dissolveNeighbours() {
-        for (PipeNodeEntity n : connectedNodes()) {
-            if (n.network != null) {
-                n.network.dissolve();
+        for (PipeNode n : connectedNodes()) {
+            PipeNetwork linked = n.currentNetwork();
+            if (linked != null) {
+                linked.dissolve();
             }
         }
+    }
+
+    /**
+     * Dissolves this node's network and its neighbours', so the next ones built follow its current
+     * connections: call it after they change. Members keep their shares by volume (CONT-003).
+     */
+    protected void reconnect() {
+        if (network != null) {
+            network.dissolve();
+        }
+        dissolveNeighbours();
     }
 
     @Override
@@ -182,10 +207,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
         if (level instanceof ServerLevel) {
             unloading = false;
             cellWatch.reset();
-            if (network != null) {
-                network.dissolve();
-            }
-            dissolveNeighbours();
+            reconnect();
         }
     }
 
