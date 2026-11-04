@@ -102,12 +102,15 @@ public abstract class ValveBlock extends BaseEntityBlock implements PipeConnecto
 
     /**
      * Turns the valve, by changing its block state; its block entity acts on that at its next step.
+     * Its flanges and shape are the same open or shut, so it updates no neighbour's shape. That update
+     * would only read the blocks around it, and at a chunk's edge the read would bring a chunk that is
+     * away back to full status for a moment, long enough for a network built then to reach into it.
      *
      * @param open whether it opens
      * @param sound the sound it makes
      */
     protected static void turn(Level level, BlockPos pos, BlockState state, boolean open, SoundEvent sound) {
-        level.setBlock(pos, state.setValue(OPEN, open), Block.UPDATE_CLIENTS);
+        level.setBlock(pos, state.setValue(OPEN, open), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.5f, open ? 0.8f : 0.6f);
     }
 
