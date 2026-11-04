@@ -1,11 +1,15 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import static io.github.west3436.zas.atmos.gametest.Area.N2;
+import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Kind;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
@@ -22,6 +26,7 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Pig;
@@ -240,8 +245,9 @@ public final class ContainerFailureTests {
 
     /**
      * Tanks fail wherever they are carried, in real time: in a main slot, in the offhand, in a worn
-     * suit's slot and on the ground. A fake player doesn't tick, so its inventory is ticked here as
-     * a player's would be. The gas goes into the room the holder or the item is in.
+     * suit's slot, on the ground and in a dropped suit's slot. A fake player doesn't tick, so its
+     * inventory is ticked here as a player's would be. The gas goes into the room the holder or the
+     * item is in.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = 200)
     public static void cont_038_a_tank_fails_in_an_inventory_a_suit_and_on_the_ground(GameTestHelper h) {
@@ -267,6 +273,12 @@ public final class ContainerFailureTests {
         ItemEntity item = new ItemEntity(a.level, groundAt.x, groundAt.y, groundAt.z, ground);
         item.setNoPickUpDelay();
         a.level.addFreshEntity(item);
+        ItemStack droppedSuit = new ItemStack(AtmosItems.SOFTSUIT_CHESTPLATE.get());
+        SuitItem.setTank(droppedSuit, tank(41));
+        Vec3 suitAt = a.point(1, 1, 3);
+        ItemEntity suitItem = new ItemEntity(a.level, suitAt.x, suitAt.y, suitAt.z, droppedSuit);
+        suitItem.setNoPickUpDelay();
+        a.level.addFreshEntity(suitItem);
 
         h.onEachTick(inventory::tick);
         h.startSequence()
@@ -278,12 +290,15 @@ public final class ContainerFailureTests {
                                     .isEmpty(),
                             "the tank in the suit's slot is still there");
                     h.assertTrue(item.isRemoved(), "the tank on the ground is still there");
-                    a.close(roomMoles(a), room + 4 * each, "the room's gas");
+                    h.assertTrue(SuitItem.tank(suitItem.getItem()).isEmpty(), "the dropped suit's tank is still there");
+                    a.close(roomMoles(a), room + 5 * each, "the room's gas");
                 })
                 .thenExecute(() -> {
                     h.assertFalse(
                             player.getItemBySlot(EquipmentSlot.CHEST).isEmpty(),
                             "the suit went with the tank in its slot");
+                    h.assertFalse(suitItem.isRemoved(), "the dropped suit went with the tank in its slot");
+                    suitItem.discard();
                     a.forceLoad(false);
                 })
                 .thenSucceed();
@@ -423,6 +438,33 @@ public final class ContainerFailureTests {
         GasTankItem.setGas(t, new GasParcel(cold.moles(), T * 3));
         h.assertValueEqual(TankFailure.check(a.level, at, t, null).kind(), Kind.EXPLODE, "hot");
         power(h, oneBlast(h, at), 1);
+        h.succeed();
+    }
+
+    /**
+     * The check sees what a reaction raised in the same atmos tick (CONT-100 goes first): hydrogen
+     * burning in a tank takes it from below 30 atm to above 50 atm in one call, and it explodes with
+     * the power of the pressure it reached. Had the check gone first, the tank would have held.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_038_a_burn_explodes_a_tank_in_the_same_atmos_tick(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 312);
+        GasDeviceTests.room(a);
+        ItemStack t = new ItemStack(AtmosItems.EMPTY_TANK.get());
+        ResourceLocation hydrogen = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
+        GasTankItem.setGas(t, new GasParcel(Map.of(hydrogen, 5.0, O2, 10.0, N2, 13.0), 900));
+
+        GasMixture before = GasTankItem.contents(t);
+        GasMixture burned = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
+        h.assertTrue(before.pressure() < 30 * ATM, "it starts at " + before.pressure() + " kPa, not below 30 atm");
+        h.assertTrue(burned.pressure() > 50 * ATM, "the burn reaches " + burned.pressure() + " kPa, not above 50 atm");
+
+        Vec3 at = a.point(2, 2, 2);
+        ItemEntity holder = new ItemEntity(a.level, at.x, at.y, at.z, t);
+        h.assertTrue(GasTankItem.atmosTick(t, a.level, holder), "the tank's atmos tick changed nothing");
+        h.assertTrue(t.isEmpty(), "the tank is still there after its burn");
+        power(h, oneBlast(h, TankFailure.pointOf(holder)), (burned.pressure() - 50 * ATM) / (10 * ATM));
         h.succeed();
     }
 }

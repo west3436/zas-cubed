@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.TankFailure;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
@@ -257,39 +258,38 @@ public class GasTankItem extends Item {
         };
     }
 
-    // ---- In the world -------------------------------------------------------------------------
+    // ---- Atmos ticks --------------------------------------------------------------------------
 
     /**
-     * One atmos tick of a tank being carried, in an inventory, a suit's slot or on the ground: it
-     * fails if its pressure says so (CONT-038), at the middle of its holder's body. A chest's
-     * contents don't tick, so a tank in one waits until it comes out, and neither does a tank on a
-     * mob or in an item frame.
-     *
-     * <p>Anything that changes the gas by itself, such as a reaction in the tank (CONT-100), goes
-     * before the check, so that the check sees the pressure it raised in the same tick.
+     * One atmos tick of a tank, wherever it is: its gas reacts (CONT-100), then it fails if its
+     * pressure says so (CONT-038), at the middle of its holder's body. The reaction goes first, so
+     * that the check sees the pressure it raised in the same tick. Whatever carries a tank calls
+     * this once per atmos tick ({@link AtmosTicks#due}): the tank itself while it is in a player's
+     * inventory or dropped, and a suit or a tank transfer valve for the tanks inside it. A tank
+     * anywhere else, such as a chest, waits until it is carried again (architecture §11.9).
      *
      * @param tank the tank's stack, changed in place, and used up if the tank is destroyed
-     * @param level the level
-     * @param holder the entity carrying it, or the item entity it is
-     * @return whether the stack changed, so a holder that keeps a copy knows to write it back
+     * @param level the level it is in
+     * @param holder the entity carrying it: the player, or the dropped item
+     * @return whether the stack changed, so that a holder of a copy knows to write it back
      */
     public static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
-        return TankFailure.check(level, TankFailure.pointOf(holder), tank, null).kind() != ContainerFailure.Kind.NONE;
+        boolean reacted = ContainerReactions.react(tank, ((GasTankItem) tank.getItem()).volume);
+        ContainerFailure.Verdict verdict = TankFailure.check(level, TankFailure.pointOf(holder), tank, null);
+        return reacted || verdict.kind() != ContainerFailure.Kind.NONE;
     }
 
-    /** In a player's inventory, the main slots, the armor slots and the offhand alike. */
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
-        super.inventoryTick(stack, level, entity, slot, selected);
-        if (level instanceof ServerLevel server && AtmosTicks.itemsStepNow(server)) {
+        if (level instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
             atmosTick(stack, server, entity);
         }
     }
 
-    /** On the ground. A tank that is destroyed takes its item entity with it. */
+    /** A tank that is destroyed on the ground takes its item entity with it. */
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (entity.level() instanceof ServerLevel server && AtmosTicks.itemsStepNow(server)) {
+        if (entity.level() instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
             atmosTick(stack, server, entity);
             if (stack.isEmpty()) {
                 entity.discard();

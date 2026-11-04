@@ -279,7 +279,7 @@ scrubber and the conservation checker waits for the scrubber.*
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
 
 #### CONT-100 · Reactions in containers
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, D-50 · Depends: API-019, FIRE-031
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-50 · Depends: API-019, FIRE-031
 
 Each atmos tick, every pipe network, canister and tank shall react its mixture
 through the API (API-019), with no ignition source. A pipe network that
@@ -291,6 +291,17 @@ overpressures bursts (CONT-108).
 
 *2026-10-31: pipes now burst (CONT-108, D-59); they previously never burst in
 R1.*
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network reacts once per atmos tick, run by the first of its members to step;
+a canister is a network node, so it reacts the same way, alone or on a port. A
+tank reacts while a player has it, in a worn or carried suit's slot, and
+dropped; the tank transfer valve will tick its own (CONT-103). The game offers
+no tick to a stack in a chest, on a mob or in an item frame, so a tank there
+waits until it is carried again ([architecture
+§11.9](../architecture.md#119-breathing-gear-cont-030-to-cont-032-cont-039-cont-090)).
+`ContainerReactionTests.cont_100_*` (GameTest) check a network, a canister and
+tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 
 ## Devices (R1 set)
 
@@ -864,14 +875,16 @@ as a vanilla explosion of power (P − 50 atm) / 10 atm.
 applies it at a position. A leak lets out a tenth of the gas each atmos tick and
 stops at 30 atm. A rupture or an explosion uses the tank up and puts all its gas
 into its cell. It goes by pressure alone, without vg's integrity steps. A tank
-checks once per atmos tick in a player's main slots, armor slots and offhand, in
-a suit's slot in any of those, and on the ground. A tank in a chest, on a mob, in
-an item frame or in a dropped suit doesn't tick and waits until it is carried.
-What leaks goes into the cell at the middle of the holder's body, and the
-explosion is there too. It has no source entity, so it hurts the holder and
-credits nobody. `ContainerFailureTest` (Unit) checks every threshold;
-the `cont_038_` GameTests check each threshold in the world, the formula's power,
-that the holder is hurt under each preset, and failing in each place.*
+checks once per atmos tick, after its gas reacts (CONT-100), so a burn that raises
+the pressure is seen in that same tick. It checks wherever it reacts: in a
+player's main slots, armor slots and offhand, in a suit's slot, worn, carried or
+dropped, and on the ground. A tank in a chest, on a mob or in an item frame
+doesn't tick and waits until it is carried. What leaks goes into the cell at the
+middle of the holder's body, and the explosion is there too. It has no source
+entity, so it hurts the holder and credits nobody. `ContainerFailureTest` (Unit)
+checks every threshold; the `cont_038_` GameTests check each threshold in the
+world, the formula's power, that the holder is hurt under each preset, failing in
+each place, and a burn that explodes a tank in one atmos tick.*
 
 #### CONT-107 · Container explosions and blocks
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-28, D-14

@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.device;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 
 /**
  * The content mod's clock. Devices and pipe networks step once per atmos tick (D-31, CONT-006),
@@ -32,13 +33,17 @@ public final class AtmosTicks {
     }
 
     /**
-     * Whether items step in this game tick. A tank in an inventory or on the ground is in no
-     * device schedule; it asks here each game tick, and steps once per atmos tick.
+     * Whether gas carried by an entity is due its atmos tick now. An item stack has no schedule, and
+     * the game offers it a tick each game tick only while it is in a player's inventory or dropped,
+     * so an item that holds gas asks this each time (architecture §11.9). It is true once per {@link
+     * #PERIOD} for each entity, at a phase given by its id, which spreads entities across game ticks
+     * as {@link DeviceSchedule} does devices.
      *
-     * @param level the level it is in
-     * @return true once every {@link #PERIOD} game ticks
+     * @param level the level, on the server
+     * @param holder the entity carrying the gas: the player, or the dropped item
+     * @return true in one game tick of every {@link #PERIOD}
      */
-    public static boolean itemsStepNow(ServerLevel level) {
-        return now(level) % PERIOD == 0;
+    public static boolean due(ServerLevel level, Entity holder) {
+        return Math.floorMod(now(level) + holder.getId(), PERIOD) == 0;
     }
 }

@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.SlotAccess;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
@@ -162,14 +163,26 @@ public class SuitItem extends ArmorItem {
         player.playSound(in ? SoundEvents.BUNDLE_INSERT : SoundEvents.BUNDLE_REMOVE_ONE, 0.8f, 1.0f);
     }
 
-    /** The tank in the slot steps as a carried tank does, and its stack, a copy, is written back. */
+    // ---- The tank's atmos tick ---------------------------------------------------------------
+
+    /** The tank in the slot has its atmos tick while the suit is worn or carried (CONT-100). */
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
-        super.inventoryTick(stack, level, entity, slot, selected);
-        if (tankSlot && level instanceof ServerLevel server && AtmosTicks.itemsStepNow(server)) {
-            ItemStack tank = tank(stack);
-            if (tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, server, entity)) {
-                setTank(stack, tank);
+    public void inventoryTick(ItemStack suit, Level level, Entity entity, int slot, boolean selected) {
+        tankAtmosTick(suit, level, entity);
+    }
+
+    /** The tank in the slot has its atmos tick while the suit lies dropped (CONT-100). */
+    @Override
+    public boolean onEntityItemUpdate(ItemStack suit, ItemEntity entity) {
+        tankAtmosTick(suit, entity.level(), entity);
+        return false;
+    }
+
+    private void tankAtmosTick(ItemStack suit, Level level, Entity holder) {
+        if (tankSlot && level instanceof ServerLevel server && AtmosTicks.due(server, holder)) {
+            ItemStack tank = tank(suit);
+            if (tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, server, holder)) {
+                setTank(suit, tank);
             }
         }
     }

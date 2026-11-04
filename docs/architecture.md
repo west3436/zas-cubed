@@ -1271,6 +1271,17 @@ way.
   its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
   `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
   fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
+- **Limits that widen** (FIRE-032). Every check of a fuel's flammability limits
+  goes through `FlammabilityLimits.lowerAt` and `upperAt`, with the mixture's
+  temperature and the reaction's heat per mole of fuel, which the compiled
+  reaction works out once. Both widen by the modified Burgess–Wheeler rule above
+  298 K, and the declared limits hold at and below it. The rule is the
+  statement that a flame at its lower limit reaches about the same temperature
+  however warm its gas started, so its constant is a heat capacity, about
+  31.4 J/(mol·K). A fire's own heat therefore lowers the limit about 1.5 times as
+  fast as it burns the fuel in air (whose C<sub>v</sub> is about 21 J/(mol·K)),
+  so a fire that loses no heat doesn't stop at the declared limit: it goes on to
+  the 0.1 % floor, or to the fire oxygen threshold if that comes first.
 - **One step.** Every condition is read from the mixture at the start. Each
   reaction's extent is worked out alone: as far as its limiting reactant
   allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
@@ -2086,8 +2097,19 @@ the cell in front of its grille).
   block's colour to its drop (`copy_state`), and an undyed drop carries
   nothing, so it stacks with new items. Items are tinted like blocks, with
   no extra models.
-- **Deferred:** pipe bursts (CONT-108), reactions in pipes (CONT-100) and
-  client smoothing (CONT-070) are not built yet; S-01 needs none of them.
+- **Reactions** (CONT-100). A network has no step of its own, so the first
+  member to step runs its atmos tick for all of them, and the next one starts
+  when a member steps again (`PipeNetwork.startsAtmosTick`). A member that
+  isn't stepping, because its chunk has left full status, holds nothing up. It
+  runs in `PipeNodeEntity.beforeAtmosTick`, which comes before the node's own
+  `atmosTick`, so every kind of node takes part without doing anything, and a
+  device's step sees the pressure the reaction left. The mixture reacts through
+  `ContainerReactions.react`: `Reactions.applyStandalone` (API-019) with no
+  ignition source, so it burns only above a fuel's autoignition temperature.
+  A new network reacts at its first step, so a rebuild can bring its next
+  reaction forward by up to an atmos tick.
+- **Deferred:** pipe bursts (CONT-108) and client smoothing (CONT-070) are not
+  built yet; S-01 needs neither.
 
 ### 11.5 Devices
 
@@ -2502,6 +2524,26 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   volume and pressure, taken from the canister's network and mixed into the
   tank through a `GasStore`. A 70 L tank then becomes the kind of its contents
   (`GasTankItem.ofItsKind`), keeping its components.
+- **Atmos ticks** (CONT-100). A stack has no block entity and no schedule, so a
+  tank gets its atmos tick from whatever carries it, through
+  `GasTankItem.atmosTick`. The cost is one integer test per game tick
+  (`AtmosTicks.due`: once per 20 game ticks per entity, at a phase set by the
+  entity's id), then, once a second, one `ContainerReactions.react`, which
+  writes the stack only if something reacted, so a quiet tank costs no
+  inventory sync.
+
+  | Where the tank is | What ticks it |
+  |---|---|
+  | In a player's inventory, held or in the offhand | `Item.inventoryTick`, which the game calls for every stack in a player's inventory, armor slots and offhand |
+  | In a suit's tank slot, worn or carried | The suit's `inventoryTick`, which works on a copy of the tank and writes it back if it changed |
+  | Dropped, alone or in a suit | `onEntityItemUpdate`, NeoForge's per-tick call for a dropped item |
+  | In a tank transfer valve | The valve, as a suit does; its primed entity in its own tick (CONT-103) |
+  | In a chest, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
+
+  A mined canister's item (`CanisterItem`) reacts in the same places, with its
+  1,000 L. Reaching a chest would mean scanning every container each second,
+  which is why it isn't done, and no API change would help. Offline players'
+  tanks wait likewise.
 - **Mask and suit** (`SuitItem`). Armor items whose life support is a fixed
   rating: the breath mask only seals; each softsuit piece protects from 0 to
   1 atm and 0 to 500 K, and the helmet seals. They have no durability.
@@ -2514,17 +2556,13 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   capped power. It is plain arithmetic, unit-tested without the game.
   `TankFailure.check(level, at, tank, source)` applies a tank's verdict there
   and then, changing the stack in place.
-  - **When it runs.** Once per atmos tick, through
-    `GasTankItem.atmosTick(tank, level, holder)`: anything that changes the gas
-    by itself goes before the check, so the check sees that pressure in the
-    same tick. `inventoryTick` calls it for a tank in a player's main slots,
-    armor slots or offhand and, through `SuitItem`, for a tank in a suit's slot
-    anywhere in that inventory. `onEntityItemUpdate` calls it for a tank on the
-    ground. Those hooks ask `AtmosTicks.itemsStepNow`, since items aren't in a
-    device schedule. Nothing ticks a tank in a chest, on a mob, in an item
-    frame or in a dropped suit, so it waits until it is carried again.
+  - **When it runs.** Last in `GasTankItem.atmosTick(tank, level, holder)`,
+    after the gas reacts, so the check sees the pressure a reaction raised in
+    the same atmos tick. A tank fails wherever the table above ticks it, and
+    waits wherever it doesn't.
   - **Where it fails.** At the middle of its holder's body, or of the item
-    entity (`TankFailure.pointOf`). Gas goes into the cell there through
+    entity, which for a tank in a dropped suit is the suit's
+    (`TankFailure.pointOf`). Gas goes into the cell there through
     `GasMutations.add`. The middle of the body, not the eyes, because a vanilla
     explosion skips an entity whose eyes are exactly at its centre.
   - **The explosion's source.** A carried tank's explosion has none. A vanilla

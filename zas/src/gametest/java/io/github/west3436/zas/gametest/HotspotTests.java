@@ -7,8 +7,10 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Geometry;
@@ -37,7 +39,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Hotspots (FIRE-010, FIRE-011, FIRE-013, FIRE-014, FIRE-016 to FIRE-019, DATA-009): the engine's
+ * Hotspots (FIRE-010, FIRE-011, FIRE-013, FIRE-014, FIRE-016 to FIRE-019, FIRE-032, DATA-009): the engine's
  * hotspot phase with the server's side of it, the {@code zas:gas_fire} block, the fire intents and
  * the fire flags in the geometry table, burning the shipped reactions.
  *
@@ -308,7 +310,10 @@ public final class HotspotTests {
         h.succeed();
     }
 
-    /** FIRE-017: a gas fire goes out once its hydrogen falls below its lower limit, 4 %, with O₂ left. */
+    /**
+     * FIRE-017: a gas fire goes out once its hydrogen falls below its lower limit, with O₂ left. The
+     * fire warms the room, so the limit by then is under the 4 % it has when cold (FIRE-032).
+     */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_017_gas_fire_goes_out_without_fuel(GameTestHelper h) {
         with(0, true, () -> {
@@ -318,7 +323,7 @@ public final class HotspotTests {
             ignite(r, middle);
             h.assertTrue(gasFire(r, middle), "it didn't ignite");
             int ticks = 0;
-            while (gasFire(r, middle) && ticks < 80) {
+            while (gasFire(r, middle) && ticks < 400) {
                 r.tick();
                 ticks++;
             }
@@ -334,6 +339,55 @@ public final class HotspotTests {
     /** Whether a zone's gas passes the fire oxygen threshold (FIRE-030). */
     private static boolean sustains(ZoneInfo z) {
         return FireConfig.settings().sustains(fraction(z, O2), z.mixture().partialPressure(O2));
+    }
+
+    // ---- FIRE-032: the limits widen with temperature ---------------------------------------
+
+    /**
+     * FIRE-032: two sealed rooms at 9 % H₂ burn with one gas fire each. One has its fire's heat taken
+     * out each tick, so it stays at room temperature and its fire goes out at about 4 %, H₂'s declared
+     * limit. The other keeps its heat, which takes it past 600 K, and it burns well below 4 %, with O₂
+     * left: the fuel ran out, not the air.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_032_sealed_room_burns_below_the_declared_limit_once_hot(GameTestHelper h) {
+        with(0, false, () -> {
+            Rooms r = rooms(h, 14);
+            room(r, 0, 3, 3, 3, StandardAir.TEMPERATURE, hydrogenInAir(0.09));
+            room(r, 6, 3, 3, 3, StandardAir.TEMPERATURE, hydrogenInAir(0.09));
+            BlockPos kept = r.abs(2, 2, 2);
+            BlockPos free = r.abs(8, 2, 2);
+            ignite(r, kept);
+            ignite(r, free);
+            h.assertTrue(gasFire(r, kept) && gasFire(r, free), "they didn't ignite");
+            int ticks = 0;
+            while ((gasFire(r, kept) || gasFire(r, free)) && ticks < 400) {
+                ZoneInfo z = r.zone(2, 2, 2);
+                double joules = GasProperties.heatCapacity(z.mixture().moles())
+                        * (z.mixture().temperature() - StandardAir.TEMPERATURE);
+                if (joules > 0) {
+                    HeatMutations.remove(r.level, r.point(2, 2, 2), joules, Rooms.source("hotspots"));
+                }
+                r.tick();
+                ticks++;
+            }
+            h.assertFalse(gasFire(r, kept), "the cool room still burns after " + ticks + " ticks");
+            h.assertFalse(gasFire(r, free), "the hot room still burns after " + ticks + " ticks");
+
+            ZoneInfo cool = r.zone(2, 2, 2);
+            h.assertTrue(
+                    fraction(cool, H2) < 0.04 && fraction(cool, H2) > 0.039,
+                    "the cool room's fire went out at " + fraction(cool, H2) + " H₂");
+            h.assertTrue(cool.mixture().temperature() < 320, "the cool room warmed: " + cool.mixture());
+
+            ZoneInfo hot = r.zone(8, 2, 2);
+            h.assertTrue(hot.mixture().temperature() > 600, "the hot room stayed cool: " + hot.mixture());
+            h.assertTrue(fraction(hot, H2) < 0.002, "the hot room's fire went out at " + fraction(hot, H2) + " H₂");
+            h.assertTrue(sustains(hot), "the hot room's O₂ ran out first: " + fraction(hot, O2));
+            empty(r, 0);
+            empty(r, 6);
+        });
+        h.succeed();
     }
 
     // ---- FIRE-019: vanilla fire --------------------------------------------------------
