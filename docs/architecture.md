@@ -2217,11 +2217,23 @@ the cell in front of its grille).
     the `zas_atmos:gas` data component, with its paint as block state;
     placing the item puts the gas back. The game removes a mined block before
     it makes the drops, so `playerWillDestroy` marks the canister to keep its
-    share; drops made before removal (`destroyBlock`, explosions) mark it in
+    share; drops made before removal (`destroyBlock`) mark it in
     `getDrops`. Broken by a creative player, `playerWillDestroy` marks it to
     destroy its share instead. Removed any other way, as by `setblock`, it
     releases its share, as a pipe does.
-  - It is rated at 9,120 kPa; rupture (CONT-085) isn't built.
+  - It is rated at 9,120 kPa. `CanisterFailure.check` runs first in its atmos
+    tick, after its network has reacted, so it sees what a burn raised in that
+    tick. Above the rating, or with its gas or the air around it above 1,273 K,
+    it ruptures (CONT-085, CONT-101). Above 13,680 kPa it explodes instead
+    through `ContainerBlast` (CONT-102, §11.9), whose power and block damage
+    follow CONT-107 and CONT-109. It leaves nothing behind. As it is removed,
+    its share goes into its cell and the rest stays in the network.
+  - An explosion that reaches it ruptures it at `ExplosionEvent.Detonate`,
+    before the game makes drops, so the gas can't leave in an item. That holds
+    for an explosion that keeps blocks too. A wind burst
+    (`BlockInteraction.TRIGGER_BLOCK`) leaves it alone.
+  - Its item doesn't fail. The gas in it goes on reacting (CONT-100), and once
+    placed, the canister fails at its first atmos tick if it is over a limit.
   - The creative tab has a canister of each built-in gas at 45 atm and
     293.15 K, painted in that gas's colour (CONT-086). The item model picks
     the paint's model by the `zas_atmos:color` item property.

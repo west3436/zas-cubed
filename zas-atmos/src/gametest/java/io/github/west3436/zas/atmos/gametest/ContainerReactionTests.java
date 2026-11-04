@@ -70,6 +70,17 @@ public final class ContainerReactionTests {
         return new GasParcel(Map.of(H2, TANK_H2, O2, 2.0, N2, 3.0), temperature);
     }
 
+    /** The hydrogen in {@link #flammableInACanister}, mol. */
+    private static final double CANISTER_H2 = 1.0;
+
+    /**
+     * A leaner mixture for a canister. {@link #flammable} would burn to some 1,650 K, which ruptures a
+     * canister (CONT-085). This stays near 1,120 K, so these tests see the reaction alone.
+     */
+    private static GasParcel flammableInACanister(double temperature) {
+        return new GasParcel(Map.of(H2, CANISTER_H2, O2, 6.0, N2, 13.0), temperature);
+    }
+
     /** The store after one atmos tick is exactly the API's answer for what it held. */
     private static void assertReacted(Area a, GasStore gas, GasMixture before, String what) {
         GasMixture expected = Reactions.applyStandalone(before, 1, false);
@@ -148,16 +159,16 @@ public final class ContainerReactionTests {
         PipeNetwork onPort = a.<PipeNodeEntity>entity(4, 2, 2).network();
         a.close(alone.volume(), PipeVolumes.CANISTER, "the lone canister's volume");
         a.close(onPort.volume(), PipeVolumes.CANISTER + PipeVolumes.PORT, "the canister and port's volume");
-        alone.gas().add(flammable(HOT));
-        onPort.gas().add(flammable(HOT));
+        alone.gas().add(flammableInACanister(HOT));
+        onPort.gas().add(flammableInACanister(HOT));
 
         GasMixture beforeAlone = alone.gas().mixture();
         GasMixture beforeOnPort = onPort.gas().mixture();
         a.step();
         assertReacted(a, alone.gas(), beforeAlone, "the lone canister");
         assertReacted(a, onPort.gas(), beforeOnPort, "the canister on a port");
-        a.close(alone.gas().moles(H2), 5.0 * (1 - 375.0 / PipeVolumes.CANISTER), "the lone canister's H2");
-        a.close(onPort.gas().moles(H2), 5.0 * (1 - 375.0 / 1200.0), "H2 in the canister and port");
+        a.close(alone.gas().moles(H2), CANISTER_H2 * (1 - 375.0 / PipeVolumes.CANISTER), "the lone canister's H2");
+        a.close(onPort.gas().moles(H2), CANISTER_H2 * (1 - 375.0 / 1200.0), "H2 in the canister and port");
         double pressure = beforeAlone.pressure();
         h.assertTrue(alone.gas().pressure() > pressure, "the burn raised no pressure");
         h.succeed();

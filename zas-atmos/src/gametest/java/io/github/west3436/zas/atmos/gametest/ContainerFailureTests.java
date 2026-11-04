@@ -6,8 +6,10 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
@@ -16,6 +18,10 @@ import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
 import io.github.west3436.zas.atmos.failure.TankFailure;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
+import io.github.west3436.zas.atmos.pipe.PipeNetwork;
+import io.github.west3436.zas.atmos.pipe.PipeVolumes;
+import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOptions;
@@ -34,6 +40,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -42,10 +49,10 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * How tanks fail (CONT-038), what their explosions do to blocks under each preset (CONT-107) and how
- * strong they can be (CONT-109). Most build in their own {@link Area} and drive atmos ticks
- * themselves, in a batch of their own; explosions are watched through {@link Blasts}. The rule's
- * every threshold is in {@code ContainerFailureTest}.
+ * How tanks and canisters fail (CONT-038, CONT-085, CONT-101, CONT-102), what their explosions do to
+ * blocks under each preset (CONT-107) and how strong they can be (CONT-109). Most build in their own
+ * {@link Area} and drive atmos ticks themselves, in a batch of their own; explosions are watched
+ * through {@link Blasts}. The rule's every threshold is in {@code ContainerFailureTest}.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -465,6 +472,318 @@ public final class ContainerFailureTests {
         h.assertTrue(GasTankItem.atmosTick(t, a.level, holder), "the tank's atmos tick changed nothing");
         h.assertTrue(t.isEmpty(), "the tank is still there after its burn");
         power(h, oneBlast(h, TankFailure.pointOf(holder)), (burned.pressure() - 50 * ATM) / (10 * ATM));
+        h.succeed();
+    }
+
+    // ---- CONT-085, CONT-101, CONT-102 -----------------------------------------------------------
+
+    /** The moles of N2 that make a pressure in a volume at a temperature. */
+    private static double molesFor(double kPa, double volume, double kelvin) {
+        return kPa * volume / (GasMixture.GAS_CONSTANT * kelvin);
+    }
+
+    /** A canister in a sealed room, standing alone, holding N2 at a pressure. */
+    private static CanisterBlockEntity canisterAt(Area a, double kPa) {
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 1, 2);
+        can.network().gas().add(new GasParcel(Map.of(N2, molesFor(kPa, PipeVolumes.CANISTER, T)), T));
+        return can;
+    }
+
+    private static boolean canisterGone(Area a) {
+        return !a.get(2, 1, 2).is(AtmosBlocks.CANISTER.get());
+    }
+
+    /** Just below its rating a canister holds; just above it, it ruptures into its cell, with no explosion. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_101_a_canister_ruptures_just_above_90_atm_and_not_below(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 313);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        CanisterBlockEntity can = canisterAt(a, 9119);
+        double below = can.network().gas().totalMoles();
+        a.step();
+        h.assertFalse(canisterGone(a), "a canister at 9,119 kPa ruptured");
+        a.close(roomMoles(a), room, "the room's gas with the canister whole");
+
+        double raised = molesFor(9121, PipeVolumes.CANISTER, T);
+        can.network().gas().add(new GasParcel(Map.of(N2, raised - below), T));
+        a.step();
+        h.assertTrue(canisterGone(a), "a canister at 9,121 kPa held");
+        a.tick();
+        a.close(roomMoles(a), room + raised, "the room's gas after the rupture");
+        h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a rupturing canister exploded");
+        h.succeed();
+    }
+
+    /**
+     * CONT-102's plan: from below 90 atm to above 135 atm in one tick. It goes straight to the
+     * explosion, with the formula's power, and its gas goes into its cell.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_102_a_canister_raised_past_135_atm_in_one_tick_explodes(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 314);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        CanisterBlockEntity can = canisterAt(a, 5000);
+        double start = can.network().gas().totalMoles();
+        a.step();
+        h.assertFalse(canisterGone(a), "a canister at 5,000 kPa failed");
+
+        double kPa = ContainerFailure.CANISTER_EXPLODE_KPA + 25 * ATM;
+        double raised = molesFor(kPa, PipeVolumes.CANISTER, T);
+        can.network().gas().add(new GasParcel(Map.of(N2, raised - start), T));
+        a.step();
+        h.assertTrue(canisterGone(a), "the canister is still there");
+        power(h, oneBlast(h, a.point(2, 1, 2)), 2.5);
+        a.tick();
+        a.close(roomMoles(a), room + raised, "the room's gas after the explosion");
+        h.succeed();
+    }
+
+    /**
+     * CONT-102's plan by way of a burn: hydrogen in a lone canister takes it from below 90 atm to above
+     * 135 atm in one atmos tick, and the check sees that in the same tick. Had the check gone first,
+     * the canister would have held.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_102_a_burn_explodes_a_canister_in_the_same_atmos_tick(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 323);
+        GasDeviceTests.room(a);
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 1, 2);
+        ResourceLocation hydrogen = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
+        can.network().gas().add(new GasParcel(Map.of(hydrogen, 400.0, O2, 400.0, N2, 400.0), 900));
+
+        GasMixture before = can.network().gas().mixture();
+        GasMixture burned = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
+        h.assertTrue(
+                before.pressure() < ContainerFailure.CANISTER_RATED_KPA,
+                "it starts at " + before.pressure() + " kPa, not below 90 atm");
+        h.assertTrue(
+                burned.pressure() > ContainerFailure.CANISTER_EXPLODE_KPA,
+                "the burn reaches " + burned.pressure() + " kPa, not above 135 atm");
+
+        a.step();
+        h.assertTrue(canisterGone(a), "the canister is still there after its burn");
+        power(
+                h,
+                oneBlast(h, a.point(2, 1, 2)),
+                (burned.pressure() - ContainerFailure.CANISTER_EXPLODE_KPA) / ContainerFailure.POWER_SCALE_KPA);
+        h.succeed();
+    }
+
+    /** A canister's power is capped too (CONT-109). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_109_a_canisters_power_is_capped_at_16(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 315);
+        GasDeviceTests.room(a);
+        canisterAt(a, ContainerFailure.CANISTER_EXPLODE_KPA + 300 * ATM);
+        a.step();
+        h.assertTrue(canisterGone(a), "the canister is still there");
+        power(h, oneBlast(h, a.point(2, 1, 2)), 16);
+        h.succeed();
+    }
+
+    /** A canister's explosion follows the preset, as a tank's does (CONT-107). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_107_a_canister_breaks_blocks_only_under_hardcore(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 316);
+        withPreset(AtmospherePreset.NORMAL, () -> h.assertFalse(canisterBlastBreaks(a), "broke blocks under Normal"));
+        withPreset(
+                AtmospherePreset.HARDCORE, () -> h.assertTrue(canisterBlastBreaks(a), "broke nothing under Hardcore"));
+        h.assertValueEqual(Blasts.take(a.point(3, 2, 3)).size(), 2, "explosions, one under each preset");
+        h.succeed();
+    }
+
+    /** Explodes a canister inside a shell of glass and says whether any of the glass broke. */
+    private static boolean canisterBlastBreaks(Area a) {
+        shell(a);
+        a.place(3, 2, 3, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(3, 2, 3);
+        double kPa = ContainerFailure.CANISTER_EXPLODE_KPA + 20 * ATM;
+        can.network().gas().add(new GasParcel(Map.of(N2, molesFor(kPa, PipeVolumes.CANISTER, T)), T));
+        a.step();
+        return glassLeft(a) < 26;
+    }
+
+    /**
+     * A canister in a network fails at the network's pressure. Its share goes into its cell, and the
+     * rest stays in the pipes. This stays below the 100 atm at which the pipe would burst first.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_101_a_canister_in_a_network_ruptures_with_its_share(GameTestHelper h) {
+        Area a = new Area(h, 317);
+        GasDeviceTests.room(a);
+        double room = a.zone(1, 2, 1).mixture().totalMoles();
+        a.place(2, 1, 2, GasDeviceTests.pipe());
+        a.place(2, 2, 2, GasDeviceTests.port());
+        a.place(2, 3, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 3, 2);
+        PipeNetwork net = can.network();
+        double total = molesFor(9200, net.volume(), T);
+        double share = total * PipeVolumes.CANISTER / net.volume();
+        net.gas().add(new GasParcel(Map.of(N2, total), T));
+        a.step();
+        h.assertFalse(a.get(2, 3, 2).is(AtmosBlocks.CANISTER.get()), "the canister held above its rating");
+        h.assertTrue(a.get(2, 1, 2).is(AtmosBlocks.PIPE.get()), "the pipe went with the canister");
+        a.tick();
+        a.close(a.zone(1, 2, 1).mixture().totalMoles(), room + share, "the room's gas: the canister's share");
+        h.succeed();
+    }
+
+    /** An item above the rating doesn't fail while it's an item. Placed, it ruptures at its first atmos tick. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_101_a_canister_placed_above_its_rating_ruptures(GameTestHelper h) {
+        Area a = new Area(h, 324);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        double moles = molesFor(9200, PipeVolumes.CANISTER, T);
+        ItemStack item = new ItemStack(AtmosItems.CANISTER.get());
+        item.set(AtmosComponents.GAS.get(), new GasParcel(Map.of(N2, moles), T));
+
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.<CanisterBlockEntity>entity(2, 1, 2).applyComponentsFromItemStack(item);
+        a.step();
+        h.assertTrue(canisterGone(a), "a canister placed at 9,200 kPa held");
+        a.tick();
+        a.close(roomMoles(a), room + moles, "the room's gas after the rupture");
+        h.succeed();
+    }
+
+    /**
+     * Any explosion a canister is caught in ruptures it (CONT-085), also one that leaves blocks
+     * intact. Its gas goes into its cell, not into an item.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_canister_caught_in_an_explosion_ruptures(GameTestHelper h) {
+        Area a = new Area(h, 318);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        CanisterBlockEntity can = canisterAt(a, 2000);
+        double held = can.network().gas().totalMoles();
+        Vec3 near = a.point(2, 2, 2);
+        a.level.explode(null, near.x, near.y, near.z, 4f, Level.ExplosionInteraction.NONE);
+        h.assertTrue(canisterGone(a), "the blast left the canister whole");
+        h.assertTrue(a.get(0, 2, 2).is(Blocks.STONE), "a blast that keeps blocks broke the wall");
+        a.tick();
+        a.close(roomMoles(a), room + held, "the room's gas after the rupture");
+        h.succeed();
+    }
+
+    /**
+     * A blast that breaks blocks ruptures a canister too, so its gas goes into its cell rather than
+     * into an item. Power 2 reaches the metal canister next to it but not the stone walls, so the room
+     * stays sealed and can show where the gas went.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_blast_that_breaks_blocks_ruptures_a_canister(GameTestHelper h) {
+        Area a = new Area(h, 319);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        CanisterBlockEntity can = canisterAt(a, 2000);
+        double held = can.network().gas().totalMoles();
+        Vec3 near = a.point(2, 2, 2);
+        a.level.explode(null, near.x, near.y, near.z, 2f, Level.ExplosionInteraction.BLOCK);
+        h.assertTrue(canisterGone(a), "the blast left the canister whole");
+        h.assertTrue(a.get(0, 2, 2).is(Blocks.STONE), "the blast broke the wall, so the room proves nothing");
+        a.tick();
+        a.close(roomMoles(a), room + held, "the room's gas after the rupture");
+        h.succeed();
+    }
+
+    /** A wind charge's blast only pushes, and triggers doors: it leaves a canister alone. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_wind_burst_leaves_a_canister_whole(GameTestHelper h) {
+        Area a = new Area(h, 320);
+        a.clear(0, 0, 6, 6);
+        a.place(3, 1, 3, GasDeviceTests.canister());
+        Vec3 near = a.point(3, 2, 3);
+        a.level.explode(null, near.x, near.y, near.z, 4f, Level.ExplosionInteraction.TRIGGER);
+        h.assertTrue(a.get(3, 1, 3).is(AtmosBlocks.CANISTER.get()), "a wind burst ruptured the canister");
+        h.succeed();
+    }
+
+    /** Gas above 1,273 K ruptures its canister, and gas at 1,273 K doesn't. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_canister_with_gas_above_1273_k_ruptures(GameTestHelper h) {
+        Area a = new Area(h, 321);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 1, 2);
+        can.network().gas().add(new GasParcel(Map.of(N2, 10.0), 1273));
+        a.step();
+        h.assertFalse(canisterGone(a), "a canister at 1,273 K ruptured");
+
+        can.network().gas().setTemperature(1300);
+        a.step();
+        h.assertTrue(canisterGone(a), "a canister at 1,300 K held");
+        a.tick();
+        h.assertTrue(roomMoles(a) > room + 9.99, "the canister's gas didn't reach the room");
+        h.succeed();
+    }
+
+    /**
+     * Air above 1,273 K around it ruptures a canister, even an empty one. Its cell's reading can lag
+     * behind placing it, so this allows a few atmos ticks.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_canister_in_air_above_1273_k_ruptures(GameTestHelper h) {
+        Area a = new Area(h, 322);
+        a.box(0, 0, 4, 4);
+        a.settle(GasMutations.add(a.level, a.point(2, 2, 2), new GasParcel(Map.of(N2, 5000.0), 3000), Area.SOURCE));
+        double air = a.zone(2, 2, 2).mixture().temperature();
+        h.assertTrue(air > ContainerFailure.CANISTER_MAX_K, "the room is at " + air + " K, so this proves nothing");
+
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        for (int i = 0; i < 8 && !canisterGone(a); i++) {
+            a.step();
+        }
+        h.assertTrue(canisterGone(a), "an empty canister in a room at " + air + " K held");
+        h.succeed();
+    }
+
+    /**
+     * A burn that heats a canister's gas past 1,273 K ruptures it, far below its rating: it goes by
+     * the hotter of its gas and the air around it.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_085_a_burn_past_1273_k_ruptures_a_canister(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 325);
+        GasDeviceTests.room(a);
+        double room = roomMoles(a);
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 1, 2);
+        ResourceLocation hydrogen = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
+        can.network().gas().add(new GasParcel(Map.of(hydrogen, 5.0, O2, 10.0, N2, 15.0), 900));
+
+        GasMixture burned = Reactions.applyStandalone(can.network().gas().mixture(), AtmosTicks.SECONDS, false);
+        h.assertTrue(
+                burned.temperature() > ContainerFailure.CANISTER_MAX_K,
+                "the burn reaches " + burned.temperature() + " K, not above 1,273 K");
+        h.assertTrue(
+                burned.pressure() < ContainerFailure.CANISTER_RATED_KPA,
+                "the burn reaches " + burned.pressure() + " kPa, so the pressure could be what ruptures it");
+
+        a.step();
+        h.assertTrue(canisterGone(a), "the canister held a burn at " + burned.temperature() + " K");
+        h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a canister well below its rating exploded");
+        a.tick();
+        h.assertTrue(
+                roomMoles(a) > room + 25, "the canister's gas didn't reach the room"); // it may go on burning there
         h.succeed();
     }
 }
