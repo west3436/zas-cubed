@@ -3,8 +3,8 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
-accepted on 2026-10-31 (D-57). FIRE-033 and FIRE-034 were added as Draft on
-2026-11-04.
+accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033 and FIRE-034 were added as
+Drafts on 2026-11-04.
 
 **Scope.** Covers:
 - gas reactions
@@ -96,6 +96,40 @@ Shipped in `data/zas/zas/reaction/` as reactions that need ignition, with
 these limits and autoignition points. Checked by the `fire_003_` tests in
 `ReactionFormatTest`, which burn the shipped files with the shipped gases, and
 `ReactionSetTest`. In game they burn once hotspots do (FIRE-011).*
+
+*2026-11-04: the limits in this table are the ones at 298 K and below. Above
+298 K they widen with the gas's temperature (FIRE-032,
+[#211](https://github.com/west3436/zas-cubed/issues/211)).*
+
+#### FIRE-032 · Flammability limits widen with temperature
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-003, FIRE-010, [#211](https://github.com/west3436/zas-cubed/issues/211)
+
+Above 298 K, a fuel's lower flammability limit shall fall and its upper limit
+rise, each by 0.75 · (T − 298) / ΔH꜀ percentage points, with T in K and ΔH꜀ the
+reaction's heat per mole of fuel in kcal/mol. The lower limit shall stop at a
+mole fraction of 0.1 %, or where it was declared if that is lower, and the
+upper at 100 %. At and below 298 K the declared limits shall apply.
+
+| Fuel | Lower limit at 298 K | Falls per kelvin | Reaches 0.1 % at |
+|---|---|---|---|
+| H₂ | 4 % | 0.0130 points | 599 K |
+| CH₄ | 5 % | 0.0039 points | 1,550 K |
+| CO | 12.5 % | 0.0111 points | 1,416 K |
+
+- **Rationale:** Decision: the owner's, 2026-11-03, on the fire round's test
+  feedback ([#211](https://github.com/west3436/zas-cubed/issues/211)): a hot
+  room stopped burning at H₂'s 4 % with O₂ left. Real limits widen as the gas
+  warms, and the modified Burgess–Wheeler rule gives how far.
+- **Verify:** Unit tests check 3.9 % H₂ doesn't burn at 298 K and does at
+  700 K, and that a fire at 2,700 K burns H₂ down to the floor or to the fire
+  oxygen threshold. A GameTest checks a sealed room at 9 % H₂ burns to about 4 %
+  when kept at room temperature and well below it once its own heat takes it
+  past 600 K.
+
+*2026-11-04: Built, and waiting for review. `FlammabilityLimits.lowerAt` and
+`upperAt`, used by every check of the limits in `ReactionSet`. Checked by the
+`fire_032_` tests in `ReactionSetTest` and
+`fire_032_sealed_room_burns_below_the_declared_limit_once_hot` (GameTest).*
 
 #### FIRE-005 · Incomplete combustion
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-49, LIFE-041
@@ -201,6 +235,12 @@ that fuel's autoignition temperature.
 *2026-11-03: Implemented ([#42](https://github.com/west3436/zas-cubed/issues/42)). A zone with no hotspot whose gas is
 flammable at or above a fuel's autoignition point starts a gas fire at its lowest
 free position. `fire_010_hydrogen_autoignites_at_900_k_not_800_k` checks it.*
+
+*2026-11-04: the limits this tests are the fuel's at the mixture's temperature
+(FIRE-032, [#211](https://github.com/west3436/zas-cubed/issues/211)), not
+FIRE-003's table, so a mixture leaner than that table can autoignite. At its
+autoignition point H₂ is flammable down to 0.1 %, CH₄ to about 3 % and CO to
+about 6 %.*
 
 #### FIRE-014 · Ignition sources
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-03, D-49

@@ -6,6 +6,7 @@ import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
@@ -60,6 +61,10 @@ public final class AtmosBlocks {
 
     /** The heater (CONT-019). */
     public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
+
+    /** The air conditioner, the requirements' freezer (CONT-019). */
+    public static final DeferredBlock<AirConditionerBlock> AIR_CONDITIONER =
+            BLOCKS.registerBlock("air_conditioner", AirConditionerBlock::new, metal());
 
     /** The recharger (CONT-113). */
     public static final DeferredBlock<RechargerBlock> RECHARGER =

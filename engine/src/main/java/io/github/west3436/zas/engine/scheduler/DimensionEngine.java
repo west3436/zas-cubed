@@ -339,7 +339,7 @@ public final class DimensionEngine {
         // A rebuilt zone stays paused until what its surface opens onto is classified.
         Set<Long> waiting = new HashSet<>();
         for (long id : resuming) {
-            if (classifier.hasPending()) {
+            if (classifier.hasPendingFor(id)) {
                 waiting.add(id);
             } else {
                 rebuilt.remove(id);
