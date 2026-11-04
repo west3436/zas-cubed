@@ -143,10 +143,12 @@ public final class PipeChunkTests {
                     what + ": expected " + expected + ", got " + actual);
         }
 
-        /** Every member of a node's network is loaded and not removed. */
+        /** Every block entity among a node's network's members is loaded and not removed. */
         void noStale(PipeNodeEntity node, String when) {
             for (PipeNode m : node.network().members()) {
-                PipeNodeEntity e = (PipeNodeEntity) m;
+                if (!(m instanceof PipeNodeEntity e)) {
+                    continue; // a device's port, which isn't a block entity
+                }
                 h.assertFalse(e.isRemoved(), when + ": a removed node at " + e.getBlockPos() + " is in the network");
                 h.assertTrue(
                         e.getLevel().getBlockEntity(e.getBlockPos()) == e,
