@@ -24,6 +24,36 @@ class PipeNetworkTest {
     private static final double T = 293.15;
     private static final double REL = 1e-12;
 
+    /** CONT-100, CONT-006: whichever member steps first runs the network's atmos tick, once per round. */
+    @Test
+    void cont_100_a_network_runs_one_atmos_tick_per_round_of_its_members() {
+        Node a = new Node(70);
+        Node b = new Node(70);
+        Node c = new Node(70);
+        a.links.add(b);
+        b.links.add(c);
+        PipeNetwork net = a.net();
+        assertTrue(net.startsAtmosTick(b));
+        assertFalse(net.startsAtmosTick(a));
+        assertFalse(net.startsAtmosTick(c));
+        assertTrue(net.startsAtmosTick(b), "b steps again: the next atmos tick");
+        assertFalse(net.startsAtmosTick(a));
+        assertFalse(net.startsAtmosTick(c));
+    }
+
+    /** CONT-100: a member whose chunk has left full status doesn't step, and holds nothing up. */
+    @Test
+    void cont_100_a_member_that_is_not_stepping_holds_up_no_atmos_tick() {
+        Node a = new Node(70);
+        Node away = new Node(70);
+        a.links.add(away);
+        PipeNetwork net = a.net();
+        assertEquals(2, net.members().size());
+        assertTrue(net.startsAtmosTick(a));
+        assertTrue(net.startsAtmosTick(a));
+        assertTrue(net.startsAtmosTick(a));
+    }
+
     /** A node in a test graph, linked by hand. */
     private static final class Node implements PipeNode {
         final GasStore stored;
