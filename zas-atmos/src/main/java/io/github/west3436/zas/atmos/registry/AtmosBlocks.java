@@ -17,6 +17,7 @@ import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
+import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -50,6 +51,10 @@ public final class AtmosBlocks {
     /** A scrubber (CONT-015). */
     public static final DeferredBlock<ScrubberBlock> SCRUBBER =
             BLOCKS.registerBlock("scrubber", ScrubberBlock::new, metal());
+
+    /** The passive vent: it equalizes with the room, with no power (CONT-016). */
+    public static final DeferredBlock<PassiveVentBlock> PASSIVE_VENT =
+            BLOCKS.registerBlock("passive_vent", PassiveVentBlock::new, metal());
 
     /** The area air controller, a wall panel (CONT-040, D-68). */
     public static final DeferredBlock<AreaAirControllerBlock> AREA_AIR_CONTROLLER =

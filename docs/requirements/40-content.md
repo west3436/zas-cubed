@@ -620,7 +620,7 @@ mixture (CONT-001). The sample that would pass 50 atm is cut to what reaches
 it.*
 
 #### CONT-016 · Passive vent
-`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
+`Could` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
 
 A passive vent shall equalize its buffer with the room when the pressure
 difference exceeds 0.5 kPa, at the one-connection sharing ratio (CORE-031).
@@ -635,6 +635,17 @@ opposite its grille.
 - **Changed 2026-11-02 (the owner, in the batch 5 art review):** the passive
   vent is shaped like the vent: it faces any of six ways and takes a pipe
   only on its back.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:passive_vent` is a 400 L network node with no power and no GUI, which
+makes an open pipe end's exchange with the cell in front of its grille, through
+one `ZonePort`, while its network and that cell differ by more than 0.5 kPa
+([architecture §11.5](../architecture.md#115-devices)).
+`PassiveVentTests.cont_016_a_passive_vent_equalizes_only_above_the_threshold`,
+`cont_016_a_passive_vent_stays_idle_within_the_threshold` and
+`cont_016_a_pipe_joins_a_passive_vent_only_on_its_back` (GameTest) check the
+Verify. In an open cell it equalizes with the ambient
+(`cont_016_a_passive_vent_in_an_open_cell_vents_to_the_ambient`).*
 
 #### CONT-082 · Injector
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the vent covers it), 2026-10-30. · Verify: GameTest
