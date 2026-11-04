@@ -749,7 +749,8 @@ the lever if the per-cell cost ever matters.
   GEO-025, GEO-026), together with its saved held positions, so changes made
   while it was stored apply. Saved cells that are no longer cells are left
   out, and their gas stays in the zone (CORE-022). The zone stays paused until
-  that classification finishes.
+  that classification finishes. A classification that another zone is waiting
+  on doesn't hold it.
 - **Records not yet taken in are kept.** A record the worker hasn't confirmed
   (its batch isn't applied yet), or that no engine has taken (the dimension is
   excluded, or its engine doesn't exist yet), is written back as it is.
