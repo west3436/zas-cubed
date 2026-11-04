@@ -1,0 +1,26 @@
+{
+  "variants": {
+    "axis=x,open=false": {
+      "model": "zas_atmos:block/redstone_valve",
+      "y": 90
+    },
+    "axis=x,open=true": {
+      "model": "zas_atmos:block/redstone_valve_open",
+      "y": 90
+    },
+    "axis=y,open=false": {
+      "model": "zas_atmos:block/redstone_valve",
+      "x": 90
+    },
+    "axis=y,open=true": {
+      "model": "zas_atmos:block/redstone_valve_open",
+      "x": 90
+    },
+    "axis=z,open=false": {
+      "model": "zas_atmos:block/redstone_valve"
+    },
+    "axis=z,open=true": {
+      "model": "zas_atmos:block/redstone_valve_open"
+    }
+  }
+}

@@ -11,6 +11,7 @@ class PipeVolumesTest {
     void cont_007_each_part_has_its_volume() {
         assertEquals(70, PipeVolumes.PIPE);
         assertEquals(200, PipeVolumes.PORT);
+        assertEquals(200, PipeVolumes.VALVE);
         assertEquals(400, PipeVolumes.VENT);
         assertEquals(1_000, PipeVolumes.CANISTER);
         // The vent's rate is half its own buffer's moles (CONT-078).
