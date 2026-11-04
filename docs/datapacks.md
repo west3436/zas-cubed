@@ -465,7 +465,7 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
 | `concentrations` | list | no | Objects `{"gas", "min", "max"}`: the gas's mole fraction of the mixture must be from `min` (default 0) to `max` (default 1) |
 | `catalysts` | list | no | Objects `{"gas", "min"}`: the gas must be present, at a mole fraction of at least `min` (default 0), and isn't consumed |
 | `requires_ignition` | boolean | no | Whether it needs an ignition source in or next to the cell (FIRE-006). Default false |
-| `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture, 0 to 1), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
+| `flammability` | object | no | The fuel's flammability limits: `fuel` (a gas id), `lower` and `upper` (its mole fraction of the mixture at 298 K, 0 to 1; they widen above it, FIRE-032), and `autoignition` (K, optional): at or above it no ignition source is needed. A reaction with flammability limits is a fire, so it also needs the fire oxygen threshold (FIRE-030) |
 | `rate` | object | no | How fast it goes (CORE-046): `per_second` (k, above 0), `activation_energy` (Ea in J/mol, default 0) and `reference_temperature` (K, default 298.15). Without one it goes as far as its reactants allow in one step. Not allowed with `requires_ignition` |
 | `incomplete_combustion` | object | no | Another form, with its own `reactants`, `products` and `enthalpy`, blended in by the share of carbon that forms CO when the O₂ fraction is low (FIRE-005) |
 | `parameters` | any | no | Only for a code type: passed to it as it loads, and checked by it |
@@ -501,6 +501,14 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
 - **Every condition is read at the start of a step,** from the whole mixture:
   temperatures, mole fractions, catalysts, flammability limits and, for a
   fire, the oxygen threshold.
+- **Flammability limits widen with temperature** (FIRE-032). What you declare
+  holds at 298 K and below. Above it, `lower` falls and `upper` rises by 0.75 ·
+  (T − 298) / ΔH꜀ percentage points, the modified Burgess–Wheeler rule, where
+  ΔH꜀ is the heat the reaction releases per mole of its `fuel`, in kcal/mol
+  (`-enthalpy` / 4,184 / the fuel's coefficient). `lower` stops at 0.1 %, or at
+  what you declared if that is lower, and `upper` at 100 %. A reaction that
+  releases no heat, such as a code type, whose `enthalpy` isn't allowed, keeps
+  its limits at any temperature.
 - **A reaction without `requires_ignition`** runs in every zone each atmos
   tick. With a `rate`, a step of dt seconds goes 1 − e^(−k·dt) of the way to
   using up its limiting reactant, with k = `per_second` ·
@@ -527,6 +535,11 @@ produces the products' and releases −`enthalpy` J of heat into the gas.
 | `hydrogen_combustion.json` | H₂ + ½ O₂ → H₂O | −242 kJ/mol | 4–75 % H₂ | 858 K |
 | `methane_combustion.json` | CH₄ + 2 O₂ → CO₂ + 2 H₂O | −802 kJ/mol | 5–15 % CH₄ | 810 K |
 | `carbon_monoxide_combustion.json` | CO + ½ O₂ → CO₂ | −283 kJ/mol | 12.5–74 % CO | 882 K |
+
+- **The limits above are at 298 K** (FIRE-032). Hot gas burns leaner: H₂'s
+  lower limit reaches the 0.1 % floor near 600 K, CH₄'s near 1,550 K and CO's
+  near 1,420 K, so a hot room burns its fuel out unless the fire oxygen
+  threshold stops it first.
 
 - **Methane's incomplete form** (FIRE-005) is CH₄ + 1.5 O₂ → CO + 2 H₂O,
   −519 kJ/mol. Below an O₂ fraction of 0.18 (`[fire]` in the server config) a

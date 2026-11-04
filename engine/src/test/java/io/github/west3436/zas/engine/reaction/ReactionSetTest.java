@@ -93,6 +93,173 @@ class ReactionSetTest {
         assertEquals((before + 242_000) / 25.28, m.temperature(), 1e-6);
     }
 
+    // ---- FIRE-032: the limits widen with temperature --------------------------------------------
+
+    /** H₂'s limits as FIRE-003 ships them, and its heat of combustion. */
+    private static final ReactionConditions.FlammabilityLimits H2_LIMITS =
+            new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.04, 0.75, 858);
+
+    private static final double H2_HEAT = 242_000;
+
+    private static final double FLOOR = ReactionConditions.FlammabilityLimits.LOWER_LIMIT_FLOOR;
+
+    @Test
+    void fire_032_hydrogen_at_3_9_percent_burns_at_700_k_but_not_at_298_k() {
+        GasMixture cold = fuelInAir(1000, 298, H2, 0.039);
+        assertFalse(COMBUSTION.flammability(cold, FIRE).flammable());
+        assertFalse(COMBUSTION.burn(cold, 1000, true, FIRE).reacted());
+
+        GasMixture hot = fuelInAir(1000, 700, H2, 0.039);
+        assertTrue(COMBUSTION.flammability(hot, FIRE).flammable());
+        assertTrue(COMBUSTION.burn(hot, 1000, true, FIRE).reacted());
+        assertEquals(0, hot.moles(H2));
+    }
+
+    /** The modified Burgess–Wheeler rule: 0.75 points · (kcal/mol) / K over the heat of combustion. */
+    @Test
+    void fire_032_the_lower_limit_falls_by_the_rule_for_each_fuel() {
+        // H2, 242 kJ/mol = 57.8 kcal/mol: about 0.013 points a kelvin.
+        assertEquals(0.04 - 0.0075 / (242.0 / 4.184) * 202, H2_LIMITS.lowerAt(500, H2_HEAT), 1e-12);
+        // CH4, 802 kJ/mol.
+        ReactionConditions.FlammabilityLimits ch4 =
+                new ReactionConditions.FlammabilityLimits("zas:methane", 0.05, 0.15, 810);
+        assertEquals(0.05 - 0.0075 / (802.0 / 4.184) * 702, ch4.lowerAt(1000, 802_000), 1e-12);
+        // CO, 283 kJ/mol.
+        ReactionConditions.FlammabilityLimits co =
+                new ReactionConditions.FlammabilityLimits("zas:carbon_monoxide", 0.125, 0.74, 882);
+        assertEquals(0.125 - 0.0075 / (283.0 / 4.184) * 702, co.lowerAt(1000, 283_000), 1e-12);
+    }
+
+    @Test
+    void fire_032_at_and_below_298_k_the_declared_limits_hold() {
+        for (double t : new double[] {2.7, 200, 293.15, 298}) {
+            assertEquals(0.04, H2_LIMITS.lowerAt(t, H2_HEAT));
+            assertEquals(0.75, H2_LIMITS.upperAt(t, H2_HEAT));
+        }
+        // At the shipped room temperature, 4 % burns and just under doesn't.
+        assertTrue(
+                COMBUSTION.flammability(fuelInAir(1000, 293.15, H2, 0.04), FIRE).flammable());
+        assertFalse(COMBUSTION
+                .flammability(fuelInAir(1000, 293.15, H2, 0.0399), FIRE)
+                .flammable());
+    }
+
+    @Test
+    void fire_032_the_lower_limit_stops_at_its_floor() {
+        // H2's limit reaches the floor near 600 K, and stays there.
+        assertTrue(H2_LIMITS.lowerAt(580, H2_HEAT) > FLOOR);
+        assertEquals(FLOOR, H2_LIMITS.lowerAt(600, H2_HEAT));
+        assertEquals(FLOOR, H2_LIMITS.lowerAt(5000, H2_HEAT));
+
+        // A limit a pack declares below the floor stays as declared.
+        ReactionConditions.FlammabilityLimits low =
+                new ReactionConditions.FlammabilityLimits("zas:hydrogen", 0.0005, 0.75, 858);
+        assertEquals(0.0005, low.lowerAt(298, H2_HEAT));
+        assertEquals(0.0005, low.lowerAt(5000, H2_HEAT));
+    }
+
+    @Test
+    void fire_032_the_upper_limit_rises_by_as_much_as_the_lower_falls() {
+        assertEquals(0.04 - H2_LIMITS.lowerAt(500, H2_HEAT), H2_LIMITS.upperAt(500, H2_HEAT) - 0.75, 1e-12);
+        assertEquals(1, H2_LIMITS.upperAt(5000, H2_HEAT));
+
+        // Methane's narrow limits show it: 16 % is too rich when cold, and burns when hot.
+        assertFalse(
+                COMBUSTION.flammability(fuelInAir(1000, 298, CH4, 0.16), FIRE).flammable());
+        assertTrue(
+                COMBUSTION.flammability(fuelInAir(1000, 700, CH4, 0.16), FIRE).flammable());
+    }
+
+    /** The rule takes the heat per mole of fuel, however the reaction is written. */
+    @Test
+    void fire_032_the_limits_follow_the_heat_per_mole_of_fuel() {
+        ReactionSet doubled = Chemistry.compile(ReactionDefinition.standard(
+                "test:doubled",
+                Map.of("zas:hydrogen", 2.0, "zas:oxygen", 1.0),
+                Map.of("zas:water_vapor", 2.0),
+                -484_000,
+                ReactionConditions.combustion(H2_LIMITS),
+                Optional.empty(),
+                Optional.empty()));
+        double limit = H2_LIMITS.lowerAt(500, H2_HEAT);
+        assertFalse(doubled.flammability(fuelInAir(1000, 500, H2, limit * 0.99), FIRE)
+                .flammable());
+        assertTrue(doubled.flammability(fuelInAir(1000, 500, H2, limit * 1.01), FIRE)
+                .flammable());
+    }
+
+    /** With no heat of combustion to go on, a reaction keeps the limits it declares. */
+    @Test
+    void fire_032_a_reaction_that_releases_no_heat_keeps_its_limits() {
+        ReactionSet set = Chemistry.compile(ReactionDefinition.standard(
+                "test:cool",
+                Map.of("zas:hydrogen", 1.0, "zas:oxygen", 0.5),
+                Map.of("zas:water_vapor", 1.0),
+                0,
+                ReactionConditions.combustion(H2_LIMITS),
+                Optional.empty(),
+                Optional.empty()));
+        assertFalse(set.flammability(fuelInAir(1000, 2000, H2, 0.039), FIRE).flammable());
+        assertTrue(set.flammability(fuelInAir(1000, 2000, H2, 0.041), FIRE).flammable());
+    }
+
+    /** Burns parcels of a mixture until it can't burn, as a hotspot would. */
+    private static void burnOut(GasMixture m) {
+        for (int i = 0; i < 20_000 && COMBUSTION.flammability(m, FIRE).flammable(); i++) {
+            assertTrue(COMBUSTION.burn(m, 375, true, FIRE).reacted());
+        }
+        assertFalse(COMBUSTION.flammability(m, FIRE).flammable());
+        assertFalse(COMBUSTION.burn(m, 375, true, FIRE).reacted());
+    }
+
+    /** A hot room with O₂ to spare burns its hydrogen down to the floor, then goes out. */
+    @Test
+    void fire_032_a_fire_at_2700_k_burns_hydrogen_down_to_the_floor() {
+        GasMixture m = mixture(146_000, 2700, H2, 340, O2, 2200, N2, 5960);
+        burnOut(m);
+        double left = m.moles(H2) / m.totalMoles();
+        assertTrue(left < FLOOR && left > FLOOR * 0.99, "H2 fraction left: " + left);
+        assertTrue(m.moles(O2) / m.totalMoles() > 0.14, "O2 ran out first: " + m.moles(O2));
+    }
+
+    /**
+     * The room #211 reports: 340 mol of H₂ and 1,208 mol of O₂ in 8,500 mol at about 2,700 K. Its O₂
+     * is only just above the fire oxygen threshold (FIRE-030), so that stops it, not the limit.
+     */
+    @Test
+    void fire_032_a_fire_at_2700_k_short_of_oxygen_stops_at_the_oxygen_threshold() {
+        GasMixture m = mixture(146_000, 2700, H2, 340, O2, 1208, N2, 6952);
+        burnOut(m);
+        double o2 = m.moles(O2) / m.totalMoles();
+        assertTrue(o2 < 0.14 && o2 > 0.139, "O2 fraction left: " + o2);
+        assertTrue(m.moles(H2) < 340 && m.moles(H2) > 280, "H2 left: " + m.moles(H2));
+    }
+
+    /** FIRE-010 tests the limits at the gas's temperature, so a lean mix lights by itself when hot. */
+    @Test
+    void fire_032_a_lean_mixture_autoignites_above_its_autoignition_point() {
+        GasMixture hot = fuelInAir(1000, 900, H2, 0.03);
+        assertTrue(COMBUSTION.flammability(hot, FIRE).ignitesAt(900));
+        assertTrue(COMBUSTION.burn(hot, 1000, false, FIRE).reacted());
+
+        // Warm but below 858 K, it needs a source.
+        GasMixture warm = fuelInAir(1000, 800, H2, 0.03);
+        assertTrue(COMBUSTION.flammability(warm, FIRE).flammable());
+        assertFalse(COMBUSTION.flammability(warm, FIRE).ignitesAt(800));
+        assertFalse(COMBUSTION.burn(warm, 1000, false, FIRE).reacted());
+    }
+
+    /** A container's gas uses the same limits (FIRE-031), which a hot TTV tank relies on (S-13). */
+    @Test
+    void fire_032_a_hot_lean_container_burns() {
+        GasMixture tank = mixture(70, 900, H2, 0.3, O2, 3, N2, 6.7);
+        assertTrue(COMBUSTION.applyStandalone(tank, 1, false, FIRE).reacted());
+        assertEquals(0, tank.moles(H2));
+
+        GasMixture cold = mixture(70, 293.15, H2, 0.3, O2, 3, N2, 6.7);
+        assertFalse(COMBUSTION.applyStandalone(cold, 1, true, FIRE).reacted());
+    }
+
     // ---- FIRE-006: reactions requiring ignition ------------------------------------------------
 
     @Test

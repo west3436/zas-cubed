@@ -279,7 +279,7 @@ scrubber and the conservation checker waits for the scrubber.*
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
 
 #### CONT-100 · Reactions in containers
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, D-50 · Depends: API-019, FIRE-031
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-50 · Depends: API-019, FIRE-031
 
 Each atmos tick, every pipe network, canister and tank shall react its mixture
 through the API (API-019), with no ignition source. A pipe network that
@@ -291,6 +291,17 @@ overpressures bursts (CONT-108).
 
 *2026-10-31: pipes now burst (CONT-108, D-59); they previously never burst in
 R1.*
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+A network reacts once per atmos tick, run by the first of its members to step;
+a canister is a network node, so it reacts the same way, alone or on a port. A
+tank reacts while a player has it, in a worn or carried suit's slot, and
+dropped; the tank transfer valve will tick its own (CONT-103). The game offers
+no tick to a stack in a chest, on a mob or in an item frame, so a tank there
+waits until it is carried again ([architecture
+§11.9](../architecture.md#119-breathing-gear-cont-030-to-cont-032-cont-039-cont-090)).
+`ContainerReactionTests.cont_100_*` (GameTest) check a network, a canister and
+tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 
 ## Devices (R1 set)
 
