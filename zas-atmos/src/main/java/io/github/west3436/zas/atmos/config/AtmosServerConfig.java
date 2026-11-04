@@ -27,6 +27,12 @@ public final class AtmosServerConfig {
     /** The most heat a heater adds, in W (CONT-087). */
     public static final ModConfigSpec.IntValue HEATER_WATTS;
 
+    /** The air conditioner's draw from its battery at full power, in FE/t; less in proportion below it (CONT-087). */
+    public static final ModConfigSpec.IntValue AIR_CONDITIONER_DRAW;
+
+    /** The most heat an air conditioner takes, in W (CONT-087). */
+    public static final ModConfigSpec.IntValue AIR_CONDITIONER_WATTS;
+
     /** The recharger's draw from its controller while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_DRAW;
 
@@ -70,6 +76,11 @@ public final class AtmosServerConfig {
                 .defineInRange("heater", 60, 0, 100_000);
         HEATER_WATTS = builder.comment("The most heat a heater adds, in W, not FE/t (CONT-087)")
                 .defineInRange("heater_watts", 5_000, 0, 1_000_000);
+        AIR_CONDITIONER_DRAW = builder.comment(
+                        "Air conditioner, from its battery while it cools at full power; in proportion below it (CONT-087)")
+                .defineInRange("air_conditioner", 60, 0, 100_000);
+        AIR_CONDITIONER_WATTS = builder.comment("The most heat an air conditioner takes, in W, not FE/t (CONT-087)")
+                .defineInRange("air_conditioner_watts", 5_000, 0, 1_000_000);
         RECHARGER_DRAW = builder.comment("Recharger, from its controller while it charges (CONT-113)")
                 .defineInRange("recharger", 40, 0, 100_000);
         RECHARGER_RATE = builder.comment("What a recharger puts into its battery while it charges, in FE/t (CONT-113)")

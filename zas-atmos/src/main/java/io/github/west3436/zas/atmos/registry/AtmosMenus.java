@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
+import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
@@ -41,6 +42,10 @@ public final class AtmosMenus {
     /** A heater's switch, setpoint and battery (CONT-019). */
     public static final Supplier<MenuType<HeaterMenu>> HEATER =
             MENUS.register("heater", () -> new MenuType<>(HeaterMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** An air conditioner's switch, setpoint and battery (CONT-019). */
+    public static final Supplier<MenuType<AirConditionerMenu>> AIR_CONDITIONER = MENUS.register(
+            "air_conditioner", () -> new MenuType<>(AirConditionerMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
