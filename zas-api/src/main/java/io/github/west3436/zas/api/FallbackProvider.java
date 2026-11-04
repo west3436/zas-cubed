@@ -135,4 +135,9 @@ final class FallbackProvider implements ZasApiProvider {
     public int atmosPeriodTicks() {
         return Atmospheres.DEFAULT_PERIOD_TICKS;
     }
+
+    @Override
+    public boolean containerExplosionsBreakBlocks() {
+        return false;
+    }
 }
