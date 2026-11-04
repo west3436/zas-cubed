@@ -656,7 +656,7 @@ contents into its cell.
 (D-59).*
 
 #### CONT-086 · Filled canisters are creative-only
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: CONT-050
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: CONT-050
 
 Canisters pre-filled with each built-in gas shall exist only in creative.
 Survival canisters are crafted empty.
@@ -670,6 +670,15 @@ Survival canisters are crafted empty.
 ([#48](https://github.com/west3436/zas-cubed/issues/48)), and no recipe makes a
 filled one. Survival recipes, the empty canister's included, aren't written
 yet.*
+
+*2026-11-04: Implemented. Inspected now that the survival recipes are in
+([#178](https://github.com/west3436/zas-cubed/pull/178)). `canister.json` is the
+only recipe that makes a canister, and its result carries no gas. No recipe
+result carries components at all. `AtmosCreativeTab` is the only caller of
+`CanisterItem.filled` in the mod, and lists one canister for each of the 8
+shipped gases as well as the empty one. A canister filled by a player keeps its
+gas when mined, which is the gas they acquired, not a pre-filled one.
+`cont_086_filled_canisters_are_creative_only` (GameTest) keeps this checked.*
 
 #### CONT-018 · Portable pump and scrubber
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-69
@@ -1051,6 +1060,11 @@ A handheld extinguisher shall put out hotspots and fire blocks it is aimed at.
 The extinguisher sprays while use is held, 5 blocks ahead, and refills at
 water. `cont_037_extinguisher_puts_out_fire_it_is_aimed_at` and
 `cont_037_extinguisher_puts_out_a_gas_fire_hotspot` (GameTest).*
+
+*2026-11-04: it has a survival recipe, proposed and waiting for the owner's
+review ([crafting](../crafting.md)). It comes out full, and the recipe's water
+bucket comes back empty. `cont_037_extinguisher_is_crafted_full_and_returns_the_bucket`
+(GameTest).*
 
 ## Area air controllers and firelocks
 
