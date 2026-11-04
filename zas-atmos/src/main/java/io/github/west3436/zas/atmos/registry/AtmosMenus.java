@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
+import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -56,6 +57,10 @@ public final class AtmosMenus {
             "pressure_pump",
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
+    /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
+    public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
+            MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

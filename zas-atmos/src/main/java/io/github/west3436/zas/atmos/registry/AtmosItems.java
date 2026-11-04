@@ -36,6 +36,7 @@ public final class AtmosItems {
     public static final DeferredItem<CanisterItem> CANISTER =
             ITEMS.registerItem("canister", p -> new CanisterItem(AtmosBlocks.CANISTER.get(), p));
     public static final DeferredItem<BlockItem> VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.VENT);
+    public static final DeferredItem<BlockItem> SCRUBBER = ITEMS.registerSimpleBlockItem(AtmosBlocks.SCRUBBER);
     public static final DeferredItem<BlockItem> AREA_AIR_CONTROLLER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
     public static final DeferredItem<BlockItem> FIRE_ALARM = ITEMS.registerSimpleBlockItem(AtmosBlocks.FIRE_ALARM);
