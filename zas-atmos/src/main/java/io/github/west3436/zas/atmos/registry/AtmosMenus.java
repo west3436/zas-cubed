@@ -4,8 +4,10 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
+import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.mixer.MixerMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
@@ -56,6 +58,14 @@ public final class AtmosMenus {
             "pressure_pump",
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
+    /** A filter's switch, target, side port and what it selects (CONT-013). */
+    public static final Supplier<MenuType<FilterMenu>> FILTER =
+            MENUS.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
+
+    /** A mixer's switch, target, side port and fractions (CONT-077). */
+    public static final Supplier<MenuType<MixerMenu>> MIXER = MENUS.register(
+            "mixer", () -> new MenuType<>((id, inventory) -> new MixerMenu(id), FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

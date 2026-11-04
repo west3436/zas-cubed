@@ -4,11 +4,13 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
+import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
+import io.github.west3436.zas.atmos.mixer.MixerBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
@@ -100,6 +102,16 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<PressurePumpBlockEntity>> PRESSURE_PUMP = BLOCK_ENTITIES.register(
             "pressure_pump",
             () -> BlockEntityType.Builder.of(PressurePumpBlockEntity::new, AtmosBlocks.PRESSURE_PUMP.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<FilterBlockEntity>> FILTER = BLOCK_ENTITIES.register(
+            "filter",
+            () -> BlockEntityType.Builder.of(FilterBlockEntity::new, AtmosBlocks.FILTER.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<MixerBlockEntity>> MIXER = BLOCK_ENTITIES.register(
+            "mixer",
+            () -> BlockEntityType.Builder.of(MixerBlockEntity::new, AtmosBlocks.MIXER.get())
                     .build(null));
 
     public static final Supplier<BlockEntityType<ValveBlockEntity>> VALVE = BLOCK_ENTITIES.register(

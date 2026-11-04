@@ -357,6 +357,11 @@ menu-button packet; the server refuses unknown ids and clamps every setting
 `GasDeviceTests.cont_074_out_of_range_settings_are_clamped_or_refused`
 (GameTest). Later devices' GUIs follow the same pattern.*
 
+*2026-11-04: The filter's and mixer's GUIs do too. A filter's button sends an
+entry's place in a list the server made, so a client can't select anything else.
+`FilterMixerTests.cont_074_a_filter_gui_validates_on_the_server` and
+`cont_074_a_mixer_gui_validates_on_the_server` (GameTest).*
+
 *2026-11-04: The pressure pump's GUI does too (`PumpMenu`,
 `PumpTests.cont_074_a_pumps_gui_is_checked_on_the_server`).*
 
@@ -473,7 +478,7 @@ input's conditions, and never more (vg's max-instead-of-min bug is fixed).
   below and above the limit.
 
 #### CONT-013 · Filter
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 
 A filter shall send selected gases or gas tags to a side outlet, up to a
 target pressure of at most 4,500 kPa.
@@ -484,8 +489,16 @@ target pressure of at most 4,500 kPa.
 - **Verify:** A Unit test checks selected gases leave by the side outlet up to
   the target.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`FilterMathTest.cont_013_*` (Unit) checks selected gases and tags leave by the
+side outlet and the rest by the output, that the first outlet to reach the
+target stops it, at most 100 L/s at input conditions, and that moles and thermal
+energy are conserved. `FilterMixerTests.cont_013_a_real_filter_sends_what_it_selects_to_its_side_outlet`
+and `cont_013_a_real_filter_selects_by_gas_and_by_gas_tag` (GameTest) check a real
+filter among three pipe networks.*
+
 #### CONT-077 · Mixer
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 
 A mixer shall combine two inputs at set fractions, up to a target pressure of
 at most 4,500 kPa.
@@ -494,6 +507,13 @@ at most 4,500 kPa.
   §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)).
 - **Verify:** A Unit test checks the output fractions and that both inputs
   scale together when one runs short.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`MixerMathTest.cont_077_*` (Unit) checks the fractions, that both inputs scale
+together when one is limited or runs short, the target, at most 100 L/s from each
+input at its conditions, and that moles and thermal energy are conserved.
+`FilterMixerTests.cont_077_a_real_mixer_adds_both_inputs_in_their_fractions`
+(GameTest) checks a real mixer among three pipe networks.*
 
 #### CONT-014 · Vent
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
@@ -1769,6 +1789,11 @@ controller. The generators are removed and the buffer spent; once its lease
 runs out, it moves nothing and shows off, and stays switched on. This stays
 Accepted until each device exists to check.*
 
+*2026-11-04: The filter and the mixer stop when their provider's power is cut:
+`FilterMixerTests.cont_060_a_real_filter_runs_on_a_controller_and_stops_when_its_power_is_cut`
+and `cont_060_a_real_mixer_runs_on_a_controller_and_stops_when_its_power_is_cut`
+(GameTest), as the pump's. This stays Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1819,6 +1844,12 @@ it is on, running or idle. `PumpTests.cont_060_a_real_pump_runs_on_a_controller_
 (GameTest) checks a controller pays for it while it is on, and that it draws
 nothing while it is off. This stays Accepted until every device's draw is in
 the config.*
+
+*2026-11-04: The filter's and mixer's 20 FE/t are `[power] filter` and `[power]
+mixer`, drawn while on, running or idle. The `FilterMixerTests.cont_060_*`
+GameTests check a controller pays for each while it is on, and that each draws
+nothing while it is off. This stays Accepted until every device's draw is in the
+config.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01

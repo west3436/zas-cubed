@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.filter;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
 import io.netty.buffer.ByteBuf;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
@@ -57,6 +59,13 @@ public record FilterOption(ResourceLocation id, boolean tag) {
         tags.forEach(id -> out.add(new FilterOption(id, true)));
         gases.forEach(id -> out.add(new FilterOption(id, false)));
         return List.copyOf(out);
+    }
+
+    /** The entry's name: a gas's, or a tag's translation, {@code gas_tag.<namespace>.<path>}, or its id. */
+    public Component name() {
+        return tag
+                ? Component.translatableWithFallback("gas_tag." + id.getNamespace() + "." + id.getPath(), "#" + id)
+                : GasCodecs.name(id);
     }
 
     /** Whether a selection names this entry. A gas selected only through a tag doesn't count. */

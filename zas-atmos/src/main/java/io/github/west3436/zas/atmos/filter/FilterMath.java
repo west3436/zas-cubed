@@ -1,8 +1,9 @@
 package io.github.west3436.zas.atmos.filter;
 
-import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.pump.PumpFlow;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Predicate;
@@ -17,33 +18,17 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <ul>
  *   <li>100 L/s at the input's conditions, the same limit as a pressure pump (CONT-076);
- *   <li>the slice that brings the output to the target: if a part p of the slice goes there, that
- *       is ΔP·V/(R·T<sub>in</sub>)/p moles, with V the output's network's volume, counted once (as
- *       CONT-011 does);
+ *   <li>the slice whose part for the output brings the output to the target, as a pressure pump
+ *       works that out ({@link PumpFlow#molesToTarget}): with the output's network's volume counted
+ *       once, and allowing for the temperature it settles at;
  *   <li>the same for the side outlet.
  * </ul>
  *
  * <p>Gas moves at the input's temperature and mixes into each outlet conserving thermal energy, as
- * everything added to a {@link GasStore} does (CONT-008). The target is exact when the gases' heat
- * capacities match; otherwise an outlet can land a little off it, and the next step corrects a
- * shortfall.
+ * everything added to a {@link GasStore} does (CONT-008).
  */
 public final class FilterMath {
-    /** The highest target, kPa (CONT-013). */
-    public static final double MAX_TARGET = 4_500;
-
-    /** A new filter's target, kPa: one atmosphere. */
-    public static final double DEFAULT_TARGET = 101.325;
-
-    /** The most a filter takes from its input per second, L, at the input's conditions. */
-    public static final double LITRES_PER_SECOND = 100;
-
     private FilterMath() {}
-
-    /** A target clamped to 0–4,500 kPa; NaN is 0. */
-    public static double clampTarget(double kpa) {
-        return Double.isNaN(kpa) ? 0 : Math.max(0, Math.min(MAX_TARGET, kpa));
-    }
 
     /**
      * The moles a filter takes from its input this step.
@@ -63,37 +48,37 @@ public final class FilterMath {
             Predicate<ResourceLocation> selected,
             double target,
             double seconds) {
-        double total = in.totalMoles();
-        double temperature = in.temperature();
-        if (!(total > 0) || !(temperature > 0) || !(seconds > 0)) {
+        if (!(in.totalMoles() > 0) || !(in.temperature() > 0) || !(seconds > 0)) {
             return 0;
         }
-        double kpa = clampTarget(target);
+        double kpa = PumpFlow.clampTarget(target);
         if (out.pressure() >= kpa || side.pressure() >= kpa) {
             return 0;
         }
-        double chosen = 0;
-        for (Map.Entry<ResourceLocation, Double> e : in.moles().entrySet()) {
-            if (selected.test(e.getKey())) {
-                chosen += e.getValue();
-            }
-        }
-        double rate = total * Math.min(1, LITRES_PER_SECOND * seconds / in.volume());
-        double byOut = room(out, kpa, temperature, (total - chosen) / total);
-        double bySide = room(side, kpa, temperature, chosen / total);
-        return Math.min(rate, Math.min(byOut, bySide));
+        Map<ResourceLocation, Double> toSide = new TreeMap<>();
+        Map<ResourceLocation, Double> toOut = new TreeMap<>();
+        in.moles().forEach((gas, n) -> (selected.test(gas) ? toSide : toOut).put(gas, n));
+        double rate = PumpFlow.molesInVolume(PumpFlow.MAX_RATE * seconds, PumpFlow.Side.of(in));
+        return Math.min(rate, Math.min(sliceToTarget(toOut, in, out, kpa), sliceToTarget(toSide, in, side, kpa)));
     }
 
     /**
-     * The slice that brings an outlet to the target, when a part of the slice goes to it.
+     * The slice whose part for an outlet brings that outlet to the target.
      *
-     * @return the slice's moles; infinite if none of the slice goes to the outlet
+     * @param part the gases of the input that go to the outlet
+     * @return the slice's moles; infinite if none of the input goes to the outlet
      */
-    private static double room(GasStore outlet, double target, double temperature, double part) {
-        if (!(part > 0)) {
+    private static double sliceToTarget(
+            Map<ResourceLocation, Double> part, GasStore in, GasStore outlet, double target) {
+        double moles = 0;
+        for (double n : part.values()) {
+            moles += n;
+        }
+        if (!(moles > 0)) {
             return Double.POSITIVE_INFINITY;
         }
-        return (target - outlet.pressure()) * outlet.volume() / (GasMixture.GAS_CONSTANT * temperature) / part;
+        PumpFlow.Side gas = new PumpFlow.Side(moles, GasProperties.heatCapacity(part), in.temperature(), in.volume());
+        return PumpFlow.molesToTarget(target, gas, PumpFlow.Side.of(outlet)) * in.totalMoles() / moles;
     }
 
     /**

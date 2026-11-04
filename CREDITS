@@ -114,6 +114,14 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/pressure_pump.js
 origin: original
 notes: The pressure pump's six facings, on and off, with the existing pressure_pump and pressure_pump_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/filter.json
+origin: original
+notes: The filter's six facings, on and off, with its side port on either side, with the existing filter models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/mixer.json
+origin: original
+notes: The mixer's six facings, on and off, with its side port on either side, with the existing mixer models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/manual_valve.json
 origin: original
 notes: The manual valve, open and shut, on each axis, with the existing manual_valve and manual_valve_open models.

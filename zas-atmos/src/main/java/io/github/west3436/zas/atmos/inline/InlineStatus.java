@@ -16,7 +16,9 @@ public enum InlineStatus {
     /** Its output has reached its target. */
     TARGET_REACHED,
     /** Pipes join its ports into one network, so it has nothing to move gas between. */
-    SAME_NETWORK;
+    SAME_NETWORK,
+    /** Its side outlet has reached its target: a filter stops then, whatever is in its input. */
+    SIDE_TARGET_REACHED;
 
     /** The status with an ordinal, or {@link #OFF} for one out of range. */
     public static InlineStatus of(int ordinal) {

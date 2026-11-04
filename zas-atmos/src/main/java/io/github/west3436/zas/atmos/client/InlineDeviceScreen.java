@@ -33,10 +33,15 @@ abstract class InlineDeviceScreen<M extends InlineDeviceMenu> extends DeviceScre
     /** The lines of the device's own settings. */
     abstract List<Component> settingLines();
 
+    /** Where the switch goes, below the most lines there can be. */
+    int switchY() {
+        return SWITCH_Y;
+    }
+
     @Override
     protected void init() {
         super.init();
-        button(8, SWITCH_Y, 184, Component.translatable("gui.zas_atmos.inline.toggle"), InlineDeviceMenu.TOGGLE);
+        button(8, switchY(), 184, Component.translatable("gui.zas_atmos.inline.toggle"), InlineDeviceMenu.TOGGLE);
     }
 
     @Override
