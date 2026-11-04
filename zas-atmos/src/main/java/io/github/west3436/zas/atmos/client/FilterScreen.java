@@ -19,7 +19,9 @@ final class FilterScreen extends SidePortScreen<FilterMenu> {
     /** Below the most lines: state, a status of two, the target, three ports and power. */
     private static final int SWITCH_Y = 110;
 
-    private static final int ROWS = 4;
+    /** Five rows of two: what ZAS³ ships fits on one page, and only more than that needs a second. */
+    private static final int ROWS = 5;
+
     private static final int PER_PAGE = 2 * ROWS;
     private static final int ROW_HEIGHT = 19;
 
