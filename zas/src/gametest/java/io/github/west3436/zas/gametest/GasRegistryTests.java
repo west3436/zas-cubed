@@ -10,6 +10,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
+import io.github.west3436.zas.config.AtmospherePreset;
+import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.gas.GasDefinition;
@@ -361,6 +363,30 @@ public final class GasRegistryTests {
     public static void api_052_period_is_the_servers(GameTestHelper h) {
         h.assertValueEqual(
                 Atmospheres.periodTicks(), ZasServerConfig.scheduler().periodTicks(), "the configured period");
+        h.succeed();
+    }
+
+    /**
+     * The API answers the preset's option (API-059): under each preset its default, and an override
+     * under either preset.
+     */
+    @GameTest(template = "empty")
+    public static void api_059_container_explosions_follow_the_preset(GameTestHelper h) {
+        AtmospherePreset before = ZasServerConfig.preset();
+        try {
+            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "under Normal");
+            ZasServerConfig.setPreset(AtmospherePreset.HARDCORE);
+            h.assertTrue(Atmospheres.containerExplosionsBreakBlocks(), "under Hardcore");
+            PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.setOverride(false);
+            h.assertFalse(Atmospheres.containerExplosionsBreakBlocks(), "overridden off under Hardcore");
+            ZasServerConfig.setPreset(AtmospherePreset.NORMAL);
+            PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.setOverride(true);
+            h.assertTrue(Atmospheres.containerExplosionsBreakBlocks(), "overridden on under Normal");
+        } finally {
+            PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.clearOverride();
+            ZasServerConfig.setPreset(before);
+        }
         h.succeed();
     }
 }

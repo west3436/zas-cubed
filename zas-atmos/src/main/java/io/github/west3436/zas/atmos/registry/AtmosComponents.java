@@ -41,6 +41,21 @@ public final class AtmosComponents {
     public static final Supplier<DataComponentType<Integer>> CHARGES = COMPONENTS.registerComponentType(
             "charges", b -> b.persistent(ExtraCodecs.NON_NEGATIVE_INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
+    // ---- The tank transfer valve (CONT-103, CONT-104) ----
+
+    /** A TTV's tanks: the first in slot 0, the second in slot 1, either empty. */
+    public static final Supplier<DataComponentType<ItemContainerContents>> TTV_TANKS = COMPONENTS.registerComponentType(
+            "ttv_tanks",
+            b -> b.persistent(ItemContainerContents.CODEC).networkSynchronized(ItemContainerContents.STREAM_CODEC));
+
+    /** Whether a TTV's valve is open: its gas is in its second tank. Without it, closed. */
+    public static final Supplier<DataComponentType<Boolean>> TTV_OPEN = COMPONENTS.registerComponentType(
+            "ttv_open", b -> b.persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
+    /** A TTV's timer setting in s, 0 to 600; without it, the default. */
+    public static final Supplier<DataComponentType<Integer>> TTV_TIMER = COMPONENTS.registerComponentType(
+            "ttv_timer", b -> b.persistent(ExtraCodecs.NON_NEGATIVE_INT).networkSynchronized(ByteBufCodecs.VAR_INT));
+
     private AtmosComponents() {}
 
     public static void register(IEventBus modBus) {

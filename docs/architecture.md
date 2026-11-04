@@ -2004,7 +2004,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy` and a fire extinguisher's `zas_atmos:charges`) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -2016,10 +2016,12 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
+| `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank screen, item model properties |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2686,6 +2688,30 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+- **Tank failure** (CONT-038, CONT-107, CONT-109). `ContainerFailure` turns a
+  pressure into a verdict: nothing, a leak, a rupture or an explosion with its
+  capped power. It is plain arithmetic, unit-tested without the game.
+  `TankFailure.check(level, at, tank, source)` applies a tank's verdict there
+  and then, changing the stack in place.
+  - **When it runs.** Last in `GasTankItem.atmosTick(tank, level, holder)`,
+    after the gas reacts, so the check sees the pressure a reaction raised in
+    the same atmos tick. A tank fails wherever the table above ticks it, and
+    waits wherever it doesn't.
+  - **Where it fails.** At the middle of its holder's body, or of the item
+    entity, which for a tank in a dropped suit is the suit's
+    (`TankFailure.pointOf`). Gas goes into the cell there through
+    `GasMutations.add`. The middle of the body, not the eyes, because a vanilla
+    explosion skips an entity whose eyes are exactly at its centre.
+  - **The explosion's source.** A carried tank's explosion has none. A vanilla
+    explosion spares its source entity, so naming the holder would leave them
+    unhurt, and damage credited to a player is refused when PvP is off. The
+    stack is used up before the explosion, so a holder it kills doesn't drop
+    the tank.
+  - **Blocks.** `ContainerBlast.explode` asks
+    `Atmospheres.containerExplosionsBreakBlocks()` (API-059) each time. If so,
+    it is a vanilla `BLOCK` explosion, which follows the
+    `blockExplosionDropDecay` game rule; if not, `NONE`, which keeps every block
+    and still hurts entities.
 
 ### 11.10 The fire extinguisher (CONT-037)
 
@@ -2718,3 +2744,43 @@ is in [crafting.md](crafting.md), and a crafted one is full.
 - **What it doesn't do.** It doesn't put out burning entities, cool anything
   or change the gas: a fire whose zone still has the O₂ and heat can light
   again (FIRE-010).
+
+### 11.11 The tank transfer valve (CONT-103, CONT-104)
+
+Two gas tanks joined by a valve, with a timer: `ttv.TransferValve` holds the
+tanks and the valve and is what the item and the entity share.
+
+- **The valve.** Opening moves all of the first tank's gas into the second,
+  mixing temperatures through `GasTankItem.add`; the second tank's volume
+  doesn't change, so the pressure there is what makes a TTV a bomb. Closing
+  shares the gas between the tanks by volume. Each tank then takes the kind of
+  what it holds (`GasTankItem.ofItsKind`). With a tank missing no gas moves, so
+  the valve's button refuses, and the timer running out only shows the valve
+  open.
+- **The item** (`TransferValveItem`). The tanks are the stack's
+  `zas_atmos:ttv_tanks`, slot 0 the first and slot 1 the second; a working
+  `TransferValve` is read from the stack and saved back. Tanks go on by
+  right-clicks in an inventory, as a bundle's contents do, only while the valve
+  is closed. Taking a tank off an open valve closes it first, so the tank has
+  its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
+  Each atmos tick its tanks react in a player's inventory or on the ground, and
+  a tank that fails destroys the stack.
+- **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
+  the tank screen's pattern. A button sends `TransferValveSettings` (hand and
+  button id); the server refuses an unknown hand or button or a hand holding no
+  TTV, and clamps the timer to 0–600 s.
+- **Primed** (`PrimedTransferValve`). Starting the timer consumes the item and
+  adds the entity at the player's feet, tossed gently the way they face, with
+  primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
+  or hurt, so a timer can't be stopped. It counts its fuse down in game ticks,
+  opens its valve at 0, and at 0 s does so as it is added. Its tanks react every
+  atmos tick, and at once when the valve opens, so a mixture above autoignition
+  burns on the next game tick. A TTV that survives waits `SETTLE_TICKS` (5 s)
+  and drops as an item, valve open and timer setting kept, so a dud can be
+  taken away. It saves its tanks, valve, timer and countdowns.
+- **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which
+  have no block state, so `ModelEvent.RegisterAdditional` loads them: no tanks,
+  one or two, timer running or valve open. Each tank's faces carry a tint index,
+  1 for the first and 2 for the second, tinted by the tank's kind. Clients are
+  sent the tanks and the valve as entity data. The item uses the same tints on
+  its sprite's layers 1 and 2, and `zas_atmos:tanks` picks its sprite.
