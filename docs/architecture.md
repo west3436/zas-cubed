@@ -2364,7 +2364,7 @@ the cell in front of its grille).
     `ThermoMachineBlockEntity`, `ThermoMachineMenu`, `ThermoStatus` and
     `ThermoMachineScreen`, and what it shares with every portable in the
     `.portable` package: `PortableBlock` (facing, `lit`, shape, opening the GUI,
-    dropping the battery), `PortableDevice` (the battery slot, the switch, the
+    dropping what it holds), `PortableDevice` (the battery slot, the switch, the
     `point()`) and `PortableMenu`.
 - **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
   in `.heater`. The heater's mirror, the same size and on the same code. Its
@@ -2379,6 +2379,20 @@ the cell in front of its grille).
   the setpoint, the way a heater holds its room just under it; in the GameTest,
   a stone room in the Overworld 5 K under the ambient stays within 0.5 K above a
   288 K setpoint and never goes below it.
+- **Portable scrubber** (CONT-018, D-73), in `.portable`, on `PortableGasDevice`,
+  the base for a portable that moves gas. It has a 2,000 L store and two slots,
+  a battery and a held tank (`TankSlot`). It works on the held tank if there is
+  one, instead of the room, and otherwise on the zone it stands in, through one
+  `ZonePort` (CONT-072), waiting on `CellWatch` as a vent does. In open air with
+  no tank it does nothing. `PortableScrubberMath` gives what it takes each
+  second: the gases of `GasSelection.DEFAULT` (CO₂ and `zas:toxic`) from a
+  2,500 L sample, through `ScrubberMath`, up to the moles of 150 L of the air,
+  stopping at 50 atm in the store. It pays `[power] portable_scrubber` FE/t (15)
+  only while it moves gas, and moves what the charge pays for when too little is
+  left. The store and a held tank react each atmos tick (CONT-100). The store has
+  no outlet, since a portable has no pipe (D-73). Its item keeps the store's gas
+  when mined, as a canister's does: broken in creative the gas is destroyed, and
+  removed any other way it is released where the portable stood.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as
@@ -2411,7 +2425,7 @@ the cell in front of its grille).
   (`data/zas/tags/block/ignition_sources.json`), so the framework counts it as
   a standing ignition source while `lit` is true (API-053, §5), with nothing
   added to the API. `lit` picks the `igniter_on` model. No GUI.
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner or recharger with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber or recharger with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The

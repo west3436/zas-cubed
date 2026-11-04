@@ -798,6 +798,11 @@ until the portable pump, portable scrubber and freezer exist.*
 *2026-11-04: The freezer exists, as the air conditioner (CONT-019), so this
 stays Accepted until the portable pump and scrubber exist.*
 
+*2026-11-04: The portable scrubber exists. `PortableScrubberTests.cont_018_*`
+(GameTest) check it on a room and on a held tank, stopping when its battery is
+empty, and a controller in its room not powering or listing it. This stays
+Accepted until the portable pump exists.*
+
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
 
