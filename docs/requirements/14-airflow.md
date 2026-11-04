@@ -310,7 +310,7 @@ GameTest above runs a player through the client's path; the rubber-banding
 check is Manual.*
 
 #### FLOW-019 · Crawling through low openings
-`Must` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: FLOW-017
+`Must` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: FLOW-017
 
 When airflow carries a player into an opening too low to stand in, such as a
 hole one block high, the player shall take the swimming (crawling) pose, and
@@ -346,6 +346,9 @@ for a hole level with the floor, and
 `flow_019_a_player_crawls_into_a_hole_above_the_floor` checks a hole a block up,
 and a doorway, which doesn't trigger it; being carried through is the Manual
 check.*
+
+*2026-11-03: Implemented. The owner passed the round's combined test, which
+retested a player being carried through a one-block hole.*
 
 #### FLOW-008 · Feedback
 `Should` · `R1` · `Rejected` — duplicate of CLIENT-003, 2026-10-30.

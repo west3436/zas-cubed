@@ -182,8 +182,12 @@ it contains the attachment-sync privacy fix and the network hardening
   ([neoforge §1](../research/neoforge-1.21.1.md#1-toolchain)).
 - **Verify:** Inspect the mod metadata; CI builds and tests against the floor.
 
+*2026-11-03: Still Accepted. The mod metadata gives `[21.1.264,)` and CI uses
+Java 21, but CI builds and tests against 21.1.265 (`neo_version`), not the
+floor the Verify plan asks for ([#69](https://github.com/west3436/zas-cubed/issues/69)).*
+
 #### NFR-023 · Dedicated server safety
-`Must` · `R0` · `Accepted` · Verify: GameTest · Depends: NFR-020
+`Must` · `R0` · `Implemented` · Verify: GameTest · Depends: NFR-020
 
 A dedicated server shall start with no client classes loaded. CI boots one as
 a GameTest.
@@ -192,6 +196,10 @@ a GameTest.
   booting one in CI catches it ([neoforge
   §13](../research/neoforge-1.21.1.md#13-testing--ci)).
 - **Verify:** A CI GameTest boots a dedicated server.
+
+*2026-11-03: Implemented. `nfr_023_zas_loads_on_dedicated_server` and
+`nfr_023_zas_atmos_loads_on_dedicated_server` check they run on a dedicated
+server, in CI's "GameTests (dedicated server)" step.*
 
 #### NFR-021 · Injection-only mixins
 `Must` · `R1` · `Accepted` · Verify: Inspect
@@ -264,6 +272,10 @@ every PR.
 - **Rationale:** Decision: D-04 (library standards).
 - **Verify:** Inspect the CI configuration.
 
+*2026-11-03: Still Accepted. CI runs the build, unit tests and GameTests on
+every PR. Its API diff runs too, but compares nothing until API-043's baseline
+is set ([#61](https://github.com/west3436/zas-cubed/issues/61)).*
+
 #### NFR-034 · Benchmark regression check
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-40, NFR-001
 
@@ -301,13 +313,16 @@ governed by NFR-041.
 - **Verify:** Inspect: PR reviews against the clean-room rule (NFR-043).
 
 #### NFR-043 · Clean-room rule in contributions
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-01
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-01
 
 `CONTRIBUTING.md` shall state the clean-room rule, and the PR template shall
 carry a checkbox confirming it.
 
 - **Rationale:** Decision: D-01.
 - **Verify:** Inspect `CONTRIBUTING.md` and the PR template.
+
+*2026-11-03: Implemented. `CONTRIBUTING.md` has "The clean-room rule", and the
+first item of the PR template's checklist confirms it.*
 
 #### NFR-041 · Asset sources
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26

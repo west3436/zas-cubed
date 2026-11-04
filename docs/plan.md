@@ -270,7 +270,7 @@ merged as [#183](https://github.com/west3436/zas-cubed/pull/183).
 | Heat sources | [#175](https://github.com/west3436/zas-cubed/pull/175) | #40 without HEAT-007; API-013 | Paused regions void or supply heat; ice never warms (as built) |
 | Life support and worn protection | [#176](https://github.com/west3436/zas-cubed/pull/176) | API-022 in part; LIFE-020, LIFE-024 to LIFE-027 | API-022's gas filtering |
 | Firelock and crowbar | [#168](https://github.com/west3436/zas-cubed/pull/168) | CONT-043 (changed by the owner: a breach alarms the controller at once, so firelocks shut within about 2 s, and a link covers only the device linked), CONT-092 to CONT-094; CONT-042 and CONT-068 | Firelocks over doors and airlocks |
-| Airflow | [#171](https://github.com/west3436/zas-cubed/pull/171) | The #44 subset; FLOW-018 (changed by the owner: creative players and spectators are exempt) and FLOW-019 (crawling through low holes, owner) added and *Implemented* | Particles and sound (CLIENT-003, [#184](https://github.com/west3436/zas-cubed/issues/184)). Magnetic boots for FLOW-012 ([#186](https://github.com/west3436/zas-cubed/issues/186)) |
+| Airflow | [#171](https://github.com/west3436/zas-cubed/pull/171) | The #44 subset; FLOW-018 (changed by the owner: creative players and spectators are exempt) and FLOW-019 (crawling through low holes, owner) added and *Implemented* | Particles and sound (CLIENT-003 and CLIENT-010, [#57](https://github.com/west3436/zas-cubed/issues/57)). Magnetic boots for FLOW-012 ([#49](https://github.com/west3436/zas-cubed/issues/49)) |
 | S-02 GameTest | [#173](https://github.com/west3436/zas-cubed/pull/173) | S-02 | None |
 | Client breathing sync | [#170](https://github.com/west3436/zas-cubed/pull/170) | LIFE-023 | None |
 | Battery heater, batteries, recharger | [#177](https://github.com/west3436/zas-cubed/pull/177) | CONT-111 to CONT-113 *Implemented*; CONT-018, CONT-019, CONT-064, CONT-087 changed by the owner | The air conditioner, portable scrubber and portable pump are battery portables in the text only. The air conditioner will hold its room the heater's way, with `HeatMutations.remove` (owner, 2026-11-03) |
@@ -411,12 +411,12 @@ _Updated 2026-11-03._
    2026-11-03 (#167 to #177, #180, #182, #183)*. ~~S-03 and S-04 (fire)~~
    *done 2026-11-03 (#188 to #199, #202 to #207; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
-   S-11 and S-13, on the rest of #34, #47, #48, #50 and #52 (pumps, filters
+   S-11 and S-13, on the rest of #47, #48, #50 and #52 (pumps, filters
    and scrubbers).
    - From the fire round: a recipe for the extinguisher, and CLIENT-013's
      look check.
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
-     airflow particles and sound (#184), magnetic boots (#186) and insulating
+     airflow particles and sound (#57), magnetic boots (#49) and insulating
      station walls (#179).
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost

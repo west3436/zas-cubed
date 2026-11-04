@@ -120,6 +120,11 @@ CI shall check API compatibility automatically against the last release.
 - **Verify:** Inspect: the CI job runs on every build and fails on a
   deliberate test break.
 
+*2026-11-03: Still Accepted. `:zas-api:apiCompat` runs in CI's `check`, and it
+failed on a deliberate break against a scratch baseline ([#87](https://github.com/west3436/zas-cubed/pull/87)). Until
+`api_baseline_version` names a release it skips with a notice, so CI compares
+nothing yet. Set it after the first release ([#61](https://github.com/west3436/zas-cubed/issues/61)).*
+
 #### API-003 · No optional-mod references
 `Must` · `R0` · `Implemented` · Verify: Inspect
 
