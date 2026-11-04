@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.fire.BlockIgnitionSettings;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.reaction.Flammability;
 import io.github.west3436.zas.engine.reaction.ReactionResult;
@@ -26,7 +27,8 @@ import java.util.function.LongConsumer;
  * The hotspot phase (phase 6 of the atmos tick, architecture §3.2 and §5's fire row): per-cell
  * fires that burn their zone's gas a parcel at a time (FIRE-011), spread to neighbouring cells
  * (FIRE-016), go out when their gas won't burn (FIRE-017) and start by ignition (FIRE-014) or by
- * themselves (FIRE-010).
+ * themselves (FIRE-010). The phase ends with flammable blocks catching fire from gas fires and hot
+ * gas ({@link BlockIgniter}, FIRE-034, FIRE-033).
  *
  * <p><b>Every hotspot is a block.</b> A hotspot is a vanilla fire block in a zone (FIRE-019) or a
  * {@code zas:gas_fire} block (FIRE-018), both flagged in the geometry palette ({@link
@@ -45,8 +47,9 @@ import java.util.function.LongConsumer;
  * {@link ReactionSet#PARCEL_LITRES_PER_SECOND} litres per second of its zone's gas with the
  * batch's reactions ({@link ReactionSet#burn}), or goes out
  * if the gas won't burn; then every hotspot that burned may spread to each open neighbouring cell
- * that could hold a fire. Vanilla fire never goes out here: putting it out without O₂ is FIRE-020's.
- * Hotspots in paused zones keep still (GEO-035).
+ * that could hold a fire; then the gas fires that burned and the hot zones may light flammable
+ * blocks. Vanilla fire never goes out here: putting it out without O₂ is FIRE-020's. Hotspots in
+ * paused zones keep still (GEO-035).
  *
  * <p><b>Determinism</b> (§3.5). Hotspots are kept by position, in a sorted map. A spread's draw is
  * a hash of the dimension's seed, the atmos tick, the zone, the hotspot and the target, so it
@@ -86,6 +89,7 @@ final class Hotspots {
     private final boolean[] fire;
     private final boolean[] gasFire;
     private final boolean[] source;
+    private final BlockIgniter igniter;
 
     private final TreeMap<Long, Hotspot> byBlock = new TreeMap<>();
     /** Positions whose gas fire didn't appear, with the tick that was found. */
@@ -134,11 +138,18 @@ final class Hotspots {
             source[id] = g.hasFlag(Geometry.FLAG_IGNITION_SOURCE);
         }
         mirror.indexFlagged(id -> id >= 0 && id < n && (fire[id] || gasFire[id] || source[id]));
+        igniter = new BlockIgniter(graph, space, mirror, palette);
     }
 
-    /** Seeds the spread draws, per dimension (§3.5). */
+    /** Seeds the spread and block-ignition draws, per dimension (§3.5). */
     void setSeed(long seed) {
         this.seed = seed;
+        igniter.setSeed(seed);
+    }
+
+    /** What sets blocks alight (FIRE-033, FIRE-034), which hears of geometry and membership changes. */
+    BlockIgniter igniter() {
+        return igniter;
     }
 
     /** How many hotspots there are, pending ones included. */
@@ -210,6 +221,7 @@ final class Hotspots {
 
         List<long[]> burned = burn(seconds);
         spread(burned, settings.hotspots().chanceIn(seconds));
+        lightBlocks(burned, seconds, settings.blockIgnition());
 
         TreeMap<Long, Long> now = new TreeMap<>();
         for (Hotspot h : byBlock.values()) {
@@ -482,6 +494,21 @@ final class Hotspots {
                 }
             }
         }
+    }
+
+    /** Gas fires that burned, then hot zones, may set flammable blocks alight (FIRE-034, FIRE-033). */
+    private void lightBlocks(List<long[]> burned, double seconds, BlockIgnitionSettings settings) {
+        if (!settings.enabled()) {
+            return;
+        }
+        for (long[] b : burned) {
+            Hotspot h = byBlock.get(b[0]);
+            Zone z = graph.zone(b[2]);
+            if (h != null && h.gas() && z != null) {
+                igniter.gasFire(b[0], z, tick, seconds, settings, fireSettings, intents);
+            }
+        }
+        igniter.hotGas(tick, seconds, settings, fireSettings, byBlock::containsKey, intents);
     }
 
     /** Starts a pending gas hotspot and asks for its block. */

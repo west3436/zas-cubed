@@ -61,7 +61,8 @@ import java.util.TreeSet;
  *   <li>Heat: conduction through zone boundaries, heat sources and radiation to a vacuum
  *       ({@link Conduction}, HEAT-001 to HEAT-015).
  *   <li>Hotspots: fires that burn their zone's gas, spread, go out and start ({@link Hotspots},
- *       FIRE-010 to FIRE-019), with this tick's ignition operations.
+ *       FIRE-010 to FIRE-019), with this tick's ignition operations; and flammable blocks catching
+ *       fire from gas fires and hot gas ({@link BlockIgniter}, FIRE-033, FIRE-034).
  *   <li>Zone updates: each zone's reactions that don't need ignition ({@link ReactionSet#react},
  *       FIRE-001).
  *   <li>Garbage collection: R1, empty for now.
@@ -178,14 +179,16 @@ public final class DimensionEngine {
                 ConservationLedger.of(registry, config));
         this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
         this.conduction = new Conduction(graph, mirror, palette, space.naming(), membership);
-        graph.setMembershipListener(MembershipListener.both(membership, conduction));
         this.hotspots = new Hotspots(graph, space, mirror, palette);
+        graph.setMembershipListener(
+                MembershipListener.both(MembershipListener.both(membership, conduction), hotspots.igniter()));
         this.lastSnapshot = AtmosSnapshot.empty(registry);
     }
 
     /**
-     * Seeds the random draws of hotspot spread (FIRE-016) for this dimension, so two dimensions
-     * don't draw alike (§3.5). Owner thread, before the first tick.
+     * Seeds the random draws of hotspot spread (FIRE-016) and of blocks catching fire (FIRE-033,
+     * FIRE-034) for this dimension, so two dimensions don't draw alike (§3.5). Owner thread, before
+     * the first tick.
      */
     public void setSeed(long seed) {
         hotspots.setSeed(seed);
@@ -194,6 +197,11 @@ public final class DimensionEngine {
     /** How many hotspots burn, pending ones included. Same thread rule as {@link #graph()}. */
     public int hotspotCount() {
         return hotspots.count();
+    }
+
+    /** How many zones have their flammable faces cached (FIRE-033). Same thread rule as {@link #graph()}. */
+    int cachedFlammableZones() {
+        return hotspots.igniter().cachedZones();
     }
 
     // ---- Queries (owner thread) -----------------------------------------------
@@ -396,7 +404,7 @@ public final class DimensionEngine {
         phases.enter(Phase.HEAT);
         conduction.tick(batch.settings().heat(), batch.settings().exchange().periodSeconds(), ambient);
 
-        // 6. Hotspots (FIRE-010 to FIRE-019).
+        // 6. Hotspots (FIRE-010 to FIRE-019), and the blocks they and hot gas light (FIRE-033, FIRE-034).
         phases.enter(Phase.HOTSPOTS);
         int[] ignitionOps = new int[ignitionCount];
         long[] ignitionBlocks = new long[ignitionCount];
@@ -622,6 +630,7 @@ public final class DimensionEngine {
             if (old == null) {
                 mirror.put(s);
                 conduction.sectionArrived(s.key());
+                hotspots.igniter().sectionArrived();
                 addBorderCells(s.key(), toRefresh);
                 continue;
             }
@@ -660,6 +669,7 @@ public final class DimensionEngine {
             for (int index : changed) {
                 long block = blockAt(base, index);
                 conduction.blockChanged(block);
+                hotspots.igniter().blockChanged(block);
                 space.forEachCellAt(block, changedCells::add);
                 for (Face f : Face.values()) {
                     space.forEachCellAt(offset(block, f), toRefresh::add);
