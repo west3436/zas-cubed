@@ -7,6 +7,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.ZonePort;
+import io.github.west3436.zas.atmos.failure.CanisterFailure;
+import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
@@ -41,10 +43,13 @@ import net.minecraft.world.phys.Vec3;
  * AtmosComponents#GAS}, and placing the item puts it back. Broken in creative, its gas is
  * destroyed with it. Removed any other way, it releases its gas into its cell, as a pipe does
  * (CONT-009).
+ *
+ * <p>Too much pressure or heat, or an explosion, makes it rupture or explode ({@link
+ * CanisterFailure}).
  */
 public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider {
-    /** The pressure a canister is rated for, kPa (90 atm). Rupture isn't built yet (CONT-085). */
-    public static final double RATED_KPA = 9120.0;
+    /** The pressure a canister is rated for, kPa (90 atm); above it, it ruptures (CONT-101). */
+    public static final double RATED_KPA = ContainerFailure.CANISTER_RATED_KPA;
 
     /** Who a canister's releases are made by. */
     public static final SourceId VALVE = SourceId.of(ZasAtmosMod.MOD_ID, "canister_valve");
@@ -178,6 +183,9 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
     protected void atmosTick(ServerLevel level) {
         cellWatch().step();
         GasStore gas = network().gas();
+        if (CanisterFailure.check(level, worldPosition, gas)) {
+            return;
+        }
         if (!valveOpen() || gas.isEmpty()) {
             return;
         }

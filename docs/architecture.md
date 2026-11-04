@@ -2201,8 +2201,9 @@ the cell in front of its grille).
 - **Connections.** A block that pipes join implements `PipeConnector`, which
   says on which faces it offers a connection; two neighbours are connected
   when both offer one on their shared face. A pipe offers every face, a cap
-  only the face it points at, a vent or scrubber only its back (CONT-014,
-  CONT-015), a connector port only its bottom, plus its top for a canister
+  only the face it points at, a vent, passive vent or scrubber only its back
+  (CONT-014, CONT-015, CONT-016), a connector port only its bottom, plus its
+  top for a canister
   (CONT-083), and a valve its two flanges (CONT-010). Gas passes a connection
   unless one side shuts it (`carriesGas`), as a shut valve does:
   `PipeConnector.connected` decides a pipe's arms and open ends, and `joined`
@@ -2316,11 +2317,27 @@ the cell in front of its grille).
     the `zas_atmos:gas` data component, with its paint as block state;
     placing the item puts the gas back. The game removes a mined block before
     it makes the drops, so `playerWillDestroy` marks the canister to keep its
-    share; drops made before removal (`destroyBlock`, explosions) mark it in
+    share; drops made before removal (`destroyBlock`) mark it in
     `getDrops`. Broken by a creative player, `playerWillDestroy` marks it to
     destroy its share instead. Removed any other way, as by `setblock`, it
     releases its share, as a pipe does.
-  - It is rated at 9,120 kPa; rupture (CONT-085) isn't built.
+  - It is rated at 9,120 kPa. `CanisterFailure.check` runs first in its atmos
+    tick, after its network has reacted, so it sees what a burn raised in that
+    tick. Above the rating, or with the air around it above 1,273 K, it ruptures
+    (CONT-085, CONT-101). Above 13,680 kPa it explodes instead through
+    `ContainerBlast` (CONT-102, §11.9), whose power and block damage follow
+    CONT-107 and CONT-109. It leaves nothing behind. As it is removed, its share
+    goes into its cell and the rest stays in the network.
+  - The temperature limit reads the cell: its zone's air, or the ambient's in
+    open air. A paused or unresolved cell reads as not hot, because its sample
+    is a last-known mixture or a stand-in. Hot gas inside a canister is left to
+    the pressure limits, which are what turn a burn into an explosion (D-57).
+  - An explosion that reaches it ruptures it at `ExplosionEvent.Detonate`,
+    before the game makes drops, so the gas can't leave in an item. That holds
+    for an explosion that keeps blocks too. A wind burst
+    (`BlockInteraction.TRIGGER_BLOCK`) leaves it alone.
+  - Its item doesn't fail. The gas in it goes on reacting (CONT-100), and once
+    placed, the canister fails at its first atmos tick if it is over a limit.
   - The creative tab has a canister of each built-in gas at 45 atm and
     293.15 K, painted in that gas's colour (CONT-086). The item model picks
     the paint's model by the `zas_atmos:color` item property.
@@ -2362,6 +2379,15 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
+- **Passive vent** (CONT-016), in `.vent`.
+  - Shaped like the vent: a full block whose grille faces any of six ways,
+    facing the player who places it, with a pipe only on its back. It has a
+    400 L buffer in its network, no power, no settings and no GUI.
+  - While its network and the cell in front of the grille differ by more than
+    0.5 kPa, each atmos tick it makes an open pipe end's exchange with that
+    cell (`PipeBlockEntity.openEndFlow`, CONT-004), on one `ZonePort`. Each gas
+    moves by its own gap, so a mixture spreads both ways. Within 0.5 kPa nothing
+    moves, whatever the gases.
 - **Scrubber** (CONT-015, CONT-079 to CONT-081), in `.scrubber`.
   - Shaped like the vent: a full block whose grille faces any of six ways,
     facing the player who places it, with a pipe only on its back. Its 200 L

@@ -347,7 +347,7 @@ public final class GasDeviceTests {
         a.close(again.network().gas().moles(O2), 1_234.5, "O2 after placing it again");
         a.close(again.network().gas().moles(N2), 10.0, "N2 after placing it again");
 
-        // Dropped before removal, as by destroyBlock or an explosion: the same, and nothing released.
+        // Dropped before removal, as by destroyBlock: the same, and nothing released.
         BlockPos pos2 = a.abs(5, 1, 2);
         BlockState state2 = a.level.getBlockState(pos2);
         ItemStack second = canisterIn(Block.getDrops(state2, a.level, pos2, again));
