@@ -194,7 +194,7 @@ public class TransferValveItem extends Item {
      */
     public static boolean step(ItemStack stack, ServerLevel level, Entity holder) {
         TransferValve valve = valve(stack);
-        TransferValve.Step step = valve.step(level, holder);
+        TransferValve.Step step = valve.step(level, holder, null);
         if (step == TransferValve.Step.CHANGED) {
             save(stack, valve);
         }

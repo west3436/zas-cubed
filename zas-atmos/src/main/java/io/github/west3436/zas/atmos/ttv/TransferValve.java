@@ -2,12 +2,16 @@ package io.github.west3436.zas.atmos.ttv;
 
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.atmos.failure.ContainerFailure.Kind;
 import io.github.west3436.zas.atmos.failure.TankFailure;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Two gas tanks joined by a valve (CONT-103): what a tank transfer valve is, whether it is an item
@@ -27,7 +31,7 @@ public final class TransferValve {
         QUIET,
         /** A tank's gas changed, so a holder that keeps a copy writes it back. */
         CHANGED,
-        /** A tank's failure destroyed the TTV. */
+        /** A tank exploded, destroying the TTV. */
         DESTROYED
     }
 
@@ -156,39 +160,48 @@ public final class TransferValve {
     }
 
     /**
-     * One atmos tick of the tanks' gas, through {@link GasTankItem#atmosTick}: each tank reacts what
-     * it holds (CONT-100), then fails if its pressure says so (CONT-038). A tank that ruptures or
-     * explodes takes the TTV with it, and whatever the other tank holds goes into the cell too.
+     * One atmos tick of the tanks' gas: each tank reacts what it holds (CONT-100), then fails if its
+     * pressure says so (CONT-038). These are the calls {@link GasTankItem#atmosTick} makes, but here
+     * how a tank failed matters. A tank that leaks stays on, and one that ruptures bursts alone,
+     * leaving its place empty. A tank that explodes takes the TTV with it, and the other tank's gas
+     * goes into the cell too.
      *
      * @param level the level it is in
      * @param holder who or what holds it, or the primed TTV itself
+     * @param source the entity an explosion comes from: a primed TTV itself, and null for a TTV that
+     *     something carries, which it would otherwise spare
      * @return what it came to
      */
-    public Step step(ServerLevel level, Entity holder) {
-        boolean changed = false;
-        if (first.getItem() instanceof GasTankItem) {
-            changed = GasTankItem.atmosTick(first, level, holder);
-            if (first.isEmpty()) {
-                return destroyed(level, holder, second);
-            }
+    public Step step(ServerLevel level, Entity holder, @Nullable Entity source) {
+        Vec3 at = TankFailure.pointOf(holder);
+        boolean changed = react(first);
+        Kind kind = TankFailure.check(level, at, first, source).kind();
+        if (kind == Kind.EXPLODE) {
+            release(level, at, second);
+            return Step.DESTROYED;
         }
-        if (second.getItem() instanceof GasTankItem) {
-            changed |= GasTankItem.atmosTick(second, level, holder);
-            if (second.isEmpty()) {
-                return destroyed(level, holder, first);
-            }
+        changed |= kind != Kind.NONE;
+        changed |= react(second);
+        kind = TankFailure.check(level, at, second, source).kind();
+        if (kind == Kind.EXPLODE) {
+            release(level, at, first);
+            return Step.DESTROYED;
         }
+        changed |= kind != Kind.NONE;
         return changed ? Step.CHANGED : Step.QUIET;
     }
 
-    /** One tank is gone: the gas of the one left has nothing to hold it. */
-    private static Step destroyed(ServerLevel level, Entity holder, ItemStack other) {
-        if (other.getItem() instanceof GasTankItem) {
-            GasParcel gas = GasTankItem.gas(other);
+    private static boolean react(ItemStack tank) {
+        return tank.getItem() instanceof GasTankItem item && ContainerReactions.react(tank, item.volume());
+    }
+
+    /** The gas of the tank left when the other explodes: it has nothing left to hold it. */
+    private static void release(ServerLevel level, Vec3 at, ItemStack tank) {
+        if (tank.getItem() instanceof GasTankItem) {
+            GasParcel gas = GasTankItem.gas(tank);
             if (!gas.isEmpty()) {
-                GasMutations.add(level, TankFailure.pointOf(holder), gas, TankFailure.RELEASE);
+                GasMutations.add(level, at, gas, TankFailure.RELEASE);
             }
         }
-        return Step.DESTROYED;
     }
 }

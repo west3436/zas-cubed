@@ -224,8 +224,8 @@ public final class TransferValveTests {
     }
 
     /**
-     * A tank that explodes takes the TTV with it. Its blast is the tank failure's own (CONT-038), at
-     * the holder's middle, and the other tank's gas goes into the cell with its own.
+     * A tank that explodes takes the TTV with it, whichever tank it is. Its blast is the tank failure's
+     * own (CONT-038), at the holder's middle, and the other tank's gas goes into the cell with its own.
      */
     @GameTest(template = "empty", batch = FAILURE_BATCH)
     public static void cont_103_a_tank_that_explodes_destroys_the_ttv(GameTestHelper h) {
@@ -233,43 +233,68 @@ public final class TransferValveTests {
         Area a = new Area(h, 103);
         FakePlayer p = roomWithZone(a);
         double room = a.zone(2, 2, 2).mixture().totalMoles();
-        ItemStack burst = nitrogen(60);
-        double held = GasTankItem.gas(burst).totalMoles() + 5;
-        ItemStack bomb = ttv(tank(Map.of(O2, 5.0), T), burst, TransferValve.DEFAULT_TIMER);
+        for (boolean firstFails : new boolean[] {true, false}) {
+            ItemStack burst = nitrogen(60);
+            ItemStack other = tank(Map.of(O2, 5.0), T);
+            room += GasTankItem.gas(burst).totalMoles() + 5;
+            ItemStack bomb = firstFails
+                    ? ttv(burst, other, TransferValve.DEFAULT_TIMER)
+                    : ttv(other, burst, TransferValve.DEFAULT_TIMER);
 
-        h.assertTrue(TransferValveItem.step(bomb, a.level, p), "the TTV outlasted its tank");
-        a.tick();
-        h.assertTrue(
-                Math.abs(a.zone(2, 2, 2).mixture().totalMoles() - (room + held)) < 1e-6,
-                "the gas in the room: expected " + (room + held) + ", got "
-                        + a.zone(2, 2, 2).mixture().totalMoles());
-        List<Explosion> blasts = Blasts.take(a.point(2, 2, 2));
-        h.assertValueEqual(blasts.size(), 1, "explosions");
-        h.assertTrue(
-                Math.abs(blasts.get(0).radius() - 1) < 1e-4,
-                "the power at 60 atm: " + blasts.get(0).radius());
+            h.assertTrue(TransferValveItem.step(bomb, a.level, p), "the TTV outlasted its tank");
+            a.tick();
+            double now = a.zone(2, 2, 2).mixture().totalMoles();
+            h.assertTrue(Math.abs(now - room) < 1e-6, "the gas in the room: expected " + room + ", got " + now);
+            List<Explosion> blasts = Blasts.take(a.point(2, 2, 2));
+            h.assertValueEqual(blasts.size(), 1, "explosions");
+            h.assertTrue(
+                    Math.abs(blasts.get(0).radius() - 1) < 1e-4,
+                    "the power at 60 atm: " + blasts.get(0).radius());
+        }
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
 
-    /** A tank that ruptures takes the TTV with it too, with no blast. */
+    /** A primed TTV goes with its tank, and doesn't stay on to drop as a dud. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_103_a_primed_ttv_goes_off_with_its_tank(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 108);
+        FakePlayer p = player(a, ttv(tank(Map.of(O2, 5.5), 1400), tank(Map.of(H2, 5.0), T), 0));
+        PrimedTransferValve primed = prime(h, p);
+        primed.tick();
+        h.assertTrue(primed.isRemoved(), "the primed TTV outlasted its tank");
+        h.assertValueEqual(Blasts.take(a.point(2, 2, 2)).size(), 1, "explosions");
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /**
+     * A tank that ruptures bursts alone, with no blast: its gas goes into the cell, and the TTV stays,
+     * with the other tank and its gas.
+     */
     @GameTest(template = "empty", batch = FAILURE_BATCH)
-    public static void cont_103_a_tank_that_ruptures_destroys_the_ttv(GameTestHelper h) {
+    public static void cont_103_a_tank_that_ruptures_leaves_the_ttv(GameTestHelper h) {
         Blasts.listen();
         Area a = new Area(h, 104);
         FakePlayer p = roomWithZone(a);
         double room = a.zone(2, 2, 2).mixture().totalMoles();
-        ItemStack burst = nitrogen(45);
-        double held = GasTankItem.gas(burst).totalMoles() + 5;
-        // The failing tank is the first this time, so the second is the one left over.
-        ItemStack bomb = ttv(burst, tank(Map.of(O2, 5.0), T), TransferValve.DEFAULT_TIMER);
+        for (boolean firstFails : new boolean[] {true, false}) {
+            ItemStack burst = nitrogen(45);
+            ItemStack other = tank(Map.of(O2, 5.0), T);
+            room += GasTankItem.gas(burst).totalMoles();
+            ItemStack stack = firstFails
+                    ? ttv(burst, other, TransferValve.DEFAULT_TIMER)
+                    : ttv(other, burst, TransferValve.DEFAULT_TIMER);
 
-        h.assertTrue(TransferValveItem.step(bomb, a.level, p), "the TTV outlasted its tank");
-        a.tick();
-        h.assertTrue(
-                Math.abs(a.zone(2, 2, 2).mixture().totalMoles() - (room + held)) < 1e-6,
-                "the gas in the room: expected " + (room + held) + ", got "
-                        + a.zone(2, 2, 2).mixture().totalMoles());
+            h.assertFalse(TransferValveItem.step(stack, a.level, p), "a rupture destroyed the TTV");
+            a.tick();
+            double now = a.zone(2, 2, 2).mixture().totalMoles();
+            h.assertTrue(Math.abs(now - room) < 1e-6, "the gas in the room: expected " + room + ", got " + now);
+            TransferValve left = TransferValveItem.valve(stack);
+            h.assertTrue((firstFails ? left.first() : left.second()).isEmpty(), "the burst tank is still on");
+            close(h, GasTankItem.gas(firstFails ? left.second() : left.first()).moles(O2), 5.0, "the other tank's O2");
+        }
         h.assertTrue(Blasts.take(a.point(2, 2, 2)).isEmpty(), "a rupture exploded");
         a.clear(-1, -1, 5, 5);
         h.succeed();
@@ -319,7 +344,7 @@ public final class TransferValveTests {
     }
 
     /** On the ground the same, and the item entity goes with it. */
-    @GameTest(template = "empty", batch = BATCH)
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void cont_103_a_tank_failing_on_the_ground_takes_the_ttv_with_it(GameTestHelper h) {
         Blasts.listen();
         Area a = new Area(h, 107);
@@ -328,13 +353,18 @@ public final class TransferValveTests {
         Vec3 at = a.point(2, 1, 2);
         ItemEntity item = new ItemEntity(
                 a.level, at.x, at.y, at.z, ttv(tank(Map.of(O2, 5.0), T), nitrogen(60), TransferValve.DEFAULT_TIMER));
+        // A blast destroys a dropped item by itself, and here it should be the TTV that removes it.
+        item.setInvulnerable(true);
         a.level.addFreshEntity(item);
         List<Explosion> blasts = new ArrayList<>();
+        boolean[] outlasted = {false};
 
+        // Asked as soon as the blast is seen: an item left there would later despawn all the same.
         h.succeedWhen(() -> {
             blasts.addAll(Blasts.take(a.point(2, 2, 2)));
-            h.assertTrue(item.isRemoved(), "the dropped TTV is still there");
             h.assertValueEqual(blasts.size(), 1, "explosions");
+            outlasted[0] |= !item.isRemoved();
+            h.assertFalse(outlasted[0], "the dropped TTV outlasted its tank");
             a.clear(-1, -1, 5, 5);
             a.forceLoad(false);
         });
@@ -537,7 +567,7 @@ public final class TransferValveTests {
     }
 
     /** The level ticks a primed TTV in a loaded chunk on its own, so its timer does run out. */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 200)
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void cont_104_a_primed_valve_ticks_in_the_world(GameTestHelper h) {
         Area a = new Area(h, 97);
         a.forceLoad(true);
@@ -592,7 +622,7 @@ public final class TransferValveTests {
     }
 
     /** A primed TTV that survives its valve opening drops as an item again, its valve as it left it. */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 200)
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void cont_104_a_dud_drops_as_an_item_again(GameTestHelper h) {
         Area a = new Area(h, 99);
         a.forceLoad(true);

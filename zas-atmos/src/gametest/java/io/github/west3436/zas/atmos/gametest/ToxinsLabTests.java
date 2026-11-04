@@ -77,7 +77,7 @@ public final class ToxinsLabTests {
 
     private ToxinsLabTests() {}
 
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void s_13_toxins_lab(GameTestHelper h) {
         h.assertValueEqual(ZasServerConfig.preset(), AtmospherePreset.NORMAL, "the preset");
         Blasts.listen();
@@ -85,7 +85,8 @@ public final class ToxinsLabTests {
         a.forceLoad(true);
 
         // The burn chamber: an igniter on the floor, and a vent in the east wall leading through a
-        // pressure pump to a canister on a port.
+        // pressure pump to a canister on a port. The canister stands outside: it would fail in the
+        // chamber's hot air (CONT-085), and the gas inside it is no danger to it.
         a.box(0, 0, 4, 4);
         a.place(1, 1, 2, AtmosBlocks.IGNITER.get().defaultBlockState());
         IgniterBlockEntity igniter = a.entity(1, 1, 2);
@@ -198,13 +199,16 @@ public final class ToxinsLabTests {
         a.level.addFreshEntity(pig);
         float full = pig.getHealth();
         List<Explosion> blasts = new ArrayList<>();
+        boolean[] outlasted = {false};
 
         // The tank explodes with the power the burnt mix's pressure gives: it hurts the pig, and under
         // Normal it breaks nothing.
         h.succeedWhen(() -> {
             blasts.addAll(Blasts.take(a.point(13, 1, 2)));
-            h.assertTrue(primed.isRemoved(), "the TTV hasn't gone off");
             h.assertValueEqual(blasts.size(), 1, "explosions");
+            // Asked as soon as the blast is seen: a TTV left over would be gone 5 s later as a dud.
+            outlasted[0] |= !primed.isRemoved();
+            h.assertFalse(outlasted[0], "the TTV outlasted its tank");
             h.assertTrue(
                     Math.abs(blasts.get(0).radius() - verdict.power()) < 1e-4,
                     "the explosion's power: expected " + verdict.power() + ", got "

@@ -290,6 +290,23 @@ open, the room airs out to 20 % O₂, and a fire lit again burns on. Under
 Normal the room stays unzoned, its air stays the ambient, and the fire burns
 as vanilla's does.*
 
+*2026-11-04: S-13's GameTest passes, as `ToxinsLabTests.s_13_toxins_lab` in the
+Overworld under Normal, with shipped devices. The burn chamber is a sealed
+3 × 3 × 3 stone room of 12 % H₂ in O₂ at 1 atm. Its nitrogen has to come out
+first, which the test does through the API and a player does with a vent on
+siphon: with a room's air left in and 10 % H₂ added, the chamber peaked at
+856 K, just short of autoignition. A redstone block fires the igniter, and the
+chamber burns to about 1,400 K. A vent on siphon then draws the exhaust through
+a pressure pump, set to 1,100 kPa, into a canister on a connector port outside
+the chamber, where it stands at about 1,410 K. The canister fills an empty tank
+to 1,013 kPa: 6.05 mol
+at about 90 % O₂. An H₂ canister fills another to 174 kPa, 5 mol at room
+temperature. On a TTV with a 2 s timer, the valve opens and the mix is at
+917 K. It burns within an atmos tick to 70 atm, and the tank explodes with
+power 2.0, the power the test checks. A pig 2 blocks away falls from 10 health
+to 0.28, and glass, planks and the floor stay intact. The Manual playtest is
+still to come.*
+
 ## Questions
 
 ### Resolved (2026-10-30)

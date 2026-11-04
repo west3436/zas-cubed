@@ -1062,11 +1062,13 @@ first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
 `cont_103_without_both_tanks_no_gas_moves`,
 `cont_103_tanks_go_on_and_come_off_in_an_inventory` and
 `cont_103_the_screen_takes_tanks_off` check it. A TTV's tanks fail as any tank
-does (CONT-038): one that leaks stays on, and one that ruptures or explodes
-takes the TTV with it, with the other tank's gas going into the cell too. The
-requirement doesn't say, so that is for the owner to confirm.
+does (CONT-038). One that leaks stays on, and one that ruptures bursts alone,
+leaving its place empty. One that explodes takes the TTV with it, and the other
+tank's gas goes into the cell too. The requirement doesn't say what becomes of
+the TTV, so that is for the owner to confirm.
 `cont_103_a_tank_that_explodes_destroys_the_ttv`,
-`cont_103_a_tank_that_ruptures_destroys_the_ttv`,
+`cont_103_a_primed_ttv_goes_off_with_its_tank`,
+`cont_103_a_tank_that_ruptures_leaves_the_ttv`,
 `cont_103_a_leaking_tank_stays_on_the_ttv`,
 `cont_103_a_tank_failing_in_an_inventory_takes_the_ttv_with_it` and
 `cont_103_a_tank_failing_on_the_ground_takes_the_ttv_with_it` check that.*
@@ -1100,8 +1102,9 @@ to confirm. `cont_104_the_valve_opens_by_hand`,
 `cont_104_a_primed_valve_ticks_in_the_world`,
 `cont_104_a_primed_valve_cant_be_picked_up_or_used`,
 `cont_104_the_timer_is_clamped_to_its_range`,
-`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
-and `cont_104_a_primed_valve_is_saved` check it.*
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`,
+`cont_104_an_open_valve_wont_start_its_timer` and
+`cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest
