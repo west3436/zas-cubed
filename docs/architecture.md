@@ -2564,7 +2564,8 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
 
 ### 11.10 The fire extinguisher (CONT-037)
 
-`tool.FireExtinguisherItem`, one to a stack, with vg's sprite (D-74).
+`tool.FireExtinguisherItem`, one to a stack, with vg's sprite (D-74). Its recipe
+is in [crafting.md](crafting.md), and a crafted one is full.
 
 - **Spraying.** Using it starts a held use, as a bow's. While the use is held,
   every `SPRAY_INTERVAL` (4) ticks it sprays once and uses one of its
