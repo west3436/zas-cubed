@@ -713,7 +713,7 @@ zone (`CanisterRelease`); the release pressure is clamped to 10–1,013 kPa.
 have.*
 
 #### CONT-085 · Canister rupture
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 A canister caught in an explosion, or above 1,273 K, shall rupture and dump
 its contents into its cell.
@@ -724,8 +724,22 @@ its contents into its cell.
 - **Verify:** GameTests check a canister caught in an explosion and one heated
   above 1,273 K both rupture into their cell.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`CanisterFailure` removes the block, which leaves nothing behind, and its share
+of its network's gas goes into its cell while the rest stays in the network. Any
+explosion that reaches it ruptures it before the game makes drops, whether or not
+the explosion keeps blocks, but not a wind burst. `cont_085_` (GameTest).*
+
+*2026-11-04: "above 1,273 K" means the air around the canister, not the gas inside
+it, as vg's limit is for fire outside. The gas inside is left to the pressure limits
+(CONT-101, CONT-102, D-57): counting it would rupture nearly every burning canister
+before those limits could act, and S-13's path charges a canister with exhaust at
+about 1,400 K. In open air the air is the ambient, at most 340 K in the built-in
+dimensions. A paused or unresolved cell counts as not hot until it resolves, because
+its sample is a last-known mixture or a stand-in; the pressure limits still apply.*
+
 #### CONT-101 · Canister overpressure rupture
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57 · Depends: CONT-085
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57 · Depends: CONT-085
 
 A canister above its 9,120 kPa (90 atm) rating shall rupture as in CONT-085.
 
@@ -733,8 +747,13 @@ A canister above its 9,120 kPa (90 atm) rating shall rupture as in CONT-085.
 - **Verify:** A GameTest checks a canister ruptures just above 90 atm and not
   below.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+A canister in a network fails at the network's pressure. Its item doesn't fail,
+and a canister placed over the rating ruptures at its first atmos tick. `cont_101_`
+(GameTest) and `ContainerFailureTest` (Unit).*
+
 #### CONT-102 · Canister explosion
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, CONT-038
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, CONT-038
 
 A canister above 150 % of its rating (13,680 kPa, 135 atm) shall explode
 instead, as a vanilla explosion of power (P − 135 atm) / 10 atm, releasing its
@@ -746,6 +765,13 @@ contents into its cell.
 
 *2026-10-31: threshold and power confirmed; the power is capped by CONT-109
 (D-59).*
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+The check runs in the canister's atmos tick, after its network has reacted (CONT-100),
+so a burn that raises the pressure is seen in that tick. An explosion has no source
+entity. `cont_102_a_canister_raised_past_135_atm_in_one_tick_explodes` and
+`cont_102_a_burn_explodes_a_canister_in_the_same_atmos_tick` (GameTest) and
+`ContainerFailureTest` (Unit).*
 
 #### CONT-086 · Filled canisters are creative-only
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: CONT-050
@@ -999,6 +1025,9 @@ each time. `cont_107_a_tank_breaks_blocks_only_under_hardcore` and
 `cont_038_a_blast_hurts_the_tanks_holder_under_each_preset` checks the harm.
 Canisters will explode through the same call (CONT-102).*
 
+*2026-11-04: canisters do now.
+`cont_107_a_canister_breaks_blocks_only_under_hardcore` (GameTest).*
+
 #### CONT-109 · Container explosion power cap
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
 
@@ -1014,6 +1043,9 @@ at 16, configurable (TNT is 4).
 0 to 64. `cont_109_a_tanks_power_is_capped_at_16` and
 `cont_109_the_cap_is_configurable` (GameTest), and `ContainerFailureTest` (Unit)
 for the canister's rule.*
+
+*2026-11-04: `cont_109_a_canisters_power_is_capped_at_16` (GameTest) checks a
+canister in the world.*
 
 #### CONT-103 · Tank transfer valve
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13

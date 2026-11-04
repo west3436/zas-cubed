@@ -94,7 +94,7 @@ public final class ContainerFailure {
      * (P − 135 atm) / 10 atm, and ruptures above its 90 atm rating or above 1,273 K.
      *
      * @param kPa its pressure
-     * @param kelvin the hotter of its gas and the air around it
+     * @param kelvin the temperature of the air around it, not of the gas inside it (CONT-085)
      * @param powerCap the most power an explosion can have (CONT-109)
      * @return what it does; a canister never just leaks
      */

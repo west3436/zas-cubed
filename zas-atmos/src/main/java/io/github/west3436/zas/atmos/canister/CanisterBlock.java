@@ -168,7 +168,7 @@ public class CanisterBlock extends BaseEntityBlock implements PipeConnector {
         return super.playerWillDestroy(level, pos, state, player);
     }
 
-    /** Drops made before the block goes, as by an explosion or {@code destroyBlock}, keep the gas too. */
+    /** Drops made before the block goes, as by {@code destroyBlock}, keep the gas too. An explosion ruptures it first. */
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         List<ItemStack> drops = super.getDrops(state, params);
