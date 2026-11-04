@@ -58,6 +58,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.PIPE_CAP.get());
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
+        out.accept(AtmosItems.PRESSURE_PUMP.get());
         out.accept(AtmosItems.CANISTER.get());
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));

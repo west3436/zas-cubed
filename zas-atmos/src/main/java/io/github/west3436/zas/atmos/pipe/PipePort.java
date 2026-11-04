@@ -1,0 +1,114 @@
+package io.github.west3436.zas.atmos.pipe;
+
+import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.gas.GasStore;
+import java.util.List;
+import java.util.function.Supplier;
+import net.minecraft.nbt.CompoundTag;
+
+/**
+ * One pipe port of a device with several: a network node of its own that isn't a block entity, so
+ * one block can sit in several networks (CONT-007, architecture §11.5). It behaves as a {@link
+ * PipeNodeEntity} does, and its device calls it where a node's block entity would act: when it
+ * loads, unloads, is removed and is saved.
+ *
+ * <p>Server thread only.
+ */
+public final class PipePort implements PipeNode {
+    private final GasStore stored;
+    private final Supplier<List<PipeNode>> links;
+    private PipeNetwork network;
+
+    /**
+     * @param volume the port's buffer in L
+     * @param links the nodes connected to the port now
+     */
+    public PipePort(double volume, Supplier<List<PipeNode>> links) {
+        this.stored = new GasStore(volume);
+        this.links = links;
+    }
+
+    @Override
+    public double nodeVolume() {
+        return stored.volume();
+    }
+
+    @Override
+    public GasStore stored() {
+        return stored;
+    }
+
+    @Override
+    public PipeNetwork currentNetwork() {
+        return network;
+    }
+
+    @Override
+    public void joinNetwork(PipeNetwork network) {
+        this.network = network;
+    }
+
+    @Override
+    public List<PipeNode> connectedNodes() {
+        return links.get();
+    }
+
+    /**
+     * The port's network, built now if it has none.
+     *
+     * @return the network, valid
+     */
+    public PipeNetwork network() {
+        if (network == null || !network.valid()) {
+            network = null;
+            PipeNetwork.build(this, PipeNode::connectedNodes);
+        }
+        return network;
+    }
+
+    /** The port's share of its network's gas, or its own gas if it is in no network. */
+    public GasParcel share() {
+        return network != null && network.valid()
+                ? network.shareOf(this)
+                : new GasParcel(stored.moles(), stored.temperature());
+    }
+
+    /** Ends the port's network, if it has one: each member keeps its share by volume (CONT-003). */
+    public void dissolve() {
+        if (network != null) {
+            network.dissolve();
+        }
+    }
+
+    /** Dissolves the networks of the nodes connected to the port, so they are rebuilt with or without it. */
+    public void dissolveLinks() {
+        for (PipeNode n : connectedNodes()) {
+            PipeNetwork linked = n.currentNetwork();
+            if (linked != null) {
+                linked.dissolve();
+            }
+        }
+    }
+
+    /**
+     * Takes the port out of its network for good, as when its device is removed: the network
+     * dissolves, and the port's share is returned rather than kept (CONT-009).
+     *
+     * @return its share of the gas
+     */
+    public GasParcel detach() {
+        GasParcel share = network != null && network.valid() ? network.detach(this) : stored.drain();
+        network = null;
+        return share;
+    }
+
+    /** Writes the port's share, as a node's is saved. */
+    public CompoundTag save() {
+        return GasStore.save(share());
+    }
+
+    /** Reads what {@link #save} wrote. */
+    public void load(CompoundTag tag) {
+        stored.set(GasStore.parcel(tag));
+    }
+}

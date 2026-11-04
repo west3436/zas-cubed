@@ -11,6 +11,7 @@
     "zas_atmos:firelock",
     "zas_atmos:heater",
     "zas_atmos:recharger",
-    "zas_atmos:igniter"
+    "zas_atmos:igniter",
+    "zas_atmos:pressure_pump"
   ]
 }

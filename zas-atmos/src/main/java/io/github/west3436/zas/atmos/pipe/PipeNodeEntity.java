@@ -35,7 +35,7 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>The network is built lazily, on the server, the first time {@link #network()} is called.
  */
-public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
+public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, PipeHost {
     /** Who removed pipes' gas is released by, for the conservation ledger. */
     public static final SourceId RELEASE = SourceId.of(ZasAtmosMod.MOD_ID, "pipe_release");
 
@@ -79,7 +79,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
     public PipeNetwork network() {
         if (network == null || !network.valid()) {
             network = null;
-            PipeNetwork.build(this, n -> ((PipeNodeEntity) n).connectedNodes());
+            PipeNetwork.build(this, PipeNode::connectedNodes);
         }
         return network;
     }
@@ -116,24 +116,26 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
      * The loaded nodes this one is connected to, in direction order. A neighbour in an unloaded
      * chunk isn't reached, and that chunk keeps its share saved.
      */
-    public List<PipeNodeEntity> connectedNodes() {
-        List<PipeNodeEntity> out = new ArrayList<>(6);
+    @Override
+    public List<PipeNode> connectedNodes() {
+        List<PipeNode> out = new ArrayList<>(6);
         if (level == null) {
             return out;
         }
         BlockState self = level.getBlockState(worldPosition);
         for (Direction d : Direction.values()) {
-            BlockPos next = worldPosition.relative(d);
-            if (!level.isLoaded(next)) {
-                continue;
-            }
-            if (PipeConnector.connected(self, d, level.getBlockState(next))
-                    && level.getBlockEntity(next) instanceof PipeNodeEntity n
-                    && !n.isRemoved()) {
+            PipeNode n = PipeHost.across(level, worldPosition, self, d);
+            if (n != null) {
                 out.add(n);
             }
         }
         return out;
+    }
+
+    /** Every face leads to the one node: this one. */
+    @Override
+    public PipeNode nodeOn(Direction face) {
+        return this;
     }
 
     /**
@@ -155,9 +157,10 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode {
 
     /** Dissolves the networks of connected neighbours, so they are rebuilt with or without this node. */
     private void dissolveNeighbours() {
-        for (PipeNodeEntity n : connectedNodes()) {
-            if (n.network != null) {
-                n.network.dissolve();
+        for (PipeNode n : connectedNodes()) {
+            PipeNetwork linked = n.currentNetwork();
+            if (linked != null) {
+                linked.dissolve();
             }
         }
     }

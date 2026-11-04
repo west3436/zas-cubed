@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
+import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -68,6 +69,10 @@ public final class AtmosBlocks {
     /** The igniter (CONT-105). */
     public static final DeferredBlock<IgniterBlock> IGNITER =
             BLOCKS.registerBlock("igniter", IgniterBlock::new, metal());
+
+    /** The pressure pump (CONT-011). */
+    public static final DeferredBlock<PressurePumpBlock> PRESSURE_PUMP =
+            BLOCKS.registerBlock("pressure_pump", PressurePumpBlock::new, metal());
 
     private AtmosBlocks() {}
 

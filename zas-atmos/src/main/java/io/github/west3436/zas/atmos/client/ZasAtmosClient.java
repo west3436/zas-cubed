@@ -60,6 +60,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.GENERATOR.get(), GeneratorScreen::new);
         event.register(AtmosMenus.HEATER.get(), HeaterScreen::new);
         event.register(AtmosMenus.RECHARGER.get(), RechargerScreen::new);
+        event.register(AtmosMenus.PRESSURE_PUMP.get(), PumpScreen::pressure);
     }
 
     /**

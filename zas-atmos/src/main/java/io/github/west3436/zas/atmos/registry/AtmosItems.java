@@ -51,6 +51,9 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> RECHARGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.RECHARGER);
     public static final DeferredItem<BlockItem> IGNITER = ITEMS.registerSimpleBlockItem(AtmosBlocks.IGNITER);
 
+    public static final DeferredItem<BlockItem> PRESSURE_PUMP =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.PRESSURE_PUMP);
+
     // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
 
     public static final DeferredItem<BatteryItem> BATTERY =
