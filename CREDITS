@@ -102,6 +102,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/air_conditioner.
 origin: original
 notes: The air conditioner's four facings, cooling and idle, with the existing air_conditioner and air_conditioner_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/portable_scrubber.json
+origin: original
+notes: The portable scrubber's four facings, working and idle, with the existing portable_scrubber and portable_scrubber_on models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/recharger.json
 origin: original
 notes: The recharger's four facings: empty with the existing recharger model, and holding a battery with recharger_0 to recharger_4 by its charge.

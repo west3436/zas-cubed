@@ -286,7 +286,7 @@ through a `ZonePort`. The open pipe end, canister valve and vent GameTests
 exercise the calls.*
 
 #### CONT-072 · One outstanding mutation per port
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-50, CORE-036
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-50, CORE-036
 
 A device port shall issue a new zone mutation only after its previous one has
 completed, so decisions made on a stale snapshot never add or remove gas
@@ -301,6 +301,14 @@ twice.
 changes through one `ZonePort` and wait while it is busy
 ([#48](https://github.com/west3436/zas-cubed/issues/48)); the GameTest with a
 scrubber and the conservation checker waits for the scrubber.*
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+`ZonePortTest.cont_072_*` (Unit) checks a port waits for its future.
+`ScrubberStationTests.cont_072_a_vent_and_scrubber_keep_the_gas_with_the_checker_on`
+(GameTest) runs a vent and a scrubber on one network in a sealed room with the
+invariant checker on. Each is unready while its port is busy, a second pass of
+the schedule on the same snapshot moves nothing more, the checker finds nothing
+unexplained, and each gas's moles in the room and the network stay the same.*
 
 #### CONT-073 · No reactions in pipes
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
@@ -834,6 +842,11 @@ until the portable pump, portable scrubber and freezer exist.*
 *2026-11-04: The freezer exists, as the air conditioner (CONT-019), so this
 stays Accepted until the portable pump and scrubber exist.*
 
+*2026-11-04: The portable scrubber exists. `PortableScrubberTests.cont_018_*`
+(GameTest) check it on a room and on a held tank, stopping when its battery is
+empty, and a controller in its room not powering or listing it. This stays
+Accepted until the portable pump exists.*
+
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
 
@@ -1357,7 +1370,7 @@ minimum and no temperature bounds, which would always trip in an empty room.
 changes the rating.*
 
 #### CONT-041 · Controller modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 The area air controller shall command its vents and scrubbers in these modes:
 
@@ -1387,6 +1400,13 @@ scrubber follow the orders.*
 it implements `VentControl`, and `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest) checks that the vent
 follows Scrubbing, Off, Panic and Replacement, and moves nothing while ordered
 off. This stays Accepted until the scrubber follows its orders.*
+
+*2026-11-04: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)).
+`ScrubberStationTests.cont_041_a_real_vent_and_scrubber_follow_each_mode`
+(GameTest) sets each mode on a real controller, with a real vent and scrubber
+in a mixed room. It checks each one's settings and block state and what it does
+to the gas, and that Cycle switches to Fill and Fill to Scrubbing by
+themselves.*
 
 #### CONT-048 · Controller redstone
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -1692,7 +1712,7 @@ pipes join it only at the water inlet on its back.
   join only the water inlet on the back.
 
 #### CONT-053 · Photosynthesis
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33, D-13, S-11
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
 
 Inside a zone, plants (data-driven by block tag: crops, saplings, leaves,
 etc.) shall turn CO₂ into an equal number of moles of O₂ while lit, limited by
@@ -1710,8 +1730,19 @@ Hardcore placing one in an enclosed, unzoned area forms a zone. Photosynthesis
 reads the same tag. CONT-057's two rates can tell leaves apart by
 `#minecraft:leaves`, or split the tag into two that it includes.*
 
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)),
+in `zas`, beside respiration, whose non-triggering `LIFE` mutations it shares; the
+design and its cost are in
+[architecture.md](../architecture.md#photosynthesis-cont-053-cont-057). The tag
+is split: `#zas:plants` holds `#zas:crop_plants` and `#zas:leaf_plants`. Light is
+what a player reads, block light or sky light less the day's darkening, so a glass
+greenhouse slows at night. `cont_053_lit_crops_stop_when_co2_runs_out` checks equal
+moles, the stop and the `LIFE` ledger, and `PhotosynthesisTests` also covers a
+plant in the dark, a paused zone, the zones plants act in under each preset, and
+how plants are found and followed.*
+
 #### CONT-057 · Photosynthesis rates
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-33, S-11
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-33, S-11
 
 Rates shall be configurable per tag and scale linearly with light level, from
 0 at light 0. Defaults at light 15 follow the preset (OPS-007), so that a
@@ -1731,6 +1762,14 @@ LIFE-042):
 *2026-10-31: defaults lowered from 0.002 and 0.001 mol/s (one crop supplied
 about 7 breathers) and made preset-dependent, at the user's request before
 the baseline (D-61).*
+
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)).
+The options are `crop_photosynthesis_rate`, for `#zas:crop_plants` and anything
+else in `#zas:plants`, and `leaf_photosynthesis_rate`, for `#zas:leaf_plants`
+([config.md](../config.md#the-preset-and-its-options)). The arithmetic is
+`PhotosynthesisRatesTest`, and `cont_057_rates_at_light_15_and_7_under_each_preset`
+checks the table in the world for wheat, a sapling and leaves. Leaves dim their own
+position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
 `Must` · `R1` · `Accepted` · Verify: Inspect
@@ -2041,7 +2080,7 @@ gas; once it is linked with the multitool to a generator-powered controller in
 another room, it is powered by that controller and blows.*
 
 #### CONT-064 · Controller power priority
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-34, S-02
 
 When a controller's buffer can't meet demand, it shall power devices in
 priority order: life support (vents, scrubbers) first, then pumps, filters and
@@ -2074,6 +2113,15 @@ itself and the vent but not a pump powers the vent and leaves the pump off
 *2026-11-03: a central atmospherics controller ranks zones above this
 (CONT-121, D-75): it decides how much FE each area air controller gets, and
 each area air controller then powers its parts in this order.*
+
+*2026-11-04: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)).
+`ScrubberStationTests.cont_064_a_starved_controller_keeps_a_real_vent_and_scrubber_running`
+(GameTest) runs in real time, holding a real controller's buffer. With plenty,
+all four parts run. With FE for itself, the vent and the scrubber only, those
+keep running and moving gas while the pump and the auxiliary part lose their
+leases and stop. With none, the vent and scrubber stop too. The pump and the
+auxiliary part are stand-ins, since the real ones are other work in this
+round; they differ only in their priority group.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)

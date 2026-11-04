@@ -290,6 +290,16 @@ open, the room airs out to 20 % O₂, and a fire lit again burns on. Under
 Normal the room stays unzoned, its air stays the ambient, and the fire burns
 as vanilla's does.*
 
+*2026-11-04: S-11's plan passes, as
+`PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and_lit_crops_make_o2`
+and `s_11_normal_greenhouse_stays_unzoned`. The greenhouse is a sealed
+3 × 3 × 3 glass box on farmland, open to the sky above it, planted with 9 wheat.
+Under Hardcore the planting forms a zone of the ambient air, which holds no CO₂,
+so the plants wait. Once CO₂ is added, one pass at noon turns 9 plants' worth at
+light 15 into the same moles of O₂. Under Normal the same planting leaves the
+greenhouse unzoned, and `cont_053_under_normal_plants_act_in_a_zone_that_exists`
+checks that the plants act once CO₂ from the API has formed a zone there.*
+
 *2026-11-04: S-13's GameTest passes, as `ToxinsLabTests.s_13_toxins_lab` in the
 Overworld under Normal, with shipped devices. The burn chamber is a sealed
 3 × 3 × 3 stone room of 12 % H₂ in O₂ at 1 atm. Its nitrogen has to come out
@@ -299,9 +309,8 @@ siphon: with a room's air left in and 10 % H₂ added, the chamber peaked at
 chamber burns to about 1,400 K. A vent on siphon then draws the exhaust through
 a pressure pump, set to 1,100 kPa, into a canister on a connector port outside
 the chamber, where it stands at about 1,410 K. The canister fills an empty tank
-to 1,013 kPa: 6.05 mol
-at about 90 % O₂. An H₂ canister fills another to 174 kPa, 5 mol at room
-temperature. On a TTV with a 2 s timer, the valve opens and the mix is at
+to 1,013 kPa: 6.05 mol at about 90 % O₂. An H₂ canister fills another to
+174 kPa, 5 mol at room temperature. On a TTV with a 2 s timer, the valve opens and the mix is at
 917 K. It burns within an atmos tick to 70 atm, and the tank explodes with
 power 2.0, the power the test checks. A pig 2 blocks away falls from 10 health
 to 0.28, and glass, planks and the floor stay intact. The Manual playtest is
