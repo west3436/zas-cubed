@@ -206,6 +206,8 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | Key | Default | Meaning |
 |---|---|---|
 | `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] scrubber` | `15` | What a scrubber draws while it scrubs or siphons, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] scrubber_panic` | `30` | What a scrubber draws in panic, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] heater` | `60` | What a heater draws from its battery while it heats at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers a heater (D-73) |
 | `[power] heater_watts` | `5000` | The most heat a heater adds, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops heaters heating |
 | `[power] recharger` | `40` | What a recharger draws from its controller while its battery has room, in FE/t, 0 to 100,000 (CONT-113) |

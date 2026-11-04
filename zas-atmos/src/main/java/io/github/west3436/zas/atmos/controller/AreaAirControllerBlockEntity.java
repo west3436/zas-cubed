@@ -163,7 +163,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         // Orders first, then the bill: a part's draw follows its order (a vent draws nothing while
         // off), so paying first would let the tick a part is switched on run free.
         VentOrder vent = mode.vent(preset).from(getBlockPos());
-        ScrubberOrder scrubber = mode.scrubber(preset);
+        ScrubberOrder scrubber = mode.scrubber(preset).from(getBlockPos());
         for (PoweredDevice d : covered) {
             if (d instanceof VentControl v) {
                 v.ventOrder(vent);

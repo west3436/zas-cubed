@@ -106,6 +106,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/igniter.json
 origin: original
 notes: The igniter, sparking and idle, with the existing igniter and igniter_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/scrubber.json
+origin: original
+notes: The scrubber's six facings and four modes, with the existing scrubber models.
+
 path: zas-atmos/src/gametest/resources/assets/zas_atmos/blockstates/test_vent.json
 origin: original
 notes: GameTest stand-in for a vent (dev runs only), shown with the existing vent model.

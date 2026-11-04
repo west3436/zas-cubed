@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -42,6 +43,10 @@ public final class AtmosBlocks {
 
     /** A vent (CONT-014). */
     public static final DeferredBlock<VentBlock> VENT = BLOCKS.registerBlock("vent", VentBlock::new, metal());
+    /** A scrubber (CONT-015). */
+    public static final DeferredBlock<ScrubberBlock> SCRUBBER =
+            BLOCKS.registerBlock("scrubber", ScrubberBlock::new, metal());
+
     /** The area air controller, a wall panel (CONT-040, D-68). */
     public static final DeferredBlock<AreaAirControllerBlock> AREA_AIR_CONTROLLER =
             BLOCKS.registerBlock("area_air_controller", AreaAirControllerBlock::new, metal().strength(1.5f, 4.8f));
