@@ -12,5 +12,10 @@ public class PipeCapBlockEntity extends PipeNodeEntity {
     }
 
     @Override
+    protected boolean isSegment() {
+        return true;
+    }
+
+    @Override
     protected void atmosTick(ServerLevel level) {}
 }

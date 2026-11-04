@@ -123,6 +123,7 @@ class PipeNetworkTest {
     void cont_007_part_volumes() {
         assertEquals(70, PipeVolumes.PIPE);
         assertEquals(200, PipeVolumes.PORT);
+        assertEquals(200, PipeVolumes.VALVE);
         assertEquals(400, PipeVolumes.VENT);
         assertEquals(1000, PipeVolumes.CANISTER);
     }
@@ -200,6 +201,82 @@ class PipeNetworkTest {
         close(10, merged.gas().moles(N2), "N2");
         for (Node n : a) {
             assertTrue(n.stored().isEmpty(), "a member keeps gas of its own");
+        }
+    }
+
+    /**
+     * An open valve is a node linked to both sides, and a shut one is linked to neither (CONT-075):
+     * opening adds the sides' gas and energy together, and shutting shares them out by volume, valve
+     * included.
+     */
+    @Test
+    void cont_075_a_valve_joins_two_networks_and_splits_them_by_volume() {
+        List<Node> left = run(3);
+        List<Node> right = run(5);
+        Node valve = new Node(PipeVolumes.VALVE);
+        left.get(0).stored.set(new GasParcel(Map.of(O2, 2.0), 300));
+        right.get(0).stored.set(new GasParcel(Map.of(N2, 6.0), 500));
+        double energy = 2 * GasProperties.molarHeatCapacity(O2) * 300 + 6 * GasProperties.molarHeatCapacity(N2) * 500;
+        double volume = 8 * PipeVolumes.PIPE + PipeVolumes.VALVE;
+        close(2.0, left.get(0).net().gas().moles(O2), "left O2 while the valve is shut");
+        close(6.0, right.get(0).net().gas().moles(N2), "right N2 while the valve is shut");
+
+        link(left.get(2), valve);
+        link(valve, right.get(0));
+        PipeNetwork joined = PipeNetwork.build(valve, n -> ((Node) n).links);
+        assertSame(joined, left.get(0).network, "left joined");
+        assertSame(joined, right.get(4).network, "right joined");
+        close(volume, joined.volume(), "joined volume, the valve's included");
+        close(2.0, joined.gas().moles(O2), "O2 joined");
+        close(6.0, joined.gas().moles(N2), "N2 joined");
+        close(energy, joined.gas().thermalEnergy(), "energy joined");
+        double mixed = joined.gas().temperature();
+
+        unlink(left.get(2), valve);
+        unlink(valve, right.get(0));
+        joined.dissolve();
+        PipeNetwork l = left.get(0).net();
+        PipeNetwork r = right.get(0).net();
+        PipeNetwork v = valve.net();
+        close(3 * PipeVolumes.PIPE, l.volume(), "left volume");
+        close(5 * PipeVolumes.PIPE, r.volume(), "right volume");
+        close(PipeVolumes.VALVE, v.volume(), "the shut valve is a network of its own");
+        for (PipeNetwork part : List.of(l, r, v)) {
+            close(2.0 * part.volume() / volume, part.gas().moles(O2), "O2 by volume");
+            close(6.0 * part.volume() / volume, part.gas().moles(N2), "N2 by volume");
+            close(mixed, part.gas().temperature(), "each part keeps the mixed temperature");
+        }
+        close(
+                energy,
+                l.gas().thermalEnergy() + r.gas().thermalEnergy() + v.gas().thermalEnergy(),
+                "energy split");
+    }
+
+    /** Turning a valve again and again neither loses nor makes gas or energy (CONT-003, CONT-075). */
+    @Test
+    void cont_075_turning_a_valve_again_and_again_conserves_gas_and_energy() {
+        List<Node> left = run(4);
+        List<Node> right = run(9);
+        Node valve = new Node(PipeVolumes.VALVE);
+        left.get(0).stored.set(new GasParcel(Map.of(O2, 3.0, N2, 11.0), 320));
+        right.get(0).stored.set(new GasParcel(Map.of(N2, 0.7), 650));
+        double energy = (3 * GasProperties.molarHeatCapacity(O2) + 11 * GasProperties.molarHeatCapacity(N2)) * 320
+                + 0.7 * GasProperties.molarHeatCapacity(N2) * 650;
+        for (int turn = 0; turn < 1_000; turn++) {
+            link(left.get(3), valve);
+            link(valve, right.get(0));
+            PipeNetwork joined = PipeNetwork.build(valve, n -> ((Node) n).links);
+            assertEquals(14, joined.members().size());
+            assertEquals(3.0, joined.gas().moles(O2), 1e-9, "O2 at turn " + turn);
+            assertEquals(11.7, joined.gas().moles(N2), 1e-9, "N2 at turn " + turn);
+            assertEquals(energy, joined.gas().thermalEnergy(), 1e-9 * energy, "energy at turn " + turn);
+            unlink(left.get(3), valve);
+            unlink(valve, right.get(0));
+            joined.dissolve();
+            double parts = left.get(0).net().gas().totalMoles()
+                    + right.get(0).net().gas().totalMoles()
+                    + valve.net().gas().totalMoles();
+            assertEquals(14.7, parts, 1e-9, "the parts' moles at turn " + turn);
         }
     }
 
