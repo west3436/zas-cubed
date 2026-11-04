@@ -18,7 +18,10 @@ public final class AtmosComponents {
     public static final DeferredRegister.DataComponents COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, ZasAtmosMod.MOD_ID);
 
-    /** The gas a canister item carries: its contents when it was mined, or a creative fill (CONT-017, CONT-086). */
+    /**
+     * The gas a canister or portable item carries: its contents when it was mined, or a creative fill
+     * (CONT-017, CONT-018, CONT-086).
+     */
     public static final Supplier<DataComponentType<GasParcel>> GAS = COMPONENTS.registerComponentType(
             "gas", b -> b.persistent(GasCodecs.PARCEL).networkSynchronized(GasCodecs.PARCEL_STREAM));
 

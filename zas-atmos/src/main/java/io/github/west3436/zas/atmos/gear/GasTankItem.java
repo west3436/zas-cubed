@@ -194,6 +194,14 @@ public class GasTankItem extends Item {
         return taken;
     }
 
+    /** Takes up to the given moles of each gas from a tank stack, as a scrubber does (CONT-018). */
+    public static GasParcel take(ItemStack stack, Map<ResourceLocation, Double> want) {
+        GasStore store = store(stack);
+        GasParcel taken = store.take(want);
+        setGas(stack, new GasParcel(store.moles(), store.temperature()));
+        return taken;
+    }
+
     private static GasStore store(ItemStack stack) {
         GasStore store = new GasStore(((GasTankItem) stack.getItem()).volume);
         store.set(gas(stack));
