@@ -2,6 +2,8 @@ package io.github.west3436.zas.atmos.canister;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
@@ -12,10 +14,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.BlockItemStateProperties;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
 /** A canister's item. It carries the gas of a mined canister, or a creative fill (CONT-086), and lists it. */
@@ -43,6 +49,23 @@ public class CanisterItem extends BlockItem {
         stack.set(AtmosComponents.GAS.get(), new GasParcel(Map.of(gas, moles), FILL_K));
         stack.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(CanisterColor.PROPERTY, color));
         return stack;
+    }
+
+    /** A mined canister's gas goes on reacting while it is carried (CONT-100). */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
+        if (level instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+            ContainerReactions.react(stack, PipeVolumes.CANISTER);
+        }
+    }
+
+    /** A mined canister's gas goes on reacting while it lies dropped (CONT-100). */
+    @Override
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        if (entity.level() instanceof ServerLevel server && AtmosTicks.due(server, entity)) {
+            ContainerReactions.react(stack, PipeVolumes.CANISTER);
+        }
+        return false;
     }
 
     @Override

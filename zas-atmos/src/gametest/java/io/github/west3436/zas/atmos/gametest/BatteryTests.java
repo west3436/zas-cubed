@@ -15,7 +15,7 @@ import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
-import io.github.west3436.zas.atmos.heater.HeaterStatus;
+import io.github.west3436.zas.atmos.heater.ThermoStatus;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
@@ -182,7 +182,7 @@ public final class BatteryTests {
             heater.setSetpoint(HeaterMath.MAX_SETPOINT);
             heater.setOn(true);
             s.cycle(heater);
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heater on the test FE item");
+            h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater on the test FE item");
             h.assertValueEqual(
                     heater.energy(),
                     TestParts.FE_ITEM_CAPACITY - 60 * AtmosTicks.PERIOD,
@@ -326,10 +326,10 @@ public final class BatteryTests {
             Object part = heater;
             h.assertFalse(part instanceof io.github.west3436.zas.atmos.power.PoweredDevice, "the heater is a part");
             int own = AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_DRAW) * AtmosTicks.PERIOD;
-            for (int i = 0; i < 4 && heater.status() != HeaterStatus.HEATING; i++) {
+            for (int i = 0; i < 4 && heater.status() != ThermoStatus.HEATING; i++) {
                 s.cycle(c, heater);
             }
-            h.assertValueEqual(heater.status(), HeaterStatus.HEATING, "the heater in the controller's room");
+            h.assertValueEqual(heater.status(), ThermoStatus.HEATING, "the heater in the controller's room");
             c.toggleLink(heater.getBlockPos());
             int before = heater.energy();
             s.cycle(c, heater);
