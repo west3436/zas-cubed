@@ -3,7 +3,8 @@
 **Status:** Accepted 2026-10-30 (full form 2026-10-31). Requirements
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
-accepted on 2026-10-31 (D-57).
+accepted on 2026-10-31 (D-57). FIRE-033 and FIRE-034 were added as Draft on
+2026-11-04.
 
 **Scope.** Covers:
 - gas reactions
@@ -456,6 +457,59 @@ carbon), overridable per tag of the block it burns on.
 `#minecraft:fire` (10 kW), or one whose `burning_on` matches the block it burns
 on: the block below it, or else the first flammable block next to it. Checked
 by `fire_022_fire_burns_its_profile_and_a_tag_overrides_it`.*
+
+#### FIRE-033 · Hot gas ignites blocks
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-020, FIRE-030
+
+A flammable block next to an air cell of a zone whose temperature is at or above
+the block's ignition temperature shall catch fire, with a chance per second for
+each such face of `odds / 100 × heat`. `odds` is the block's vanilla ignite odds,
+counting at most 100. `heat` rises linearly from 0.1 at the ignition temperature
+to 1 at 500 K above it. The fire is a vanilla fire in that air cell, as flint and
+steel would place one. The ignition temperature is `[fire]
+block_ignition_temperature` (default 573 K), which datapacks may override per
+block or block tag.
+
+- **Rationale:** The owner's choice of 2026-11-03: a wooden room at 2,700 K
+  should catch fire from the heat. The default is about wood's autoignition
+  point. Open air is ambient, not a zone, so it never lights a block.
+- **Verify:** Unit tests check the chance, the rate over many seeds, and that a
+  cool zone never looks for flammable blocks. GameTests check a sealed planks
+  room at 293 K stays unlit and at 700 K gets fires on its inside faces, that a
+  tag override changes the temperature, that the rate matches the chance, and
+  that nothing lights with `doFireTick` false or below 14 % O₂.
+
+*2026-11-04: Built for review ([#212](https://github.com/west3436/zas-cubed/issues/212)). `engine.scheduler.BlockIgniter`, in
+phase 6 (architecture §5, Hotspots). The same rules apply under Normal and
+Hardcore. Under Normal, a sealed room is only a zone once something makes one.
+Once lit, the fire burns as FIRE-020 and FIRE-022 say. Checked by the `fire_033_`
+tests in `BlockIgnitionSettingsTest`, `BlockIgniterTest` (Unit) and
+`BlockIgnitionTests` (GameTest), among them
+`fire_033_a_planks_room_lights_only_when_hot` and
+`fire_033_rate_matches_the_odds_and_the_heat`.*
+
+#### FIRE-034 · Gas fires light the blocks next to them
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-018, FIRE-030
+
+A cell with a gas fire beside a flammable block shall light it, with a chance per
+second for each such block of `[fire] hotspot_block_ignite_chance × odds / 100`
+(default 1), where `odds` is the block's vanilla ignite odds, counting at most
+100. A vanilla fire takes the gas fire's cell, which may be the only open cell
+beside the block. A vanilla fire has vanilla's own spread instead.
+
+- **Rationale:** The owner's choice of 2026-11-03. FIRE-016's spread only reaches
+  air cells whose gas can burn, so a gas fire would never light the wood or wool
+  beside it.
+- **Verify:** Unit tests check the chance and the rate over many seeds. GameTests
+  check a gas fire beside wool lights it and one beside stone doesn't, that the
+  rate matches the configured chance, and that nothing lights with `doFireTick`
+  false or below 14 % O₂.
+
+*2026-11-04: Built for review ([#212](https://github.com/west3436/zas-cubed/issues/212)). `BlockIgniter`, for each gas fire that
+burned this tick. Checked by the `fire_034_` tests in `BlockIgnitionSettingsTest`,
+`BlockIgniterTest` (Unit) and `BlockIgnitionTests` (GameTest), among them
+`fire_034_a_gas_fire_lights_wool_not_stone` and
+`fire_034_rate_matches_the_configured_chance`.*
 
 #### FIRE-024 · Combustion as a zone trigger (Hardcore)
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-14, S-04
