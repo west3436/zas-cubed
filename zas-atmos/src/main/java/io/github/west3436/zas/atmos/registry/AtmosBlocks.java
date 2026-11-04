@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
+import io.github.west3436.zas.atmos.portable.PortablePumpBlock;
 import io.github.west3436.zas.atmos.portable.PortableScrubberBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
@@ -72,6 +73,10 @@ public final class AtmosBlocks {
     /** The portable scrubber (CONT-018). */
     public static final DeferredBlock<PortableScrubberBlock> PORTABLE_SCRUBBER =
             BLOCKS.registerBlock("portable_scrubber", PortableScrubberBlock::new, metal());
+
+    /** The portable pump (CONT-018). */
+    public static final DeferredBlock<PortablePumpBlock> PORTABLE_PUMP =
+            BLOCKS.registerBlock("portable_pump", PortablePumpBlock::new, metal());
 
     /** The recharger (CONT-113). */
     public static final DeferredBlock<RechargerBlock> RECHARGER =

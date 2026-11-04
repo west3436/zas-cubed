@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
+import io.github.west3436.zas.atmos.portable.PortablePumpBlockEntity;
 import io.github.west3436.zas.atmos.portable.PortableScrubberBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
@@ -93,6 +94,11 @@ public final class AtmosBlockEntities {
                     () -> BlockEntityType.Builder.of(
                                     PortableScrubberBlockEntity::new, AtmosBlocks.PORTABLE_SCRUBBER.get())
                             .build(null));
+
+    public static final Supplier<BlockEntityType<PortablePumpBlockEntity>> PORTABLE_PUMP = BLOCK_ENTITIES.register(
+            "portable_pump",
+            () -> BlockEntityType.Builder.of(PortablePumpBlockEntity::new, AtmosBlocks.PORTABLE_PUMP.get())
+                    .build(null));
 
     public static final Supplier<BlockEntityType<RechargerBlockEntity>> RECHARGER = BLOCK_ENTITIES.register(
             "recharger",
