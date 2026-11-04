@@ -60,6 +60,21 @@ public final class Atmospheres {
     }
 
     /**
+     * Whether explosions of gas containers, such as tanks and canisters, break blocks (API-059,
+     * CONT-107, OPS-007): true under the Hardcore preset and false under Normal, unless the server
+     * overrides it. They hurt entities either way. Ask each time, since a preset change or a config
+     * edit applies from the next read. Without ZAS³, false.
+     *
+     * <p>Thread: any.
+     *
+     * @return true if a container's explosion should break blocks
+     */
+    @AnyThread
+    public static boolean containerExplosionsBreakBlocks() {
+        return ZasApi.provider().containerExplosionsBreakBlocks();
+    }
+
+    /**
      * The atmosphere at an exact point.
      *
      * <p>Thread: any.
