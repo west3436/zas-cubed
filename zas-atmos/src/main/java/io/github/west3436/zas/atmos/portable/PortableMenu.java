@@ -1,6 +1,6 @@
 package io.github.west3436.zas.atmos.portable;
 
-import io.github.west3436.zas.atmos.battery.Batteries;
+import java.util.List;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -10,14 +10,12 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
 
 /**
- * A portable's GUI (CONT-018, CONT-074): its battery slot, which takes only a battery (CONT-112),
- * its switch and its battery's charge, above the player's inventory. The client sends only button
- * ids; the server checks each id and refuses a player too far away ({@link #stillValid}). A subclass
- * adds its own buttons from {@link #TOGGLE} + 1 and its own values from {@link #DATA_COUNT}.
+ * A portable's GUI (CONT-018, CONT-074): its slots, which take only what they hold (CONT-112), its
+ * switch and its battery's charge, above the player's inventory. The client sends only button ids;
+ * the server checks each id and refuses a player too far away ({@link #stillValid}). A subclass adds
+ * its own buttons from {@link #TOGGLE} + 1 and its own values from {@link #DATA_COUNT}.
  */
 public abstract class PortableMenu extends AbstractContainerMenu {
     /** Switches it on or off. */
@@ -35,6 +33,7 @@ public abstract class PortableMenu extends AbstractContainerMenu {
     /** How many values every portable syncs. */
     public static final int DATA_COUNT = 5;
 
+    private final int deviceSlots;
     private final ContainerData data;
     private final ContainerLevelAccess access;
     private final Block block;
@@ -44,9 +43,7 @@ public abstract class PortableMenu extends AbstractContainerMenu {
      * @param type the menu's type
      * @param id the menu's id
      * @param inventory the player's inventory
-     * @param battery the battery slot
-     * @param batteryX where the battery slot is drawn
-     * @param batteryY where the battery slot is drawn
+     * @param slots the portable's own slots, which a shift-click fills in order
      * @param inventoryY where the player's inventory starts
      * @param data the synced values
      * @param dataCount how many there must be
@@ -58,9 +55,7 @@ public abstract class PortableMenu extends AbstractContainerMenu {
             MenuType<?> type,
             int id,
             Inventory inventory,
-            IItemHandler battery,
-            int batteryX,
-            int batteryY,
+            List<Slot> slots,
             int inventoryY,
             ContainerData data,
             int dataCount,
@@ -69,11 +64,12 @@ public abstract class PortableMenu extends AbstractContainerMenu {
             PortableDevice device) {
         super(type, id);
         checkContainerDataCount(data, dataCount);
+        this.deviceSlots = slots.size();
         this.data = data;
         this.access = access;
         this.block = block;
         this.device = device;
-        addSlot(new SlotItemHandler(battery, 0, batteryX, batteryY));
+        slots.forEach(this::addSlot);
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(inventory, col + row * 9 + 9, 8 + col * 18, inventoryY + row * 18));
@@ -123,11 +119,10 @@ public abstract class PortableMenu extends AbstractContainerMenu {
         }
         ItemStack stack = slot.getItem();
         ItemStack copy = stack.copy();
-        if (index == 0) {
-            if (!moveItemStackTo(stack, 1, slots.size(), true)) {
-                return ItemStack.EMPTY;
-            }
-        } else if (!Batteries.isBattery(stack) || !moveItemStackTo(stack, 0, 1, false)) {
+        boolean moved = index < deviceSlots
+                ? moveItemStackTo(stack, deviceSlots, slots.size(), true)
+                : moveItemStackTo(stack, 0, deviceSlots, false); // each slot takes only what it holds
+        if (!moved) {
             return ItemStack.EMPTY;
         }
         if (stack.isEmpty()) {

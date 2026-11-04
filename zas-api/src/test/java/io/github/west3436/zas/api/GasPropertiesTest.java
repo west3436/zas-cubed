@@ -98,4 +98,14 @@ class GasPropertiesTest {
         assertEquals(20, FallbackProvider.INSTANCE.atmosPeriodTicks());
         assertEquals(20, Atmospheres.periodTicks());
     }
+
+    /** Without ZAS³ a container's explosion breaks no blocks, and an older provider says the same. */
+    @Test
+    void api_059_container_explosions_break_no_blocks_without_zas() throws NoSuchMethodException {
+        assertEquals(false, FallbackProvider.INSTANCE.containerExplosionsBreakBlocks());
+        assertEquals(false, Atmospheres.containerExplosionsBreakBlocks());
+        assertTrue(
+                ZasApiProvider.class.getMethod("containerExplosionsBreakBlocks").isDefault());
+        assertEquals(false, older().containerExplosionsBreakBlocks());
+    }
 }

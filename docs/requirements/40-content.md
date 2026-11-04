@@ -286,7 +286,7 @@ through a `ZonePort`. The open pipe end, canister valve and vent GameTests
 exercise the calls.*
 
 #### CONT-072 · One outstanding mutation per port
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest · Trace: D-50, CORE-036
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-50, CORE-036
 
 A device port shall issue a new zone mutation only after its previous one has
 completed, so decisions made on a stale snapshot never add or remove gas
@@ -301,6 +301,14 @@ twice.
 changes through one `ZonePort` and wait while it is busy
 ([#48](https://github.com/west3436/zas-cubed/issues/48)); the GameTest with a
 scrubber and the conservation checker waits for the scrubber.*
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+`ZonePortTest.cont_072_*` (Unit) checks a port waits for its future.
+`ScrubberStationTests.cont_072_a_vent_and_scrubber_keep_the_gas_with_the_checker_on`
+(GameTest) runs a vent and a scrubber on one network in a sealed room with the
+invariant checker on. Each is unready while its port is busy, a second pass of
+the schedule on the same snapshot moves nothing more, the checker finds nothing
+unexplained, and each gas's moles in the room and the network stay the same.*
 
 #### CONT-073 · No reactions in pipes
 `Won't` · `R1` · `Rejected` — superseded by CONT-100 (D-57), 2026-10-31.
@@ -369,6 +377,9 @@ stays Accepted until every device's GUI is built.*
 *2026-11-02: The vent's GUI also refuses every button while an area air
 controller controls the vent (CONT-014), on the server, whatever the client
 sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
+
+*2026-11-04: The scrubber's GUI follows the same pattern
+(`ScrubberTests.cont_074_a_scrubbers_gui_is_checked_and_a_controller_wins`).*
 
 #### CONT-010 · Valves
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -568,7 +579,7 @@ when blowing, and of its zone when siphoning (`VentFlow`).
 siphon tests (GameTest) check a room takes at least four atmos ticks.*
 
 #### CONT-015 · Scrubber
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02
 
 A scrubber shall remove selected gases or gas tags from its zone. The default
 selection is CO₂ and `zas:toxic`. It faces any of six ways, and a pipe joins
@@ -584,8 +595,20 @@ it only on its back, the face opposite its grille.
   is shaped like the vent: it faces any of six ways and takes a pipe only on
   its back.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:scrubber` takes gas from the cell in front of its grille into its
+network, through one `ZonePort` ([architecture
+§11.5](../architecture.md#115-devices)). `GasSelection` holds the gases and gas
+tags it keeps. An area air controller's order sets them, and so does its GUI,
+which has a toggle for each shipped gas and gas tag.
+`ScrubberTests.cont_015_a_scrubber_removes_co2_and_co_and_leaves_o2_and_n2` and
+`cont_015_a_pipe_joins_a_scrubber_only_on_its_back` (GameTest) check the Verify,
+and `GasSelectionTest` (Unit) checks the default. In an open cell it takes from
+the ambient, as a siphoning vent does
+(`cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`).*
+
 #### CONT-079 · Scrubber modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall have three modes: scrubbing (keeps only the selected gases),
 siphon (keeps its whole sample) and panic (siphon at the panic rate).
@@ -594,8 +617,15 @@ siphon (keeps its whole sample) and panic (siphon at the panic rate).
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks each mode's effect on a mixed room.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberTests.cont_079_scrubbing_keeps_only_the_selected_gases`,
+`cont_079_siphon_keeps_its_whole_sample` and
+`cont_079_panic_is_siphon_at_the_panic_rate` (GameTest) each run a step in a
+mixed room and check every gas in the room and the network. A sample's other
+gases are never removed, so "keeps only" is a removal of the kept gases alone.*
+
 #### CONT-080 · Scrubber rate
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 
@@ -605,8 +635,12 @@ A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 - **Verify:** A Unit test checks the sampled volume per second in normal and
   panic modes.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_080_*` (Unit). A sample holds its volume's share of the
+zone's moles, and at most all of them.*
+
 #### CONT-081 · Scrubber stall
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall stop once its buffer reaches 50 atm.
 
@@ -614,8 +648,15 @@ A scrubber shall stop once its buffer reaches 50 atm.
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A Unit test checks a scrubber stops at 50 atm in its buffer.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_081_*` (Unit), and
+`ScrubberTests.cont_081_a_scrubber_stops_at_50_atm_in_its_buffer` (GameTest).
+Its buffer is a network member, so 50 atm is read from its network's one
+mixture (CONT-001). The sample that would pass 50 atm is cut to what reaches
+it.*
+
 #### CONT-016 · Passive vent
-`Could` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
+`Could` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
 
 A passive vent shall equalize its buffer with the room when the pressure
 difference exceeds 0.5 kPa, at the one-connection sharing ratio (CORE-031).
@@ -630,6 +671,17 @@ opposite its grille.
 - **Changed 2026-11-02 (the owner, in the batch 5 art review):** the passive
   vent is shaped like the vent: it faces any of six ways and takes a pipe
   only on its back.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:passive_vent` is a 400 L network node with no power and no GUI, which
+makes an open pipe end's exchange with the cell in front of its grille, through
+one `ZonePort`, while its network and that cell differ by more than 0.5 kPa
+([architecture §11.5](../architecture.md#115-devices)).
+`PassiveVentTests.cont_016_a_passive_vent_equalizes_only_above_the_threshold`,
+`cont_016_a_passive_vent_stays_idle_within_the_threshold` and
+`cont_016_a_pipe_joins_a_passive_vent_only_on_its_back` (GameTest) check the
+Verify. In an open cell it equalizes with the ambient
+(`cont_016_a_passive_vent_in_an_open_cell_vents_to_the_ambient`).*
 
 #### CONT-082 · Injector
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; the vent covers it), 2026-10-30. · Verify: GameTest
@@ -708,7 +760,7 @@ zone (`CanisterRelease`); the release pressure is clamped to 10–1,013 kPa.
 have.*
 
 #### CONT-085 · Canister rupture
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 A canister caught in an explosion, or above 1,273 K, shall rupture and dump
 its contents into its cell.
@@ -719,8 +771,22 @@ its contents into its cell.
 - **Verify:** GameTests check a canister caught in an explosion and one heated
   above 1,273 K both rupture into their cell.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`CanisterFailure` removes the block, which leaves nothing behind, and its share
+of its network's gas goes into its cell while the rest stays in the network. Any
+explosion that reaches it ruptures it before the game makes drops, whether or not
+the explosion keeps blocks, but not a wind burst. `cont_085_` (GameTest).*
+
+*2026-11-04: "above 1,273 K" means the air around the canister, not the gas inside
+it, as vg's limit is for fire outside. The gas inside is left to the pressure limits
+(CONT-101, CONT-102, D-57): counting it would rupture nearly every burning canister
+before those limits could act, and S-13's path charges a canister with exhaust at
+about 1,400 K. In open air the air is the ambient, at most 340 K in the built-in
+dimensions. A paused or unresolved cell counts as not hot until it resolves, because
+its sample is a last-known mixture or a stand-in; the pressure limits still apply.*
+
 #### CONT-101 · Canister overpressure rupture
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57 · Depends: CONT-085
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57 · Depends: CONT-085
 
 A canister above its 9,120 kPa (90 atm) rating shall rupture as in CONT-085.
 
@@ -728,8 +794,13 @@ A canister above its 9,120 kPa (90 atm) rating shall rupture as in CONT-085.
 - **Verify:** A GameTest checks a canister ruptures just above 90 atm and not
   below.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+A canister in a network fails at the network's pressure. Its item doesn't fail,
+and a canister placed over the rating ruptures at its first atmos tick. `cont_101_`
+(GameTest) and `ContainerFailureTest` (Unit).*
+
 #### CONT-102 · Canister explosion
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, CONT-038
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, CONT-038
 
 A canister above 150 % of its rating (13,680 kPa, 135 atm) shall explode
 instead, as a vanilla explosion of power (P − 135 atm) / 10 atm, releasing its
@@ -741,6 +812,13 @@ contents into its cell.
 
 *2026-10-31: threshold and power confirmed; the power is capped by CONT-109
 (D-59).*
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+The check runs in the canister's atmos tick, after its network has reacted (CONT-100),
+so a burn that raises the pressure is seen in that tick. An explosion has no source
+entity. `cont_102_a_canister_raised_past_135_atm_in_one_tick_explodes` and
+`cont_102_a_burn_explodes_a_canister_in_the_same_atmos_tick` (GameTest) and
+`ContainerFailureTest` (Unit).*
 
 #### CONT-086 · Filled canisters are creative-only
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: CONT-050
@@ -800,6 +878,11 @@ until the portable pump, portable scrubber and freezer exist.*
 
 *2026-11-04: The freezer exists, as the air conditioner (CONT-019), so this
 stays Accepted until the portable pump and scrubber exist.*
+
+*2026-11-04: The portable scrubber exists. `PortableScrubberTests.cont_018_*`
+(GameTest) check it on a room and on a held tank, stopping when its battery is
+empty, and a controller in its room not powering or listing it. This stays
+Accepted until the portable pump exists.*
 
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
@@ -940,7 +1023,7 @@ made by filling (CONT-039); the creative tab also has a filled emergency tank,
 O₂ at 3 atm. `cont_030_tanks` checks each tank's volume and contents.*
 
 #### CONT-038 · Tank failure
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 A tank shall leak above 30 atm, rupture above 40 atm, and explode above 50 atm
 as a vanilla explosion of power (P − 50 atm) / 10 atm.
@@ -955,8 +1038,24 @@ as a vanilla explosion of power (P − 50 atm) / 10 atm.
 
 *2026-10-31: the power is capped by CONT-109 (D-59).*
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerFailure` turns a pressure into a verdict, and `TankFailure.check`
+applies it at a position. A leak lets out a tenth of the gas each atmos tick and
+stops at 30 atm. A rupture or an explosion uses the tank up and puts all its gas
+into its cell. It goes by pressure alone, without vg's integrity steps. A tank
+checks once per atmos tick, after its gas reacts (CONT-100), so a burn that raises
+the pressure is seen in that same tick. It checks wherever it reacts: in a
+player's main slots, armor slots and offhand, in a suit's slot, worn, carried or
+dropped, and on the ground. A tank in a chest, on a mob or in an item frame
+doesn't tick and waits until it is carried. What leaks goes into the cell at the
+middle of the holder's body, and the explosion is there too. It has no source
+entity, so it hurts the holder and credits nobody. `ContainerFailureTest` (Unit)
+checks every threshold; the `cont_038_` GameTests check each threshold in the
+world, the formula's power, that the holder is hurt under each preset, failing in
+each place, and a burn that explodes a tank in one atmos tick.*
+
 #### CONT-107 · Container explosions and blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, D-28, D-14
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-28, D-14
 
 Explosions of tanks (CONT-038) and canisters (CONT-102) shall break blocks
 only under the Hardcore preset. Under Normal they damage entities but leave
@@ -966,8 +1065,18 @@ blocks intact. Either preset can override it (OPS-007).
 - **Verify:** GameTests explode a tank under each preset and check blocks
   break only under Hardcore.
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerBlast.explode` reads the preset's option through the API (API-059)
+each time. `cont_107_a_tank_breaks_blocks_only_under_hardcore` and
+`cont_107_either_preset_can_override_it` (GameTest).
+`cont_038_a_blast_hurts_the_tanks_holder_under_each_preset` checks the harm.
+Canisters will explode through the same call (CONT-102).*
+
+*2026-11-04: canisters do now.
+`cont_107_a_canister_breaks_blocks_only_under_hardcore` (GameTest).*
+
 #### CONT-109 · Container explosion power cap
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
 
 The power of a tank (CONT-038) or canister (CONT-102) explosion shall be capped
 at 16, configurable (TNT is 4).
@@ -976,8 +1085,17 @@ at 16, configurable (TNT is 4).
 - **Verify:** A GameTest explodes a tank at a pressure whose formula power
   exceeds 16 and checks the power used is 16.
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`[containers] explosion_power_cap` in `zas_atmos-server.toml`, 16 by default and
+0 to 64. `cont_109_a_tanks_power_is_capped_at_16` and
+`cont_109_the_cap_is_configurable` (GameTest), and `ContainerFailureTest` (Unit)
+for the canister's rule.*
+
+*2026-11-04: `cont_109_a_canisters_power_is_capped_at_16` (GameTest) checks a
+canister in the world.*
+
 #### CONT-103 · Tank transfer valve
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13
 
 A handheld tank transfer valve shall hold two gas tanks (CONT-030) joined by a
 valve. Opening the valve moves all of the first tank's gas into the second;
@@ -992,8 +1110,18 @@ It's an item until its timer starts, and an entity once primed (CONT-104).
 - **Changed 2026-11-02 (the owner, in the batch 3 art review):** a TTV is an
   entity only once primed, like primed TNT (CONT-104).
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`zas_atmos:tank_transfer_valve` holds two tanks, fitted by right-clicks in an
+inventory while its valve is closed. Taking a tank off an open valve closes it
+first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
+`cont_103_a_hot_mixture_burns_in_the_tank`,
+`cont_103_without_both_tanks_no_gas_moves`,
+`cont_103_tanks_go_on_and_come_off_in_an_inventory` and
+`cont_103_the_screen_takes_tanks_off` check it. Until CONT-038 is built, a
+TTV's tank fails only by exploding above 50 atm, without leaks or ruptures.*
+
 #### CONT-104 · TTV timer
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
 A TTV's valve shall open by hand, or when a timer set from 0 to 600 s
 (default 10 s) runs out. Starting the timer primes the TTV: it becomes an
@@ -1010,6 +1138,19 @@ timer starts, as in vg. vg's signaler and proximity triggers are R2.
   inventory or as a dropped item.
 
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
+
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+The entity is `zas_atmos:primed_tank_transfer_valve`. A TTV that survives its
+valve opening drops as an item again after 5 s, so a dud doesn't stay forever
+where no one can touch it; the requirement doesn't say, so that is for the owner
+to confirm. `cont_104_the_valve_opens_by_hand`,
+`cont_104_at_0_s_the_valve_opens_when_the_timer_starts`,
+`cont_104_the_valve_opens_when_the_timer_runs_out`,
+`cont_104_a_primed_valve_ticks_in_the_world`,
+`cont_104_a_primed_valve_cant_be_picked_up_or_used`,
+`cont_104_the_timer_is_clamped_to_its_range`,
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
+and `cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -1262,7 +1403,7 @@ minimum and no temperature bounds, which would always trip in an empty room.
 changes the rating.*
 
 #### CONT-041 · Controller modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
 The area air controller shall command its vents and scrubbers in these modes:
 
@@ -1292,6 +1433,13 @@ scrubber follow the orders.*
 it implements `VentControl`, and `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest) checks that the vent
 follows Scrubbing, Off, Panic and Replacement, and moves nothing while ordered
 off. This stays Accepted until the scrubber follows its orders.*
+
+*2026-11-04: Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)).
+`ScrubberStationTests.cont_041_a_real_vent_and_scrubber_follow_each_mode`
+(GameTest) sets each mode on a real controller, with a real vent and scrubber
+in a mixed room. It checks each one's settings and block state and what it does
+to the gas, and that Cycle switches to Fill and Fill to Scrubbing by
+themselves.*
 
 #### CONT-048 · Controller redstone
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -1597,7 +1745,7 @@ pipes join it only at the water inlet on its back.
   join only the water inlet on the back.
 
 #### CONT-053 · Photosynthesis
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33, D-13, S-11
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
 
 Inside a zone, plants (data-driven by block tag: crops, saplings, leaves,
 etc.) shall turn CO₂ into an equal number of moles of O₂ while lit, limited by
@@ -1615,8 +1763,19 @@ Hardcore placing one in an enclosed, unzoned area forms a zone. Photosynthesis
 reads the same tag. CONT-057's two rates can tell leaves apart by
 `#minecraft:leaves`, or split the tag into two that it includes.*
 
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)),
+in `zas`, beside respiration, whose non-triggering `LIFE` mutations it shares; the
+design and its cost are in
+[architecture.md](../architecture.md#photosynthesis-cont-053-cont-057). The tag
+is split: `#zas:plants` holds `#zas:crop_plants` and `#zas:leaf_plants`. Light is
+what a player reads, block light or sky light less the day's darkening, so a glass
+greenhouse slows at night. `cont_053_lit_crops_stop_when_co2_runs_out` checks equal
+moles, the stop and the `LIFE` ledger, and `PhotosynthesisTests` also covers a
+plant in the dark, a paused zone, the zones plants act in under each preset, and
+how plants are found and followed.*
+
 #### CONT-057 · Photosynthesis rates
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-33, S-11
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-33, S-11
 
 Rates shall be configurable per tag and scale linearly with light level, from
 0 at light 0. Defaults at light 15 follow the preset (OPS-007), so that a
@@ -1636,6 +1795,14 @@ LIFE-042):
 *2026-10-31: defaults lowered from 0.002 and 0.001 mol/s (one crop supplied
 about 7 breathers) and made preset-dependent, at the user's request before
 the baseline (D-61).*
+
+*2026-11-04: implemented ([#51](https://github.com/west3436/zas-cubed/issues/51)).
+The options are `crop_photosynthesis_rate`, for `#zas:crop_plants` and anything
+else in `#zas:plants`, and `leaf_photosynthesis_rate`, for `#zas:leaf_plants`
+([config.md](../config.md#the-preset-and-its-options)). The arithmetic is
+`PhotosynthesisRatesTest`, and `cont_057_rates_at_light_15_and_7_under_each_preset`
+checks the table in the world for wheat, a sapling and leaves. Leaves dim their own
+position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
 `Must` · `R1` · `Accepted` · Verify: Inspect
@@ -1791,6 +1958,11 @@ it is on, running or idle. `PumpTests.cont_060_a_real_pump_runs_on_a_controller_
 nothing while it is off. This stays Accepted until every device's draw is in
 the config.*
 
+*2026-11-04: The scrubber's 15 (30) FE/t are `[power] scrubber` and `[power]
+scrubber_panic`, drawn while it isn't off
+(`ScrubberTests.cont_065_a_scrubber_draws_only_while_on_and_twice_as_much_in_panic`).
+This stays Accepted until every device's draw is in the config.*
+
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
 
@@ -1941,7 +2113,7 @@ gas; once it is linked with the multitool to a generator-powered controller in
 another room, it is powered by that controller and blows.*
 
 #### CONT-064 · Controller power priority
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-34, S-02
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-34, S-02
 
 When a controller's buffer can't meet demand, it shall power devices in
 priority order: life support (vents, scrubbers) first, then pumps, filters and
@@ -1974,6 +2146,15 @@ itself and the vent but not a pump powers the vent and leaves the pump off
 *2026-11-03: a central atmospherics controller ranks zones above this
 (CONT-121, D-75): it decides how much FE each area air controller gets, and
 each area air controller then powers its parts in this order.*
+
+*2026-11-04: Implemented ([#52](https://github.com/west3436/zas-cubed/issues/52)).
+`ScrubberStationTests.cont_064_a_starved_controller_keeps_a_real_vent_and_scrubber_running`
+(GameTest) runs in real time, holding a real controller's buffer. With plenty,
+all four parts run. With FE for itself, the vent and the scrubber only, those
+keep running and moving gas while the pump and the auxiliary part lose their
+leases and stop. With none, the vent and scrubber stop too. The pump and the
+auxiliary part are stand-ins, since the real ones are other work in this
+round; they differ only in their priority group.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)

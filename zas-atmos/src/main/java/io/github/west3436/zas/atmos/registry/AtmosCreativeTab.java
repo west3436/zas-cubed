@@ -61,6 +61,8 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
         out.accept(AtmosItems.PRESSURE_PUMP.get());
+        out.accept(AtmosItems.SCRUBBER.get());
+        out.accept(AtmosItems.PASSIVE_VENT.get());
         out.accept(AtmosItems.CANISTER.get());
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));
@@ -69,6 +71,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.GENERATOR.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());
+        out.accept(AtmosItems.PORTABLE_SCRUBBER.get());
         out.accept(AtmosItems.FIRELOCK.get());
         out.accept(AtmosItems.RECHARGER.get());
         out.accept(AtmosItems.IGNITER.get());
@@ -79,6 +82,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
+        out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());
         out.accept(AtmosItems.AIR_TANK.get());
         out.accept(AtmosItems.EMPTY_TANK.get());

@@ -27,7 +27,7 @@ final class ThermoMachineScreen<M extends ThermoMachineMenu> extends DeviceScree
     protected void init() {
         super.init();
         int top = ThermoMachineMenu.BATTERY_Y - 1; // below up to five lines; the battery slot beside the switch
-        button(8, top, 160, Component.translatable("gui.zas_atmos.thermo.toggle"), ThermoMachineMenu.TOGGLE);
+        button(8, top, 160, Component.translatable("gui.zas_atmos.portable.toggle"), ThermoMachineMenu.TOGGLE);
         for (int i = 0; i < 4; i++) {
             button(
                     8 + 46 * i,
@@ -46,7 +46,9 @@ final class ThermoMachineScreen<M extends ThermoMachineMenu> extends DeviceScree
     List<Component> lines() {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable(
-                menu.value(ThermoMachineMenu.DATA_ON) != 0 ? "gui.zas_atmos.thermo.on" : "gui.zas_atmos.thermo.off"));
+                menu.value(ThermoMachineMenu.DATA_ON) != 0
+                        ? "gui.zas_atmos.portable.on"
+                        : "gui.zas_atmos.portable.off"));
         String setpoint = kelvin(menu.value(ThermoMachineMenu.DATA_SETPOINT));
         int room = menu.value(ThermoMachineMenu.DATA_ROOM);
         lines.add(

@@ -6,8 +6,10 @@ import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
+import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -47,6 +49,10 @@ public final class AtmosMenus {
     public static final Supplier<MenuType<AirConditionerMenu>> AIR_CONDITIONER = MENUS.register(
             "air_conditioner", () -> new MenuType<>(AirConditionerMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    /** A portable scrubber's switch, battery and held tank (CONT-018). */
+    public static final Supplier<MenuType<PortableScrubberMenu>> PORTABLE_SCRUBBER = MENUS.register(
+            "portable_scrubber", () -> new MenuType<>(PortableScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
             MENUS.register("recharger", () -> new MenuType<>(RechargerMenu::new, FeatureFlags.DEFAULT_FLAGS));
@@ -56,6 +62,10 @@ public final class AtmosMenus {
             "pressure_pump",
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
+    /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
+    public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
+            MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

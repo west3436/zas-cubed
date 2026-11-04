@@ -9,9 +9,11 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
+import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.world.item.ArmorItem;
@@ -35,6 +37,8 @@ public final class AtmosItems {
     public static final DeferredItem<CanisterItem> CANISTER =
             ITEMS.registerItem("canister", p -> new CanisterItem(AtmosBlocks.CANISTER.get(), p));
     public static final DeferredItem<BlockItem> VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.VENT);
+    public static final DeferredItem<BlockItem> SCRUBBER = ITEMS.registerSimpleBlockItem(AtmosBlocks.SCRUBBER);
+    public static final DeferredItem<BlockItem> PASSIVE_VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.PASSIVE_VENT);
     public static final DeferredItem<BlockItem> AREA_AIR_CONTROLLER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
     public static final DeferredItem<BlockItem> FIRE_ALARM = ITEMS.registerSimpleBlockItem(AtmosBlocks.FIRE_ALARM);
@@ -44,6 +48,9 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> AIR_CONDITIONER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AIR_CONDITIONER);
+
+    public static final DeferredItem<PortableGasItem> PORTABLE_SCRUBBER =
+            ITEMS.registerItem("portable_scrubber", p -> new PortableGasItem(AtmosBlocks.PORTABLE_SCRUBBER.get(), p));
 
     public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
             ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
@@ -81,6 +88,10 @@ public final class AtmosItems {
     /** Puts out the fires it is aimed at (CONT-037). */
     public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =
             ITEMS.registerItem("fire_extinguisher", FireExtinguisherItem::new);
+
+    /** Two gas tanks joined by a valve, with a timer (CONT-103, CONT-104). */
+    public static final DeferredItem<TransferValveItem> TANK_TRANSFER_VALVE =
+            ITEMS.registerItem("tank_transfer_valve", TransferValveItem::new);
 
     // ---- Breathing gear (S-08) ----
 

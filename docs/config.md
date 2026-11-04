@@ -144,15 +144,14 @@ warning in the log.
 | `combustion_forms_zones` | `false` | `true` | Whether a fire starting, or a furnace or campfire being lit, forms a zone in an enclosed, unzoned area: the blocks in `#zas:combustion` (CORE-056, FIRE-024) |
 | `planting_forms_zones` | `false` | `true` | Whether placing a crop, sapling or leaves forms a zone in an enclosed, unzoned area: the blocks in `#zas:plants` (CORE-056, CONT-053) |
 | `block_pressure_damage` | `false` | `true` | Whether a pressure difference breaks blocks in `zas:pressure_fragile`, such as glass (FLOW-007, FLOW-016) |
-| `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a lit crop or sapling in a zone makes from CO₂ at light 15, in mol/h (CONT-057) |
-| `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a lit leaf block (CONT-057) |
+| `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a plant in `#zas:crop_plants`, such as a crop or sapling, makes from CO₂ in a zone at light 15, in mol/h. It scales linearly with the light, from 0 at light 0 (CONT-053, CONT-057) |
+| `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a plant in `#zas:leaf_plants`, such as a leaf block (CONT-057) |
 | `container_explosions_break_blocks` | `false` | `true` | Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107) |
 
-`ambient_variant`, `combustion_forms_zones` and `planting_forms_zones` act
-today. The others are in the file and in `/zas preset` already, marked "not
-used yet" with the requirement they wait for, and take effect when that
-feature lands. The space-mod compat mode (SPACE-004) joins in R2 with the Ad
-Astra adapter (D-66).
+Every option acts today except `block_pressure_damage`, which is in the file and
+in `/zas preset` already, marked "not used yet" with the requirement it waits
+for, and takes effect when that feature lands. The space-mod compat mode
+(SPACE-004) joins in R2 with the Ad Astra adapter (D-66).
 
 Zone triggers that aren't options: Normal's triggers (CORE-055), API calls
 (which include devices, leaks and `/zas gas`) and breaches of zones, form
@@ -208,10 +207,13 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | Key | Default | Meaning |
 |---|---|---|
 | `[power] vent` | `10` | What a vent draws while it runs, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] scrubber` | `15` | What a scrubber draws while it scrubs or siphons, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] scrubber_panic` | `30` | What a scrubber draws in panic, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] heater` | `60` | What a heater draws from its battery while it heats at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers a heater (D-73) |
 | `[power] heater_watts` | `5000` | The most heat a heater adds, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops heaters heating |
 | `[power] air_conditioner` | `60` | What an air conditioner draws from its battery while it cools at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers an air conditioner (D-73) |
 | `[power] air_conditioner_watts` | `5000` | The most heat an air conditioner takes, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops air conditioners cooling |
+| `[power] portable_scrubber` | `15` | What a portable scrubber draws from its battery while it moves gas, in FE/t, 0 to 100,000 (CONT-018). No controller powers a portable scrubber (D-73) |
 | `[power] recharger` | `40` | What a recharger draws from its controller while its battery has room, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] recharger_rate` | `28` | What a recharger puts into its battery, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] igniter` | `20` | What an igniter draws from its controller while it has a redstone signal, in FE/t, 0 to 100,000 (CONT-105) |
@@ -223,6 +225,7 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] generator_buffer` | `8000` | The generator's own store, in FE, 1,000 to 30,000. It starts no new fuel while the store is full |
 | `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 | `[controller] breach_drop_kpa` | `10.0` | A fall in a controller's zone pressure within one atmos tick, in kPa, 0 to 1,000, that sends it to danger 2 at once, as a breach to space does. It counts only for a preset with a pressure min2, and only once the pressure is below min1. 0 turns it off (CONT-043) |
+| `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
 
 ## Common: `zas-common.toml`
 
