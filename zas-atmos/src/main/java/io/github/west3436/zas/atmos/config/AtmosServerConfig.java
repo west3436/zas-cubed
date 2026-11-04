@@ -19,6 +19,12 @@ public final class AtmosServerConfig {
     /** The heater's draw from its battery at full power, in FE/t; less in proportion below it (CONT-087). */
     public static final ModConfigSpec.IntValue HEATER_DRAW;
 
+    /** A scrubber's draw while it scrubs or siphons, in FE/t (CONT-065). */
+    public static final ModConfigSpec.IntValue SCRUBBER_DRAW;
+
+    /** A scrubber's draw in panic, in FE/t (CONT-065). */
+    public static final ModConfigSpec.IntValue SCRUBBER_PANIC_DRAW;
+
     /** The most heat a heater adds, in W (CONT-087). */
     public static final ModConfigSpec.IntValue HEATER_WATTS;
 
@@ -75,6 +81,9 @@ public final class AtmosServerConfig {
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
                 .push("power");
         VENT_DRAW = builder.comment("Vent").defineInRange("vent", 10, 0, 100_000);
+        SCRUBBER_DRAW =
+                builder.comment("Scrubber, while it scrubs or siphons").defineInRange("scrubber", 15, 0, 100_000);
+        SCRUBBER_PANIC_DRAW = builder.comment("Scrubber, in panic").defineInRange("scrubber_panic", 30, 0, 100_000);
         HEATER_DRAW = builder.comment(
                         "Heater, from its battery while it heats at full power; in proportion below it (CONT-087)")
                 .defineInRange("heater", 60, 0, 100_000);
