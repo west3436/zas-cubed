@@ -188,6 +188,78 @@ class PersistenceTest {
     }
 
     /**
+     * A sealed shaft from the ceiling of a room whose interior tops out at y 66, rising past the
+     * sections kept mirrored around a zone, so a fill up it asks for a section the mirror lacks.
+     */
+    private static void shaftAbove(TestWorld world, int x, int z) {
+        world.room(x, 68, z, x, 100, z);
+    }
+
+    /**
+     * A rebuilt zone waits only for what its own surface opens onto. Another zone's breach, still
+     * fetching sections elsewhere in the dimension, doesn't keep it paused (GEO-033, #209).
+     */
+    @Test
+    void geo_033_rebuilt_zone_doesnt_wait_for_another_zones_breach() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        long chunk = SectionKeys.chunk(0, 0);
+        sim.world.room(1, 64, 1, 4, 66, 3);
+        sim.world.room(100, 64, 1, 104, 66, 3);
+        shaftAbove(sim.world, 102, 2);
+        sim.add(2, 65, 2, 40, 0);
+        sim.add(101, 65, 2, 40, 0);
+        sim.step();
+        long id = sim.zoneAt(2, 65, 2).id();
+        long other = sim.zoneAt(101, 65, 2).id();
+        ChunkRecord saved = sim.unload(chunk);
+        sim.step();
+        assertNull(sim.snapshot().zone(id));
+
+        sim.load(chunk, saved);
+        sim.world.set(102, 67, 2, TestWorld.AIR); // the other zone's ceiling opens into its shaft
+        sim.step();
+        assertTrue(sim.engine.classifier().hasPending(), "the other zone's breach isn't waiting for a section");
+        assertTrue(sim.engine.classifier().hasPendingFor(other), "the wait isn't the other zone's");
+        assertFalse(sim.engine.classifier().hasPendingFor(id), "the wait is the rebuilt zone's");
+        assertFalse(sim.snapshot().zone(id).paused(), "the rebuilt zone waited for another zone's breach");
+        close(40, sim.snapshot().zone(id).moles(Sim.N2), "the rebuilt zone's gas");
+
+        sim.step();
+        assertFalse(sim.engine.classifier().hasPending(), "the other zone's breach didn't finish");
+    }
+
+    /**
+     * A rebuilt zone stays paused while what its own surface opens onto waits for sections, and
+     * resumes once that is classified (GEO-023, GEO-033, architecture §4.5).
+     */
+    @Test
+    void geo_033_rebuilt_zone_waits_for_its_own_surface() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        long chunk = SectionKeys.chunk(0, 0);
+        sim.world.room(1, 64, 1, 4, 66, 3);
+        shaftAbove(sim.world, 2, 2);
+        sim.add(2, 65, 2, 40, 0);
+        sim.step();
+        long id = sim.zoneAt(2, 65, 2).id();
+        int cells = sim.snapshot().zone(id).cellCount();
+        ChunkRecord saved = sim.unload(chunk);
+        sim.step();
+        assertNull(sim.snapshot().zone(id));
+
+        sim.world.set(2, 67, 2, TestWorld.AIR); // its ceiling opens into the shaft while it's stored
+        sim.load(chunk, saved);
+        sim.step();
+        assertTrue(sim.engine.classifier().hasPendingFor(id), "the zone's surface isn't waiting for a section");
+        assertTrue(sim.snapshot().zone(id).paused(), "the zone resumed before its surface was classified");
+
+        sim.steps(2);
+        ZoneView z = sim.snapshot().zone(id);
+        assertFalse(z.paused(), "the zone didn't resume");
+        assertTrue(z.cellCount() > cells, "the shaft didn't join the zone");
+        close(40, z.moles(Sim.N2), "the zone's gas");
+    }
+
+    /**
      * Queued additions are saved at shutdown and applied after load; removals are not saved
      * (DATA-011). A new engine stands for the next session.
      */
