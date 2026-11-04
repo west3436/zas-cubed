@@ -858,7 +858,7 @@ at 16, configurable (TNT is 4).
   exceeds 16 and checks the power used is 16.
 
 #### CONT-103 · Tank transfer valve
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13
 
 A handheld tank transfer valve shall hold two gas tanks (CONT-030) joined by a
 valve. Opening the valve moves all of the first tank's gas into the second;
@@ -873,8 +873,18 @@ It's an item until its timer starts, and an entity once primed (CONT-104).
 - **Changed 2026-11-02 (the owner, in the batch 3 art review):** a TTV is an
   entity only once primed, like primed TNT (CONT-104).
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`zas_atmos:tank_transfer_valve` holds two tanks, fitted by right-clicks in an
+inventory while its valve is closed. Taking a tank off an open valve closes it
+first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
+`cont_103_a_hot_mixture_burns_in_the_tank`,
+`cont_103_without_both_tanks_no_gas_moves`,
+`cont_103_tanks_go_on_and_come_off_in_an_inventory` and
+`cont_103_the_screen_takes_tanks_off` check it. Until CONT-038 is built, a
+TTV's tank fails only by exploding above 50 atm, without leaks or ruptures.*
+
 #### CONT-104 · TTV timer
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
 A TTV's valve shall open by hand, or when a timer set from 0 to 600 s
 (default 10 s) runs out. Starting the timer primes the TTV: it becomes an
@@ -891,6 +901,19 @@ timer starts, as in vg. vg's signaler and proximity triggers are R2.
   inventory or as a dropped item.
 
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
+
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+The entity is `zas_atmos:primed_tank_transfer_valve`. A TTV that survives its
+valve opening drops as an item again after 5 s, so a dud doesn't stay forever
+where no one can touch it; the requirement doesn't say, so that is for the owner
+to confirm. `cont_104_the_valve_opens_by_hand`,
+`cont_104_at_0_s_the_valve_opens_when_the_timer_starts`,
+`cont_104_the_valve_opens_when_the_timer_runs_out`,
+`cont_104_a_primed_valve_ticks_in_the_world`,
+`cont_104_a_primed_valve_cant_be_picked_up_or_used`,
+`cont_104_the_timer_is_clamped_to_its_range`,
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
+and `cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest

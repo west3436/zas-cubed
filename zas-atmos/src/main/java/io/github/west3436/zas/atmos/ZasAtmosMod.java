@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosCapabilities;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosCreativeTab;
+import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.resources.ResourceLocation;
@@ -30,6 +31,7 @@ public final class ZasAtmosMod {
         AtmosItems.register(modBus);
         AtmosComponents.register(modBus);
         AtmosBlockEntities.register(modBus);
+        AtmosEntities.register(modBus);
         AtmosMenus.register(modBus);
         AtmosCreativeTab.register(modBus);
         AtmosCapabilities.register(modBus);

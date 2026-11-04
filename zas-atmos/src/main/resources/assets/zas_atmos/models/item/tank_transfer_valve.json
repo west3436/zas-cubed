@@ -2,5 +2,19 @@
   "parent": "item/generated",
   "textures": {
     "layer0": "zas_atmos:item/tank_transfer_valve"
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "zas_atmos:tanks": 0.5
+      },
+      "model": "zas_atmos:item/tank_transfer_valve_one"
+    },
+    {
+      "predicate": {
+        "zas_atmos:tanks": 1
+      },
+      "model": "zas_atmos:item/tank_transfer_valve_two"
+    }
+  ]
 }
