@@ -58,6 +58,10 @@ Pipes and caps hold 70 L, a connector port 200 L, a vent 400 L and a canister
 1,000 L (`PipeVolumes`). `PipeVolumesTest.cont_007_each_part_has_its_volume`
 (Unit); `GasDeviceTests` checks the volumes of built networks.*
 
+*2026-11-04: A device with several ports has a 200 L buffer per port, each in
+the network on its side ([architecture §11.4](../architecture.md#114-pipe-networks)).
+`PipePortTest.cont_007_a_port_is_a_200_litre_node_in_its_network` (Unit).*
+
 *2026-11-04: Note: a valve's body holds 200 L, one port buffer's volume, from
 the valve row of [vg §2](../research/vg-atmos-content.md#2-devices)
 (`PipeVolumes.VALVE`; `PipeVolumesTest` checks it).*
@@ -99,6 +103,9 @@ and ruptures move gas between pipes and zones.
 *2026-11-02: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
 Inspect: the content mod calls `GasMutations` only in `ZonePort` (devices and
 open ends) and `PipeNodeEntity` (a removed segment's share, CONT-009).*
+
+*2026-11-04: `InlineDeviceEntity` calls it too, for a removed device's port
+shares (CONT-009). Inline devices otherwise move gas only between networks.*
 
 #### CONT-003 · Gas-conserving rebuilds
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CORE-036
@@ -223,6 +230,11 @@ just above the threshold, open air, a network with no segment and a burst from
 a reaction; `PipeBurstTest.cont_108_*` (Unit) check the threshold and the choice
 among segments.*
 
+*2026-11-04: A device's pipe port can be the first member of a network to step,
+so it runs the burst check as a pipe does. Pipes on a pump's port burst even if
+only the port steps, and a network of ports alone has no segment and holds
+(`PumpTests.cont_108_a_run_on_a_pump_port_bursts_and_ports_alone_hold`, GameTest).*
+
 #### CONT-006 · Network cadence
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50
 
@@ -318,6 +330,11 @@ waits until it is carried again ([architecture
 `ContainerReactionTests.cont_100_*` (GameTest) check a network, a canister and
 tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 
+*2026-11-04: A device's pipe port takes its turn too, so a network of ports
+alone, with no pipe in it, reacts the same way
+(`PumpTests.cont_100_a_network_of_ports_alone_reacts_once_per_atmos_tick`,
+GameTest).*
+
 ## Devices (R1 set)
 
 All active devices consume FE as described under [Power](#power).
@@ -339,6 +356,9 @@ menu-button packet; the server refuses unknown ids and clamps every setting
 (`CanisterMenu`, `VentMenu`).
 `GasDeviceTests.cont_074_out_of_range_settings_are_clamped_or_refused`
 (GameTest). Later devices' GUIs follow the same pattern.*
+
+*2026-11-04: The pressure pump's GUI does too (`PumpMenu`,
+`PumpTests.cont_074_a_pumps_gui_is_checked_on_the_server`).*
 
 *2026-11-02: The controller's and the generator's GUIs are built ([#50](https://github.com/west3436/zas-cubed/issues/50),
 [#52](https://github.com/west3436/zas-cubed/issues/52)). The controller's buttons are menu button clicks: unknown ids are
@@ -398,7 +418,7 @@ the block state, so a real unload and reload keeps it, and the gas on each side
 and energy.*
 
 #### CONT-011 · Pressure pump
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 
 A pressure pump shall move the moles needed to bring its output to a target
 pressure (0–4,500 kPa), counting the output buffer once (vg counts it twice).
@@ -411,8 +431,18 @@ pressure (0–4,500 kPa), counting the output buffer once (vg counts it twice).
 - **Verify:** A Unit test checks the moles moved for given pressures, volumes
   and targets.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:pressure_pump` sits in a pipe line with a 200 L port at each end, each
+in a network of its own ([architecture §11.5](../architecture.md#115-devices)).
+`PumpFlowTest.cont_011_*` (Unit) checks the moles, counting the buffer once as
+part of the network's volume, and that gas of a different heat capacity or
+temperature still lands on the target.
+`PumpTests.cont_011_a_real_pump_brings_its_output_to_its_target` (GameTest)
+checks it between two real networks, conserving moles and thermal energy, and
+`cont_011_pipes_join_a_pump_only_at_its_ends` its ports.*
+
 #### CONT-076 · Pressure pump throughput
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 
 A pressure pump shall move at most 100 L/s, at input conditions.
 
@@ -422,6 +452,12 @@ A pressure pump shall move at most 100 L/s, at input conditions.
   is 100 L/s.
 - **Verify:** A Unit test checks the moles moved per second never exceed 100 L
   at input conditions.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`PumpFlowTest.cont_076_*` (Unit) checks the limit at several pressures and
+temperatures, and that the pump takes no more than its input holds.
+`PumpTests.cont_011_a_real_pump_brings_its_output_to_its_target` (GameTest)
+checks a real pump's first second.*
 
 #### CONT-012 · Volume pump
 `Should` · `R1` · `Accepted` · Verify: Unit · Trace: vg quirk 1
@@ -1749,6 +1785,13 @@ In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` (GameTest), the
 spent; once the vent's lease runs out, it moves nothing and shows off. This
 stays Accepted until each device exists to check.*
 
+*2026-11-04: The pressure pump stops when its provider's power is cut. In
+`PumpTests.cont_060_a_real_pump_runs_on_a_controller_and_stops_when_its_power_is_cut`
+(GameTest), a real pump pumps between two networks under a generator-powered
+controller. The generators are removed and the buffer spent; once its lease
+runs out, it moves nothing and shows off, and stays switched on. This stays
+Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -1793,6 +1836,12 @@ vent, out of a real generator's FE, and an ordered-off vent draws nothing.
 This stays Accepted until every device's draw is in the config.*
 
 *2026-11-03: added the central atmospherics controller (CONT-115, D-75).*
+
+*2026-11-04: The pressure pump's 20 FE/t is `[power] pressure_pump`, drawn while
+it is on, running or idle. `PumpTests.cont_060_a_real_pump_runs_on_a_controller_and_stops_when_its_power_is_cut`
+(GameTest) checks a controller pays for it while it is on, and that it draws
+nothing while it is off. This stays Accepted until every device's draw is in
+the config.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01

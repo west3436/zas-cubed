@@ -7,6 +7,7 @@ import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
+import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -49,6 +50,12 @@ public final class AtmosMenus {
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
             MENUS.register("recharger", () -> new MenuType<>(RechargerMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A pressure pump's switch and target (CONT-011). */
+    public static final Supplier<MenuType<PumpMenu>> PRESSURE_PUMP = MENUS.register(
+            "pressure_pump",
+            () -> new MenuType<>(
+                    (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

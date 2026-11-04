@@ -101,6 +101,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.HEATER.get(), ThermoMachineScreen<HeaterMenu>::new);
         event.register(AtmosMenus.AIR_CONDITIONER.get(), ThermoMachineScreen<AirConditionerMenu>::new);
         event.register(AtmosMenus.RECHARGER.get(), RechargerScreen::new);
+        event.register(AtmosMenus.PRESSURE_PUMP.get(), PumpScreen::pressure);
     }
 
     /**

@@ -110,6 +110,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/igniter.json
 origin: original
 notes: The igniter, sparking and idle, with the existing igniter and igniter_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/pressure_pump.json
+origin: original
+notes: The pressure pump's six facings, on and off, with the existing pressure_pump and pressure_pump_on models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/manual_valve.json
 origin: original
 notes: The manual valve, open and shut, on each axis, with the existing manual_valve and manual_valve_open models.
