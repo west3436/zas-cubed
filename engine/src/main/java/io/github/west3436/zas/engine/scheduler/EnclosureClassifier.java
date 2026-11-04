@@ -56,6 +56,8 @@ public final class EnclosureClassifier implements Classifier {
     private long[] held = new long[0];
     /** Whether a held breach asked for sections this tick. */
     private boolean fetching;
+    /** Zones opening onto the breaches that asked for sections this tick, ascending. */
+    private long[] fetchingZones = new long[0];
     /** Zones of breaches held at unloaded chunks, ascending. */
     private long[] heldZones = new long[0];
     /** Seeds of the breaches that pause those zones, ascending. */
@@ -135,6 +137,7 @@ public final class EnclosureClassifier implements Classifier {
             seeds = all;
         }
         fetching = false;
+        fetchingZones = new long[0];
         long[] previouslyHeld = heldZones;
         heldZones = new long[0];
         pausingSeeds = new long[0];
@@ -145,6 +148,7 @@ public final class EnclosureClassifier implements Classifier {
         List<Long> stillHeld = new ArrayList<>();
         java.util.TreeSet<Long> pausedBy = new java.util.TreeSet<>();
         java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
+        java.util.TreeSet<Long> waiting = new java.util.TreeSet<>();
         for (Breach b : breaches.classify(graph, topology, seeds)) {
             if (b instanceof Breach.Hold hold) {
                 if (hold.zones().length == 0) {
@@ -157,6 +161,11 @@ public final class EnclosureClassifier implements Classifier {
                 for (long k : fetch) {
                     requestSection.accept(k);
                     fetching = true;
+                }
+                if (fetch.length > 0) {
+                    for (long z : hold.zones()) {
+                        waiting.add(z);
+                    }
                 }
                 boolean wasPaused = false;
                 for (long z : hold.zones()) {
@@ -185,6 +194,11 @@ public final class EnclosureClassifier implements Classifier {
         for (long z : pausing) {
             heldZones[i++] = z;
         }
+        fetchingZones = new long[waiting.size()];
+        i = 0;
+        for (long z : waiting) {
+            fetchingZones[i++] = z;
+        }
         pausingSeeds = new long[pausedBy.size()];
         i = 0;
         for (long s : pausedBy) {
@@ -195,6 +209,11 @@ public final class EnclosureClassifier implements Classifier {
     @Override
     public boolean hasPending() {
         return fetching;
+    }
+
+    @Override
+    public boolean hasPendingFor(long zone) {
+        return Arrays.binarySearch(fetchingZones, zone) >= 0;
     }
 
     @Override
