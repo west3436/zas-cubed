@@ -66,9 +66,11 @@ class PortableGasScreen<M extends PortableGasMenu> extends DeviceScreen<M> {
         super.render(graphics, mouseX, mouseY, partialTick);
         if (hoveredSlot != null && !hoveredSlot.hasItem()) {
             if (hoveredSlot.index == BATTERY_SLOT) {
-                graphics.renderTooltip(font, Component.translatable("gui.zas_atmos.portable.battery_slot"), mouseX, mouseY);
+                graphics.renderTooltip(
+                        font, Component.translatable("gui.zas_atmos.portable.battery_slot"), mouseX, mouseY);
             } else if (hoveredSlot.index == TANK_SLOT) {
-                graphics.renderTooltip(font, Component.translatable("gui.zas_atmos.portable.tank_slot"), mouseX, mouseY);
+                graphics.renderTooltip(
+                        font, Component.translatable("gui.zas_atmos.portable.tank_slot"), mouseX, mouseY);
             }
         }
     }

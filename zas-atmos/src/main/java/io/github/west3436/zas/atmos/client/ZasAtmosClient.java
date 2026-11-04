@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
+import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
@@ -62,6 +63,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.GENERATOR.get(), GeneratorScreen::new);
         event.register(AtmosMenus.HEATER.get(), ThermoMachineScreen<HeaterMenu>::new);
         event.register(AtmosMenus.AIR_CONDITIONER.get(), ThermoMachineScreen<AirConditionerMenu>::new);
+        event.register(AtmosMenus.PORTABLE_SCRUBBER.get(), PortableGasScreen<PortableScrubberMenu>::new);
         event.register(AtmosMenus.RECHARGER.get(), RechargerScreen::new);
     }
 

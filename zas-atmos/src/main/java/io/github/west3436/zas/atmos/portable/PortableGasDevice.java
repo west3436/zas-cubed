@@ -10,6 +10,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
@@ -36,7 +37,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * air and the store, and it pays its battery its draw over the tick, only if there is something to
  * move. With too little charge left it moves what the charge pays for, then stops. A zone's gas moves
  * through one {@link ZonePort}, so one change is outstanding at a time (CONT-072), and a tank's moves
- * at once.
+ * at once. Its store and a held tank react each atmos tick, on or off (CONT-100).
  *
  * <p>Its item carries the store's gas, as a canister's does: a player who mines it gets the gas with
  * the item, one who breaks it in creative destroys the gas, and removed any other way it releases the
@@ -147,9 +148,21 @@ public abstract class PortableGasDevice extends PortableDevice {
     @Override
     protected void atmosTick(ServerLevel level) {
         watch.step();
+        react();
         airPressure = Double.NaN;
         status = on() ? step(level) : PortableStatus.OFF;
         showWorking(level, status == PortableStatus.WORKING);
+    }
+
+    /** The gas it holds reacts, on or off (CONT-100): its store's and a held tank's. */
+    private void react() {
+        boolean reacted = ContainerReactions.react(store);
+        if (tank.tank().getItem() instanceof GasTankItem item) {
+            reacted |= ContainerReactions.react(tank.tank(), item.volume());
+        }
+        if (reacted) {
+            setChanged();
+        }
     }
 
     /** One step's work on the air. */
@@ -292,7 +305,8 @@ public abstract class PortableGasDevice extends PortableDevice {
     protected int menuValue(int index) {
         return switch (index) {
             case PortableGasMenu.DATA_STATUS -> status.ordinal();
-            case PortableGasMenu.DATA_AIR -> Double.isNaN(airPressure) ? PortableGasMenu.NO_AIR : kilopascals(airPressure);
+            case PortableGasMenu.DATA_AIR ->
+                Double.isNaN(airPressure) ? PortableGasMenu.NO_AIR : kilopascals(airPressure);
             case PortableGasMenu.DATA_ON_TANK -> tank.tank().isEmpty() ? 0 : 1;
             case PortableGasMenu.DATA_STORE -> kilopascals(store.pressure());
             default -> index < PortableMenu.DATA_COUNT ? super.menuValue(index) : 0;

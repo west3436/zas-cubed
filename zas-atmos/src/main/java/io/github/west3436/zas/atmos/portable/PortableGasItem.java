@@ -33,7 +33,9 @@ public class PortableGasItem extends BlockItem {
                 .withStyle(ChatFormatting.GRAY));
         gas.moles()
                 .forEach((id, n) -> tooltip.add(Component.translatable(
-                                "item.zas_atmos.canister.gas", GasCodecs.name(id), String.format(Locale.ROOT, "%.1f", n))
+                                "item.zas_atmos.canister.gas",
+                                GasCodecs.name(id),
+                                String.format(Locale.ROOT, "%.1f", n))
                         .withStyle(ChatFormatting.GRAY)));
     }
 }

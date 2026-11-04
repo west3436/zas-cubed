@@ -66,6 +66,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.GENERATOR.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());
+        out.accept(AtmosItems.PORTABLE_SCRUBBER.get());
         out.accept(AtmosItems.FIRELOCK.get());
         out.accept(AtmosItems.RECHARGER.get());
         out.accept(AtmosItems.IGNITER.get());

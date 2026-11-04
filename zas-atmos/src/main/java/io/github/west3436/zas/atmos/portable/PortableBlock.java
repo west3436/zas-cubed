@@ -90,7 +90,8 @@ public abstract class PortableBlock extends BaseEntityBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PortableDevice device) {
-            device.heldItems().forEach(item -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), item));
+            device.heldItems()
+                    .forEach(item -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), item));
         }
         super.onRemove(state, level, pos, newState, moved);
     }
