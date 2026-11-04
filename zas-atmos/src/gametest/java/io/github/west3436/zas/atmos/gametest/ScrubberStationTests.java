@@ -232,6 +232,7 @@ public final class ScrubberStationTests {
         vent.network().gas().add(new GasParcel(Map.of(N2, 1_000.0), T));
         double[] co2 = new double[1];
         int[] steps = new int[2];
+        int[] paid = new int[1];
         h.startSequence()
                 // Plenty of FE: every part runs.
                 .thenExecuteFor(140, () -> c.buffer().set(10_000))
@@ -246,10 +247,17 @@ public final class ScrubberStationTests {
                     // Air leaves, so the vent has something to fill.
                     GasMutations.remove(s.level, s.point(2, 2, 2), Map.of(N2, 300.0), Site.SOURCE);
                 })
-                // Short of FE: the leases of the parts that miss out run out.
-                .thenExecuteFor(80, () -> c.buffer().set(650))
+                // Short of FE: the leases of the parts that miss out run out. In a game tick the
+                // controller steps in, it pays 600 of the 650 held, so this reads 50; otherwise 650.
+                .thenExecute(() -> c.buffer().set(650))
+                .thenExecuteFor(80, () -> {
+                    int left = c.buffer().getEnergyStored();
+                    h.assertTrue(left == 650 || left == 50, "the starved controller paid " + (650 - left) + " FE");
+                    paid[0] += left == 50 ? 1 : 0;
+                    c.buffer().set(650);
+                })
                 .thenExecute(() -> {
-                    h.assertValueEqual(c.buffer().getEnergyStored(), 650, "the held buffer");
+                    h.assertTrue(paid[0] >= 3, "the starved controller paid only " + paid[0] + " times");
                     h.assertTrue(c.powered(), "the starved controller is unpowered");
                     h.assertTrue(vent.running(), "the vent stopped before the pump");
                     h.assertTrue(scrubber.running(), "the scrubber stopped before the pump");
