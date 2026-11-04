@@ -1,9 +1,6 @@
 package io.github.west3436.zas.atmos.ttv;
 
-import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
-import io.github.west3436.zas.api.reaction.Reactions;
-import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +21,16 @@ import net.minecraft.world.phys.Vec3;
  * <p>Server thread only.
  */
 public final class TransferValve {
+    /** What one atmos tick of the tanks' gas came to. */
+    public enum Step {
+        /** Nothing happened to the tanks. */
+        QUIET,
+        /** A tank's gas changed, so a holder that keeps a copy writes it back. */
+        CHANGED,
+        /** A tank's failure destroyed the TTV. */
+        DESTROYED
+    }
+
     /** The shortest timer, s (CONT-104): the valve opens as soon as the timer starts. */
     public static final int MIN_TIMER = 0;
 
@@ -163,31 +170,24 @@ public final class TransferValve {
      *
      * @param level the level it is in
      * @param holder who or what holds it, or the primed TTV itself
-     * @return whether the TTV was destroyed
+     * @return what it came to
      */
-    public boolean step(ServerLevel level, Entity holder) {
-        react(first);
-        react(second);
-        Vec3 at = holder.position();
-        return explodes(level, at, first) || explodes(level, at, second);
+    public Step step(ServerLevel level, Entity holder) {
+        boolean changed = atmosTick(first, level, holder);
+        changed |= atmosTick(second, level, holder);
+        Vec3 at = holder.getBoundingBox().getCenter();
+        if (explodes(level, at, first) || explodes(level, at, second)) {
+            return Step.DESTROYED;
+        }
+        return changed ? Step.CHANGED : Step.QUIET;
     }
 
-    private static void react(ItemStack tank) {
-        if (tank.isEmpty()) {
-            return;
-        }
-        GasMixture before = GasTankItem.contents(tank);
-        if (before.isEmpty()) {
-            return;
-        }
-        GasMixture after = Reactions.applyStandalone(before, AtmosTicks.SECONDS, false);
-        if (after != before) {
-            GasTankItem.setGas(tank, new GasParcel(after.moles(), after.temperature()));
-        }
+    private static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
+        return tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, level, holder);
     }
 
     private static boolean explodes(ServerLevel level, Vec3 at, ItemStack tank) {
-        if (tank.isEmpty()) {
+        if (!(tank.getItem() instanceof GasTankItem)) {
             return false;
         }
         double atm = GasTankItem.contents(tank).pressure() / 101.325;

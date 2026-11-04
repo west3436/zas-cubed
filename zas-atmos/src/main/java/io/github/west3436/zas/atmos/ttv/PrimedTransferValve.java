@@ -163,11 +163,14 @@ public class PrimedTransferValve extends Entity {
         }
         if (--nextStep <= 0) {
             nextStep = AtmosTicks.PERIOD;
-            if (valve.step(level, this)) {
+            TransferValve.Step step = valve.step(level, this);
+            if (step == TransferValve.Step.DESTROYED) {
                 discard();
                 return;
             }
-            publish();
+            if (step == TransferValve.Step.CHANGED) {
+                publish();
+            }
         }
         if (valve.isOpen() && --settle <= 0) {
             dropAsItem(level);

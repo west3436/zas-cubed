@@ -194,18 +194,16 @@ public class TransferValveItem extends Item {
      */
     public static boolean step(ItemStack stack, ServerLevel level, Entity holder) {
         TransferValve valve = valve(stack);
-        if (valve.step(level, holder)) {
-            return true;
+        TransferValve.Step step = valve.step(level, holder);
+        if (step == TransferValve.Step.CHANGED) {
+            save(stack, valve);
         }
-        save(stack, valve);
-        return false;
+        return step == TransferValve.Step.DESTROYED;
     }
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity holder, int slot, boolean selected) {
-        if (level instanceof ServerLevel server
-                && holder.tickCount % AtmosTicks.PERIOD == 0
-                && step(stack, server, holder)) {
+        if (level instanceof ServerLevel server && AtmosTicks.due(server, holder) && step(stack, server, holder)) {
             stack.setCount(0);
         }
     }
@@ -213,7 +211,7 @@ public class TransferValveItem extends Item {
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
         if (entity.level() instanceof ServerLevel server
-                && entity.tickCount % AtmosTicks.PERIOD == 0
+                && AtmosTicks.due(server, entity)
                 && step(stack, server, entity)) {
             entity.discard();
             return true;
