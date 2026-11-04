@@ -168,6 +168,21 @@ OPS-005 does, with a logged error. The server keeps running.
 - **Verify:** A GameTest injects an engine exception and checks the dimension
   pauses and the server keeps running.
 
+#### NFR-015 · A server stop finishes
+`Must` · `R1` · `Draft` · Verify: Unit · Trace: DATA-011
+
+A server stop shall finish, or say why it hasn't: while one is still running 2
+minutes after it began, ZAS³ shall log each level's remaining chunk work and a
+dump of every thread, every 2 minutes, at most 3 times. A stop that takes less
+than 2 minutes logs nothing, and the reports can't keep the JVM alive.
+
+- **Rationale:** Inferred: the game's final chunk loop logs nothing while it
+  runs, so a stop stuck there leaves no trace of why
+  ([#232](https://github.com/west3436/zas-cubed/issues/232)).
+- **Verify:** Unit tests of `StopWatchdog`: a stop that finishes in time logs
+  nothing, and a stuck one is reported with its threads, a limited number of
+  times, from a daemon thread.
+
 ## Compatibility
 
 #### NFR-020 · Platform
