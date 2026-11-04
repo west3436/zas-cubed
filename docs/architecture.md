@@ -2225,11 +2225,15 @@ the cell in front of its grille).
     releases its share, as a pipe does.
   - It is rated at 9,120 kPa. `CanisterFailure.check` runs first in its atmos
     tick, after its network has reacted, so it sees what a burn raised in that
-    tick. Above the rating, or with its gas or the air around it above 1,273 K,
-    it ruptures (CONT-085, CONT-101). Above 13,680 kPa it explodes instead
-    through `ContainerBlast` (CONT-102, §11.9), whose power and block damage
-    follow CONT-107 and CONT-109. It leaves nothing behind. As it is removed,
-    its share goes into its cell and the rest stays in the network.
+    tick. Above the rating, or with the air around it above 1,273 K, it ruptures
+    (CONT-085, CONT-101). Above 13,680 kPa it explodes instead through
+    `ContainerBlast` (CONT-102, §11.9), whose power and block damage follow
+    CONT-107 and CONT-109. It leaves nothing behind. As it is removed, its share
+    goes into its cell and the rest stays in the network.
+  - The temperature limit reads the cell: its zone's air, or the ambient's in
+    open air. A paused or unresolved cell reads as not hot, because its sample
+    is a last-known mixture or a stand-in. Hot gas inside a canister is left to
+    the pressure limits, which are what turn a burn into an explosion (D-57).
   - An explosion that reaches it ruptures it at `ExplosionEvent.Detonate`,
     before the game makes drops, so the gas can't leave in an item. That holds
     for an explosion that keeps blocks too. A wind burst

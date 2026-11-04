@@ -31,8 +31,8 @@ public final class CanisterFailure {
 
     /**
      * Applies the failure rule to a canister. Its atmos tick calls this after its network has reacted
-     * (CONT-100), so the check sees the pressure a burn raised in the same tick. It goes by the hotter
-     * of its gas and the air around it.
+     * (CONT-100), so the check sees the pressure a burn raised in the same tick. Its temperature limit
+     * goes by the air around it. Hot gas inside it is left to the pressure limits (CONT-085, D-57).
      *
      * @param level the level
      * @param pos the canister
@@ -40,8 +40,7 @@ public final class CanisterFailure {
      * @return whether the canister failed, and is gone
      */
     public static boolean check(ServerLevel level, BlockPos pos, GasStore gas) {
-        double kelvin = Math.max(gas.isEmpty() ? 0 : gas.temperature(), airKelvin(level, pos));
-        Verdict verdict = ContainerFailure.canister(gas.pressure(), kelvin, ContainerBlast.powerCap());
+        Verdict verdict = ContainerFailure.canister(gas.pressure(), airKelvin(level, pos), ContainerBlast.powerCap());
         if (!verdict.destroys()) {
             return false;
         }
@@ -55,7 +54,11 @@ public final class CanisterFailure {
         return true;
     }
 
-    /** The air around a canister, K, or 0 while its cell is paused or unresolved and its reading isn't real. */
+    /**
+     * The air around a canister, K: its zone's, or the ambient's in open air. A paused or unresolved
+     * cell reads 0, because its sample is a last-known mixture or a stand-in, so it can't rupture a
+     * canister by heat until it resolves.
+     */
     private static double airKelvin(ServerLevel level, BlockPos pos) {
         AtmosphereSample cell = Atmospheres.at(level, pos);
         return cell.state() == AtmosphereState.ZONED || cell.state() == AtmosphereState.AMBIENT

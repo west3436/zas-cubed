@@ -720,9 +720,15 @@ its contents into its cell.
 `CanisterFailure` removes the block, which leaves nothing behind, and its share
 of its network's gas goes into its cell while the rest stays in the network. Any
 explosion that reaches it ruptures it before the game makes drops, whether or not
-the explosion keeps blocks, but not a wind burst. "Above 1,273 K" goes by the
-hotter of its gas and the air around it, so a burn past that ruptures it even far
-below its rating. `cont_085_` (GameTest).*
+the explosion keeps blocks, but not a wind burst. `cont_085_` (GameTest).*
+
+*2026-11-04: "above 1,273 K" means the air around the canister, not the gas inside
+it, as vg's limit is for fire outside. The gas inside is left to the pressure limits
+(CONT-101, CONT-102, D-57): counting it would rupture nearly every burning canister
+before those limits could act, and S-13's path charges a canister with exhaust at
+about 1,400 K. In open air the air is the ambient, at most 340 K in the built-in
+dimensions. A paused or unresolved cell counts as not hot until it resolves, because
+its sample is a last-known mixture or a stand-in; the pressure limits still apply.*
 
 #### CONT-101 · Canister overpressure rupture
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57 · Depends: CONT-085

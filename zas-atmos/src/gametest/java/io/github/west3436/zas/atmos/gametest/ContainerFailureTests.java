@@ -713,27 +713,6 @@ public final class ContainerFailureTests {
         h.succeed();
     }
 
-    /** Gas above 1,273 K ruptures its canister, and gas at 1,273 K doesn't. */
-    @GameTest(template = "empty", batch = BATCH)
-    public static void cont_085_a_canister_with_gas_above_1273_k_ruptures(GameTestHelper h) {
-        Area a = new Area(h, 321);
-        GasDeviceTests.room(a);
-        double room = roomMoles(a);
-        a.place(2, 1, 2, GasDeviceTests.canister());
-        a.tick();
-        CanisterBlockEntity can = a.entity(2, 1, 2);
-        can.network().gas().add(new GasParcel(Map.of(N2, 10.0), 1273));
-        a.step();
-        h.assertFalse(canisterGone(a), "a canister at 1,273 K ruptured");
-
-        can.network().gas().setTemperature(1300);
-        a.step();
-        h.assertTrue(canisterGone(a), "a canister at 1,300 K held");
-        a.tick();
-        h.assertTrue(roomMoles(a) > room + 9.99, "the canister's gas didn't reach the room");
-        h.succeed();
-    }
-
     /**
      * Air above 1,273 K around it ruptures a canister, even an empty one. Its cell's reading can lag
      * behind placing it, so this allows a few atmos ticks.
@@ -755,35 +734,40 @@ public final class ContainerFailureTests {
     }
 
     /**
-     * A burn that heats a canister's gas past 1,273 K ruptures it, far below its rating: it goes by
-     * the hotter of its gas and the air around it.
+     * "Above 1,273 K" means the air around a canister, not the gas inside it. Gas at 2,000 K inside one
+     * in a cool room leaves it whole, and so does a burn (cont_100_a_canister_reacts_alone_and_on_a_port).
+     * Heat the room past 1,273 K and it ruptures into its cell, with no explosion.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_085_a_burn_past_1273_k_ruptures_a_canister(GameTestHelper h) {
+    public static void cont_085_hot_air_ruptures_a_canister_and_hot_gas_inside_alone_does_not(GameTestHelper h) {
         Blasts.listen();
         Area a = new Area(h, 325);
         GasDeviceTests.room(a);
-        double room = roomMoles(a);
         a.place(2, 1, 2, GasDeviceTests.canister());
         a.tick();
         CanisterBlockEntity can = a.entity(2, 1, 2);
-        ResourceLocation hydrogen = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
-        can.network().gas().add(new GasParcel(Map.of(hydrogen, 5.0, O2, 10.0, N2, 15.0), 900));
+        can.network().gas().add(new GasParcel(Map.of(N2, 100.0), 2000));
 
-        GasMixture burned = Reactions.applyStandalone(can.network().gas().mixture(), AtmosTicks.SECONDS, false);
-        h.assertTrue(
-                burned.temperature() > ContainerFailure.CANISTER_MAX_K,
-                "the burn reaches " + burned.temperature() + " K, not above 1,273 K");
-        h.assertTrue(
-                burned.pressure() < ContainerFailure.CANISTER_RATED_KPA,
-                "the burn reaches " + burned.pressure() + " kPa, so the pressure could be what ruptures it");
+        double air = a.zone(2, 2, 2).mixture().temperature();
+        h.assertTrue(air < ContainerFailure.CANISTER_MAX_K, "the room is at " + air + " K, so this proves nothing");
+        for (int i = 0; i < 4; i++) {
+            a.step();
+        }
+        h.assertFalse(canisterGone(a), "gas at 2,000 K inside a canister in a room at " + air + " K ruptured it");
+        a.close(can.network().gas().temperature(), 2000, "the gas inside the canister");
+        double held = can.network().gas().totalMoles();
 
-        a.step();
-        h.assertTrue(canisterGone(a), "the canister held a burn at " + burned.temperature() + " K");
-        h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a canister well below its rating exploded");
+        a.settle(GasMutations.add(a.level, a.point(1, 2, 1), new GasParcel(Map.of(N2, 5000.0), 3000), Area.SOURCE));
+        air = a.zone(2, 2, 2).mixture().temperature();
+        h.assertTrue(air > ContainerFailure.CANISTER_MAX_K, "the room is at " + air + " K, so this proves nothing");
+        double room = roomMoles(a);
+        for (int i = 0; i < 8 && !canisterGone(a); i++) {
+            a.step();
+        }
+        h.assertTrue(canisterGone(a), "a canister in a room at " + air + " K held");
         a.tick();
-        h.assertTrue(
-                roomMoles(a) > room + 25, "the canister's gas didn't reach the room"); // it may go on burning there
+        a.close(roomMoles(a), room + held, "the room's gas after the rupture");
+        h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a canister well below its rating exploded");
         h.succeed();
     }
 }
