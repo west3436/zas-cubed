@@ -60,6 +60,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.REDSTONE_VALVE.get());
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
+        out.accept(AtmosItems.SCRUBBER.get());
         out.accept(AtmosItems.CANISTER.get());
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));
@@ -78,6 +79,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
+        out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());
         out.accept(AtmosItems.AIR_TANK.get());
         out.accept(AtmosItems.EMPTY_TANK.get());

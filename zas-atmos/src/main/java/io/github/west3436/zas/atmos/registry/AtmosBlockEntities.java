@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
@@ -52,6 +53,11 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<VentBlockEntity>> VENT = BLOCK_ENTITIES.register(
             "vent",
             () -> BlockEntityType.Builder.of(VentBlockEntity::new, AtmosBlocks.VENT.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<ScrubberBlockEntity>> SCRUBBER = BLOCK_ENTITIES.register(
+            "scrubber",
+            () -> BlockEntityType.Builder.of(ScrubberBlockEntity::new, AtmosBlocks.SCRUBBER.get())
                     .build(null));
 
     public static final Supplier<BlockEntityType<AreaAirControllerBlockEntity>> AREA_AIR_CONTROLLER =
