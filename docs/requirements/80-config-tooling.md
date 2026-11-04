@@ -53,6 +53,10 @@ The following shall be data-driven, with documented JSON formats:
 - **Rationale:** Decision: D-04. Pack makers can tune everything without code.
 - **Verify:** Inspect the documented formats against the loaders.
 
+*2026-11-03: Still Accepted. [Datapack formats](../datapacks.md) has a section
+for every listed format except the `zas:pressure_fragile` tag, which comes with
+Hardcore block damage ([#45](https://github.com/west3436/zas-cubed/issues/45)).*
+
 #### OPS-008 · Datapack validation
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: OPS-002
 
