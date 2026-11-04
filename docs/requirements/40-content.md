@@ -62,6 +62,10 @@ Pipes and caps hold 70 L, a connector port 200 L, a vent 400 L and a canister
 the network on its side ([architecture §11.4](../architecture.md#114-pipe-networks)).
 `PipePortTest.cont_007_a_port_is_a_200_litre_node_in_its_network` (Unit).*
 
+*2026-11-04: Note: a valve's body holds 200 L, one port buffer's volume, from
+the valve row of [vg §2](../research/vg-atmos-content.md#2-devices)
+(`PipeVolumes.VALVE`; `PipeVolumesTest` checks it).*
+
 #### CONT-008 · Perfect mixing
 `Must` · `R1` · `Implemented` · Verify: Unit
 
@@ -202,7 +206,7 @@ Pipes may leak or burst above configurable pressure differentials.
 Leaks and configurable thresholds stay here.*
 
 #### CONT-108 · Pipe burst
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
 
 When a pipe network's pressure exceeds a segment's cell pressure by more than
 10,132.5 kPa (100 atm), one such segment, chosen at random, shall burst that
@@ -214,6 +218,22 @@ that never runs.)
 - **Verify:** A GameTest raises a network to just below and just above 100 atm
   over its room and checks only the second bursts one segment and dumps
   everything, with no explosion.
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+`PipeBurst` checks at the start of a network's atmos tick, on what the last one
+left, so a reaction that takes a network past the threshold bursts it one atmos
+tick later, and a canister on the network fails first. Pipes and caps are
+segments; a device's buffer isn't, so a network with no pipe doesn't burst. A
+segment in a paused or unresolved cell doesn't burst, and a burst pipe drops
+nothing. `PipeBurstTests.cont_108_*` (GameTest) check a room just below and
+just above the threshold, open air, a network with no segment and a burst from
+a reaction; `PipeBurstTest.cont_108_*` (Unit) check the threshold and the choice
+among segments.*
+
+*2026-11-04: A device's pipe port can be the first member of a network to step,
+so it runs the burst check as a pipe does. Pipes on a pump's port burst even if
+only the port steps, and a network of ports alone has no segment and holds
+(`PumpTests.cont_108_a_run_on_a_pump_port_bursts_and_ports_alone_hold`, GameTest).*
 
 #### CONT-006 · Network cadence
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50
@@ -351,7 +371,7 @@ controller controls the vent (CONT-014), on the server, whatever the client
 sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
 
 #### CONT-010 · Valves
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 There shall be a manual valve and a redstone-controlled valve.
 
@@ -360,8 +380,18 @@ There shall be a manual valve and a redstone-controlled valve.
   Minecraft's control signal.
 - **Verify:** A GameTest opens and closes each valve by hand and by redstone.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Each valve answers to its own control: using a manual valve turns it and
+redstone doesn't move it, and a redstone valve is open exactly while it gets a
+signal and a hand doesn't move it. An inline part with a flange at each end of
+its axis, placed in line with the pipes beside it ([architecture
+§11.5](../architecture.md#115-devices)).
+`ValveTests.cont_010_a_manual_valve_turns_by_hand_only`,
+`cont_010_a_redstone_valve_follows_its_signal_only` and
+`cont_010_a_placed_valve_lines_up_with_its_pipes` (GameTest).*
+
 #### CONT-075 · Open valves join networks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 An open valve shall join the networks on both sides into one. Closing it
 separates them, sharing gas by volume (CONT-003).
@@ -371,6 +401,21 @@ separates them, sharing gas by volume (CONT-003).
 - **Verify:** A GameTest opens a valve between networks at different
   pressures, checks they equalize as one, closes it and checks the split by
   volume.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ValveTests.cont_075_a_manual_valve_joins_networks_and_splits_them_by_volume`
+and its redstone twin (GameTest) follow the Verify plan and check moles and
+thermal energy at each stage. A valve's 200 L body counts: open, it is part of
+the one network's volume; shut, it is a network of its own, holding its share
+sealed inside. Pipes stay connected to a shut valve and have no open end there
+(`cont_075_a_pipe_at_a_shut_valve_does_not_leak`). Networks follow a valve at
+its next atmos step, so it rebuilds them at most once per atmos tick
+(`cont_075_a_valve_rebuilds_networks_only_when_it_has_moved`). The position is
+the block state, so a real unload and reload keeps it, and the gas on each side
+(`cont_075_a_shut_valve_stays_shut_through_a_reload`,
+`cont_075_an_open_valve_stays_open_through_a_reload`).
+`PipeNetworkTest.cont_075_*` (Unit) turns a valve 1,000 times and checks moles
+and energy.*
 
 #### CONT-011 · Pressure pump
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)

@@ -56,6 +56,8 @@ public final class AtmosCreativeTab {
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
         out.accept(AtmosItems.PIPE_CAP.get());
+        out.accept(AtmosItems.MANUAL_VALVE.get());
+        out.accept(AtmosItems.REDSTONE_VALVE.get());
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
         out.accept(AtmosItems.PRESSURE_PUMP.get());

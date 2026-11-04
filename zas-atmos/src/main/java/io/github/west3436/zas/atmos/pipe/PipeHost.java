@@ -21,18 +21,19 @@ public interface PipeHost {
     PipeNode nodeOn(Direction face);
 
     /**
-     * The node across a face of a block, if the two blocks are connected there and the neighbour is
-     * loaded. A neighbour in an unloaded chunk isn't reached, and that chunk keeps its share saved.
+     * The node across a face of a block, if gas passes between the two blocks there ({@link
+     * PipeConnector#joined}, so not through a shut valve) and the neighbour is loaded. A neighbour in
+     * an unloaded chunk isn't reached, and that chunk keeps its share saved.
      *
      * @param level the level
      * @param pos the block's position
      * @param self the block's state
      * @param face the face, toward the neighbour
-     * @return the neighbour's node, or null
+     * @return the neighbour's node, or null if gas doesn't pass there
      */
     static PipeNode across(Level level, BlockPos pos, BlockState self, Direction face) {
         BlockPos next = pos.relative(face);
-        if (!level.isLoaded(next) || !PipeConnector.connected(self, face, level.getBlockState(next))) {
+        if (!level.isLoaded(next) || !PipeConnector.joined(self, face, level.getBlockState(next))) {
             return null;
         }
         BlockEntity neighbour = level.getBlockEntity(next);

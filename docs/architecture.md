@@ -2046,13 +2046,17 @@ the cell in front of its grille).
 
 - **Nodes.** Every network member is a `PipeNodeEntity`, a device block
   entity with a gas volume (CONT-007): a pipe or a pipe cap holds 70 L, a
-  port buffer 200 L, a vent's buffer 400 L, a canister 1,000 L. Device
-  buffers are network members, so a device sees its network's conditions.
+  port buffer or a valve's body 200 L, a vent's buffer 400 L, a canister
+  1,000 L. Device buffers are network members, so a device sees its network's
+  conditions.
 - **Connections.** A block that pipes join implements `PipeConnector`, which
   says on which faces it offers a connection; two neighbours are connected
   when both offer one on their shared face. A pipe offers every face, a cap
-  only the face it points at, a vent only its back (CONT-014) and a
-  connector port only its bottom, plus its top for a canister (CONT-083).
+  only the face it points at, a vent only its back (CONT-014), a connector
+  port only its bottom, plus its top for a canister (CONT-083), and a valve
+  its two flanges (CONT-010). Gas passes a connection unless one side shuts
+  it (`carriesGas`), as a shut valve does: `PipeConnector.connected` decides a
+  pipe's arms and open ends, and `joined` decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
 - **Blocks in several networks.** A block entity that pipes join is a
@@ -2111,13 +2115,25 @@ the cell in front of its grille).
   isn't stepping, because its chunk has left full status, holds nothing up. It
   runs in `PipeNodeEntity.beforeAtmosTick`, which comes before the node's own
   `atmosTick`, so every kind of node takes part without doing anything, and a
-  device's step sees the pressure the reaction left. The mixture reacts through
+  device's step sees the pressure the reaction left. An inline device does the
+  same for each of its ports (`PipePort.beforeAtmosTick`). The mixture reacts through
   `ContainerReactions.react`: `Reactions.applyStandalone` (API-019) with no
   ignition source, so it burns only above a fuel's autoignition temperature.
   A new network reacts at its first step, so a rebuild can bring its next
   reaction forward by up to an atmos tick.
-- **Deferred:** pipe bursts (CONT-108) and client smoothing (CONT-070) are not
-  built yet; S-01 needs neither.
+- **Bursts** (CONT-108, `PipeBurst`). A network's atmos tick starts by checking
+  what the last one left, before it reacts. Above 10,132.5 kPa it reads the cell
+  of each segment (a pipe or a cap, not a device's buffer), and picks one of
+  those more than that over their cell with the level's random source. It
+  drains the network, destroys the segment with the game's block-break effects
+  and no drop, and adds the gas to the segment's cell through `GasMutations.add`.
+  There is no explosion. A paused or unresolved cell, or a chunk out of full
+  status, can't burst. Because the check comes first, a reaction that takes a
+  network past the threshold bursts it one atmos tick later, after every member
+  has stepped: a canister on the network, rated lower than a pipe, fails first,
+  rather than being emptied by a burst in the same instant.
+- **Deferred:** client smoothing (CONT-070) is not built yet; S-01 doesn't need
+  it.
 
 ### 11.5 Devices
 
@@ -2196,6 +2212,34 @@ the cell in front of its grille).
     controller's x and z in two 16-bit halves each, because menu data syncs as
     shorts. `VentSettings.OFF`, `VentSettings.blow(target)` and
     `VentSettings.siphon(target)` build the usual settings.
+- **Valves** (CONT-010, CONT-075), in `.valve`.
+  - An inline part with a pipe flange at each end of its `axis`, and no power
+    or GUI. It takes the axis with the most parts offering it a connection, and
+    the axis the player looks along wins a tie, so with no pipes around the look
+    alone decides.
+  - Its `open` block state is its position, saved with the chunk like `axis`.
+    Using a manual valve flips it, and redstone doesn't move it. A redstone valve
+    is open exactly while `hasNeighborSignal` holds, and a hand doesn't move it;
+    placed in a signal, it starts open.
+  - Pipes join both flanges, open or shut, so a pipe ending at a shut valve keeps
+    its arm and has no open end. Gas passes only while it is open (§11.4). A
+    flange with nothing on it doesn't leak.
+  - Its 200 L body is a network node, saved as any node is. Open, its volume
+    counts in the one network it joins. Shut, it is a network of its own,
+    holding its share sealed inside until it opens, or releasing it if it is
+    removed (CONT-009).
+  - The networks follow the block state at the valve's next step, when it
+    compares `open` with the position they were last built for and, if they
+    differ, calls `PipeNodeEntity.reconnect()`: its network and its neighbours'
+    dissolve, and each member keeps its share by volume (CONT-003). So a valve
+    rebuilds networks at most once per atmos tick however fast a redstone clock
+    turns it, and not at all if it is back where it was by its next step. The
+    position last built for isn't saved: it starts from the block state, and
+    every node's network dissolves at load anyway.
+  - While a side's chunk is away (out of full status, with its nodes in memory),
+    an opened valve can't dissolve that side's network. When the chunk returns,
+    an open valve whose neighbour is in another network reconnects at its next
+    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`).
 - **Heater** (CONT-019, CONT-087, D-73), in `.heater`.
   - A portable floor machine, not a full block, so it stands in its room's
     cell and gas passes around it. Its front faces the player who places it.

@@ -5,6 +5,7 @@ import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 
 /**
  * One pipe port of a device with several: a network node of its own that isn't a block entity, so
@@ -64,6 +65,19 @@ public final class PipePort implements PipeNode {
             PipeNetwork.build(this, PipeNode::connectedNodes);
         }
         return network;
+    }
+
+    /**
+     * The port's turn in its network's atmos tick, rebuilding the network first if it has dissolved,
+     * as a {@link PipeNodeEntity} takes its own. A network may hold only ports, with no pipe to run
+     * it, and among pipes a port may be the first member to step, so whichever does runs the burst
+     * check and the reaction for them all (CONT-100, CONT-108). Its device calls this before each
+     * atmos tick of its own.
+     *
+     * @param level the level
+     */
+    public void beforeAtmosTick(ServerLevel level) {
+        PipeNodeEntity.atmosTurn(level, network(), this);
     }
 
     /** The port's share of its network's gas, or its own gas if it is in no network. */

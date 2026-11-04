@@ -14,7 +14,9 @@ import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
+import io.github.west3436.zas.atmos.pipe.PipeBurst;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
+import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.power.DevicePower;
@@ -26,6 +28,8 @@ import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.valve.ValveBlock;
+import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -406,6 +410,138 @@ public final class PumpTests {
             }
             assertReacted(h, s, mixed, before, "a port and pipes, round " + round);
         }
+        s.clear();
+        h.succeed();
+    }
+
+    /**
+     * A port can be the first member of a network to step, so the burst check runs for it as for a
+     * pipe. Here only the pump steps, and a segment of the run on its port still bursts, with all the
+     * gas going. Two pumps' ports alone have no segment, and hold at the same pressure.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_108_a_run_on_a_pump_port_bursts_and_ports_alone_hold(GameTestHelper h) {
+        Site s = new Site(h, 557);
+        s.clear();
+        double kPa = 2 * PipeBurst.THRESHOLD_KPA;
+
+        PressurePumpBlockEntity pump = s.place(3, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        pipe(s, 4, 2, 2);
+        cap(s, 5, 2, 2, Direction.WEST);
+        GasStore run = out(pump);
+        s.close(run.volume(), RUN, 1e-9, "the run's volume");
+        run.add(new GasParcel(Map.of(N2, kPa * run.volume() / (R * T)), T));
+        pump.step();
+        int left = 0;
+        for (int x = 4; x <= 5; x++) {
+            if (s.level.getBlockEntity(s.abs(x, 2, 2)) instanceof PipeNodeEntity) {
+                left++;
+            }
+        }
+        h.assertValueEqual(left, 1, "the segments left after a burst that a port started");
+        s.close(out(pump).totalMoles(), 0, 1e-9, "the gas left in the port after the burst");
+        s.clear();
+
+        PressurePumpBlockEntity first = s.place(3, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        PressurePumpBlockEntity second = s.place(4, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        GasStore ports = out(first);
+        s.close(ports.volume(), 2 * PipeVolumes.PORT, 1e-9, "the network of two ports");
+        double moles = kPa * ports.volume() / (R * T);
+        ports.add(new GasParcel(Map.of(N2, moles), T));
+        first.step();
+        second.step();
+        h.assertTrue(first.output().network().gas() == ports, "the network of ports was rebuilt");
+        s.close(ports.totalMoles(), moles, 1e-9, "the gas in the ports alone");
+        s.clear();
+        h.succeed();
+    }
+
+    /**
+     * A valve directly against a pump's port. Shut, no gas passes it either way: the port's network
+     * stops at the valve, and the pump has nothing to take from the pipes beyond. Open, the valve and
+     * the port are one network, which stays the same object from step to step, so the valve doesn't
+     * take the port for a side apart and rebuild it each atmos tick (CONT-075).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_075_a_valve_against_a_pump_port_passes_gas_only_while_open(GameTestHelper h) {
+        Site s = new Site(h, 556);
+        s.clear();
+        // Cap, pipe, valve, pump, pipe, cap, from x = 1 to x = 6.
+        cap(s, 1, 2, 2, Direction.EAST);
+        pipe(s, 2, 2, 2);
+        BlockState shut = AtmosBlocks.MANUAL_VALVE
+                .get()
+                .defaultBlockState()
+                .setValue(ValveBlock.AXIS, Direction.Axis.X)
+                .setValue(ValveBlock.OPEN, false);
+        ValveBlockEntity valve = s.place(3, 2, 2, shut, ValveBlockEntity.class);
+        PressurePumpBlockEntity pump = s.place(4, 2, 2, pumpState(Direction.EAST), PressurePumpBlockEntity.class);
+        pipe(s, 5, 2, 2);
+        cap(s, 6, 2, 2, Direction.WEST);
+        PipeNodeEntity beyond = s.entity(2, 2, 2, PipeNodeEntity.class);
+        pump.power().setTestPowered(true);
+        pump.set(PumpFlow.MAX_TARGET);
+        pump.setOn(true);
+
+        // Shut: three networks, and the gas beyond the valve stays there.
+        h.assertTrue(
+                s.level.getBlockState(s.abs(2, 2, 2)).getValue(PipeBlock.CONNECTIONS.get(Direction.EAST)),
+                "the pipe has no arm to the shut valve");
+        s.close(in(pump).volume(), PipeVolumes.PORT, 1e-9, "the input's volume at a shut valve");
+        s.close(valve.network().volume(), PipeVolumes.VALVE, 1e-9, "the shut valve's volume");
+        s.close(beyond.network().volume(), 2 * PipeVolumes.PIPE, 1e-9, "the pipes beyond the shut valve");
+        beyond.network().gas().add(new GasParcel(Map.of(N2, 14.0), T));
+        for (int i = 0; i < 3; i++) {
+            valve.step();
+            pump.step();
+        }
+        s.close(beyond.network().gas().totalMoles(), 14.0, 1e-9, "the gas beyond the shut valve");
+        s.close(out(pump).totalMoles(), 0, 1e-12, "the output with the valve shut");
+        h.assertValueEqual(pump.status(), InlineStatus.INPUT_EMPTY, "the pump at a shut valve");
+
+        // Nor the other way: gas in the port stays in the port.
+        pump.setOn(false);
+        in(pump).add(new GasParcel(Map.of(O2, 2.0), T));
+        valve.step();
+        pump.step();
+        s.close(in(pump).moles(O2), 2.0, 1e-9, "the port's gas at a shut valve");
+        s.close(beyond.network().gas().moles(O2), 0, 1e-12, "the O2 beyond the shut valve");
+
+        // Open: the valve joins the pipes and the port into one network.
+        s.level.setBlock(valve.getBlockPos(), shut.setValue(ValveBlock.OPEN, true), Block.UPDATE_CLIENTS);
+        valve.step();
+        double volume = 2 * PipeVolumes.PIPE + PipeVolumes.VALVE + PipeVolumes.PORT;
+        PipeNetwork open = pump.input().network();
+        h.assertTrue(open == beyond.network(), "the open valve didn't join the port to the pipes");
+        h.assertTrue(open == valve.network(), "the open valve isn't in the port's network");
+        s.close(open.volume(), volume, 1e-9, "the volume through the open valve");
+        s.close(open.gas().totalMoles(), 16.0, 1e-9, "the gas through the open valve");
+
+        // It stays that network: a valve beside a port doesn't rebuild it at each step.
+        for (int i = 0; i < 3; i++) {
+            valve.step();
+            pump.step();
+            h.assertTrue(pump.input().network() == open, "the network was rebuilt at step " + i);
+            h.assertTrue(open.valid(), "the network dissolved at step " + i);
+        }
+
+        // The pump draws through it.
+        pump.setOn(true);
+        pump.step();
+        s.close(out(pump).totalMoles(), 16.0 * PumpFlow.MAX_RATE / volume, 1e-9, "the gas drawn through the valve");
+
+        // Shut again: each side keeps its share by volume (CONT-003), and the flow ends.
+        double left = open.gas().totalMoles();
+        s.level.setBlock(valve.getBlockPos(), shut, Block.UPDATE_CLIENTS);
+        valve.step();
+        h.assertFalse(pump.input().network() == beyond.network(), "the shut valve left the port joined");
+        s.close(in(pump).totalMoles(), left * PipeVolumes.PORT / volume, 1e-9, "the port's share");
+        double pipes = beyond.network().gas().totalMoles();
+        s.close(pipes, left * 2 * PipeVolumes.PIPE / volume, 1e-9, "the pipes' share");
+        for (int i = 0; i < 40; i++) {
+            pump.step();
+        }
+        s.close(beyond.network().gas().totalMoles(), pipes, 1e-9, "the gas beyond the valve, shut again");
         s.clear();
         h.succeed();
     }

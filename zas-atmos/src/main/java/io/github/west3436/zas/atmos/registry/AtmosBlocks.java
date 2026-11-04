@@ -14,6 +14,8 @@ import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
+import io.github.west3436.zas.atmos.valve.ManualValveBlock;
+import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -78,6 +80,14 @@ public final class AtmosBlocks {
     /** The pressure pump (CONT-011). */
     public static final DeferredBlock<PressurePumpBlock> PRESSURE_PUMP =
             BLOCKS.registerBlock("pressure_pump", PressurePumpBlock::new, metal());
+
+    /** The manual valve (CONT-010). */
+    public static final DeferredBlock<ManualValveBlock> MANUAL_VALVE =
+            BLOCKS.registerBlock("manual_valve", ManualValveBlock::new, metal());
+
+    /** The redstone valve (CONT-010). */
+    public static final DeferredBlock<RedstoneValveBlock> REDSTONE_VALVE =
+            BLOCKS.registerBlock("redstone_valve", RedstoneValveBlock::new, metal());
 
     private AtmosBlocks() {}
 
