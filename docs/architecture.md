@@ -2784,8 +2784,10 @@ tanks and the valve and is what the item and the entity share.
   right-clicks in an inventory, as a bundle's contents do, only while the valve
   is closed. Taking a tank off an open valve closes it first, so the tank has
   its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
-  Each atmos tick its tanks react in a player's inventory or on the ground, and
-  a tank that fails destroys the stack.
+  Each atmos tick each tank gets `GasTankItem.atmosTick` in a player's inventory
+  or on the ground: it reacts, then fails if its pressure says so (§11.9). A
+  leaking tank stays on. A tank that ruptures or explodes takes the TTV with it,
+  and the other tank's gas goes into the cell too.
 - **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
   the tank screen's pattern. A button sends `TransferValveSettings` (hand and
   button id); the server refuses an unknown hand or button or a hand holding no
@@ -2794,9 +2796,10 @@ tanks and the valve and is what the item and the entity share.
   adds the entity at the player's feet, tossed gently the way they face, with
   primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
   or hurt, so a timer can't be stopped. It counts its fuse down in game ticks,
-  opens its valve at 0, and at 0 s does so as it is added. Its tanks react every
-  atmos tick, and at once when the valve opens, so a mixture above autoignition
-  burns on the next game tick. A TTV that survives waits `SETTLE_TICKS` (5 s)
+  opens its valve at 0, and at 0 s does so as it is added. Its tanks get the
+  same atmos tick, and one at once when the valve opens, so a mixture above
+  autoignition burns on the next game tick, and a tank it takes past 50 atm
+  explodes then. A TTV that survives waits `SETTLE_TICKS` (5 s)
   and drops as an item, valve open and timer setting kept, so a dud can be
   taken away. It saves its tanks, valve, timer and countdowns.
 - **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which

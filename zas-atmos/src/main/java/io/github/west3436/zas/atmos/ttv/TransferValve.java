@@ -1,13 +1,13 @@
 package io.github.west3436.zas.atmos.ttv;
 
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.atmos.failure.TankFailure;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * Two gas tanks joined by a valve (CONT-103): what a tank transfer valve is, whether it is an item
@@ -39,15 +39,6 @@ public final class TransferValve {
 
     /** A new TTV's timer, s (CONT-104). */
     public static final int DEFAULT_TIMER = 10;
-
-    /** The pressure above which a tank explodes, atm (CONT-038). */
-    private static final double EXPLODES_ATM = 50;
-
-    /** The explosion's power per atm above that (CONT-038). */
-    private static final double ATM_PER_POWER = 10;
-
-    /** The greatest power of a container's explosion (CONT-109). */
-    private static final double MAX_POWER = 16;
 
     private ItemStack first;
     private ItemStack second;
@@ -165,37 +156,39 @@ public final class TransferValve {
     }
 
     /**
-     * One atmos tick of the tanks' gas: each tank reacts what it holds (CONT-100), and a tank past
-     * its limit fails (CONT-038).
+     * One atmos tick of the tanks' gas, through {@link GasTankItem#atmosTick}: each tank reacts what
+     * it holds (CONT-100), then fails if its pressure says so (CONT-038). A tank that ruptures or
+     * explodes takes the TTV with it, and whatever the other tank holds goes into the cell too.
      *
      * @param level the level it is in
      * @param holder who or what holds it, or the primed TTV itself
      * @return what it came to
      */
     public Step step(ServerLevel level, Entity holder) {
-        boolean changed = atmosTick(first, level, holder);
-        changed |= atmosTick(second, level, holder);
-        Vec3 at = holder.getBoundingBox().getCenter();
-        if (explodes(level, at, first) || explodes(level, at, second)) {
-            return Step.DESTROYED;
+        boolean changed = false;
+        if (first.getItem() instanceof GasTankItem) {
+            changed = GasTankItem.atmosTick(first, level, holder);
+            if (first.isEmpty()) {
+                return destroyed(level, holder, second);
+            }
+        }
+        if (second.getItem() instanceof GasTankItem) {
+            changed |= GasTankItem.atmosTick(second, level, holder);
+            if (second.isEmpty()) {
+                return destroyed(level, holder, first);
+            }
         }
         return changed ? Step.CHANGED : Step.QUIET;
     }
 
-    private static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
-        return tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, level, holder);
-    }
-
-    private static boolean explodes(ServerLevel level, Vec3 at, ItemStack tank) {
-        if (!(tank.getItem() instanceof GasTankItem)) {
-            return false;
+    /** One tank is gone: the gas of the one left has nothing to hold it. */
+    private static Step destroyed(ServerLevel level, Entity holder, ItemStack other) {
+        if (other.getItem() instanceof GasTankItem) {
+            GasParcel gas = GasTankItem.gas(other);
+            if (!gas.isEmpty()) {
+                GasMutations.add(level, TankFailure.pointOf(holder), gas, TankFailure.RELEASE);
+            }
         }
-        double atm = GasTankItem.contents(tank).pressure() / 101.325;
-        if (atm <= EXPLODES_ATM) {
-            return false;
-        }
-        float power = (float) Math.min(MAX_POWER, (atm - EXPLODES_ATM) / ATM_PER_POWER);
-        level.explode(null, at.x, at.y, at.z, power, Level.ExplosionInteraction.NONE);
-        return true;
+        return Step.DESTROYED;
     }
 }
