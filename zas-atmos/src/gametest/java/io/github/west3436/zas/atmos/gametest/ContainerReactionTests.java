@@ -58,6 +58,18 @@ public final class ContainerReactionTests {
         return new GasParcel(Map.of(H2, 5.0, O2, 10.0, N2, 15.0), temperature);
     }
 
+    /** The hydrogen in {@link #flammableInATank}, mol. */
+    private static final double TANK_H2 = 1.0;
+
+    /**
+     * The same mixture for a 70 L tank, a fifth as much of it. A tank burns all its gas at once, and
+     * the 30 mol of {@link #flammable} would reach some 96 atm and explode it (CONT-038). This reaches
+     * some 19 atm, which a tank holds, so these tests see the reaction alone.
+     */
+    private static GasParcel flammableInATank(double temperature) {
+        return new GasParcel(Map.of(H2, TANK_H2, O2, 2.0, N2, 3.0), temperature);
+    }
+
     /** The store after one atmos tick is exactly the API's answer for what it held. */
     private static void assertReacted(Area a, GasStore gas, GasMixture before, String what) {
         GasMixture expected = Reactions.applyStandalone(before, 1, false);
@@ -186,10 +198,11 @@ public final class ContainerReactionTests {
                 .thenExecute(() -> {
                     for (ItemStack tank : new ItemStack[] {carried, held, offhand, SuitItem.tank(suit)}) {
                         h.assertValueEqual(GasTankItem.gas(tank).moles(H2), 0.0, "H2 left in a tank");
-                        a.close(GasTankItem.gas(tank).moles(H2O), 5.0, "water in a tank");
+                        a.close(GasTankItem.gas(tank).moles(H2O), TANK_H2, "water in a tank");
                         h.assertTrue(GasTankItem.gas(tank).temperature() > HOT, "a tank didn't heat up");
                     }
-                    h.assertTrue(cold.get(AtmosComponents.GAS.get()).equals(flammable(800)), "the cold tank reacted");
+                    h.assertTrue(
+                            cold.get(AtmosComponents.GAS.get()).equals(flammableInATank(800)), "the cold tank reacted");
                     a.close(
                             canister.get(AtmosComponents.GAS.get()).moles(H2),
                             5.0 * (1 - 375.0 / PipeVolumes.CANISTER),
@@ -200,7 +213,7 @@ public final class ContainerReactionTests {
 
     private static ItemStack tank(double temperature) {
         ItemStack tank = new ItemStack(AtmosItems.EMPTY_TANK.get());
-        GasTankItem.setGas(tank, flammable(temperature));
+        GasTankItem.setGas(tank, flammableInATank(temperature));
         return tank;
     }
 
@@ -252,11 +265,11 @@ public final class ContainerReactionTests {
         ItemEntity droppedSuit = drop(a, 4, suit);
         h.startSequence()
                 .thenWaitUntil(() -> {
-                    a.close(GasTankItem.gas(droppedTank.getItem()).moles(H2O), 5.0, "water in the dropped tank");
+                    a.close(GasTankItem.gas(droppedTank.getItem()).moles(H2O), TANK_H2, "water in the dropped tank");
                     a.close(
                             GasTankItem.gas(SuitItem.tank(droppedSuit.getItem()))
                                     .moles(H2O),
-                            5.0,
+                            TANK_H2,
                             "water in the dropped suit's tank");
                 })
                 .thenExecute(() -> {

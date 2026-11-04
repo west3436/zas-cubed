@@ -7,8 +7,9 @@ R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
 [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
 [airflow class tags](#airflow-classes), [reactions](#reactions) and
-[ignition sources](#ignition-sources). The rest of OPS-002's list (fuel, the
-other entity tags) arrives with its features in R1. Every format
+[ignition sources](#ignition-sources), [fuel profiles](#fuel-profiles) and
+[block ignition](#block-ignition). The rest of OPS-002's list (the other entity
+tags) arrives with its features in R1. Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -423,6 +424,42 @@ data/<namespace>/zas/fuel_profile/<path>.json
   ([Invalid files](#invalid-files)).
 - **When it applies:** profiles load when the server starts and reload with
   `/reload`.
+
+## Block ignition
+
+The gas temperature at which a flammable block catches fire from a zone beside
+it (FIRE-033), in place of `[fire] block_ignition_temperature`
+([config](config.md#server-zas-servertoml)):
+
+```
+data/<namespace>/zas/block_ignition/<path>.json
+```
+
+```json
+{
+  "blocks": ["#minecraft:wool", "#minecraft:leaves"],
+  "temperature": 500
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
+| `temperature` | number | yes | The ignition temperature, in K, above 0, up to 100,000 |
+
+- **Which blocks can burn** stays vanilla's: this file only says when. A block
+  catches only if it is flammable (`isFlammable`), with vanilla ignite odds
+  above 0, which is what `FireBlock.setFlammable` or NeoForge's flammability
+  hooks give it. Naming stone does nothing.
+- **Which file.** A file naming the block directly beats one matching it through
+  a tag. Then the file whose id sorts last wins.
+- **Shipped,** in `data/zas/zas/block_ignition/`: `wool_and_leaves.json`, 500 K
+  for `#minecraft:wool`, `#minecraft:wool_carpets` and `#minecraft:leaves`.
+- **Invalid files** are skipped with an error naming the file and field
+  ([Invalid files](#invalid-files)).
+- **When it applies:** files load when the server starts and reload with
+  `/reload`. A change gives the blocks a new geometry, which replaces each
+  dimension's simulation, as a change to a geometry override does.
 
 ## Reactions
 

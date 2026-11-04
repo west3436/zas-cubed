@@ -5,6 +5,7 @@
     "zas_atmos:connector_port",
     "zas_atmos:canister",
     "zas_atmos:vent",
+    "zas_atmos:scrubber",
     "zas_atmos:area_air_controller",
     "zas_atmos:fire_alarm",
     "zas_atmos:generator",
@@ -12,6 +13,8 @@
     "zas_atmos:heater",
     "zas_atmos:air_conditioner",
     "zas_atmos:recharger",
-    "zas_atmos:igniter"
+    "zas_atmos:igniter",
+    "zas_atmos:manual_valve",
+    "zas_atmos:redstone_valve"
   ]
 }

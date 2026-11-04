@@ -58,6 +58,10 @@ Pipes and caps hold 70 L, a connector port 200 L, a vent 400 L and a canister
 1,000 L (`PipeVolumes`). `PipeVolumesTest.cont_007_each_part_has_its_volume`
 (Unit); `GasDeviceTests` checks the volumes of built networks.*
 
+*2026-11-04: Note: a valve's body holds 200 L, one port buffer's volume, from
+the valve row of [vg §2](../research/vg-atmos-content.md#2-devices)
+(`PipeVolumes.VALVE`; `PipeVolumesTest` checks it).*
+
 #### CONT-008 · Perfect mixing
 `Must` · `R1` · `Implemented` · Verify: Unit
 
@@ -195,7 +199,7 @@ Pipes may leak or burst above configurable pressure differentials.
 Leaks and configurable thresholds stay here.*
 
 #### CONT-108 · Pipe burst
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59, D-57, [vg §1](../research/vg-atmos-content.md#1-pipe-networks) · Depends: CONT-100
 
 When a pipe network's pressure exceeds a segment's cell pressure by more than
 10,132.5 kPa (100 atm), one such segment, chosen at random, shall burst that
@@ -207,6 +211,17 @@ that never runs.)
 - **Verify:** A GameTest raises a network to just below and just above 100 atm
   over its room and checks only the second bursts one segment and dumps
   everything, with no explosion.
+
+*2026-11-04: Implemented ([#47](https://github.com/west3436/zas-cubed/issues/47)).
+`PipeBurst` checks at the start of a network's atmos tick, on what the last one
+left, so a reaction that takes a network past the threshold bursts it one atmos
+tick later, and a canister on the network fails first. Pipes and caps are
+segments; a device's buffer isn't, so a network with no pipe doesn't burst. A
+segment in a paused or unresolved cell doesn't burst, and a burst pipe drops
+nothing. `PipeBurstTests.cont_108_*` (GameTest) check a room just below and
+just above the threshold, open air, a network with no segment and a burst from
+a reaction; `PipeBurstTest.cont_108_*` (Unit) check the threshold and the choice
+among segments.*
 
 #### CONT-006 · Network cadence
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-31, D-20, D-50
@@ -335,8 +350,11 @@ stays Accepted until every device's GUI is built.*
 controller controls the vent (CONT-014), on the server, whatever the client
 sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
 
+*2026-11-04: The scrubber's GUI follows the same pattern
+(`ScrubberTests.cont_074_a_scrubbers_gui_is_checked_and_a_controller_wins`).*
+
 #### CONT-010 · Valves
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 There shall be a manual valve and a redstone-controlled valve.
 
@@ -345,8 +363,18 @@ There shall be a manual valve and a redstone-controlled valve.
   Minecraft's control signal.
 - **Verify:** A GameTest opens and closes each valve by hand and by redstone.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+Each valve answers to its own control: using a manual valve turns it and
+redstone doesn't move it, and a redstone valve is open exactly while it gets a
+signal and a hand doesn't move it. An inline part with a flange at each end of
+its axis, placed in line with the pipes beside it ([architecture
+§11.5](../architecture.md#115-devices)).
+`ValveTests.cont_010_a_manual_valve_turns_by_hand_only`,
+`cont_010_a_redstone_valve_follows_its_signal_only` and
+`cont_010_a_placed_valve_lines_up_with_its_pipes` (GameTest).*
+
 #### CONT-075 · Open valves join networks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 An open valve shall join the networks on both sides into one. Closing it
 separates them, sharing gas by volume (CONT-003).
@@ -356,6 +384,21 @@ separates them, sharing gas by volume (CONT-003).
 - **Verify:** A GameTest opens a valve between networks at different
   pressures, checks they equalize as one, closes it and checks the split by
   volume.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ValveTests.cont_075_a_manual_valve_joins_networks_and_splits_them_by_volume`
+and its redstone twin (GameTest) follow the Verify plan and check moles and
+thermal energy at each stage. A valve's 200 L body counts: open, it is part of
+the one network's volume; shut, it is a network of its own, holding its share
+sealed inside. Pipes stay connected to a shut valve and have no open end there
+(`cont_075_a_pipe_at_a_shut_valve_does_not_leak`). Networks follow a valve at
+its next atmos step, so it rebuilds them at most once per atmos tick
+(`cont_075_a_valve_rebuilds_networks_only_when_it_has_moved`). The position is
+the block state, so a real unload and reload keeps it, and the gas on each side
+(`cont_075_a_shut_valve_stays_shut_through_a_reload`,
+`cont_075_an_open_valve_stays_open_through_a_reload`).
+`PipeNetworkTest.cont_075_*` (Unit) turns a valve 1,000 times and checks moles
+and energy.*
 
 #### CONT-011 · Pressure pump
 `Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
@@ -492,7 +535,7 @@ when blowing, and of its zone when siphoning (`VentFlow`).
 siphon tests (GameTest) check a room takes at least four atmos ticks.*
 
 #### CONT-015 · Scrubber
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-02
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-02
 
 A scrubber shall remove selected gases or gas tags from its zone. The default
 selection is CO₂ and `zas:toxic`. It faces any of six ways, and a pipe joins
@@ -508,8 +551,20 @@ it only on its back, the face opposite its grille.
   is shaped like the vent: it faces any of six ways and takes a pipe only on
   its back.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:scrubber` takes gas from the cell in front of its grille into its
+network, through one `ZonePort` ([architecture
+§11.5](../architecture.md#115-devices)). `GasSelection` holds the gases and gas
+tags it keeps. An area air controller's order sets them, and so does its GUI,
+which has a toggle for each shipped gas and gas tag.
+`ScrubberTests.cont_015_a_scrubber_removes_co2_and_co_and_leaves_o2_and_n2` and
+`cont_015_a_pipe_joins_a_scrubber_only_on_its_back` (GameTest) check the Verify,
+and `GasSelectionTest` (Unit) checks the default. In an open cell it takes from
+the ambient, as a siphoning vent does
+(`cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`).*
+
 #### CONT-079 · Scrubber modes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall have three modes: scrubbing (keeps only the selected gases),
 siphon (keeps its whole sample) and panic (siphon at the panic rate).
@@ -518,8 +573,15 @@ siphon (keeps its whole sample) and panic (siphon at the panic rate).
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A GameTest checks each mode's effect on a mixed room.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberTests.cont_079_scrubbing_keeps_only_the_selected_gases`,
+`cont_079_siphon_keeps_its_whole_sample` and
+`cont_079_panic_is_siphon_at_the_panic_rate` (GameTest) each run a step in a
+mixed room and check every gas in the room and the network. A sample's other
+gases are never removed, so "keeps only" is a removal of the kept gases alone.*
+
 #### CONT-080 · Scrubber rate
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 
@@ -529,14 +591,25 @@ A scrubber shall sample 500 L/s of its zone (1,000 L/s in panic).
 - **Verify:** A Unit test checks the sampled volume per second in normal and
   panic modes.
 
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_080_*` (Unit). A sample holds its volume's share of the
+zone's moles, and at most all of them.*
+
 #### CONT-081 · Scrubber stall
-`Must` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
 A scrubber shall stop once its buffer reaches 50 atm.
 
 - **Rationale:** vg: vg's 50 atm scrubber stall ([vg
   §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)).
 - **Verify:** A Unit test checks a scrubber stops at 50 atm in its buffer.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`ScrubberMathTest.cont_081_*` (Unit), and
+`ScrubberTests.cont_081_a_scrubber_stops_at_50_atm_in_its_buffer` (GameTest).
+Its buffer is a network member, so 50 atm is read from its network's one
+mixture (CONT-001). The sample that would pass 50 atm is cut to what reaches
+it.*
 
 #### CONT-016 · Passive vent
 `Could` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
@@ -864,7 +937,7 @@ made by filling (CONT-039); the creative tab also has a filled emergency tank,
 O₂ at 3 atm. `cont_030_tanks` checks each tank's volume and contents.*
 
 #### CONT-038 · Tank failure
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §4](../research/vg-atmos-content.md#4-mob-interaction-humans)
 
 A tank shall leak above 30 atm, rupture above 40 atm, and explode above 50 atm
 as a vanilla explosion of power (P − 50 atm) / 10 atm.
@@ -879,8 +952,24 @@ as a vanilla explosion of power (P − 50 atm) / 10 atm.
 
 *2026-10-31: the power is capped by CONT-109 (D-59).*
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerFailure` turns a pressure into a verdict, and `TankFailure.check`
+applies it at a position. A leak lets out a tenth of the gas each atmos tick and
+stops at 30 atm. A rupture or an explosion uses the tank up and puts all its gas
+into its cell. It goes by pressure alone, without vg's integrity steps. A tank
+checks once per atmos tick, after its gas reacts (CONT-100), so a burn that raises
+the pressure is seen in that same tick. It checks wherever it reacts: in a
+player's main slots, armor slots and offhand, in a suit's slot, worn, carried or
+dropped, and on the ground. A tank in a chest, on a mob or in an item frame
+doesn't tick and waits until it is carried. What leaks goes into the cell at the
+middle of the holder's body, and the explosion is there too. It has no source
+entity, so it hurts the holder and credits nobody. `ContainerFailureTest` (Unit)
+checks every threshold; the `cont_038_` GameTests check each threshold in the
+world, the formula's power, that the holder is hurt under each preset, failing in
+each place, and a burn that explodes a tank in one atmos tick.*
+
 #### CONT-107 · Container explosions and blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, D-28, D-14
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, D-28, D-14
 
 Explosions of tanks (CONT-038) and canisters (CONT-102) shall break blocks
 only under the Hardcore preset. Under Normal they damage entities but leave
@@ -890,8 +979,15 @@ blocks intact. Either preset can override it (OPS-007).
 - **Verify:** GameTests explode a tank under each preset and check blocks
   break only under Hardcore.
 
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`ContainerBlast.explode` reads the preset's option through the API (API-059)
+each time. `cont_107_a_tank_breaks_blocks_only_under_hardcore` and
+`cont_107_either_preset_can_override_it` (GameTest).
+`cont_038_a_blast_hurts_the_tanks_holder_under_each_preset` checks the harm.
+Canisters will explode through the same call (CONT-102).*
+
 #### CONT-109 · Container explosion power cap
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59 · Depends: CONT-038, CONT-102
 
 The power of a tank (CONT-038) or canister (CONT-102) explosion shall be capped
 at 16, configurable (TNT is 4).
@@ -899,6 +995,12 @@ at 16, configurable (TNT is 4).
 - **Rationale:** Decision: D-59.
 - **Verify:** A GameTest explodes a tank at a pressure whose formula power
   exceeds 16 and checks the power used is 16.
+
+*2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`[containers] explosion_power_cap` in `zas_atmos-server.toml`, 16 by default and
+0 to 64. `cont_109_a_tanks_power_is_capped_at_16` and
+`cont_109_the_cap_is_configurable` (GameTest), and `ContainerFailureTest` (Unit)
+for the canister's rule.*
 
 #### CONT-103 · Tank transfer valve
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-57, S-13
@@ -1720,6 +1822,11 @@ vent, out of a real generator's FE, and an ordered-off vent draws nothing.
 This stays Accepted until every device's draw is in the config.*
 
 *2026-11-03: added the central atmospherics controller (CONT-115, D-75).*
+
+*2026-11-04: The scrubber's 15 (30) FE/t are `[power] scrubber` and `[power]
+scrubber_panic`, drawn while it isn't off
+(`ScrubberTests.cont_065_a_scrubber_draws_only_while_on_and_twice_as_much_in_panic`).
+This stays Accepted until every device's draw is in the config.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01

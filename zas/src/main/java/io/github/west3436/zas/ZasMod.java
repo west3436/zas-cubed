@@ -8,6 +8,7 @@ import io.github.west3436.zas.config.ZasClientConfig;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.debug.DebugOverlay;
 import io.github.west3436.zas.environment.Ambients;
+import io.github.west3436.zas.fire.BlockIgnitions;
 import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.fire.FuelProfiles;
 import io.github.west3436.zas.gas.GasRegistryEvents;
@@ -58,6 +59,7 @@ public final class ZasMod {
         Photosynthesis.register(NeoForge.EVENT_BUS);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
         FuelProfiles.register(NeoForge.EVENT_BUS);
+        BlockIgnitions.register(NeoForge.EVENT_BUS);
         Burners.register(NeoForge.EVENT_BUS);
     }
 }

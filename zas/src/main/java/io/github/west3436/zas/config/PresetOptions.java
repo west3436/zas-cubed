@@ -117,7 +117,7 @@ public final class PresetOptions {
             true,
             "Whether tank and canister explosions break blocks; they hurt entities either way",
             "CONT-107",
-            "CONT-107");
+            null);
 
     private static final List<PresetOption<?>> ALL = List.of(
             AMBIENT_VARIANT,

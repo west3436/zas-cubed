@@ -45,6 +45,11 @@ public class PipeBlockEntity extends PipeNodeEntity {
         super(AtmosBlockEntities.PIPE.get(), pos, state, PipeVolumes.PIPE);
     }
 
+    @Override
+    protected boolean isSegment() {
+        return true;
+    }
+
     /** Whether the pipe has an open end: fewer than two connections. */
     public boolean isOpen() {
         return PipeBlock.connections(getBlockState()) < 2;
