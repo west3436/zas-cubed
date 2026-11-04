@@ -2,6 +2,8 @@
   "itemGroup.zas_atmos": "ZAS³ Atmospherics",
   "block.zas_atmos.pipe": "Pipe",
   "block.zas_atmos.pipe_cap": "Pipe End Cap",
+  "block.zas_atmos.manual_valve": "Manual Valve",
+  "block.zas_atmos.redstone_valve": "Redstone Valve",
   "block.zas_atmos.connector_port": "Connector Port",
   "block.zas_atmos.canister": "Canister",
   "block.zas_atmos.vent": "Vent",
