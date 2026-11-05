@@ -1070,6 +1070,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` and light vanilla fires | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027, FIRE-033, FIRE-034 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, DATA-019, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
+| Device activity (`zas_atmos`) | what each device moved in its last step | what changed, within 32 blocks, ≤ once per atmos tick per player | DATA-017, DATA-018, D-53 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
 *Implemented (#30):* the `/zas` commands ([commands.md](commands.md)) read
@@ -2177,7 +2178,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
 | `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
-| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
@@ -2195,7 +2196,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, and `GasJetParticles` (§11.12) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12) and `DeviceLoops` (§11.2) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2244,6 +2245,24 @@ jar, so providers can be tested before real devices exist.
 - **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once, for
   GameTests that drive atmos ticks themselves with the framework's
   `tickNow`.
+- **Activity** (DATA-017, DATA-018; Draft until the owner's review). A device that
+  moves gas calls `reportMoved(moles)` in its step, and `reportStopped()` when it
+  is off. A device that moves no gas, such as a heater, calls `reportRunning()`,
+  and reads as working. That one line is all a device needs. The base turns it
+  into a level
+  (`DeviceActivity`), and a device that has never reported costs one null check.
+  `DeviceActivitySync` lists each level's devices that aren't idle. Once per atmos
+  tick, at a phase given by its entity id, a player is sent what differs from what
+  it was last told, within 32 blocks, and told to forget what has gone idle, been
+  removed or is over 40 blocks away. A device that hasn't stepped for 3 s reads as
+  idle, so a stuck port or a chunk out of full status can't leave a loop running.
+- **Reading it on a client.** `ClientDeviceActivity.LOCAL` holds the table:
+  `level(pos)`, or `forEach`. It empties on a new level and on logging out, and
+  whoever reads it checks the block is still there. It doesn't drop a device whose
+  chunk has left the client, because the server wouldn't say it again.
+  `client.DeviceLoops.add(block, sound)` gives a kind of device its loop: each
+  client tick it asks `ClientSounds.loop` for every listed device of that kind
+  within 8 blocks, as loud as its level (0.35, 0.6 or 1).
 
 ### 11.3 The power contract (CONT-060, CONT-065, CONT-069)
 
@@ -3173,8 +3192,10 @@ client works out for itself. No client ever sees a zone (D-53).
 
 `AtmosSounds`, and `zas.sound.ZasSounds` for the framework, register one sound
 event for each thing that happens, named for it: `zas_atmos:device.pump.run`,
-`zas:fire.ignite`. Everything about how an event sounds is in the mod's
-`sounds.json`: the file, and its pitch, volume and range. So devices can share
-vg's few files at different pitches, and a sound can be swapped with no code
-change. Which vg file each event uses, and why, is in [vg
-sounds](research/vg-sounds.md).
+`zas:fire.ignite`. How an event sounds is in the mod's `sounds.json`: the file,
+its pitch and its volume. So devices can share vg's few files at different
+pitches, and a sound can be swapped with no code change. A one-shot's range is
+there too. A server only sends a sound out to its event's range, so an event
+heard past 16 blocks is registered with the same range, and a GameTest checks
+that they agree. A loop's range comes from the client's loop manager instead.
+Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).

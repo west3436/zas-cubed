@@ -70,19 +70,27 @@ elsewhere. It doesn't prove where a file came from.
 | `machines/effects/air_alarm_warning`, `air_alarm_danger` | vg #37730 says they are Airbus and MD-11 autopilot disconnect sounds. The tags say Sound Forge 4.0, 1999. |
 | `machines/looping/gas_hiss`, `machines/looping/smes_hum`, `machines/effects/smes_switch`, `machines/looping/bubbles` | The same PR, which names no source. All carry the same tag left by an MP4 container (`TXXX=isommp42` or `iso6mp41`) as the two aircraft files. `bubbles` also says Sound Forge 4.0, 1999. |
 | `effects/Explosion_Small1` to `3`, `effects/explosionsmallfar` | Added with `weapons/stickybomb_det` in a "Stickybomb Launcher" commit, a Team Fortress 2 weapon, with no source. `Explosion_Small1` says Sound Forge 5.0, 2003, twelve years before the commit. |
-| `effects/Explosion3` to `6` | One 2014 sound batch with no sources. `Explosion5` is tagged `TITLE=Track 81`, `ALBUM=Album`, `ARTIST=Artist`, as a track of an effects disc would be. 3, 4 and 6 have no sign themselves and are left out only as its siblings. |
+| `effects/Explosion3` to `6`, `effects/bamfgas` | One 2014 sound batch with no sources. `Explosion5` is tagged `TITLE=Track 81`, `ALBUM=Album`, `ARTIST=Artist`, as a track of an effects disc would be. The others have no sign themselves and are left out only as its siblings. |
 | `machines/charge_finish` | vg #25079 links a Discord-hosted `alert12.mp3` with no source. |
 | `misc/click`, `weapons/flamethrower`, `machines/compactor` | Tags from a DASH stream (`major_brand=dash`), as a video download leaves. |
 | `effects/vacuum` | Tags from an M4A made by Google's muxer. |
 | `effects/blow` | Tagged `TITLE=Age of empires 2 villager spawn sound`. |
 | `misc/TestLoop1` | FL Studio music from a roundstart-music commit. |
 
-**Used, with a doubt the owner should see:** see [For review](#for-review).
+**Used, with a gap:** `misc/fire_alarm`, for the fire alarm. It came in vg #33473
+(`bc8e6c73f7`, 2022), whose author is this project's owner. The PR names no
+source, and the file's tags are the emptied keys of an MP4 file. The owner says
+(2026-11-05) that it came from Freesound under a suitable license. The original
+sound and its author aren't recorded. See [For review](#for-review).
 
 **Used, no sign:** everything else in the tables. Most came in vg's first commit
 (`662c08272a`, 2010), an import with no record of each file. The wind files came
 in `4053e33a3f` (2012), and `misc/comfyfire` in `484b82f074` (2015), whose
-message credits sprites but no sounds.
+message credits sprites but no sounds. Of the rest, `effects/extinguish` and
+`refill` came in `456a9d6da6` (2010), `effects/alert` in `7a4b9e09bc` (2011),
+`machines/pressurehiss` in `ad47dc7a62` (2016), `machines/door_bolt` and
+`door_unbolt` in `c5c5fe9ca0` (2019), and `items/assemblytick2` in `1c313df696`
+(2025).
 
 ## Airflow
 
@@ -110,7 +118,7 @@ All are in `assets/zas/sounds/fire/`.
 | Event | vg file | vg's use | Source | Shipped |
 |---|---|---|---|---|
 | `zas:fire.loop` | `misc/comfyfire` | **No match: vg's gas fire is silent.** The closest is the campfire's crackle. This long file holds the same material as the three parts vg plays. It is a crackle, not a roar | 15.88 s, 2 ch | 15.48 s loop |
-| `zas:fire.ignite` | `effects/bamf` | **No match: gas catching fire is silent in vg.** The closest is the flare-up when a player catches fire by accident, also a reagent splash exploding. The right channel only, as the two are out of phase | 2.21 s, 2 ch | one-shot |
+| `zas:fire.ignite` | `effects/bamf` | **No match: gas catching fire is silent in vg.** The closest is the flare-up when a player catches fire by accident, also a reagent splash exploding. The right channel only, as averaging the two partly cancels them | 2.21 s, 2 ch | one-shot |
 
 ## Gas blasts
 
@@ -121,11 +129,13 @@ gas containers that explode (CONT-107).
 |---|---|---|---|---|
 | `zas_atmos:blast.near` | `effects/Explosion1`, `effects/Explosion2` | Two of the six near sounds of a blast with a devastation range | 3.19 s and 3.94 s, 2 ch | 1, 1 |
 | `zas_atmos:blast.small` | The same two | **vg's small sounds aren't usable** (see above), so these are its big ones, pitched up | | 1.5, 0.6 |
-| `zas_atmos:blast.far` | `effects/explosionfar` | The far sound of a big blast, out to the far distance | 7.56 s, 2 ch | 1, 1; `attenuation_distance` 256 |
-| `zas_atmos:blast.small_far` | The same | **vg's small far sound isn't usable**, so this is its big one, pitched up | | 1.5, 0.5; `attenuation_distance` 128 |
+| `zas_atmos:blast.far` | `effects/explosionfar` | The far sound of a big blast, out to the far distance | 7.56 s, 2 ch | 1, 1; range 256 |
+| `zas_atmos:blast.small_far` | The same | **vg's small far sound isn't usable**, so this is its big one, pitched up | | 1.5, 0.5; range 128 |
 
 Pass volume 4 for a near blast, as vanilla's explosion does: that gives 64 blocks
-of range.
+of range. The far events carry their range themselves, so pass volume 1. A
+`level.playSound` reaches everyone in range, near listeners included, so to play
+one or the other per listener, as vg does, send each player only theirs.
 
 ## Devices
 
@@ -143,7 +153,10 @@ Shared running loops:
 | `device/hiss` | `effects/smoke` | As `airflow.hiss` | 3.56 s, 2 ch | 2.77 s |
 | `device/engine` | `ambience/ambieng1` | Engine room ambience, not played by any code now. A steady pulse every 0.410 s, and the loop is cut to 15 of them | 38.82 s, 2 ch | 6.15 s |
 
-Running loops, about 8 blocks' range (`attenuation_distance` 8):
+Running loops. `sounds.json` sets each loop's file, pitch and volume, but **not its
+range**. A loop plays through the client's loop manager with no attenuation of its
+own, so its range comes from the `LoopRequest` that starts it, about 8 blocks by the
+owner's decision.
 
 | Event | File | Pitch | Volume | vg |
 |---|---|---|---|---|
@@ -163,46 +176,70 @@ Running loops, about 8 blocks' range (`attenuation_distance` 8):
 | `zas_atmos:device.recharger.run` | hum | 1.8 | 0.2 | **Silent** while charging |
 | `zas_atmos:device.generator.run` | engine | 1 | 0.45 | **Silent**; no generator of vg's has a sound |
 
-On, off and event sounds land in the round's second sound PR. The events will
-be, with their planned files:
+On and off, all `machines/click` (0.37 s, 2 ch), shipped as `device/click`. **No
+device-specific match:** vg's space heater clicks when it shuts itself off, and many
+machines' buttons use it. Each device has a pitch of its own, lower for off.
 
-| Events | vg file | vg's use | Source |
+| Events | On pitch | Off pitch | Volume |
 |---|---|---|---|
-| `device.<pump, volume_pump, vent, scrubber, filter, mixer, heater, air_conditioner, portable_pump, portable_scrubber, generator, controller, recharger>.on` and `.off`, at a pitch each | `machines/click` | **No device-specific match.** The space heater's click when it shuts itself off, and many machines' buttons | 0.37 s, 2 ch |
-| `device.valve.open`, `.close`, and `device.redstone_valve.open`, `.close`, pitched up | `machines/door_unbolt`, `machines/door_bolt` | **Valves are silent.** The airlock's bolts lifting and dropping | 1.02 s, 2 ch |
-| `device.canister.open`, `.close` | `machines/click`, pitched down | **Silent**, though the hiss starts and stops | 0.37 s, 2 ch |
-| `device.port.connect`, `.disconnect` | `items/Ratchet` | vg's wrench, which is what connects a port | 1.41 s, 2 ch |
-| `device.pipe.burst`, `device.container.burst` | `effects/bamfgas` | **Pipes burst silently.** An airbag inflating, a chem grenade going off | 2.21 s, 2 ch |
-| `device.container.leak` | `effects/spray` | A canister destroyed; a tank rupturing, both very quiet | 1.46 s, 2 ch |
-| `device.tank.open`, `.close` | `machines/click` | **Silent** | 0.37 s, 2 ch |
-| `device.tank.low` | `effects/alert` | A tank almost out of gas, on inspecting it | 2.38 s, 1 ch |
-| `device.igniter.click` | `machines/click` | The ignition switch clicks, with a file not used here | 0.37 s, 2 ch |
-| `device.igniter.spark` | `effects/sparks1` to `4` | Any spark effect | 0.73 to 1.15 s, 2 ch |
-| `device.fire_alarm.alarm` | `misc/fire_alarm` | A fire alarm going off, at most once per its delay | 4.01 s, 2 ch |
-| `device.fire_alarm.reset` | `machines/click` | **Silent** | 0.37 s, 2 ch |
-| `device.controller.warning` | `machines/twobeep` | **Weak.** vg's air alarm has its own warning sound, which can't be used. Used for pinpointers, cargo and consoles | 0.29 s, 1 ch |
-| `device.controller.danger` | `machines/warning-buzzer` | **Weak**, as above. Gas extractor warnings, consoles | 3.51 s, 1 ch |
-| `device.firelock.open`, `.close` | `machines/airlock` | vg's firelock plays the default door sound | 1.28 s, 2 ch |
-| `device.firelock.force` | `effects/bang` | **Silent** apart from opening. A flashbang, or headbutting a door | 0.51 s, 2 ch |
-| `device.recharger.done` | `machines/ping` | **vg's recharger beep can't be used.** The robot charging station finishing an upgrade | 0.49 s, 1 ch |
-| `device.ttv.arm` | `weapons/armbomb` | A grenade being armed | 1.97 s, 2 ch |
-| `device.ttv.tick` | `items/assemblytick2` | An assembly timer's tick. vg's valve itself is silent | 0.20 s, 2 ch |
-| `device.ttv.open` | `machines/pressurehiss` | **Silent.** Cryo tubes, sleepers and suit machines opening | 1.69 s, 2 ch |
-| `device.extinguisher.spray` | `effects/extinguish` | The fire extinguisher spraying | 1.62 s, 2 ch |
-| `device.extinguisher.refill` | `effects/refill` | The fire extinguisher refilling | 1.27 s, 2 ch |
-| `device.extinguisher.empty` | `machines/click`, pitched up | **Silent** | 0.37 s, 2 ch |
+| `zas_atmos:device.pump.on`, `.off` | 1.1 | 0.9 | 0.35 |
+| `zas_atmos:device.volume_pump.on`, `.off` | 1 | 0.8 | 0.35 |
+| `zas_atmos:device.vent.on`, `.off` | 1.2 | 1 | 0.35 |
+| `zas_atmos:device.scrubber.on`, `.off` | 1.3 | 1.1 | 0.35 |
+| `zas_atmos:device.filter.on`, `.off` | 1.4 | 1.2 | 0.35 |
+| `zas_atmos:device.mixer.on`, `.off` | 1.5 | 1.3 | 0.35 |
+| `zas_atmos:device.heater.on`, `.off` | 0.9 | 0.75 | 0.35 |
+| `zas_atmos:device.air_conditioner.on`, `.off` | 1 | 0.85 | 0.35 |
+| `zas_atmos:device.portable_pump.on`, `.off` | 1.15 | 0.95 | 0.35 |
+| `zas_atmos:device.portable_scrubber.on`, `.off` | 1.25 | 1.05 | 0.35 |
+| `zas_atmos:device.generator.on`, `.off` | 0.8 | 0.7 | 0.35 |
+| `zas_atmos:device.controller.on`, `.off` | 1.6 | 1.4 | 0.35 |
+| `zas_atmos:device.recharger.on`, `.off` | 1.7 | 1.5 | 0.3 |
+
+The passive vent has no switch, so it has only its loop.
+
+Event sounds. Every event below is in `zas_atmos`:
+
+| Event | Pitch | Volume | vg file | vg's use | Source |
+|---|---|---|---|---|---|
+| `device.valve.open`, `.close` | 1.4 | 0.4 | `machines/door_unbolt`, `machines/door_bolt` | **Valves are silent.** The airlock's bolts lifting and dropping | 1.02 s, 2 ch |
+| `device.redstone_valve.open`, `.close` | 1.7 | 0.4 | The same | As above | |
+| `device.canister.open`, `.close` | 0.8, 0.7 | 0.35 | `machines/click` | **Silent**, though vg's hiss starts and stops | 0.37 s, 2 ch |
+| `device.port.connect`, `.disconnect` | 1, 0.9 | 0.4 | `items/Ratchet` | vg's wrench, which is what connects a port | 1.41 s, 2 ch |
+| `device.pipe.burst` | 0.85 | 0.8 | `effects/bamf` | **Pipes burst silently.** vg's flare-up and reagent splash exploding, the same file as `fire.ignite`, as the closer `effects/bamfgas` is [left out](#provenance) | 2.21 s, 2 ch |
+| `device.container.burst` | 1 | 0.9 | `effects/bamf` | **No match.** As above; vg's canisters and tanks give only the spray below | |
+| `device.container.leak` | 1.3 | 0.35 | `effects/spray` | A canister destroyed; a tank rupturing, both very quiet | 1.46 s, 2 ch |
+| `device.tank.open`, `.close` | 1.3, 1.1 | 0.3 | `machines/click` | **Silent.** A tank has no valve, only a distribution pressure, so these are for its supply starting and stopping | 0.37 s, 2 ch |
+| `device.tank.low` | 1 | 0.35 | `effects/alert` | A tank almost out of gas, on inspecting it | 2.38 s, 1 ch |
+| `device.igniter.click` | 1.5 | 0.35 | `machines/click` | The ignition switch clicks, with a file [left out](#provenance) | 0.37 s, 2 ch |
+| `device.igniter.spark` | 1 | 0.7 | `effects/sparks1` to `4` | Any spark effect | 0.73 to 1.15 s, 2 ch |
+| `device.fire_alarm.alarm` | 1 | 0.75; range 32 | `misc/fire_alarm` | A fire alarm going off, at most once per its delay | 4.01 s, 2 ch |
+| `device.fire_alarm.reset` | 1.2 | 0.35 | `machines/click` | **Silent** | 0.37 s, 2 ch |
+| `device.controller.warning` | 1 | 0.25 | `machines/twobeep` | **Weak.** vg's air alarm has its own warning sound, which is [left out](#provenance). Pinpointers, cargo and consoles | 0.29 s, 1 ch |
+| `device.controller.danger` | 1 | 0.5; range 24 | `machines/warning-buzzer` | **Weak**, as above. Gas extractor warnings, consoles | 3.51 s, 1 ch |
+| `device.firelock.open`, `.close` | 0.9, 0.8 | 0.5, 0.6 | `machines/airlock` | vg's firelock plays the default door sound | 1.28 s, 2 ch |
+| `device.firelock.force` | 0.8 | 0.4 | `effects/bang` | **Weak: silent** apart from opening. A flashbang, or headbutting a door | 0.51 s, 2 ch |
+| `device.recharger.done` | 1 | 0.3 | `machines/ping` | **vg's recharger beep is [left out](#provenance).** The robot charging station finishing an upgrade | 0.49 s, 1 ch |
+| `device.ttv.arm` | 1 | 0.7 | `weapons/armbomb` | A grenade being armed | 1.97 s, 2 ch |
+| `device.ttv.tick` | 1 | 0.3 | `items/assemblytick2` | An assembly timer's tick. vg's valve itself is silent | 0.20 s, 2 ch |
+| `device.ttv.open` | 1 | 0.6 | `machines/pressurehiss` | **Silent.** Cryo tubes, sleepers and suit machines opening | 1.69 s, 2 ch |
+| `device.extinguisher.spray` | 1 | 0.5 | `effects/extinguish` | The fire extinguisher spraying | 1.62 s, 2 ch |
+| `device.extinguisher.refill` | 1 | 0.5 | `effects/refill` | The fire extinguisher refilling | 1.27 s, 2 ch |
+| `device.extinguisher.empty` | 1.7 | 0.3 | `machines/click` | **Silent** | 0.37 s, 2 ch |
 
 ## How the files are made and used
 
 - **Mono.** Minecraft only attenuates mono sounds with distance, so a stereo file
   plays equally loud everywhere (CLIENT-021). Channels are averaged, or the
-  louder one kept where averaging would cancel: of the files so far, only
-  `effects/bamf`, whose average loses 4 dB against its louder channel.
+  louder one kept where averaging would cancel: only `effects/bamf`, whose average
+  loses 4 dB against its louder channel.
 - **Levels.** Loops are set to -20 dBFS RMS, or as near as a -1 dBFS peak allows,
   and one-shots to -1 dBFS peak, so relative levels live in `sounds.json`. For
   scale, vanilla's sounds measure: explosion -13 and -15 dBFS RMS, fire -34,
   click -27, fizz -24, conduit -22, beacon -29, portal -17. `fire.loop` comes out
-  at -34, because the crackle's peaks limit it, the same as vanilla's fire.
+  at -34, because the crackle's peaks limit it, the same as vanilla's fire. The
+  volumes in `sounds.json` are starting points from these figures, not from
+  listening: the click at 0.35 comes out about 3 dB above vanilla's lever.
 - **Loops** are cut to a region and their ends joined with an equal-power
   crossfade of 0.4 to 1.5 s, which also removes the near-silence at both ends of
   the wind files. Measured after encoding, the step across each join is at most
@@ -215,10 +252,15 @@ be, with their planned files:
   and loops exactly. The longest loop is 15.5 s, under 1.4 MB when decoded.
 - **Pitch** multiplies: what `sounds.json` sets, what the code passes, then the
   game clamps the result to 0.5 to 2.
-- **Range** is the event's `attenuation_distance` (16 by default) times the
-  volume passed, if that is above 1. All events use variable range, so a server
-  sends a sound as far as that reaches.
+- **A one-shot's range** on a client is its `attenuation_distance` (16 by default)
+  times the volume passed, if that is above 1. A server sends a sound only out to
+  the event's own range: 16 blocks, or 16 times a volume above 1, unless the event
+  is registered with a fixed range. So `blast.far`, `blast.small_far`,
+  `device.controller.danger` and `device.fire_alarm.alarm` are registered with the
+  range their `sounds.json` sets, and a GameTest checks the two agree.
+- **A loop's range** isn't in `sounds.json`: see [Devices](#devices).
 - **Sliders.** Blocks on Blocks, airflow on Ambient/Environment.
+- **Size.** 35 files, 842 KB in all.
 - **The game's decoder reads them.** The test `client_021_…decodes…` runs every
   file through Minecraft's own decoder, as nothing here can play one.
 
@@ -226,25 +268,27 @@ be, with their planned files:
 
 Replace the ogg under the same name, or change the `name`, `pitch` or `volume` in
 `sounds.json`. No code changes, as events are named for what happens, not for the
-file. A new file also needs its `CREDITS` entry and must be mono.
+file. A new file also needs its `CREDITS` entry and must be mono. A one-shot's range
+past 16 blocks also needs the same number in `AtmosSounds`.
 
 ## For review
 
 For the owner, when judging the combined world:
 
 - **The most noticeable files:** `effects/smoke` and the wind files for airflow,
-  `misc/comfyfire` for fire, `effects/bamf` for ignition, `effects/Explosion1`,
-  `Explosion2` and `explosionfar` for blasts.
+  `misc/comfyfire` for fire, `effects/bamf` for ignition and bursts,
+  `effects/Explosion1`, `Explosion2` and `explosionfar` for blasts.
 - **`machines/looping/gas_hiss`** is vg's own gas-release loop and the natural
   choice for the hiss, but it came in the same PR as two aircraft recordings,
   with the same MP4 tag. If you know it's fine, it's one file to swap, for the
   airflow hiss and the canister. The same goes for `smes_hum` and `smes_switch`.
-- **`misc/fire_alarm`**, planned for the fire alarm, is your own vg PR (#33473),
-  which names no source. Its tags are the emptied keys of an MP4 file. You'd know
-  where it came from. If it isn't clean, `machines/warning-buzzer` is the
-  fallback.
-- **`effects/bamfgas`**, planned for bursts, came in the same 2014 batch as
-  `Explosion5`, the file tagged as a disc track. It has no sign itself.
-- **Weak matches:** the controller's alarms, the pumps' and the generator's loops,
-  and the fire loop, which is a crackle and not a roar.
+- **`misc/fire_alarm`** has a gap in its record. You cleared it on 2026-11-05: from
+  Freesound under a suitable license. The original sound and its author aren't
+  recorded, and `CREDITS` says so. Some Freesound licenses need the author named,
+  so if you find the original, its entry should gain its link and author.
+- **Bursts use `effects/bamf`,** the same file as ignition. `effects/bamfgas` would
+  have been closer, but it's left out with its 2014 batch. Pipe bursts are pitched
+  lower, but a burst and an ignition may be hard to tell apart.
+- **Weak matches:** the controller's alarms, the firelock being forced, the pumps'
+  and the generator's loops, and the fire loop, which is a crackle and not a roar.
 - **Small blasts** are vg's big explosion pitched up, not vg's small files.

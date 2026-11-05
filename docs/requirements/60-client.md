@@ -272,12 +272,15 @@ these either, so this stays Draft.*
 
 Every sound event `zas` and `zas_atmos` register shall be defined in their
 `sounds.json`, every file an event names shall exist, every file shipped shall
-be named by an event, and every event shall have a subtitle in `en_us`.
+be named by an event, and every event shall have a subtitle in `en_us`. An event
+whose `sounds.json` sets a range past 16 blocks shall be registered with that
+range.
 
 - **Rationale:** Inferred: a missing file only logs a warning and plays silence,
   which nobody can catch without hearing it. Subtitles are how a player who can't
   hear a sound still gets it, and they must be translatable (CLIENT-007). Files
-  nothing plays would only grow the jar.
+  nothing plays would only grow the jar. A server only sends a sound out to its
+  event's range, so a longer range in `sounds.json` alone is never heard out there.
 - **Verify:** Unit tests check the files and subtitles; a GameTest checks the
   registered events against `sounds.json`.
 
@@ -285,8 +288,9 @@ be named by an event, and every event shall have a subtitle in `en_us`.
 `client_020_every_event_names_files_that_exist`,
 `client_020_every_file_is_named_by_an_event` and
 `client_020_every_event_has_a_translated_subtitle` (Unit, one set per mod), and
-`client_020_registered_events_are_defined` and
-`client_020_atmos_registered_events_are_defined` (GameTests).*
+`client_020_registered_events_are_defined`,
+`client_020_atmos_registered_events_are_defined` and
+`client_020_atmos_event_ranges_match_sounds_json` (GameTests).*
 
 #### CLIENT-021 · Sound files are mono Vorbis
 `Must` · `R1` · `Draft` · Verify: Unit · Trace: CLIENT-010

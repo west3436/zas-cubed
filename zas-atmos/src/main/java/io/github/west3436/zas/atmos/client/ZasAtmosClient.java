@@ -47,6 +47,7 @@ public final class ZasAtmosClient {
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
+        DeviceLoops.register(NeoForge.EVENT_BUS);
         ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
     }
 

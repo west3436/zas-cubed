@@ -80,6 +80,10 @@ public final class TestDevice {
         public int draw = 10;
         /** Whether it is ready to step. */
         public boolean ready = true;
+        /** The moles it says it moves each step (DATA-017). */
+        public double moves;
+        /** Whether it says it has stopped at each step (DATA-017). */
+        public boolean stopping;
 
         private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, () -> draw, this::now);
 
@@ -93,6 +97,10 @@ public final class TestDevice {
             threads.add(Thread.currentThread());
             if (power.isPowered()) {
                 poweredSteps.add(now());
+            }
+            reportMoved(moves);
+            if (stopping) {
+                reportStopped();
             }
         }
 
