@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.pipe;
 
 import io.github.west3436.zas.atmos.gas.GasStore;
+import java.util.List;
 
 /**
  * A member of a pipe network: a pipe, a cap, a device's port buffer, an attached canister
@@ -22,4 +23,12 @@ public interface PipeNode {
 
     /** Sets the network the node is in; called only by {@link PipeNetwork}. */
     void joinNetwork(PipeNetwork network);
+
+    /**
+     * The nodes connected to this one in the world, for {@link PipeNetwork#build}. A node that isn't
+     * in a world, as in a unit test, has none and is linked by the function given to {@code build}.
+     */
+    default List<PipeNode> connectedNodes() {
+        return List.of();
+    }
 }

@@ -2116,6 +2116,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
+| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus` |
+| `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
@@ -2218,6 +2220,13 @@ the cell in front of its grille).
   decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
+- **Blocks in several networks.** A block entity that pipes join is a
+  `PipeHost`, which says which node each face leads to. A `PipeNodeEntity` is
+  one node, so every face leads to itself. A device with several ports has a
+  `PipePort` per port, a node that isn't a block entity, so each face leads to
+  a network of its own (§11.5). A network's members are `PipeNode`s, then, and
+  not all of them are `PipeNodeEntity`s. A network may hold only ports, with no
+  pipe in it at all, so a port steps its network as a pipe does (CONT-100).
 - **One mixture.** A `PipeNetwork` is its members and one `GasStore`, whose
   volume is theirs summed (CONT-001), so every change mixes the whole network
   (CONT-008). A `GasStore` is the content mod's mutable mixture. Gas added
@@ -2267,7 +2276,8 @@ the cell in front of its grille).
   isn't stepping, because its chunk has left full status, holds nothing up. It
   runs in `PipeNodeEntity.beforeAtmosTick`, which comes before the node's own
   `atmosTick`, so every kind of node takes part without doing anything, and a
-  device's step sees the pressure the reaction left. The mixture reacts through
+  device's step sees the pressure the reaction left. An inline device does the
+  same for each of its ports (`PipePort.beforeAtmosTick`). The mixture reacts through
   `ContainerReactions.react`: `Reactions.applyStandalone` (API-019) with no
   ignition source, so it burns only above a fuel's autoignition temperature.
   A new network reacts at its first step, so a rebuild can bring its next
@@ -2446,7 +2456,10 @@ the cell in front of its grille).
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
     an open valve whose neighbour is in another network reconnects at its next
-    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`).
+    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
+    a valve updates no neighbour's shape, since its flanges and shape are the same
+    open or shut. That update's read of the next block would bring such a chunk
+    back for two game ticks, and a network built in them would reach into it.
 - **Heater** (CONT-019, CONT-087, D-73), in `.heater`.
   - A portable floor machine, not a full block, so it stands in its room's
     cell and gas passes around it. Its front faces the player who places it.
@@ -2548,7 +2561,51 @@ the cell in front of its grille).
   (`data/zas/tags/block/ignition_sources.json`), so the framework counts it as
   a standing ignition source while `lit` is true (API-053, §5), with nothing
   added to the API. `lit` picks the `igniter_on` model. No GUI.
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber or recharger with an empty hand opens its
+- **Inline devices**, in `.inline`: pumps, and the base for filters and mixers.
+  - An `InlineDeviceBlock` sits in a pipe line. It isn't a full block, so it
+    stands in its room's cell and gas passes around it. `facing` is the way its
+    gas goes, in any of six ways, and `on` shows it is running: on and powered.
+    Its models are drawn facing north and turned by the blockstate: y 90, 180
+    and 270 for east, south and west, x 270 for up and x 90 for down. Its shape
+    is drawn facing north, too, and turned the same way.
+  - `portFaces` gives the faces it has a pipe port on, in port order. The
+    default is two: port 0 at the back, where gas comes in, and port 1 at the
+    front. A device with a side port adds it, and calls
+    `InlineDeviceEntity.portsChanged` after moving it.
+  - Placed, its gas goes the way the player looks. Nothing can turn it
+    afterwards until the wrench exists, so if that way joins no pipe and another
+    does, it takes the nearest way that does: looking down at a run on the
+    floor, it lines up with the run.
+  - An `InlineDeviceEntity` has a 200 L `PipePort` per port (CONT-007), each
+    in a network of its own (§11.4). It saves each port's share, in `Ports`, and
+    releases them into its cell when it is removed (CONT-009). Pipes that join
+    two of its ports make them one network; it then has nothing to move gas
+    between. Before its own step, each port takes its turn in its network's
+    atmos tick (CONT-100), so a network of ports alone reacts too.
+  - It is a controller's part in the gas-handling group (CONT-064), through
+    its zone or a link, with its own cell as its `airPoint`. It draws
+    `drawWhenOn()` FE/t while on, running or idle, and runs only on paid-for
+    power. So a lease it got while it was off, which cost nothing, doesn't run
+    it. `work` moves the gas and returns an `InlineStatus` for its GUI: moving,
+    or idle and why.
+  - `InlineDeviceMenu` holds the switch, power, status and each port's pressure
+    in its data slots, and a device's own slots and buttons follow.
+    `InlineDeviceScreen`, its GUI, shows them, with the device's own lines and
+    buttons.
+- **Pressure pump** (CONT-011, CONT-076), in `.pump`. A `PumpBlockEntity` has
+  an input at the back and an output at the front, the way its arrows point,
+  and one setting. It moves gas between the two networks' `GasStore`s directly,
+  so the gas mixes in conserving thermal energy (§11.4), and it adds no heat of
+  its own. `PumpFlow.pressurePump` is the least of what brings the output to
+  the target (`molesToTarget`) and the moles in 100 L at the input's conditions
+  (`molesInVolume`). The output's volume is its network's, which counts the
+  port's buffer once. `molesToTarget` allows for the output's temperature
+  changing as gas mixes in, so it hits the target even between gases of
+  different molar heat capacity. The target is 0–4,500 kPa, 101.325 kPa when
+  new, and flows under 10⁻⁴ mol are skipped. It draws `[power] pressure_pump`
+  FE/t (20). Its GUI has the switch and ±10 and ±100 kPa buttons, and shows its
+  status, target, both pressures and its power.
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
