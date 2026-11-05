@@ -273,6 +273,24 @@ public record Geometry(
         return new Geometry(coverage, cells, f, through, partitions, u, source, igniteOdds, ignitionTemperature);
     }
 
+    /**
+     * This shape with the heat and fire data of another geometry: for the geometry of a single
+     * position, which is still that of its block (GEO-043, API-023).
+     */
+    public Geometry withDataOf(Geometry block) {
+        int kept = FLAG_HEAT_SOURCE | FLAG_FIRE | FLAG_GAS_FIRE | FLAG_IGNITION_SOURCE;
+        return new Geometry(
+                coverage,
+                cells,
+                (flags & ~kept) | (block.flags & kept),
+                through,
+                partitions,
+                block.transmittance,
+                block.sourceTemperature,
+                block.igniteOdds,
+                block.ignitionTemperature);
+    }
+
     /** Whether the block can catch fire (FIRE-033, FIRE-034). */
     public boolean isFlammable() {
         return igniteOdds > 0;

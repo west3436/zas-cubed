@@ -108,7 +108,7 @@ exposure temperature (LIFE-011).*
 ## Normal-preset survival
 
 #### ENV-009 · No hazards in Normal
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-13, D-19
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-19
 
 With the Normal preset and no atmos devices in use, ZAS³ shall cause no
 atmospheric hazards in the vanilla dimensions. (No zones form there either,
@@ -118,8 +118,13 @@ per CORE-055.)
 - **Verify:** A GameTest under Normal checks a player in each vanilla
   dimension takes no atmospheric harm.
 
+*2026-11-05: `env_009_no_atmospheric_harm_in_any_vanilla_dimension` puts a player
+that can be hurt in the open air of each dimension for 20 s of checks and game
+ticks (#66). The test's coverage is open air: it doesn't try every biome or a
+player in a cave.*
+
 #### ENV-013 · Vanilla fire and furnaces in Normal
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-13, S-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, S-04
 
 With the Normal preset, fire and furnaces outside zones shall behave as in
 vanilla.
@@ -127,6 +132,11 @@ vanilla.
 - **Rationale:** Decision: D-13 (S-04).
 - **Verify:** A GameTest under Normal checks fire spreads and a furnace smelts
   outside zones as in vanilla.
+
+*2026-11-05: `env_013_fire_spreads_outside_zones_in_every_vanilla_dimension` and
+`env_013_furnace_smelts_at_vanillas_rate_outside_zones` pass in each dimension
+(#66). The furnace is checked against vanilla's exact rate. Fire is random, so it's
+checked to spread and stay alight on netherrack, not against vanilla's odds.*
 
 ## Providers
 
@@ -229,7 +239,7 @@ ambient composition and temperature, never by a subset of gases.
 ## Changes and exclusion
 
 #### ENV-006 · Live ambient changes
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
 
 Existing ambient edges shall pick up a changed ambient within one atmos tick.
 The change may come from a datapack reload or from a provider, for example a
@@ -242,16 +252,38 @@ planetary day/night temperature.
   temperature and checks a zone beside it moves toward the new value from the
   next tick.
 
-#### ENV-017 · Small ambient changes don't wake edges
-`Must` · `R1` · `Accepted` · Verify: Unit, Bench · Depends: CORE-006, CORE-066
+*2026-11-05: `env_006_a_reloaded_datapack_moves_a_zone_from_the_next_atmos_tick`
+really reloads a pack, and
+`env_006_a_providers_changing_answer_moves_a_zone_every_atmos_tick` does the same
+through a provider (#66). The zone in both is a pinned room with a hole, the only
+zone that can stay beside an ambient that matches it (D-63, D-64).*
 
-A change to the ambient shall wake a sleeping ambient edge only once the new
-ambient is no longer equivalent (CORE-006) to the mixture the zone snapped to.
+#### ENV-017 · Ambient changes add no extra work
+`Must` · `R1` · `Implemented` · Verify: Unit, Bench · Trace: D-63, D-64 · Depends: CORE-006, CORE-066
+
+A change to the ambient shall add no extra work: it wakes no edge and adds no
+exchange.
 
 - **Rationale:** Inferred: providers may change an ambient slightly every tick
-  (day/night), and waking every edge each time would cost too much.
-- **Verify:** Unit tests check a small change leaves an edge asleep and a
-  large one wakes it; Bench measures a provider changing every tick.
+  (day/night), which mustn't cost much.
+- **Verify:** Unit tests check a sleeping edge stays asleep and exchange calls
+  don't change when the ambient does; Bench measures a provider changing every
+  tick.
+
+*2026-11-05: reworded; the owner chose this over revisiting D-64. It used to say
+that a change wakes a sleeping ambient edge only once it breaks equivalence with
+the mixture the zone snapped to. No such edge exists: a zone that matches its
+ambient dissolves (D-63) unless pinned, and a pinned one keeps exchanging (D-64),
+so ambient edges never sleep and nothing snaps (#66).*
+
+*2026-11-05: `AmbientChangeTest`'s `env_017_` tests pass. The ambient bench has
+the same exchange calls per tick with a still ambient and a changing one in every
+world ([benchmarks](../research/benchmarks.md#ambient-changing-every-tick-env-017)).
+Walls still conduct toward the new temperature (HEAT-001), since that's the change
+doing its job, which costs each zone a heat step: within noise for S-10, and about
+0.25 ms of worker time per atmos tick with 1,000 more rooms. The bench found one
+real cost, resolving every zone's heat links on each change, which is gone
+(`env_017_a_changing_ambient_resolves_no_links_unless_it_turns_to_vacuum`).*
 
 #### ENV-007 · Excluded dimensions
 `Must` · `R0` · `Implemented` · Verify: GameTest
@@ -269,7 +301,7 @@ purged and its chunks save without them. An unloaded dimension is different:
 its zones persist and pause.*
 
 #### ENV-018 · Excluded dimensions keep their ambient
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 An excluded dimension shall keep its ambient for queries (CORE-050) and
 hazards (LIFE). Gas operations there behave as in open air (CORE-053,
@@ -279,6 +311,12 @@ CORE-057).
   it only stops zones forming.
 - **Verify:** A GameTest checks an excluded vacuum dimension still harms an
   unsuited player and that added gas goes to open air.
+
+*2026-11-05: `env_018_an_excluded_vacuum_harms_an_unsuited_player` and
+`env_018_gas_operations_in_an_excluded_vacuum_act_on_the_open_air` pass (#66), in
+the End, borrowed with a test definition that excludes it. Also
+`env_018_an_excluded_ambient_with_gas_supplies_what_is_taken`, and
+`env_018_a_provider_still_sets_an_excluded_dimensions_ambient`.*
 
 #### ENV-008 · Not atmospheric
 `Won't` · `R1` · `Accepted`

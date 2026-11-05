@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.classify;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
+import java.util.Arrays;
 
 /**
  * A lazily filled cache of {@link GeometryPalette#connects}, which builds face masks on every
@@ -14,10 +15,10 @@ final class ConnectionTable {
     private static final long[] AIR_AIR = {1L, 0, 0, 0};
 
     private final GeometryPalette palette;
-    private final int[] cellCounts;
-    private final double[][] volumes;
+    private int[] cellCounts = new int[0];
+    private double[][] volumes = new double[0][];
     /** Per geometry: bit {@code face.ordinal()} is set when that face is a zone boundary. */
-    private final int[] boundary;
+    private int[] boundary = new int[0];
 
     private long[] keys = new long[256];
     private long[][] values = new long[256][];
@@ -25,11 +26,17 @@ final class ConnectionTable {
 
     ConnectionTable(GeometryPalette palette) {
         this.palette = palette;
+        readPalette();
+    }
+
+    /** Takes in the palette's entries added since the last read: an extensible palette grows. */
+    private void readPalette() {
+        int from = cellCounts.length;
         int n = palette.size();
-        cellCounts = new int[n];
-        volumes = new double[n][];
-        boundary = new int[n];
-        for (int id = 0; id < n; id++) {
+        cellCounts = Arrays.copyOf(cellCounts, n);
+        volumes = Arrays.copyOf(volumes, n);
+        boundary = Arrays.copyOf(boundary, n);
+        for (int id = from; id < n; id++) {
             Geometry g = palette.geometry(id);
             int count = Math.min(g.cellCount(), CellIds.MAX_SUB_CELLS);
             cellCounts[id] = count;
@@ -51,11 +58,17 @@ final class ConnectionTable {
 
     /** The number of cells of a geometry the topology can name. */
     int cellCount(int id) {
+        if (id >= cellCounts.length) {
+            readPalette();
+        }
         return cellCounts[id];
     }
 
     /** The volume of a cell, or 0 if the geometry has no such cell. */
     double volume(int id, int sub) {
+        if (id >= volumes.length) {
+            readPalette();
+        }
         double[] v = volumes[id];
         return sub < v.length ? v[sub] : 0;
     }
@@ -65,6 +78,9 @@ final class ConnectionTable {
      * boundaries (GEO-007): either block flags its side of the shared face.
      */
     boolean boundary(int a, Face face, int b) {
+        if (a >= boundary.length || b >= boundary.length) {
+            readPalette();
+        }
         return (boundary[a] & (1 << face.ordinal())) != 0
                 || (boundary[b] & (1 << face.opposite().ordinal())) != 0;
     }
@@ -76,6 +92,9 @@ final class ConnectionTable {
     long[] connections(int a, Face face, int b) {
         if (a == GeometryPalette.AIR_ID && b == GeometryPalette.AIR_ID) {
             return AIR_AIR;
+        }
+        if (a >= cellCounts.length || b >= cellCounts.length) {
+            readPalette();
         }
         if (cellCounts[a] == 0 || cellCounts[b] == 0) {
             return NONE;

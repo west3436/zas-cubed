@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.ignition.IgnitionEvents;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -36,8 +37,9 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  *
  * <ul>
  *   <li>bumps the chunk's block generation ({@link ChunkGenerations}), on every write;
- *   <li>if the geometry id changed, marks the position in the dimension's {@link DirtySections};
- *       a write that keeps the geometry id (stone to cobblestone, air to a redstone torch) stops there
+ *   <li>if the geometry id changed, or either state's geometry is worked out per position ({@link
+ *       PositionGeometries}), marks the position in the dimension's {@link DirtySections}; a write
+ *       that keeps the geometry id (stone to cobblestone, air to a redstone torch) stops there
  *       (GEO-011);
  *   <li>if the write starts a Hardcore zone trigger that is active, a fire or a lit furnace
  *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
@@ -128,7 +130,7 @@ public final class ChangeTracker {
         }
         int oldId = Block.getId(old);
         int nowId = Block.getId(now);
-        boolean geometryChanged = geometryChanged(oldId, nowId);
+        boolean geometryChanged = geometryChanged(level, pos, oldId, nowId);
         int triggers = TriggerStates.started(oldId, nowId);
         boolean plantChanged = TriggerStates.plantChanged(oldId, nowId);
         IgnitionEvents.onBlockWrite(level, pos, now);
@@ -142,11 +144,16 @@ public final class ChangeTracker {
 
     /**
      * Whether a write from state id {@code oldId} to {@code nowId} ({@link Block#getId}) can change
-     * gas geometry. While the geometry table is being rebuilt the answer is yes, so nothing is
-     * missed.
+     * gas geometry. A state whose geometry is worked out per position can change it whatever its id,
+     * and what was worked out at the position no longer holds. While the geometry table is being
+     * rebuilt the answer is yes, so nothing is missed.
      */
-    static boolean geometryChanged(int oldId, int nowId) {
+    private static boolean geometryChanged(ServerLevel level, BlockPos pos, int oldId, int nowId) {
         GeometryTable table = Geometries.tableIfReady();
+        if (table != null && (table.perPosition(oldId) || table.perPosition(nowId))) {
+            PositionGeometries.forget(level, pos);
+            return true;
+        }
         return table == null || table.geometryId(oldId) != table.geometryId(nowId);
     }
 

@@ -13,6 +13,8 @@ import io.github.west3436.zas.fire.Burners;
 import io.github.west3436.zas.fire.FuelProfiles;
 import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
+import io.github.west3436.zas.geometry.PositionGeometries;
+import io.github.west3436.zas.geometry.SealProviders;
 import io.github.west3436.zas.hotspot.HotspotBlocks;
 import io.github.west3436.zas.hud.AtmosHud;
 import io.github.west3436.zas.hud.ListenerAir;
@@ -44,6 +46,8 @@ public final class ZasMod {
         HotspotBlocks.register(modBus);
         ZasSounds.register(modBus);
         Geometries.register(NeoForge.EVENT_BUS);
+        SealProviders.register(modBus);
+        PositionGeometries.register(NeoForge.EVENT_BUS);
         ChangeTracker.register(NeoForge.EVENT_BUS);
         TriggerStates.register(NeoForge.EVENT_BUS);
         IgnitionSources.register(NeoForge.EVENT_BUS);

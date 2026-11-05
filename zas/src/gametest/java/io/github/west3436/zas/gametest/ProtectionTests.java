@@ -6,6 +6,8 @@ import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.life.Hazard;
@@ -13,9 +15,12 @@ import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.ProtectionConfig;
 import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;
+import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.Protections;
+import io.github.west3436.zas.life.Respiration;
 import io.github.west3436.zas.life.Shielding;
 import io.github.west3436.zas.life.WornProtection;
 import java.util.ArrayList;
@@ -26,10 +31,14 @@ import java.util.UUID;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -54,6 +63,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class ProtectionTests {
     private static final EquipmentSlot[] ARMOR = ProtectionConfig.SLOTS;
+    private static final ResourceLocation CO = ResourceLocation.fromNamespaceAndPath("zas", "carbon_monoxide");
+    private static final ResourceLocation N2O = ResourceLocation.fromNamespaceAndPath("zas", "nitrous_oxide");
 
     private ProtectionTests() {}
 
@@ -86,18 +97,49 @@ public final class ProtectionTests {
             }
         }
 
+        /** A sealed room from x0 to x0 + 4 holding these moles at 293.15 K. */
+        void room(int x0, Map<ResourceLocation, Double> moles) {
+            r.clear(x0, x0 + 5);
+            r.shell(x0, x0 + 4);
+            r.settle(GasMutations.remove(
+                    r.level,
+                    r.point(x0 + 2, 2, 2),
+                    Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
+                    Rooms.source("protection")));
+            r.settle(GasMutations.add(
+                    r.level,
+                    r.point(x0 + 2, 2, 2),
+                    new GasParcel(moles, StandardAir.TEMPERATURE),
+                    Rooms.source("protection")));
+        }
+
         Zombie zombie(int x0) {
-            Zombie z = EntityType.ZOMBIE.create(r.level);
-            h.assertTrue(z != null, "couldn't create a zombie");
-            z.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
-            z.setNoAi(true);
-            r.level.addFreshEntity(z);
-            entities.add(z);
-            return z;
+            return spawn(EntityType.ZOMBIE, x0);
+        }
+
+        Pig pig(int x0) {
+            return spawn(EntityType.PIG, x0);
+        }
+
+        private <T extends Mob> T spawn(EntityType<T> type, int x0) {
+            T e = type.create(r.level);
+            h.assertTrue(e != null, "couldn't create a " + type);
+            e.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
+            e.setNoAi(true);
+            r.level.addFreshEntity(e);
+            entities.add(e);
+            return e;
         }
 
         FakePlayer player(int x0) {
             FakePlayer p = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_protection"));
+            p.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
+            return p;
+        }
+
+        /** A player that damage reaches, for a test of what harms it ({@link TestPlayers}). */
+        FakePlayer hurtable(int x0) {
+            FakePlayer p = TestPlayers.hurtable(r.level, "zas_protection");
             p.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
             return p;
         }
@@ -380,6 +422,246 @@ public final class ProtectionTests {
             close(h, WornProtection.airflowResistance(own), 0.25, 0, "its own");
             close(h, WornProtection.airflowResistance(suited), 0.5, 0, "its own and a worn piece");
             close(h, WornProtection.airflowResistance(elytra), 0.75, 0, "two worn pieces");
+        }
+        h.succeed();
+    }
+
+    // ---- API-022, CONT-088: gas filtering ----------------------------------------------------------
+
+    /** Moles for a partial pressure in kPa in a Lab's 27,000 L room at 293.15 K. */
+    private static double molesAt(double kPa) {
+        return kPa * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+    }
+
+    /**
+     * A room of air with gas in it at these partial pressures: 2 kPa of CO, which makes a breather
+     * unconscious and deals 2 HP/s (LIFE-041); 2 kPa of N₂O, which incapacitates it; and 3 kPa of CO₂,
+     * which is below its first threshold and isn't in {@code #zas:toxic}.
+     */
+    private static Map<ResourceLocation, Double> foulAir() {
+        return Map.of(
+                StandardAir.OXYGEN,
+                molesAt(21),
+                StandardAir.NITROGEN,
+                molesAt(79),
+                CO,
+                molesAt(2),
+                N2O,
+                molesAt(2),
+                Respiration.CARBON_DIOXIDE,
+                molesAt(3));
+    }
+
+    /** Runs a check, then another 2 s later, which charges the 2 s between them. */
+    private static void breatheTwoSeconds(LivingEntity e) {
+        long now = e.level().getGameTime();
+        Breathers.checkAt(e, now);
+        Breathers.checkAt(e, now + 40);
+    }
+
+    /**
+     * A filter in the head slot takes CO and N₂O, the {@code #zas:toxic} gases, out of what its
+     * wearer breathes and nothing else, so neither harms it, and the room keeps them; in the chest
+     * slot it does nothing, and a bare player beside it is harmed (API-022, CONT-088).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_022_a_filter_keeps_toxic_gases_out_of_the_breath(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 265)) {
+            lab.room(0, foulAir());
+            FakePlayer masked = lab.hurtable(0);
+            masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+            FakePlayer chest = lab.hurtable(0);
+            chest.setItemSlot(EquipmentSlot.CHEST, new ItemStack(TestLifeSupport.item()));
+            FakePlayer bare = lab.hurtable(0);
+
+            GasMixture room = lab.r.zone(2, 2, 2).mixture();
+            Breathability v = Breathing.of(masked);
+            GasMixture breath = v.breath().orElseThrow();
+            h.assertTrue(v.protection().contains(Protection.GAS_FILTERING), "masked protection: " + v);
+            h.assertFalse(v.hazards().contains(Hazard.TOXIC_GAS), "masked hazards: " + v);
+            h.assertValueEqual(v.reason(), BreathReason.BREATHABLE, "the masked player's reason");
+            close(h, breath.moles(CO), 0, 0, "CO in the masked breath");
+            close(h, breath.moles(N2O), 0, 0, "N2O in the masked breath");
+            for (ResourceLocation gas : List.of(StandardAir.OXYGEN, StandardAir.NITROGEN, Respiration.CARBON_DIOXIDE)) {
+                close(h, breath.moles(gas), room.moles(gas), 1e-9, gas + " in the masked breath");
+                close(
+                        h,
+                        breath.partialPressure(gas),
+                        room.partialPressure(gas),
+                        1e-9,
+                        gas + "'s partial pressure in the masked breath");
+            }
+
+            for (FakePlayer unfiltered : List.of(chest, bare)) {
+                Breathability u = Breathing.of(unfiltered);
+                h.assertFalse(u.protection().contains(Protection.GAS_FILTERING), "unfiltered protection: " + u);
+                h.assertTrue(u.hazards().contains(Hazard.TOXIC_GAS), "unfiltered hazards: " + u);
+                close(h, u.breath().orElseThrow().moles(CO), room.moles(CO), 1e-9, "CO in an unfiltered breath");
+            }
+            h.assertFalse(WornProtection.gasFiltering(chest), "a filter in the chest slot counts");
+
+            breatheTwoSeconds(masked);
+            breatheTwoSeconds(chest);
+            breatheTwoSeconds(bare);
+            close(h, masked.getHealth(), masked.getMaxHealth(), 0, "the masked player's health");
+            h.assertTrue(masked.getActiveEffects().isEmpty(), "effects on the masked player");
+            close(h, bare.getHealth(), bare.getMaxHealth() - 4, 1e-6, "the bare player's health: 2 HP/s for 2 s");
+            h.assertTrue(bare.hasEffect(MobEffects.BLINDNESS), "the bare player isn't unconscious");
+            close(h, chest.getHealth(), chest.getMaxHealth() - 4, 1e-6, "health with the filter in the chest slot");
+
+            lab.r.ticks(2);
+            GasMixture after = lab.r.zone(2, 2, 2).mixture();
+            close(h, after.moles(CO), room.moles(CO), 1e-9, "CO left in the room");
+            close(h, after.moles(N2O), room.moles(N2O), 1e-9, "N2O left in the room");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A filter supplies no O₂ (CONT-088): in a room of nitrogen and CO, its wearer is spared the CO
+     * and still can't breathe, so its air drains at the full rate (LIFE-003).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_022_a_filter_supplies_no_oxygen(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 266)) {
+            lab.room(0, Map.of(StandardAir.NITROGEN, molesAt(100), CO, molesAt(2)));
+            FakePlayer masked = lab.hurtable(0);
+            masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+            BreathingRules.Assessment a = BreathingRules.assess(masked);
+            h.assertValueEqual(a.verdict().reason(), BreathReason.LOW_OXYGEN, "the masked player's reason");
+            close(h, a.drain(), 1, 0, "its air's drain");
+            h.assertFalse(a.verdict().hazards().contains(Hazard.TOXIC_GAS), "its hazards: " + a.verdict());
+            close(h, a.verdict().breath().orElseThrow().moles(CO), 0, 0, "CO in its breath");
+            breatheTwoSeconds(masked);
+            close(h, masked.getHealth(), masked.getMaxHealth(), 0, "its health: nothing but hypoxia harms it");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A filter works on a tank's breath too, and only there: its wearer on internals breathes the
+     * tank's gas without its CO, while the tank's draw and the exhale (LIFE-043, LIFE-045) carry the
+     * CO on into the room. A seal alone leaves the CO in the breath (API-022, CONT-088).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_022_a_filter_works_on_a_tanks_breath(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 267)) {
+            lab.room(0, Map.of(StandardAir.NITROGEN, molesAt(100)));
+            Map<ResourceLocation, Double> sour = Map.of(StandardAir.OXYGEN, 0.9, CO, 0.1);
+            FakePlayer masked = lab.hurtable(0);
+            masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+            masked.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(sour, 21.3));
+            Internals.set(masked, true);
+            FakePlayer sealed = lab.hurtable(0);
+            sealed.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CARVED_PUMPKIN));
+            sealed.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(sour, 21.3));
+            Internals.set(sealed, true);
+
+            Breathability v = Breathing.of(masked);
+            h.assertValueEqual(v.source(), BreathSource.INTERNALS, "the masked player's source");
+            h.assertTrue(v.protection().contains(Protection.SEALED_BREATHING), "protection: " + v);
+            h.assertTrue(v.protection().contains(Protection.GAS_FILTERING), "protection: " + v);
+            h.assertFalse(v.hazards().contains(Hazard.TOXIC_GAS), "hazards: " + v);
+            GasMixture breath = v.breath().orElseThrow();
+            close(h, breath.moles(CO), 0, 0, "CO in the filtered breath");
+            close(h, breath.partialPressure(StandardAir.OXYGEN), 21.3 * 0.9, 1e-9, "O2 in the filtered breath");
+            Breathability s = Breathing.of(sealed);
+            h.assertTrue(s.hazards().contains(Hazard.TOXIC_GAS), "a seal alone filtered the tank: " + s);
+            h.assertFalse(s.protection().contains(Protection.GAS_FILTERING), "a seal alone: " + s);
+
+            double before = lab.r.zone(2, 2, 2).mixture().moles(CO);
+            breatheTwoSeconds(masked);
+            double left = TestLifeSupport.contents(masked.getOffhandItem()).moles(CO);
+            h.assertTrue(left < 0.1, "the tank's draw left its CO behind: " + left);
+            close(h, masked.getHealth(), masked.getMaxHealth(), 0, "the masked player's health");
+            lab.r.ticks(2);
+            close(h, lab.r.zone(2, 2, 2).mixture().moles(CO) - before, 0.1 - left, 1e-9, "CO exhaled into the room");
+        }
+        h.succeed();
+    }
+
+    /** An item given gas filtering by data, with no capability, filters as one with it does (LIFE-026). */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_026_a_data_item_filters_the_breath(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 268)) {
+            lab.room(0, foulAir());
+            ILifeSupport head = Protections.of(new ItemStack(Items.CREEPER_HEAD));
+            h.assertTrue(head != null && head.gasFiltering(), "the creeper head's data");
+            FakePlayer masked = lab.hurtable(0);
+            masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CREEPER_HEAD));
+            h.assertTrue(WornProtection.gasFiltering(masked), "the data item in the head slot doesn't filter");
+            Breathability v = Breathing.of(masked);
+            h.assertTrue(v.protection().contains(Protection.GAS_FILTERING), "protection: " + v);
+            h.assertFalse(v.hazards().contains(Hazard.TOXIC_GAS), "hazards: " + v);
+            close(h, v.breath().orElseThrow().moles(CO), 0, 0, "CO in the breath");
+        }
+        h.succeed();
+    }
+
+    /**
+     * API-022's plan for a test entity: a pig given every part by its own capability has each
+     * honoured. Pressure, thermal protection and airflow resistance as a worn piece's; sealed
+     * breathing and a tank of its own let it breathe in a vacuum, and draw on the tank; and the filter
+     * spares it a foul room that harms a bare pig beside it.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void api_022_a_test_entity_gets_every_part(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 269)) {
+            lab.room(0, foulAir());
+            lab.room(6, 0, StandardAir.TEMPERATURE);
+
+            // In the foul room: the filter, against a bare pig.
+            Pig own = lab.pig(0);
+            own.addTag(TestLifeSupport.EVERY_PART_TAG);
+            Pig bare = lab.pig(0);
+            Breathability v = Breathing.of(own);
+            h.assertTrue(v.protection().contains(Protection.GAS_FILTERING), "the pig's protection: " + v);
+            h.assertFalse(v.hazards().contains(Hazard.TOXIC_GAS), "the pig's hazards: " + v);
+            close(h, v.breath().orElseThrow().moles(CO), 0, 0, "CO in the pig's breath");
+            h.assertTrue(Breathing.of(bare).hazards().contains(Hazard.TOXIC_GAS), "the bare pig's hazards");
+            breatheTwoSeconds(own);
+            breatheTwoSeconds(bare);
+            close(h, own.getHealth(), own.getMaxHealth(), 0, "the pig's health");
+            h.assertTrue(bare.getHealth() < bare.getMaxHealth(), "the foul room didn't harm the bare pig");
+
+            // Pressure and temperature, each side of 1 atm and 293.15 K.
+            close(h, exposure(own, at(0, StandardAir.TEMPERATURE)).decompression(), 0, 0, "decompression");
+            close(
+                    h,
+                    exposure(bare, at(0, StandardAir.TEMPERATURE)).decompression(),
+                    1,
+                    0,
+                    "a bare pig's decompression");
+            close(h, exposure(own, at(600, StandardAir.TEMPERATURE)).barotrauma(), 0, 0, "barotrauma");
+            h.assertTrue(exposure(bare, at(600, StandardAir.TEMPERATURE)).barotrauma() > 0, "a bare pig's barotrauma");
+            close(h, exposure(own, at(StandardAir.PRESSURE, 450)).burns(), 0, 0, "burns");
+            close(h, exposure(bare, at(StandardAir.PRESSURE, 450)).burns(), 2, 0, "a bare pig's burns");
+            close(h, exposure(own, at(StandardAir.PRESSURE, 150)).frostbite(), 0, 0, "frostbite");
+            close(h, exposure(bare, at(StandardAir.PRESSURE, 150)).frostbite(), 1, 0, "a bare pig's frostbite");
+
+            // Airflow resistance (flow_012_resistance_scales_the_push checks a mob's own moves it less).
+            close(h, WornProtection.airflowResistance(own), 0.5, 0, "the pig's airflow resistance");
+
+            // In the vacuum: its seal and its own tank.
+            TestLifeSupport.PIG_TANK.refill();
+            Pig suited = lab.pig(6);
+            suited.addTag(TestLifeSupport.EVERY_PART_TAG);
+            Internals.set(suited, true);
+            Pig gasping = lab.pig(6);
+            Breathability t = Breathing.of(suited);
+            h.assertValueEqual(t.source(), BreathSource.INTERNALS, "the suited pig's source");
+            h.assertValueEqual(t.reason(), BreathReason.BREATHABLE, "the suited pig's reason");
+            h.assertTrue(t.protection().contains(Protection.SEALED_BREATHING), "its protection: " + t);
+            h.assertTrue(t.protection().contains(Protection.PRESSURE), "its protection: " + t);
+            close(h, t.breath().orElseThrow().partialPressure(StandardAir.OXYGEN), 21.3, 1e-9, "its breath's O2");
+            h.assertValueEqual(Breathing.of(gasping).reason(), BreathReason.LOW_OXYGEN, "a bare pig in the vacuum");
+            breatheTwoSeconds(suited);
+            close(
+                    h,
+                    1 - TestLifeSupport.PIG_TANK.contents().totalMoles(),
+                    Internals.drawRate(21.3, StandardAir.TEMPERATURE) * 2,
+                    1e-12,
+                    "its draw on its own tank");
         }
         h.succeed();
     }

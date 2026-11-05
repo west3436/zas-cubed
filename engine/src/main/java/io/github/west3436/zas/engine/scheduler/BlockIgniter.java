@@ -10,6 +10,7 @@ import io.github.west3436.zas.engine.zone.MembershipListener;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,15 +54,16 @@ final class BlockIgniter implements MembershipListener {
     private final ZoneGraph graph;
     private final CellSpace space;
     private final SectionMirror mirror;
+    private final GeometryPalette palette;
 
     /** Each geometry's ignite odds; 0 if it isn't flammable. */
-    private final int[] odds;
+    private int[] odds = new int[0];
 
     /** Each geometry's own ignition temperature, or NaN for the configured one. */
-    private final double[] ignition;
+    private double[] ignition = new double[0];
 
     /** The lowest ignition temperature of any flammable geometry that has its own. */
-    private final double lowestOwn;
+    private double lowestOwn = Double.POSITIVE_INFINITY;
 
     /** The faces of hot zones, by zone id, sorted by air cell then block. Lookups only (CORE-072). */
     private final Map<Long, long[]> faces = new HashMap<>();
@@ -72,19 +74,24 @@ final class BlockIgniter implements MembershipListener {
         this.graph = graph;
         this.space = space;
         this.mirror = mirror;
+        this.palette = palette;
+        geometriesAdded();
+    }
+
+    /** The palette took in the geometries of single positions (GEO-043, API-023). */
+    void geometriesAdded() {
+        int from = odds.length;
         int n = palette.size();
-        odds = new int[n];
-        ignition = new double[n];
-        double lowest = Double.POSITIVE_INFINITY;
-        for (int id = 0; id < n; id++) {
+        odds = Arrays.copyOf(odds, n);
+        ignition = Arrays.copyOf(ignition, n);
+        for (int id = from; id < n; id++) {
             Geometry g = palette.geometry(id);
             odds[id] = g.igniteOdds();
             ignition[id] = g.ignitionTemperature();
-            if (g.isFlammable() && g.ignitionTemperature() < lowest) {
-                lowest = g.ignitionTemperature();
+            if (g.isFlammable() && g.ignitionTemperature() < lowestOwn) {
+                lowestOwn = g.ignitionTemperature();
             }
         }
-        lowestOwn = lowest;
     }
 
     void setSeed(long seed) {

@@ -60,7 +60,8 @@ final class BenchWorld implements DimensionPipeline.World {
     private final ChunkGenerations generations = new ChunkGenerations();
     private final Set<Long> loaded = new HashSet<>();
     private final int background;
-    final Ambient ambient;
+    /** What each batch carries; a bench may change it between steps (ENV-017). */
+    Ambient ambient;
     /** Sections captured at batch close. */
     long captures;
 

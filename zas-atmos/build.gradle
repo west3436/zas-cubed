@@ -75,3 +75,25 @@ tasks.named('test', Test) {
     // The shipped sounds, which tests read as files.
     systemProperty 'zas_atmos.resources', file('src/main/resources').absolutePath
 }
+
+// The compatibility matrix (NFR-025, docs/release-checklist.md). Only -Pcompat.matrix=true adds these
+// mods, and only to this project's runs, so no jar and no ordinary run ever holds them. Sodium is left
+// out of the GameTest server, where it isn't loaded and all its mixins are client mixins.
+if (providers.gradleProperty('compat.matrix').getOrElse('false').toBoolean()) {
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven { url = 'https://api.modrinth.com/maven' }
+            }
+            filter { includeGroup 'maven.modrinth' }
+        }
+    }
+    neoForge.runs.gameTestServer.systemProperty 'zas.compatMatrix', 'true'
+    dependencies {
+        ['modernfix:5.27.27+mc1.21.1', 'ferrite-core:7.0.3-neoforge', 'lithium:mc1.21.1-0.15.4-neoforge'].each {
+            runtimeOnly "maven.modrinth:$it"
+            gametestRuntimeOnly "maven.modrinth:$it"
+        }
+        runtimeOnly 'maven.modrinth:sodium:mc1.21.1-0.8.13-neoforge'
+    }
+}

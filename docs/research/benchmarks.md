@@ -658,6 +658,50 @@ code with no player nearby, with other builds running on the machine. Not measur
 the packets to players nearby, or the block changes reaching the worker in the next
 batch, which cost what any 32 block changes cost.
 
+## Ambient changing every tick (ENV-017)
+
+_Run 2026-11-05 with `./gradlew :engine:bench -Pbench.args=ambient`, same machine,
+while other builds were running, so compare a row with its neighbour, not with
+the tables above._ What a provider changing the ambient every atmos tick costs,
+against the same world under an ambient that holds still. The change is a day and
+night: ±10 K over 1,200 ticks and ±1 % on the pressure; the vacuum world's
+background temperature swings 100 ± 50 K. 1,200 ticks after 600 of warm-up, with
+each mode run twice in turn and the second reported. "Before" is the same run with
+the heat phase resolving every zone's links on each ambient change, as it did
+until this measurement.
+
+| World | Ambient | Exchange calls per tick | Worker tick, median: before | Worker tick, median | p99 | Server: close plus apply, median |
+|---|---|---|---|---|---|---|
+| S-10 station, standard air | still | 0 | 0.061 ms | 0.152 ms | 0.413 ms | 0.069 ms |
+| | changing | 0 | 1.06 ms | 0.182 ms | 0.265 ms | 0.061 ms |
+| S-10 station, vacuum | still | 0.16 | 0.106 ms | 0.195 ms | 0.294 ms | 0.049 ms |
+| | changing | 0.16 | 1.03 ms | 0.167 ms | 0.282 ms | 0.033 ms |
+| S-10 and 1,000 idle rooms, standard air | still | 0 | 0.597 ms | 0.701 ms | 1.70 ms | 0.201 ms |
+| | changing | 0 | 4.97 ms | 0.956 ms | 1.88 ms | 0.347 ms |
+| 100 pinned rooms with holes, standard air | still | 100 | 0.046 ms | 0.071 ms | 0.133 ms | 0.013 ms |
+| | changing | 100 | 0.347 ms | 0.093 ms | 0.157 ms | 0.013 ms |
+
+- **Edges cost nothing extra:** exchange calls per tick match in every world, and
+  no groups equalized in any measured tick. A changed ambient wakes nothing, and a
+  pinned room's ambient edge exchanges once a tick either way.
+- **The bench found one real cost, now gone.** `Conduction` resolved every zone's
+  links on each new ambient, O(zones + links): 8 to 17 times the still ambient's
+  worker tick. Only whether the ambient has gas decides what a link resolves to, so
+  each zone now keeps a conductance to the ambient, and each step reads the
+  temperature. Only a change to or from a vacuum resolves links now.
+- **What's left is heat, not edges.** A sealed room next to a moving ambient
+  stays unsettled, so each takes a heat step every tick and its snapshot view
+  changes: about 0.25 ms of worker time and 0.15 ms of server time per atmos tick
+  for 1,100 zones, 0.02 ms per game tick at most. In the vacuum world, where rooms
+  never settle anyway, the two modes are within noise.
+- **The "still" and "before" columns differ** because they're separate runs on a
+  busy machine, which is also why the vacuum row's "changing" is below its "still".
+  Treat differences under about 0.1 ms here as noise.
+- **Not measured:** the provider's own time, which is the mod's, and the cost in a
+  world with many zones whose door edges sit near their equivalence limit. A
+  temperature swing that opened a real difference across a door would wake that
+  edge, as any change to a zone does (CORE-066).
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall

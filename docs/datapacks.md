@@ -125,7 +125,7 @@ Addons read a tag through the API's `GasTags` (architecture §6.1).
 |---|---|---|
 | `#zas:oxidizer` | `zas:oxygen`, `zas:nitrous_oxide` | Fire logic (FIRE-003) and warnings about a fuel mixed with an oxidizer (CONT-103) |
 | `#zas:flammable` | `zas:hydrogen`, `zas:methane`, `zas:carbon_monoxide` | Fire logic: the fuels (FIRE-003); the air alarm and devices that warn of flammable mixtures |
-| `#zas:toxic` | `zas:carbon_monoxide`, `zas:nitrous_oxide` | The gas mask, which filters them out of the breath (CONT-088), and the scrubber, which removes CO₂ and these by default (CONT-015) |
+| `#zas:toxic` | `zas:carbon_monoxide`, `zas:nitrous_oxide` | Gas filtering, which keeps them out of the breath (API-022, CONT-088), and the scrubber, which removes CO₂ and these by default (CONT-015) |
 
 CO₂ isn't in `#zas:toxic`: it harms only at high partial pressure, which its
 hazard profile covers. There is no breathable tag, because breathing reads
@@ -932,7 +932,7 @@ data/<namespace>/zas/protection/<name>.json
 | `min_temperature_k` | 293.15 | The lowest temperature it protects against, 0 to 293.15 K; the default protects against no cold |
 | `max_temperature_k` | 293.15 | The highest temperature it protects against, at least 293.15 K; the default protects against no heat |
 | `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021) |
-| `gas_filtering` | `false` | Whether it filters the breath, in the head slot. Carried for gas masks; not applied yet |
+| `gas_filtering` | `false` | Whether it filters the `#zas:toxic` gases out of the breath, in the head slot (API-022, CONT-088) |
 | `airflow_resistance` | 0 | How much it resists being pushed by airflow, 0 to 1 (FLOW-012) |
 
 An item counts in the head, chest, legs and feet slots, each covering its
