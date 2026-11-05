@@ -46,7 +46,7 @@ public final class PassiveVentTests {
 
     private PassiveVentTests() {}
 
-    private static BlockState passiveVent(Direction facing) {
+    static BlockState passiveVent(Direction facing) {
         return AtmosBlocks.PASSIVE_VENT.get().defaultBlockState().setValue(PassiveVentBlock.FACING, facing);
     }
 
