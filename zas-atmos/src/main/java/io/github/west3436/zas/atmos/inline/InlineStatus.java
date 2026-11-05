@@ -16,7 +16,9 @@ public enum InlineStatus {
     /** Its output has reached its target. */
     TARGET_REACHED,
     /** Pipes join its ports into one network, so it has nothing to move gas between. */
-    SAME_NETWORK;
+    SAME_NETWORK,
+    /** Its rate is set to 0. */
+    RATE_ZERO;
 
     /** The status with an ordinal, or {@link #OFF} for one out of range. */
     public static InlineStatus of(int ordinal) {

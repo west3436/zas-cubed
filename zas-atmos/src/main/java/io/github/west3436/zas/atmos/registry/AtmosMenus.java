@@ -63,6 +63,12 @@ public final class AtmosMenus {
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
 
+    /** A volume pump's switch and rate (CONT-012). */
+    public static final Supplier<MenuType<PumpMenu>> VOLUME_PUMP = MENUS.register(
+            "volume_pump",
+            () -> new MenuType<>(
+                    (id, inventory) -> new PumpMenu(AtmosMenus.VOLUME_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
     /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
     public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
             MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));

@@ -26,6 +26,7 @@ import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.PumpFlow;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
+import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.valve.ValveBlock;
@@ -410,6 +411,96 @@ public final class PumpTests {
             }
             assertReacted(h, s, mixed, before, "a port and pipes, round " + round);
         }
+        s.clear();
+        h.succeed();
+    }
+
+    /**
+     * A real volume pump between two networks moves its set volume at input conditions, at most 100
+     * L/s, however high the output's pressure, and conserves moles and thermal energy (CONT-012). Its
+     * GUI steps its rate by 1 and 10 L/s, clamped to 0–100 (CONT-074), and it draws 20 FE/t while on
+     * (CONT-065).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_012_a_real_volume_pump_moves_its_set_volume(GameTestHelper h) {
+        Site s = new Site(h, 558);
+        s.clear();
+        BlockState state =
+                AtmosBlocks.VOLUME_PUMP.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST);
+        cap(s, 2, 2, 2, Direction.EAST);
+        pipe(s, 3, 2, 2);
+        VolumePumpBlockEntity pump = s.place(4, 2, 2, state, VolumePumpBlockEntity.class);
+        pipe(s, 5, 2, 2);
+        cap(s, 6, 2, 2, Direction.WEST);
+        pump.power().setTestPowered(true);
+
+        h.assertFalse(pump.on(), "a new pump is on");
+        s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "a new pump's rate");
+        h.assertValueEqual(AtmosServerConfig.get(AtmosServerConfig.VOLUME_PUMP_DRAW), 20, "the pump's draw");
+        h.assertValueEqual(pump.power().draw(), 0, "the draw of a pump that's off");
+        h.assertValueEqual(pump.power().priority(), PowerPriority.GAS_HANDLING, "the pump's group");
+
+        // Its GUI: the four steps, then past each end of the range.
+        Player hand = h.makeMockPlayer(GameType.SURVIVAL);
+        PumpMenu menu = (PumpMenu) pump.createMenu(1, hand.getInventory(), hand);
+        h.assertTrue(menu.clickMenuButton(hand, InlineDeviceMenu.TOGGLE), "the switch was refused");
+        h.assertTrue(pump.on(), "the switch didn't switch it on");
+        h.assertValueEqual(pump.power().draw(), 20, "the draw of a pump that's on");
+        h.assertFalse(menu.clickMenuButton(hand, PumpMenu.LAST_BUTTON + 1), "an unknown button wasn't refused");
+        double[] steps = {-10, -1, 1, 10};
+        pump.set(50);
+        for (int i = 0; i < steps.length; i++) {
+            double before = pump.setting();
+            h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG + i), "step " + i + " was refused");
+            s.close(pump.setting(), before + steps[i], 1e-9, "step " + i);
+        }
+        pump.set(5);
+        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG), "the step down was refused");
+        s.close(pump.setting(), 0, 1e-9, "the rate stepped below 0");
+        pump.set(95);
+        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.LAST_BUTTON), "the step up was refused");
+        s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "the rate stepped above 100 L/s");
+        pump.set(500);
+        s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "the rate set above 100 L/s");
+        h.assertValueEqual(menu.value(PumpMenu.DATA_SETTING), 100, "the GUI's rate at the top");
+
+        // At a rate of 0 it moves nothing, and says why.
+        in(pump).add(new GasParcel(Map.of(N2, 200.0), 600));
+        out(pump).add(new GasParcel(Map.of(O2, 1.0), T));
+        double moles = in(pump).totalMoles() + out(pump).totalMoles();
+        double energy = in(pump).thermalEnergy() + out(pump).thermalEnergy();
+        pump.set(0);
+        pump.step();
+        s.close(out(pump).totalMoles(), 1.0, 1e-9, "the output at a rate of 0");
+        h.assertValueEqual(pump.status(), InlineStatus.RATE_ZERO, "the status at a rate of 0");
+
+        // Below and at the limit: its set volume at the input's conditions.
+        for (double rate : new double[] {20, PumpFlow.MAX_RATE}) {
+            pump.set(rate);
+            double expected = in(pump).totalMoles() * rate / RUN;
+            double before = out(pump).totalMoles();
+            pump.step();
+            s.close(out(pump).totalMoles() - before, expected, 1e-9, "the moles at " + rate + " L/s");
+            h.assertValueEqual(pump.status(), InlineStatus.MOVING, "the status at " + rate + " L/s");
+        }
+        s.close(in(pump).totalMoles() + out(pump).totalMoles(), moles, 1e-9, "the moles");
+        s.close(in(pump).thermalEnergy() + out(pump).thermalEnergy(), energy, 1e-4, "the thermal energy");
+
+        // It has no target: it goes on while the output is above the input.
+        for (int i = 0; i < 3; i++) {
+            pump.step();
+        }
+        double higher = out(pump).pressure();
+        h.assertTrue(higher > in(pump).pressure(), "the output should be above the input by now");
+        pump.step();
+        h.assertTrue(out(pump).pressure() > higher, "the pump stopped against the higher pressure");
+
+        // With the input drained, it says so.
+        for (int i = 0; i < 60; i++) {
+            pump.step();
+        }
+        h.assertTrue(in(pump).totalMoles() < 1e-3, "the input didn't drain: " + in(pump).totalMoles());
+        h.assertValueEqual(pump.status(), InlineStatus.INPUT_EMPTY, "the status with no gas");
         s.clear();
         h.succeed();
     }
