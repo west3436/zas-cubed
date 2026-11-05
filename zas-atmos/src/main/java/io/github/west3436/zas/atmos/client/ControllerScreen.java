@@ -40,9 +40,12 @@ public class ControllerScreen extends AbstractContainerScreen<ControllerMenu> {
         super.init();
         int x = leftPos + 6;
         int y = topPos + 40;
-        ControllerMode[] modes = ControllerMode.values();
-        for (int i = 0; i < modes.length; i++) {
-            button(x + i * 48, y, 46, Component.translatable("gui.zas_atmos.controller.mode." + modes[i].key()), i);
+        int modeX = x;
+        for (ControllerMode mode : ControllerMode.values()) {
+            Component label = Component.translatable("gui.zas_atmos.controller.mode." + mode.key());
+            int width = font.width(label) + 10;
+            button(modeX, y, width, label, mode.ordinal());
+            modeX += width + 2;
         }
         y += 22;
         for (int i = 0; i < ControllerPreset.SHIPPED.size(); i++) {

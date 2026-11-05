@@ -78,6 +78,7 @@
   "gui.zas_atmos.controller.mode.scrubbing": "Scrub",
   "gui.zas_atmos.controller.mode.replacement": "Replace",
   "gui.zas_atmos.controller.mode.panic": "Panic",
+  "gui.zas_atmos.controller.mode.siphon": "Siphon",
   "gui.zas_atmos.controller.mode.cycle": "Cycle",
   "gui.zas_atmos.controller.mode.fill": "Fill",
   "gui.zas_atmos.controller.mode.off": "Off",

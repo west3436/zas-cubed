@@ -145,8 +145,9 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     }
 
     /**
-     * An area air controller's order (CONT-041): off, or blow to its target, with the internal
-     * bound at 0. The same order every atmos tick changes nothing.
+     * An area air controller's order (CONT-041): off, blow to its target with the internal bound at 0,
+     * or siphon to its target with the internal bound at its highest. The same order every atmos tick
+     * changes nothing.
      */
     @Override
     public void ventOrder(VentOrder order) {
@@ -157,7 +158,13 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                 : power.source() instanceof net.minecraft.world.level.block.entity.BlockEntity be
                         ? be.getBlockPos()
                         : controller().orElse(null);
-        control(from, order.on() ? VentSettings.blow(order.targetKpa()) : VentSettings.OFF);
+        control(
+                from,
+                switch (order.mode()) {
+                    case OFF -> VentSettings.OFF;
+                    case BLOW -> VentSettings.blow(order.targetKpa());
+                    case SIPHON -> VentSettings.siphon(order.targetKpa());
+                });
     }
 
     /**

@@ -25,7 +25,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <p>Buttons:
  *
  * <ul>
- *   <li>{@code 0}–{@code 5}: set the mode, by {@link ControllerMode} ordinal;
+ *   <li>{@code 0}–{@code 6}: set the mode, by {@link ControllerMode} ordinal;
  *   <li>{@code 10}, {@code 11}: load the shipped Human or Vacuum preset, discarding edits;
  *   <li>{@code 20}/{@code 21}: select the previous or next reading; {@code 22}/{@code 23}: the
  *       previous or next bound;
