@@ -1915,7 +1915,7 @@ sound, and nothing here runs for it.*
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
-| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
+| `.api.capability` | `IGasHandler` (block, sided; built, with its `BLOCK` capability: `contents`, and `fill` and `drain` that simulate or execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
@@ -2016,6 +2016,7 @@ fallback, and a provider without it, give 16 kPa.
 | Futures | Complete on the server thread at the apply tick |
 | Events | Fired on the server thread when results are applied (API-032), on `NeoForge.EVENT_BUS` |
 | Providers (seal, ambient), hazard handlers | Called on the server thread |
+| Gas handlers (`IGasHandler`) | Called on the server thread, in a pipe node's step (API-026) |
 | `ReactionType`, `Reactions.applyStandalone` | Any thread; pure |
 
 ### 6.4 Event model
@@ -2383,6 +2384,23 @@ the cell in front of its grille).
   decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
+- **Gas handlers** (API-025, API-026). A node connects to a neighbour that isn't
+  a pipe part but provides `IGasHandler`, on any face where it offers a
+  connection, so a pipe grows an arm and counts it when it looks for an open end.
+  A handler isn't a network member: it adds no volume and has no share. In its
+  step, after its network's atmos tick, a node looks up the handler on each such
+  face and moves each gas toward an equal concentration, as `openEndFlow` does at
+  a ratio of 1, since a handler is the same sort of store as a canister on a port.
+  It takes what it offers out of the store first and delivers what the handler
+  leaves, so a handler that refuses, takes part, throws or removes the node loses
+  no gas; a removed node releases it (CONT-009). No zone is involved, so the
+  ledger has nothing to explain (CORE-073). A shut valve stays connected and moves
+  nothing. A pipe's arms follow the capability each step, so one that comes or
+  goes with no block changing is followed within an atmos tick, and an arm into a
+  chunk that's away stays as it is. `GasHandlers` holds every lookup and every
+  call into a handler, so a fault guard (NFR-013) has one place to go. The client
+  never looks: providers run on the server thread, and arms reach the client in
+  the block state.
 - **Blocks in several networks.** A block entity that pipes join is a
   `PipeHost`, which says which node each face leads to. A `PipeNodeEntity` is
   one node, so every face leads to itself. A device with several ports has a

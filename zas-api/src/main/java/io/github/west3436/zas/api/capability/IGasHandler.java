@@ -33,8 +33,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface IGasHandler {
     /** The capability on blocks. */
-    BlockCapability<IGasHandler, @Nullable Direction> BLOCK = BlockCapability.createSided(
-            ResourceLocation.fromNamespaceAndPath("zas", "gas_handler"), IGasHandler.class);
+    BlockCapability<IGasHandler, @Nullable Direction> BLOCK =
+            BlockCapability.createSided(ResourceLocation.fromNamespaceAndPath("zas", "gas_handler"), IGasHandler.class);
 
     /** Whether a call changes anything. */
     enum Action {

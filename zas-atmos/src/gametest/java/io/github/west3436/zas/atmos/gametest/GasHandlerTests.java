@@ -22,10 +22,12 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.valve.ValveBlock;
+import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,6 +35,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -40,7 +43,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -60,6 +62,7 @@ public final class GasHandlerTests {
     private static final String CHECKER_BATCH = "zas_atmos_gas_handler_checker";
     private static final String REAL_TIME_BATCH = "zas_atmos_gas_handler_real_time";
     private static final String CHUNK_BATCH = "zas_atmos_gas_handler_chunks";
+    private static final ResourceLocation CO2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
     private static final TicketType<ChunkPos> HOLD =
             TicketType.create("zas_atmos_gas_handler_hold", Comparator.comparingLong(ChunkPos::toLong));
 
@@ -111,9 +114,7 @@ public final class GasHandlerTests {
         a.close(held.temperature(), 300, "the temperature after the fill");
         a.close(held.volume(), TestGasHandler.VOLUME, "its volume");
 
-        Map<io.github.west3436.zas.api.gas.GasParcel, Double> none = Map.of();
-        h.assertTrue(none.isEmpty(), "");
-        Map<net.minecraft.resources.ResourceLocation, Double> want = Map.of(O2, 1.0, N2, 100.0);
+        Map<ResourceLocation, Double> want = Map.of(O2, 1.0, N2, 100.0);
         GasParcel wouldGive = handler.drain(want, IGasHandler.Action.SIMULATE);
         a.close(wouldGive.moles(O2), 1, "a simulated drain's O2");
         a.close(wouldGive.moles(N2), 6, "a simulated drain's N2: all there is");
@@ -195,7 +196,8 @@ public final class GasHandlerTests {
         BlockPos beside = a.abs(4, 2, 2);
         ItemStack pipes = new ItemStack(AtmosItems.PIPE.get());
         BlockState pipe = AtmosBlocks.PIPE.get().getStateForPlacement(context(player, pipes, beside));
-        h.assertTrue(pipe.getValue(PipeBlock.CONNECTIONS.get(Direction.WEST)), "a placed pipe has no arm to the handler");
+        h.assertTrue(
+                pipe.getValue(PipeBlock.CONNECTIONS.get(Direction.WEST)), "a placed pipe has no arm to the handler");
         h.assertFalse(pipe.getValue(PipeBlock.CONNECTIONS.get(Direction.EAST)), "a placed pipe has an arm to air");
 
         ItemStack pumps = new ItemStack(AtmosItems.PRESSURE_PUMP.get());
@@ -230,7 +232,7 @@ public final class GasHandlerTests {
                 .defaultBlockState()
                 .setValue(ValveBlock.AXIS, Direction.Axis.Y)
                 .setValue(ValveBlock.OPEN, true);
-        Map<String, BlockState> onTop = new java.util.LinkedHashMap<>();
+        Map<String, BlockState> onTop = new LinkedHashMap<>();
         onTop.put("a cap", cap);
         onTop.put("a vent", GasDeviceTests.vent(Direction.DOWN));
         onTop.put("a scrubber", ScrubberTests.scrubber(Direction.DOWN));
@@ -271,20 +273,14 @@ public final class GasHandlerTests {
                 x,
                 2,
                 2,
-                AtmosBlocks.PASSIVE_VENT
-                        .get()
-                        .defaultBlockState()
-                        .setValue(io.github.west3436.zas.atmos.vent.PassiveVentBlock.FACING, Direction.DOWN));
+                AtmosBlocks.PASSIVE_VENT.get().defaultBlockState().setValue(PassiveVentBlock.FACING, Direction.DOWN));
         passive.tank.add(gas(4, 0));
         checks.add(() -> h.assertTrue(passive.drains > 0, "a passive vent didn't drain the handler above"));
         x += 2;
 
         // A pump, filter and mixer are off, and each port still has its own exchange.
         for (BlockState inline : List.of(
-                AtmosBlocks.PRESSURE_PUMP
-                        .get()
-                        .defaultBlockState()
-                        .setValue(InlineDeviceBlock.FACING, Direction.EAST),
+                AtmosBlocks.PRESSURE_PUMP.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST),
                 AtmosBlocks.FILTER.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST),
                 AtmosBlocks.MIXER.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST))) {
             int at = x + 1;
@@ -297,7 +293,10 @@ public final class GasHandlerTests {
                 Direction face = faces.get(i);
                 BlockPos beside = a.abs(at, 2, 2).relative(face);
                 TestGasHandler.Entity tank = handler(
-                        a, beside.getX() - a.origin.getX(), beside.getY() - a.origin.getY(), beside.getZ() - a.origin.getZ());
+                        a,
+                        beside.getX() - a.origin.getX(),
+                        beside.getY() - a.origin.getY(),
+                        beside.getZ() - a.origin.getZ());
                 PipePort port = device.port(i);
                 double moles = i + 1.0; // each its own, so a mix-up between ports shows
                 tank.tank.add(gas(moles, 0));
@@ -479,7 +478,7 @@ public final class GasHandlerTests {
             a.box(0, 0, 4, 4);
             a.fill(2, 2, 2, Map.of(O2, 30.0));
             TestGasHandler.Entity tank = handler(a, 2, 1, 2);
-            tank.tank.add(new GasParcel(Map.of(N2, 20.0), T));
+            tank.tank.add(new GasParcel(Map.of(CO2, 20.0), T)); // the room has none, so it can be followed
             a.tick();
             PipeTests.pipe(a, 2, 2, 2);
             PipeBlockEntity pipe = a.entity(2, 2, 2);
@@ -487,7 +486,7 @@ public final class GasHandlerTests {
             h.assertTrue(pipe.isOpen(), "a pipe with only a handler's arm has no open end");
             a.tick();
             double o2 = a.zone(2, 3, 2).mixture().moles(O2);
-            double n2 = 20;
+            double co2 = 20;
             for (int i = 0; i < 12; i++) {
                 a.step();
                 ConservationReport report = a.service().dimensionFor(a.level).lastConservation();
@@ -499,12 +498,12 @@ public final class GasHandlerTests {
                         o2,
                         "O2 in all at step " + i);
                 a.close(
-                        zone.moles(N2) + pipe.network().gas().moles(N2) + tank.tank.moles(N2),
-                        n2,
-                        "N2 in all at step " + i);
+                        zone.moles(CO2) + pipe.network().gas().moles(CO2) + tank.tank.moles(CO2),
+                        co2,
+                        "CO2 in all at step " + i);
             }
             h.assertTrue(tank.tank.moles(O2) > 0, "no room O2 reached the handler");
-            h.assertTrue(a.zone(2, 3, 2).mixture().moles(N2) > 0, "no handler N2 reached the room");
+            h.assertTrue(a.zone(2, 3, 2).mixture().moles(CO2) > 0, "no handler CO2 reached the room");
         } finally {
             ZasServerConfig.CONSERVATION_CHECKER.set(was);
         }
@@ -583,6 +582,7 @@ public final class GasHandlerTests {
         }
         h.assertValueEqual(tank.fills, 1, "the fill wasn't asked for");
         a.close(pipe.network().gas().moles(N2), 12, "the network's N2 after the handler threw");
+        tank.duringFill = () -> {}; // the next test's steps reach this pipe too
         h.succeed();
     }
 
@@ -630,28 +630,40 @@ public final class GasHandlerTests {
     /** A handler that removes a device's port from inside a fill: the same, for a pump's gas. */
     @GameTest(template = "empty", batch = CHECKER_BATCH)
     public static void api_026_a_handler_that_removes_a_pump_mid_fill_loses_no_gas(GameTestHelper h) {
-        Area a = new Area(h, 1113);
-        a.box(0, 0, 6, 4);
-        a.fill(3, 3, 2, Map.of(N2, 30.0));
-        TestGasHandler.Entity tank = handler(a, 4, 2, 2);
-        a.place(
-                3,
-                2,
-                2,
-                AtmosBlocks.PRESSURE_PUMP.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST));
-        a.tick();
-        InlineDeviceEntity pump = a.entity(3, 2, 2);
-        pump.port(1).network().gas().add(new GasParcel(Map.of(N2, 12.0), T));
-        tank.capacity = 1;
-        tank.duringFill = () -> a.set(3, 2, 2, AIR);
-        double n2 = a.zone(3, 3, 2).mixture().moles(N2) + 12;
+        boolean was = ZasServerConfig.CONSERVATION_CHECKER.get();
+        ZasServerConfig.CONSERVATION_CHECKER.set(true);
+        try {
+            Area a = new Area(h, 1113);
+            a.box(0, 0, 6, 4);
+            a.fill(3, 3, 2, Map.of(N2, 30.0));
+            TestGasHandler.Entity tank = handler(a, 4, 2, 2);
+            a.place(
+                    3,
+                    2,
+                    2,
+                    AtmosBlocks.PRESSURE_PUMP
+                            .get()
+                            .defaultBlockState()
+                            .setValue(InlineDeviceBlock.FACING, Direction.EAST));
+            a.tick();
+            InlineDeviceEntity pump = a.entity(3, 2, 2);
+            pump.port(1).network().gas().add(new GasParcel(Map.of(N2, 12.0), T));
+            tank.capacity = 1;
+            tank.duringFill = () -> a.set(3, 2, 2, AIR);
+            double n2 = a.zone(3, 3, 2).mixture().moles(N2) + 12;
 
-        pump.step();
-        h.assertTrue(pump.isRemoved(), "the pump is still there");
-        a.close(tank.tank.moles(N2), 1, "what the handler took");
-        a.tick();
-        a.tick();
-        a.close(a.zone(3, 3, 2).mixture().moles(N2) + tank.tank.moles(N2), n2, "N2 in the room and the handler");
+            pump.step();
+            h.assertTrue(pump.isRemoved(), "the pump is still there");
+            a.close(tank.tank.moles(N2), 1, "what the handler took");
+            a.tick();
+            a.tick();
+            ConservationReport report = a.service().dimensionFor(a.level).lastConservation();
+            h.assertTrue(report != null, "the checker didn't run");
+            h.assertTrue(report.conserved(), "unexplained: " + report.violations());
+            a.close(a.zone(3, 3, 2).mixture().moles(N2) + tank.tank.moles(N2), n2, "N2 in the room and the handler");
+        } finally {
+            ZasServerConfig.CONSERVATION_CHECKER.set(was);
+        }
         h.succeed();
     }
 
@@ -714,8 +726,4 @@ public final class GasHandlerTests {
     private static boolean full(Area a, ChunkPos chunk) {
         return a.level.getChunkSource().hasChunk(chunk.x, chunk.z);
     }
-
-    /** {@link Block} is here for its javadoc's sake only until a test needs it. */
-    @SuppressWarnings("unused")
-    private static final Class<Block> BLOCK = Block.class;
 }

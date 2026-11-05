@@ -125,7 +125,9 @@ public final class GasHandlers {
     public static void exchange(ServerLevel level, BlockPos pos, BlockState self, Direction face, Buffer buffer) {
         ServerThreads.require(level, "A gas handler transfer");
         BlockPos next = pos.relative(face);
-        if (!(self.getBlock() instanceof PipeConnector block) || !block.carriesGas(self, face) || !level.isLoaded(next)) {
+        if (!(self.getBlock() instanceof PipeConnector block)
+                || !block.carriesGas(self, face)
+                || !level.isLoaded(next)) {
             return;
         }
         IGasHandler handler = handler(level, next, level.getBlockState(next), face);
