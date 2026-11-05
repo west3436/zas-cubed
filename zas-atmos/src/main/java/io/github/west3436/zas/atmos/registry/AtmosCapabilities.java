@@ -2,6 +2,8 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
+import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
+import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
@@ -70,6 +72,7 @@ public final class AtmosCapabilities {
         event.registrar(PROTOCOL)
                 .playToClient(ControllerSync.TYPE, ControllerSync.CODEC, ControllerSync::handle)
                 .playToClient(GasJet.TYPE, GasJet.CODEC, GasJet::handle)
+                .playToClient(DeviceActivityPayload.TYPE, DeviceActivityPayload.CODEC, ClientDeviceActivity::handle)
                 .playToServer(TankSettings.TYPE, TankSettings.CODEC, TankSettings::handle)
                 .playToServer(TransferValveSettings.TYPE, TransferValveSettings.CODEC, TransferValveSettings::handle);
     }
