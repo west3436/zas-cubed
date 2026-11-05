@@ -637,7 +637,12 @@ public final class ValveTests {
                     r.hold(r.chunkB, false);
                 })
                 .thenWaitUntil(() -> h.assertFalse(r.full(r.chunkB), "chunk B is still loaded"))
-                .thenExecute(r::turn)
+                .thenExecute(() -> {
+                    r.turn();
+                    // Checked now: chunk B would be back for only two game ticks, and whether a network
+                    // is built in them depends on where the devices fall in the atmos period.
+                    h.assertFalse(r.full(r.chunkB), "turning the valve loaded chunk B");
+                })
                 .thenIdle(40)
                 .thenExecute(() -> {
                     h.assertFalse(r.full(r.chunkB), "chunk B came back by itself");
