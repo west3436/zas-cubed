@@ -1156,13 +1156,23 @@ flow's speed when it first takes hold (FLOW-009). An entity's airflow
 resistance r (FLOW-012, `WornProtection.airflowResistance`) scales the flow's
 speed where it is by (1 − r); a player's is worked out on the server and sent
 with its openings, as protection data isn't on the client. Creative players
-and spectators are never moved and are sent nothing (`Airflow.exempt`,
-FLOW-018). A player the flow carries towards an opening too low to stand in
-has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
+and spectators are never moved and are sent no openings to be pushed by
+(`Airflow.exempt`, FLOW-018). A player the flow carries towards an opening too
+low to stand in has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
 through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
 into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
 aren't done.
+
+Showing airflow is separate from pushing with it, and wider (CLIENT-003,
+DATA-015). At each atmos tick `VisibleFlows` picks a player's list: every exported
+edge's openings within 32 blocks, whichever zone the player is in and in any game
+mode, with the differences in whole kPa. The server sends the list, as an
+`AirflowEffectsPayload`, only if it differs from the last it sent the player, and
+every 10 s as a failsafe. The client holds the last list in `HeldFlows`, so a
+steady breach goes on showing with no packets; a newer list replaces it, and an
+empty one ends it. `AirflowParticlePlan` turns the list into each game tick's
+particles, with no Minecraft classes, and `client.AirflowParticles` starts them.
 
 *Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):*
 ignition sources (FIRE-014, FIRE-015), in `io.github.west3436.zas.ignition`.

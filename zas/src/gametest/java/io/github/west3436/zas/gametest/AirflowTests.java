@@ -4,9 +4,14 @@ import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.airflow.Airflow;
 import io.github.west3436.zas.airflow.AirflowClass;
+import io.github.west3436.zas.airflow.AirflowEffectsPayload;
 import io.github.west3436.zas.airflow.AirflowImpulsePayload;
 import io.github.west3436.zas.airflow.AirflowReceiver;
 import io.github.west3436.zas.airflow.AirflowSyncPayload;
+import io.github.west3436.zas.airflow.HeldFlows;
+import io.github.west3436.zas.airflow.VisibleFlow;
+import io.github.west3436.zas.airflow.VisibleFlows;
+import io.github.west3436.zas.airflow.VisibleOpening;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AirflowConfig;
@@ -14,6 +19,8 @@ import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.flow.FlowField;
 import io.github.west3436.zas.engine.flow.FlowSettings;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +30,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -43,7 +51,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017 to
- * FLOW-019).
+ * FLOW-019), and what the server sends clients to show it (CLIENT-003, DATA-015).
  *
  * <p>Each test runs within one game tick, so nothing moves the entities between the push and the
  * check: it drives atmos ticks itself, then one game tick of airflow ({@link Airflow#step}), and
@@ -93,18 +101,57 @@ public final class AirflowTests {
             holeY = y;
             r.clear(0, 48);
             r.box(0, 0, HOLE_X, 6);
+            emptyRoom();
+            h.assertTrue(r.zoned(10, Y, Z), "the room didn't zone");
+            open();
+            h.assertTrue(hasOpenings(), "the breach has no airflow");
+        }
+
+        /** Takes all the gas out of the room. */
+        void emptyRoom() {
             r.settle(GasMutations.remove(
                     r.level,
                     r.point(10, Y, Z),
                     Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
                     Rooms.source("airflow")));
-            h.assertTrue(r.zoned(10, Y, Z), "the room didn't zone");
-            r.set(HOLE_X, y, Z, Rooms.AIR);
+        }
+
+        /** Builds the room with this share of its air left, then opens the hole in its east wall. */
+        void breachKeeping(double keep) {
+            r.clear(0, 48);
+            r.box(0, 0, HOLE_X, 6);
+            r.settle(GasMutations.remove(
+                    r.level, r.point(10, Y, Z), Map.of(StandardAir.NITROGEN, 1e-3), Rooms.source("airflow")));
+            Map<ResourceLocation, Double> take = new HashMap<>();
+            r.zone(10, Y, Z).mixture().moles().forEach((gas, moles) -> take.put(gas, moles * (1 - keep)));
+            r.settle(GasMutations.remove(r.level, r.point(10, Y, Z), take, Rooms.source("airflow")));
+            open();
+        }
+
+        /** Opens the hole and runs atmos ticks for airflow to find it, if it is to. */
+        private void open() {
+            r.set(HOLE_X, holeY, Z, Rooms.AIR);
             for (int i = 0; i < 6 && !hasOpenings(); i++) {
                 r.tick();
                 Airflow.step(r.level);
             }
-            h.assertTrue(hasOpenings(), "the breach has no airflow");
+        }
+
+        /**
+         * The airflow the server tells a player to show, if it would tell it anything, as an atmos
+         * tick would at game tick {@code now}. Null for nothing.
+         */
+        AirflowEffectsPayload show(ServerPlayer player, long now) {
+            List<AirflowEffectsPayload> sent = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == player && p instanceof AirflowEffectsPayload x) {
+                    sent.add(x);
+                }
+            });
+            Airflow.showForTest(r.level, player, now);
+            Airflow.sendHookForTest(null);
+            h.assertTrue(sent.size() <= 1, "more than one payload at once: " + sent);
+            return sent.isEmpty() ? null : sent.get(0);
         }
 
         boolean hasOpenings() {
@@ -641,6 +688,224 @@ public final class AirflowTests {
             FakePlayer door = s.standing(floor, 1.3);
             h.assertFalse(Airflow.crawlForTest(s.r.level, door), "the player crawled into a doorway");
             h.assertTrue(door.getForcedPose() == null, "a forced pose at the doorway");
+        }
+        h.succeed();
+    }
+
+    /**
+     * The server tells every player within 32 blocks of a breach where it is and which way it
+     * flows, and none beyond (CLIENT-003, DATA-015). It tells them whichever zone they are in, and
+     * in creative or spectator mode, though it pushes neither kind.
+     */
+    @GameTest(template = "empty")
+    public static void client_003_players_within_32_blocks_are_sent_the_breach(GameTestHelper h) {
+        try (Site s = new Site(h, 121)) {
+            s.breach();
+            // A sealed room of its own, past the air outside the hole.
+            s.r.box(26, 0, 34, 6);
+            s.r.settle(GasMutations.remove(
+                    s.r.level, s.r.point(30, Y, Z), Map.of(StandardAir.NITROGEN, 1e-3), Rooms.source("airflow")));
+            h.assertTrue(s.r.zoned(30, Y, Z), "the sealed room didn't zone");
+            Airflow.step(s.r.level);
+            long now = s.r.level.getGameTime();
+
+            AirflowEffectsPayload sent = s.show(s.player(HOLE_X + 3), now);
+            h.assertTrue(sent != null && sent.flows().size() == 1, "beside the breach: " + sent);
+            VisibleFlow flow = sent.flows().get(0);
+            h.assertTrue(Math.abs(flow.kpa() - 101) <= 2, "the difference: " + flow.kpa());
+            BlockPos hole = s.r.abs(HOLE_X, Y, Z);
+            h.assertValueEqual(flow.openings().size(), 1, "the openings of a one-block hole");
+            VisibleOpening opening = flow.openings().get(0);
+            h.assertTrue(
+                    Math.abs(opening.x() - hole.getX()) <= 1
+                            && opening.y() == hole.getY()
+                            && opening.z() == hole.getZ(),
+                    "not at the hole: " + opening);
+            h.assertValueEqual(opening.nx(), -1, "the flow's direction, into the room");
+
+            ByteBuf buf = Unpooled.buffer();
+            AirflowEffectsPayload.STREAM_CODEC.encode(buf, sent);
+            h.assertValueEqual(buf.readableBytes(), 15, "the bytes for one hole");
+
+            h.assertTrue(s.show(s.player(HOLE_X + 28), now) != null, "28 blocks away");
+            h.assertTrue(s.show(s.player(HOLE_X - 15), now) != null, "inside the breached room");
+            h.assertTrue(s.show(s.player(HOLE_X + 34), now) == null, "34 blocks away");
+
+            FakePlayer walledOff = s.player(30);
+            h.assertTrue(s.show(walledOff, now) != null, "in a zone not beside the edge");
+            List<CustomPacketPayload> pushes = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> pushes.add(p));
+            Airflow.syncForTest(s.r.level, walledOff);
+            h.assertTrue(pushes.isEmpty(), "a player in another zone was sent the push: " + pushes);
+
+            FakePlayer creative = s.player(HOLE_X + 3);
+            h.assertTrue(creative.setGameMode(GameType.CREATIVE), "the player didn't go creative");
+            h.assertTrue(s.show(creative, now) != null, "a creative player");
+            FakePlayer spectator = s.player(HOLE_X + 3);
+            h.assertTrue(spectator.setGameMode(GameType.SPECTATOR), "the player didn't go spectator");
+            h.assertTrue(s.show(spectator, now) != null, "a spectator");
+        }
+        h.succeed();
+    }
+
+    /**
+     * An edge at FLOW-011's lowest threshold shows, though it is too weak to move a player
+     * (CLIENT-003); one below it doesn't.
+     */
+    @GameTest(template = "empty")
+    public static void client_003_an_edge_shows_from_the_lowest_class_threshold(GameTestHelper h) {
+        try (Site weak = new Site(h, 122)) {
+            weak.breachKeeping(0.6);
+            h.assertTrue(weak.hasOpenings(), "40 kPa has no airflow");
+            FakePlayer player = weak.player(HOLE_X + 3);
+            AirflowEffectsPayload sent = weak.show(player, weak.r.level.getGameTime());
+            h.assertTrue(sent != null && sent.flows().size() == 1, "a 40 kPa edge: " + sent);
+            int kpa = sent.flows().get(0).kpa();
+            h.assertTrue(kpa > AirflowClass.LIGHT.threshold() && kpa < AirflowClass.MOB.threshold(), "kPa: " + kpa);
+            List<CustomPacketPayload> pushes = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> pushes.add(p));
+            Airflow.syncForTest(weak.r.level, player);
+            h.assertTrue(pushes.isEmpty(), "a 40 kPa edge pushed a player: " + pushes);
+        }
+        try (Site faint = new Site(h, 123)) {
+            faint.breachKeeping(0.9);
+            h.assertFalse(faint.hasOpenings(), "10 kPa has airflow");
+            FakePlayer player = faint.player(HOLE_X + 3);
+            h.assertTrue(faint.show(player, faint.r.level.getGameTime()) == null, "a 10 kPa edge was sent");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A steady breach is sent once, and held by the client with no further packets but a rare
+     * resend; when it is sealed, the end is sent, and nothing after (DATA-015).
+     */
+    @GameTest(template = "empty")
+    public static void data_015_a_steady_breach_is_held_until_it_ends(GameTestHelper h) {
+        try (Site s = new Site(h, 124)) {
+            s.breach();
+            FakePlayer player = s.player(HOLE_X + 5);
+            Object here = s.r.level.dimension().location();
+            HeldFlows client = new HeldFlows();
+            long sentAt = s.r.level.getGameTime();
+            long now = sentAt;
+            AirflowEffectsPayload first = s.show(player, now);
+            h.assertTrue(first != null && !first.flows().isEmpty(), "the breach wasn't sent: " + first);
+            client.accept(first.flows(), here);
+
+            // Kept at a vacuum, the difference holds to the kPa, tick after tick.
+            int period = 20;
+            for (int i = 0; i < 6; i++) {
+                s.emptyRoom();
+                Airflow.step(s.r.level);
+                h.assertTrue(s.hasOpenings(), "the breach ended on its own");
+                now += period;
+                for (int t = 0; t < period; t++) {
+                    client.tick(here);
+                }
+                AirflowEffectsPayload later = s.show(player, now);
+                h.assertTrue(later == null, "sent again with nothing changed: " + later);
+                h.assertValueEqual(client.flows(), first.flows(), "what the client holds");
+            }
+
+            // The resend, unchanged.
+            AirflowEffectsPayload resend = s.show(player, sentAt + VisibleFlows.RESEND_TICKS);
+            h.assertTrue(resend != null, "no resend");
+            h.assertValueEqual(resend.flows(), first.flows(), "the resend");
+
+            // Sealed, the edge goes, and the client is told.
+            s.r.set(HOLE_X, Y, Z, Rooms.STONE);
+            for (int i = 0; i < 6 && s.hasOpenings(); i++) {
+                s.r.tick();
+                Airflow.step(s.r.level);
+            }
+            h.assertFalse(s.hasOpenings(), "the sealed hole still has airflow");
+            AirflowEffectsPayload end = s.show(player, sentAt + VisibleFlows.RESEND_TICKS + period);
+            h.assertTrue(end != null && end.flows().isEmpty(), "the end wasn't sent: " + end);
+            client.accept(end.flows(), here);
+            h.assertTrue(client.flows().isEmpty(), "the client kept showing it");
+            h.assertTrue(s.show(player, sentAt + 100 * VisibleFlows.RESEND_TICKS) == null, "sent after the end");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A listed player is told at most once per atmos tick, even if what it should show changes
+     * between them, and told at the next one (DATA-015).
+     */
+    @GameTest(template = "empty")
+    public static void data_015_at_most_once_per_atmos_tick(GameTestHelper h) {
+        try (Site s = new Site(h, 125)) {
+            s.breach();
+            FakePlayer player = s.player(HOLE_X + 5);
+            List<AirflowEffectsPayload> sent = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == player && p instanceof AirflowEffectsPayload x) {
+                    sent.add(x);
+                }
+            });
+            // Listed for the body of this game tick only, as nothing else runs in it.
+            s.r.level.players().add(player);
+            try {
+                s.r.tick();
+                Airflow.step(s.r.level);
+                h.assertValueEqual(sent.size(), 1, "payloads at an atmos tick");
+                h.assertFalse(sent.get(0).flows().isEmpty(), "the first payload was empty");
+
+                // It moves out of range, but no atmos tick has come.
+                Vec3 away = s.r.point(HOLE_X + 40, Y, Z);
+                player.moveTo(away.x, away.y, away.z);
+                Airflow.step(s.r.level);
+                Airflow.step(s.r.level);
+                h.assertValueEqual(sent.size(), 1, "payloads with no atmos tick");
+
+                s.r.tick();
+                Airflow.step(s.r.level);
+                h.assertValueEqual(sent.size(), 2, "payloads at the next atmos tick");
+                h.assertTrue(sent.get(1).flows().isEmpty(), "out of range wasn't sent as an end");
+            } finally {
+                s.r.level.players().remove(player);
+            }
+        }
+        h.succeed();
+    }
+
+    /** Airflow switched off ends what clients are showing (FLOW-014, DATA-015). */
+    @GameTest(template = "empty")
+    public static void data_015_airflow_off_ends_what_clients_show(GameTestHelper h) {
+        try (Site s = new Site(h, 126)) {
+            s.breach();
+            FakePlayer player = s.player(HOLE_X + 5);
+            h.assertTrue(s.show(player, s.r.level.getGameTime()) != null, "the breach wasn't sent");
+            List<AirflowEffectsPayload> sent = new ArrayList<>();
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == player && p instanceof AirflowEffectsPayload x) {
+                    sent.add(x);
+                }
+            });
+            s.enabled(false);
+            Airflow.step(s.r.level);
+            h.assertValueEqual(sent.size(), 1, "payloads when airflow went off");
+            h.assertTrue(sent.get(0).flows().isEmpty(), "the end wasn't empty");
+        }
+        h.succeed();
+    }
+
+    /** A respawned or reconnected player is a new object, which holds nothing, so is sent it again. */
+    @GameTest(template = "empty")
+    public static void data_015_a_new_player_object_is_sent_it_again(GameTestHelper h) {
+        try (Site s = new Site(h, 127)) {
+            s.breach();
+            UUID id = UUID.randomUUID();
+            Vec3 at = s.r.point(HOLE_X + 5, Y, Z);
+            FakePlayer before = new FakePlayer(s.r.level, new GameProfile(id, "zas_airflow"));
+            before.moveTo(at.x, at.y, at.z);
+            long now = s.r.level.getGameTime();
+            h.assertTrue(s.show(before, now) != null, "the breach wasn't sent");
+            h.assertTrue(s.show(before, now) == null, "sent twice");
+            FakePlayer after = new FakePlayer(s.r.level, new GameProfile(id, "zas_airflow"));
+            after.moveTo(at.x, at.y, at.z);
+            h.assertTrue(s.show(after, now) != null, "the new player object wasn't sent it");
         }
         h.succeed();
     }
