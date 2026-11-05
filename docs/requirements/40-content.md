@@ -12,6 +12,7 @@ CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
 owner, accepted and implemented the same day. CONT-115 to CONT-124, the
 central atmospherics controller, were added and accepted on 2026-11-03 (D-75).
+CONT-127, the other devices' sounds, was added as Draft on 2026-11-05.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -2484,6 +2485,45 @@ if the player were there (CONT-074).
   an unloaded chunk can't be opened.
 
 *2026-11-03: Accepted by the owner as written.*
+
+#### CONT-127 · The other devices' sounds
+`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
+
+A heater, air conditioner, portable pump, portable scrubber, recharger or
+generator shall play its running loop only while it is working, heard out to 8
+blocks. Devices and tools shall play their own one-shot sounds, once per change
+of state, for what really happens to them:
+
+- **A machine's switch:** on and off, for the heater, air conditioner, portable
+  pump and portable scrubber.
+- **Recharger:** it starts charging, its battery fills, or it stops short.
+- **Generator:** it lights or goes out.
+- **Igniter:** its signal changes; it sparks as it lights, then every 3 s.
+- **Area air controller:** it gains or loses power, or its danger rises.
+- **Firelock:** it opens or closes; a crowbar forces it, or a lockdown refuses it.
+- **Tank transfer valve:** it is armed, its timer ticks, its valve opens or is
+  closed by hand.
+- **Tank:** its supply is shut off or started, or it reaches its last minute of
+  breath.
+- **Fire extinguisher:** it sprays, is refilled or is empty.
+- **Container:** it leaks or bursts.
+
+These replace the vanilla sounds that stood in for them.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: a loop
+  plays only while the device works, and each event has a sound. Inferred: a
+  server that plays an event only when its state changes can't repeat it.
+- **Verify:** `cont_127_*` (GameTests) count what a device plays through each
+  change of state, and check what the machines report as device activity. The
+  owner listens for the loops starting and stopping within 8 blocks, in the
+  round's test world.
+
+*2026-11-05: added for review, with the machines built. A machine's off sound
+plays only for its switch, not when its battery runs out, since the switch
+hasn't moved. A generator isn't an `AtmosDevice`, so it has no device activity:
+a client asks for its loop while its block shows `lit`, which clients already
+have. A recharger's lease isn't saved, so one that was charging when its chunk
+left plays its on sound when it starts charging again.*
 
 ## R1 / R2 split
 

@@ -134,13 +134,47 @@ the server sends. It stays Accepted until the owner checks how it looks.*
 #### CLIENT-010 · Airflow sound
 `Should` · `R1` · `Accepted` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
 
-Such an edge shall play a looping hiss whose volume and pitch rise with the
-pressure difference, audible within 16 blocks.
+Such an edge shall play a looping hiss whose volume follows the moles per second
+through its openings and whose pitch rises with the pressure difference, audible
+within 16 blocks. A listener in a vacuum shall hear none of it.
 
-- **Rationale:** Inferred: a hiss is the clearest cue to a leak, louder as it
-  worsens.
-- **Verify:** Manual check of the hiss at different pressure differences and
-  distances.
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05 set the
+  loudness and the vacuum. Inferred: a hiss is the clearest cue to a leak, louder
+  as it worsens.
+- **Verify:** Manual check of the hiss at different pressure differences, room
+  sizes and distances.
+
+*2026-11-05: The owner changed the loudness rule. Volume followed the pressure
+difference; it now follows the moles per second through the opening, so no flow
+is silence and a big room venting is louder than a closet at the same pressure.
+The difference still sets the pitch. This stays Accepted, and nothing has been
+heard yet, so the Manual check is open.*
+
+*What was built. The engine records each edge's net moles per second, and the
+client gets it with the rest of DATA-015's list. Measured by `FlowExportTest`,
+through one hole at 1 atm to a vacuum: 11.6 mol/s from a 3-cell room, 23.6 from 27
+cells and 27.0 from 675. It levels off with size because venting is limited by the
+hole, not the room. `AirflowSoundPlan` holds the rest, with no game classes:*
+
+- *Volume is moles per second / 64, up to 1, so that hole plays at 0.18, 0.37 and
+  0.42. `AirflowSoundPlan.volume` is the one place that decides it.*
+- *Pitch is 1 at 101 kPa, and moves 0.107 for each doubling of the difference, from
+  0.7 to 1.5: 0.75 at 20 kPa and 1.11 at 200.*
+- *Openings are grouped by the 8-block cell of the world grid they are in, whichever
+  edge they belong to. Each cell is one source at the middle of its flow, with the
+  flows added up, so many edges at one breach make one capped sound. A client hears
+  the 2 sources loudest where it stands.*
+- *Each source plays two loops: `zas:airflow.hiss`, and the wind of the class its
+  difference reaches (FLOW-011): `airflow.light`, `.mob` from 65 kPa or `.heavy` from
+  85. The wind files carry almost nothing above 400 Hz and the hiss has no body
+  (`docs/research/vg-sounds.md`). So airflow takes at most 4 of CLIENT-015's 8 slots.*
+- *The vacuum is CLIENT-016's thin air, with no second rule here. It reads the real
+  pressure at the eyes, so it holds in a sealed suit and in creative.*
+
+*`AirflowSoundPlanTest` checks the curves, the grouping and the cap;
+`AirflowSoundLoopsTest` runs the loops through the real `LoopBook`, for the slots,
+the vacuum, a steady breach staying in the same voices, and nothing left once the
+flow ends.*
 
 #### CLIENT-004 · Low-pressure sound
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; damping every sound needs sound-engine hooks, and no R1 scenario needs it), 2026-10-31. · Verify: Manual
@@ -156,8 +190,9 @@ deferred here.*
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
 
 A client shall play at most 8 looping sounds at once, chosen from those
-requested within their range: the ones that reach the player loudest, which
-among loops of one volume and range are the nearest. Each shall fade over 0.5 s
+requested within their range: the ones that will play loudest at the player,
+counting the volume in `sounds.json` and the player's sliders, which among loops
+of one volume and range are the nearest. Each shall fade over 0.5 s
 as it starts, stops or changes volume, and shall stop within 1 s of its last
 request, as soon as its chunk or the player's level is gone, and when the
 player leaves its range.
@@ -178,6 +213,15 @@ the new one starts, so there are never more than 8. The sound engine's own
 attenuation is off: the gain falls in a straight line to 0 at each loop's range.
 Nothing has been heard yet, so the Manual part is open.*
 
+*2026-11-05: Choosing now counts what a loop will play at. It compared requested
+volumes, but the engine then multiplies by the event's volume in `sounds.json`,
+which sets the device loops' levels, so a pump at 0.35 there ranked about 3 times
+louder than it plays. By calculation, 8 pumps working hard within 5 blocks took
+every slot from a breach louder than any of them 2 blocks away. `ClientLoops` now
+gives the book that volume times the slider as a weight, 1 for an event with no
+sound data. `LoopBookTest` and `ClientLoopsTest` (Unit) check it. The client side
+hasn't run, so what plays is still unverified.*
+
 #### CLIENT-016 · Thin air
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
 
@@ -192,8 +236,10 @@ pressure the client doesn't know yet counts as being in normal air.
   fade where the player is first warned, and a straight line in amplitude is
   roughly what falling density does to a sound.
 - **Verify:** `ThinAirTest` and `LoopBookTest` (Unit) check the curve and that a
-  vacuum leaves no voice playing; `client_016_*` (GameTest) check the factor in
-  rooms and in open air; Manual checks how the fade sounds.
+  vacuum leaves no voice playing; `ThinAirOneShotsTest` (Unit) checks which
+  one-shots fade and by how much; `client_016_*` (GameTest) check the factor in
+  rooms and in open air; Manual checks how the fade sounds, and that a real
+  one-shot from a server fades.
 
 *2026-11-05: added for review, with the curve built (`sound.ThinAir`), for the
 owner to judge by ear: 0 at 1 kPa or below, 0.08 at 5, 0.18 at 10, 0.39 at 20,
@@ -202,6 +248,16 @@ player, so a sealed suit in a vacuum hears silence. The open air reads as its
 dimension's ambient pressure, so it is normal air in a breathable dimension and
 a vacuum in an airless one. Nothing has been heard yet, so the Manual part is
 open.*
+
+*2026-11-05: one-shots fade too, on the client as each sound starts
+(`client.ThinAirOneShots`, on NeoForge's `PlaySoundEvent`), for every event in a
+namespace a mod gives `ClientSounds.fadeInThinAir` (API-060). A server plays a
+sound for everyone in range and only each client knows its own player's air, so
+nothing that plays a sound has to do anything, and it must not multiply by the
+factor as well. In a vacuum the sound is dropped, and its subtitle with it. A
+sound above volume 1 keeps full gain and loses range until the factor brings it
+below 1, since the engine works out both from the volume, so a near blast at
+volume 4 starts to lose gain at a factor of 0.25.*
 
 #### CLIENT-017 · Gas particle limits
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-53
@@ -251,6 +307,47 @@ by ratio, because gas comes in amounts many powers of ten apart. An exploding
 container sends none, as vanilla's explosion has its own particles, and an empty
 canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests`
 and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
+these either, so this stays Draft.*
+
+#### CLIENT-019 · Flow particles
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018
+
+An open pipe end (CONT-004) moving at least 0.25 mol/s net shall show particles
+scaled by its flow, moving out of its mouth while gas leaves and into it while
+gas enters, and none below that. A vent or scrubber at activity level working or
+hard (DATA-017) shall show particles sized by that level, blowing out of the
+grille of a blowing vent and drawn into the grille of a siphoning vent or of a
+scrubber, and none below working.
+
+- **Rationale:** Decision: the owner, 2026-11-02 (#164) and 2026-11-05: players
+  should see big changes in the atmosphere, such as a vacuum being filled or
+  scrubbers working hard, and tell which way a device is going, with nothing at
+  a trickle.
+- **Verify:** Unit tests of the threshold and scaling; GameTests of what the
+  server sends for each flow and what a client is told of each device; Manual
+  check of how it looks.
+
+*2026-11-05: Open ends are built. While it flows, an end sends one event per
+atmos tick with its net moles per second, so gases only passing each other show
+nothing. A pipe with one connection blows out of the opposite face, and a lone
+pipe every way. Each event's particles last 22 game ticks and then stop. Events
+go to players within 16 blocks. Together with a tank's leak jets, a player is
+sent at most 20 a second, of 41-byte payloads: about 1.2 KiB/s with their headers,
+however large the station. Past that cap the same ends lose out each second. `JetPlanTest`,
+`JetEmittersTest`, `SendLimiterTest` and `GasJetTest` (Unit) and the `client_019_*`
+tests in `PipeTests` (GameTests) pass. Nobody has seen them yet. The art half of
+#164 is still to come. Vents and scrubbers wait for the device activity sync.*
+
+*2026-11-05: Vents and scrubbers are built, with nothing new sent. The client
+reads how hard a device is working from its activity table (DATA-018), and which
+way from its block state: `VentMode.PROPERTY` for a vent, which can do either, and
+`FACING` for where its grille looks. A device that is off shows nothing even
+while the table still lists it, and one whose block has gone shows nothing at all.
+Working shows 0.3 particles a game tick travelling 1.2 blocks, and hard 1 a tick
+travelling 2.5, starting across most of the grille rather than from one point.
+They stop within a game tick of the device stopping, and count toward CLIENT-017's
+limits. `DeviceJetsTest`, `JetPlanTest` and `JetEmittersTest` (Unit) and the
+`client_019_*` tests in `DeviceActivityTests` (GameTests) pass. Nobody has seen
 these either, so this stays Draft.*
 
 ## Sound files

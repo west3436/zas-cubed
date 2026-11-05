@@ -62,7 +62,6 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
     private final Batteries.Slot battery = new Batteries.Slot(this::batteryChanged);
     private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
     private Status status = Status.NO_BATTERY;
-    private boolean stepped;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -161,14 +160,10 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
 
     /**
      * Plays what a change of status sounds like (CONT-127): it starts charging, stops short, or
-     * finishes. The first step after loading has nothing to compare with, as its status isn't saved,
-     * so a chunk coming back plays nothing.
+     * finishes. Neither its status nor its lease is saved, so one that was charging when its chunk left
+     * starts again unpowered, silently, and sounds as it starts charging once more.
      */
     private void sound(ServerLevel level, Status was) {
-        if (!stepped) {
-            stepped = true;
-            return;
-        }
         if (status == was || (status != Status.CHARGING && was != Status.CHARGING)) {
             return;
         }

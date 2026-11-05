@@ -214,7 +214,8 @@ public abstract class PortableGasDevice extends PortableDevice {
         Map<ResourceLocation, Double> take = new TreeMap<>(move.take());
         take.replaceAll((gas, n) -> n * paid);
         double give = move.give() * paid;
-        reportMoved(give + take.values().stream().mapToDouble(Double::doubleValue).sum());
+        reportMoved(
+                give + take.values().stream().mapToDouble(Double::doubleValue).sum());
         if (held.isEmpty()) {
             onZone(level, take, give);
         } else {

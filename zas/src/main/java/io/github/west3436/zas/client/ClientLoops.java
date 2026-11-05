@@ -11,13 +11,16 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.core.SectionPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Plays what the {@link LoopBook} says (CLIENT-015): the thin shell between its rules, with the
@@ -42,6 +45,7 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 final class ClientLoops implements ClientSoundProvider, LoopPlayer.Engine<ClientLoops.LoopSound, LoopSoundInstance> {
     private static final ClientLoops INSTANCE = new ClientLoops();
+    private static final RandomSource WEIGHT_RANDOM = RandomSource.create();
 
     /**
      * A sound and its slider, compared by the sound's id: an event made twice for one id is one
@@ -95,8 +99,36 @@ final class ClientLoops implements ClientSoundProvider, LoopPlayer.Engine<Client
                     r.z(),
                     r.volume(),
                     r.pitch(),
-                    r.range());
+                    r.range(),
+                    weight(r));
         }
+    }
+
+    /**
+     * What the sound engine will multiply a loop's volume by, for choosing which loops play: the volume
+     * its event has in {@code sounds.json}, and its slider, as the engine reads them. The master slider
+     * is left out, since it applies to every loop alike.
+     */
+    private static double weight(LoopRequest r) {
+        Minecraft mc = Minecraft.getInstance();
+        double slider = r.channel() == SoundSource.MASTER ? 1 : mc.options.getSoundSourceVolume(r.channel());
+        return slider * eventVolume(mc.getSoundManager().getSoundEvent(r.sound().getLocation()));
+    }
+
+    /**
+     * The volume an event has in {@code sounds.json}. With several sounds of different volumes it is
+     * always the same one's, so it doesn't change from one request to the next, though a loop may play
+     * another. Every loop in this mod has one sound.
+     *
+     * @param event the event's sound data, or null if it has none, as before sounds have loaded
+     * @return its volume, or 1 with no data, so that nothing goes silent for the lack of it
+     */
+    static double eventVolume(@Nullable WeighedSoundEvents event) {
+        if (event == null) {
+            return 1;
+        }
+        WEIGHT_RANDOM.setSeed(0);
+        return event.getSound(WEIGHT_RANDOM).getVolume().sample(WEIGHT_RANDOM);
     }
 
     private void tick(Minecraft mc) {

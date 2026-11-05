@@ -26,11 +26,16 @@ public final class JetEmitters {
     /** The most particles a client makes for jets in a game tick, at the All setting. */
     public static final int TOTAL = 120;
 
-    /** The most sources it keeps at once. It is well above what the sends allow, and only a safety limit. */
+    /**
+     * The most sources it keeps at once. It is well above what the sends and a station's working devices
+     * come to, and only a safety limit.
+     */
     public static final int MAX_SOURCES = 512;
 
     /** A source further than this from the camera makes nothing, in blocks: vanilla's particle limit. */
     public static final double RANGE = 32;
+
+    private static final double[] NO_OFFSET = {0, 0, 0};
 
     /** Makes one particle. */
     @FunctionalInterface
@@ -156,19 +161,25 @@ public final class JetEmitters {
         }
     }
 
-    /** Makes one particle of a source, part of the way along its first tick so they don't bunch. */
+    /**
+     * Makes one particle of a source, part of the way along its first tick so they don't bunch. One
+     * going inward starts as far out as it would have ended, and flies back to the source.
+     */
     private void emit(Source s, Sink sink) {
         JetPlan plan = s.plan;
         double[] d = JetPlan.direction(s.ax, s.ay, s.az, plan.spread(), random);
         double speed = plan.speed();
         double along = speed * random.nextDouble();
+        double out = plan.inward() ? plan.distance() - along : along;
+        double way = plan.inward() ? -speed : speed;
+        double[] at = plan.patch() > 0 ? JetPlan.across(s.ax, s.ay, s.az, plan.patch(), random) : NO_OFFSET;
         sink.spawn(
-                s.x + d[0] * along,
-                s.y + d[1] * along,
-                s.z + d[2] * along,
-                d[0] * speed,
-                d[1] * speed,
-                d[2] * speed,
+                s.x + at[0] + d[0] * out,
+                s.y + at[1] + d[1] * out,
+                s.z + at[2] + d[2] * out,
+                d[0] * way,
+                d[1] * way,
+                d[2] * way,
                 plan.lifetime(),
                 plan.shade(),
                 plan.size());

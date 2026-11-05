@@ -1168,12 +1168,22 @@ aren't done.
 Showing airflow is separate from pushing with it, and wider (CLIENT-003,
 DATA-015). At each atmos tick `VisibleFlows` picks a player's list: every exported
 edge's openings within 32 blocks, whichever zone the player is in and in any game
-mode, with the differences in whole kPa. The server sends the list, as an
-`AirflowEffectsPayload`, only if it differs from the last it sent the player, and
-every 10 s as a failsafe. The client holds the last list in `HeldFlows`, so a
-steady breach goes on showing with no packets; a newer list replaces it, and an
-empty one ends it. `AirflowParticlePlan` turns the list into each game tick's
-particles, with no Minecraft classes, and `client.AirflowParticles` starts them.
+mode, with the differences in whole kPa and the moles per second through those
+openings. The engine records that flow on each `Edge` as it exchanges, and exports
+it with the edge. The server sends the list, as an `AirflowEffectsPayload`, only if
+it differs from the last it sent the player, and every 10 s as a failsafe. The
+client holds the last list in `HeldFlows`, so a steady breach goes on showing with
+no packets; a newer list replaces it, and an empty one ends it.
+`AirflowParticlePlan` turns the list into each game tick's particles, with no
+Minecraft classes, and `client.AirflowParticles` starts them.
+
+`AirflowSoundPlan` turns the same list into loops (CLIENT-010), also with no
+Minecraft classes: openings grouped by 8-block grid cell, the 2 sources loudest at
+the listener, and a hiss and a wind for each. `client.AirflowSounds` asks
+`ClientSounds.loop` for them each game tick while the list has them. It never stops
+a sound. When the list changes or ends it stops asking, and the loop manager's lease
+ends the sound, so a flow that ends can't leave a loop playing. Thin air is the
+manager's too.
 
 *Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):*
 ignition sources (FIRE-014, FIRE-015), in `io.github.west3436.zas.ignition`.
@@ -1820,6 +1830,11 @@ unverified.*
   chosen once it is silent. A chosen loop gets a bonus of 1.25 on its loudness,
   so loops about as loud don't take turns. A new voice starts only when fewer
   than 8 exist, so a swap waits for the old voice to fade.
+- **What counts as loud.** A request's volume, times what's left after distance,
+  times a weight the shell reads for it: the volume its event has in `sounds.json`
+  times its slider, as the engine reads them. An event with no sound data weighs 1.
+  The weight counts only in choosing, because the engine applies it to the sound
+  itself. A loop on a slider at 0 weighs nothing and holds no slot.
 - **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
   stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
   that forgets, or stops existing, can't leave a sound playing.
@@ -1847,6 +1862,14 @@ unverified.*
   and sent to it if it changed. It is whole kPa capped at 50, so normal air sends
   nothing after the first. A client that hasn't been told, or has left a server,
   counts as normal air, and an unresolved point leaves the last reading standing.
+- **One-shots** (`client.ThinAirOneShots`). A server plays a sound for everyone in
+  range, so the fade happens on each client, in NeoForge's `PlaySoundEvent`, the
+  one place every sound passes through. A non-ticking sound in a namespace given
+  to `ClientSounds.fadeInThinAir` plays at the factor's share of its volume, or
+  not at all at 0. So whatever plays a sound, on either side, plays its event as
+  usual and doesn't multiply by the factor. Vanilla's sounds and loops are left
+  alone. Each mod gives its own namespace, since `zas` knows nothing of the mods
+  built on it.
 
 ## 6. API module
 
@@ -1863,7 +1886,7 @@ unverified.*
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
-| `.api.client` | `ClientSounds` (`thinAir()`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
+| `.api.client` | `ClientSounds` (`thinAir()`, `fadeInThinAir(namespace)`, `fadesInThinAir(namespace)`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -2180,14 +2203,14 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
-| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
-| `particle` | Gas particles (§11.12): the server's sends (`GasJets`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
+| `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12) and `DeviceLoops` (§11.2) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -2348,7 +2371,8 @@ the cell in front of its grille).
   ([#153](https://github.com/west3436/zas-cubed/issues/153)). #154 fixed that
   in the framework, which now reads such a cell as unresolved; the wait stays
   as defence in depth. A pipe cap
-  closes an end and never leaks.
+  closes an end and never leaks. An end moving at least 0.25 mol/s net shows a
+  jet (CLIENT-019, §11.12).
 - **Dye** (CONT-114). A dye on a pipe or cap sets its `color` state; the
   client tints the models' tint index 0 with the dye's colour. The colour
   doesn't change connections. A `PipeItem` carries a colour in the vanilla
@@ -2934,7 +2958,7 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   (D-35, CONT-067): it isn't in `#zas:combustion` and has no fuel profile, so
   lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
   no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
-  takes only fuel, and shows the burn time and stored FE.
+  takes only fuel, and shows the burn time and stored FE. Its sounds are in §11.13.
 
 ### 11.8 Firelocks
 
@@ -3153,7 +3177,8 @@ client works out for itself. No client ever sees a zone (D-53).
   or tint.
 - **The plan** (`particle.JetPlan`) turns a kind and its number into particles
   per tick, how many ticks, each particle's life, how far it travels, the
-  cone's half-angle, a grey and a size. The speed comes from the distance, the
+  cone's half-angle, a grey, a size, whether they fly in or out, and how wide a
+  patch they start across. The speed comes from the distance, the
   life and the sprite's friction, so a particle ends about where it should.
   Sizes that follow moles go by ratio, between a low and a high amount, since
   gas comes in amounts many powers of ten apart.
@@ -3164,9 +3189,31 @@ client works out for itself. No client ever sees a zone (D-53).
   | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
   | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
   | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
+  | `OPEN_END` | An open pipe end moves at least 0.25 mol/s net, each atmos tick (§11.4) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
+  | `DEVICE` | Never sent: the client makes it for a vent or scrubber it is told is working | Its activity level: positive out, negative in | Working: 0.3 particles per tick, travelling 1.2 blocks. Hard: 1 per tick, travelling 2.5 blocks. In a 20° cone, across most of the grille |
 
   An exploding container sends nothing, since vanilla's explosion has its own
   particles. Nothing is sent for no moles, so an empty canister shows nothing.
+  An open end looks away from its one connection, and a lone pipe every way. Its
+  22 ticks run a little past the next atmos tick, so a flowing end's jets run
+  into each other and one that stops goes quiet within about a second.
+- **What is sent.** A jet goes to players within its kind's range: 16 blocks for
+  `OPEN_END`, 32 for the rest. `LEAK` and `OPEN_END` are `flowing`, sent every
+  atmos tick while gas flows, so each player is sent at most 20 of them per
+  second (`SendLimiter`): at most about 1.2 KiB/s, however large the station,
+  within DATA-006's 2 KiB/s. The budget is per second, not per game tick, because
+  a device's phase comes from the order it was added, so a few ends can share a
+  game tick. Past the budget they just aren't sent, and since phases are fixed
+  the same ends lose out each second.
+- **Vents and scrubbers** (`particle.DeviceJets`, CLIENT-019). These add nothing
+  to the network. Each game tick the client walks its activity table (DATA-018),
+  and for each device within 32 blocks reads its block state: `FACING` for where
+  the grille looks, and its mode for which way the gas goes, as a vent can siphon
+  as well as blow. It asks for a one-tick `DEVICE` jet from just in front of the
+  grille, unless the level is below working, the mode is off, or the block isn't
+  a vent or a scrubber. Asking again takes over the same source, which keeps what
+  it has built up towards its next particle, so a slow rate holds, and a device
+  no longer asked for stops within a game tick.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes
@@ -3191,3 +3238,26 @@ there too. A server only sends a sound out to its event's range, so an event
 heard past 16 blocks is registered with the same range, and a GameTest checks
 that they agree. A loop's range comes from the client's loop manager instead.
 Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).
+
+**Machines** (CONT-127). The heater, air conditioner, portable pump, portable
+scrubber and recharger report their activity (§11.2) and each has a `DeviceLoops`
+line, so a client plays its `run` loop within 8 blocks while it works.
+`ThermoMachineBlockEntity` and the recharger report as running, and
+`PortableGasDevice` the moles it moved. The generator has no activity to report,
+as it isn't an `AtmosDevice`: its block entity has a client ticker that asks for
+the loop while its block shows `lit`. That adds no sync, and when the block goes
+or its chunk unloads the ticker stops, so the request lapses.
+
+Their one-shots come from the server when their state changes. `PortableDevice.setOn`
+plays a machine's `on` or `off`, and only if the switch moved. The recharger plays
+`on` as it starts charging, `done` as its battery fills and `off` if it stops
+short. The generator plays `on` and `off` as its `lit` changes, so not between one
+piece of fuel and the next.
+
+**Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
+canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
+and sends each player in the level one `ClientboundSoundPacket`, which
+`BlastSound.heard` chooses from the blast's power and the player's distance, so
+nobody hears a near and a far sound together. These packets don't use the server's
+range check, but the events' ranges are still what the client attenuates by. Any
+other explosion goes through vanilla's code and keeps vanilla's sound.

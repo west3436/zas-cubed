@@ -559,6 +559,13 @@ thread: 1 without ZAS³ and on a dedicated server.
 `ClientSounds.thinAir()`, with `api_060_a_listener_hears_normally_without_zas`
 (Unit).*
 
+*2026-11-05: for review, the API also lets a mod have ZAS³ fade its one-shot
+sounds: one call, `ClientSounds.fadeInThinAir(modId)`, from its client entry
+point, and `fadesInThinAir` to ask. A sound a server plays can only be faded on
+the client that hears it, and `zas` knows nothing of the mods built on it, so
+each names its own namespace. With `api_060_a_mod_gives_its_own_namespace`
+(Unit).*
+
 #### API-061 · Looping sounds through the API
 `Should` · `R1` · `Draft` · Verify: Unit, Inspect, Manual · Trace: CLIENT-015, CONT-095 · Depends: API-009
 
