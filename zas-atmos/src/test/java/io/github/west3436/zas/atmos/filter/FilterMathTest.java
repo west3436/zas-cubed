@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.pump.PumpFlow;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -145,10 +146,10 @@ class FilterMathTest {
 
     @Test
     void cont_013_the_target_is_at_most_4500_kpa() {
-        assertEquals(4_500, FilterMath.clampTarget(9_999));
-        assertEquals(0, FilterMath.clampTarget(-5));
-        assertEquals(0, FilterMath.clampTarget(Double.NaN));
-        assertEquals(250, FilterMath.clampTarget(250));
+        assertEquals(4_500, PumpFlow.clampTarget(9_999));
+        assertEquals(0, PumpFlow.clampTarget(-5));
+        assertEquals(0, PumpFlow.clampTarget(Double.NaN));
+        assertEquals(250, PumpFlow.clampTarget(250));
         // A higher target acts as 4,500 kPa.
         GasStore in = store(200, Map.of(N2, 10_000.0), T);
         GasStore out = empty(200);
@@ -194,6 +195,25 @@ class FilterMathTest {
         double n = FilterMath.moles(in, out, side, ONLY_CO2, 500, 1);
         FilterMath.move(n, in, out, side, ONLY_CO2);
         assertEquals(500, out.pressure(), 1e-6);
+    }
+
+    @Test
+    void cont_013_each_outlet_lands_on_the_target_between_gases_of_different_heat_capacities() {
+        // Hot nitrogen into cold oxygen, whose heat capacities differ: the output settles between
+        // their temperatures by heat capacity, and its pressure still lands on the target.
+        GasStore in = store(200, Map.of(N2, 1_000.0), 1_000);
+        GasStore out = store(1_000, Map.of(O2, 40.0), 250);
+        GasStore side = empty(200);
+        FilterMath.move(FilterMath.moles(in, out, side, ONLY_CO2, 400, 1), in, out, side, ONLY_CO2);
+        assertEquals(400, out.pressure(), TINY);
+
+        // The same through the side outlet, with the other gas sharing the slice.
+        GasStore mixed = store(200, Map.of(N2, 500.0, O2, 500.0), 1_000);
+        GasStore roomy = empty(100_000);
+        GasStore oxygen = store(1_000, Map.of(CO2, 40.0), 250);
+        Predicate<ResourceLocation> onlyO2 = Set.of(O2)::contains;
+        FilterMath.move(FilterMath.moles(mixed, roomy, oxygen, onlyO2, 400, 1), mixed, roomy, oxygen, onlyO2);
+        assertEquals(400, oxygen.pressure(), TINY);
     }
 
     @Test

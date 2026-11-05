@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.pump.PumpFlow;
 import java.util.Map;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class MixerMathTest {
         GasStore nitrogen = store(2_000, N2, 2_000, T);
         GasStore out = empty(500);
         MixerMath.move(MixerMath.moles(oxygen, nitrogen, out, 0.5, 101.325, 1), oxygen, nitrogen, out);
-        assertEquals(MixerMath.Flow.NONE, MixerMath.moles(oxygen, nitrogen, out, 0.5, 101.325, 1));
+        assertEquals(0, MixerMath.moles(oxygen, nitrogen, out, 0.5, 101.325, 1).total(), TINY);
         assertEquals(MixerMath.Flow.NONE, MixerMath.moles(oxygen, nitrogen, out, 0.5, 50, 1), "already above it");
     }
 
@@ -134,6 +135,19 @@ class MixerMathTest {
     }
 
     @Test
+    void cont_077_the_output_lands_on_the_target_between_gases_of_different_heat_capacities() {
+        // Hot oxygen and cold nitrogen into an output of nitrogen: the moles stay in proportion to
+        // fraction over temperature, and the pressure still lands on the target.
+        GasStore hot = store(10_000, O2, 100_000, 1_000);
+        GasStore cold = store(10_000, N2, 100_000, 250);
+        GasStore out = store(1_000, N2, 40, 300);
+        MixerMath.Flow flow = MixerMath.moles(hot, cold, out, 0.25, 500, 1);
+        assertEquals((0.25 / 1_000) / (0.75 / 250), flow.first() / flow.second(), TINY);
+        MixerMath.move(flow, hot, cold, out);
+        assertEquals(500, out.pressure(), TINY);
+    }
+
+    @Test
     void cont_077_moving_gas_conserves_moles_and_thermal_energy() {
         GasStore first = store(1_000, O2, 100, 400);
         GasStore second = store(1_000, N2, 100, 250);
@@ -164,9 +178,7 @@ class MixerMathTest {
 
     @Test
     void cont_077_settings_are_clamped() {
-        assertEquals(4_500, MixerMath.clampTarget(9_999));
-        assertEquals(0, MixerMath.clampTarget(-5));
-        assertEquals(0, MixerMath.clampTarget(Double.NaN));
+        assertEquals(4_500, PumpFlow.clampTarget(9_999));
         assertEquals(1, MixerMath.clampFraction(2));
         assertEquals(0, MixerMath.clampFraction(-1));
         assertEquals(0.5, MixerMath.clampFraction(Double.NaN));

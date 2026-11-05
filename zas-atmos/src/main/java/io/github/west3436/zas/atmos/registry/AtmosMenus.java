@@ -4,8 +4,10 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
+import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.mixer.MixerMenu;
 import io.github.west3436.zas.atmos.portable.PortablePumpMenu;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
@@ -73,6 +75,14 @@ public final class AtmosMenus {
             "volume_pump",
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.VOLUME_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
+    /** A filter's switch, target, side port and what it selects (CONT-013). */
+    public static final Supplier<MenuType<FilterMenu>> FILTER =
+            MENUS.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
+
+    /** A mixer's switch, target, side port and fractions (CONT-077). */
+    public static final Supplier<MenuType<MixerMenu>> MIXER = MENUS.register(
+            "mixer", () -> new MenuType<>((id, inventory) -> new MixerMenu(id), FeatureFlags.DEFAULT_FLAGS));
 
     /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
     public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
