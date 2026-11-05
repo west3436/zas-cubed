@@ -18,6 +18,8 @@ import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
 import io.github.west3436.zas.atmos.failure.TankFailure;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
+import io.github.west3436.zas.atmos.particle.GasJet;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -102,6 +104,170 @@ public final class ContainerFailureTests {
     }
 
     // ---- CONT-038 -------------------------------------------------------------------------------
+
+    // ---- CLIENT-018 ------------------------------------------------------------------------------
+
+    /** The one jet the server sent around a point, of a kind; fails if there are none or more. */
+    private static GasJet oneJet(GameTestHelper h, Vec3 near, GasJetKind kind) {
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets sent");
+        h.assertValueEqual(jets.get(0).kind(), kind, "the jet's kind");
+        return jets.get(0);
+    }
+
+    private static void jetAt(GameTestHelper h, GasJet jet, Vec3 point) {
+        h.assertTrue(
+                new Vec3(jet.x(), jet.y(), jet.z()).distanceTo(point) < 1e-6,
+                "the jet is at " + jet.x() + ", " + jet.y() + ", " + jet.z() + ", not " + point);
+    }
+
+    /** A jet's moles, as near as the float it is sent in holds them. */
+    private static void jetMoles(GameTestHelper h, GasJet jet, double expected) {
+        h.assertTrue(
+                Math.abs(jet.amount() - expected) <= expected * 1e-6,
+                "the jet's moles: " + jet.amount() + ", not " + expected);
+    }
+
+    private static void noDirection(GameTestHelper h, GasJet jet) {
+        h.assertTrue(jet.dx() == 0 && jet.dy() == 0 && jet.dz() == 0, "a burst has a direction: " + jet);
+    }
+
+    /**
+     * A tank holding sends nothing. A leaking tank sends a jet each atmos tick, from where it is and in
+     * a level direction, sized by what it lost in that tick. Once it stops leaking, so do the jets.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_leaking_tank_sends_a_jet_of_what_it_lost(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 860);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+
+        TankFailure.check(a.level, at, tank(29.9), null);
+        h.assertTrue(JetLog.take(at).isEmpty(), "a tank at 29.9 atm sent a jet");
+
+        ItemStack t = tank(39.9);
+        double start = moles(t);
+        h.assertValueEqual(TankFailure.check(a.level, at, t, null).kind(), Kind.LEAK, "at 39.9 atm");
+        GasJet jet = oneJet(h, at, GasJetKind.LEAK);
+        jetAt(h, jet, at);
+        jetMoles(h, jet, start - moles(t));
+        h.assertTrue(
+                jet.dy() == 0 && Math.abs(Math.hypot(jet.dx(), jet.dz()) - 1) < 1e-4,
+                "the jet isn't level and a unit long: " + jet);
+
+        for (int i = 0; i < 8 && TankFailure.check(a.level, at, t, null).kind() == Kind.LEAK; i++) {
+            a.tick();
+        }
+        JetLog.take(at);
+        h.assertValueEqual(TankFailure.check(a.level, at, t, null), Verdict.NONE, "at 30 atm");
+        h.assertTrue(JetLog.take(at).isEmpty(), "a tank that stopped leaking sent a jet");
+        a.tick();
+        h.succeed();
+    }
+
+    /** A rupturing tank sends one burst, in every direction, of all it held. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_rupturing_tank_sends_a_burst_of_all_its_gas(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 861);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+        ItemStack t = tank(45);
+        double held = moles(t);
+        h.assertValueEqual(TankFailure.check(a.level, at, t, null), Verdict.RUPTURE, "at 45 atm");
+        GasJet jet = oneJet(h, at, GasJetKind.BURST);
+        jetAt(h, jet, at);
+        noDirection(h, jet);
+        jetMoles(h, jet, held);
+        a.tick();
+        h.succeed();
+    }
+
+    /** An explosion shows vanilla's own particles, so an exploding tank sends no burst as well. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_an_exploding_tank_sends_no_burst(GameTestHelper h) {
+        Blasts.listen();
+        JetLog.listen();
+        Area a = new Area(h, 862);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+        h.assertValueEqual(TankFailure.check(a.level, at, tank(51), null).kind(), Kind.EXPLODE, "at 51 atm");
+        h.assertValueEqual(Blasts.take(at).size(), 1, "explosions");
+        h.assertTrue(JetLog.take(at).isEmpty(), "an exploding tank sent a jet");
+        a.tick();
+        h.succeed();
+    }
+
+    /** A canister over its rating sends one burst from its middle, of what it held. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_rupturing_canister_sends_a_burst(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 863);
+        GasDeviceTests.room(a);
+        CanisterBlockEntity can = canisterAt(a, 9200);
+        double held = can.network().gas().totalMoles();
+        JetLog.take(a.point(2, 1, 2));
+        a.step();
+        h.assertTrue(canisterGone(a), "a canister at 9,200 kPa held");
+        GasJet jet = oneJet(h, a.point(2, 1, 2), GasJetKind.BURST);
+        jetAt(h, jet, a.point(2, 1, 2));
+        noDirection(h, jet);
+        jetMoles(h, jet, held);
+        h.succeed();
+    }
+
+    /** A canister in a network lets out only its share, so that is the size of its burst. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_canister_in_a_network_sends_a_burst_of_its_share(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 864);
+        GasDeviceTests.room(a);
+        a.place(2, 1, 2, GasDeviceTests.pipe());
+        a.place(2, 2, 2, GasDeviceTests.port());
+        a.place(2, 3, 2, GasDeviceTests.canister());
+        a.tick();
+        CanisterBlockEntity can = a.entity(2, 3, 2);
+        PipeNetwork net = can.network();
+        double total = molesFor(9200, net.volume(), T);
+        double share = total * PipeVolumes.CANISTER / net.volume();
+        net.gas().add(new GasParcel(Map.of(N2, total), T));
+        JetLog.take(a.point(2, 3, 2));
+        a.step();
+        h.assertFalse(a.get(2, 3, 2).is(AtmosBlocks.CANISTER.get()), "the canister held above its rating");
+        GasJet jet = oneJet(h, a.point(2, 3, 2), GasJetKind.BURST);
+        jetMoles(h, jet, share);
+        h.succeed();
+    }
+
+    /**
+     * A canister caught in a blast bursts too, sized by what it held. An empty one has nothing to let
+     * out, so it shows nothing.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_canister_caught_in_a_blast_sends_a_burst(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 865);
+        GasDeviceTests.room(a);
+        CanisterBlockEntity can = canisterAt(a, 2000);
+        double held = can.network().gas().totalMoles();
+        Vec3 near = a.point(2, 2, 2);
+        JetLog.take(near);
+        a.level.explode(null, near.x, near.y, near.z, 4f, Level.ExplosionInteraction.NONE);
+        h.assertTrue(canisterGone(a), "the blast left the canister whole");
+        GasJet jet = oneJet(h, near, GasJetKind.BURST);
+        jetMoles(h, jet, held);
+        jetAt(h, jet, a.point(2, 1, 2));
+        a.tick();
+
+        a.place(2, 1, 2, GasDeviceTests.canister());
+        a.tick();
+        JetLog.take(near);
+        a.level.explode(null, near.x, near.y, near.z, 4f, Level.ExplosionInteraction.NONE);
+        h.assertTrue(canisterGone(a), "the second blast left the canister whole");
+        h.assertTrue(JetLog.take(near).isEmpty(), "an empty canister sent a burst");
+        h.succeed();
+    }
 
     /** Up to 30 atm a tank holds, and neither the stack nor the room changes. */
     @GameTest(template = "empty", batch = BATCH)

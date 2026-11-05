@@ -7,6 +7,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -67,17 +68,12 @@ public final class TankFailure {
         switch (verdict.kind()) {
             case NONE -> {}
             case LEAK -> {
-                GasMutations.add(
-                        level,
-                        at,
-                        GasTankItem.take(tank, ContainerFailure.leakMoles(gas.totalMoles(), gas.pressure())),
-                        RELEASE);
+                GasParcel lost = GasTankItem.take(tank, ContainerFailure.leakMoles(gas.totalMoles(), gas.pressure()));
+                GasMutations.add(level, at, lost, RELEASE);
                 ContainerBlast.hiss(level, at);
+                GasJets.leak(level, at, lost.totalMoles());
             }
-            case RUPTURE -> {
-                release(level, at, tank);
-                ContainerBlast.burst(level, at);
-            }
+            case RUPTURE -> ContainerBlast.burst(level, at, release(level, at, tank));
             case EXPLODE -> {
                 release(level, at, tank);
                 ContainerBlast.explode(level, at, verdict.power(), source);
@@ -86,10 +82,15 @@ public final class TankFailure {
         return verdict;
     }
 
-    /** Uses the stack up and puts all its gas in the cell at a point. */
-    private static void release(ServerLevel level, Vec3 at, ItemStack tank) {
+    /**
+     * Uses the stack up and puts all its gas in the cell at a point.
+     *
+     * @return the moles it let out
+     */
+    private static double release(ServerLevel level, Vec3 at, ItemStack tank) {
         GasParcel all = GasTankItem.gas(tank);
         tank.setCount(0);
         GasMutations.add(level, at, all, RELEASE);
+        return all.totalMoles();
     }
 }

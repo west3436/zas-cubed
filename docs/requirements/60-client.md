@@ -187,6 +187,16 @@ blocks. `JetPlanTest` (Unit) and `client_018_a_spray_sends_a_jet_along_the_look`
 `client_018_only_a_spray_sends_a_jet` (GameTests) pass. Leaks and bursts are
 next, and nobody has seen any of it yet.*
 
+*2026-11-05: Leaks and bursts are built. A leaking tank sends a level jet in a
+random direction each atmos tick, with the moles it lost. A rupturing tank or
+canister, or a bursting pipe, sends a burst in every direction, with the moles
+it let out: a canister's share of its network, or all of a burst pipe's. Sizes go
+by ratio, because gas comes in amounts many powers of ten apart. An exploding
+container sends none, as vanilla's explosion has its own particles, and an empty
+canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests`
+and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
+these either, so this stays Draft.*
+
 ## Debug rendering
 
 #### CLIENT-005 · Debug zone overlay
