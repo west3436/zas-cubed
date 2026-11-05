@@ -42,7 +42,7 @@ class VisibleFlowsTest {
     void client_003_it_carries_where_the_opening_is_and_the_way_the_flow_goes() {
         FlowField field = field(edge(1, FlowEdge.AMBIENT, 101.3, new int[] {10, 64, -20}));
         List<VisibleFlow> flows = VisibleFlows.near(field, 0, 64, 0);
-        assertEquals(List.of(new VisibleFlow(101, List.of(new VisibleOpening(10, 64, -20, WEST)))), flows);
+        assertEquals(List.of(new VisibleFlow(101, 0, List.of(new VisibleOpening(10, 64, -20, WEST)))), flows);
         VisibleOpening o = flows.get(0).openings().get(0);
         assertEquals(-1, o.nx());
         assertEquals(0, o.ny());
@@ -96,6 +96,55 @@ class VisibleFlowsTest {
         assertTrue(flows.stream().mapToInt(f -> f.openings().size()).sum() <= VisibleFlows.MAX_OPENINGS);
         assertTrue(flows.stream().noneMatch(f -> f.openings().isEmpty()));
         assertTrue(flows.stream().noneMatch(f -> Math.abs(f.openings().get(0).x()) > 16), "a far edge was kept");
+    }
+
+    /** An edge with this flow, of openings at z = 0 along x, each {x}. */
+    private static FlowField flowing(double moles, int... xs) {
+        long[] high = new long[xs.length];
+        long[] low = new long[xs.length];
+        for (int i = 0; i < xs.length; i++) {
+            high[i] = CellIds.of(xs[i], 64, 0);
+            low[i] = CellIds.of(xs[i], 64, -1);
+        }
+        return FlowField.of(List.of(new FlowEdge(1, FlowEdge.AMBIENT, 101, 0, high, low, moles)));
+    }
+
+    @Test
+    void client_010_the_flow_sent_is_what_passes_through_the_openings_in_range() {
+        // Two openings share 40 mol/s; one is out of range.
+        List<VisibleFlow> flows = VisibleFlows.near(flowing(40, 0, 60), 0, 64, 0);
+        assertEquals(1, flows.size());
+        assertEquals(1, flows.get(0).openings().size());
+        assertEquals(20, flows.get(0).molesPerSecond(), 1);
+
+        // A wall of openings, all in range: sampling them down doesn't lose any of the flow.
+        long[] high = new long[VisibleFlows.MAX_OPENINGS_PER_FLOW + 20];
+        long[] low = new long[high.length];
+        for (int i = 0; i < high.length; i++) {
+            high[i] = CellIds.of(i % 16, 64 + i / 16, 0);
+            low[i] = CellIds.of(i % 16, 64 + i / 16, -1);
+        }
+        FlowField wide = FlowField.of(List.of(new FlowEdge(1, FlowEdge.AMBIENT, 101, 0, high, low, 40)));
+        VisibleFlow sampled = VisibleFlows.near(wide, 8, 66, 0).get(0);
+        assertEquals(VisibleFlows.MAX_OPENINGS_PER_FLOW, sampled.openings().size());
+        assertEquals(40, sampled.molesPerSecond(), 2);
+    }
+
+    @Test
+    void client_010_flow_steps_round_trip_closely_and_nothing_stays_nothing() {
+        assertEquals(0, VisibleFlow.step(0));
+        assertEquals(0, new VisibleFlow(0, 0, List.of()).molesPerSecond(), 1e-12);
+        for (double moles : new double[] {1, 2.3, 5.4, 11.6, 23.6, 27, 69, 500, 10_000}) {
+            double back = new VisibleFlow(0, VisibleFlow.step(moles), List.of()).molesPerSecond();
+            assertEquals(moles, back, 0.05 * (1 + moles), "at " + moles);
+        }
+    }
+
+    @Test
+    void data_015_a_step_of_flow_is_a_change_and_less_is_not() {
+        List<VisibleFlow> flow = VisibleFlows.near(flowing(27, 0), 0, 64, 0);
+        assertFalse(VisibleFlows.shouldSend(flow, VisibleFlows.near(flowing(27.1, 0), 0, 64, 0), 20));
+        assertTrue(VisibleFlows.shouldSend(flow, VisibleFlows.near(flowing(30, 0), 0, 64, 0), 20));
     }
 
     @Test

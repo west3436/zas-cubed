@@ -10,6 +10,9 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.particle.GasJet;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
@@ -20,6 +23,8 @@ import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.gametest.TestPlayers;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -28,6 +33,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -38,6 +44,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -191,6 +198,228 @@ public final class PipeTests {
         a.step();
         a.close(pipe.network().gas().moles(O2), 10.0, "O2 in the capped pipe");
         a.close(a.zone(2, 2, 2).mixture().moles(O2), roomO2, "O2 in the room");
+        h.succeed();
+    }
+
+    // ---- CLIENT-019 ------------------------------------------------------------------------------
+
+    /** A sealed room with its zone formed, holding gas. */
+    private static void room(Area a) {
+        a.box(0, 0, 4, 4);
+        a.fill(2, 2, 2, Map.of(N2, 1000.0));
+    }
+
+    /** An empty pipe with one connection, a cap to its west, in a {@link #room}, its end settled. */
+    private static PipeBlockEntity endInRoom(Area a) {
+        room(a);
+        cap(a, 1, 1, 2, Direction.EAST);
+        pipe(a, 2, 1, 2);
+        a.tick();
+        PipeBlockEntity pipe = a.entity(2, 1, 2);
+        settle(a);
+        a.h.assertTrue(pipe.isOpen(), "the pipe isn't open");
+        return pipe;
+    }
+
+    /** The atmos ticks a newly placed open end waits, moving nothing. */
+    private static void settle(Area a) {
+        for (int i = 0; i < PipeBlockEntity.SETTLE_STEPS; i++) {
+            a.step();
+        }
+    }
+
+    /** What an end's next atmos tick moves, with the moles it has now. */
+    private static PipeBlockEntity.Flow flowNow(Area a, PipeBlockEntity pipe) {
+        GasStore gas = pipe.network().gas();
+        return PipeBlockEntity.openEndFlow(
+                gas.moles(), gas.volume(), a.zone(2, 2, 2).mixture(), false, PipeBlockEntity.OPEN_END_RATIO);
+    }
+
+    /** Fills a pipe's network to the room's level of each gas, plus some more N2 on top. */
+    private static void fillToRoom(Area a, PipeBlockEntity pipe, double overRoom) {
+        GasStore gas = pipe.network().gas();
+        ZoneInfo room = a.zone(2, 2, 2);
+        Map<ResourceLocation, Double> moles = new HashMap<>();
+        room.mixture()
+                .moles()
+                .forEach((id, n) ->
+                        moles.put(id, n * gas.volume() / room.mixture().volume()));
+        moles.merge(N2, overRoom, Double::sum);
+        gas.add(new GasParcel(moles, T));
+    }
+
+    private static void close(Area a, double got, double want, String what) {
+        a.h.assertTrue(Math.abs(got - want) <= Math.abs(want) * 1e-6, what + ": " + got + ", not " + want);
+    }
+
+    /**
+     * An open end venting into a room sends one jet per atmos tick, from its mouth on the free side,
+     * looking away from its connection, with the net moles per second. A settling end sends nothing,
+     * however full, because it moves nothing.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_an_open_end_venting_sends_a_jet_out_of_its_free_side(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 867);
+        room(a);
+        cap(a, 1, 1, 2, Direction.EAST);
+        pipe(a, 2, 1, 2);
+        a.tick();
+        PipeBlockEntity pipe = a.entity(2, 1, 2);
+        Vec3 near = a.point(2, 1, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(N2, 300.0), T));
+        JetLog.take(near);
+        settle(a);
+        h.assertTrue(JetLog.take(near).isEmpty(), "a settling end sent a jet");
+
+        PipeBlockEntity.Flow flow = flowNow(a, pipe);
+        h.assertTrue(flow.net() > 0, "expected gas going out, net " + flow.net());
+        a.step();
+
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets in one atmos tick");
+        GasJet jet = jets.get(0);
+        h.assertValueEqual(jet.kind(), GasJetKind.OPEN_END, "the jet's kind");
+        h.assertTrue(jet.dx() == 1 && jet.dy() == 0 && jet.dz() == 0, "the jet doesn't look east: " + jet);
+        h.assertTrue(
+                new Vec3(jet.x(), jet.y(), jet.z()).distanceTo(near.add(0.2, 0, 0)) < 1e-6,
+                "the jet isn't at the pipe's east mouth: " + jet);
+        close(a, jet.amount(), flow.net(), "the jet's flow");
+        h.succeed();
+    }
+
+    /** An empty pipe in a room of gas draws it in: the same mouth and direction, with a negative flow. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_an_open_end_taking_gas_in_sends_a_negative_flow(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 868);
+        PipeBlockEntity pipe = endInRoom(a);
+        Vec3 near = a.point(2, 1, 2);
+        JetLog.take(near);
+        PipeBlockEntity.Flow flow = flowNow(a, pipe);
+        h.assertTrue(flow.net() < -0.25, "expected a real flow in, net " + flow.net());
+        a.step();
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets in one atmos tick");
+        h.assertTrue(jets.get(0).dx() == 1, "the jet doesn't look east: " + jets.get(0));
+        close(a, jets.get(0).amount(), flow.net(), "the jet's flow");
+        h.succeed();
+    }
+
+    /**
+     * A trickle sends nothing: an end a little over its room stays quiet, and the same end further over
+     * it shows, on either side of the threshold.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_trickle_sends_nothing(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 869);
+        PipeBlockEntity pipe = endInRoom(a);
+        Vec3 near = a.point(2, 1, 2);
+
+        pipe.network().gas().drain();
+        fillToRoom(a, pipe, 1.0);
+        double trickle = flowNow(a, pipe).net();
+        h.assertTrue(trickle > 0.05 && trickle < 0.25, "expected a trickle, net " + trickle);
+        JetLog.take(near);
+        a.step();
+        h.assertTrue(JetLog.take(near).isEmpty(), "a trickle of " + trickle + " mol/s sent a jet");
+
+        pipe.network().gas().drain();
+        fillToRoom(a, pipe, 3.0);
+        double flowing = flowNow(a, pipe).net();
+        h.assertTrue(flowing > 0.25, "expected more than a trickle, net " + flowing);
+        a.step();
+        h.assertValueEqual(JetLog.take(near).size(), 1, "jets from " + flowing + " mol/s");
+        h.succeed();
+    }
+
+    /** Gases that only pass each other are no jet: plenty moves each way, and the net is about nothing. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_gases_passing_each_other_send_nothing(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 870);
+        PipeBlockEntity pipe = endInRoom(a);
+        Vec3 near = a.point(2, 1, 2);
+        GasStore gas = pipe.network().gas();
+        gas.drain();
+        ZoneInfo room = a.zone(2, 2, 2);
+        double sameLevel =
+                room.mixture().totalMoles() * gas.volume() / room.mixture().volume();
+        ResourceLocation co2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+        gas.add(new GasParcel(Map.of(co2, sameLevel), T));
+
+        PipeBlockEntity.Flow flow = flowNow(a, pipe);
+        double out =
+                flow.out().values().stream().mapToDouble(Double::doubleValue).sum();
+        h.assertTrue(out > 0.25, "expected a real flow out, " + out);
+        h.assertTrue(Math.abs(flow.net()) < 0.01, "expected about no net flow, " + flow.net());
+        JetLog.take(near);
+        a.step();
+        h.assertTrue(JetLog.take(near).isEmpty(), "gases passing each other sent a jet");
+        h.succeed();
+    }
+
+    /** A lone pipe has no connection to look away from, so its jet has no direction: every way. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_lone_pipe_sends_a_jet_every_way(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 871);
+        room(a);
+        pipe(a, 2, 1, 2);
+        a.tick();
+        PipeBlockEntity pipe = a.entity(2, 1, 2);
+        settle(a);
+        Vec3 near = a.point(2, 1, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(N2, 100.0), T));
+        JetLog.take(near);
+        a.step();
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets in one atmos tick");
+        GasJet jet = jets.get(0);
+        h.assertTrue(jet.dx() == 0 && jet.dy() == 0 && jet.dz() == 0, "the jet has a direction: " + jet);
+        h.assertTrue(new Vec3(jet.x(), jet.y(), jet.z()).distanceTo(near) < 1e-6, "the jet isn't at the pipe: " + jet);
+        h.succeed();
+    }
+
+    /** A pipe capped at both ends isn't open, so however full it is it sends nothing. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_capped_pipe_sends_nothing(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 872);
+        room(a);
+        cap(a, 1, 1, 2, Direction.EAST);
+        pipe(a, 2, 1, 2);
+        cap(a, 3, 1, 2, Direction.WEST);
+        a.tick();
+        PipeBlockEntity pipe = a.entity(2, 1, 2);
+        h.assertTrue(PipeBlock.openFace(a.get(2, 1, 2)) == null, "a pipe with two connections has an open face");
+        settle(a);
+        pipe.network().gas().add(new GasParcel(Map.of(N2, 300.0), T));
+        JetLog.take(a.point(2, 1, 2));
+        a.step();
+        h.assertTrue(JetLog.take(a.point(2, 1, 2)).isEmpty(), "a capped pipe sent a jet");
+        h.succeed();
+    }
+
+    /** A flowing end's jet goes to players within 16 blocks only: half the reach of a burst. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_an_open_ends_jet_reaches_16_blocks(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 873);
+        PipeBlockEntity pipe = endInRoom(a);
+        Vec3 near = a.point(2, 1, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(N2, 300.0), T));
+        JetLog.take(near);
+        a.step();
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets in one atmos tick");
+        GasJet jet = jets.get(0);
+        FakePlayer p = TestPlayers.hurtable(a.level, "zas_client_019");
+        p.moveTo(jet.x() + 15, jet.y(), jet.z());
+        h.assertTrue(GasJets.reaches(p, jet), "a player 15 blocks away isn't sent it");
+        p.moveTo(jet.x() + 17, jet.y(), jet.z());
+        h.assertFalse(GasJets.reaches(p, jet), "a player 17 blocks away is sent it");
         h.succeed();
     }
 
