@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.environment.AmbientDefinition;
 import io.github.west3436.zas.api.environment.AmbientProviders;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -63,6 +65,16 @@ public final class WithoutZasTests {
     private static final BlockPos RIGHT = new BlockPos(3, 1, 1);
 
     private WithoutZasTests() {}
+
+    /** The gas-handler capability exists with nothing behind it: asking a block for it is safe (API-021). */
+    @GameTest(template = "empty")
+    public static void s_12_the_gas_handler_capability_exists_without_zas(GameTestHelper h) {
+        BlockPos pos = h.absolutePos(new BlockPos(1, 2, 1));
+        h.assertTrue(
+                h.getLevel().getCapability(IGasHandler.BLOCK, pos, Direction.UP) == null,
+                "a block with no provider gave a gas handler");
+        h.succeed();
+    }
 
     /** The addon loaded and zas didn't, so the API reports no implementation (API-040). */
     @GameTest(template = "empty")
