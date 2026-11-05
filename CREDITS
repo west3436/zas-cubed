@@ -2745,6 +2745,139 @@ source: sound/ambience/ambieng1.ogg
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 adapted: Mixed to mono, cut to a loop with a 0.4 s crossfade, levelled, re-encoded.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/click.ogg
+origin: vgstation13
+source: sound/machines/click.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/unbolt.ogg
+origin: vgstation13
+source: sound/machines/door_unbolt.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/bolt.ogg
+origin: vgstation13
+source: sound/machines/door_bolt.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/ratchet.ogg
+origin: vgstation13
+source: sound/items/Ratchet.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/burst.ogg
+origin: vgstation13
+source: sound/effects/bamf.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Kept the right channel only, as the two partly cancel, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/spray.ogg
+origin: vgstation13
+source: sound/effects/spray.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/low.ogg
+origin: vgstation13
+source: sound/effects/alert.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/spark1.ogg
+origin: vgstation13
+source: sound/effects/sparks1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/spark2.ogg
+origin: vgstation13
+source: sound/effects/sparks2.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/spark3.ogg
+origin: vgstation13
+source: sound/effects/sparks3.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/spark4.ogg
+origin: vgstation13
+source: sound/effects/sparks4.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/fire_alarm.ogg
+origin: vgstation13
+source: sound/misc/fire_alarm.ogg
+commit: bc8e6c73f7b07b90cdd75fe30ff81836df13900b
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+notes: From Freesound under a suitable license, per the vg PR's author, 2026-11-05; the original sound and its author aren't recorded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/beep.ogg
+origin: vgstation13
+source: sound/machines/twobeep.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/buzzer.ogg
+origin: vgstation13
+source: sound/machines/warning-buzzer.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/door.ogg
+origin: vgstation13
+source: sound/machines/airlock.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/bang.ogg
+origin: vgstation13
+source: sound/effects/bang.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/ping.ogg
+origin: vgstation13
+source: sound/machines/ping.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/arm.ogg
+origin: vgstation13
+source: sound/weapons/armbomb.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/tick.ogg
+origin: vgstation13
+source: sound/items/assemblytick2.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/pressure.ogg
+origin: vgstation13
+source: sound/machines/pressurehiss.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/extinguish.ogg
+origin: vgstation13
+source: sound/effects/extinguish.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/refill.ogg
+origin: vgstation13
+source: sound/effects/refill.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
 path: zas/src/main/resources/assets/zas/sounds.json
 origin: original
 

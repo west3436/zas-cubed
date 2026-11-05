@@ -3165,8 +3165,10 @@ client works out for itself. No client ever sees a zone (D-53).
 
 `AtmosSounds`, and `zas.sound.ZasSounds` for the framework, register one sound
 event for each thing that happens, named for it: `zas_atmos:device.pump.run`,
-`zas:fire.ignite`. Everything about how an event sounds is in the mod's
-`sounds.json`: the file, and its pitch, volume and range. So devices can share
-vg's few files at different pitches, and a sound can be swapped with no code
-change. Which vg file each event uses, and why, is in [vg
-sounds](research/vg-sounds.md).
+`zas:fire.ignite`. How an event sounds is in the mod's `sounds.json`: the file,
+its pitch and its volume. So devices can share vg's few files at different
+pitches, and a sound can be swapped with no code change. A one-shot's range is
+there too. A server only sends a sound out to its event's range, so an event
+heard past 16 blocks is registered with the same range, and a GameTest checks
+that they agree. A loop's range comes from the client's loop manager instead.
+Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).
