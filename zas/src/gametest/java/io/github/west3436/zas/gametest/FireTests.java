@@ -389,10 +389,16 @@ public final class FireTests {
 
     // ---- FIRE-024: a sealed fire suffocates itself (Hardcore) ---------------------------------
 
+    /** How long a room must stay without fire to count as out: far longer than a gas fire takes to light. */
+    private static final int FIRE_024_QUIET_TICKS = 20;
+
     /**
      * FIRE-024: under Hardcore, a fire lit in a sealed, unzoned room forms a zone holding the room's
      * air (CORE-056), burns its O₂ down, and goes out once the O₂ fraction falls below 0.14; the room
-     * keeps the CO₂ and CO it made.
+     * keeps the CO₂ and CO it made. A room this small, burned in these 30 s steps, is hot by then, so
+     * its CO can light by itself as a gas fire (FIRE-035), at most once. That burns down too and leaves
+     * the room with no fire of either kind. While it does, wool in the walls lights no vanilla fire
+     * (FIRE-033, FIRE-034).
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore(GameTestHelper h) {
@@ -430,13 +436,48 @@ public final class FireTests {
             r.tick();
             burns++;
         }
-        h.assertTrue(r.level.getBlockState(fire).isAir(), "the fire still burns after " + burns + " burns");
+        h.assertFalse(r.level.getBlockState(fire).is(Blocks.FIRE), "the fire still burns after " + burns + " burns");
         ZoneInfo after = r.zone(1, 2, 1);
         double fraction = after.mixture().composition().get(O2);
         h.assertTrue(fraction < 0.14, "the fire went out at an O2 fraction of " + fraction);
         h.assertTrue(fraction > 0.12, "the fire burned on far below the threshold: " + fraction);
         h.assertTrue(after.mixture().moles(CO2) > 0, "no CO2 made");
         h.assertTrue(after.mixture().moles(CO) > 0, "no CO made as the O2 fell");
+
+        // Wait for any gas fire from the CO to light, which may already have happened, and to burn down:
+        // until both cells have held no fire for a run of ticks. Whether the CO is within its limit when
+        // the vanilla fire goes out isn't certain, so a run may light none.
+        BlockPos above = r.abs(1, 2, 1);
+        r.set(0, 1, 1, Blocks.WHITE_WOOL.defaultBlockState());
+        r.set(0, 2, 1, Blocks.WHITE_WOOL.defaultBlockState());
+        boolean burning = HotspotTests.gasFire(r, fire) || HotspotTests.gasFire(r, above);
+        int lightings = burning ? 1 : 0;
+        int quiet = 0;
+        int ticks = 0;
+        while (quiet < FIRE_024_QUIET_TICKS && ticks < 400) {
+            r.tick();
+            ticks++;
+            h.assertFalse(
+                    r.level.getBlockState(fire).getBlock() instanceof BaseFireBlock
+                            || r.level.getBlockState(above).getBlock() instanceof BaseFireBlock,
+                    "a vanilla fire lit below 14 % O2, " + ticks + " ticks on: "
+                            + r.zone(1, 2, 1).mixture());
+            boolean now = HotspotTests.gasFire(r, fire) || HotspotTests.gasFire(r, above);
+            lightings += now && !burning ? 1 : 0;
+            burning = now;
+            quiet = now ? 0 : quiet + 1;
+        }
+        ZoneInfo end = r.zone(1, 2, 1);
+        h.assertTrue(
+                quiet >= FIRE_024_QUIET_TICKS, "a gas fire still burns after " + ticks + " ticks: " + end.mixture());
+        h.assertTrue(lightings <= 1, "the room's CO lit " + lightings + " times, ending at " + end.mixture());
+        h.assertTrue(r.level.getBlockState(fire).isAir(), "the fire's cell holds a fire or a block");
+        h.assertTrue(r.level.getBlockState(above).isAir(), "the cell above holds a fire or a block");
+        double left = end.mixture().composition().get(O2);
+        h.assertTrue(left < 0.14, "the O2 fraction rose to " + left);
+        h.assertTrue(left > 0.12, "the gas fire burned on far below the threshold: " + left);
+        h.assertTrue(end.mixture().moles(CO2) > 0, "no CO2 left");
+        h.assertTrue(end.mixture().moles(CO) > 0, "no CO left");
         h.succeed();
     }
 }

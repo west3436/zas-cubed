@@ -1212,6 +1212,10 @@ the `[fire]` section of the server config (`FireConfig`), carried to the worker
 in `EngineSettings.fire` so one atmos tick sees one threshold. It tests a
 fraction and a partial pressure, a `GasMixture`, or partial pressures by
 registry index as a published zone or an ambient gives them.
+`sustainsAutoignited` tests only the pressure floor, for a gas fire at or above
+its fuel's autoignition temperature (FIRE-035, Draft), and only `ReactionSet`
+uses it: vanilla fire, fuel blocks and blocks catching fire keep the whole
+threshold.
 `engine.fire.CarbonCombustion` burns carbon (FIRE-025: C + O₂ → CO₂, 394
 kJ/mol, so a power fixes the carbon, O₂ and CO₂ per second) with FIRE-005's CO
 share: 0 at an O₂ fraction of 0.18 (`FireSettings.incompleteBelowFraction`,
@@ -1279,8 +1283,11 @@ way.
   (HOTSPOTS) and containers: 375 L per second (`PARCEL_LITRES_PER_SECOND`,
   FIRE-011). A reaction that needs ignition burns if a source is present or the
   gas is at or above its autoignition temperature. One with flammability
-  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), and
-  its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
+  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), or
+  `sustainsAutoignited` if the gas is at or above that reaction's own
+  autoignition temperature (FIRE-035). A mixture of fuels can therefore burn one
+  and not another: at 850 K below 14 % O₂, CH₄ burns and H₂ doesn't. Its
+  incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
   `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
   fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
 - **Limits that widen** (FIRE-032). Every check of a fuel's flammability limits
@@ -1293,7 +1300,9 @@ way.
   31.4 J/(mol·K). A fire's own heat therefore lowers the limit about 1.5 times as
   fast as it burns the fuel in air (whose C<sub>v</sub> is about 21 J/(mol·K)),
   so a fire that loses no heat doesn't stop at the declared limit: it goes on to
-  the 0.1 % floor, or to the fire oxygen threshold if that comes first.
+  the 0.1 % floor, or until it runs short of O₂ if that comes first. Short of O₂
+  means FIRE-030's threshold below the fuel's autoignition temperature, and only
+  the threshold's 10 kPa floor at or above it (FIRE-035).
 - **One step.** Every condition is read from the mixture at the start. Each
   reaction's extent is worked out alone: as far as its limiting reactant
   allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
@@ -1392,9 +1401,10 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   3. Every active hotspot, in position order, burns a parcel of 375 L per
      second of its zone's gas (FIRE-011). A gas fire whose gas won't burn goes
      out instead, and its block is removed (FIRE-017). Whether gas burns
-     includes the fire oxygen threshold (FIRE-030). A vanilla fire is never put
-     out here; that is FIRE-020's, on the server. Without fuel it just burns
-     nothing.
+     includes the fire oxygen threshold (FIRE-030), or only its pressure floor
+     at or above the fuel's autoignition temperature (FIRE-035). A vanilla fire
+     is never put out here; that is FIRE-020's, on the server, which keeps the
+     whole threshold. Without fuel it just burns nothing.
   4. Every hotspot that burned may spread to each open neighbouring cell that
      is air, in an active zone with flammable gas (FIRE-016). The chance is
      `spread_chance` per second, 1 − (1 − p)^dt per tick.

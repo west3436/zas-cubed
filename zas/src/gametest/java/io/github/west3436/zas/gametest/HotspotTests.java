@@ -26,11 +26,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,7 +41,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Hotspots (FIRE-010, FIRE-011, FIRE-013, FIRE-014, FIRE-016 to FIRE-019, FIRE-032, DATA-009): the engine's
+ * Hotspots (FIRE-010, FIRE-011, FIRE-013, FIRE-014, FIRE-016 to FIRE-019, FIRE-032, FIRE-035, DATA-009): the engine's
  * hotspot phase with the server's side of it, the {@code zas:gas_fire} block, the fire intents and
  * the fire flags in the geometry table, burning the shipped reactions.
  *
@@ -386,6 +388,96 @@ public final class HotspotTests {
             h.assertTrue(sustains(hot), "the hot room's O₂ ran out first: " + fraction(hot, O2));
             empty(r, 0);
             empty(r, 6);
+        });
+        h.succeed();
+    }
+
+    // ---- FIRE-035: a gas fire at autoignition needs only the O₂ floor ------------------------
+
+    /** Partial pressures, kPa, at 3 atm: 3 % hydrogen and 12 % O₂, nitrogen for the rest. */
+    private static Map<ResourceLocation, Double> shortOfOxygen() {
+        double kPa = 3 * 101.325;
+        return Map.of(H2, 0.03 * kPa, O2, 0.12 * kPa, N2, 0.85 * kPa);
+    }
+
+    /**
+     * FIRE-035: sealed rooms of hydrogen at 12 % O₂. At 1,000 K, above hydrogen's 858 K, the gas lights
+     * by itself and burns down to the 0.1 % floor, its O₂ still above 10 kPa. At 800 K nothing burns,
+     * and an ignition finds it not flammable (FIRE-030). A burning room whose heat is taken out, down
+     * to 800 K, goes out with fuel left. And at 1,000 K, with O₂ at 9 kPa, nothing burns.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_035_a_hot_room_burns_below_14_percent_and_a_cooler_one_does_not(GameTestHelper h) {
+        with(0, false, () -> {
+            Rooms r = rooms(h, 15);
+            room(r, 0, 3, 3, 3, 1000, shortOfOxygen());
+            room(r, 6, 3, 3, 3, 800, shortOfOxygen());
+            room(r, 12, 3, 3, 3, 1000, shortOfOxygen());
+            room(r, 18, 3, 3, 3, 1000, Map.of(H2, 3.0, O2, 9.0, N2, 20.0));
+            h.assertTrue(fraction(r.zone(2, 2, 2), O2) < 0.14, "the room isn't short of O2");
+
+            r.ticks(3);
+            h.assertTrue(fires(r, 0) > 0, "the room at 1,000 K didn't ignite");
+            h.assertTrue(fires(r, 12) > 0, "the room to be cooled didn't ignite");
+            h.assertValueEqual(fires(r, 6), 0, "gas fires in the room at 800 K");
+            h.assertValueEqual(fires(r, 18), 0, "gas fires in the room with O2 at 9 kPa");
+            h.assertValueEqual(
+                    ignite(r, r.abs(8, 2, 2)).status(),
+                    OpOutcome.IgnitionStatus.NOT_FLAMMABLE,
+                    "an ignition at 800 K and 12 % O2");
+
+            ZoneInfo burning = r.zone(14, 2, 2);
+            double joules = GasProperties.heatCapacity(burning.mixture().moles())
+                    * (burning.mixture().temperature() - 800);
+            HeatMutations.remove(r.level, r.point(14, 2, 2), joules, Rooms.source("hotspots"));
+            r.ticks(2);
+            h.assertValueEqual(fires(r, 12), 0, "the fire burns on after cooling to 800 K");
+            h.assertTrue(fraction(r.zone(14, 2, 2), H2) > 0.02, "the cooled room's hydrogen ran out");
+
+            int ticks = 0;
+            while (fires(r, 0) > 0 && ticks < 500) {
+                r.tick();
+                ticks++;
+            }
+            h.assertValueEqual(fires(r, 0), 0, "the hot room still burns after " + ticks + " ticks");
+            ZoneInfo hot = r.zone(2, 2, 2);
+            h.assertTrue(
+                    fraction(hot, H2) < 0.001 && fraction(hot, H2) > 0.0009,
+                    "the hot room's fire went out at " + fraction(hot, H2) + " H₂");
+            h.assertTrue(fraction(hot, O2) < 0.14, "the hot room's O₂ rose: " + fraction(hot, O2));
+            h.assertTrue(hot.mixture().partialPressure(O2) > 10, "the O₂ reached its floor: " + hot.mixture());
+            h.assertValueEqual(r.zone(8, 2, 2).mixture().moles(H2O), 0.0, "water in the room at 800 K");
+            h.assertValueEqual(r.zone(20, 2, 2).mixture().moles(H2O), 0.0, "water in the room with O2 at 9 kPa");
+            empty(r, 0);
+            empty(r, 6);
+            empty(r, 12);
+            empty(r, 18);
+        });
+        h.succeed();
+    }
+
+    /**
+     * FIRE-035: only a gas fire skips the fraction. In gas at 1,000 K and 12 % O₂, flint and steel
+     * can't light a fire (M3), and a vanilla fire goes out on its own tick (M2, FIRE-030), while the
+     * gas burns on as a gas fire.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void fire_035_a_vanilla_fire_in_hot_gas_keeps_the_oxygen_fraction(GameTestHelper h) {
+        with(0, false, () -> {
+            Rooms r = rooms(h, 15);
+            room(r, 24, 3, 3, 3, 1000, shortOfOxygen());
+            r.set(26, 0, 2, Blocks.NETHERRACK.defaultBlockState());
+            BlockPos at = r.abs(26, 1, 2);
+            h.assertFalse(BaseFireBlock.canBePlacedAt(r.level, at, Direction.NORTH), "fire can go in at 12 % O₂");
+
+            r.level.setBlockAndUpdate(at, Blocks.FIRE.defaultBlockState());
+            r.level.getBlockState(at).tick(r.level, at, r.level.random);
+            h.assertTrue(r.level.getBlockState(at).isAir(), "the vanilla fire burns on at 12 % O₂");
+
+            r.ticks(3);
+            h.assertTrue(fires(r, 24) > 0, "the hot gas didn't ignite");
+            h.assertTrue(r.zone(26, 2, 2).mixture().moles(H2O) > 0, "the hot gas didn't burn");
+            empty(r, 24);
         });
         h.succeed();
     }
