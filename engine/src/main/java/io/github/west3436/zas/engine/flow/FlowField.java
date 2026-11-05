@@ -35,9 +35,24 @@ public final class FlowField {
      * @param difference the edge's pressure difference, kPa
      * @param highZone the high side's zone, or {@link FlowEdge#AMBIENT}
      * @param lowZone the low side's zone, or {@link FlowEdge#AMBIENT}
+     * @param molesPerSecond this opening's share of the edge's flow, shared evenly (CLIENT-010)
      */
     public record Opening(
-            int hx, int hy, int hz, int lx, int ly, int lz, double difference, long highZone, long lowZone) {
+            int hx,
+            int hy,
+            int hz,
+            int lx,
+            int ly,
+            int lz,
+            double difference,
+            long highZone,
+            long lowZone,
+            double molesPerSecond) {
+        /** An opening whose flow in moles isn't known, as the client gets them for pushing. */
+        public Opening(int hx, int hy, int hz, int lx, int ly, int lz, double difference, long highZone, long lowZone) {
+            this(hx, hy, hz, lx, ly, lz, difference, highZone, lowZone, 0);
+        }
+
         /** Whether an entity in {@code zone} is on one of this opening's sides. */
         public boolean touches(long zone) {
             return zone == ANY_ZONE || zone == highZone || zone == lowZone;
@@ -113,6 +128,7 @@ public final class FlowField {
             boolean zoneHigh = e.pressure() >= e.otherPressure();
             long high = zoneHigh ? e.zone() : e.other();
             long low = zoneHigh ? e.other() : e.zone();
+            double share = e.openings() == 0 ? 0 : e.molesPerSecond() / e.openings();
             for (int i = 0; i < e.openings(); i++) {
                 long h = zoneHigh ? e.cell(i) : e.otherCell(i);
                 long l = zoneHigh ? e.otherCell(i) : e.cell(i);
@@ -125,7 +141,8 @@ public final class FlowField {
                         CellIds.z(l),
                         e.difference(),
                         high,
-                        low));
+                        low,
+                        share));
             }
         }
         return out.isEmpty() ? EMPTY : new FlowField(out);

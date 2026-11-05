@@ -237,20 +237,22 @@ outlive the flow by more than a moment.*
 
 *Showing airflow has its own payload, `AirflowEffectsPayload`: every exported
 edge's openings within 32 blocks, whatever the player's zone or game mode, each
-with its block, the face the flow leaves by, and the edge's difference in whole
-kPa. No zone ids. At an atmos tick the server sends a player its whole list if
-it differs from the last it sent, so a difference that moved by a whole kPa or
-an opening coming into range or leaving. A steady breach sends nothing, and the
+with its block and the face the flow leaves by, and each edge with its difference
+in whole kPa and the moles per second through those openings (CLIENT-010), as one
+byte: steps of an eighth of a doubling, about 9%. No zone ids. At an atmos tick the
+server sends a player its whole list if it differs from the last it sent, so a
+difference that moved by a whole kPa, a flow that moved by a step, or an opening
+coming into range or leaving. A steady breach sends nothing, and the
 client holds the list. A newer list replaces it, so an edge missing from one has
 ended, and an empty list ends them all. As a failsafe against a client showing a
 flow that ended, a list that isn't empty is sent again every 10 s, and the client
 drops it after 30 s with no packet, on leaving the dimension or on logging out.*
 
 *Measured bytes, before about 21 of packet id and channel name: 1 for an empty
-list; 15 for one hole; 47 for a 3 × 3 hole (4 an opening); and at most 1,129, for
+list; 16 for one hole; 48 for a 3 × 3 hole (4 an opening); and at most 1,161, for
 the largest list, 32 edges and 256 openings. An edge with over 64 openings in
 range is sampled evenly. So a steady one-hole breach costs about 4 B/s, and one
-whose difference is moving at most about 36 B/s. FLOW-017's payload, for
+whose difference or flow is moving at most about 37 B/s. FLOW-017's payload, for
 comparison, is 89 bytes every second for one hole. `AirflowEffectsPayloadTest`, `HeldFlowsTest` and
 `VisibleFlowsTest` check the format, the holding and the selection;
 `data_015_a_steady_breach_is_held_until_it_ends`,
