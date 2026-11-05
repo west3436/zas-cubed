@@ -2215,7 +2215,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure` and `zas_atmos:tank_low`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, `zas_atmos:tank_low` and `zas_atmos:leaking`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -3307,7 +3307,7 @@ as they happen:
 | Tank | `close`, `open` | Its distribution pressure reaches 0, or leaves it |
 | | `low` | A breath takes it under `LOW_SECONDS` (60) of breath |
 | Fire extinguisher | `spray`, `refill`, `empty` | §11.10 |
-| Container | `leak`, `burst` | `ContainerBlast.hiss` and `burst` |
+| Container | `leak`, as a leak starts; `burst` | `ContainerBlast.hiss` and `burst` |
 
 A controller decides from the panel saved in its block state, so a chunk coming
 back plays nothing. It plays nothing while its danger stays or falls. `Internals`
@@ -3316,6 +3316,14 @@ tank's `open` and `close` follow the settings screen's pressure instead. A tank'
 `supply` doesn't know who is breathing, so the breath that crosses the line sets
 `zas_atmos:tank_low`, and the tank's next atmos tick plays `low` at its holder and
 clears it. A tank has to be run down past the line again to warn again.
+
+A tank is an item with no memory, so `TankFailure.check` marks one that starts to
+leak with `zas_atmos:leaking` and plays `leak` only when it sets the mark. The first
+check that finds the tank holding clears it, so a tank that is refilled and leaks
+again is heard again. Its gas and jets still go at every leaking atmos tick. That
+check changes the stack under a `NONE` verdict, so a holder that keeps a copy of a
+tank (a suit, a TTV) asks `TankFailure.leaking` before it checks, and writes the copy
+back if so.
 
 **The fire alarm** (CONT-128). A server plays only `reset`, as an alarm goes from
 `alarm` to `normal`. Each client plays the alarm itself, from the block state it

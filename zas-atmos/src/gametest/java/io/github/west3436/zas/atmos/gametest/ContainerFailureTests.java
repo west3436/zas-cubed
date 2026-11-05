@@ -26,6 +26,8 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.atmos.ttv.TransferValve;
+import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -955,6 +957,124 @@ public final class ContainerFailureTests {
 
         h.assertValueEqual(TankFailure.check(a.level, at, tank(45), null), Verdict.RUPTURE, "at 45 atm");
         DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "rupturing", AtmosSounds.CONTAINER_BURST);
+        a.tick();
+        h.succeed();
+    }
+
+    /**
+     * A leak hisses once, as it starts, though it loses gas and sends a jet at each of its atmos ticks:
+     * 3 of them from 39.9 atm. A tank that stopped leaking and was refilled hisses again, and one refilled
+     * while it still leaks doesn't (CONT-127, CONT-038).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_tank_hisses_once_as_a_leak_starts(GameTestHelper h) {
+        SoundLog.listen();
+        JetLog.listen();
+        Area a = new Area(h, 884);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+        ItemStack t = tank(39.9);
+        double start = moles(t);
+
+        int leaks = 0;
+        while (leaks < 8 && TankFailure.check(a.level, at, t, null).kind() == Kind.LEAK) {
+            leaks++;
+            a.tick();
+        }
+        List<GasJet> jets = JetLog.take(at);
+        h.assertValueEqual(jets.size(), leaks, "the jets of a whole leak");
+        // Rounding can leave it a hair over 30 atm, for one more check that loses next to nothing.
+        h.assertValueEqual(
+                jets.stream().filter(jet -> jet.amount() > 1e-6).count(),
+                3L,
+                "the jets of a whole leak with gas in them");
+        a.close(moles(t), start * 30 / 39.9, "the tank's gas after a whole leak");
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "a whole leak", AtmosSounds.CONTAINER_LEAK);
+
+        GasTankItem.setGas(t, GasTankItem.gas(tank(39.9)));
+        h.assertValueEqual(TankFailure.check(a.level, at, t, null).kind(), Kind.LEAK, "refilled");
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "a new leak after a refill", AtmosSounds.CONTAINER_LEAK);
+
+        GasTankItem.setGas(t, GasTankItem.gas(tank(39.9)));
+        h.assertValueEqual(TankFailure.check(a.level, at, t, null).kind(), Kind.LEAK, "refilled while it leaks");
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "refilled while it leaks");
+        a.tick();
+        h.succeed();
+    }
+
+    /** The tank in a worn suit's slot: a copy each time it is read. */
+    private static ItemStack wornTank(FakePlayer player) {
+        return SuitItem.tank(player.getItemBySlot(EquipmentSlot.CHEST));
+    }
+
+    /**
+     * A suit keeps a copy of its tank and writes it back only if the tank says it changed. So a leak in
+     * a suit's slot hisses once, the check that ends it reaches the suit, and refilled it hisses again,
+     * in real time (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 300)
+    public static void cont_127_a_leak_in_a_suit_hisses_once_and_again_when_refilled(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 885);
+        a.forceLoad(true); // it waits in real time
+        GasDeviceTests.room(a);
+        FakePlayer player = TestPlayers.hurtable(a.level, "zas_suit_leak");
+        player.moveTo(Vec3.atBottomCenterOf(a.abs(2, 1, 2)));
+        ItemStack suit = new ItemStack(AtmosItems.SOFTSUIT_CHESTPLATE.get());
+        SuitItem.setTank(suit, tank(39.9));
+        player.setItemSlot(EquipmentSlot.CHEST, suit);
+        Vec3 at = TankFailure.pointOf(player);
+        Runnable leakOver = () -> {
+            ItemStack tank = wornTank(player);
+            h.assertTrue(GasTankItem.contents(tank).pressure() < 30 * ATM + 1e-6, "still leaking");
+            h.assertFalse(TankFailure.leaking(tank), "the suit's tank is still marked as leaking");
+        };
+
+        h.onEachTick(player.getInventory()::tick);
+        h.startSequence()
+                .thenWaitUntil(leakOver)
+                .thenExecute(() -> {
+                    DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "a whole leak", AtmosSounds.CONTAINER_LEAK);
+                    ItemStack tank = wornTank(player);
+                    GasTankItem.setGas(tank, GasTankItem.gas(tank(39.9)));
+                    SuitItem.setTank(player.getItemBySlot(EquipmentSlot.CHEST), tank);
+                })
+                .thenWaitUntil(leakOver)
+                .thenExecute(() -> {
+                    DeviceSoundTests.heard(
+                            h, at, SoundSource.BLOCKS, "a leak after a refill", AtmosSounds.CONTAINER_LEAK);
+                    a.forceLoad(false);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A TTV keeps copies of its tanks too, so a leak on one hisses once, the check that ends it reaches
+     * the TTV, and refilled it hisses again (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_leak_on_a_ttv_hisses_once_and_again_when_refilled(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 886);
+        GasDeviceTests.room(a);
+        FakePlayer player = TestPlayers.hurtable(a.level, "zas_ttv_leak");
+        player.moveTo(Vec3.atBottomCenterOf(a.abs(2, 1, 2)));
+        Vec3 at = TankFailure.pointOf(player);
+        ItemStack ttv = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());
+        TransferValveItem.save(ttv, new TransferValve(tank(39.9), ItemStack.EMPTY, false));
+
+        for (int i = 0; i < 8; i++) {
+            h.assertFalse(TransferValveItem.step(ttv, a.level, player), "the leak destroyed the TTV");
+            a.tick();
+        }
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "a whole leak", AtmosSounds.CONTAINER_LEAK);
+        h.assertFalse(TankFailure.leaking(TransferValveItem.valve(ttv).first()), "the TTV's tank is still marked");
+
+        TransferValve valve = TransferValveItem.valve(ttv);
+        GasTankItem.setGas(valve.first(), GasTankItem.gas(tank(39.9)));
+        TransferValveItem.save(ttv, valve);
+        TransferValveItem.step(ttv, a.level, player);
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "a leak after a refill", AtmosSounds.CONTAINER_LEAK);
         a.tick();
         h.succeed();
     }
