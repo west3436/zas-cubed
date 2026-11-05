@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.inline;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
@@ -190,12 +191,46 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
 
     /**
      * Each port's turn in its network's atmos tick (CONT-100, CONT-108), whether the device is on or
-     * off. This also rebuilds dissolved networks, so their gas is shared over their new members.
+     * off. This also rebuilds dissolved networks, so their gas is shared over their new members. Then
+     * each port's turn with a gas handler on its face (API-025, API-026), on or off too, as a port's
+     * network shares its gas with a pipe whether the device runs or not.
      */
     @Override
     protected final void beforeAtmosTick(ServerLevel level) {
         for (PipePort p : ports) {
             p.beforeAtmosTick(level);
+        }
+        for (int i = 0; i < ports.length && !isRemoved(); i++) {
+            exchangeWithHandler(level, i);
+        }
+    }
+
+    private void exchangeWithHandler(ServerLevel level, int index) {
+        BlockState self = getBlockState();
+        if (self.getBlock() instanceof InlineDeviceBlock block) {
+            Direction face = block.portFaces(self).get(index);
+            if (GasHandlers.connects(level, worldPosition, self, face)) {
+                PipePort port = ports[index];
+                GasHandlers.exchange(
+                        level,
+                        worldPosition,
+                        self,
+                        face,
+                        new GasHandlers.Buffer(
+                                () -> port.network().gas(), gas -> deliver(level, port, gas), this::isRemoved));
+            }
+        }
+    }
+
+    /** Puts a gas handler's gas into a port's network, or releases it if a handler's call removed the device. */
+    private void deliver(ServerLevel level, PipePort port, GasParcel gas) {
+        if (gas.isEmpty()) {
+            return;
+        }
+        if (isRemoved()) {
+            GasMutations.add(level, Vec3.atCenterOf(worldPosition), gas, PipeNodeEntity.RELEASE);
+        } else {
+            port.network().gas().add(gas);
         }
     }
 

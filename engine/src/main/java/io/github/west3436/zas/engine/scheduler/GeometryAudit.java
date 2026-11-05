@@ -221,7 +221,8 @@ public final class GeometryAudit {
      *
      * @param engine the engine
      * @param region the region
-     * @param fresh fresh snapshots of the region's loaded sections, using the engine's palette
+     * @param fresh fresh snapshots of the region's loaded sections, using the engine's palette;
+     *     overrides are {@linkplain DimensionEngine#resolve resolved} here
      * @param maxFindings how many findings to list; all are counted
      */
     public static Report run(
@@ -232,7 +233,7 @@ public final class GeometryAudit {
         ZoneGraph graph = engine.graph();
         Map<Long, SectionSnapshot> live = new HashMap<>();
         for (SectionSnapshot s : fresh) {
-            live.put(s.key(), s);
+            live.put(s.key(), engine.resolve(s));
         }
         SectionTopology topology = new SectionTopology(
                 engine.palette(),
