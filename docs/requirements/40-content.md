@@ -1369,6 +1369,9 @@ review ([crafting](../crafting.md)). It comes out full, and the recipe's water
 bucket comes back empty. `cont_037_extinguisher_is_crafted_full_and_returns_the_bucket`
 (GameTest).*
 
+*2026-11-05: its spray shows a cone of particles (CLIENT-018). It still has no
+in-use pose.*
+
 ## Area air controllers and firelocks
 
 The area air controller takes the place of vg's air alarm (D-68). It also
