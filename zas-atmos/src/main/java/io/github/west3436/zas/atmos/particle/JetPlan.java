@@ -38,6 +38,35 @@ public record JetPlan(
     private static final int SPRAY_LIFETIME = 14;
     private static final float SPRAY_SHADE = 0.94f;
 
+    /** The moles in an atmos tick a leak's size scales over: a small tank's trickle to a 70 L tank's most. */
+    static final double LEAK_LOW = 0.1;
+
+    static final double LEAK_HIGH = 10;
+
+    /** A leak's game ticks: most of the second until its next atmos tick, so a long leak pulses. */
+    static final int LEAK_TICKS = 16;
+
+    private static final int LEAK_LIFETIME = 10;
+    private static final double LEAK_SPREAD = Math.toRadians(10);
+
+    /** The moles a burst's size scales over: a small tank to a full canister's 3,700 and more. */
+    static final double BURST_LOW = 1;
+
+    static final double BURST_HIGH = 5000;
+
+    /** A burst's game ticks: nearly at once, and short enough that no particles are lost to the cap. */
+    static final int BURST_TICKS = 3;
+
+    /** The particles in the smallest burst and the biggest. */
+    static final int BURST_FEWEST = 16;
+
+    static final int BURST_MOST = 120;
+
+    private static final int BURST_LIFETIME = 16;
+
+    /** The grey of escaping gas. */
+    private static final float GAS_SHADE = 0.82f;
+
     /**
      * The plan for a jet.
      *
@@ -56,7 +85,44 @@ public record JetPlan(
                         SPRAY_SPREAD,
                         SPRAY_SHADE,
                         1.0f);
+            case LEAK -> {
+                double t = scale(amount, LEAK_LOW, LEAK_HIGH);
+                yield new JetPlan(
+                        lerp(0.75, 3, t), LEAK_TICKS, LEAK_LIFETIME, lerp(1, 3, t), LEAK_SPREAD, GAS_SHADE, (float)
+                                lerp(0.7, 1, t));
+            }
+            case BURST -> {
+                double t = scale(amount, BURST_LOW, BURST_HIGH);
+                yield new JetPlan(
+                        lerp(BURST_FEWEST, BURST_MOST, t) / BURST_TICKS,
+                        BURST_TICKS,
+                        BURST_LIFETIME,
+                        lerp(1.5, 6, t),
+                        Math.PI,
+                        GAS_SHADE,
+                        (float) lerp(1, 1.6, t));
+            }
         };
+    }
+
+    /**
+     * How big a jet is, 0 to 1, for an amount between two it scales over, by ratio: gas comes in
+     * amounts many powers of ten apart, so each doubling adds the same.
+     *
+     * @param amount the amount
+     * @param low the amount at and below which it is 0; anything that isn't a number is 0 too
+     * @param high the amount at and above which it is 1
+     * @return its size
+     */
+    static double scale(double amount, double low, double high) {
+        if (!(amount > low)) {
+            return 0;
+        }
+        return Math.min(1, Math.log(amount / low) / Math.log(high / low));
+    }
+
+    private static double lerp(double from, double to, double t) {
+        return from + (to - from) * t;
     }
 
     /** An amount, with anything that isn't a positive number as 0. */

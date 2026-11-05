@@ -150,6 +150,24 @@ class JetEmittersTest {
     }
 
     @Test
+    void client_018_a_burst_shows_all_its_particles_and_goes_every_way() {
+        emitters.add(GasJetKind.BURST, 1, 1, 1, 0, 0, 0, JetPlan.BURST_HIGH);
+        for (int i = 0; i < JetPlan.BURST_TICKS; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        assertEquals(JetPlan.BURST_MOST, spawned.size());
+        boolean east = false;
+        boolean west = false;
+        for (Spawned s : spawned) {
+            east |= s.vx > 0;
+            west |= s.vx < 0;
+        }
+        assertTrue(east && west, "it only went one way");
+        tick(ParticleDensity.ALL);
+        assertEquals(0, emitters.sources());
+    }
+
+    @Test
     void client_018_a_spray_goes_along_its_direction() {
         spray(1);
         tick(ParticleDensity.ALL);
