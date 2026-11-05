@@ -47,21 +47,45 @@ public final class SealProviderTests {
 
     /** The two rooms, the test block in the wall answering {@code answer}, and gas in both, so both have zones. */
     private static Rooms rooms(GameTestHelper h, int index, SealGeometry answer) {
+        return rooms(h, index, answer, 300, 100);
+    }
+
+    private static Rooms rooms(GameTestHelper h, int index, SealGeometry answer, double westO2, double eastO2) {
         Rooms r = new Rooms(h, index);
         r.clear(8, 0, 20, 6);
         r.box(10, 0, 14, 4);
         r.box(14, 0, 18, 4);
         TestSealBlock.answer(r.abs(WALL, 2, 2), answer);
         r.set(WALL, 2, 2, TestSealBlock.state());
-        r.settle(GasMutations.add(r.level, r.point(WEST, 2, 2), oxygen(300), source("api_023")));
-        r.settle(GasMutations.add(r.level, r.point(EAST, 2, 2), oxygen(100), source("api_023")));
+        r.settle(GasMutations.add(r.level, r.point(WEST, 2, 2), oxygen(westO2), source("api_023")));
+        r.settle(GasMutations.add(r.level, r.point(EAST, 2, 2), oxygen(eastO2), source("api_023")));
         return r;
     }
 
+    private static boolean oneZone(Rooms r) {
+        return r.zone(WEST, 2, 2).id().equals(r.zone(EAST, 2, 2).id());
+    }
+
     private static void apart(Rooms r, String when) {
-        r.h.assertFalse(r.zone(WEST, 2, 2).id().equals(r.zone(EAST, 2, 2).id()), "the rooms are one zone " + when);
+        r.h.assertFalse(oneZone(r), "the rooms are one zone " + when);
         r.h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 27, "the west room " + when);
         r.h.assertFalse(r.zoned(WALL, 2, 2), "the block has a zone " + when);
+    }
+
+    /**
+     * Checks the block has opened between the rooms: one tick after markDirty it holds gas of a zone,
+     * and the rooms become one zone once their mixtures are equivalent (CORE-023).
+     */
+    private static void joined(Rooms r, String when) {
+        r.h.assertTrue(r.zoned(WALL, 2, 2), "the block has no zone " + when);
+        for (int i = 0; i < 40 && !oneZone(r); i++) {
+            r.tick();
+        }
+        r.h.assertTrue(oneZone(r), "the rooms never became one zone " + when);
+        ZoneInfo zone = r.zone(WEST, 2, 2);
+        r.h.assertValueEqual(r.zone(WALL, 2, 2).id(), zone.id(), "the block's zone " + when);
+        r.h.assertValueEqual(zone.cellCount(), 55, "the rooms and the block " + when);
+        r.close(zone.volume(), 55_000, "the volume " + when);
     }
 
     /**
@@ -71,7 +95,7 @@ public final class SealProviderTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void api_023_zones_follow_the_provider(GameTestHelper h) {
-        Rooms r = rooms(h, 640, SealGeometry.SEALED);
+        Rooms r = rooms(h, 640, SealGeometry.SEALED, 200, 200);
         BlockPos pos = r.abs(WALL, 2, 2);
         apart(r, "sealed");
 
@@ -81,11 +105,7 @@ public final class SealProviderTests {
 
         BlockGeometry.markDirty(r.level, pos);
         r.tick();
-        ZoneInfo joined = r.zone(WEST, 2, 2);
-        h.assertValueEqual(r.zone(EAST, 2, 2).id(), joined.id(), "the rooms, open");
-        h.assertValueEqual(r.zone(WALL, 2, 2).id(), joined.id(), "the block, open");
-        h.assertValueEqual(joined.cellCount(), 55, "the rooms and the opening");
-        r.close(joined.volume(), 55_000, "the volume, open");
+        joined(r, "open");
         h.assertValueEqual(PointResolver.resolve(r.level, r.point(WALL, 2, 2)).pos(), pos, "a point in the block");
 
         TestSealBlock.answer(pos, SealGeometry.SEALED);
@@ -94,12 +114,12 @@ public final class SealProviderTests {
         apart(r, "sealed again");
         h.assertFalse(
                 PointResolver.resolve(r.level, r.point(WALL, 2, 2)).pos().equals(pos),
-                "a point in the sealed block stays in it");
+                "a point in the sealed block still resolves to it");
 
         TestSealBlock.answer(pos, SealGeometry.OPEN);
         BlockGeometry.markDirty(r.level, pos);
         r.tick();
-        h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 55, "open again");
+        joined(r, "open again");
         TestSealBlock.answer(pos, null);
         BlockGeometry.markDirty(r.level, pos);
         r.tick();

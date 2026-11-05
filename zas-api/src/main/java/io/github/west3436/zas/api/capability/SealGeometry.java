@@ -25,6 +25,8 @@ public record SealGeometry(Set<Direction> sealedFaces, Set<Direction> boundaryFa
     public static final SealGeometry OPEN = new SealGeometry(Set.of(), Set.of(), FULL_VOLUME);
 
     /**
+     * Checks the volume and copies the faces.
+     *
      * @throws IllegalArgumentException if {@code volume} isn't from 0 to 1,000
      */
     public SealGeometry {
