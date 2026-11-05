@@ -85,7 +85,7 @@ cached, except for the blocks in GEO-043.
   Bench measures the lookup cost.
 
 #### GEO-042 · Moving and animated blocks
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-44
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-44
 
 Blocks whose shape changes because they are moving or animating, such as
 moving pistons and opening shulker boxes, shall be ignored while in motion.
@@ -97,8 +97,12 @@ closed) and doesn't track the animation.
   and checks the cells don't change mid-motion and the open box counts as
   closed.
 
+*2026-11-05: Implemented. `geo_042_cells_do_not_change_while_a_piston_moves`
+extends and retracts a sticky piston beside a zone, and
+`geo_042_an_open_shulker_box_counts_as_closed` opens a box in a room's wall.*
+
 #### GEO-043 · Position-dependent static shapes
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-44
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-44
 
 Block states whose collision shape depends on position or block-entity data,
 but doesn't change on its own (bamboo's offset, data-driven modded shapes),
@@ -108,6 +112,10 @@ shall be evaluated per position and re-evaluated whenever the block changes
 - **Rationale:** Decision: D-44.
 - **Verify:** A GameTest places bamboo at two positions and checks their cells
   differ, and that a change re-evaluates them.
+
+*2026-11-05: Implemented. `geo_043_bamboo_cells_differ_by_position` does that, and
+`geo_043_points_in_each_cell_resolve_to_that_cell` covers points in a shape of
+several cells ([#123](https://github.com/west3436/zas-cubed/issues/123)).*
 
 #### GEO-004 · Sub-cells
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-44
@@ -287,7 +295,7 @@ changes that couldn't be observed at write time (offline or worldgen edits).
   checks the zone is revalidated on load.
 
 #### GEO-014 · Mark-dirty API
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [neoforge §3](../research/neoforge-1.21.1.md#3-block-change-detection)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [neoforge §3](../research/neoforge-1.21.1.md#3-block-change-detection)
 
 The API shall expose a `markDirty(level, pos)` call that makes the engine
 re-evaluate that position's geometry, for changes it can't observe, such as
@@ -298,6 +306,9 @@ shapes driven by block-entity data.
   §3](../research/neoforge-1.21.1.md#3-block-change-detection)).
 - **Verify:** A GameTest changes a test block's data-driven shape, calls
   markDirty, and checks the geometry is re-evaluated.
+
+*2026-11-05: Implemented. `geo_014_mark_dirty_reevaluates_a_data_driven_shape`
+does that, in a real level: the zones change only once markDirty is called.*
 
 ## Enclosure detection
 
