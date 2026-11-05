@@ -140,6 +140,20 @@ class FragileBlocksTest {
         assertEquals(List.of(SectionKeys.block(3, 65, 1)), blocks(sim.step()));
     }
 
+    /** OPS-005: a paused dimension's zones are all paused, so no window breaks until it resumes. */
+    @Test
+    void ops_005_a_paused_dimension_holds_its_windows_until_it_resumes() {
+        Sim sim = roomWithWindow(Ambient.VACUUM, GLASS);
+        sim.settings = sim.settings.withFragile(FragileSettings.OFF);
+        sim.add(1, 65, 1, molesFor(160, 27), 0);
+        sim.step();
+        sim.settings = sim.settings.withFragile(ON).withDimensionPaused(true);
+        assertEquals(List.of(), blocks(sim.step()), "at 160 kPa, paused");
+        assertEquals(List.of(), blocks(sim.step()), "still paused");
+        sim.settings = sim.settings.withDimensionPaused(false);
+        assertEquals(List.of(SectionKeys.block(3, 65, 1)), blocks(sim.step()), "resumed");
+    }
+
     /** FLOW-007 says "exceeds": a difference of exactly the threshold holds. */
     @Test
     void flow_007_exactly_the_threshold_holds() {

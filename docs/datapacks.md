@@ -695,12 +695,12 @@ tag, `[airflow] pressure_fragile_threshold_kpa`
   pressure, and any other cell the dimension's ambient. The difference is between
   the highest and lowest of them. A solid block beside it isn't a side, so of two
   layers of glass neither sees a difference, and both hold.
-- **What holds for now.** A block holds while one of its sides is a paused zone or
-  an unresolved region, or is in an unloaded chunk, or in a chunk whose saved
-  zones aren't back yet, however large the difference looks. Those numbers are a
-  last-known state or a guess. It is judged again each atmos tick, so it breaks
-  when the far side comes back, if the difference is still there. Nothing is
-  loaded to find out.
+- **What holds for now.** A block holds while one of its sides is a paused zone
+  (in a paused dimension every zone is) or an unresolved region, or is in an
+  unloaded chunk, or in a chunk whose saved zones aren't back yet, however large
+  the difference looks. Those numbers are a last-known state or a guess. It is
+  judged again each atmos tick, so it breaks when the far side comes back, if the
+  difference is still there. Nothing is loaded to find out.
 - **The break** is vanilla's, as if with no tool, with the block's own sound and
   particles. It drops what the block's loot table gives without a tool: nothing
   for glass and panes, which need silk touch, and itself for a plain block added
