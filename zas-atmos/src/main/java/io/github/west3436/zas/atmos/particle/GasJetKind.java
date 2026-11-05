@@ -12,7 +12,13 @@ public enum GasJetKind {
      * An open pipe end moving gas (CLIENT-019). Its amount is the net moles per second: positive out of
      * the pipe, negative into it. Its direction is the way the end looks out, whichever way the gas goes.
      */
-    OPEN_END(16, true);
+    OPEN_END(16, true),
+    /**
+     * A vent or scrubber moving a fair amount of gas (CLIENT-019). The server never sends one: a client
+     * makes it for itself, from what it knows of the device ({@link DeviceJets}). Its amount is the
+     * device's activity level: positive blowing out of its grille, negative drawing into it.
+     */
+    DEVICE(32, false);
 
     private final double range;
     private final boolean flowing;
