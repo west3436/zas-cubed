@@ -280,7 +280,7 @@ public final class ContainerReactionTests {
     }
 
     /** A dropped tank reacts, and so does the tank in a dropped suit: the game ticks both entities. */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 100)
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void cont_100_a_dropped_tank_reacts(GameTestHelper h) {
         Area a = new Area(h, 125);
         a.forceLoad(true);
