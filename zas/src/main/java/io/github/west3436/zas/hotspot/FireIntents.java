@@ -49,6 +49,17 @@ public final class FireIntents {
         return n;
     }
 
+    /** Told of gas catching fire: its first gas fire, now placed (FIRE-036). */
+    @FunctionalInterface
+    public interface Caught {
+        void at(BlockPos pos, double fuelMoles);
+    }
+
+    /** As {@link #apply(ServerLevel, List, LongPredicate, LongPredicate, Caught)}, telling no one. */
+    public static int apply(ServerLevel level, List<FireIntent> intents, LongPredicate loaded, LongPredicate blocked) {
+        return apply(level, intents, loaded, blocked, (pos, fuelMoles) -> {});
+    }
+
     /**
      * Places and removes gas fires and lights vanilla fires as the intents ask, in their order, in
      * loaded chunks only. An intent in a chunk that isn't at full status does nothing: reading the
@@ -58,9 +69,12 @@ public final class FireIntents {
      *     the atmosphere sees it
      * @param blocked whether a fire may not be placed at a position ({@link BlockPos#asLong}): one
      *     put out since the tick's batch closed (API-057)
+     * @param caught told of an intent that {@linkplain FireIntent#catches catches}, once its block is
+     *     placed, and not if the world refused it
      * @return how many blocks changed
      */
-    public static int apply(ServerLevel level, List<FireIntent> intents, LongPredicate loaded, LongPredicate blocked) {
+    public static int apply(
+            ServerLevel level, List<FireIntent> intents, LongPredicate loaded, LongPredicate blocked, Caught caught) {
         if (intents.isEmpty()) {
             return 0;
         }
@@ -86,6 +100,9 @@ public final class FireIntents {
             };
             if (done) {
                 changed++;
+                if (i.catches()) {
+                    caught.at(pos, i.fuelMoles());
+                }
             }
         }
         return changed;
