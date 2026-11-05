@@ -1255,7 +1255,12 @@ vanilla fire and fuel blocks, in `io.github.west3436.zas.fire`.
   operation) are queued in proportion to the O₂ actually removed. So the
   products land one atmos tick after the O₂ leaves, and a zone short of O₂
   gets only what burned. `zas_atmos`'s generator isn't in the tag and has no
-  profile: it doesn't use the air (D-35, CONT-067).
+  profile: it doesn't use the air (D-35, CONT-067). Burning never loads a chunk
+  (GEO-034). A chunk leaves full status well before it unloads, and only
+  unloading ends its tracking, so a tracked block is read through `getChunkNow`:
+  reading through the level would add a ticket and pull the chunk back up. A
+  block whose chunk isn't full, or a fire beside such a chunk, waits. It burns
+  nothing, doesn't go out and stays tracked.
 
 ### Reactions
 
@@ -1463,7 +1468,7 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
     `TriggerStates` leaves it out of `#zas:combustion`, which takes in
     `#minecraft:fire`, so `Burners` never burns it as carbon.
   - `DimensionAtmos` applies the result's `FireIntent`s first in the apply
-    (`FireIntents`), in loaded chunks only, then posts the fire events
+    (`FireIntents`), in chunks at full status only, then posts the fire events
     (API-031). It then completes the ignitions (`DimensionAtmos.ignite`, an
     `Ignited`) and other outcomes.
   - `DimensionAtmos.extinguish` (API-057) removes the fire blocks in a box at

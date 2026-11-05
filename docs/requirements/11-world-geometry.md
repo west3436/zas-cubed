@@ -437,6 +437,13 @@ The engine shall never force chunks to stay loaded.
 - **Verify:** Inspect the code for chunk tickets; a GameTest checks the ticket
   count doesn't change.
 
+*2026-11-04: Still Implemented, with a bug fixed. Reading a block through the
+level adds a ticket, so `Burners` and `FireIntents` pulled chunks that had
+left full status back up. They now read such chunks only through
+`getChunkNow`, and a fire waits while its chunk isn't full. The GameTest
+`geo_034_a_fire_waits_while_its_chunk_isnt_full` checks the chunks' ticket
+levels don't change.*
+
 #### GEO-035 · Last-known state at paused interfaces
 `Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
 

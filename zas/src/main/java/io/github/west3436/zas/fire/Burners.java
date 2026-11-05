@@ -62,6 +62,9 @@ import org.jetbrains.annotations.Nullable;
  * forms a zone (CORE-051): combustion forms zones only through the Hardcore trigger (CORE-056). A
  * block outside zones changes nothing.
  *
+ * <p><b>Chunks.</b> Burning never loads a chunk (GEO-034). A block whose chunk isn't at full status,
+ * or a fire beside such a chunk, waits: it burns nothing, doesn't go out and stays tracked.
+ *
  * <p>Server thread. Writes made off the server thread aren't tracked until their chunk loads again.
  */
 public final class Burners {
@@ -257,12 +260,18 @@ public final class Burners {
                 if (!only.test(pos)) {
                     continue;
                 }
-                BlockState state = level.getBlockState(pos);
+                BlockState state = stateIfFull(level, pos);
+                if (state == null) {
+                    continue;
+                }
                 if (!TriggerStates.isCombustion(state)) {
                     set.remove(key);
                     continue;
                 }
                 boolean isFire = state.getBlock() instanceof BaseFireBlock;
+                if (isFire && !sidesFull(level, pos)) {
+                    continue; // what it burns on may be over the border, and going out updates blocks there
+                }
                 FireAir.Air air = FireAir.at(level, pointOf(pos, state));
                 if (!air.sustains(fire)) {
                     if (isFire) {
@@ -337,17 +346,39 @@ public final class Burners {
      * flammable block next to it, in {@link Direction} order; null if none.
      */
     static @Nullable BlockState burningOn(ServerLevel level, BlockPos pos) {
-        BlockState below = level.getBlockState(pos.below());
-        if (!below.isAir()) {
+        BlockState below = stateIfFull(level, pos.below());
+        if (below != null && !below.isAir()) {
             return below;
         }
         for (Direction d : Direction.values()) {
             BlockPos next = pos.relative(d);
-            BlockState there = level.getBlockState(next);
-            if (!there.isAir() && there.isFlammable(level, next, d.getOpposite())) {
+            BlockState there = stateIfFull(level, next);
+            if (there != null && !there.isAir() && there.isFlammable(level, next, d.getOpposite())) {
                 return there;
             }
         }
         return null;
+    }
+
+    /**
+     * The block at a position, or null if its chunk isn't at full status (GEO-034). Reading through the
+     * level would add a ticket and pull that chunk back up, blocking the server thread until it's
+     * ready; a chunk leaves full status well before it unloads, and only unloading ends its tracking.
+     */
+    private static @Nullable BlockState stateIfFull(ServerLevel level, BlockPos pos) {
+        LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk == null ? null : chunk.getBlockState(pos);
+    }
+
+    /** Whether the chunks of a position's four horizontal neighbours are all at full status. */
+    private static boolean sidesFull(ServerLevel level, BlockPos pos) {
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            int x = pos.getX() + d.getStepX();
+            int z = pos.getZ() + d.getStepZ();
+            if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) {
+                return false;
+            }
+        }
+        return true;
     }
 }

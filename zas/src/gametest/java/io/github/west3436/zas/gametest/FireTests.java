@@ -15,9 +15,13 @@ import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.fire.CarbonCombustion;
+import io.github.west3436.zas.engine.scheduler.FireIntent;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.fire.Burners;
+import io.github.west3436.zas.hotspot.FireIntents;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -28,11 +32,14 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.BaseFireBlock;
@@ -69,6 +76,10 @@ public final class FireTests {
 
     /** Air: 21 % O₂ at 1 atm. */
     static final Map<ResourceLocation, Double> AIR = Map.of(N2, 80.04675, O2, 21.27825);
+
+    /** Holds a chunk at full status; lapses by itself, after longer than the test using it runs. */
+    private static final TicketType<ChunkPos> FULL =
+            TicketType.create("zas_gametest_fire_full", Comparator.comparingLong(ChunkPos::toLong), 400);
 
     private FireTests() {}
 
@@ -479,5 +490,73 @@ public final class FireTests {
         h.assertTrue(end.mixture().moles(CO2) > 0, "no CO2 left");
         h.assertTrue(end.mixture().moles(CO) > 0, "no CO left");
         h.succeed();
+    }
+
+    // ---- GEO-034: fire doesn't load chunks ----------------------------------------------
+
+    /**
+     * GEO-034: a tracked fire over a chunk that isn't at full status waits, and neither it nor a fire
+     * beside that chunk nor a fire intent in it pulls the chunk back up. A chunk two away from a held
+     * one is at ticket level 35: still there and still tracked, but not full. A ticket from reading
+     * it through the level would make it 33. Once the chunks are full again, the fires burn.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_034_a_fire_waits_while_its_chunk_isnt_full(GameTestHelper h) {
+        Rooms r = rooms(h, 9);
+        ServerChunkCache chunks = r.level.getChunkSource();
+        ChunkPos west = r.chunk(0);
+        ChunkPos middle = r.chunk(16);
+        ChunkPos east = r.chunk(32);
+        List<ChunkPos> leaving = List.of(west, middle);
+        leaving.forEach(c -> chunks.addRegionTicket(FULL, c, 0, c));
+        chunks.addRegionTicket(FULL, east, 0, east);
+        // A fire in the west chunk, and one in the east chunk's first column with air below it, so what
+        // it burns on is looked for on all sides. Its west wall is in the middle chunk.
+        room(r, 2, NETHERRACK, FIRE, AIR);
+        room(r, 31, Rooms.STONE, Rooms.AIR, AIR);
+        r.set(33, 2, 2, Blocks.OAK_PLANKS.defaultBlockState());
+        r.set(32, 2, 2, FIRE);
+        r.tick();
+        BlockPos inWest = r.abs(4, 1, 2);
+        BlockPos besideMiddle = r.abs(32, 2, 2);
+        h.assertTrue(Burners.tracks(r.level, inWest), "the west fire isn't tracked");
+        h.assertTrue(Burners.tracks(r.level, besideMiddle), "the east fire isn't tracked");
+        leaving.forEach(c -> chunks.removeRegionTicket(FULL, c, 0, c));
+        List<FireIntent> place =
+                List.of(new FireIntent(FireIntent.Kind.PLACE, r.abs(4, 2, 2).asLong(), 0));
+        h.startSequence()
+                .thenWaitUntil(() -> {
+                    h.assertValueEqual(ticketLevel(chunks, middle), 34, "the middle chunk's ticket level");
+                    h.assertValueEqual(ticketLevel(chunks, west), 35, "the west chunk's ticket level");
+                })
+                .thenExecute(() -> {
+                    h.assertTrue(Burners.burn(r.level, 10, p -> inArea(r, p, 2)).isEmpty(), "the west fire burned");
+                    h.assertTrue(
+                            Burners.burn(r.level, 10, p -> inArea(r, p, 31)).isEmpty(), "the east fire burned");
+                    h.assertValueEqual(FireIntents.apply(r.level, place, c -> true, b -> false), 0, "fires placed");
+                    h.assertValueEqual(ticketLevel(chunks, middle), 34, "the middle chunk's level after burning");
+                    h.assertValueEqual(ticketLevel(chunks, west), 35, "the west chunk's level after burning");
+                    h.assertTrue(Burners.tracks(r.level, inWest), "the west fire counted as gone");
+                    h.assertTrue(Burners.tracks(r.level, besideMiddle), "the east fire counted as gone");
+                    leaving.forEach(c -> chunks.addRegionTicket(FULL, c, 0, c));
+                })
+                .thenWaitUntil(() -> {
+                    h.assertTrue(chunks.getChunkNow(west.x, west.z) != null, "the west chunk isn't back");
+                    h.assertTrue(chunks.getChunkNow(middle.x, middle.z) != null, "the middle chunk isn't back");
+                    h.assertFalse(
+                            Burners.burn(r.level, 1, p -> inArea(r, p, 2)).isEmpty(), "the west fire didn't burn");
+                    h.assertFalse(
+                            Burners.burn(r.level, 1, p -> inArea(r, p, 31)).isEmpty(), "the east fire didn't burn");
+                })
+                .thenExecute(() -> {
+                    h.assertValueEqual(FireIntents.apply(r.level, place, c -> true, b -> false), 1, "fires placed");
+                    leaving.forEach(c -> chunks.removeRegionTicket(FULL, c, 0, c));
+                    chunks.removeRegionTicket(FULL, east, 0, east);
+                })
+                .thenSucceed();
+    }
+
+    private static int ticketLevel(ServerChunkCache chunks, ChunkPos chunk) {
+        return chunks.chunkMap.getVisibleChunkIfPresent(chunk.toLong()).getTicketLevel();
     }
 }
