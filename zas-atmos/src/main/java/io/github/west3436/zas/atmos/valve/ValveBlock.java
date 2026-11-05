@@ -1,12 +1,13 @@
 package io.github.west3436.zas.atmos.valve;
 
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -107,11 +108,11 @@ public abstract class ValveBlock extends BaseEntityBlock implements PipeConnecto
      * away back to full status for a moment, long enough for a network built then to reach into it.
      *
      * @param open whether it opens
-     * @param sound the sound it makes
+     * @param sound the sound it makes (CONT-126)
      */
-    protected static void turn(Level level, BlockPos pos, BlockState state, boolean open, SoundEvent sound) {
+    protected static void turn(Level level, BlockPos pos, BlockState state, boolean open, Supplier<SoundEvent> sound) {
         level.setBlock(pos, state.setValue(OPEN, open), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
-        level.playSound(null, pos, sound, SoundSource.BLOCKS, 0.5f, open ? 0.8f : 0.6f);
+        AtmosSounds.play(level, pos, sound);
     }
 
     @Override

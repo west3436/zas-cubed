@@ -12,6 +12,8 @@ CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
 owner, accepted and implemented the same day. CONT-115 to CONT-124, the
 central atmospherics controller, were added and accepted on 2026-11-03 (D-75).
+CONT-125 and CONT-126, the sounds of pipe devices, were added as Draft on
+2026-11-05.
 CONT-127, the other devices' sounds, was added as Draft on 2026-11-05.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
@@ -2485,6 +2487,63 @@ if the player were there (CONT-074).
   an unloaded chunk can't be opened.
 
 *2026-11-03: Accepted by the owner as written.*
+
+## Device sounds
+
+#### CONT-125 · Pipe devices sound while they move gas
+`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-015, DATA-017, DATA-018
+
+A pressure pump, volume pump, filter, mixer, vent, passive vent, scrubber or
+canister, and a pipe with an open end, shall each play its own looping sound to
+a player within 8 blocks while it is moving gas, and only then. Being on or
+powered isn't enough: a pump at its target, or with nothing to pump, is silent.
+A device that was switched off, shut or lost its power goes silent at its next
+step, without the level's usual hold.
+
+- **Rationale:** A sound that follows the gas tells a player which machines are
+  doing something, and a room of machines at rest is quiet.
+- **Verify:** `cont_125_*` (GameTests) build each kind but the vent and the
+  scrubber, which `data_017_*` cover. Each reads the level a player beside it
+  would be told: idle off, unpowered, at its target and with nothing to move,
+  and rising with the moles it moves. Manual: each kind's loop plays near it and
+  stops when its gas stops. A server can't check that, because a client plays the
+  loop from the level.
+
+*2026-11-05: added for review, with the behaviour built. Each device reports in
+its step (DATA-017), and one line for each in `ZasAtmosClient` gives it its loop.
+A passive vent and an open pipe end report the net flow, so gases only passing
+each other at one pressure are silent, as they show no particles (CLIENT-019).
+How loud each loop should be is for the owner to judge by ear.*
+
+#### CONT-126 · Pipe devices sound when they change
+`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-016, CLIENT-020
+
+Each of these shall play its own sound, once per change:
+
+- a pressure pump, volume pump, filter or mixer being switched on or off;
+- a vent or scrubber going from off to a mode, or back to off;
+- a manual or redstone valve opening or shutting;
+- a canister's valve opening or shutting;
+- a connector port gaining or losing a canister;
+- a pipe segment bursting.
+
+Nothing else about them shall play a sound: not an order repeated, a change
+between modes or of settings, a second redstone signal, power coming or going,
+or a chunk loading. These replace the vanilla lever and trapdoor sounds the
+valves used. Pipe devices keep vanilla's sounds for being walked on and broken.
+
+- **Rationale:** A click confirms what a player did, and a controller's orders
+  are heard only when they change something.
+- **Verify:** `cont_126_*` (GameTests) make each change and count what the server
+  plays at that block, and repeat it or make the changes that should stay silent
+  and count nothing. Manual: each sound is heard and suits its device.
+
+*2026-11-05: added for review, with the behaviour built. Sounds follow the switch
+or a controller's order, not power, so losing power is heard only as a device's
+loop fading. A power lease isn't saved, so following power would click every
+running device off and on as its chunk loads, click a whole station at once in a
+blackout, and be up to a second late on a click in a GUI. A canister that bursts
+on its port sounds the port's disconnection as well as the burst.*
 
 #### CONT-127 · The other devices' sounds
 `Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017

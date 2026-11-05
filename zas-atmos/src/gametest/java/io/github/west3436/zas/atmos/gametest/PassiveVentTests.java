@@ -46,7 +46,7 @@ public final class PassiveVentTests {
     }
 
     /** A sealed 3×3×3 room with its zone formed, and a passive vent in its west wall, facing in. */
-    private static PassiveVentBlockEntity rig(Area a) {
+    static PassiveVentBlockEntity rig(Area a) {
         a.box(0, 0, 4, 4);
         a.fill(2, 2, 2, Map.of(N2, 10.0));
         a.place(0, 2, 2, passiveVent(Direction.EAST));
@@ -55,7 +55,7 @@ public final class PassiveVentTests {
     }
 
     /** Replaces the network's gas with one gas at a pressure. */
-    private static void network(PassiveVentBlockEntity v, ResourceLocation gas, double kPa) {
+    static void network(PassiveVentBlockEntity v, ResourceLocation gas, double kPa) {
         GasStore net = v.network().gas();
         net.drain();
         net.add(new GasParcel(Map.of(gas, kPa * net.volume() / RT), T));

@@ -8,12 +8,15 @@ import io.github.west3436.zas.atmos.inline.SidePortEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -69,6 +72,7 @@ public class FilterBlockEntity extends SidePortEntity {
             }
             return side.pressure() >= out.pressure() ? InlineStatus.SIDE_TARGET_REACHED : InlineStatus.TARGET_REACHED;
         }
+        reportMoved(n);
         FilterMath.move(n, in, out, side, selection);
         return InlineStatus.MOVING;
     }
@@ -76,6 +80,11 @@ public class FilterBlockEntity extends SidePortEntity {
     @Override
     protected int drawWhenOn() {
         return AtmosServerConfig.get(AtmosServerConfig.FILTER_DRAW);
+    }
+
+    @Override
+    protected Supplier<SoundEvent> switchSound(boolean on) {
+        return on ? AtmosSounds.FILTER_ON : AtmosSounds.FILTER_OFF;
     }
 
     @Override

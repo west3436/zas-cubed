@@ -51,6 +51,17 @@ public final class ZasAtmosClient {
         DeviceLoops.register(NeoForge.EVENT_BUS);
         ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
 
+        // Pipe devices' running sounds (CONT-125).
+        DeviceLoops.add(AtmosBlocks.PRESSURE_PUMP, AtmosSounds.PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.VOLUME_PUMP, AtmosSounds.VOLUME_PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.FILTER, AtmosSounds.FILTER_RUN);
+        DeviceLoops.add(AtmosBlocks.MIXER, AtmosSounds.MIXER_RUN);
+        DeviceLoops.add(AtmosBlocks.VENT, AtmosSounds.VENT_RUN);
+        DeviceLoops.add(AtmosBlocks.PASSIVE_VENT, AtmosSounds.PASSIVE_VENT_RUN);
+        DeviceLoops.add(AtmosBlocks.SCRUBBER, AtmosSounds.SCRUBBER_RUN);
+        DeviceLoops.add(AtmosBlocks.CANISTER, AtmosSounds.CANISTER_RUN);
+        DeviceLoops.add(AtmosBlocks.PIPE, AtmosSounds.PIPE_LEAK);
+
         // Running machines' loops (CONT-127). The generator's isn't here: it plays from its own ticker.
         DeviceLoops.add(AtmosBlocks.HEATER, AtmosSounds.HEATER_RUN);
         DeviceLoops.add(AtmosBlocks.AIR_CONDITIONER, AtmosSounds.AIR_CONDITIONER_RUN);

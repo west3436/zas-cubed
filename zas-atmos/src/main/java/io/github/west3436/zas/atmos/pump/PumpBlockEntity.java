@@ -103,6 +103,7 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
         if (n < PipeBlockEntity.MIN_FLOW) {
             return idle(input);
         }
+        reportMoved(n);
         out.gas().add(from.takeFraction(n / input.moles()));
         return InlineStatus.MOVING;
     }

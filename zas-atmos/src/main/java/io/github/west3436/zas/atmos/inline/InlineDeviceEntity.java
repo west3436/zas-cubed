@@ -11,7 +11,9 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -20,6 +22,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.block.Block;
@@ -86,6 +89,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     /** What it draws while it is on, in FE/t (CONT-065). */
     protected abstract int drawWhenOn();
 
+    /** The sound of its switch going on or off (CONT-126). */
+    protected abstract Supplier<SoundEvent> switchSound(boolean on);
+
     /** A port, in the order of its block's {@link InlineDeviceBlock#portFaces}. */
     public PipePort port(int index) {
         return ports[index];
@@ -130,11 +136,18 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         return on;
     }
 
-    /** Switches it on or off. Server side. */
+    /**
+     * Switches it on or off, with its switch's sound (CONT-126). The sound follows the switch and not
+     * the power: a lease isn't saved, so a device following its power would click off and on again
+     * whenever its chunk loaded. Server side.
+     */
     public void setOn(boolean on) {
         if (on != this.on) {
             this.on = on;
             setChanged();
+            if (level != null) {
+                AtmosSounds.play(level, worldPosition, switchSound(on));
+            }
         }
     }
 
@@ -187,6 +200,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
             level.setBlock(worldPosition, state.setValue(InlineDeviceBlock.ON, running), Block.UPDATE_CLIENTS);
         }
         status = running ? work(level) : InlineStatus.OFF;
+        if (!running) {
+            reportStopped();
+        }
     }
 
     // ---- The menu's data ------------------------------------------------------------------------

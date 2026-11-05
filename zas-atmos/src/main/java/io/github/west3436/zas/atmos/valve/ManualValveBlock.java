@@ -1,8 +1,8 @@
 package io.github.west3436.zas.atmos.valve;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -27,7 +27,8 @@ public class ManualValveBlock extends ValveBlock {
     protected InteractionResult useWithoutItem(
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide) {
-            turn(level, pos, state, !state.getValue(OPEN), SoundEvents.LEVER_CLICK);
+            boolean open = !state.getValue(OPEN);
+            turn(level, pos, state, open, open ? AtmosSounds.VALVE_OPEN : AtmosSounds.VALVE_CLOSE);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

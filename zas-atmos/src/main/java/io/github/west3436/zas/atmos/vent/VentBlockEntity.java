@@ -18,6 +18,7 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
 import java.util.TreeMap;
 import net.minecraft.core.BlockPos;
@@ -124,17 +125,22 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     }
 
     /**
-     * Sets the vent's mode and bounds. The bounds are already clamped by {@link VentSettings}.
-     * Server side. A player's settings go through {@link #setByHand}, and a controller's through
-     * {@link #control}.
+     * Sets the vent's mode and bounds. The bounds are already clamped by {@link VentSettings}. It plays
+     * its on or off sound as it goes from off to a mode or back (CONT-126). Server side. A player's
+     * settings go through {@link #setByHand}, and a controller's through {@link #control}.
      *
      * @param settings the new settings; null is off
      */
     public void command(VentSettings settings) {
         VentSettings next = settings == null ? VentSettings.OFF : settings;
         if (!next.equals(this.settings)) { // a controller sends the same order every atmos tick
+            boolean wasOff = this.settings.mode() == VentMode.OFF;
+            boolean off = next.mode() == VentMode.OFF;
             this.settings = next;
             setChanged();
+            if (wasOff != off && level != null) {
+                AtmosSounds.play(level, worldPosition, off ? AtmosSounds.VENT_OFF : AtmosSounds.VENT_ON);
+            }
         }
     }
 
