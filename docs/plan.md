@@ -345,6 +345,31 @@ passed. The owner's in-game checks come afterwards, in one combined test world.
 The GameTests are `PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and_lit_crops_make_o2`,
 `s_11_normal_greenhouse_stays_unzoned` and `ToxinsLabTests.s_13_toxins_lab`.
 
+*2026-11-05: sound and particles on main.* The scope was airflow particles and
+sound, sounds for every device, gas fire and gas blast sounds, and particles for
+vents, scrubbers, leaks, bursts, open pipe ends and the extinguisher. The sounds
+are vgstation13's oggs, chosen from how vg uses them
+([vg-sounds](research/vg-sounds.md)), and the particles are vanilla sprites tinted
+in neutral colours. GUI textures, display units, language, the rest of CLIENT-004
+and gas-coloured particles stayed out. The owner set the main rules: airflow's
+loudness follows moles per second and its pitch the pressure difference, a
+listener in a vacuum hears no airflow, and only this round's sounds fade in thin
+air. Every PR merged once CI passed. CI has no client, so nothing here has been
+heard or seen, and every *Draft* ID above waits on the owner's combined test
+world.
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Sound files | [#251](https://github.com/west3436/zas-cubed/pull/251), [#254](https://github.com/west3436/zas-cubed/pull/254) | CLIENT-020, CLIENT-021 added as *Draft*; notes on NFR-041, NFR-045 | The owner's ear on each choice. No loop's join has been checked. The origin of `misc/fire_alarm` is recorded only as Freesound |
+| Looping sounds and thin air | [#252](https://github.com/west3436/zas-cubed/pull/252), [#257](https://github.com/west3436/zas-cubed/pull/257), [#258](https://github.com/west3436/zas-cubed/pull/258) | CLIENT-015, CLIENT-016, DATA-019, API-060, API-061 added as *Draft* | None of it has run on a client |
+| Device activity | [#255](https://github.com/west3436/zas-cubed/pull/255) | DATA-017, DATA-018 added as *Draft* | DATA-006 has to be measured with this included |
+| Airflow | [#248](https://github.com/west3436/zas-cubed/pull/248), [#250](https://github.com/west3436/zas-cubed/pull/250), [#256](https://github.com/west3436/zas-cubed/pull/256) | CLIENT-003, CLIENT-010 stay *Accepted*; dated notes on CLIENT-010, DATA-015 | The owner's check, and whether a big room should be louder than moles per second makes it. DATA-015's bench |
+| Particles | [#247](https://github.com/west3436/zas-cubed/pull/247), [#249](https://github.com/west3436/zas-cubed/pull/249), [#253](https://github.com/west3436/zas-cubed/pull/253), [#260](https://github.com/west3436/zas-cubed/pull/260) | CLIENT-017 to CLIENT-019 added as *Draft*; note on DATA-006 | The art half of [#164](https://github.com/west3436/zas-cubed/issues/164). No bench of the jet cap |
+| Pipe device sounds | [#263](https://github.com/west3436/zas-cubed/pull/263) | CONT-125, CONT-126 added as *Draft* | The owner's check |
+| Other device sounds | [#262](https://github.com/west3436/zas-cubed/pull/262), [#264](https://github.com/west3436/zas-cubed/pull/264), [#265](https://github.com/west3436/zas-cubed/pull/265) | CONT-127, CONT-128 added as *Draft* | The owner's check. The generator's loop has never run |
+| Fire and blast sounds | [#259](https://github.com/west3436/zas-cubed/pull/259), [#261](https://github.com/west3436/zas-cubed/pull/261) | FIRE-036, FIRE-037 added as *Draft* | The owner's check. `fire.loop` is a quiet crackle, as vg's gas fire is silent |
+| Four fire test flakes | [#266](https://github.com/west3436/zas-cubed/pull/266) | None | None |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -424,7 +449,7 @@ The GameTests are `PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and
 
 ## Immediate next steps
 
-_Updated 2026-11-04._
+_Updated 2026-11-05._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -450,11 +475,14 @@ _Updated 2026-11-04._
    owner's combined test world still to play. Next, S-09 and S-10, then the rest
    of #49 and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
    electrolyzer).
+   - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
+     owner's second combined test world to play and its *Draft* IDs to accept.
    - From this round, for the owner: accept the *Draft* IDs (FIRE-032 to FIRE-035,
      API-059, NFR-015), approve the extinguisher's recipe, and choose what to do
      about a stop hanging on a server running behind (#242).
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
-     airflow particles and sound (#57), magnetic boots (#49) and insulating
+     display units and language (#57), magnetic boots (#49) and insulating
      station walls (#179).
    - Follow-ups from R0 to fold in along the way: zone-creation speed
      ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
