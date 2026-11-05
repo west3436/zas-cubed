@@ -7,7 +7,9 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * The per-gas conservation ledger and its checker (CORE-036, CORE-073).
@@ -41,6 +43,7 @@ public final class ConservationLedger {
     private final double[] start;
     private final double[] voided;
     private final double[] supplied;
+    private final Map<String, double[]> operators = new TreeMap<>();
     private boolean begun;
 
     /**
@@ -131,6 +134,19 @@ public final class ConservationLedger {
         supplied[gas] += moles;
     }
 
+    /**
+     * Records gas an operator's command removed from zones (OPS-013): a sink of {@link
+     * LedgerCategory#OPERATOR}, attributed to whoever ran it and reported with the period ({@link
+     * ConservationReport#byOperator}).
+     */
+    public void recordOperator(String source, GasMixture removed) {
+        record(LedgerCategory.OPERATOR, removed, -1);
+        double[] row = operators.computeIfAbsent(source, s -> new double[registry.size()]);
+        for (int i = 0; i < row.length; i++) {
+            row[i] += removed.moles(i);
+        }
+    }
+
     /** The moles recorded against a category for one gas since {@link #begin}. */
     public double recorded(LedgerCategory category, int gas) {
         return recorded[category.ordinal()][gas];
@@ -154,6 +170,7 @@ public final class ConservationLedger {
         }
         Arrays.fill(voided, 0);
         Arrays.fill(supplied, 0);
+        operators.clear();
         begun = true;
     }
 
@@ -177,6 +194,7 @@ public final class ConservationLedger {
         }
         double[] voidedNow = voided.clone();
         double[] suppliedNow = supplied.clone();
+        Map<String, double[]> operatorsNow = new TreeMap<>(operators);
         List<ConservationReport.Violation> violations = new ArrayList<>();
         for (int i = 0; i < start.length; i++) {
             double explained = 0;
@@ -197,7 +215,7 @@ public final class ConservationLedger {
             }
         }
         begin(totals);
-        return new ConservationReport(tick, byCategory, voidedNow, suppliedNow, violations);
+        return new ConservationReport(tick, byCategory, voidedNow, suppliedNow, operatorsNow, violations);
     }
 
     private void requireLength(double[] totals) {

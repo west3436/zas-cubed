@@ -239,7 +239,7 @@ item moves again once they're back on.*
 ## Blocks
 
 #### FLOW-007 · Pressure damage to blocks
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-28, D-14
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-28, D-14
 
 With the Hardcore preset, blocks in the `zas:pressure_fragile` tag (by default
 glass and glass panes) shall break when the pressure difference across them
@@ -249,8 +249,20 @@ exceeds the tag's threshold.
 - **Verify:** A GameTest under Hardcore checks glass breaks above the
   threshold.
 
+*2026-11-05: done ([#45](https://github.com/west3436/zas-cubed/issues/45)).
+`flow_007_glass_breaks_above_the_threshold_under_hardcore` and
+`flow_007_a_pane_breaks_above_the_threshold` check a zone against the ambient, and
+`flow_007_glass_between_two_zones_breaks_and_conserves_gas` two zones. The tag's
+threshold is one config value for the whole tag,
+`[airflow] pressure_fragile_threshold_kpa`, since a tag can't hold a number. A
+block holds while a side of it is a paused zone or an unresolved region, or is in
+an unloaded chunk (`geo_034_`, `geo_035_` tests in the same class,
+`PressureDamageTests`; the engine's in `FragileBlocksTest`). The break is vanilla's
+`destroyBlock`, and a tick breaks at most `pressure_fragile_breaks_per_tick` blocks
+in a dimension.*
+
 #### FLOW-015 · Default fragility threshold
-`Should` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-28
+`Should` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-28
 
 The default threshold shall be 150 kPa, so windows hold 1 atm against vacuum
 and blow out on overpressure.
@@ -259,8 +271,14 @@ and blow out on overpressure.
 - **Verify:** Inspect the default; a GameTest checks a window holds 101 kPa
   against vacuum and breaks at 160 kPa.
 
+*2026-11-05: done ([#45](https://github.com/west3436/zas-cubed/issues/45)). The
+default is `FragileSettings.DEFAULT_THRESHOLD_KPA`, read by the config;
+`flow_015_the_default_threshold_is_150_kpa` checks both, and
+`flow_015_a_window_holds_101_kpa_against_vacuum_and_breaks_at_160` checks a glass
+block and a pane in a vacuum dimension.*
+
 #### FLOW-016 · Block damage off in Normal
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-14, D-28
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-14, D-28
 
 With the Normal preset, block pressure damage shall be off. Either preset can
 override it.
@@ -268,6 +286,10 @@ override it.
 - **Rationale:** Decision: D-14 and D-28.
 - **Verify:** A GameTest checks glass holds under Normal and that the override
   turns damage on.
+
+*2026-11-05: done ([#45](https://github.com/west3436/zas-cubed/issues/45)).
+`flow_016_normal_holds_and_the_override_turns_damage_on` checks that, and
+`flow_016_hardcore_can_override_damage_off` the other way round.*
 
 ## Players
 

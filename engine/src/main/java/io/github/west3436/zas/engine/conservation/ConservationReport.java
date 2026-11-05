@@ -1,6 +1,9 @@
 package io.github.west3436.zas.engine.conservation;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * One period of the conservation ledger (CORE-073): what each category changed,
@@ -12,13 +15,27 @@ import java.util.List;
  *     they never entered a zone, so they explain no change
  * @param supplied per gas index, moles supplied by paused zones and unresolved regions without
  *     depleting them (GEO-038)
+ * @param byOperator per operator, in source order, and per gas index, the moles their commands
+ *     removed (OPS-013): who {@link LedgerCategory#OPERATOR}'s sinks are attributed to
  * @param violations unexplained changes, in gas index order; empty when conserved
  */
 public record ConservationReport(
-        long tick, double[][] byCategory, double[] voided, double[] supplied, List<Violation> violations) {
+        long tick,
+        double[][] byCategory,
+        double[] voided,
+        double[] supplied,
+        Map<String, double[]> byOperator,
+        List<Violation> violations) {
 
     public ConservationReport {
+        byOperator = Collections.unmodifiableMap(new TreeMap<>(byOperator));
         violations = List.copyOf(violations);
+    }
+
+    /** The moles of one gas that an operator's commands removed (OPS-013). */
+    public double removedBy(String operator, int gas) {
+        double[] moles = byOperator.get(operator);
+        return moles == null ? 0 : moles[gas];
     }
 
     /** Whether every change was explained. */

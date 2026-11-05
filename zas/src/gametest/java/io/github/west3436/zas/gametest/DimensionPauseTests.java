@@ -77,7 +77,7 @@ public final class DimensionPauseTests {
     }
 
     /** Collects what commands send to their source. */
-    private static final class Capture implements CommandSource {
+    static final class Capture implements CommandSource {
         final List<Component> messages = new CopyOnWriteArrayList<>();
 
         @Override
@@ -109,7 +109,7 @@ public final class DimensionPauseTests {
         }
     }
 
-    private static CommandSourceStack console(ServerLevel level, Capture capture, int permission) {
+    static CommandSourceStack console(ServerLevel level, Capture capture, int permission) {
         return new CommandSourceStack(
                 capture,
                 Vec3.ZERO,
@@ -122,7 +122,7 @@ public final class DimensionPauseTests {
                 null);
     }
 
-    private static int run(CommandSourceStack source, String command) {
+    static int run(CommandSourceStack source, String command) {
         try {
             return source.getServer().getCommands().getDispatcher().execute(command, source);
         } catch (CommandSyntaxException e) {
@@ -130,7 +130,7 @@ public final class DimensionPauseTests {
         }
     }
 
-    private static void refused(CommandSourceStack source, String command) {
+    static void refused(CommandSourceStack source, String command) {
         try {
             source.getServer().getCommands().getDispatcher().execute(command, source);
         } catch (CommandSyntaxException e) {

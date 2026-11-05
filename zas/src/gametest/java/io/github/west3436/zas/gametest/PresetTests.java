@@ -277,15 +277,14 @@ public final class PresetTests {
             h.assertTrue(report.contains("  Server config: "), report);
             h.assertTrue(
                     report.contains("  ambient_variant = NORMAL [preset] (Normal NORMAL, Hardcore HARDCORE)"), report);
-            // The zone triggers are wired (CORE-056), so they don't wait; block damage still does.
+            // The zone triggers are wired (CORE-056), and block damage (FLOW-007), so they don't wait.
             h.assertTrue(
                     report.contains("  combustion_forms_zones = false [preset] (Normal false, Hardcore true)\n"),
                     report);
             h.assertTrue(
                     report.contains("  planting_forms_zones = false [preset] (Normal false, Hardcore true)\n"), report);
             h.assertTrue(
-                    report.contains("  block_pressure_damage = false [preset] (Normal false, Hardcore true), not used"
-                            + " yet: waits for FLOW-007"),
+                    report.contains("  block_pressure_damage = false [preset] (Normal false, Hardcore true)\n"),
                     report);
             // Photosynthesis reads its rates (CONT-057), so they don't wait either.
             h.assertTrue(

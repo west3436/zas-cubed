@@ -2,6 +2,7 @@ package io.github.west3436.zas.provider;
 
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
+import io.github.west3436.zas.engine.GeometryDeriver;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.geometry.PositionGeometries;
@@ -22,8 +23,9 @@ import net.minecraft.world.phys.Vec3;
  * (API-015, D-44).
  *
  * <ul>
- *   <li><b>An exact point</b> uses the sub-cell of its block that contains it ({@link SubCells}).
- *       A point inside the block's collision shape uses the block's nearest cell.
+ *   <li><b>An exact point</b> uses the sub-cell of its block that contains it ({@link SubCells}, or
+ *       for a block with a shape of its own at that position, {@link PositionGeometries#cellOf}). A
+ *       point inside the block's collision shape uses the block's nearest cell.
  *   <li><b>A point inside a block with no cells</b> (a full block, which holds no gas) uses the
  *       nearest cell next to it: of the six neighbours, in order of the point's distance to the
  *       face they share (ties in {@link Face} order), the first that has a cell, and of that
@@ -67,7 +69,7 @@ public final class PointResolver {
         }
         Geometry g = PositionGeometries.geometry(level, pos, state, table);
         if (g.cellCount() > 0) {
-            return new Cell(pos, cellNear(state, g, pos, point), g.cellCount());
+            return new Cell(pos, cellNear(level, table, state, g, pos, point), g.cellCount());
         }
         // No cells here: the nearest neighbour with one.
         double fx = point.x - pos.getX();
@@ -90,7 +92,7 @@ public final class PointResolver {
             }
             Geometry ng = PositionGeometries.geometry(level, next, there, table);
             if (ng.cellCount() > 0) {
-                return new Cell(next, cellNear(there, ng, next, point), ng.cellCount());
+                return new Cell(next, cellNear(level, table, there, ng, next, point), ng.cellCount());
             }
         }
         return new Cell(pos, -1, 0);
@@ -120,11 +122,13 @@ public final class PointResolver {
             return Vec3.atCenterOf(pos);
         }
         Geometry g = PositionGeometries.geometry(level, pos, state, table);
-        int voxel = SubCells.voxelOf(state, g, SubCells.largest(g));
+        int largest = SubCells.largest(g);
+        byte[] own = g.cellCount() > 1 ? PositionGeometries.cellOf(level, pos, state, table) : null;
+        int voxel = own != null ? SubCells.voxelOf(own, largest) : SubCells.voxelOf(state, g, largest);
         if (voxel < 0) {
             return Vec3.atCenterOf(pos);
         }
-        double n = io.github.west3436.zas.engine.GeometryDeriver.N;
+        double n = GeometryDeriver.N;
         return new Vec3(
                 pos.getX() + ((voxel & 15) + 0.5) / n,
                 pos.getY() + ((voxel >>> 8) + 0.5) / n,
@@ -132,13 +136,18 @@ public final class PointResolver {
     }
 
     /** The cell of a block nearest a point, which may lie outside it; -1 for the largest. */
-    private static int cellNear(BlockState state, Geometry g, BlockPos pos, Vec3 point) {
-        return SubCells.at(
-                state,
-                g,
-                SubCells.voxel(point.x - pos.getX()),
-                SubCells.voxel(point.y - pos.getY()),
-                SubCells.voxel(point.z - pos.getZ()));
+    private static int cellNear(
+            ServerLevel level, GeometryTable table, BlockState state, Geometry g, BlockPos pos, Vec3 point) {
+        int x = SubCells.voxel(point.x - pos.getX());
+        int y = SubCells.voxel(point.y - pos.getY());
+        int z = SubCells.voxel(point.z - pos.getZ());
+        byte[] own = g.cellCount() > 1 ? PositionGeometries.cellOf(level, pos, state, table) : null;
+        if (own == null) {
+            return SubCells.at(state, g, x, y, z);
+        }
+        // Off the server thread the geometry and the map are two reads, which a change may fall between.
+        int cell = own[GeometryDeriver.index(x, y, z)];
+        return cell < g.cellCount() ? cell : -1;
     }
 
     /** The distance from a point within a block (each coordinate 0 to 1) to one of its faces. */

@@ -12,8 +12,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * each voxel back to its cell with {@link GeometryDeriver#cellOfVoxels}, so a free voxel gives the
  * cell holding it and a voxel inside the shape gives the nearest cell. The map is built the first
  * time a block state with more than one cell is asked about and kept for the session: 4 KiB each,
- * for the few states that divide their block (panes, bars, walls, fences). Safe to call from any
- * thread.
+ * for the few states that divide their block (panes and walls). Safe to call from any thread.
+ *
+ * <p>This is about block states. A position with a shape of its own has its own map, from {@link
+ * PositionGeometries#cellOf}, since its cells aren't its state's (GEO-043).
  */
 public final class SubCells {
     private static final VoxelMap NONE = new VoxelMap(null, 0);
@@ -36,9 +38,9 @@ public final class SubCells {
      *
      * @param state the block
      * @param geometry its geometry in the current table
-     * @return the cell's index in {@code geometry}; -1 if the block has no cells, or if its cells
-     *     don't come from its collision shape as derived at the origin (a position-dependent
-     *     shape whose cells differ), so a caller should fall back to the largest cell
+     * @return the cell's index in {@code geometry}; -1 if the block has no cells, or if its geometry
+     *     isn't known yet or its shape is broken, so that its cells aren't those of its collision shape
+     *     at the origin, and a caller should fall back to the largest cell
      */
     public static int at(BlockState state, Geometry geometry, int x, int y, int z) {
         int count = geometry.cellCount();
@@ -67,10 +69,15 @@ public final class SubCells {
         if (map.cells() != geometry.cellCount()) {
             return -1;
         }
+        return voxelOf(map.cellOf(), cell);
+    }
+
+    /** A voxel that {@code cellOf} maps to {@code cell}: the one nearest the block's centre, the first of equals. */
+    public static int voxelOf(byte[] cellOf, int cell) {
         int best = -1;
         int bestDistance = Integer.MAX_VALUE;
         for (int i = 0; i < GeometryDeriver.VOXELS; i++) {
-            if (map.cellOf()[i] != cell) {
+            if (cellOf[i] != cell) {
                 continue;
             }
             int dx = 2 * (i & 15) - 15;
@@ -83,6 +90,15 @@ public final class SubCells {
             }
         }
         return best;
+    }
+
+    /** A state's voxel to cell map, if {@code geometry} is several cells and they are that state's; otherwise null. */
+    static byte[] cellOf(BlockState state, Geometry geometry) {
+        if (geometry.cellCount() <= 1) {
+            return null;
+        }
+        VoxelMap map = MAPS.computeIfAbsent(state, SubCells::map);
+        return map.cells() == geometry.cellCount() ? map.cellOf() : null;
     }
 
     /** The index of a geometry's largest cell, the first of equals; -1 if it has none. */

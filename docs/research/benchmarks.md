@@ -630,6 +630,34 @@ zones change, on the worker; the 1,000-cell row's first tick includes the
 JIT's warm-up. Not measured: Minecraft's entity lookup by box, which costs the
 entities in the boxes around the openings' sections.
 
+## Block pressure damage (FLOW-007)
+
+_Run 2026-11-05 with `./gradlew :engine:bench -Pbench.args=fragile`, same
+machine, with other builds running on it._ A room of 8,000 cells at 1 atm against
+a vacuum, with that many fragile blocks in its walls (400 is a whole wall, 2,400
+all six), and a second, small room far away. Worker: the atmos tick's median over
+40 ticks, with the option off; on, with nothing near the threshold; and on, with
+the small room raised to 4 atm so every window is judged every tick. None breaks.
+
+| Windows | Option off | On, nothing near the threshold | Blocks judged | On, a difference elsewhere | Blocks judged |
+|---|---|---|---|---|---|
+| 0 | 0.192 ms | 0.144 ms | 0 | 0.122 ms | 0 |
+| 400 | 0.153 ms | 0.109 ms | 0 | 0.505 ms | 400 |
+| 2,400 | 0.099 ms | 0.089 ms | 0 | 2.01 ms | 2,400 |
+
+With nothing near the threshold no block is looked at, and any difference from the
+option being off is lost in the noise of these runs, whose order also favours the
+later columns while the JIT warms up. With a difference elsewhere, a window costs
+about 1 µs per tick on the worker, however far it is from breaking. 1 atm against a
+vacuum never gets there at the default threshold.
+
+Breaking is on the server thread and bounded by `pressure_fragile_breaks_per_tick`:
+the GameTest `flow_007_measures_what_a_full_tick_of_breaks_costs` logged a median of
+1.1 ms (0.94 to 5.04 ms over six runs) for the default 32 glass blocks in a row, cold
+code with no player nearby, with other builds running on the machine. Not measured:
+the packets to players nearby, or the block changes reaching the worker in the next
+batch, which cost what any 32 block changes cost.
+
 ## Ambient changing every tick (ENV-017)
 
 _Run 2026-11-05 with `./gradlew :engine:bench -Pbench.args=ambient`, same machine,

@@ -62,7 +62,14 @@ public record GasOp(
          * Ignites a flammable zone in the target's cell or a neighbouring cell (FIRE-014): a hotspot
          * starts there, in the hotspot phase. It moves no gas itself and never forms a zone.
          */
-        IGNITE;
+        IGNITE,
+        /**
+         * Resets the zone at the target to the ambient by operator command (OPS-013): its cells
+         * become unzoned, and its gas is removed and attributed to the source. It asks for no
+         * amounts and never forms a zone. It is applied ahead of the other operations and the undo
+         * point, so what they do sees the cells unzoned and a rejected component never undoes it.
+         */
+        RESET;
 
         /** Whether the kind is a pin or an unpin, which moves no gas. */
         public boolean isPin() {
@@ -147,6 +154,11 @@ public record GasOp(
     /** An ignition at a position by {@code source} (FIRE-014). */
     public static GasOp ignite(long seq, long block, String source) {
         return new GasOp(seq, Kind.IGNITE, block, new double[0], 0, LedgerCategory.REACTION, false, source, -1);
+    }
+
+    /** A reset of the zone at a position's cell {@code sub} (-1 for its largest), by {@code source} (OPS-013). */
+    public static GasOp reset(long seq, long block, int sub, String source) {
+        return new GasOp(seq, Kind.RESET, block, new double[0], 0, LedgerCategory.OPERATOR, false, source, sub);
     }
 
     /** An API removal. */
