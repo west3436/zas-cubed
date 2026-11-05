@@ -27,6 +27,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A pipe segment (CONT-001, CONT-007): a 4 px tube with an arm toward each connected neighbour. It
@@ -99,6 +100,29 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
             }
         }
         return n;
+    }
+
+    /**
+     * The way a pipe state's open end looks out: away from its one connection.
+     *
+     * @return the direction; null for a pipe with no connection, open every way, or with more than one,
+     *     which has no open end
+     */
+    @Nullable
+    public static Direction openFace(BlockState state) {
+        if (!(state.getBlock() instanceof PipeBlock)) {
+            return null;
+        }
+        Direction only = null;
+        for (Direction d : Direction.values()) {
+            if (state.getValue(CONNECTIONS.get(d))) {
+                if (only != null) {
+                    return null;
+                }
+                only = d;
+            }
+        }
+        return only == null ? null : only.getOpposite();
     }
 
     @Override

@@ -156,19 +156,24 @@ public final class JetEmitters {
         }
     }
 
-    /** Makes one particle of a source, part of the way along its first tick so they don't bunch. */
+    /**
+     * Makes one particle of a source, part of the way along its first tick so they don't bunch. One
+     * going inward starts as far out as it would have ended, and flies back to the source.
+     */
     private void emit(Source s, Sink sink) {
         JetPlan plan = s.plan;
         double[] d = JetPlan.direction(s.ax, s.ay, s.az, plan.spread(), random);
         double speed = plan.speed();
         double along = speed * random.nextDouble();
+        double out = plan.inward() ? plan.distance() - along : along;
+        double way = plan.inward() ? -speed : speed;
         sink.spawn(
-                s.x + d[0] * along,
-                s.y + d[1] * along,
-                s.z + d[2] * along,
-                d[0] * speed,
-                d[1] * speed,
-                d[2] * speed,
+                s.x + d[0] * out,
+                s.y + d[1] * out,
+                s.z + d[2] * out,
+                d[0] * way,
+                d[1] * way,
+                d[2] * way,
                 plan.lifetime(),
                 plan.shade(),
                 plan.size());

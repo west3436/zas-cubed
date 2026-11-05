@@ -2129,7 +2129,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
-| `particle` | Gas particles (§11.12): the server's sends (`GasJets`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
+| `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, and `GasJetParticles` (§11.12) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -2272,7 +2272,8 @@ the cell in front of its grille).
   ([#153](https://github.com/west3436/zas-cubed/issues/153)). #154 fixed that
   in the framework, which now reads such a cell as unresolved; the wait stays
   as defence in depth. A pipe cap
-  closes an end and never leaks.
+  closes an end and never leaks. An end moving at least 0.25 mol/s net shows a
+  jet (CLIENT-019, §11.12).
 - **Dye** (CONT-114). A dye on a pipe or cap sets its `color` state; the
   client tints the models' tint index 0 with the dye's colour. The colour
   doesn't change connections. A `PipeItem` carries a colour in the vanilla
@@ -3088,9 +3089,21 @@ client works out for itself. No client ever sees a zone (D-53).
   | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
   | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
   | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
+  | `OPEN_END` | An open pipe end moves at least 0.25 mol/s net, each atmos tick (§11.4) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
 
   An exploding container sends nothing, since vanilla's explosion has its own
   particles. Nothing is sent for no moles, so an empty canister shows nothing.
+  An open end looks away from its one connection, and a lone pipe every way. Its
+  22 ticks run a little past the next atmos tick, so a flowing end's jets run
+  into each other and one that stops goes quiet within about a second.
+- **What is sent.** A jet goes to players within its kind's range: 16 blocks for
+  `OPEN_END`, 32 for the rest. `LEAK` and `OPEN_END` are `flowing`, sent every
+  atmos tick while gas flows, so each player is sent at most 20 of them per
+  second (`SendLimiter`): at most about 1.2 KiB/s, however large the station,
+  within DATA-006's 2 KiB/s. The budget is per second, not per game tick, because
+  a device's phase comes from the order it was added, so a few ends can share a
+  game tick. Past the budget they just aren't sent, and since phases are fixed
+  the same ends lose out each second.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes

@@ -1,8 +1,10 @@
 package io.github.west3436.zas.atmos.particle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -106,6 +108,51 @@ class JetPlanTest {
         assertTrue(big.perTick() <= JetEmitters.PER_SOURCE, big.perTick() + " a tick");
         JetPlan leak = JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_HIGH);
         assertTrue(leak.perTick() <= JetEmitters.PER_SOURCE, leak.perTick() + " a tick");
+        JetPlan end = JetPlan.of(GasJetKind.OPEN_END, JetPlan.OPEN_END_MAX_FLOW);
+        assertTrue(end.perTick() <= JetEmitters.PER_SOURCE, end.perTick() + " a tick");
+    }
+
+    @Test
+    void client_019_a_trickle_shows_nothing() {
+        assertFalse(JetPlan.showsFlow(0));
+        assertFalse(JetPlan.showsFlow(0.2499));
+        assertFalse(JetPlan.showsFlow(-0.2499));
+        assertFalse(JetPlan.showsFlow(Double.NaN));
+        assertTrue(JetPlan.showsFlow(JetPlan.OPEN_END_MIN_FLOW));
+        assertTrue(JetPlan.showsFlow(-JetPlan.OPEN_END_MIN_FLOW));
+        assertTrue(JetPlan.showsFlow(100));
+    }
+
+    @Test
+    void client_019_a_lone_pipe_a_little_over_its_room_is_about_the_threshold() {
+        // A 70 L pipe at 1.5 atm over a large room: the open end's 0.163 of the 1.44 moles above it.
+        double overRoom = 0.5 * 101.325 * 70 / (8.314 * 293.15);
+        assertEquals(JetPlan.OPEN_END_MIN_FLOW, 0.163 * overRoom, 0.03);
+    }
+
+    @Test
+    void client_019_more_flow_is_a_bigger_jet_either_way() {
+        JetPlan small = JetPlan.of(GasJetKind.OPEN_END, JetPlan.OPEN_END_MIN_FLOW);
+        JetPlan middle = JetPlan.of(GasJetKind.OPEN_END, 4);
+        JetPlan big = JetPlan.of(GasJetKind.OPEN_END, JetPlan.OPEN_END_MAX_FLOW);
+        assertTrue(small.perTick() < middle.perTick() && middle.perTick() < big.perTick());
+        assertTrue(small.distance() < middle.distance() && middle.distance() < big.distance());
+        assertTrue(small.size() < big.size());
+        assertEquals(big, JetPlan.of(GasJetKind.OPEN_END, JetPlan.OPEN_END_MAX_FLOW * 100));
+
+        JetPlan drawn = JetPlan.of(GasJetKind.OPEN_END, -4);
+        assertFalse(middle.inward());
+        assertTrue(drawn.inward());
+        assertEquals(middle.perTick(), drawn.perTick(), EPS);
+        assertEquals(middle.distance(), drawn.distance(), EPS);
+    }
+
+    @Test
+    void client_019_a_flowing_end_runs_into_its_next_atmos_tick() {
+        JetPlan plan = JetPlan.of(GasJetKind.OPEN_END, 1);
+        assertTrue(plan.ticks() > AtmosTicks.PERIOD, "there would be a gap each atmos tick");
+        assertTrue(plan.ticks() <= AtmosTicks.PERIOD + 5, "it would run on too long after the flow stops");
+        assertEquals(plan.distance(), travelled(plan), EPS);
     }
 
     @Test

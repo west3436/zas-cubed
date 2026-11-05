@@ -14,9 +14,17 @@ import java.util.random.RandomGenerator;
  * @param spread the half-angle of its cone, in radians; {@link Math#PI} is every direction
  * @param shade its grey, 0 black to 1 white: neutral, never a gas's colour (CLIENT-017)
  * @param size its size, as a multiple of the sprite's own
+ * @param inward whether its particles fly toward the source, as gas drawn in, rather than away
  */
 public record JetPlan(
-        double perTick, int ticks, int lifetime, double distance, double spread, float shade, float size) {
+        double perTick,
+        int ticks,
+        int lifetime,
+        double distance,
+        double spread,
+        float shade,
+        float size,
+        boolean inward) {
     /**
      * How much of its speed the sprite keeps each game tick: vanilla's poof, which is what the client
      * spawns. A particle's speed comes from this and {@link #lifetime}, so it ends {@link #distance} away.
@@ -68,6 +76,24 @@ public record JetPlan(
     private static final float GAS_SHADE = 0.82f;
 
     /**
+     * The least flow an open end shows, in moles per second: below it, a trickle shows nothing
+     * (CLIENT-019). A lone 70 L pipe reaches it at about 1.5 atm over its room.
+     */
+    static final double OPEN_END_MIN_FLOW = 0.25;
+
+    /** The flow at and above which an open end's jet is at its biggest, in moles per second. */
+    static final double OPEN_END_MAX_FLOW = 64;
+
+    /**
+     * An open end's game ticks: its 20-tick atmos tick and a little, so a flowing end's jets run into
+     * each other, and one that stops goes quiet within about a second.
+     */
+    static final int OPEN_END_TICKS = 22;
+
+    private static final int OPEN_END_LIFETIME = 8;
+    private static final double OPEN_END_SPREAD = Math.toRadians(12);
+
+    /**
      * The plan for a jet.
      *
      * @param kind what it is
@@ -84,12 +110,19 @@ public record JetPlan(
                         Math.max(SPRAY_MIN_DISTANCE, positive(amount)),
                         SPRAY_SPREAD,
                         SPRAY_SHADE,
-                        1.0f);
+                        1.0f,
+                        false);
             case LEAK -> {
                 double t = scale(amount, LEAK_LOW, LEAK_HIGH);
                 yield new JetPlan(
-                        lerp(0.75, 3, t), LEAK_TICKS, LEAK_LIFETIME, lerp(1, 3, t), LEAK_SPREAD, GAS_SHADE, (float)
-                                lerp(0.7, 1, t));
+                        lerp(0.75, 3, t),
+                        LEAK_TICKS,
+                        LEAK_LIFETIME,
+                        lerp(1, 3, t),
+                        LEAK_SPREAD,
+                        GAS_SHADE,
+                        (float) lerp(0.7, 1, t),
+                        false);
             }
             case BURST -> {
                 double t = scale(amount, BURST_LOW, BURST_HIGH);
@@ -100,9 +133,32 @@ public record JetPlan(
                         lerp(1.5, 6, t),
                         Math.PI,
                         GAS_SHADE,
-                        (float) lerp(1, 1.6, t));
+                        (float) lerp(1, 1.6, t),
+                        false);
+            }
+            case OPEN_END -> {
+                double t = scale(Math.abs(amount), OPEN_END_MIN_FLOW, OPEN_END_MAX_FLOW);
+                yield new JetPlan(
+                        lerp(0.2, 2.5, t),
+                        OPEN_END_TICKS,
+                        OPEN_END_LIFETIME,
+                        lerp(0.6, 2.5, t),
+                        OPEN_END_SPREAD,
+                        GAS_SHADE,
+                        (float) lerp(0.5, 0.8, t),
+                        amount < 0);
             }
         };
+    }
+
+    /**
+     * Whether an open end's flow is enough to show (CLIENT-019).
+     *
+     * @param molesPerSecond its net flow, either way
+     * @return whether it is at or above {@link #OPEN_END_MIN_FLOW}; anything that isn't a number isn't
+     */
+    public static boolean showsFlow(double molesPerSecond) {
+        return Math.abs(molesPerSecond) >= OPEN_END_MIN_FLOW;
     }
 
     /**
