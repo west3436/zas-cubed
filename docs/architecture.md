@@ -1830,6 +1830,11 @@ unverified.*
   chosen once it is silent. A chosen loop gets a bonus of 1.25 on its loudness,
   so loops about as loud don't take turns. A new voice starts only when fewer
   than 8 exist, so a swap waits for the old voice to fade.
+- **What counts as loud.** A request's volume, times what's left after distance,
+  times a weight the shell reads for it: the volume its event has in `sounds.json`
+  times its slider, as the engine reads them. An event with no sound data weighs 1.
+  The weight counts only in choosing, because the engine applies it to the sound
+  itself. A loop on a slider at 0 weighs nothing and holds no slot.
 - **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
   stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
   that forgets, or stops existing, can't leave a sound playing.
@@ -1857,6 +1862,14 @@ unverified.*
   and sent to it if it changed. It is whole kPa capped at 50, so normal air sends
   nothing after the first. A client that hasn't been told, or has left a server,
   counts as normal air, and an unresolved point leaves the last reading standing.
+- **One-shots** (`client.ThinAirOneShots`). A server plays a sound for everyone in
+  range, so the fade happens on each client, in NeoForge's `PlaySoundEvent`, the
+  one place every sound passes through. A non-ticking sound in a namespace given
+  to `ClientSounds.fadeInThinAir` plays at the factor's share of its volume, or
+  not at all at 0. So whatever plays a sound, on either side, plays its event as
+  usual and doesn't multiply by the factor. Vanilla's sounds and loops are left
+  alone. Each mod gives its own namespace, since `zas` knows nothing of the mods
+  built on it.
 
 ## 6. API module
 
@@ -1873,7 +1886,7 @@ unverified.*
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
-| `.api.client` | `ClientSounds` (`thinAir()`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
+| `.api.client` | `ClientSounds` (`thinAir()`, `fadeInThinAir(namespace)`, `fadesInThinAir(namespace)`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -2190,7 +2203,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
-| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
@@ -3229,3 +3242,11 @@ plays a machine's `on` or `off`, and only if the switch moved. The recharger pla
 `on` as it starts charging, `done` as its battery fills and `off` if it stops
 short. The generator plays `on` and `off` as its `lit` changes, so not between one
 piece of fuel and the next.
+
+**Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
+canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
+and sends each player in the level one `ClientboundSoundPacket`, which
+`BlastSound.heard` chooses from the blast's power and the player's distance, so
+nobody hears a near and a far sound together. These packets don't use the server's
+range check, but the events' ranges are still what the client attenuates by. Any
+other explosion goes through vanilla's code and keeps vanilla's sound.

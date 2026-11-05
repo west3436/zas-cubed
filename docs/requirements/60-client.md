@@ -190,8 +190,9 @@ deferred here.*
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
 
 A client shall play at most 8 looping sounds at once, chosen from those
-requested within their range: the ones that reach the player loudest, which
-among loops of one volume and range are the nearest. Each shall fade over 0.5 s
+requested within their range: the ones that will play loudest at the player,
+counting the volume in `sounds.json` and the player's sliders, which among loops
+of one volume and range are the nearest. Each shall fade over 0.5 s
 as it starts, stops or changes volume, and shall stop within 1 s of its last
 request, as soon as its chunk or the player's level is gone, and when the
 player leaves its range.
@@ -212,6 +213,15 @@ the new one starts, so there are never more than 8. The sound engine's own
 attenuation is off: the gain falls in a straight line to 0 at each loop's range.
 Nothing has been heard yet, so the Manual part is open.*
 
+*2026-11-05: Choosing now counts what a loop will play at. It compared requested
+volumes, but the engine then multiplies by the event's volume in `sounds.json`,
+which sets the device loops' levels, so a pump at 0.35 there ranked about 3 times
+louder than it plays. By calculation, 8 pumps working hard within 5 blocks took
+every slot from a breach louder than any of them 2 blocks away. `ClientLoops` now
+gives the book that volume times the slider as a weight, 1 for an event with no
+sound data. `LoopBookTest` and `ClientLoopsTest` (Unit) check it. The client side
+hasn't run, so what plays is still unverified.*
+
 #### CLIENT-016 · Thin air
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
 
@@ -226,8 +236,10 @@ pressure the client doesn't know yet counts as being in normal air.
   fade where the player is first warned, and a straight line in amplitude is
   roughly what falling density does to a sound.
 - **Verify:** `ThinAirTest` and `LoopBookTest` (Unit) check the curve and that a
-  vacuum leaves no voice playing; `client_016_*` (GameTest) check the factor in
-  rooms and in open air; Manual checks how the fade sounds.
+  vacuum leaves no voice playing; `ThinAirOneShotsTest` (Unit) checks which
+  one-shots fade and by how much; `client_016_*` (GameTest) check the factor in
+  rooms and in open air; Manual checks how the fade sounds, and that a real
+  one-shot from a server fades.
 
 *2026-11-05: added for review, with the curve built (`sound.ThinAir`), for the
 owner to judge by ear: 0 at 1 kPa or below, 0.08 at 5, 0.18 at 10, 0.39 at 20,
@@ -236,6 +248,16 @@ player, so a sealed suit in a vacuum hears silence. The open air reads as its
 dimension's ambient pressure, so it is normal air in a breathable dimension and
 a vacuum in an airless one. Nothing has been heard yet, so the Manual part is
 open.*
+
+*2026-11-05: one-shots fade too, on the client as each sound starts
+(`client.ThinAirOneShots`, on NeoForge's `PlaySoundEvent`), for every event in a
+namespace a mod gives `ClientSounds.fadeInThinAir` (API-060). A server plays a
+sound for everyone in range and only each client knows its own player's air, so
+nothing that plays a sound has to do anything, and it must not multiply by the
+factor as well. In a vacuum the sound is dropped, and its subtitle with it. A
+sound above volume 1 keeps full gain and loses range until the factor brings it
+below 1, since the engine works out both from the volume, so a near blast at
+volume 4 starts to lose gain at a factor of 0.25.*
 
 #### CLIENT-017 · Gas particle limits
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-53

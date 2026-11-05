@@ -2,6 +2,8 @@ package io.github.west3436.zas.api.client;
 
 import io.github.west3436.zas.api.AnyThread;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Sound on the client through ZAS³: a factor for thin air (API-060), and looping sounds that ZAS³
@@ -23,6 +25,8 @@ public final class ClientSounds {
 
     private static final ClientSoundProvider NONE = new ClientSoundProvider() {};
 
+    private static final Set<String> FADING = ConcurrentHashMap.newKeySet();
+
     private static volatile ClientSoundProvider provider = NONE;
 
     private ClientSounds() {}
@@ -33,8 +37,9 @@ public final class ClientSounds {
      * suit doesn't change it. A client that hasn't been told yet, and the open air of a breathable
      * dimension, read as normal air.
      *
-     * <p>{@link #loop} applies it already. Multiply a one-shot sound's volume by it. Leave vanilla's
-     * sounds alone: only this mod's sounds fade in thin air.
+     * <p>{@link #loop} applies it already, and so does ZAS³ to the one-shot sounds of a namespace given
+     * to {@link #fadeInThinAir}, so don't multiply those by it again. Multiply any other one-shot sound
+     * of a mod's by it. Leave vanilla's sounds alone: only a mod's own sounds fade in thin air.
      *
      * <p>Thread: any.
      *
@@ -46,10 +51,41 @@ public final class ClientSounds {
     }
 
     /**
+     * Fades every one-shot sound event in a namespace for a listener in thin air, by {@link #thinAir}
+     * (CLIENT-016). That covers a sound a server plays, which only the client hearing it can fade, as
+     * well as one the client plays, and takes it out of a vacuum altogether. Call it once, from a
+     * mod's client entry point, with its mod id. Without ZAS³ it does nothing.
+     *
+     * <p>Thread: any.
+     *
+     * @param namespace the namespace of the sound events
+     * @throws NullPointerException if {@code namespace} is null
+     */
+    @AnyThread
+    public static void fadeInThinAir(String namespace) {
+        FADING.add(Objects.requireNonNull(namespace, "namespace"));
+    }
+
+    /**
+     * Whether a namespace's one-shot sounds fade in thin air: whether it was given to {@link
+     * #fadeInThinAir}.
+     *
+     * <p>Thread: any.
+     *
+     * @param namespace the namespace of a sound event
+     * @return true if ZAS³ fades its one-shot sounds
+     */
+    @AnyThread
+    public static boolean fadesInThinAir(String namespace) {
+        return FADING.contains(namespace);
+    }
+
+    /**
      * Asks for a looping sound, or renews the request (CLIENT-015). ZAS³ plays only the {@value
      * #MAX_LOOPS} loudest requested loops for this client, which among equal loops are the nearest,
-     * and only those within their range. It fades them in and out, applies {@link #thinAir}, and
-     * stops each one when its request lapses.
+     * and only those within their range. Loudest counts the sound's volume in {@code sounds.json} and
+     * the player's sliders. It fades them in and out, applies {@link #thinAir}, and stops each one when
+     * its request lapses.
      *
      * <p>Call it again at least every {@value #LEASE_TICKS} game ticks for as long as the source wants
      * the sound, and stop calling when it no longer does. Every game tick is fine, and is how a
