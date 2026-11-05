@@ -10,10 +10,12 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -24,6 +26,9 @@ import net.minecraft.world.phys.Vec3;
  * An area air controller that covers it, as it covers any part, reads a triggered alarm as a
  * danger-2 reading, so its firelocks, redstone and panel follow as for its own danger 2. It is a
  * life-support part (CONT-064) drawing {@code [power] fire_alarm} FE/t (CONT-065).
+ *
+ * <p>A client plays its alarm from its block state ({@link FireAlarmVoice}, CONT-128). All the server
+ * plays is the click when it resets.
  */
 public class FireAlarmBlockEntity extends AtmosDevice implements PoweredDevice {
     /** vg's fire alarm trips above 473 K (CONT-044). */
@@ -72,6 +77,9 @@ public class FireAlarmBlockEntity extends AtmosDevice implements PoweredDevice {
     private void setStatus(ServerLevel level, FireAlarmStatus status) {
         BlockState state = getBlockState();
         if (state.hasProperty(FireAlarmBlock.STATUS) && state.getValue(FireAlarmBlock.STATUS) != status) {
+            if (state.getValue(FireAlarmBlock.STATUS) == FireAlarmStatus.ALARM && status == FireAlarmStatus.NORMAL) {
+                level.playSound(null, getBlockPos(), AtmosSounds.FIRE_ALARM_RESET.get(), SoundSource.BLOCKS);
+            }
             level.setBlock(getBlockPos(), state.setValue(FireAlarmBlock.STATUS, status), 3);
         }
     }

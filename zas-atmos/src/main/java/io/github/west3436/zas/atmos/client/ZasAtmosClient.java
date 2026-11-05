@@ -55,6 +55,9 @@ public final class ZasAtmosClient {
         DeviceLoops.add(AtmosBlocks.PORTABLE_PUMP, AtmosSounds.PORTABLE_PUMP_RUN);
         DeviceLoops.add(AtmosBlocks.PORTABLE_SCRUBBER, AtmosSounds.PORTABLE_SCRUBBER_RUN);
         DeviceLoops.add(AtmosBlocks.RECHARGER, AtmosSounds.RECHARGER_RUN);
+
+        // The fire alarm's sound, one per client (CONT-128).
+        FireAlarmSounds.register(NeoForge.EVENT_BUS);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
