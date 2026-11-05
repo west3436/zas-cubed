@@ -33,6 +33,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -362,7 +363,7 @@ public final class InternalsTests {
             double co = 1.0 * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
             lab.room(0, Map.of(N2, air * 0.79, O2, air * 0.21, CO, co));
             FakePlayer in = lab.player(2);
-            seal(in);
+            in.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CARVED_PUMPKIN)); // seals, and doesn't filter
             Internals.set(in, true);
             in.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
             Breathability safe = BreathingRules.assess(in).verdict();

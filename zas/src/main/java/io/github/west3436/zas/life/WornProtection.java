@@ -134,6 +134,16 @@ public final class WornProtection implements Shielding {
     }
 
     /**
+     * Whether an entity's breath is filtered (API-022, CONT-088): by the item in its head slot, or by
+     * its own life support. Server thread.
+     */
+    public static boolean gasFiltering(LivingEntity entity) {
+        ILifeSupport head = Protections.of(entity.getItemBySlot(EquipmentSlot.HEAD));
+        ILifeSupport own = Protections.of(entity);
+        return (head != null && head.gasFiltering()) || (own != null && own.gasFiltering());
+    }
+
+    /**
      * An entity's airflow resistance, 0 to 1 (FLOW-012, API-022): the highest of its armor pieces'
      * and its own. Server thread.
      */

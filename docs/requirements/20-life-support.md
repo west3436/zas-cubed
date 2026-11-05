@@ -487,6 +487,9 @@ Gas filtering is carried but not applied until the gas mask.
 item and by tag, the precedence, an entity's own, and the invalid and duplicate
 files.*
 
+*2026-11-05: Gas filtering is now applied (API-022), from the capability or data
+alike. `life_026_a_data_item_filters_the_breath` checks a data item.*
+
 #### LIFE-027 · Vanilla armor
 `Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-47
 

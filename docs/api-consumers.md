@@ -96,7 +96,8 @@ static void capabilities(RegisterCapabilitiesEvent event) {
 - **Parts:**
   - the pressure range (`minPressure`, `maxPressure`, in kPa);
   - the temperature range (`minTemperature`, `maxTemperature`, in K);
-  - `sealedBreathing` and `gasFiltering`, which count in the head slot only;
+  - `sealedBreathing`, which internals need, and `gasFiltering`, which keeps
+    the `#zas:toxic` gases out of the breath: both count in the head slot only;
   - `airflowResistance`, 0 to 1;
   - `internalSupply`, a tank's gas for internals (below).
 - **Tanks.** An item that holds breathable gas returns an `IInternalSupply`
