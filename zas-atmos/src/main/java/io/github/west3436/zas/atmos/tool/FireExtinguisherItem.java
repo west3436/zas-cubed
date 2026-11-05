@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.tool;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,12 @@ public class FireExtinguisherItem extends Item {
 
     /** Ticks between sprays while the use is held: 5 a second, so a full one sprays for 20 s. */
     public static final int SPRAY_INTERVAL = 4;
+
+    /**
+     * Game ticks between its spray sounds while the use is held: as long as the sound is, so they
+     * don't pile up as sprays five times a second would.
+     */
+    public static final int SPRAY_SOUND_INTERVAL = 32;
 
     /** How far the spray reaches from the user's eye, in blocks, unless a block stops it first. */
     public static final double REACH = 5.0;
@@ -85,7 +92,7 @@ public class FireExtinguisherItem extends Item {
             if (fluid.is(FluidTags.WATER) && fluid.isSource() && level.mayInteract(player, pos)) {
                 if (!level.isClientSide) {
                     setCharges(stack, CHARGES);
-                    level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.PLAYERS, 1.0f, 1.0f);
+                    level.playSound(null, pos, AtmosSounds.EXTINGUISHER_REFILL.get(), SoundSource.PLAYERS);
                 }
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
@@ -102,7 +109,8 @@ public class FireExtinguisherItem extends Item {
 
     @Override
     public void onUseTick(Level level, LivingEntity user, ItemStack stack, int remaining) {
-        if (!(level instanceof ServerLevel server) || (USE_DURATION - remaining) % SPRAY_INTERVAL != 0) {
+        int held = USE_DURATION - remaining;
+        if (!(level instanceof ServerLevel server) || held % SPRAY_INTERVAL != 0) {
             return;
         }
         int left = charges(stack);
@@ -112,16 +120,28 @@ public class FireExtinguisherItem extends Item {
             return;
         }
         setCharges(stack, left - 1);
+        if (held % SPRAY_SOUND_INTERVAL == 0) {
+            server.playSound(
+                    null,
+                    user.getX(),
+                    user.getEyeY(),
+                    user.getZ(),
+                    AtmosSounds.EXTINGUISHER_SPRAY.get(),
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    1.0f);
+        }
         spray(server, user);
     }
 
     /**
      * One spray from {@code user}'s eye along its look: puts out every gas fire and vanilla fire block
-     * in it, plays the sounds and shows the particles. The spray is a line of boxes along the look, as far as {@link
-     * #REACH} or the first block with collision it meets: each box is the cell at that point, and the
-     * cells around it, three wide, beyond {@link #NARROW}. Where the line meets a block, the cells
-     * around the one in front of the face it meets are in the spray too, so a fire on a floor or
-     * wall aimed at goes out.
+     * in it, with vanilla's fizz where one goes out, and shows the particles. The spray's own sound is
+     * {@link #onUseTick}'s, as it lasts longer than a spray. The spray is a line of boxes along the
+     * look, as far as {@link #REACH} or the first block with collision it meets: each box is the cell
+     * at that point, and the cells around it, three wide, beyond {@link #NARROW}. Where the line meets
+     * a block, the cells around the one in front of the face it meets are in the spray too, so a fire
+     * on a floor or wall aimed at goes out.
      *
      * @return how many fires it put out
      */
@@ -150,16 +170,6 @@ public class FireExtinguisherItem extends Item {
                     level, box.getKey().offset(-r, -r, -r), box.getKey().offset(r, r, r));
         }
         GasJets.spray(level, user, reach);
-        float pitch = 1.6f + level.random.nextFloat() * 0.4f;
-        level.playSound(
-                null,
-                user.getX(),
-                user.getEyeY(),
-                user.getZ(),
-                SoundEvents.FIRE_EXTINGUISH,
-                SoundSource.PLAYERS,
-                0.3f,
-                pitch);
         if (out > 0) {
             // As vanilla's dowsed fire sounds.
             float fizz = 2.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.8f;
@@ -175,10 +185,10 @@ public class FireExtinguisherItem extends Item {
                 user.getX(),
                 user.getY(),
                 user.getZ(),
-                SoundEvents.DISPENSER_FAIL,
+                AtmosSounds.EXTINGUISHER_EMPTY.get(),
                 SoundSource.PLAYERS,
                 1.0f,
-                1.2f);
+                1.0f);
         if (user instanceof Player player) {
             player.displayClientMessage(Component.translatable("item.zas_atmos.fire_extinguisher.empty"), true);
         }

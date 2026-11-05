@@ -1,12 +1,15 @@
 package io.github.west3436.zas.atmos.gear;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -48,8 +51,36 @@ public record TankSettings(int hand, int button) implements CustomPacketPayload 
     public static void handle(TankSettings press, IPayloadContext context) {
         InteractionHand hand = handOf(press.hand);
         if (hand != null && context.player() instanceof ServerPlayer player && player.isAlive()) {
-            apply(player.getItemInHand(hand), press);
+            apply(player, player.getItemInHand(hand), press);
         }
+    }
+
+    /**
+     * Applies a press to the tank a player holds, with a click if it shuts off the tank's supply, by
+     * taking its distribution pressure to 0, or starts it again (CONT-127).
+     *
+     * @return whether it was applied, as {@link #apply(ItemStack, TankSettings)}
+     */
+    public static boolean apply(Player player, ItemStack stack, TankSettings press) {
+        boolean tank = stack.getItem() instanceof GasTankItem;
+        boolean was = tank && GasTankItem.distributionPressure(stack) > 0;
+        if (!apply(stack, press)) {
+            return false;
+        }
+        boolean now = GasTankItem.distributionPressure(stack) > 0;
+        if (now != was) {
+            player.level()
+                    .playSound(
+                            null,
+                            player.getX(),
+                            player.getY(),
+                            player.getZ(),
+                            (now ? AtmosSounds.TANK_OPEN : AtmosSounds.TANK_CLOSE).get(),
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            1.0f);
+        }
+        return true;
     }
 
     private static InteractionHand handOf(int ordinal) {

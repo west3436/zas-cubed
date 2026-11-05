@@ -25,6 +25,7 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
@@ -35,6 +36,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Pig;
@@ -934,6 +936,26 @@ public final class ContainerFailureTests {
         a.tick();
         a.close(roomMoles(a), room + held, "the room's gas after the rupture");
         h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a canister well below its rating exploded");
+        h.succeed();
+    }
+
+    /** A tank plays nothing while it holds, its leak while it leaks and its burst as it ruptures (CONT-127). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_tank_plays_its_leak_and_its_burst(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 880);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+
+        TankFailure.check(a.level, at, tank(29.9), null);
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "holding");
+
+        h.assertValueEqual(TankFailure.check(a.level, at, tank(39.9), null).kind(), Kind.LEAK, "at 39.9 atm");
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "leaking", AtmosSounds.CONTAINER_LEAK);
+
+        h.assertValueEqual(TankFailure.check(a.level, at, tank(45), null), Verdict.RUPTURE, "at 45 atm");
+        DeviceSoundTests.heard(h, at, SoundSource.BLOCKS, "rupturing", AtmosSounds.CONTAINER_BURST);
+        a.tick();
         h.succeed();
     }
 }

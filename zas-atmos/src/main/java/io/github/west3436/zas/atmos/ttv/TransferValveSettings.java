@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.ttv;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -93,7 +94,10 @@ public record TransferValveSettings(int hand, int button) implements CustomPacke
             case VALVE -> {
                 boolean moved = TransferValveItem.toggle(stack);
                 if (moved) {
-                    sound(player, SoundEvents.LEVER_CLICK, 1.0f, 0.8f);
+                    SoundEvent event = TransferValveItem.valve(stack).isOpen()
+                            ? AtmosSounds.TTV_OPEN.get()
+                            : AtmosSounds.VALVE_CLOSE.get();
+                    sound(player, event, 1.0f, 1.0f);
                 }
                 yield moved;
             }

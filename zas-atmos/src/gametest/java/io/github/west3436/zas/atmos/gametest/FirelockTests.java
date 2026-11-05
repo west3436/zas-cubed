@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.firelock.Lockdown;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.atmos.vent.VentBlock;
@@ -545,6 +546,46 @@ public final class FirelockTests {
             s.addKpa(2, 2, 2, StandardAir.OXYGEN, 21);
             s.cycle(b, f);
             h.assertTrue(open(s), "didn't reopen once the lockdown ended");
+        });
+    }
+
+    /**
+     * By hand a firelock plays its own opening and closing, once each, and a thud if a lockdown refuses
+     * it. A crowbar plays its bang on top of the move, and an alarm moves it with the same sounds
+     * (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_firelock_plays_as_it_moves_and_refuses(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 806);
+        runWithoutHeat(h, s, () -> {
+            FirelockBlockEntity f = rooms(s); // no controllers, so no alarm
+            BlockPos lower = s.abs(4, 1, 2);
+            s.cycle(f);
+            DeviceSoundTests.played(h, lower, "standing open");
+
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            use(s, player, 1);
+            DeviceSoundTests.played(h, lower, "closed by hand", AtmosSounds.FIRELOCK_CLOSE);
+            use(s, player, 2);
+            DeviceSoundTests.played(h, lower, "opened by hand, at its upper half", AtmosSounds.FIRELOCK_OPEN);
+            use(s, player, 1);
+            DeviceSoundTests.played(h, lower, "closed again", AtmosSounds.FIRELOCK_CLOSE);
+
+            fillAt(s, 2, 0.5, 293.15);
+            fillAt(s, 6, 25.6, 293.15);
+            s.cycle(f);
+            h.assertTrue(f.lockdown().isPresent(), "not locked down at 25.1 kPa");
+            DeviceSoundTests.played(h, lower, "locking down");
+            use(s, player, 1);
+            h.assertFalse(open(s), "a locked-down firelock opened by hand");
+            DeviceSoundTests.played(h, lower, "refused", AtmosSounds.FIRELOCK_FORCE);
+
+            CrowbarItem.force(s.level, lower, player);
+            DeviceSoundTests.played(h, lower, "forced open", AtmosSounds.FIRELOCK_OPEN, AtmosSounds.FIRELOCK_FORCE);
+            CrowbarItem.force(s.level, lower, player);
+            DeviceSoundTests.played(h, lower, "forced shut", AtmosSounds.FIRELOCK_CLOSE, AtmosSounds.FIRELOCK_FORCE);
+            player.discard();
         });
     }
 }

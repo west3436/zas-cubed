@@ -2584,6 +2584,26 @@ a client asks for its loop while its block shows `lit`, which clients already
 have. A recharger's lease isn't saved, so one that was charging when its chunk
 left plays its on sound when it starts charging again.*
 
+*2026-11-05: the other devices' events are built, for the owner to judge:*
+
+- *An igniter sparks every 3 s while it stays lit.*
+- *A TTV's timer ticks each second for its last 30 s, and every 5 s before.*
+- *A tank warns at 60 s of breath left, worked out from LIFE-043's 0.5 L per 8 s at
+  its distribution pressure, and only when a breath crosses that line.*
+- *A tank's open and close follow its distribution pressure reaching or leaving 0,
+  not the internals key, which this mod can't see (CONT-095).*
+- *A refused firelock plays the crowbar's `device.firelock.force`, as a thud. There
+  is no event of its own.*
+- *A TTV closed by hand plays `device.valve.close`.*
+- *An extinguisher's spray sound comes every 32 game ticks, about its length, not with
+  each of its five sprays a second. It keeps vanilla's fizz where a fire goes out.
+  Holding use on an empty one repeats its click about five times a second, as its
+  old click did.*
+- *Each controller plays its own warning or danger once, so a station-wide danger
+  plays one from each controller in earshot.*
+- *Adding and taking a TTV's tanks keep vanilla's bundle sounds, as no event covers
+  them.*
+
 ## R1 / R2 split
 
 | R1 | R2 |

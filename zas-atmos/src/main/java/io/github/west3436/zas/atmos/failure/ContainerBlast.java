@@ -89,7 +89,7 @@ public final class ContainerBlast {
 
     /** The hiss of a container losing gas. */
     public static void hiss(ServerLevel level, Vec3 at) {
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.4f, 1.6f);
+        level.playSound(null, at.x, at.y, at.z, AtmosSounds.CONTAINER_LEAK.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
     }
 
     /**
@@ -100,7 +100,7 @@ public final class ContainerBlast {
      * @param moles the moles it let out, which size the particles
      */
     public static void burst(ServerLevel level, Vec3 at, double moles) {
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.5f, 1.8f);
+        level.playSound(null, at.x, at.y, at.z, AtmosSounds.CONTAINER_BURST.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
         GasJets.burst(level, at, moles);
     }
 }

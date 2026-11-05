@@ -6,10 +6,12 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -22,7 +24,11 @@ import net.minecraft.world.phys.Vec3;
  * framework ignites a flammable mixture beside a lit igniter (API-053).
  */
 public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice {
+    /** Atmos ticks between its spark sounds while it stays lit, 3 s (CONT-127). */
+    public static final int SPARK_STEPS = 3;
+
     private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
+    private int sparkIn;
 
     public IgniterBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.IGNITER.get(), pos, state);
@@ -59,8 +65,14 @@ public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice {
     protected void atmosTick(ServerLevel level) {
         boolean spark = signal() && paid();
         BlockState state = getBlockState();
+        boolean lighting = false;
         if (state.hasProperty(IgniterBlock.LIT) && state.getValue(IgniterBlock.LIT) != spark) {
             level.setBlock(worldPosition, state.setValue(IgniterBlock.LIT, spark), Block.UPDATE_CLIENTS);
+            lighting = spark;
+        }
+        if (spark && (lighting || --sparkIn <= 0)) {
+            sparkIn = SPARK_STEPS;
+            level.playSound(null, worldPosition, AtmosSounds.IGNITER_SPARK.get(), SoundSource.BLOCKS);
         }
     }
 

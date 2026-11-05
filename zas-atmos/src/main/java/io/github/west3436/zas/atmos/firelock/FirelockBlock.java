@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.firelock;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import java.util.EnumMap;
@@ -9,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -57,9 +57,9 @@ import org.jetbrains.annotations.Nullable;
  * firelock's cells join the room behind it, and opening or closing it never splits a zone
  * (GEO-044). A panel in the middle of the block, as the model draws it, would seal no face.
  *
- * <p>By hand it opens and closes like a door, but a locked-down firelock refuses to open and
- * shows a warning (CONT-093). A crowbar forces it either way, even locked down (CONT-094).
- * Redstone doesn't move it.
+ * <p>By hand it opens and closes like a door, but a locked-down firelock refuses to open, with a
+ * thud and a warning (CONT-093). A crowbar forces it either way, even locked down, with a bang
+ * (CONT-094). Redstone doesn't move it.
  */
 public class FirelockBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final MapCodec<FirelockBlock> CODEC = simpleCodec(FirelockBlock::new);
@@ -285,7 +285,7 @@ public class FirelockBlock extends HorizontalDirectionalBlock implements EntityB
                     && server.getBlockEntity(lower) instanceof FirelockBlockEntity be
                     && be.lockdown().isPresent()) {
                 player.displayClientMessage(be.lockdown().get().message(), true);
-                server.playSound(null, pos, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 0.5f, 0.6f);
+                server.playSound(null, pos, AtmosSounds.FIRELOCK_FORCE.get(), SoundSource.BLOCKS);
                 return InteractionResult.CONSUME;
             }
             setOpen(server, lower, !state.getValue(OPEN), player);
@@ -310,12 +310,7 @@ public class FirelockBlock extends HorizontalDirectionalBlock implements EntityB
         }
         level.setBlock(lower, next, Block.UPDATE_ALL);
         level.playSound(
-                null,
-                lower,
-                open ? SoundEvents.IRON_DOOR_OPEN : SoundEvents.IRON_DOOR_CLOSE,
-                SoundSource.BLOCKS,
-                1.0f,
-                level.getRandom().nextFloat() * 0.1f + 0.9f);
+                null, lower, (open ? AtmosSounds.FIRELOCK_OPEN : AtmosSounds.FIRELOCK_CLOSE).get(), SoundSource.BLOCKS);
         level.gameEvent(by, open ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, lower);
         if (level.getBlockEntity(lower) instanceof FirelockBlockEntity be) {
             be.changed(open);
