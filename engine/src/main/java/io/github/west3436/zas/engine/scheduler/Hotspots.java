@@ -114,6 +114,9 @@ final class Hotspots {
      */
     private final Map<Long, Flammability> flammable = new HashMap<>();
 
+    /** The zones with a gas fire this tick, pending ones included: found once and added to as fires start. */
+    private final Set<Long> gasZones = new HashSet<>();
+
     private boolean zonedFound;
     private final LongConsumer zonedCheck = this::checkZoned;
 
@@ -204,6 +207,7 @@ final class Hotspots {
         flammable.clear();
 
         sync();
+        findGasZones();
 
         Ignition[] found = new Ignition[ignitions.length];
         for (int i = 0; i < ignitions.length; i++) {
@@ -511,10 +515,31 @@ final class Hotspots {
         igniter.hotGas(tick, seconds, settings, fireSettings, byBlock::containsKey, intents);
     }
 
-    /** Starts a pending gas hotspot and asks for its block. */
+    /**
+     * Starts a pending gas hotspot and asks for its block. If its zone has no gas fire yet, the gas is
+     * catching fire, and the intent says so (FIRE-036). A vanilla fire doesn't count: it can burn in
+     * air that has nothing else to burn, and its gas catches when the first gas fire starts.
+     */
     private void start(long block, Zone zone) {
         byBlock.put(block, new Hotspot(block, true, tick, zone.id()));
-        intents.add(new FireIntent(FireIntent.Kind.PLACE, block, zone.id()));
+        intents.add(
+                gasZones.add(zone.id())
+                        ? new FireIntent(
+                                FireIntent.Kind.PLACE, block, zone.id(), true, reactions.fuelMoles(zone.mixture()))
+                        : new FireIntent(FireIntent.Kind.PLACE, block, zone.id()));
+    }
+
+    /** Finds the zones with a gas fire now. A hotspot still pending here has been dropped by {@link #sync}. */
+    private void findGasZones() {
+        gasZones.clear();
+        for (Hotspot h : byBlock.values()) {
+            if (h.gas()) {
+                Zone z = zoneAt(h.block());
+                if (z != null) {
+                    gasZones.add(z.id());
+                }
+            }
+        }
     }
 
     /** Whether a gas fire could go at a position: plain air, with no hotspot and no recent refusal. */

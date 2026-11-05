@@ -53,6 +53,8 @@ import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.reaction.ServerReactions;
+import io.github.west3436.zas.sound.IgnitionWhoomps;
+import io.github.west3436.zas.sound.ZasSounds;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -70,6 +72,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -193,6 +196,8 @@ public final class DimensionAtmos {
     private final Map<Long, CompletableFuture<HeatResult>> heats = new TreeMap<>();
     /** Ignitions waiting for their atmos tick, by sequence number (FIRE-014). */
     private final Map<Long, CompletableFuture<Ignited>> ignitions = new TreeMap<>();
+
+    private final IgnitionWhoomps whoomps = new IgnitionWhoomps();
     /**
      * The boxes put out (API-057) while a batch was in flight, with the number of that batch: a gas
      * fire it asks for in one isn't placed, since it didn't see the spray. Cleared at each apply.
@@ -1162,15 +1167,20 @@ public final class DimensionAtmos {
             }
         }
         extinguished.clear();
-        FireIntents.apply(level, a.fireIntents(), this::isChunkLoaded, block -> {
-            BlockPos p = BlockPos.of(block);
-            for (BoundingBox box : sprayed) {
-                if (box.isInside(p)) {
-                    return true;
-                }
-            }
-            return false;
-        });
+        FireIntents.apply(
+                level,
+                a.fireIntents(),
+                this::isChunkLoaded,
+                block -> {
+                    BlockPos p = BlockPos.of(block);
+                    for (BoundingBox box : sprayed) {
+                        if (box.isInside(p)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                this::gasCaught);
         // API-031, after the blocks: a listener finds the fire's blocks as the event says.
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());
@@ -1221,6 +1231,21 @@ public final class DimensionAtmos {
             }
         }
         return true;
+    }
+
+    /** Gas caught fire: its whoomp, unless another has just played nearby (FIRE-036). */
+    private void gasCaught(BlockPos pos, double fuelMoles) {
+        if (whoomps.allow(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime())) {
+            level.playSound(
+                    null,
+                    pos.getX() + 0.5,
+                    pos.getY() + 0.5,
+                    pos.getZ() + 0.5,
+                    ZasSounds.FIRE_IGNITE.get(),
+                    SoundSource.BLOCKS,
+                    IgnitionWhoomps.volume(fuelMoles),
+                    1);
+        }
     }
 
     private static Ignited ignited(OpOutcome.Ignition i, long zoneId) {

@@ -62,6 +62,9 @@ public final class ZasClient {
         ThinAirOneShots.register();
         ClientSounds.fadeInThinAir(ZasMod.MOD_ID);
 
+        // The gas fire loop (FIRE-036).
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> GasFireLoops.tick());
+
         // Airflow's particles and sound (CLIENT-003, CLIENT-010). The particles' tick also ages what
         // the client holds, so it goes first.
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {
