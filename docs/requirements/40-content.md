@@ -954,6 +954,13 @@ waits for its cell, and stays dark. Its GUI's status line still changes at the s
 `DeviceSoundTests.cont_018_*` and `cont_019_*` (GameTest) check this. How quickly it
 feels in play is for the owner's test world.*
 
+*2026-11-05: the owner accepted capping the portable pump's siphon. As in vg it had no
+limit, so a 4,500 kPa target pulled about 3,700 mol in a second, more than a 27-block
+room holds. It now takes at most the moles of 150 L of the air a second, the same volume
+as a release and as the portable scrubber. A held tank is smaller than that, so it still
+empties at once. `cont_018_a_siphon_is_limited_to_150_litres_of_the_air` (Unit) and
+`cont_018_portable_pump_works_on_its_room_on_its_battery` (GameTest) cover it.*
+
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
 

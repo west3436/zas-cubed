@@ -2706,8 +2706,8 @@ the cell in front of its grille).
   shares its store, slots and item. It has a direction and a target of 0–4,500
   kPa (CONT-011), 101.325 kPa when new. Releasing, it fills the air from the
   store to the target, up to the moles of 150 L of the store a second.
-  Siphoning, it fills the store from the air to the target, with no limit but
-  what the air holds, in the air's proportions. `PortablePumpMath` gets both from
+  Siphoning, it fills the store from the air to the target, up to the moles of
+  150 L of the air a second, in the air's proportions. `PortablePumpMath` gets both from
   `PumpFlow.molesToTarget` and `molesInVolume`, so the target allows for the
   temperature gas mixes to. It pays `[power] portable_pump` FE/t (20) only while
   it moves gas. A target above a tank's limits can make a held tank leak or

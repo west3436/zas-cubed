@@ -147,14 +147,26 @@ public final class PortablePumpTests {
             s.cycle(pump);
             h.assertValueEqual(pump.status(), PortableStatus.NO_BATTERY, "the pump with no battery");
 
-            // A full battery: it waits for the air to settle, then siphons the store up to the target at
-            // once, in the air's proportions, as vg's does, and costs 20 FE/t.
+            // A full battery: it waits for the air to settle, then siphons 150 L of the air each second, in
+            // the air's proportions, and costs 20 FE/t.
             BatteryTests.swap(pump.battery(), AtmosItems.BATTERY.get().full());
             for (int i = 0; i < 6 && pump.status() != PortableStatus.WORKING; i++) {
                 s.cycle(pump);
             }
             h.assertValueEqual(pump.status(), PortableStatus.WORKING, "the pump after it settled");
             h.assertTrue(lit(s, pump), "not lit while pumping");
+            s.close(
+                    pump.store().totalMoles(),
+                    start.totalMoles() * PortablePumpMath.LITRES / start.volume(),
+                    1e-6,
+                    "the store after a second");
+            h.assertValueEqual(pump.energy(), 100_000 - STEP, "the battery after a step");
+
+            // It carries on up to the target.
+            int steps = 1;
+            for (; steps < 100 && pump.store().pressure() < 299.9; steps++) {
+                s.cycle(pump);
+            }
             s.close(pump.store().pressure(), 300, 1, "the store after a siphon");
             GasMixture after = air(s);
             s.close(after.moles(O2) + pump.store().moles(O2), start.moles(O2), 1e-6, "O2 lost in the siphon");
@@ -164,12 +176,12 @@ public final class PortablePumpTests {
                     start.moles(O2) / start.moles(N2),
                     1e-6,
                     "the store's proportions");
-            h.assertValueEqual(pump.energy(), 100_000 - STEP, "the battery after a step");
+            h.assertValueEqual(pump.energy(), 100_000 - steps * STEP, "the battery after the siphon");
 
             // At the target, it stops and draws nothing.
             s.cycle(pump);
             h.assertValueEqual(pump.status(), PortableStatus.AT_TARGET, "the pump at its target");
-            h.assertValueEqual(pump.energy(), 100_000 - STEP, "the battery at the target");
+            h.assertValueEqual(pump.energy(), 100_000 - steps * STEP, "the battery at the target");
             h.assertFalse(lit(s, pump), "lit at the target");
 
             // Released: 150 L of the store a second, one change at a time.

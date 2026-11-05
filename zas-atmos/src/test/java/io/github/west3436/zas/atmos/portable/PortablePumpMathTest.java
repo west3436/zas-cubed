@@ -51,12 +51,19 @@ class PortablePumpMathTest {
                 1e-9);
     }
 
-    /** Siphoning, it fills its store to the target in one go, with no limit but what the air holds. */
+    /** Siphoning far from the target, it takes the moles of 150 L of the air each second. */
     @Test
-    void cont_018_a_siphon_fills_the_store_to_the_target_at_once() {
+    void cont_018_a_siphon_is_limited_to_150_litres_of_the_air() {
+        GasMixture room = air(100, ROOM);
+        assertEquals(room.totalMoles() * 150 / ROOM, PortablePumpMath.siphon(4_500, room, store(100)), 1e-9);
+    }
+
+    /** Siphoning close to the target, it takes what brings the store to the target. */
+    @Test
+    void cont_018_a_siphon_close_to_the_target_takes_only_what_it_needs() {
         assertEquals(
-                400 * PortableGasDevice.STORE_LITRES / RT,
-                PortablePumpMath.siphon(500, air(100, ROOM), store(100)),
+                1 * PortableGasDevice.STORE_LITRES / RT,
+                PortablePumpMath.siphon(101, air(100, ROOM), store(100)),
                 1e-6);
     }
 

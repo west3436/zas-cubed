@@ -6,13 +6,16 @@ import io.github.west3436.zas.atmos.pump.PumpFlow;
 
 /**
  * What a portable pump moves in one second (CONT-018), through {@link PumpFlow}. It has two
- * directions. Releasing, it fills the air around it from its store to a target pressure, up to {@link
- * #RELEASE_LITRES} of the store's gas a second. Siphoning, it fills its store from the air to a target
- * pressure, with no such limit, as vg's does.
+ * directions. Releasing, it fills the air around it from its store to a target pressure. Siphoning, it
+ * fills its store from the air to a target pressure. Either way it moves up to {@link #LITRES} a second
+ * of the gas it takes from.
  */
 public final class PortablePumpMath {
-    /** The most it releases per second, L at the store's conditions: vg's 300 L per 2 s tick (D-20). */
-    public static final double RELEASE_LITRES = 150;
+    /**
+     * The most it moves per second, L at the conditions of the gas it takes from: vg's release, 300 L per
+     * 2 s tick (D-20). vg's siphon has no limit; ours has this one too (CONT-018).
+     */
+    public static final double LITRES = 150;
 
     /** A new pump's target, kPa: one atmosphere. */
     public static final double DEFAULT_TARGET = StandardAir.PRESSURE;
@@ -34,8 +37,7 @@ public final class PortablePumpMath {
      */
     public static double release(double target, GasMixture store, GasMixture air) {
         PumpFlow.Side in = PumpFlow.Side.of(store);
-        return Math.min(
-                PumpFlow.molesToTarget(target, in, PumpFlow.Side.of(air)), PumpFlow.molesInVolume(RELEASE_LITRES, in));
+        return Math.min(PumpFlow.molesToTarget(target, in, PumpFlow.Side.of(air)), PumpFlow.molesInVolume(LITRES, in));
     }
 
     /**
@@ -47,7 +49,8 @@ public final class PortablePumpMath {
      * @return the moles, never more than the air holds; 0 once the store is at the target
      */
     public static double siphon(double target, GasMixture air, GasMixture store) {
+        PumpFlow.Side in = PumpFlow.Side.of(air);
         return Math.min(
-                PumpFlow.molesToTarget(target, PumpFlow.Side.of(air), PumpFlow.Side.of(store)), air.totalMoles());
+                PumpFlow.molesToTarget(target, in, PumpFlow.Side.of(store)), PumpFlow.molesInVolume(LITRES, in));
     }
 }
