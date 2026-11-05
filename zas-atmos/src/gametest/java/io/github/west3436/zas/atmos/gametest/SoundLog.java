@@ -17,8 +17,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
  * the sounds at its own block.
  */
 final class SoundLog {
-    /** How far from a block's centre a sound still counts as that block's. */
-    private static final double NEAR = 1;
+    /** How far from a block's centre a sound still counts as that block's: its neighbours' don't. */
+    private static final double NEAR = 0.5;
 
     private static final List<Played> SEEN = new ArrayList<>();
     private static boolean listening;
@@ -62,7 +62,7 @@ final class SoundLog {
      * Takes the sounds recorded at a block: they aren't reported again.
      *
      * @param at the block's centre, as {@link Area#point}
-     * @return the sounds within a block of it, oldest first
+     * @return the sounds played there, oldest first
      */
     static List<Played> take(Vec3 at) {
         List<Played> out = new ArrayList<>();
