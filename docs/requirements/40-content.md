@@ -1194,6 +1194,33 @@ the TTV, so that is for the owner to confirm.
 `cont_103_a_tank_failing_in_an_inventory_takes_the_ttv_with_it` and
 `cont_103_a_tank_failing_on_the_ground_takes_the_ttv_with_it` check that.*
 
+*2026-11-05: Note: after playtesting, the owner asked for tanks to go on through
+the TTV's screen as well, and approved slots over a crafting recipe. The screen
+now has a slot for each tank and the player's inventory, and these replace its
+take buttons. Slot 1 is the first tank, and right-clicking in an inventory works
+as before. Both go through `TransferValve.accepts`. Closing the screen leaves the
+tanks on the TTV.
+`cont_103_slots_give_the_same_item_data_as_right_clicks`,
+`cont_103_slots_show_the_tanks_and_keep_their_gas`,
+`cont_103_slots_refuse_what_a_right_click_refuses`,
+`cont_103_every_way_of_taking_a_tank_gives_its_share`,
+`cont_103_a_full_inventory_leaves_the_valve_as_it_was`,
+`cont_103_a_right_click_works_on_its_own_screen`,
+`cont_103_closing_the_screen_leaves_the_tanks_on`,
+`cont_103_slots_play_the_bundle_sounds`,
+`cont_103_a_clients_menu_agrees_with_the_servers` and
+`cont_103_using_it_opens_slots_that_sync_to_the_client` check it. A tank moved
+through the slots exists exactly once afterwards, with its gas:
+`cont_103_the_ttv_cant_be_moved_with_its_screen_open`,
+`cont_103_the_game_cant_swap_the_ttv_away_by_packet`,
+`cont_103_a_ttv_in_the_off_hand_works_the_same`,
+`cont_103_a_creative_player_gets_no_copies`,
+`cont_103_a_menu_stops_when_its_stack_changes`,
+`cont_103_a_stale_screen_is_refused_and_closed`,
+`cont_103_a_tank_taken_by_a_bundle_or_ttv_moves_once` and
+`cont_103_a_tank_can_fail_with_the_screen_open` check that. The screen's look
+needs a client, so it waits for the owner's check.*
+
 #### CONT-104 · TTV timer
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
@@ -1226,6 +1253,13 @@ to confirm. `cont_104_the_valve_opens_by_hand`,
 `cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`,
 `cont_104_an_open_valve_wont_start_its_timer` and
 `cont_104_a_primed_valve_is_saved` check it.*
+
+*2026-11-05: Note: with tanks now moving through the screen's slots (CONT-103),
+Start waits while a tank is on the cursor, and it uses up the TTV in creative
+too, as the entity then has the only tanks. A creative player could keep a copy
+before. `cont_104_start_waits_for_a_tank_being_moved`,
+`cont_104_the_hand_valve_needs_both_tanks_from_slots` and
+`cont_103_a_creative_player_gets_no_copies` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest

@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
+import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
 import io.github.west3436.zas.atmos.vent.VentMenu;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -87,6 +88,10 @@ public final class AtmosMenus {
     /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
     public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
             MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A held tank transfer valve's tanks, valve and timer (CONT-103, CONT-104). */
+    public static final Supplier<MenuType<TransferValveMenu>> TANK_TRANSFER_VALVE =
+            MENUS.register("tank_transfer_valve", () -> IMenuTypeExtension.create(TransferValveMenu::new));
 
     private AtmosMenus() {}
 
