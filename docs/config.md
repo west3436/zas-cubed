@@ -52,8 +52,8 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
 | `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
 | `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
-| `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). The fuel generator doesn't use the air (CONT-067) |
-| `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030) |
+| `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). A gas fire at or above its fuel's autoignition temperature doesn't need it (FIRE-035). The fuel generator doesn't use the air (CONT-067) |
+| `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030, FIRE-035) |
 | `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
 | `[fire] spread_chance` | `0.3` | The chance per second, 0 to 1, that a gas fire spreads to each neighbouring cell of its zone that is air and whose gas can burn (FIRE-016) |
 | `[fire] block_ignition_temperature` | `573.0` | The gas temperature, in K, 0 to 100,000, at which a zone sets the flammable blocks beside it alight (FIRE-033). [Datapacks](datapacks.md#block-ignition) override it for some blocks, such as wool and leaves. The chance rises with the block's vanilla ignite odds and with how far the gas is above this |
@@ -214,10 +214,12 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] air_conditioner` | `60` | What an air conditioner draws from its battery while it cools at full power, in FE/t, 0 to 100,000; in proportion below full power (CONT-087). No controller powers an air conditioner (D-73) |
 | `[power] air_conditioner_watts` | `5000` | The most heat an air conditioner takes, in W (not FE/t), 0 to 1,000,000 (CONT-087). 0 stops air conditioners cooling |
 | `[power] portable_scrubber` | `15` | What a portable scrubber draws from its battery while it moves gas, in FE/t, 0 to 100,000 (CONT-018). No controller powers a portable scrubber (D-73) |
+| `[power] portable_pump` | `20` | What a portable pump draws from its battery while it moves gas, in FE/t, 0 to 100,000 (CONT-018). No controller powers a portable pump (D-73) |
 | `[power] recharger` | `40` | What a recharger draws from its controller while its battery has room, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] recharger_rate` | `28` | What a recharger puts into its battery, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] igniter` | `20` | What an igniter draws from its controller while it has a redstone signal, in FE/t, 0 to 100,000 (CONT-105) |
 | `[power] pressure_pump` | `20` | What a pressure pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] volume_pump` | `20` | What a volume pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] filter` | `20` | What a filter draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] mixer` | `20` | What a mixer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |

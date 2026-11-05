@@ -92,7 +92,7 @@ decision that supersedes it.
 | D-46 | 2026-10-30 | **API mutations are asynchronous.** Adding or removing gas or heat returns a future that completes on the server thread once the atmos tick that applies it has been applied (at most one atmos tick). Added gas leaves the caller immediately; removed gas arrives when the future completes. | Follows from D-30. API-016, API-013. Synchronous results would break conservation when geometry changes first. |
 | D-47 | 2026-10-30 | **Armor and suits.** Vanilla armor protects against heat only: no pressure rating, no cold protection, and no seal, so it can't be used with internals. Internals need a sealed head-slot item (breath mask, gas mask, suit helmet). R1 ships a **softsuit** (full seal, low pressure down to vacuum, 0–500 K, no high-pressure protection) and a **hardsuit** (full seal, all pressures and temperatures, −10 % speed per piece). | LIFE-020, LIFE-021, LIFE-025, LIFE-027, CONT-032, CONT-036. The hardsuit moves from R2 to R1. |
 | D-48 | 2026-10-30 | **Heat conduction model.** A zone's gas-tight face conducts to the first cell or heat-source block within 3 blocks along its normal (else the ambient, as ground), through the wall's blocks in series (1/U = Σ 1/Uᵢ) with realistic U values. Faces onto vacuum radiate from the wall's outer surface in series with conduction (ε 0.9). Near-vacuum zones don't conduct. No phase changes in R1. | HEAT-001, HEAT-004, HEAT-008, HEAT-011 to HEAT-017 |
-| D-49 | 2026-10-30 | **Fire model.** All fire needs an O₂ fraction ≥ 0.14 and O₂ partial pressure ≥ 10 kPa. Hotspots burn 0.375 cell volumes per second and show as a `zas:gas_fire` block where vanilla fire can't exist; vanilla fire in a zone is a hotspot. Fuel blocks and fire blocks burn as carbon at a profile power (5 or 10 kW). O₂-poor burning makes CO. Torches ignite flammable mixtures by default. | FIRE-003, FIRE-005, FIRE-011, FIRE-014, FIRE-018, FIRE-019, FIRE-025, FIRE-030 |
+| D-49 | 2026-10-30 | **Fire model.** All fire needs an O₂ fraction ≥ 0.14 and O₂ partial pressure ≥ 10 kPa. Hotspots burn 0.375 cell volumes per second and show as a `zas:gas_fire` block where vanilla fire can't exist; vanilla fire in a zone is a hotspot. Fuel blocks and fire blocks burn as carbon at a profile power (5 or 10 kW). O₂-poor burning makes CO. Torches ignite flammable mixtures by default. | FIRE-003, FIRE-005, FIRE-011, FIRE-014, FIRE-018, FIRE-019, FIRE-025, FIRE-030. Changed 2026-11-04 by the coordinator, at the owner's request: FIRE-035 (Draft) makes an exception for a gas fire at or above its fuel's autoignition temperature, which needs only the 10 kPa floor. |
 | D-50 | 2026-10-30 | **Devices run in the content mod, through the public API.** `zas_atmos` steps its pipe networks and devices on the server thread once per atmos tick, reads zones with API queries and changes them with asynchronous API mutations, one outstanding mutation per device port. The engine has no device phase. | Supersedes the device phase in CORE-040. CONT-006, CONT-071, CONT-072, CONT-095. Shows the API is enough for other tech mods. |
 | D-51 | 2026-10-31 | **With a space-mod adapter active, ZAS³ is the only source of atmospheric harm.** The other mod's own oxygen and temperature effects on entities (damage, suit drain) are suppressed, and its oxygen checks return ZAS³'s verdict. Its world feeds ZAS³ as inputs: planet data seeds ambients, its suits get protection data, and its space-native mobs are immune. **Cooperative** mode also counts its breathable areas (Ad Astra distributors) as standard air; **Authoritative** counts only ZAS³'s atmosphere. Normal defaults to Cooperative, Hardcore to Authoritative. | SPACE-001, SPACE-004, SPACE-010, SPACE-013, SPACE-017, SPACE-019, SPACE-022, SPACE-023. Avoids double damage; splitting ownership by zone was rejected. |
 | D-52 | 2026-10-31 | **Ad Astra planets seed ambients:** `oxygen: true` gives standard air, `oxygen: false` a vacuum, both at the planet's temperature. A vacuum ambient may carry a temperature other than 2.7 K, used for radiation and exposure. | SPACE-020, ENV-003. Venus seeds as a 737 K vacuum, so a softsuit burns there and a hardsuit is needed. |
@@ -277,6 +277,12 @@ torch ignites it; the step before ignition is at or above 4 % H₂. With the
 valve closed, O₂ falls by more than 5 % while H₂O, the temperature and the
 pressure rise, the pressure past the valve's 125 kPa.*
 
+*2026-11-04: with FIRE-035 (Draft), S-03's fire is past H₂'s 858 K before its O₂
+reaches 14 %, so it burns on. Twenty steps after the valve closes, the workshop
+is at 2,534 K and 979 kPa, with 8.4 % O₂ and H₂ at its 0.1 % floor. Before
+FIRE-035 it had stopped by then at 1,103 K and 454 kPa, with 14.0 % O₂ and 12.3 %
+H₂ left. The plan's checks are unchanged and pass.*
+
 *2026-11-03: S-04's R1 plan passes on the scenario branch, as
 `FireScenarioTests.s_04_room_fire_suffocates_and_rekindles_under_hardcore`
 and `s_04_room_fire_stays_vanilla_under_normal`. The room is a sealed
@@ -299,6 +305,22 @@ so the plants wait. Once CO₂ is added, one pass at noon turns 9 plants' worth 
 light 15 into the same moles of O₂. Under Normal the same planting leaves the
 greenhouse unzoned, and `cont_053_under_normal_plants_act_in_a_zone_that_exists`
 checks that the plants act once CO₂ from the API has formed a zone there.*
+
+*2026-11-04: S-13's GameTest passes, as `ToxinsLabTests.s_13_toxins_lab` in the
+Overworld under Normal, with shipped devices. The burn chamber is a sealed
+3 × 3 × 3 stone room of 12 % H₂ in O₂ at 1 atm. Its nitrogen has to come out
+first, which the test does through the API and a player does with a vent on
+siphon: with a room's air left in and 10 % H₂ added, the chamber peaked at
+856 K, just short of autoignition. A redstone block fires the igniter, and the
+chamber burns to about 1,400 K. A vent on siphon then draws the exhaust through
+a pressure pump, set to 1,100 kPa, into a canister on a connector port outside
+the chamber, where it stands at about 1,410 K. The canister fills an empty tank
+to 1,013 kPa: 6.05 mol at about 90 % O₂. An H₂ canister fills another to
+174 kPa, 5 mol at room temperature. On a TTV with a 2 s timer, the valve opens and the mix is at
+917 K. It burns within an atmos tick to 70 atm, and the tank explodes with
+power 2.0, the power the test checks. A pig 2 blocks away falls from 10 health
+to 0.28, and glass, planks and the floor stay intact. The Manual playtest is
+still to come.*
 
 ## Questions
 

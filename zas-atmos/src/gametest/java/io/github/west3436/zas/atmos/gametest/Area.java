@@ -40,6 +40,14 @@ final class Area {
     static final BlockState AIR = Blocks.AIR.defaultBlockState();
     static final SourceId SOURCE = SourceId.of(ZasAtmosMod.MOD_ID, "gametest");
 
+    /**
+     * A timeout for a test that waits for the level to tick or find entities in a force-loaded chunk.
+     * The test server runs game ticks as fast as it can, thousands a second, while a chunk gets ticking
+     * in real time: on a busy machine that has taken more than 400 game ticks. A passing test doesn't
+     * wait this long.
+     */
+    static final int CHUNK_WAIT_TICKS = 12_000;
+
     final GameTestHelper h;
     final ServerLevel level;
     final BlockPos origin;

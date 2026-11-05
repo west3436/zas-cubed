@@ -769,6 +769,10 @@ the lever if the per-cell cost ever matters.
   their target chunk, or with the dimension if that chunk isn't loaded; they
   are queued again after load. Queued removals complete with nothing moved
   (outcome `PAUSED`); waiting additions are cancelled, their gas saved.
+- **A stop that doesn't finish says why** (NFR-015). The game's final chunk loop
+  logs nothing while it runs, so `StopWatchdog`, a daemon thread, logs each
+  level's remaining chunk work and a dump of every thread once a stop has run
+  for 2 minutes, then every 2 minutes, at most 3 times. It only reads and logs.
 - **Level-wide state is tiny.** It is kept in a `SavedData`, `zas_atmos`, per
   dimension:
   - the zone-id counter, so saved ids are never issued again (CORE-026)
@@ -1208,6 +1212,10 @@ the `[fire]` section of the server config (`FireConfig`), carried to the worker
 in `EngineSettings.fire` so one atmos tick sees one threshold. It tests a
 fraction and a partial pressure, a `GasMixture`, or partial pressures by
 registry index as a published zone or an ambient gives them.
+`sustainsAutoignited` tests only the pressure floor, for a gas fire at or above
+its fuel's autoignition temperature (FIRE-035, Draft), and only `ReactionSet`
+uses it: vanilla fire, fuel blocks and blocks catching fire keep the whole
+threshold.
 `engine.fire.CarbonCombustion` burns carbon (FIRE-025: C + O₂ → CO₂, 394
 kJ/mol, so a power fixes the carbon, O₂ and CO₂ per second) with FIRE-005's CO
 share: 0 at an O₂ fraction of 0.18 (`FireSettings.incompleteBelowFraction`,
@@ -1275,8 +1283,11 @@ way.
   (HOTSPOTS) and containers: 375 L per second (`PARCEL_LITRES_PER_SECOND`,
   FIRE-011). A reaction that needs ignition burns if a source is present or the
   gas is at or above its autoignition temperature. One with flammability
-  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), and
-  its incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
+  limits is a fire, so it also needs `FireSettings.sustains` (FIRE-030), or
+  `sustainsAutoignited` if the gas is at or above that reaction's own
+  autoignition temperature (FIRE-035). A mixture of fuels can therefore burn one
+  and not another: at 850 K below 14 % O₂, CH₄ burns and H₂ doesn't. Its
+  incomplete form is blended in by `FireSettings.coShare` (FIRE-005).
   `ReactionSet.flammability(mixture, fire)` answers whether a mixture can catch
   fire and its lowest autoignition point, for FIRE-010, FIRE-014 and FIRE-017.
 - **Limits that widen** (FIRE-032). Every check of a fuel's flammability limits
@@ -1289,7 +1300,9 @@ way.
   31.4 J/(mol·K). A fire's own heat therefore lowers the limit about 1.5 times as
   fast as it burns the fuel in air (whose C<sub>v</sub> is about 21 J/(mol·K)),
   so a fire that loses no heat doesn't stop at the declared limit: it goes on to
-  the 0.1 % floor, or to the fire oxygen threshold if that comes first.
+  the 0.1 % floor, or until it runs short of O₂ if that comes first. Short of O₂
+  means FIRE-030's threshold below the fuel's autoignition temperature, and only
+  the threshold's 10 kPa floor at or above it (FIRE-035).
 - **One step.** Every condition is read from the mixture at the start. Each
   reaction's extent is worked out alone: as far as its limiting reactant
   allows, times 1 − e^(−k·dt) if it has a rate. Then the fair allocation
@@ -1388,9 +1401,10 @@ tick (§3.2), in `engine.scheduler.Hotspots`; the server side is in
   3. Every active hotspot, in position order, burns a parcel of 375 L per
      second of its zone's gas (FIRE-011). A gas fire whose gas won't burn goes
      out instead, and its block is removed (FIRE-017). Whether gas burns
-     includes the fire oxygen threshold (FIRE-030). A vanilla fire is never put
-     out here; that is FIRE-020's, on the server. Without fuel it just burns
-     nothing.
+     includes the fire oxygen threshold (FIRE-030), or only its pressure floor
+     at or above the fuel's autoignition temperature (FIRE-035). A vanilla fire
+     is never put out here; that is FIRE-020's, on the server, which keeps the
+     whole threshold. Without fuel it just burns nothing.
   4. Every hotspot that burned may spread to each open neighbouring cell that
      is air, in an active zone with flammable gas (FIRE-016). The chance is
      `spread_chance` per second, 1 − (1 − p)^dt per tick.
@@ -2283,8 +2297,10 @@ the cell in front of its grille).
   network past the threshold bursts it one atmos tick later, after every member
   has stepped: a canister on the network, rated lower than a pipe, fails first,
   rather than being emptied by a burst in the same instant.
-- **Deferred:** client smoothing (CONT-070) is not built yet; S-01 doesn't need
-  it.
+- **Client smoothing** (CONT-070). Nothing is built for it. Pump and vent
+  animations are texture animations (`.png.mcmeta`), which the client plays at
+  game tick rate between the devices' 1 s steps. Only the switch between the on
+  and off models waits for a step.
 
 ### 11.5 Devices
 
@@ -2515,10 +2531,23 @@ the cell in front of its grille).
   2,500 L sample, through `ScrubberMath`, up to the moles of 150 L of the air,
   stopping at 50 atm in the store. It pays `[power] portable_scrubber` FE/t (15)
   only while it moves gas, and moves what the charge pays for when too little is
-  left. The store and a held tank react each atmos tick (CONT-100). The store has
-  no outlet, since a portable has no pipe (D-73). Its item keeps the store's gas
-  when mined, as a canister's does: broken in creative the gas is destroyed, and
-  removed any other way it is released where the portable stood.
+  left. The store and a held tank react each atmos tick (CONT-100), and a held
+  tank fails by its pressure where the portable stands, through
+  `TankFailure.check` (CONT-038). The store has no outlet, since a portable has
+  no pipe (D-73). Its item keeps the store's gas when mined, as a canister's
+  does: broken in creative the gas is destroyed, and removed any other way it is
+  released where the portable stood.
+- **Portable pump** (CONT-018, D-73), in `.portable`, also on
+  `PortableGasDevice`, so it works on the same air as the portable scrubber and
+  shares its store, slots and item. It has a direction and a target of 0–4,500
+  kPa (CONT-011), 101.325 kPa when new. Releasing, it fills the air from the
+  store to the target, up to the moles of 150 L of the store a second.
+  Siphoning, it fills the store from the air to the target, with no limit but
+  what the air holds, in the air's proportions. `PortablePumpMath` gets both from
+  `PumpFlow.molesToTarget` and `molesInVolume`, so the target allows for the
+  temperature gas mixes to. It pays `[power] portable_pump` FE/t (20) only while
+  it moves gas. A target above a tank's limits can make a held tank leak or
+  rupture.
 - **Batteries** (CONT-111, CONT-112), in `.battery`. `BatteryItem`s of
   100,000, 1,000,000 and 2,000,000 FE, one to a stack, keep their charge in
   the `zas_atmos:energy` component and expose it as
@@ -2595,6 +2624,13 @@ the cell in front of its grille).
   new, and flows under 10⁻⁴ mol are skipped. It draws `[power] pressure_pump`
   FE/t (20). Its GUI has the switch and ±10 and ±100 kPa buttons, and shows its
   status, target, both pressures and its power.
+- **Volume pump** (CONT-012), in `.pump`. A `PumpBlockEntity` too, set in L/s:
+  `PumpFlow.volumePump` is its set volume at the input's conditions, never more
+  than 100 L. It has no target, so it goes on whatever the output's pressure,
+  until the line bursts (CONT-108); vg's stall at 9,000 kPa over the input isn't
+  asked for. It is set to 100 L/s when new, and draws `[power] volume_pump` FE/t
+  (20). Its GUI has the same layout, with ±1 and ±10 L/s buttons, and says if
+  its rate is 0.
 - **Devices with a side port**, in `.inline`: the filter and the mixer. A
   `SidePortBlock` adds port 2, and `mirrored`, to an inline device. The port is
   to the right of the way its gas goes, or to the left while `mirrored`, as the
@@ -2640,7 +2676,7 @@ the cell in front of its grille).
   100 L at its own conditions, and when one can't give what it's asked for, both
   scale by the same factor. An input with a fraction of 0 is never asked for gas,
   so it can be empty. It draws `[power] mixer` FE/t (20).
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, recharger or inline device with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
@@ -2992,8 +3028,12 @@ tanks and the valve and is what the item and the entity share.
   right-clicks in an inventory, as a bundle's contents do, only while the valve
   is closed. Taking a tank off an open valve closes it first, so the tank has
   its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
-  Each atmos tick its tanks react in a player's inventory or on the ground, and
-  a tank that fails destroys the stack.
+  Each atmos tick, in a player's inventory or on the ground, each tank reacts
+  and then fails if its pressure says so (§11.9). `TransferValve.step` makes
+  those two calls itself, because how a tank fails decides what becomes of the
+  TTV. A tank that leaks stays on. One that ruptures bursts alone, leaving its
+  place empty. One that explodes takes the TTV with it, and the other tank's gas
+  goes into the cell too.
 - **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
   the tank screen's pattern. A button sends `TransferValveSettings` (hand and
   button id); the server refuses an unknown hand or button or a hand holding no
@@ -3002,9 +3042,11 @@ tanks and the valve and is what the item and the entity share.
   adds the entity at the player's feet, tossed gently the way they face, with
   primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
   or hurt, so a timer can't be stopped. It counts its fuse down in game ticks,
-  opens its valve at 0, and at 0 s does so as it is added. Its tanks react every
-  atmos tick, and at once when the valve opens, so a mixture above autoignition
-  burns on the next game tick. A TTV that survives waits `SETTLE_TICKS` (5 s)
+  opens its valve at 0, and at 0 s does so as it is added. Its tanks get the
+  same atmos tick, and one at once when the valve opens, so a mixture above
+  autoignition burns on the next game tick, and a tank it takes past 50 atm
+  explodes then, with the entity as the blast's source. A TTV that survives
+  waits `SETTLE_TICKS` (5 s)
   and drops as an item, valve open and timer setting kept, so a dud can be
   taken away. It saves its tanks, valve, timer and countdowns.
 - **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which

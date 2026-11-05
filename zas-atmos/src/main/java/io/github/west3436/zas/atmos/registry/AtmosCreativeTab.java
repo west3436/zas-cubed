@@ -61,6 +61,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
         out.accept(AtmosItems.PRESSURE_PUMP.get());
+        out.accept(AtmosItems.VOLUME_PUMP.get());
         out.accept(AtmosItems.FILTER.get());
         out.accept(AtmosItems.MIXER.get());
         out.accept(AtmosItems.SCRUBBER.get());
@@ -74,6 +75,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());
         out.accept(AtmosItems.PORTABLE_SCRUBBER.get());
+        out.accept(AtmosItems.PORTABLE_PUMP.get());
         out.accept(AtmosItems.FIRELOCK.get());
         out.accept(AtmosItems.RECHARGER.get());
         out.accept(AtmosItems.IGNITER.get());

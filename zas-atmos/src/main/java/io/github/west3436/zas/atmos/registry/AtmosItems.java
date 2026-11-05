@@ -52,6 +52,9 @@ public final class AtmosItems {
     public static final DeferredItem<PortableGasItem> PORTABLE_SCRUBBER =
             ITEMS.registerItem("portable_scrubber", p -> new PortableGasItem(AtmosBlocks.PORTABLE_SCRUBBER.get(), p));
 
+    public static final DeferredItem<PortableGasItem> PORTABLE_PUMP =
+            ITEMS.registerItem("portable_pump", p -> new PortableGasItem(AtmosBlocks.PORTABLE_PUMP.get(), p));
+
     public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
             ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
 
@@ -63,6 +66,7 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> PRESSURE_PUMP =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.PRESSURE_PUMP);
+    public static final DeferredItem<BlockItem> VOLUME_PUMP = ITEMS.registerSimpleBlockItem(AtmosBlocks.VOLUME_PUMP);
 
     public static final DeferredItem<BlockItem> FILTER = ITEMS.registerSimpleBlockItem(AtmosBlocks.FILTER);
     public static final DeferredItem<BlockItem> MIXER = ITEMS.registerSimpleBlockItem(AtmosBlocks.MIXER);

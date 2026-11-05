@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.mixer.MixerMenu;
+import io.github.west3436.zas.atmos.portable.PortablePumpMenu;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
@@ -55,6 +56,10 @@ public final class AtmosMenus {
     public static final Supplier<MenuType<PortableScrubberMenu>> PORTABLE_SCRUBBER = MENUS.register(
             "portable_scrubber", () -> new MenuType<>(PortableScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    /** A portable pump's switch, direction, target, battery and held tank (CONT-018). */
+    public static final Supplier<MenuType<PortablePumpMenu>> PORTABLE_PUMP =
+            MENUS.register("portable_pump", () -> new MenuType<>(PortablePumpMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
             MENUS.register("recharger", () -> new MenuType<>(RechargerMenu::new, FeatureFlags.DEFAULT_FLAGS));
@@ -65,6 +70,12 @@ public final class AtmosMenus {
             () -> new MenuType<>(
                     (id, inventory) -> new PumpMenu(AtmosMenus.PRESSURE_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
 
+    /** A volume pump's switch and rate (CONT-012). */
+    public static final Supplier<MenuType<PumpMenu>> VOLUME_PUMP = MENUS.register(
+            "volume_pump",
+            () -> new MenuType<>(
+                    (id, inventory) -> new PumpMenu(AtmosMenus.VOLUME_PUMP.get(), id), FeatureFlags.DEFAULT_FLAGS));
+
     /** A filter's switch, target, side port and what it selects (CONT-013). */
     public static final Supplier<MenuType<FilterMenu>> FILTER =
             MENUS.register("filter", () -> IMenuTypeExtension.create(FilterMenu::new));
@@ -72,6 +83,7 @@ public final class AtmosMenus {
     /** A mixer's switch, target, side port and fractions (CONT-077). */
     public static final Supplier<MenuType<MixerMenu>> MIXER = MENUS.register(
             "mixer", () -> new MenuType<>((id, inventory) -> new MixerMenu(id), FeatureFlags.DEFAULT_FLAGS));
+
     /** A scrubber's mode and gas selection (CONT-015, CONT-079). */
     public static final Supplier<MenuType<ScrubberMenu>> SCRUBBER =
             MENUS.register("scrubber", () -> new MenuType<>(ScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));

@@ -5,7 +5,8 @@ package io.github.west3436.zas.engine.reaction;
  *
  * @param flammable whether some reaction that requires ignition has every other condition met: its
  *     fuel within its flammability limits at the mixture's temperature (FIRE-032), its other
- *     conditions, and the fire oxygen threshold (FIRE-030)
+ *     conditions, and the fire oxygen threshold (FIRE-030), or only that threshold's partial-pressure
+ *     floor if the mixture is at or above that fuel's autoignition temperature (FIRE-035)
  * @param autoignition the lowest autoignition temperature, K, among those reactions; {@link
  *     Double#POSITIVE_INFINITY} if none, or none has one
  */

@@ -106,6 +106,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/portable_scrubbe
 origin: original
 notes: The portable scrubber's four facings, working and idle, with the existing portable_scrubber and portable_scrubber_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/portable_pump.json
+origin: original
+notes: The portable pump's four facings, working and idle, with the existing portable_pump and portable_pump_on models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/recharger.json
 origin: original
 notes: The recharger's four facings: empty with the existing recharger model, and holding a battery with recharger_0 to recharger_4 by its charge.
@@ -117,6 +121,10 @@ notes: The igniter, sparking and idle, with the existing igniter and igniter_on 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/pressure_pump.json
 origin: original
 notes: The pressure pump's six facings, on and off, with the existing pressure_pump and pressure_pump_on models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/volume_pump.json
+origin: original
+notes: The volume pump's six facings, on and off, with the existing volume_pump and volume_pump_on models.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/filter.json
 origin: original

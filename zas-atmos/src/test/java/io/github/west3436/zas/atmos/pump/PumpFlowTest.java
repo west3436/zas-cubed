@@ -122,6 +122,37 @@ class PumpFlowTest {
     }
 
     @Test
+    void cont_012_moves_its_set_volume_at_input_conditions() {
+        PumpFlow.Side in = side(2_000, T, 1_000);
+        for (double rate : new double[] {1, 25, 60, 99.5, 100}) {
+            assertEquals(2_000 * rate / (R * T), PumpFlow.volumePump(rate, in), 1e-9, rate + " L/s");
+        }
+    }
+
+    @Test
+    void cont_012_never_moves_more_than_100_litres_a_second() {
+        PumpFlow.Side in = side(2_000, T, 1_000);
+        double limit = 2_000 * 100 / (R * T);
+        for (double rate : new double[] {100.001, 200, 1_000, Double.MAX_VALUE}) {
+            assertEquals(limit, PumpFlow.volumePump(rate, in), 1e-9, rate + " L/s");
+        }
+    }
+
+    @Test
+    void cont_012_moves_nothing_at_a_rate_of_zero_or_from_an_empty_input() {
+        assertEquals(0, PumpFlow.volumePump(0, side(2_000, T, 1_000)));
+        assertEquals(0, PumpFlow.volumePump(-5, side(2_000, T, 1_000)));
+        assertEquals(0, PumpFlow.volumePump(100, side(0, T, 1_000)));
+    }
+
+    @Test
+    void cont_012_never_takes_more_than_the_input_holds() {
+        // A 70 L input is smaller than the rate.
+        PumpFlow.Side in = side(1_000, T, 70);
+        assertEquals(in.moles(), PumpFlow.volumePump(100, in), 1e-9);
+    }
+
+    @Test
     void cont_011_a_side_reads_a_store_and_a_mixture_alike() {
         GasStore s = store(N2, 300, 400, 340);
         PumpFlow.Side fromStore = PumpFlow.Side.of(s);

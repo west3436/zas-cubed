@@ -71,7 +71,7 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
         return port(OUTPUT);
     }
 
-    /** Its setting: a pressure pump's target, in kPa. */
+    /** Its setting: a pressure pump's target, in kPa, or a volume pump's rate, in L/s. */
     public double setting() {
         return setting;
     }
@@ -101,13 +101,24 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
         PumpFlow.Side input = PumpFlow.Side.of(from);
         double n = moles(input, PumpFlow.Side.of(out.gas()));
         if (n < PipeBlockEntity.MIN_FLOW) {
-            // Too little gas for even the rate to reach the least flow counts as none.
-            return PumpFlow.molesInVolume(PumpFlow.MAX_RATE, input) < PipeBlockEntity.MIN_FLOW
-                    ? InlineStatus.INPUT_EMPTY
-                    : InlineStatus.TARGET_REACHED;
+            return idle(input);
         }
         out.gas().add(from.takeFraction(n / input.moles()));
         return InlineStatus.MOVING;
+    }
+
+    /**
+     * Why it moved nothing, with too little to count as a flow. The default is a pressure pump's: too
+     * little gas for even the rate limit to reach the least flow counts as none, and otherwise the
+     * output has reached its target.
+     *
+     * @param in the input
+     * @return the status
+     */
+    protected InlineStatus idle(PumpFlow.Side in) {
+        return PumpFlow.molesInVolume(PumpFlow.MAX_RATE, in) < PipeBlockEntity.MIN_FLOW
+                ? InlineStatus.INPUT_EMPTY
+                : InlineStatus.TARGET_REACHED;
     }
 
     @Override

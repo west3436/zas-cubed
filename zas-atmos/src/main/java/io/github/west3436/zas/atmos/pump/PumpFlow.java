@@ -56,6 +56,18 @@ public final class PumpFlow {
     }
 
     /**
+     * What a volume pump moves in a second: its set volume at the input's conditions, and never more
+     * than {@link #MAX_RATE} L, whatever it is set to (CONT-012).
+     *
+     * @param rate the set volume, L/s
+     * @param in the input
+     * @return the moles, at least 0 and at most the input's
+     */
+    public static double volumePump(double rate, Side in) {
+        return molesInVolume(Math.min(rate, MAX_RATE), in);
+    }
+
+    /**
      * The moles that bring the output to a target: once the input's gas has mixed in, conserving
      * thermal energy, the output's pressure is the target. At or above the target, none.
      *

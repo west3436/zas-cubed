@@ -23,6 +23,9 @@ class StandaloneReactionsTest {
     private static final ResourceLocation N2 = id("nitrogen");
     private static final ResourceLocation H2O = id("water_vapor");
     private static final ResourceLocation N2O = id("nitrous_oxide");
+    private static final ResourceLocation CH4 = id("methane");
+    private static final ResourceLocation CO = id("carbon_monoxide");
+    private static final ResourceLocation CO2 = id("carbon_dioxide");
     private static final FireSettings FIRE = FireSettings.DEFAULT;
 
     private static ResourceLocation id(String path) {
@@ -108,6 +111,46 @@ class StandaloneReactionsTest {
         assertEquals(0, burned.moles(H2));
         double energy = capacity(with.moles()) * 293.15 + 242_000 * plain.moles(H2);
         assertEquals(energy / capacity(burned.moles()), burned.temperature(), 1e-6);
+    }
+
+    /**
+     * FIRE-035: a tank's gas goes by the rule a zone's does, with the shipped reactions. At 12 % O₂,
+     * it burns at 900 K with no source, and at 800 K not even with one.
+     */
+    @Test
+    void fire_035_a_hot_tank_short_of_the_oxygen_fraction_burns() throws IOException {
+        ReactionSet set = shipped();
+        GasMixture hot = new GasMixture(Map.of(H2, 2.9, O2, 3.5, N2, 22.6), 900, 70);
+        GasMixture burned = StandaloneReactions.apply(hot, 1, false, set, FIRE);
+        assertEquals(0, burned.moles(H2));
+        assertEquals(2.9, burned.moles(H2O), 1e-9);
+        assertEquals(3.5 - 2.9 / 2, burned.moles(O2), 1e-9);
+
+        GasMixture warm = new GasMixture(Map.of(H2, 2.9, O2, 3.5, N2, 22.6), 800, 70);
+        assertSame(warm, StandaloneReactions.apply(warm, 1, true, set, FIRE));
+    }
+
+    /**
+     * FIRE-005, FIRE-035: below the threshold, all of the burning carbon forms CO. At 850 K, under
+     * CO's own autoignition point, it stays CO; at 900 K, CO burns on to CO₂.
+     */
+    @Test
+    void fire_035_below_the_oxygen_fraction_methane_forms_only_co() throws IOException {
+        ReactionSet set = shipped();
+        GasMixture methane = new GasMixture(Map.of(CH4, 1.0, O2, 3.0, N2, 21.0), 850, 300);
+        GasMixture burned = StandaloneReactions.apply(methane, 1, false, set, FIRE);
+        assertEquals(0, burned.moles(CH4));
+        assertEquals(1.0, burned.moles(CO), 1e-9);
+        assertEquals(0, burned.moles(CO2));
+        assertEquals(1.5, burned.moles(O2), 1e-9);
+
+        GasMixture monoxide = new GasMixture(Map.of(CO, 5.0, O2, 3.0, N2, 17.0), 900, 300);
+        GasMixture onward = StandaloneReactions.apply(monoxide, 1, false, set, FIRE);
+        assertEquals(0, onward.moles(CO));
+        assertEquals(5.0, onward.moles(CO2), 1e-9);
+
+        GasMixture cooler = new GasMixture(Map.of(CO, 5.0, O2, 3.0, N2, 17.0), 850, 300);
+        assertSame(cooler, StandaloneReactions.apply(cooler, 1, true, set, FIRE));
     }
 
     @Test
