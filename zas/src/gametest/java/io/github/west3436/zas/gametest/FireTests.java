@@ -430,7 +430,9 @@ public final class FireTests {
             r.tick();
             burns++;
         }
-        h.assertTrue(r.level.getBlockState(fire).isAir(), "the fire still burns after " + burns + " burns");
+        // The vanilla fire is out. A room this small is well past CO's 882 K by then, so the CO it made
+        // can light by itself as a gas fire, in this cell, below 14 % O₂ (FIRE-035).
+        h.assertFalse(r.level.getBlockState(fire).is(Blocks.FIRE), "the fire still burns after " + burns + " burns");
         ZoneInfo after = r.zone(1, 2, 1);
         double fraction = after.mixture().composition().get(O2);
         h.assertTrue(fraction < 0.14, "the fire went out at an O2 fraction of " + fraction);

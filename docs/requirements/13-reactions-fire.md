@@ -235,7 +235,11 @@ in `flammability` and in every step, so hotspots and containers (`burn`,
 (FIRE-005). No new config key: `[fire] oxygen_minimum_kpa` is the floor. The #211
 room burns 332 of its 340 mol of H₂, in 1,443 parcels with one hotspot (52 of them
 to reach 14 %), and stops at 8.3 mol, the 0.1 % floor, with O₂ at 12.5 % and
-192 kPa, at 3,237 K. Checked by the `fire_035_` tests in `FireSettingsTest`,
+192 kPa, at 3,237 K. A vanilla fire that goes out below 0.14 in gas this hot can
+leave a gas fire burning its CO in its place: a two-cell room under Hardcore, burned
+in 30 s steps, is at 1,485 K with 1.6 % CO when its fire goes out
+(`fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore`). Checked by the
+`fire_035_` tests in `FireSettingsTest`,
 `ReactionSetTest`, `BlockIgniterTest` and `StandaloneReactionsTest`, and
 `fire_035_a_hot_room_burns_below_14_percent_and_a_cooler_one_does_not`,
 `fire_035_a_vanilla_fire_in_hot_gas_keeps_the_oxygen_fraction` and

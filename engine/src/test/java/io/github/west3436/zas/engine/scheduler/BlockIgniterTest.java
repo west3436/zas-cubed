@@ -316,8 +316,7 @@ class BlockIgniterTest {
     void fire_035_a_hot_gas_fire_below_14_percent_lights_no_block() {
         Burn b = new Burn(1100, 0.13).room(PLANKS).hydrogen(30);
         b.steps(30);
-        double water = b.sim.zoneAt(1, 65, 1).mixture().moles(HotspotTest.H2O);
-        assertTrue(water > 0, "the hydrogen didn't burn");
+        assertTrue(b.sim.zoneAt(1, 65, 1).moles(HotspotTest.H2O) > 0, "the hydrogen didn't burn");
         assertTrue(b.lit.isEmpty(), "a block caught at 13 % O2");
         assertEquals(0, b.cached(), "a zone that can't light a block found its faces");
     }
