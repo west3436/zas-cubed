@@ -86,9 +86,10 @@ final class Hotspots {
     private final ZoneGraph graph;
     private final CellSpace space;
     private final SectionMirror mirror;
-    private final boolean[] fire;
-    private final boolean[] gasFire;
-    private final boolean[] source;
+    private final GeometryPalette palette;
+    private boolean[] fire = new boolean[0];
+    private boolean[] gasFire = new boolean[0];
+    private boolean[] source = new boolean[0];
     private final BlockIgniter igniter;
 
     private final TreeMap<Long, Hotspot> byBlock = new TreeMap<>();
@@ -130,18 +131,33 @@ final class Hotspots {
         this.graph = graph;
         this.space = space;
         this.mirror = mirror;
+        this.palette = palette;
+        readPalette();
+        mirror.indexFlagged(id -> id >= 0 && id < fire.length && (fire[id] || gasFire[id] || source[id]));
+        igniter = new BlockIgniter(graph, space, mirror, palette);
+    }
+
+    private void readPalette() {
+        int from = fire.length;
         int n = palette.size();
-        fire = new boolean[n];
-        gasFire = new boolean[n];
-        source = new boolean[n];
-        for (int id = 0; id < n; id++) {
+        fire = Arrays.copyOf(fire, n);
+        gasFire = Arrays.copyOf(gasFire, n);
+        source = Arrays.copyOf(source, n);
+        for (int id = from; id < n; id++) {
             Geometry g = palette.geometry(id);
             gasFire[id] = g.hasFlag(Geometry.FLAG_GAS_FIRE);
             fire[id] = !gasFire[id] && g.hasFlag(Geometry.FLAG_FIRE);
             source[id] = g.hasFlag(Geometry.FLAG_IGNITION_SOURCE);
         }
-        mirror.indexFlagged(id -> id >= 0 && id < n && (fire[id] || gasFire[id] || source[id]));
-        igniter = new BlockIgniter(graph, space, mirror, palette);
+    }
+
+    /**
+     * The palette took in the geometries of single positions (GEO-043, API-023). Call before a
+     * snapshot that uses them reaches the mirror.
+     */
+    void geometriesAdded() {
+        readPalette();
+        igniter.geometriesAdded();
     }
 
     /** Seeds the spread and block-ignition draws, per dimension (§3.5). */

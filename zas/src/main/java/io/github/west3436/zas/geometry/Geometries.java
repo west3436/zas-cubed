@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -32,8 +33,8 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 /**
- * The current {@link GeometryTable}: derived geometry with datapack overrides applied, zone
- * boundaries marked and heat data added (architecture §4.1, §4.7, §4.8).
+ * The current {@link GeometryTable}: derived geometry with datapack overrides applied, blocks with
+ * seal providers flagged, zone boundaries marked and heat data added (architecture §4.1, §4.7, §4.8).
  *
  * <p>Lifecycle: overrides and heat data are read on every server data load (start and {@code
  * /reload}). Once tags are bound ({@link TagsUpdatedEvent}, server side), they and the {@link
@@ -315,7 +316,8 @@ public final class Geometries {
     }
 
     /**
-     * The derived table with the overrides applied, then the zone boundaries marked: each tagged
+     * The derived table with the overrides applied, then the blocks with seal providers flagged
+     * {@link Geometry#FLAG_POSITIONAL}, then the zone boundaries marked: each tagged
      * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
      * block's heat data added to its states' geometries; then the ignition sources flagged; then the
      * flammable states given their odds and ignition temperatures (FIRE-033, FIRE-034).
@@ -327,7 +329,13 @@ public final class Geometries {
             int[] sources,
             List<BlockIgnitions.Flammable> flammable) {
         GeometryTable derived = GeometryDerivation.derived();
-        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty() && sources.length == 0 && flammable.isEmpty()) {
+        Set<Block> sealProviders = SealProviders.blocks();
+        if (byBlock.isEmpty()
+                && sealProviders.isEmpty()
+                && boundaries.isEmpty()
+                && heat.isEmpty()
+                && sources.length == 0
+                && flammable.isEmpty()) {
             return derived;
         }
         GeometryPalette.Builder palette = derived.palette().toBuilder();
@@ -341,6 +349,22 @@ public final class Geometries {
                 if (stateId >= 0 && stateId < byStateId.length) {
                     byStateId[stateId] = id;
                     overridden++;
+                }
+            }
+        }
+        // A block with a seal provider has its geometry asked for per position, unless an override
+        // has the last word (API-023, GEO-005). In registry order, so the ids are the same every run.
+        List<Block> asked = new ArrayList<>(sealProviders);
+        asked.sort(Comparator.comparingInt(BuiltInRegistries.BLOCK::getId));
+        for (Block block : asked) {
+            if (byBlock.containsKey(block)) {
+                continue;
+            }
+            for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+                int stateId = Block.getId(state);
+                if (stateId >= 0 && stateId < byStateId.length) {
+                    byStateId[stateId] =
+                            palette.intern(palette.geometry(byStateId[stateId]).withFlags(Geometry.FLAG_POSITIONAL));
                 }
             }
         }

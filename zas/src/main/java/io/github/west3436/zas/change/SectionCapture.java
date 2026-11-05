@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.SectionSnapshot;
 import io.github.west3436.zas.engine.scheduler.SectionSource;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
@@ -18,10 +19,15 @@ import net.minecraft.world.level.chunk.PalettedContainer;
  * A private copy of one section's block states, taken on the server thread and decoded into a
  * {@link SectionSnapshot} on any thread (architecture §3.4).
  *
- * <p>Taking the copy is the server thread's only cost ({@link PalettedContainer#copy()}, about
- * 0.3 µs per section in spike S5); mapping 4096 states to geometry ids is left to {@link
+ * <p>Taking the copy is nearly the server thread's only cost ({@link PalettedContainer#copy()},
+ * about 0.3 µs per section in spike S5); mapping 4096 states to geometry ids is left to {@link
  * #decode()}, which the atmos worker calls. The copy is never shared, so reading it off-thread
  * doesn't touch the live world (CORE-049). A section holding only air is not copied at all.
+ *
+ * <p>The geometry of a position that depends on more than its block state has to be read from the
+ * live world, so it is worked out here on the server thread ({@link PositionGeometries}, API-028)
+ * and travels with the copy as the snapshot's overrides. A section with none pays one look at its
+ * palette.
  */
 public final class SectionCapture implements SectionSource {
     private final long key;
@@ -29,18 +35,21 @@ public final class SectionCapture implements SectionSource {
     private final long blockGeneration;
     private final PalettedContainer<BlockState> states; // null when the section holds only air
     private final GeometryTable table;
+    private final PositionGeometries.Overrides overrides;
 
     private SectionCapture(
             long key,
             long lifecycleGeneration,
             long blockGeneration,
             PalettedContainer<BlockState> states,
-            GeometryTable table) {
+            GeometryTable table,
+            PositionGeometries.Overrides overrides) {
         this.key = key;
         this.lifecycleGeneration = lifecycleGeneration;
         this.blockGeneration = blockGeneration;
         this.states = states;
         this.table = table;
+        this.overrides = overrides;
     }
 
     /**
@@ -67,7 +76,8 @@ public final class SectionCapture implements SectionSource {
                 ChangeTracker.lifecycleGeneration(level, pos),
                 ChangeTracker.blockGeneration(level, pos),
                 section.hasOnlyAir() ? null : section.getStates().copy(),
-                table);
+                table,
+                PositionGeometries.capture(level, chunk, section, sectionKey, table));
     }
 
     /** The section key ({@link SectionKeys}). */
@@ -91,6 +101,7 @@ public final class SectionCapture implements SectionSource {
                 }
             }
         }
-        return SectionSnapshot.of(key, lifecycleGeneration, blockGeneration, ids);
+        return SectionSnapshot.withOverrides(
+                key, lifecycleGeneration, blockGeneration, ids, overrides.indices(), overrides.geometries());
     }
 }

@@ -410,4 +410,18 @@ public interface ZasApiProvider {
     default int extinguish(ServerLevel level, BlockPos from, BlockPos to) {
         return 0;
     }
+
+    /**
+     * Makes the implementation work out a position's gas geometry again (GEO-014).
+     *
+     * <p>The default is the fallback's answer: nothing, as there are no zones. It is there for the
+     * same reason as {@link #hotspots}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param pos the block position
+     */
+    @ServerThread
+    default void markDirty(ServerLevel level, BlockPos pos) {}
 }

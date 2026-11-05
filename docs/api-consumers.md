@@ -143,6 +143,43 @@ ZonePins.unpin(level, owner);
   server thread at the next atmos tick. Pins are saved with their zone.
 - **Without ZAS³** a pin completes at once with `ABSENT`.
 
+## A block that says what it seals: seal providers
+
+ZAS³ works out what a block seals from its collision shape. A block that decides
+for itself, such as an airlock, gives a seal provider instead (API-023):
+
+```java
+@SubscribeEvent
+static void capabilities(RegisterCapabilitiesEvent event) {
+    event.registerBlock(
+            ISealProvider.BLOCK,
+            (level, pos, state, blockEntity, context) -> () ->
+                    Optional.of(blockEntity instanceof AirlockEntity airlock && airlock.isOpen()
+                            ? SealGeometry.OPEN
+                            : SealGeometry.SEALED),
+            MY_AIRLOCK.get());
+}
+
+// Whenever the answer changes without a block state being written:
+BlockGeometry.markDirty(level, pos);
+```
+
+- **The answer** is a `SealGeometry`: the gas-tight faces, the faces that keep
+  zones apart while gas crosses them, as a door's do, and the volume in litres,
+  0 to 1,000. It is a single cell, as with a datapack geometry override. An empty
+  `Optional` means the geometry from the block's collision shape.
+- **It is kept.** ZAS³ asks once, on the server thread, when it copies the block's
+  section for an atmos tick (API-028), and keeps the answer until the block state
+  at that position is written or you call `markDirty`. So keep the provider cheap,
+  and call `markDirty` whenever its answer would change. The change reaches zones
+  at the next atmos tick.
+- **A datapack override wins.** A geometry override of the block has the last
+  word, and the provider isn't called.
+- **Register at any priority but the lowest**, which is when ZAS³ notes the blocks
+  that have a provider.
+- **Threads:** `markDirty` is server thread only, and throws otherwise.
+- **Without ZAS³** nothing asks the provider, and `markDirty` does nothing.
+
 ## Fire
 
 A fire in a zone burns as hotspots, one per block: a vanilla fire block in the
