@@ -12,7 +12,8 @@ CONT-099 were rejected, and CONT-110 to CONT-113 were added as Draft.
 CONT-114 (dyed pipes) was added as Draft on 2026-11-02, then changed by the
 owner, accepted and implemented the same day. CONT-115 to CONT-124, the
 central atmospherics controller, were added and accepted on 2026-11-03 (D-75).
-CONT-127, the other devices' sounds, was added as Draft on 2026-11-05.
+CONT-127, the other devices' sounds, and CONT-128, the fire alarm's, were added
+as Draft on 2026-11-05.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -2544,6 +2545,31 @@ left plays its on sound when it starts charging again.*
   plays one from each controller in earshot.*
 - *Adding and taking a TTV's tanks keep vanilla's bundle sounds, as no event covers
   them.*
+
+#### CONT-128 · The fire alarm's sound
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-044, CLIENT-015, CLIENT-020 · Depends: CONT-044
+
+While a fire alarm within 32 blocks shows its alarm, a client shall play
+`device.fire_alarm.alarm` once every 12 s, starting as soon as the first alarm goes
+off, as a single sound at the nearest alarm, however many are alarming. It shall
+fade out within 1 s of the last alarm in range resetting. An alarm going back to
+normal shall play `device.fire_alarm.reset` once.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: the alarm
+  must alert without being unbearable, stop the moment it resets, and a whole
+  station's alarms must not stack. Inferred: 12 s between 4 s sounds leaves room
+  to hear and talk through a fire that can last minutes.
+- **Verify:** `FireAlarmVoiceTest` (Unit) checks the rhythm, the one voice at the
+  nearest alarm and the stop. `cont_128_*` (GameTests) check that the voice follows
+  the block's state and that the server plays only the reset. The owner listens for
+  how it sounds, and for it stopping, in the round's test world.
+
+*2026-11-05: added for review, with the behaviour built. The cadence is for the owner
+to judge: the sound is 4 s long and comes round every 12 s, so it is heard for a third
+of the time (`FireAlarmVoice`'s `SOUND_TICKS` and `PERIOD_TICKS`). An alarm that stops
+and starts again within 12 s keeps the same rhythm, so a flickering one can't sound
+more often. It is one loop under the nearest-8 rule (CLIENT-015), so it can be pushed
+out by 8 louder loops.*
 
 ## R1 / R2 split
 
