@@ -2496,8 +2496,8 @@ A pressure pump, volume pump, filter, mixer, vent, passive vent, scrubber or
 canister, and a pipe with an open end, shall each play its own looping sound to
 a player within 8 blocks while it is moving gas, and only then. Being on or
 powered isn't enough: a pump at its target, or with nothing to pump, is silent.
-A device that stops because it was switched off or lost its power goes silent at
-once, not after the level's usual hold.
+A device that was switched off, shut or lost its power goes silent at its next
+step, without the level's usual hold.
 
 - **Rationale:** A sound that follows the gas tells a player which machines are
   doing something, and a room of machines at rest is quiet.

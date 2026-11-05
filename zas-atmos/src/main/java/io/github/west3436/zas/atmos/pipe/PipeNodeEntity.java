@@ -196,12 +196,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
         if (flow.out().isEmpty() && flow.in().isEmpty()) {
             return;
         }
+        reportMoved(Math.abs(flow.net()));
         GasParcel out = network().gas().take(flow.out());
-        double in = 0;
-        for (double moles : flow.in().values()) {
-            in += moles;
-        }
-        reportMoved(Math.abs(out.totalMoles() - in));
         if (flow.in().isEmpty()) {
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
         } else if (out.isEmpty()) {

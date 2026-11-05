@@ -303,9 +303,14 @@ public final class PipeDeviceSoundTests {
         }
         reads(h, a, pos, DeviceActivity.IDLE, "with its valve shut");
         can.setValveOpen(true);
-        a.step(); // its block changed, so it doesn't trust its reading of the cell this step
+        a.step(); // shut, it wasn't reading its cell, so it wants to see this reading hold for a step
         a.step();
         reads(h, a, pos, DeviceActivity.HARD, "filling the room");
+        can.setValveOpen(false);
+        a.step();
+        reads(h, a, pos, DeviceActivity.IDLE, "shut, the step it stops");
+        can.setValveOpen(true);
+        a.step();
         for (int i = 0; i < 16; i++) {
             a.step();
         }

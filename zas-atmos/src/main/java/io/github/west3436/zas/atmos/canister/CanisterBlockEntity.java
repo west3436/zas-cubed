@@ -188,7 +188,11 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         if (CanisterFailure.check(level, worldPosition, gas)) {
             return;
         }
-        if (!valveOpen() || gas.isEmpty()) {
+        if (!valveOpen()) {
+            reportStopped();
+            return;
+        }
+        if (gas.isEmpty()) {
             return;
         }
         AtmosphereSample sample = Atmospheres.at(level, worldPosition);
