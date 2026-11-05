@@ -2128,20 +2128,21 @@ to API-058 are Draft.* `api.fire.Fires` is the hotspots' API (§5, Hotspots).
 ## 7. Mixin inventory
 
 All mixins are injection-only, with no `@Overwrite` (NFR-021). Each class's
-javadoc names its purpose and requirement (NFR-024). They are declared in
-`zas.mixins.json` through `[[mixins]]` in `neoforge.mods.toml`. Behaviour
+javadoc names its purpose and requirement, and each has a row here (NFR-024):
+**a new mixin adds both, with the same requirements**. They are declared in
+`zas.mixins.json` through `[[mixins]]` in `neoforge.mods.toml`, the only mixin
+config in the repository. All of them are common: none is client-only. Behaviour
 toggles are checked at runtime inside the injection, not by skipping mixins,
 because STARTUP config is too late for block classes.
 
 | # | Target | Injection | Purpose | Requirements | Verified |
 |---|---|---|---|---|---|
-| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, record a Hardcore zone trigger the write starts, and note a plant appearing or going | GEO-010, GEO-011, GEO-012, CORE-056, CONT-053 | **S1**, GameTests |
+| M1 | `LevelChunk#setBlockState(BlockPos, BlockState, boolean)`, its call to `LevelChunkSection#setBlockState(int, int, int, BlockState)` | `@WrapOperation` (`LevelChunkMixin`) | Change hook: bump the block generation, mark the position dirty if its geometry changed, record a Hardcore zone trigger the write starts, note a plant appearing or going, queue a spark ignition, and tell the burning service a fire or lit furnace came or went | GEO-010, GEO-011, GEO-012, CORE-056, CONT-053, FIRE-015, FIRE-021 | **S1**, GameTests |
 | M2 | `FireBlock#tick(BlockState, ServerLevel, BlockPos, RandomSource)` | `@Inject` HEAD, cancellable (`FireBlockMixin`) | A fire whose cell fails the fire oxygen threshold goes out; its O₂ use is the burning service's | FIRE-020, FIRE-030 | GameTests (`fire_020_`, `fire_030_`) |
-| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-014 | GameTests (`fire_020_`) |
-| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020 | applied; no GameTest of its own |
-| M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027 | GameTests (`fire_027_`) |
-| M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027 | GameTests (`fire_027_`) |
-| M7 | `PalettedContainer` internals (palette, storage) | `@Accessor` | Optional fast section decode, about 10× faster than `get()` | CORE-047 (worker side) | proposed (S5) |
+| M3 | `BaseFireBlock#canBePlacedAt(Level, BlockPos, Direction)` | `@ModifyReturnValue` (`BaseFireBlockMixin`) | No ignition without enough O₂ | FIRE-020, FIRE-030 | GameTests (`fire_020_`) |
+| M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020, FIRE-030 | applied; no GameTest of its own |
+| M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
+| M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
 
 Not mixins:
 
@@ -2153,6 +2154,9 @@ Not mixins:
 - **The Ad Astra adapter** uses Ad Astra's own events and ticks (SPACE-016,
   to be proved in S6).
 - **Client rendering** uses NeoForge render events.
+- **Section decoding** copies each `PalettedContainer` with its public `copy()`
+  (`SectionCapture`). M7, an `@Accessor` on its internals for a faster decode, was
+  proposed after S5 and never built; its number stays retired.
 - **Lit fuel blocks' O₂ use and soul fire** go through the burning service
   (§5, *Fire chemistry and fuel blocks*), which tracks burning blocks through
   the change hook (M1) and chunk loads. Candles aren't combustion.

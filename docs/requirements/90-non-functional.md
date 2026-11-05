@@ -234,13 +234,21 @@ Mixins shall be minimal and injection-based, with no `@Overwrite`.
 uses `@Overwrite`.*
 
 #### NFR-024 · Documented mixins
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 Each mixin shall be documented with its purpose and the requirement it serves.
 
 - **Rationale:** Inferred: mixins are the most fragile code across updates, so
   each needs a recorded reason.
 - **Verify:** Inspect each mixin's documentation.
+
+*2026-11-05: Implemented. Each of the five classes in `zas.mixins.json`, the only
+mixin config in the repository, has a class javadoc giving its purpose and
+requirements, and each of its six hooks has a row in [architecture
+§7](../architecture.md#7-mixin-inventory) naming the same requirements. The
+inspection found the table and the javadocs disagreeing on M1, M3, M4, M5 and M6, and
+a row for M7, which was never built; all are corrected. A new mixin adds a javadoc
+and a row.*
 
 #### NFR-025 · Compatibility matrix
 `Must` · `R1` · `Accepted` · Verify: Manual, GameTest
