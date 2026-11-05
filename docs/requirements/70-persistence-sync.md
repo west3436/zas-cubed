@@ -312,6 +312,11 @@ report too, and `cont_125_*` check them. A passive vent or open pipe end reports
 its net flow rather than all the gas it moves, so gases only passing each other
 at one pressure read as idle: for the owner's review, with CONT-125.*
 
+*2026-11-05: the portable pump and scrubber report what they move, and the heater,
+air conditioner and recharger report running, and `cont_127_*` check them. The
+generator isn't an atmospherics device, so it doesn't report: its loop follows the
+lit state it already syncs (CONT-127).*
+
 #### DATA-018 · Device activity sync
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
 
