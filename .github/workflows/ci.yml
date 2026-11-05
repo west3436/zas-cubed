@@ -40,6 +40,18 @@ jobs:
       - name: Build
         if: steps.gradle.outputs.present == 'true'
         run: ./gradlew build --stacktrace
+      # NFR-030: the engine's line coverage, on this run's summary page, with
+      # the full report as an artifact. The tests have already run in build.
+      - name: Engine coverage
+        if: steps.gradle.outputs.present == 'true'
+        run: |
+          ./gradlew :engine:jacocoTestReport --stacktrace
+          python3 scripts/coverage_summary.py engine/build/reports/jacoco/test/jacocoTestReport.xml >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: steps.gradle.outputs.present == 'true'
+        with:
+          name: engine-coverage
+          path: engine/build/reports/jacoco/test/html
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 10
