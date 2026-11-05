@@ -1,11 +1,16 @@
 package io.github.west3436.zas.atmos.power;
 
+import io.github.west3436.zas.api.client.ClientSounds;
+import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -27,6 +32,9 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  * fuel slot takes fuel from hoppers. It never touches the air (D-35, CONT-067).
  */
 public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
+    /** How far its running loop is heard, in blocks: as far as any device's. */
+    private static final double LOOP_RANGE = 8;
+
     private final ItemStackHandler fuel = new ItemStackHandler(1) {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
@@ -109,6 +117,35 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         BlockState state = getBlockState();
         if (level != null && state.getValue(GeneratorBlock.LIT) != lit) {
             level.setBlock(worldPosition, state.setValue(GeneratorBlock.LIT, lit), 3);
+            level.playSound(
+                    null,
+                    worldPosition,
+                    (lit ? AtmosSounds.GENERATOR_ON : AtmosSounds.GENERATOR_OFF).get(),
+                    SoundSource.BLOCKS);
+        }
+    }
+
+    /**
+     * One game tick on a client: the running loop, for as long as the block shows it burning
+     * (CONT-127). The generator isn't an {@code AtmosDevice}, so it has no device activity, but its
+     * {@link GeneratorBlock#LIT} already reaches every client. A block entity that has unloaded or
+     * been broken has no ticker, so its request lapses and the loop fades.
+     *
+     * @param state its block state
+     * @param pos where it is
+     */
+    static void clientTick(BlockState state, BlockPos pos) {
+        if (state.getValue(GeneratorBlock.LIT)) {
+            ClientSounds.loop(new LoopRequest(
+                    pos.immutable(),
+                    AtmosSounds.GENERATOR_RUN.get(),
+                    SoundSource.BLOCKS,
+                    pos.getX() + 0.5,
+                    pos.getY() + 0.5,
+                    pos.getZ() + 0.5,
+                    DeviceActivity.volume(DeviceActivity.WORKING),
+                    1f,
+                    LOOP_RANGE));
         }
     }
 

@@ -8,6 +8,8 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
@@ -60,13 +62,22 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
         return on;
     }
 
-    /** Switches it on or off. Server side. */
+    /** Switches it on or off, with a click (CONT-127). Server side. */
     public void setOn(boolean on) {
         if (on != this.on) {
             this.on = on;
             setChanged();
+            if (level != null && !level.isClientSide) {
+                level.playSound(null, worldPosition, on ? switchOnSound() : switchOffSound(), SoundSource.BLOCKS);
+            }
         }
     }
+
+    /** What it plays when switched on. */
+    protected abstract SoundEvent switchOnSound();
+
+    /** What it plays when switched off. */
+    protected abstract SoundEvent switchOffSound();
 
     /** Where it works: the air above it, in its own block's cell. */
     public Vec3 point() {

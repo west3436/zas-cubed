@@ -61,6 +61,13 @@ public final class ZasAtmosClient {
         DeviceLoops.add(AtmosBlocks.SCRUBBER, AtmosSounds.SCRUBBER_RUN);
         DeviceLoops.add(AtmosBlocks.CANISTER, AtmosSounds.CANISTER_RUN);
         DeviceLoops.add(AtmosBlocks.PIPE, AtmosSounds.PIPE_LEAK);
+
+        // Running machines' loops (CONT-127). The generator's isn't here: it plays from its own ticker.
+        DeviceLoops.add(AtmosBlocks.HEATER, AtmosSounds.HEATER_RUN);
+        DeviceLoops.add(AtmosBlocks.AIR_CONDITIONER, AtmosSounds.AIR_CONDITIONER_RUN);
+        DeviceLoops.add(AtmosBlocks.PORTABLE_PUMP, AtmosSounds.PORTABLE_PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.PORTABLE_SCRUBBER, AtmosSounds.PORTABLE_SCRUBBER_RUN);
+        DeviceLoops.add(AtmosBlocks.RECHARGER, AtmosSounds.RECHARGER_RUN);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */

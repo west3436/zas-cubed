@@ -6,9 +6,11 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -56,6 +58,16 @@ public class HeaterBlockEntity extends ThermoMachineBlockEntity {
     @Override
     protected ThermoStatus working() {
         return ThermoStatus.HEATING;
+    }
+
+    @Override
+    protected SoundEvent switchOnSound() {
+        return AtmosSounds.HEATER_ON.get();
+    }
+
+    @Override
+    protected SoundEvent switchOffSound() {
+        return AtmosSounds.HEATER_OFF.get();
     }
 
     @Override
