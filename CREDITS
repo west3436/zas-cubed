@@ -114,6 +114,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/igniter.json
 origin: original
 notes: The igniter, sparking and idle, with the existing igniter and igniter_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/pressure_pump.json
+origin: original
+notes: The pressure pump's six facings, on and off, with the existing pressure_pump and pressure_pump_on models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/scrubber.json
 origin: original
 notes: The scrubber's six facings and four modes, with the existing scrubber models.
