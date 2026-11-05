@@ -33,8 +33,8 @@ public final class AirflowParticlePlan {
     /** The density at Minecraft's Particles setting All. */
     public static final double ALL = 1;
 
-    /** The density at Decreased. */
-    public static final double DECREASED = 0.4;
+    /** The density at Decreased: vanilla's own share, as it drops one particle in three. */
+    public static final double DECREASED = 2.0 / 3.0;
 
     /** The density at Minimal: none. */
     public static final double MINIMAL = 0;

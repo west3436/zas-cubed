@@ -60,6 +60,43 @@ public final class GasJets {
                         (float) (reach - ahead)));
     }
 
+    /**
+     * A tank leaks: a jet from it, level and in a random direction, since a tank has no way up.
+     *
+     * @param level the level
+     * @param at where the tank is
+     * @param moles the moles it let out this atmos tick; none sends nothing
+     */
+    public static void leak(ServerLevel level, Vec3 at, double moles) {
+        if (moles > 0) {
+            double angle = level.random.nextDouble() * 2 * Math.PI;
+            send(
+                    level,
+                    new GasJet(
+                            GasJetKind.LEAK,
+                            at.x,
+                            at.y,
+                            at.z,
+                            (float) Math.cos(angle),
+                            0,
+                            (float) Math.sin(angle),
+                            (float) moles));
+        }
+    }
+
+    /**
+     * A tank or canister ruptures, or a pipe bursts: gas in every direction.
+     *
+     * @param level the level
+     * @param at where it was
+     * @param moles the moles it let out; none sends nothing, as an empty canister has nothing to show
+     */
+    public static void burst(ServerLevel level, Vec3 at, double moles) {
+        if (moles > 0) {
+            send(level, new GasJet(GasJetKind.BURST, at.x, at.y, at.z, 0, 0, 0, (float) moles));
+        }
+    }
+
     /** A unit vector to the side of the hand the user is using, level; zero looking straight up or down. */
     private static Vec3 side(Vec3 look, LivingEntity user) {
         Vec3 right = look.cross(UP);
