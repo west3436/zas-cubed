@@ -67,7 +67,8 @@ final class ListeningPlayer {
                 .toList();
     }
 
-    private static final class Recording extends ServerGamePacketListenerImpl {
+    /** A connection that keeps what a server sends, and hands what it's given to the game's own handlers. */
+    static final class Recording extends ServerGamePacketListenerImpl {
         private final List<Packet<?>> sent;
 
         Recording(ServerLevel level, ServerPlayer player, List<Packet<?>> sent) {

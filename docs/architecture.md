@@ -2232,7 +2232,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
-| `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
+| `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
@@ -3168,20 +3168,37 @@ tanks and the valve and is what the item and the entity share.
   open.
 - **The item** (`TransferValveItem`). The tanks are the stack's
   `zas_atmos:ttv_tanks`, slot 0 the first and slot 1 the second; a working
-  `TransferValve` is read from the stack and saved back. Tanks go on by
-  right-clicks in an inventory, as a bundle's contents do, only while the valve
-  is closed. Taking a tank off an open valve closes it first, so the tank has
-  its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
+  `TransferValve` is read from the stack and saved back. Tanks go on through its
+  screen's slots, or by right-clicks in an inventory as a bundle's contents do.
+  `TransferValve.accepts` is the one rule for both: one tank, only while the
+  valve is closed. Taking a tank off an open valve closes it first, so the tank
+  has its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
   Each atmos tick, in a player's inventory or on the ground, each tank reacts
   and then fails if its pressure says so (§11.9). `TransferValve.step` makes
   those two calls itself, because how a tank fails decides what becomes of the
   TTV. A tank that leaks stays on. One that ruptures bursts alone, leaving its
   place empty. One that explodes takes the TTV with it, and the other tank's gas
   goes into the cell too.
-- **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
-  the tank screen's pattern. A button sends `TransferValveSettings` (hand and
-  button id); the server refuses an unknown hand or button or a hand holding no
-  TTV, and clamps the timer to 0–600 s.
+- **Its screen** (`ttv.TransferValveMenu`, `client.TransferValveScreen`). Using
+  a held TTV opens it from the server, with the inventory place of the hand it
+  was opened from. Its two slots have no container of their own: each reads and
+  writes a place in the stack's `zas_atmos:ttv_tanks`, so what's on the TTV is
+  always what they show, closing the menu has nothing to hand back, and a tank
+  has one place to exist. Buttons go through `clickMenuButton`, like every other
+  device GUI, and the timer is clamped to 0–600 s.
+
+  A menu on a held item can duplicate it, so the TTV can't move while the screen
+  is open. Its own slot takes no click or number key, and no other slot takes the
+  number key for its place, though a right-click with a tank still works on it.
+  An off-hand TTV gets a locked slot of its own, since only a menu's slots sync
+  while one is open. `stillValid` compares the stack with the one the menu opened
+  on, by identity, and that it is still in the hand and a single item. Every
+  click and button checks it first, so a stale menu writes nothing, and the
+  player's tick closes it. Clients get new stacks at each sync, so they can only
+  check the item. A number key copies a slot's stack before emptying it, which
+  would skip closing the valve, so the menu closes it before the click goes on.
+  Start waits for an empty cursor, and consumes the item in creative too, or its
+  tanks would be in the hand and in the entity.
 - **Primed** (`PrimedTransferValve`). Starting the timer consumes the item and
   adds the entity at the player's feet, tossed gently the way they face, with
   primed TNT's gravity and friction. It can't be targeted (`isPickable`), used

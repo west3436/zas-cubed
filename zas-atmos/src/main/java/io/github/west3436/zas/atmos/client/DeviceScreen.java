@@ -18,7 +18,7 @@ import net.minecraft.world.inventory.Slot;
 abstract class DeviceScreen<M extends AbstractContainerMenu> extends AbstractContainerScreen<M> {
     private static final int PANEL = 0xF0202020;
     private static final int BORDER = 0xFF808080;
-    private static final int TEXT = 0xFFE0E0E0;
+    static final int TEXT = 0xFFE0E0E0;
     private static final int SLOT = 0xFF14171A;
 
     DeviceScreen(M menu, Inventory inventory, Component title) {

@@ -44,6 +44,12 @@ public final class TransferValve {
     /** A new TTV's timer, s (CONT-104). */
     public static final int DEFAULT_TIMER = 10;
 
+    /** The first tank's place: its gas moves into the second when the valve opens. */
+    public static final int FIRST = 0;
+
+    /** The second tank's place. */
+    public static final int SECOND = 1;
+
     private ItemStack first;
     private ItemStack second;
     private boolean open;
@@ -123,13 +129,21 @@ public final class TransferValve {
     }
 
     /**
-     * Fits a tank in the first free place. Tanks only go on while the valve is closed.
+     * Whether a stack may go on, whichever way it comes: one tank, and only while the valve is closed.
+     * Whether there is a free place for it is for whoever puts it there.
+     */
+    public boolean accepts(ItemStack tank) {
+        return !open && tank.getCount() == 1 && tank.getItem() instanceof GasTankItem;
+    }
+
+    /**
+     * Fits a tank in the first free place, if the valve {@linkplain #accepts accepts} it.
      *
      * @param tank the tank, whose stack the valve keeps
      * @return whether it went on
      */
     public boolean attach(ItemStack tank) {
-        if (open || !(tank.getItem() instanceof GasTankItem)) {
+        if (!accepts(tank)) {
             return false;
         }
         if (first.isEmpty()) {
@@ -157,6 +171,11 @@ public final class TransferValve {
         ItemStack tank = second;
         second = ItemStack.EMPTY;
         return tank;
+    }
+
+    /** Takes the tank in a place off, closing an open valve first. */
+    public ItemStack detach(int place) {
+        return place == FIRST ? detachFirst() : detachSecond();
     }
 
     /**

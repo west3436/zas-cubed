@@ -43,8 +43,6 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveColors);
         modBus.addListener(ZasAtmosClient::transferValveModels);
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
-        TransferValveItem.settingsScreen = hand -> Minecraft.getInstance()
-                .setScreen(new TransferValveScreen(hand, Component.translatable("item.zas_atmos.tank_transfer_valve")));
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
@@ -136,6 +134,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.VOLUME_PUMP.get(), PumpScreen::volume);
         event.register(AtmosMenus.FILTER.get(), FilterScreen::new);
         event.register(AtmosMenus.MIXER.get(), MixerScreen::new);
+        event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
     }
 
     /**

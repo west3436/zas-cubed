@@ -15,7 +15,7 @@ import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
-import io.github.west3436.zas.atmos.ttv.TransferValveSettings;
+import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +32,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.ClickAction;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
@@ -60,7 +61,6 @@ public final class TransferValveTests {
     private static final ResourceLocation H2 = ResourceLocation.fromNamespaceAndPath("zas", "hydrogen");
     private static final ResourceLocation H2O = ResourceLocation.fromNamespaceAndPath("zas", "water_vapor");
     private static final double T = StandardAir.TEMPERATURE;
-    private static final int MAIN = InteractionHand.MAIN_HAND.ordinal();
 
     private TransferValveTests() {}
 
@@ -102,6 +102,13 @@ public final class TransferValveTests {
         p.moveTo(Vec3.atBottomCenterOf(a.abs(2, 1, 2)));
         p.setItemInHand(InteractionHand.MAIN_HAND, held);
         return p;
+    }
+
+    /** The screen of the TTV in a player's main hand. */
+    private static TransferValveMenu menu(FakePlayer p) {
+        TransferValveMenu menu = new TransferValveMenu(1, p.getInventory(), InteractionHand.MAIN_HAND);
+        p.containerMenu = menu;
+        return menu;
     }
 
     /** Starts the timer of the TTV in a player's hand, through its screen's button. */
@@ -464,34 +471,31 @@ public final class TransferValveTests {
 
     /**
      * The valve opens and closes by hand, through the screen's button, which the server checks
-     * (CONT-074): it needs both tanks, a known hand and button, and a hand holding a TTV.
+     * (CONT-074): it needs both tanks, a known button, and a hand holding a TTV.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_104_the_valve_opens_by_hand(GameTestHelper h) {
         Area a = new Area(h, 92);
         ItemStack stack = coldMix(TransferValve.DEFAULT_TIMER);
         FakePlayer p = player(a, stack);
-        TransferValveSettings valve = new TransferValveSettings(MAIN, TransferValveSettings.VALVE);
+        TransferValveMenu menu = menu(p);
 
-        h.assertTrue(TransferValveSettings.apply(p, valve), "the valve refused to open by hand");
+        h.assertTrue(menu.clickMenuButton(p, TransferValveMenu.VALVE), "the valve refused to open by hand");
         h.assertTrue(TransferValveItem.valve(stack).isOpen(), "the valve isn't open");
         h.assertTrue(GasTankItem.gas(TransferValveItem.valve(stack).first()).isEmpty(), "the first tank kept gas");
         close(h, GasTankItem.gas(TransferValveItem.valve(stack).second()).moles(O2), 5.0, "the merged O2");
 
-        h.assertTrue(TransferValveSettings.apply(p, valve), "the valve refused to close by hand");
+        h.assertTrue(menu.clickMenuButton(p, TransferValveMenu.VALVE), "the valve refused to close by hand");
         h.assertFalse(TransferValveItem.valve(stack).isOpen(), "the valve isn't closed");
 
-        h.assertFalse(TransferValveSettings.apply(p, new TransferValveSettings(MAIN, 9)), "an unknown button");
-        h.assertFalse(TransferValveSettings.apply(p, new TransferValveSettings(MAIN, -1)), "a negative button");
-        h.assertFalse(
-                TransferValveSettings.apply(p, new TransferValveSettings(2, TransferValveSettings.VALVE)),
-                "an unknown hand");
+        h.assertFalse(menu.clickMenuButton(p, TransferValveMenu.START + 1), "an unknown button");
+        h.assertFalse(menu.clickMenuButton(p, -1), "a negative button");
         p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.MULTITOOL.get()));
-        h.assertFalse(TransferValveSettings.apply(p, valve), "a hand holding no TTV");
+        h.assertFalse(menu.clickMenuButton(p, TransferValveMenu.VALVE), "a hand holding no TTV");
 
         ItemStack empty = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());
         p.setItemInHand(InteractionHand.MAIN_HAND, empty);
-        h.assertFalse(TransferValveSettings.apply(p, valve), "a TTV with no tanks opened");
+        h.assertFalse(menu(p).clickMenuButton(p, TransferValveMenu.VALVE), "a TTV with no tanks opened");
         h.assertFalse(TransferValveItem.valve(empty).isOpen(), "a TTV with no tanks is open");
         a.clear(-1, -1, 5, 5);
         h.succeed();
@@ -503,28 +507,29 @@ public final class TransferValveTests {
         Area a = new Area(h, 93);
         ItemStack stack = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());
         FakePlayer p = player(a, stack);
+        TransferValveMenu menu = menu(p);
         h.assertValueEqual(TransferValveItem.timer(stack), 10, "a new TTV's timer");
-        press(h, p, TransferValveSettings.UP_10);
+        press(h, menu, p, TransferValveMenu.UP_10);
         h.assertValueEqual(TransferValveItem.timer(stack), 20, "after +10");
-        press(h, p, TransferValveSettings.DOWN_1);
+        press(h, menu, p, TransferValveMenu.DOWN_1);
         h.assertValueEqual(TransferValveItem.timer(stack), 19, "after -1");
-        press(h, p, TransferValveSettings.UP_1);
-        press(h, p, TransferValveSettings.DOWN_10);
-        press(h, p, TransferValveSettings.DOWN_10);
-        press(h, p, TransferValveSettings.DOWN_10);
+        press(h, menu, p, TransferValveMenu.UP_1);
+        press(h, menu, p, TransferValveMenu.DOWN_10);
+        press(h, menu, p, TransferValveMenu.DOWN_10);
+        press(h, menu, p, TransferValveMenu.DOWN_10);
         h.assertValueEqual(TransferValveItem.timer(stack), 0, "the floor");
         for (int i = 0; i < 61; i++) {
-            press(h, p, TransferValveSettings.UP_10);
+            press(h, menu, p, TransferValveMenu.UP_10);
         }
         h.assertValueEqual(TransferValveItem.timer(stack), 600, "the ceiling");
-        press(h, p, TransferValveSettings.DEFAULT);
+        press(h, menu, p, TransferValveMenu.DEFAULT);
         h.assertValueEqual(TransferValveItem.timer(stack), 10, "back to the default");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
 
-    private static void press(GameTestHelper h, FakePlayer p, int button) {
-        h.assertTrue(TransferValveSettings.apply(p, new TransferValveSettings(MAIN, button)), "button " + button);
+    private static void press(GameTestHelper h, TransferValveMenu menu, FakePlayer p, int button) {
+        h.assertTrue(menu.clickMenuButton(p, button), "button " + button);
     }
 
     /** As an item it never runs its timer (the owner's decision): only starting the timer primes it. */
@@ -710,30 +715,28 @@ public final class TransferValveTests {
         ItemStack stack = coldMix(5);
         FakePlayer p = player(a, stack);
         h.assertTrue(TransferValveItem.toggle(stack), "the valve refused to open");
-        h.assertFalse(
-                TransferValveSettings.apply(p, new TransferValveSettings(MAIN, TransferValveSettings.START)),
-                "an open valve started its timer");
+        h.assertFalse(menu(p).clickMenuButton(p, TransferValveMenu.START), "an open valve started its timer");
         h.assertValueEqual(stack.getCount(), 1, "the TTV in the hand");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
 
-    /** The screen's take buttons put a tank in the inventory, closing an open valve first. */
+    /** A shift-click on the screen's slot puts a tank in the inventory, closing an open valve first. */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_103_the_screen_takes_tanks_off(GameTestHelper h) {
         Area a = new Area(h, 102);
         ItemStack stack = coldMix(5);
         FakePlayer p = player(a, stack);
         h.assertTrue(TransferValveItem.toggle(stack), "the valve refused to open");
-        press(h, p, TransferValveSettings.TAKE_FIRST);
+        TransferValveMenu menu = menu(p);
+        menu.clicked(TransferValve.FIRST, 0, ClickType.QUICK_MOVE, p);
         h.assertFalse(TransferValveItem.valve(stack).isOpen(), "the valve stayed open");
         h.assertTrue(TransferValveItem.valve(stack).first().isEmpty(), "the first tank is still on");
-        ItemStack taken = p.getInventory().getItem(1);
+        ItemStack taken = p.getInventory().getItem(8); // as any shift-click, it fills the hotbar from the far end
         close(h, GasTankItem.gas(taken).moles(O2), 2.5, "the taken tank's O2");
         close(h, GasTankItem.gas(TransferValveItem.valve(stack).second()).moles(O2), 2.5, "the remaining tank's O2");
-        h.assertFalse(
-                TransferValveSettings.apply(p, new TransferValveSettings(MAIN, TransferValveSettings.TAKE_FIRST)),
-                "it took a tank that isn't there");
+        menu.clicked(TransferValve.FIRST, 0, ClickType.QUICK_MOVE, p);
+        h.assertTrue(p.getInventory().getItem(7).isEmpty(), "it took a tank that isn't there");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
@@ -788,15 +791,15 @@ public final class TransferValveTests {
         Area a = new Area(h, 882);
         FakePlayer p = player(a, coldMix(TransferValve.DEFAULT_TIMER));
         Vec3 at = p.position();
-        TransferValveSettings valve = new TransferValveSettings(MAIN, TransferValveSettings.VALVE);
+        TransferValveMenu menu = menu(p);
 
-        TransferValveSettings.apply(p, valve);
+        menu.clickMenuButton(p, TransferValveMenu.VALVE);
         DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "opened", AtmosSounds.TTV_OPEN);
-        TransferValveSettings.apply(p, valve);
+        menu.clickMenuButton(p, TransferValveMenu.VALVE);
         DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "closed", AtmosSounds.VALVE_CLOSE);
 
         p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get()));
-        h.assertFalse(TransferValveSettings.apply(p, valve), "a TTV with no tanks opened");
+        h.assertFalse(menu(p).clickMenuButton(p, TransferValveMenu.VALVE), "a TTV with no tanks opened");
         DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "refused");
         a.clear(-1, -1, 5, 5);
         h.succeed();
