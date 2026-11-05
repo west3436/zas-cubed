@@ -1056,6 +1056,7 @@ public final class ZoneGraph {
             if (e.removed || e.sleeping) {
                 continue;
             }
+            e.molesPerSecond = 0;
             if (e.isAmbient()) {
                 if (!e.first().paused) {
                     exchangeWithAmbient(e);
@@ -1117,7 +1118,8 @@ public final class ZoneGraph {
         Zone a = e.first();
         Zone b = e.second();
         if (!a.mixture().isEquivalent(b.mixture())) {
-            share(a, b, settings.zoneRatio(e.connections, a.volume(), b.volume()));
+            e.molesPerSecond =
+                    share(a, b, settings.zoneRatio(e.connections, a.volume(), b.volume())) / settings.periodSeconds();
             if (!a.mixture().isEquivalent(b.mixture())) {
                 return;
             }
@@ -1187,12 +1189,15 @@ public final class ZoneGraph {
      * A gives up r·V_B/(V_A+V_B) of its gas and B gives up r·V_A/(V_A+V_B); each
      * merges the other's parcel, moving both a fraction r of the way to the
      * volume-weighted mean.
+     *
+     * @return the net moles that moved, never negative
      */
-    private void share(Zone a, Zone b, double r) {
+    private double share(Zone a, Zone b, double r) {
         double va = a.volume();
         double vb = b.volume();
         GasMixture fromA = a.mixture().removeFraction(r * vb / (va + vb));
         GasMixture fromB = b.mixture().removeFraction(r * va / (va + vb));
+        double net = Math.abs(fromA.totalMoles() - fromB.totalMoles());
         a.mixture().merge(fromB);
         b.mixture().merge(fromA);
         drainPruned(fromA);
@@ -1200,6 +1205,7 @@ public final class ZoneGraph {
         a.changed = true;
         b.changed = true;
         exchangeCount++;
+        return net;
     }
 
     /**
@@ -1216,6 +1222,7 @@ public final class ZoneGraph {
             double r = settings.ambientRatio(e.connections, vz);
             GasMixture out = z.mixture().removeFraction(r);
             GasMixture in = ambientFor(r * vz);
+            e.molesPerSecond = Math.abs(out.totalMoles() - in.totalMoles()) / settings.periodSeconds();
             if (z.mixture().merge(in)) {
                 ledger.record(LedgerCategory.AMBIENT, in, 1);
             }
@@ -1240,6 +1247,7 @@ public final class ZoneGraph {
         double r = settings.zoneRatio(e.connections, va, vp);
         GasMixture out = active.mixture().removeFraction(r * vp / (va + vp));
         GasMixture in = paused.mixture().copy().removeFraction(r * va / (va + vp));
+        e.molesPerSecond = Math.abs(out.totalMoles() - in.totalMoles()) / settings.periodSeconds();
         if (active.mixture().merge(in)) {
             ledger.record(LedgerCategory.PAUSED, in, 1);
         }

@@ -134,13 +134,47 @@ the server sends. It stays Accepted until the owner checks how it looks.*
 #### CLIENT-010 · Airflow sound
 `Should` · `R1` · `Accepted` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
 
-Such an edge shall play a looping hiss whose volume and pitch rise with the
-pressure difference, audible within 16 blocks.
+Such an edge shall play a looping hiss whose volume follows the moles per second
+through its openings and whose pitch rises with the pressure difference, audible
+within 16 blocks. A listener in a vacuum shall hear none of it.
 
-- **Rationale:** Inferred: a hiss is the clearest cue to a leak, louder as it
-  worsens.
-- **Verify:** Manual check of the hiss at different pressure differences and
-  distances.
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05 set the
+  loudness and the vacuum. Inferred: a hiss is the clearest cue to a leak, louder
+  as it worsens.
+- **Verify:** Manual check of the hiss at different pressure differences, room
+  sizes and distances.
+
+*2026-11-05: The owner changed the loudness rule. Volume followed the pressure
+difference; it now follows the moles per second through the opening, so no flow
+is silence and a big room venting is louder than a closet at the same pressure.
+The difference still sets the pitch. This stays Accepted, and nothing has been
+heard yet, so the Manual check is open.*
+
+*What was built. The engine records each edge's net moles per second, and the
+client gets it with the rest of DATA-015's list. Measured by `FlowExportTest`,
+through one hole at 1 atm to a vacuum: 11.6 mol/s from a 3-cell room, 23.6 from 27
+cells and 27.0 from 675. It levels off with size because venting is limited by the
+hole, not the room. `AirflowSoundPlan` holds the rest, with no game classes:*
+
+- *Volume is moles per second / 64, up to 1, so that hole plays at 0.18, 0.37 and
+  0.42. `AirflowSoundPlan.volume` is the one place that decides it.*
+- *Pitch is 1 at 101 kPa, and moves 0.107 for each doubling of the difference, from
+  0.7 to 1.5: 0.75 at 20 kPa and 1.11 at 200.*
+- *Openings are grouped by the 8-block cell of the world grid they are in, whichever
+  edge they belong to. Each cell is one source at the middle of its flow, with the
+  flows added up, so many edges at one breach make one capped sound. A client hears
+  the 2 sources loudest where it stands.*
+- *Each source plays two loops: `zas:airflow.hiss`, and the wind of the class its
+  difference reaches (FLOW-011): `airflow.light`, `.mob` from 65 kPa or `.heavy` from
+  85. The wind files carry almost nothing above 400 Hz and the hiss has no body
+  (`docs/research/vg-sounds.md`). So airflow takes at most 4 of CLIENT-015's 8 slots.*
+- *The vacuum is CLIENT-016's thin air, with no second rule here. It reads the real
+  pressure at the eyes, so it holds in a sealed suit and in creative.*
+
+*`AirflowSoundPlanTest` checks the curves, the grouping and the cap;
+`AirflowSoundLoopsTest` runs the loops through the real `LoopBook`, for the slots,
+the vacuum, a steady breach staying in the same voices, and nothing left once the
+flow ends.*
 
 #### CLIENT-004 · Low-pressure sound
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; damping every sound needs sound-engine hooks, and no R1 scenario needs it), 2026-10-31. · Verify: Manual

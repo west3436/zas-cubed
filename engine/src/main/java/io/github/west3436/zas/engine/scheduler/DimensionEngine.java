@@ -549,7 +549,8 @@ public final class DimensionEngine {
                 continue;
             }
             long[][] open = graph.openings(e, MAX_OPENINGS_PER_EDGE);
-            out.add(new FlowEdge(a.id(), b == null ? FlowEdge.AMBIENT : b.id(), pa, pb, open[0], open[1]));
+            out.add(new FlowEdge(
+                    a.id(), b == null ? FlowEdge.AMBIENT : b.id(), pa, pb, open[0], open[1], e.molesPerSecond()));
         }
         return out;
     }

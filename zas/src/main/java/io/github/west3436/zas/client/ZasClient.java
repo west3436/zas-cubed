@@ -59,8 +59,12 @@ public final class ZasClient {
         ClientLoops.register();
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientListenerAir.clear());
 
-        // Airflow's particles (CLIENT-003).
-        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> AirflowParticles.tick());
+        // Airflow's particles and sound (CLIENT-003, CLIENT-010). The particles' tick also ages what
+        // the client holds, so it goes first.
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {
+            AirflowParticles.tick();
+            AirflowSounds.tick();
+        });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> HeldFlows.CLIENT.clear());
     }
 }
