@@ -12,15 +12,20 @@ import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmStatus;
+import io.github.west3436.zas.atmos.firealarm.FireAlarmVoice;
+import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -184,6 +189,86 @@ public final class FireAlarmTests {
             h.assertValueEqual(status(alarm), FireAlarmStatus.UNPOWERED, "the unpowered alarm's model");
             h.assertFalse(alarm.triggered(), "the unpowered alarm tripped");
             h.assertValueEqual(c.danger(), 0, "the controller with an unpowered alarm");
+        });
+    }
+
+    // ---- CONT-128 -------------------------------------------------------------------------
+
+    /**
+     * The server plays one thing for an alarm: its reset, once, when it goes back to normal. Going off
+     * plays nothing, since each client plays that itself, and nor does losing power (CONT-128).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_128_the_server_plays_only_an_alarms_reset(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 811);
+        run(h, s, () -> {
+            FireAlarmBlockEntity alarm = build(s).alarm();
+            alarm.power().setTestPowered(true);
+            BlockPos at = alarm.getBlockPos();
+            s.cycles(2, alarm);
+            h.assertValueEqual(status(alarm), FireAlarmStatus.NORMAL, "the powered alarm");
+            DeviceSoundTests.played(h, at, "getting power");
+
+            heatTo(s, 480);
+            s.cycles(2, alarm);
+            h.assertValueEqual(status(alarm), FireAlarmStatus.ALARM, "at 480 K");
+            DeviceSoundTests.played(h, at, "going off");
+
+            heatTo(s, 293.15);
+            s.cycles(2, alarm);
+            h.assertValueEqual(status(alarm), FireAlarmStatus.NORMAL, "cooled");
+            DeviceSoundTests.played(h, at, "resetting", AtmosSounds.FIRE_ALARM_RESET);
+
+            heatTo(s, 480);
+            s.cycles(2, alarm);
+            alarm.power().setTestPowered(false);
+            s.cycles(2, alarm);
+            h.assertValueEqual(status(alarm), FireAlarmStatus.UNPOWERED, "with its power gone");
+            DeviceSoundTests.played(h, at, "losing power while alarming");
+        });
+    }
+
+    /**
+     * What a client's voice is told comes from the block's state alone: it starts when the block shows
+     * the alarm and stops at the first tick after it doesn't. A server has no ticker for it, so the
+     * alarm costs a server nothing (CONT-128).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_128_the_voice_follows_the_blocks_state(GameTestHelper h) {
+        Site s = new Site(h, 812);
+        run(h, s, () -> {
+            FireAlarmBlockEntity alarm = build(s).alarm();
+            alarm.power().setTestPowered(true);
+            BlockPos at = alarm.getBlockPos();
+            Vec3 middle = Vec3.atCenterOf(at);
+            h.assertTrue(
+                    alarm.getBlockState().getTicker(s.level, AtmosBlockEntities.FIRE_ALARM.get()) == null,
+                    "a server ticks the alarm for its sound");
+
+            FireAlarmVoice voice = new FireAlarmVoice();
+            voice.tick(middle.x, middle.y, middle.z); // puts the listener there
+            s.cycles(2, alarm);
+            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            h.assertTrue(voice.tick(middle.x, middle.y, middle.z) == null, "a normal alarm made a sound");
+
+            heatTo(s, 480);
+            s.cycles(2, alarm);
+            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            h.assertValueEqual(
+                    voice.tick(middle.x, middle.y, middle.z),
+                    new FireAlarmVoice.Request(middle.x, middle.y, middle.z, 1f),
+                    "the alarm going off");
+
+            heatTo(s, 293.15);
+            s.cycles(2, alarm);
+            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            h.assertValueEqual(
+                    voice.tick(middle.x, middle.y, middle.z),
+                    new FireAlarmVoice.Request(middle.x, middle.y, middle.z, 0f),
+                    "the alarm resetting");
+            FireAlarmBlock.report(alarm.getBlockState(), at, voice);
+            h.assertTrue(voice.tick(middle.x, middle.y, middle.z) == null, "still asking after the reset");
         });
     }
 }

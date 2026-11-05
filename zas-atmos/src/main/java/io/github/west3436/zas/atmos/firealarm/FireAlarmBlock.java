@@ -1,11 +1,13 @@
 package io.github.west3436.zas.atmos.firealarm;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
@@ -13,6 +15,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
@@ -100,5 +104,26 @@ public class FireAlarmBlock extends HorizontalDirectionalBlock implements Entity
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new FireAlarmBlockEntity(pos, state);
+    }
+
+    /**
+     * On a client, tells {@link FireAlarmVoice#LOCAL} each game tick that it is alarming. An alarm
+     * that resets, is broken or unloads stops telling it, which is all it takes to silence it. The
+     * work on a server has its own schedule.
+     */
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        if (!level.isClientSide || type != AtmosBlockEntities.FIRE_ALARM.get()) {
+            return null;
+        }
+        return (l, p, s, be) -> report(s, p, FireAlarmVoice.LOCAL);
+    }
+
+    /** Tells a voice about an alarm at a position, if its state says it is alarming. */
+    public static void report(BlockState state, BlockPos pos, FireAlarmVoice voice) {
+        if (state.getValue(STATUS) == FireAlarmStatus.ALARM) {
+            voice.report(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        }
     }
 }

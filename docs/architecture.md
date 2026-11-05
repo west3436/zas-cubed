@@ -2235,7 +2235,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12) and `DeviceLoops` (§11.2) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2918,7 +2918,8 @@ as the controller's own danger 2 would: firelocks close, the redstone signal is
 15 and the panel shows danger 2. CONT-046's fall-off applies: 10 s after the
 alarm stops, the controller drops back. An alarm with no controller has no
 power and does nothing. It polls rather than listening for the fire events,
-since it needs the temperature anyway and a poll survives a reload.
+since it needs the temperature anyway and a poll survives a reload. Its sound is in
+§11.13.
 
 **The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
 that controller's position and dimension on the stack. Used on a powered
@@ -3315,6 +3316,19 @@ tank's `open` and `close` follow the settings screen's pressure instead. A tank'
 `supply` doesn't know who is breathing, so the breath that crosses the line sets
 `zas_atmos:tank_low`, and the tank's next atmos tick plays `low` at its holder and
 clears it. A tank has to be run down past the line again to warn again.
+
+**The fire alarm** (CONT-128). A server plays only `reset`, as an alarm goes from
+`alarm` to `normal`. Each client plays the alarm itself, from the block state it
+already has, so it adds no sync. `FireAlarmBlock` has a ticker on clients only, which
+tells `firealarm.FireAlarmVoice.LOCAL` each game tick that the block shows `alarm`, and
+stops telling it when the block doesn't, or is gone. The voice has no game classes. Once
+per game tick it keeps the nearest alarm within 32 blocks, and says whether to sound:
+for `SOUND_TICKS` (70) ticks of every `PERIOD_TICKS` (240), starting as soon as an alarm
+is heard after a quiet spell. `client.FireAlarmSounds` asks `ClientSounds.loop` for it
+with one source for every alarm, so a client has at most one alarm sound. The 70 ticks
+and the fade make the sound's 80 ticks, so it plays once and doesn't start over. With no
+alarm left the voice asks once more at volume 0, which fades the sound in half a second
+rather than waiting for the lease.
 
 **Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
 canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
