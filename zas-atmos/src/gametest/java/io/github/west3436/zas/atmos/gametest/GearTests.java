@@ -15,6 +15,7 @@ import io.github.west3436.zas.atmos.gear.TankSettings;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.gametest.TestPlayers;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import java.util.Map;
@@ -173,6 +174,29 @@ public final class GearTests {
         close(h, GasTankItem.distributionPressure(o2), 22.3, 1e-9, "after the refused presses");
         TankSettings.apply(o2, new TankSettings(main, TankSettings.CLOSE));
         close(h, GasTankItem.distributionPressure(o2), 0, 0, "closed");
+        h.succeed();
+    }
+
+    /** The press's handler changes the tank in the sender's hand, and refuses a spectator or a dead sender (NFR-011). */
+    @GameTest(template = "empty")
+    public static void nfr_011_only_a_living_player_sets_the_tank_they_hold(GameTestHelper h) {
+        FakePlayer sender = TestPlayers.hurtable(h.getLevel(), "zas_tank_sender");
+        ItemStack o2 = stack(AtmosItems.OXYGEN_TANK);
+        sender.setItemInHand(InteractionHand.MAIN_HAND, o2);
+        TankSettings up = new TankSettings(InteractionHand.MAIN_HAND.ordinal(), TankSettings.UP_10);
+        double start = GasTankItem.distributionPressure(o2);
+
+        TankSettings.handle(up, TestPlayers.sentBy(sender));
+        close(h, GasTankItem.distributionPressure(o2), start + 10, 1e-9, "the press on the held tank");
+
+        sender.setGameMode(GameType.SPECTATOR);
+        TankSettings.handle(up, TestPlayers.sentBy(sender));
+        close(h, GasTankItem.distributionPressure(o2), start + 10, 1e-9, "a spectator's press");
+
+        sender.setGameMode(GameType.SURVIVAL);
+        sender.setHealth(0);
+        TankSettings.handle(up, TestPlayers.sentBy(sender));
+        close(h, GasTankItem.distributionPressure(o2), start + 10, 1e-9, "a dead player's press");
         h.succeed();
     }
 

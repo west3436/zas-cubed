@@ -12,7 +12,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * M1, the change hook (architecture §4.2 and §7; GEO-010, GEO-011, GEO-012).
+ * M1, the change hook (architecture §4.2 and §7; GEO-010, GEO-011, GEO-012, and through {@link
+ * ChangeTracker} CORE-056, CONT-053, FIRE-015 and FIRE-021).
  *
  * <p>Wraps the section write inside {@link LevelChunk#setBlockState(BlockPos, BlockState,
  * boolean)}, the one place every block write into a loaded chunk passes, including mods that

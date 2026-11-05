@@ -131,8 +131,9 @@ public final class Internals {
                 "message.zas.internals.on", String.format("%.1f", supply.get().distributionPressure()));
     }
 
-    private static void handleToggle(TogglePayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player && player.isAlive()) {
+    /** Handles the keybind's toggle on the server: only for the sender, and not for one dead or spectating (NFR-011). */
+    public static void handleToggle(TogglePayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player && player.isAlive() && !player.isSpectator()) {
             toggle(player);
         }
     }
