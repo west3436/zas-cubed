@@ -190,7 +190,7 @@ watchdog logs the cause if it comes back.*
 ## Compatibility
 
 #### NFR-020 · Platform
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-09
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-09
 
 zas-cubed shall run on NeoForge `[21.1.264,)` for Minecraft 1.21.1 under Java
 21, on both dedicated servers and singleplayer. 21.1.264 is the floor because
@@ -204,6 +204,14 @@ it contains the attachment-sync privacy fix and the network hardening
 *2026-11-03: Still Accepted. The mod metadata gives `[21.1.264,)` and CI uses
 Java 21, but CI builds and tests against 21.1.265 (`neo_version`), not the
 floor the Verify plan asks for ([#69](https://github.com/west3436/zas-cubed/issues/69)).*
+
+*2026-11-05: Implemented. `neo_version` in `gradle.properties` is now 21.1.264, and it
+is also each mod's minimum in `neoforge.mods.toml`, so CI's build, unit tests and
+GameTests all run on the floor, and the two can't drift apart. This replaces
+[neoforge §1](../research/neoforge-1.21.1.md#1-toolchain)'s "build against 21.1.265".
+21.1.265 added only context to enchanted loot events
+([NeoForge #3690](https://github.com/neoforged/NeoForge/pull/3690)), which ZAS³ doesn't
+use.*
 
 #### NFR-023 · Dedicated server safety
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: NFR-020
