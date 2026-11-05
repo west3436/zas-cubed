@@ -3153,6 +3153,18 @@ client works out for itself. No client ever sees a zone (D-53).
   per tick, how many ticks, each particle's life, how far it travels, the
   cone's half-angle, a grey and a size. The speed comes from the distance, the
   life and the sprite's friction, so a particle ends about where it should.
+  Sizes that follow moles go by ratio, between a low and a high amount, since
+  gas comes in amounts many powers of ten apart.
+- **The kinds:**
+
+  | Kind | Sent when | Its number | Shape |
+  |---|---|---|---|
+  | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
+  | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
+  | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
+
+  An exploding container sends nothing, since vanilla's explosion has its own
+  particles. Nothing is sent for no moles, so an empty canister shows nothing.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes

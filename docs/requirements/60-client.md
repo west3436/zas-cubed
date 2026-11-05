@@ -123,7 +123,8 @@ of the face and moving through it towards the low side. Each opening starts
 kPa / 200 particles a tick, up to 1, so 0.1 at 20 kPa and 0.5 at 101 kPa. Their
 speed is 0.1 + 0.35 × kPa / 101.325 blocks a tick, up to 0.6. One edge starts at
 most 8 a tick and a client at most 32, spent on the nearest edge first. The
-Particles setting scales the density: All 1, Decreased 0.4, Minimal none. With
+Particles setting scales the density by vanilla's own shares: All 1, Decreased
+2/3, Minimal none. With
 airflow switched off (FLOW-014) there are none. `AirflowParticlePlanTest` checks
 the curves, the caps, the setting, the direction and the 32 blocks;
 `client_003_players_within_32_blocks_are_sent_the_breach` and
@@ -241,6 +242,16 @@ blocks. `JetPlanTest` (Unit) and `client_018_a_spray_sends_a_jet_along_the_look`
 `client_018_a_spray_stopped_by_a_wall_is_shorter` and
 `client_018_only_a_spray_sends_a_jet` (GameTests) pass. Leaks and bursts are
 next, and nobody has seen any of it yet.*
+
+*2026-11-05: Leaks and bursts are built. A leaking tank sends a level jet in a
+random direction each atmos tick, with the moles it lost. A rupturing tank or
+canister, or a bursting pipe, sends a burst in every direction, with the moles
+it let out: a canister's share of its network, or all of a burst pipe's. Sizes go
+by ratio, because gas comes in amounts many powers of ten apart. An exploding
+container sends none, as vanilla's explosion has its own particles, and an empty
+canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests`
+and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
+these either, so this stays Draft.*
 
 ## Debug rendering
 
