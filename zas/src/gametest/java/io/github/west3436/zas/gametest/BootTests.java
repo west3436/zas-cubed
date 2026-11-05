@@ -22,10 +22,15 @@ public final class BootTests {
 
     /**
      * A GameTest server holds no mod but the ones ZAS³ needs, so this suite is the run with no
-     * optional mod that NFR-022 asks for: its passing is ZAS³ running fully without one.
+     * optional mod that NFR-022 asks for: its passing is ZAS³ running fully without one. The
+     * compatibility matrix's run is the one exception, as it holds other mods on purpose (NFR-025).
      */
     @GameTest(template = "empty")
     public static void nfr_022_runs_with_no_optional_mod(GameTestHelper h) {
+        if (Boolean.getBoolean("zas.compatMatrix")) {
+            h.succeed();
+            return;
+        }
         List<String> others = ModList.get().getMods().stream()
                 .map(IModInfo::getModId)
                 .filter(id -> !REQUIRED.contains(id))
