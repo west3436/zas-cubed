@@ -2446,7 +2446,10 @@ the cell in front of its grille).
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
     an open valve whose neighbour is in another network reconnects at its next
-    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`).
+    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
+    a valve updates no neighbour's shape, since its flanges and shape are the same
+    open or shut. That update's read of the next block would bring such a chunk
+    back for two game ticks, and a network built in them would reach into it.
 - **Heater** (CONT-019, CONT-087, D-73), in `.heater`.
   - A portable floor machine, not a full block, so it stands in its room's
     cell and gas passes around it. Its front faces the player who places it.
