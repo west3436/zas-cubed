@@ -16,7 +16,7 @@ class AirflowParticlePlanTest {
     private record Started(double x, double y, double z, double vx, double vy, double vz) {}
 
     private static VisibleFlow oneHole(int kpa) {
-        return new VisibleFlow(kpa, List.of(new VisibleOpening(0, 0, 0, EAST)));
+        return new VisibleFlow(kpa, 0, List.of(new VisibleOpening(0, 0, 0, EAST)));
     }
 
     /** A flow of {@code n} openings in a line at this x, each leaving by the east face. */
@@ -25,7 +25,7 @@ class AirflowParticlePlanTest {
         for (int i = 0; i < n; i++) {
             openings.add(new VisibleOpening(x, 0, i, EAST));
         }
-        return new VisibleFlow(kpa, openings);
+        return new VisibleFlow(kpa, 0, openings);
     }
 
     /** The particles started on average per tick. */
@@ -93,7 +93,7 @@ class AirflowParticlePlanTest {
     @Test
     void client_003_none_beyond_32_blocks() {
         // The face is at x = 1, y = 0.5, z = 0.5.
-        VisibleFlow flow = new VisibleFlow(5000, List.of(new VisibleOpening(0, 0, 0, EAST)));
+        VisibleFlow flow = new VisibleFlow(5000, 0, List.of(new VisibleOpening(0, 0, 0, EAST)));
         RandomGenerator random = new Random(3);
         for (int i = 0; i < 1000; i++) {
             assertEquals(
@@ -176,7 +176,7 @@ class AirflowParticlePlanTest {
 
     @Test
     void client_003_an_opening_inside_a_block_has_no_direction_but_stays_slow_and_local() {
-        VisibleFlow flow = new VisibleFlow(100, List.of(new VisibleOpening(0, 0, 0, VisibleOpening.NO_FACE)));
+        VisibleFlow flow = new VisibleFlow(100, 0, List.of(new VisibleOpening(0, 0, 0, VisibleOpening.NO_FACE)));
         RandomGenerator random = new Random(7);
         List<Started> started = new ArrayList<>();
         for (int i = 0; i < 200; i++) {

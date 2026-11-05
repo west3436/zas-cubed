@@ -37,9 +37,10 @@ class AirflowEffectsPayloadTest {
     @Test
     void data_015_payload_round_trips() {
         List<VisibleFlow> flows = List.of(
-                new VisibleFlow(101, List.of(new VisibleOpening(-29_999_000, 300, 29_999_000, 4))),
+                new VisibleFlow(101, 38, List.of(new VisibleOpening(-29_999_000, 300, 29_999_000, 4))),
                 new VisibleFlow(
                         1500,
+                        0,
                         List.of(
                                 new VisibleOpening(-29_999_033, 267, 29_999_033, 0),
                                 new VisibleOpening(-29_998_967, 333, 29_998_967, VisibleOpening.NO_FACE))));
@@ -56,21 +57,23 @@ class AirflowEffectsPayloadTest {
     void data_015_measured_bytes() {
         // Nothing: the end of airflow.
         assertEquals(1, bytes(List.of()));
-        // One hole in a wall: count, origin, kPa, opening count, one opening.
-        assertEquals(1 + 8 + 1 + 1 + 4, bytes(List.of(new VisibleFlow(101, grid(100, 64, 100, 1, 1)))));
+        // One hole in a wall: count, origin, kPa, flow, opening count, one opening.
+        assertEquals(1 + 8 + 1 + 1 + 1 + 4, bytes(List.of(new VisibleFlow(101, 38, grid(100, 64, 100, 1, 1)))));
         // A 3 by 3 hole.
-        assertEquals(1 + 8 + 1 + 1 + 9 * 4, bytes(List.of(new VisibleFlow(101, grid(100, 64, 100, 3, 3)))));
+        assertEquals(1 + 8 + 1 + 1 + 1 + 9 * 4, bytes(List.of(new VisibleFlow(101, 38, grid(100, 64, 100, 3, 3)))));
         // A difference over 127 kPa takes one byte more.
-        assertEquals(1 + 8 + 2 + 1 + 4, bytes(List.of(new VisibleFlow(500, grid(100, 64, 100, 1, 1)))));
+        assertEquals(1 + 8 + 2 + 1 + 1 + 4, bytes(List.of(new VisibleFlow(500, 38, grid(100, 64, 100, 1, 1)))));
+        // The flow's step takes a byte up to well over any real flow.
+        assertTrue(VisibleFlow.step(30_000) <= 127);
         // The largest list: 32 edges of 8 openings, 256 in all, within 33 blocks of the first.
         List<VisibleFlow> largest = new ArrayList<>();
         for (int i = 0; i < VisibleFlows.MAX_FLOWS; i++) {
-            largest.add(new VisibleFlow(500, grid(100 + i, 64, 100, 2, 4)));
+            largest.add(new VisibleFlow(500, 38, grid(100 + i, 64, 100, 2, 4)));
         }
         int openings = largest.stream().mapToInt(f -> f.openings().size()).sum();
         assertEquals(VisibleFlows.MAX_OPENINGS, openings);
         int size = bytes(largest);
-        assertEquals(1 + 8 + 32 * (2 + 1) + 256 * 4, size);
+        assertEquals(1 + 8 + 32 * (2 + 1 + 1) + 256 * 4, size);
         assertTrue(size < 1200, "the largest list is " + size + " bytes");
 
         // For comparison, what the push's payload (FLOW-017) takes for one hole, every atmos tick.

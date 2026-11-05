@@ -11,7 +11,7 @@ class HeldFlowsTest {
     private static final String HERE = "minecraft:overworld";
     private static final String THERE = "minecraft:the_nether";
     private static final List<VisibleFlow> BREACH =
-            List.of(new VisibleFlow(101, List.of(new VisibleOpening(1, 2, 3, 5))));
+            List.of(new VisibleFlow(101, 38, List.of(new VisibleOpening(1, 2, 3, 5))));
 
     @Test
     void data_015_a_steady_breach_keeps_showing_between_packets() {
@@ -40,7 +40,7 @@ class HeldFlowsTest {
     void data_015_an_empty_list_ends_it_and_a_newer_list_replaces_it() {
         HeldFlows held = new HeldFlows();
         held.accept(BREACH, HERE);
-        List<VisibleFlow> other = List.of(new VisibleFlow(40, List.of(new VisibleOpening(9, 9, 9, 0))));
+        List<VisibleFlow> other = List.of(new VisibleFlow(40, 20, List.of(new VisibleOpening(9, 9, 9, 0))));
         held.accept(other, HERE);
         assertEquals(other, held.flows());
         held.accept(List.of(), HERE);
