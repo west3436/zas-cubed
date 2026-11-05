@@ -156,7 +156,12 @@ public abstract class PortableGasDevice extends PortableDevice {
             return; // the blast of a failing tank can break it
         }
         airPressure = Double.NaN;
-        status = on() ? step(level) : PortableStatus.OFF;
+        if (on()) {
+            status = step(level);
+        } else {
+            status = PortableStatus.OFF;
+            reportStopped();
+        }
         showWorking(level, status == PortableStatus.WORKING);
     }
 
@@ -209,6 +214,7 @@ public abstract class PortableGasDevice extends PortableDevice {
         Map<ResourceLocation, Double> take = new TreeMap<>(move.take());
         take.replaceAll((gas, n) -> n * paid);
         double give = move.give() * paid;
+        reportMoved(give + take.values().stream().mapToDouble(Double::doubleValue).sum());
         if (held.isEmpty()) {
             onZone(level, take, give);
         } else {

@@ -7,12 +7,15 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Locale;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -59,6 +62,7 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
     private final Batteries.Slot battery = new Batteries.Slot(this::batteryChanged);
     private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
     private Status status = Status.NO_BATTERY;
+    private boolean stepped;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -131,6 +135,7 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
 
     @Override
     protected void atmosTick(ServerLevel level) {
+        Status was = status;
         IEnergyStorage e = battery.energy();
         if (e == null) {
             status = Status.NO_BATTERY;
@@ -145,7 +150,32 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
             }
             status = Status.CHARGING;
         }
+        if (status == Status.CHARGING) {
+            reportRunning();
+        } else {
+            reportStopped();
+        }
+        sound(level, was);
         showCharge(level);
+    }
+
+    /**
+     * Plays what a change of status sounds like (CONT-127): it starts charging, stops short, or
+     * finishes. The first step after loading has nothing to compare with, as its status isn't saved,
+     * so a chunk coming back plays nothing.
+     */
+    private void sound(ServerLevel level, Status was) {
+        if (!stepped) {
+            stepped = true;
+            return;
+        }
+        if (status == was || (status != Status.CHARGING && was != Status.CHARGING)) {
+            return;
+        }
+        SoundEvent sound = status == Status.CHARGING
+                ? AtmosSounds.RECHARGER_ON.get()
+                : status == Status.FULL ? AtmosSounds.RECHARGER_DONE.get() : AtmosSounds.RECHARGER_OFF.get();
+        level.playSound(null, worldPosition, sound, SoundSource.BLOCKS);
     }
 
     /** Whether it has power to charge with: paid for, or any power at all when it is set to draw nothing. */

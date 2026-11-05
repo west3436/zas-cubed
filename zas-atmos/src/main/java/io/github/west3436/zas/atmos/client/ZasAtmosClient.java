@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import net.minecraft.client.Minecraft;
@@ -47,6 +48,13 @@ public final class ZasAtmosClient {
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
         DeviceLoops.register(NeoForge.EVENT_BUS);
+
+        // Running machines' loops (CONT-127). The generator's isn't here: it plays from its own ticker.
+        DeviceLoops.add(AtmosBlocks.HEATER, AtmosSounds.HEATER_RUN);
+        DeviceLoops.add(AtmosBlocks.AIR_CONDITIONER, AtmosSounds.AIR_CONDITIONER_RUN);
+        DeviceLoops.add(AtmosBlocks.PORTABLE_PUMP, AtmosSounds.PORTABLE_PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.PORTABLE_SCRUBBER, AtmosSounds.PORTABLE_SCRUBBER_RUN);
+        DeviceLoops.add(AtmosBlocks.RECHARGER, AtmosSounds.RECHARGER_RUN);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */

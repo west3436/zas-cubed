@@ -6,11 +6,13 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMath;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -45,6 +47,16 @@ public class PortableScrubberBlockEntity extends PortableGasDevice {
     @Override
     protected int drawPerTick() {
         return AtmosServerConfig.get(AtmosServerConfig.PORTABLE_SCRUBBER_DRAW);
+    }
+
+    @Override
+    protected SoundEvent switchOnSound() {
+        return AtmosSounds.PORTABLE_SCRUBBER_ON.get();
+    }
+
+    @Override
+    protected SoundEvent switchOffSound() {
+        return AtmosSounds.PORTABLE_SCRUBBER_OFF.get();
     }
 
     @Override

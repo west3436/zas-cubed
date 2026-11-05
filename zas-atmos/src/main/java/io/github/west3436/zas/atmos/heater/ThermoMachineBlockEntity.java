@@ -132,6 +132,10 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
             status = step(level, air);
         } else {
             status = ThermoStatus.OFF;
+            reportStopped();
+        }
+        if (status.working()) {
+            reportRunning();
         }
         showWorking(level, status.working());
     }
