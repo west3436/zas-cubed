@@ -769,6 +769,10 @@ the lever if the per-cell cost ever matters.
   their target chunk, or with the dimension if that chunk isn't loaded; they
   are queued again after load. Queued removals complete with nothing moved
   (outcome `PAUSED`); waiting additions are cancelled, their gas saved.
+- **A stop that doesn't finish says why** (NFR-015). The game's final chunk loop
+  logs nothing while it runs, so `StopWatchdog`, a daemon thread, logs each
+  level's remaining chunk work and a dump of every thread once a stop has run
+  for 2 minutes, then every 2 minutes, at most 3 times. It only reads and logs.
 - **Level-wide state is tiny.** It is kept in a `SavedData`, `zas_atmos`, per
   dimension:
   - the zone-id counter, so saved ids are never issued again (CORE-026)
