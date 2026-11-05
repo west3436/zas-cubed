@@ -10,6 +10,7 @@ import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Map;
 import java.util.TreeMap;
@@ -80,6 +81,7 @@ public class PipeBlockEntity extends PipeNodeEntity {
                 sample.state() == AtmosphereState.AMBIENT,
                 1 - Math.pow(1 - OPEN_END_RATIO, AtmosTicks.SECONDS));
         exchange(level, port, Vec3.atCenterOf(worldPosition), flow);
+        GasJets.openEnd(level, worldPosition, PipeBlock.openFace(getBlockState()), flow.net() / AtmosTicks.SECONDS);
     }
 
     /**
@@ -124,5 +126,17 @@ public class PipeBlockEntity extends PipeNodeEntity {
      * @param out moles per gas leaving the pipe
      * @param in moles per gas entering it
      */
-    public record Flow(Map<ResourceLocation, Double> out, Map<ResourceLocation, Double> in) {}
+    public record Flow(Map<ResourceLocation, Double> out, Map<ResourceLocation, Double> in) {
+        /** The net moles leaving the pipe: negative if more enter it, and 0 if gases only pass each other. */
+        public double net() {
+            double net = 0;
+            for (double moles : out.values()) {
+                net += moles;
+            }
+            for (double moles : in.values()) {
+                net -= moles;
+            }
+            return net;
+        }
+    }
 }

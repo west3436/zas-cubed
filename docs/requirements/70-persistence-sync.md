@@ -348,3 +348,7 @@ player, excluding the debug overlay.
 - **Rationale:** Inferred: 2 KiB/s per player keeps atmos traffic small next
   to vanilla's own, even on busy servers.
 - **Verify:** Bench measures average atmos bytes per player in S-10.
+
+*2026-11-05: Gas particle events a block repeats while gas flows (CLIENT-019)
+count here. A player is sent at most 20 a second, about 1.2 KiB/s, however large
+the station. No Bench has measured this yet.*

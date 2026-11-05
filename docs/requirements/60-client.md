@@ -253,6 +253,29 @@ canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests
 and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
 these either, so this stays Draft.*
 
+#### CLIENT-019 · Flow particles
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-004, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017
+
+An open pipe end (CONT-004) moving at least 0.25 mol/s net shall show particles
+scaled by its flow, moving out of its mouth while gas leaves and into it while
+gas enters, and none below that.
+
+- **Rationale:** Decision: the owner, 2026-11-02 (#164) and 2026-11-05: players
+  should see big changes in the atmosphere, and nothing at a trickle.
+- **Verify:** Unit tests of the threshold and scaling; GameTests of what the
+  server sends for each flow; Manual check of how it looks.
+
+*2026-11-05: Open ends are built. While it flows, an end sends one event per
+atmos tick with its net moles per second, so gases only passing each other show
+nothing. A pipe with one connection blows out of the opposite face, and a lone
+pipe every way. Each event's particles last 22 game ticks and then stop. Events
+go to players within 16 blocks. Together with a tank's leak jets, a player is
+sent at most 20 a second, of 41-byte payloads: about 1.2 KiB/s with their headers,
+however large the station. Past that cap the same ends lose out each second. `JetPlanTest`,
+`JetEmittersTest`, `SendLimiterTest` and `GasJetTest` (Unit) and the `client_019_*`
+tests in `PipeTests` (GameTests) pass. Nobody has seen them yet. The art half of
+#164 is still to come. Vents and scrubbers wait for the device activity sync.*
+
 ## Sound files
 
 #### CLIENT-020 · Sound events resolve

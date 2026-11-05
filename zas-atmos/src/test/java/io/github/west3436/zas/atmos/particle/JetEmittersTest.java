@@ -167,6 +167,73 @@ class JetEmittersTest {
         assertEquals(0, emitters.sources());
     }
 
+    /** Runs an open end's jet long enough to make some particles. */
+    private void openEnd(double molesPerSecond) {
+        emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, molesPerSecond);
+        for (int i = 0; i < 10; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        assertTrue(spawned.size() > 0, "it made nothing");
+    }
+
+    @Test
+    void client_019_gas_going_out_flies_away_from_the_mouth() {
+        openEnd(4);
+        for (Spawned s : spawned) {
+            assertTrue(s.x >= 1, "it started behind the mouth: " + s.x);
+            assertTrue(s.vx > 0, "it isn't flying away: " + s.vx);
+        }
+    }
+
+    @Test
+    void client_019_gas_going_in_flies_into_the_mouth() {
+        openEnd(-4);
+        JetPlan plan = JetPlan.of(GasJetKind.OPEN_END, -4);
+        for (Spawned s : spawned) {
+            assertTrue(s.x > 1 + plan.distance() * 0.5, "it started too near the mouth: " + s.x);
+            assertTrue(s.vx < 0, "it isn't flying in: " + s.vx);
+            // Fly it the rest of its life, as the sprite's friction would, and see where it ends.
+            double at = s.x;
+            double speed = s.vx;
+            for (int i = 0; i < 8; i++) {
+                at += speed;
+                speed *= JetPlan.FRICTION;
+            }
+            assertEquals(1, at, 0.5, "it ended away from the mouth");
+        }
+    }
+
+    @Test
+    void client_019_a_flow_that_stops_goes_quiet_by_itself() {
+        emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, 4);
+        for (int i = 0; i < JetPlan.OPEN_END_TICKS; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        int made = spawned.size();
+        assertTrue(made > 0);
+        for (int i = 0; i < 40; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        assertEquals(made, spawned.size(), "it kept going with no new word from the server");
+        assertEquals(0, emitters.sources());
+    }
+
+    @Test
+    void client_019_a_flow_that_goes_on_never_stops_or_piles_up() {
+        // The server sends one every atmos tick: one source, on for good, at its plan's rate.
+        double perTick = JetPlan.of(GasJetKind.OPEN_END, 4).perTick();
+        int ticks = 0;
+        for (int second = 0; second < 10; second++) {
+            emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, 4);
+            assertEquals(1, emitters.sources());
+            for (int i = 0; i < 20; i++) {
+                tick(ParticleDensity.ALL);
+                ticks++;
+            }
+        }
+        assertEquals(perTick * ticks, spawned.size(), 1.0);
+    }
+
     @Test
     void client_018_a_spray_goes_along_its_direction() {
         spray(1);
