@@ -11,6 +11,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.ArrayList;
@@ -296,7 +297,7 @@ public final class DebugOverlay {
                             eyes.getY() + y - PROBE_RADIUS,
                             eyes.getZ() + z - PROBE_RADIUS);
                     Geometry g = level.isLoaded(pos) && !level.isOutsideBuildHeight(pos)
-                            ? table.geometry(level.getBlockState(pos))
+                            ? PositionGeometries.geometry(level, pos, level.getBlockState(pos), table)
                             : Geometry.AIR;
                     ids[(y * side + z) * side + x] = palette.computeIfAbsent(g, k -> palette.size());
                 }

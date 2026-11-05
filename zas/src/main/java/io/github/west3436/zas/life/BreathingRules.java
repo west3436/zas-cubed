@@ -36,9 +36,11 @@ import org.jetbrains.annotations.Nullable;
  *       (LIFE-001).
  *   <li>A breather breathes the atmosphere at its eyes (LIFE-002, API-015), or, with its internals
  *       on, its breathing sealed and a tank that delivers, the tank's gas ({@link Internals},
- *       {@link BreathSource#INTERNALS}, {@link Protection#SEALED_BREATHING}: LIFE-021). With an
- *       O2 partial pressure below the minimum it can't breathe (LIFE-003); a gas its hazard
- *       profile makes harmful there is a {@link Hazard#TOXIC_GAS} (LIFE-004).
+ *       {@link BreathSource#INTERNALS}, {@link Protection#SEALED_BREATHING}: LIFE-021). A filter in
+ *       its head slot, or of its own, takes the {@code #zas:toxic} gases out of that breath,
+ *       wherever it came from ({@link Protection#GAS_FILTERING}: API-022, CONT-088). With an O2
+ *       partial pressure below the minimum it can't breathe (LIFE-003); a gas its hazard profile
+ *       makes harmful there is a {@link Hazard#TOXIC_GAS} (LIFE-004).
  *   <li>Whether or not it breathes, and with its eyes in a fluid too, the pressure and temperature
  *       of the atmosphere at its eyes may harm it ({@link EnvironmentHazards}: LIFE-010, LIFE-011,
  *       LIFE-014), unless it is in {@code zas:atmosphere_immune} ({@link Protection#IMMUNE},
@@ -139,7 +141,9 @@ public final class BreathingRules {
         }
         ResourceKey<Level> dimension = entity.level().dimension();
         Internals.Active internals = Internals.active(entity);
-        GasMixture breath = internals != null ? internals.breath() : around;
+        boolean filtered = WornProtection.gasFiltering(entity);
+        GasMixture source = internals != null ? internals.breath() : around;
+        GasMixture breath = filtered ? GasHazards.filtered(source) : source;
         double minimum = BreathingConfig.oxygenMinimum();
         double oxygen = breath.partialPressure(StandardAir.OXYGEN);
         boolean enough = oxygen >= minimum || !HazardConfig.enabled(dimension, HazardType.HYPOXIA);
@@ -153,6 +157,9 @@ public final class BreathingRules {
         hazards(b, exposure);
         if (internals != null) {
             b.protection(Protection.SEALED_BREATHING);
+        }
+        if (filtered) {
+            b.protection(Protection.GAS_FILTERING);
         }
         if (!environment) {
             b.protection(Protection.IMMUNE);

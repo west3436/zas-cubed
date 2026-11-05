@@ -20,6 +20,7 @@ import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.PresetOptions;
@@ -31,6 +32,7 @@ import io.github.west3436.zas.engine.scheduler.ZoneView;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ClientGasRegistry;
 import io.github.west3436.zas.gas.ServerGasRegistry;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.ClientBreath;
@@ -226,6 +228,16 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             return CompletableFuture.completedFuture(null);
         }
         return service.unpin(level, owner);
+    }
+
+    @Override
+    public void markDirty(ServerLevel level, BlockPos pos) {
+        if (level.isOutsideBuildHeight(pos)
+                || level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) {
+            return; // nothing is held there, and it is read afresh when it loads
+        }
+        PositionGeometries.forget(level, pos);
+        ChangeTracker.markDirty(level, pos);
     }
 
     @Override

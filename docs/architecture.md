@@ -289,8 +289,9 @@ Requirements: CORE-036, CORE-048, CORE-070, CORE-074, D-43.
 - Snapshot dirty sections with `PalettedContainer#copy()` (*spike (S5):*
   0.3 µs per section). `SectionCapture` takes the copy; the worker decodes
   it into a `SectionSnapshot`.
-- Evaluate position-dependent shapes and seal providers for dirty positions
-  (API-028).
+- Evaluate position-dependent shapes and seal providers in the sections being
+  copied, for the positions with no answer kept (API-028). A section with no
+  such block pays one look at its palette.
 - Read ambient providers (ENV-015). *Implemented
   ([#66](https://github.com/west3436/zas-cubed/issues/66)):*
   `DimensionAtmos.close` calls `Ambients.takeProviderAnswer` first, in every
@@ -403,7 +404,12 @@ context (GEO-041).
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
    a snapshot is taken, and travels in `SectionSnapshot` overrides (GEO-043,
-   API-028).
+   API-028). `PositionGeometries` keeps the answer per position until the block
+   state there is written or `markDirty` is called, so a section copied again
+   asks nothing again. The worker gives each override's geometry an id in the
+   engine's own extensible copy of the palette, so the table's palette never
+   changes. A datapack override of a seal-provider block leaves it unflagged:
+   the pack has the last word.
 6. **`dynamicShape` blocks** (179 vanilla states, including moving pistons and
    shulker boxes) use the geometry of their settled state (GEO-042), from a
    data table of state → settled state.
@@ -459,8 +465,8 @@ uncovered part of the face (GEO-003, GEO-004).
   growing isn't one. Any other write costs the same two array reads again.
 - **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
   all its non-empty sections are snapshotted and the worker compares them with
-  saved membership. `markDirty(level, pos)` (GEO-014) sets the dirty bit and
-  forces re-evaluation of position-dependent overrides.
+  saved membership. `BlockGeometry.markDirty(level, pos)` (GEO-014) sets the
+  dirty bit and forces re-evaluation of position-dependent overrides.
 
 ### 4.3 The worker's section mirror and classification (GEO-020 to GEO-028)
 
@@ -1681,7 +1687,14 @@ client breathing sync (LIFE-023): the server sends each player its own state
   - **Airflow resistance** is the highest of the pieces' and the entity's own
     (`WornProtection.airflowResistance`), which scales airflow's push
     (FLOW-012).
-  - **Gas filtering** is carried but not yet applied.
+  - **Gas filtering** comes from the head slot or the entity itself
+    (`WornProtection.gasFiltering`). `BreathingRules` takes the `#zas:toxic`
+    gases out of the breath, from the atmosphere or internals, at the same
+    temperature and volume, so the other gases keep their partial pressures,
+    and the verdict lists `GAS_FILTERING`. Only what is breathed changes: the
+    filter holds nothing and doesn't wear out, the zone keeps its gas, and a
+    tank's draw and exhale carry its gas on unfiltered (LIFE-045). The gas mask
+    itself (CONT-088) is still to come.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -1928,8 +1941,8 @@ sound, and nothing here runs for it.*
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, and the `ServerThreads` check |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
-| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
-| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
+| `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `BlockGeometry` (`markDirty(level, pos)`; GEO-014), `CompletableFuture`-based returns |
+| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block; built, with its `BLOCK` capability and the `SealGeometry` it answers with: sealed faces, zone-boundary faces and volume; API-023, API-028), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
@@ -2015,8 +2028,9 @@ breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
 *Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
 and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
 for the conditions, and breathing from internals, listed as `SEALED_BREATHING`
-with source `INTERNALS`. **Not yet built:** gas filtering, so no verdict lists
-`GAS_FILTERING`.
+with source `INTERNALS`. *Implemented
+([#60](https://github.com/west3436/zas-cubed/issues/60)):* gas filtering, listed
+as `GAS_FILTERING` for a breather with a filter, whatever is in its breath.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
 

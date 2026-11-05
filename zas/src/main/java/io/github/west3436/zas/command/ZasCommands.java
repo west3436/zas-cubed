@@ -33,6 +33,7 @@ import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.persistence.DimensionPause;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
@@ -651,7 +652,10 @@ public final class ZasCommands {
         GeometryTable table = Geometries.table();
         List<CompletableFuture<MutationResult>> futures = new ArrayList<>();
         for (BlockPos p : BlockPos.betweenClosed(from, to)) {
-            if (!level.isLoaded(p) || table.geometry(level.getBlockState(p)).volume() <= 0) {
+            if (!level.isLoaded(p)
+                    || PositionGeometries.geometry(level, p, level.getBlockState(p), table)
+                                    .volume()
+                            <= 0) {
                 continue;
             }
             double t = Atmospheres.at(level, p).temperature();

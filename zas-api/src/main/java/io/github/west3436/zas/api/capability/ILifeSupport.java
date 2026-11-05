@@ -14,7 +14,9 @@ import net.neoforged.neoforge.capabilities.ItemCapability;
  *   <li>pressure protection: the range of pressures it is rated for (LIFE-020);
  *   <li>thermal protection: the range of temperatures it is rated for (LIFE-025);
  *   <li>sealed breathing, which internals need, from the head slot (LIFE-021);
- *   <li>gas filtering, and airflow resistance (FLOW-012);
+ *   <li>gas filtering, which keeps the {@code #zas:toxic} gases out of the breath, from the head
+ *       slot (CONT-088);
+ *   <li>airflow resistance (FLOW-012);
  *   <li>an internal supply of breathable gas for internals ({@link IInternalSupply}), from a gas
  *       tank anywhere internals look for one, or a suit's tank slot (LIFE-028).
  * </ul>
@@ -97,8 +99,10 @@ public interface ILifeSupport {
     }
 
     /**
-     * Whether it filters gases out of the wearer's breath, as a gas mask does. It counts only in the
-     * head slot, or on the entity itself. False by default.
+     * Whether it filters the {@link io.github.west3436.zas.api.gas.GasTags#TOXIC} gases out of the
+     * wearer's breath, whether that comes from the atmosphere or its internals, as a gas mask does
+     * (CONT-088). It supplies no O₂, holds nothing and never wears out: the gases stay where they
+     * were. It counts only in the head slot, or on the entity itself. False by default.
      *
      * @return true if it filters
      */
