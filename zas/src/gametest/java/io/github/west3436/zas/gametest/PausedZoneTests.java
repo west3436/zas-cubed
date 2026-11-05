@@ -10,12 +10,20 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.BreathSource;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.Map;
@@ -23,6 +31,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -107,8 +117,9 @@ public final class PausedZoneTests {
 
     /**
      * An API query at a paused zone sees its last-known state, and a point in an unloaded chunk is
-     * unresolved, with the ambient as its last-known state (GEO-035). Breathing and devices come
-     * with LIFE and zas_atmos; they read the same table.
+     * unresolved, with the ambient as its last-known state (GEO-035). A breathing player and an
+     * active zone are checked below, and devices and pipes in {@code zas_atmos}'s {@code
+     * PausedZoneDeviceTests}.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void geo_035_queries_see_last_known_state(GameTestHelper h) {
@@ -125,6 +136,112 @@ public final class PausedZoneTests {
                 far.mixture(), Atmospheres.at(r.level, r.abs(5, 6, 6)).mixture(), "unresolved reads the ambient");
         r.dimension().simulateLoad(r.chunk(EAST), saved);
         r.tick();
+        h.succeed();
+    }
+
+    /**
+     * A breathing player in a paused zone goes by the zone's last-known composition, pressure and
+     * temperature, none of them the ambient's: its verdict, its air meter and its damage all come
+     * from the room as it paused, and it draws nothing from it (GEO-035).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_035_a_breathing_player_sees_last_known_state(GameTestHelper h) {
+        Rooms r = new Rooms(h, 970);
+        r.clear(8, 23);
+        r.shell(10, 21);
+        r.settle(GasMutations.remove(r.level, r.point(12, 2, 2), Map.of(O2, 1e6, Rooms.N2, 1e6), source("geo_035")));
+        double hot = 400;
+        double moles = 5 * 90_000 / (GasMixture.GAS_CONSTANT * hot); // 5 kPa of O2 in the 90,000 L room
+        r.settle(
+                GasMutations.add(r.level, r.point(12, 2, 2), new GasParcel(Map.of(O2, moles), hot), source("geo_035")));
+        FakePlayer player = TestPlayers.hurtable(r.level, "zas_geo_035");
+        player.moveTo(Vec3.atBottomCenterOf(r.abs(12, 1, 2)));
+
+        byte[] saved = r.dimension().simulateUnload(r.chunk(EAST));
+        try {
+            r.tick();
+            ZoneInfo known = r.zone(12, 2, 2);
+            h.assertTrue(known.paused(), "the zone didn't pause");
+            h.assertValueEqual(Atmospheres.of(player).state(), AtmosphereState.PAUSED, "the air at its eyes");
+            h.assertValueEqual(Atmospheres.of(player).mixture(), known.mixture(), "the last-known mixture");
+
+            long t = r.level.getGameTime();
+            Breathability verdict = Breathers.checkAt(player, t).verdict();
+            h.assertValueEqual(verdict.reason(), BreathReason.LOW_OXYGEN, "the composition");
+            h.assertValueEqual(verdict.source(), BreathSource.ATMOSPHERE, "what it breathes");
+            h.assertValueEqual(verdict.breath(), Optional.of(known.mixture()), "its breath");
+            h.assertTrue(verdict.hazards().contains(Hazard.LOW_PRESSURE), "the pressure: " + verdict);
+            h.assertTrue(verdict.hazards().contains(Hazard.HEAT), "the temperature: " + verdict);
+            h.assertValueEqual(Breathing.of(player), verdict, "the API's verdict");
+
+            float health = player.getHealth();
+            Breathers.checkAt(player, t + 40);
+            h.assertTrue(player.getHealth() < health, "2 s in the room did no harm");
+            int air = player.getAirSupply();
+            for (int i = 0; i < 20; i++) {
+                player.baseTick();
+            }
+            h.assertTrue(player.getAirSupply() < air, "the air meter didn't drain");
+
+            r.ticks(2);
+            r.same(known, r.zone(12, 2, 2), "after being breathed");
+            h.assertTrue(r.zone(12, 2, 2).paused(), "the zone resumed");
+        } finally {
+            r.dimension().simulateLoad(r.chunk(EAST), saved);
+            r.tick();
+        }
+        h.succeed();
+    }
+
+    /**
+     * An active zone across an edge from a paused one exchanges with the paused zone's last-known
+     * state: it moves toward it and never past it, the paused zone doesn't change, and the ledger
+     * records the gas as the paused category (GEO-035).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_035_an_active_zone_across_an_edge_sees_last_known_state(GameTestHelper h) {
+        Rooms r = new Rooms(h, 971);
+        r.clear(0, 23);
+        r.shell(2, 9); // A, in the west chunk
+        r.shell(9, 21); // B, across both chunks, sharing the wall at x = 9
+        r.settle(GasMutations.add(r.level, r.point(5, 2, 2), oxygen(10), source("geo_035")));
+        r.settle(GasMutations.add(r.level, r.point(12, 2, 2), oxygen(400), source("geo_035")));
+        r.set(9, 2, 2, AIR);
+        r.tick();
+        h.assertFalse(r.zone(5, 2, 2).id().equals(r.zone(12, 2, 2).id()), "the rooms merged");
+
+        byte[] saved = r.dimension().simulateUnload(r.chunk(EAST));
+        try {
+            r.tick();
+            ZoneInfo known = r.zone(12, 2, 2);
+            h.assertTrue(known.paused(), "B didn't pause");
+            h.assertFalse(r.zone(5, 2, 2).paused(), "A paused");
+
+            double before = r.zone(5, 2, 2).mixture().moles(O2);
+            CompletableFuture<ConservationReport> check = r.dimension().checkConservation();
+            r.tick();
+            double gained = r.zone(5, 2, 2).mixture().moles(O2) - before;
+            h.assertTrue(gained > 0, "A didn't draw from B");
+            ConservationReport report = check.join();
+            h.assertTrue(report.conserved(), "the checker reported " + report);
+            int o2 = r.dimension().registry().indexOf(O2.toString());
+            h.assertTrue(
+                    report.recorded(LedgerCategory.PAUSED, o2) > 0, "the gas isn't in the ledger's paused category");
+            r.same(known, r.zone(12, 2, 2), "B after the exchange");
+
+            double last = r.zone(5, 2, 2).mixture().pressure();
+            for (int i = 0; i < 20; i++) {
+                r.tick();
+                double now = r.zone(5, 2, 2).mixture().pressure();
+                h.assertTrue(now > last, "A stopped rising at " + now + " kPa, tick " + i);
+                h.assertTrue(now < known.mixture().pressure(), "A went past B's last-known pressure, tick " + i);
+                last = now;
+            }
+            r.same(known, r.zone(12, 2, 2), "B after 20 s");
+        } finally {
+            r.dimension().simulateLoad(r.chunk(EAST), saved);
+            r.tick();
+        }
         h.succeed();
     }
 
