@@ -129,7 +129,7 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
             if (air.state() == AtmosphereState.ZONED) {
                 room = air.temperature();
             }
-            status = step(level, air);
+            status = step(level, air, false);
         } else {
             status = ThermoStatus.OFF;
             reportStopped();
@@ -140,32 +140,48 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
         showWorking(level, status.working());
     }
 
-    /** One step's work on its room. */
-    private ThermoStatus step(ServerLevel level, AtmosphereSample air) {
+    @Override
+    protected boolean reportNextStep(ServerLevel level) {
+        boolean working = step(level, Atmospheres.at(level, point()), true).working();
+        if (working) {
+            reportRunning();
+        }
+        return working;
+    }
+
+    /**
+     * One step's work on its room.
+     *
+     * @param air the reading of its cell
+     * @param simulate true to say what it would do and leave the rest: no heat moves and no charge goes
+     */
+    private ThermoStatus step(ServerLevel level, AtmosphereSample air, boolean simulate) {
         IEnergyStorage energy = battery().energy();
         if (energy == null) {
             return ThermoStatus.NO_BATTERY;
         }
-        if (Double.isNaN(room)) {
+        if (air.state() != AtmosphereState.ZONED) {
             return ThermoStatus.NO_ROOM;
         }
         double power = maxWatts();
         double c = GasProperties.heatCapacity(air.mixture().moles());
-        double joules = joules(c, room, setpoint, AtmosTicks.SECONDS, power);
+        double joules = joules(c, air.temperature(), setpoint, AtmosTicks.SECONDS, power);
         if (joules <= 0) {
             return ThermoStatus.AT_SETPOINT;
         }
         int cost = HeaterMath.energy(joules, AtmosTicks.SECONDS, power, drawPerTick(), AtmosTicks.PERIOD);
         if (cost > 0) {
-            int paid = energy.extractEnergy(cost, false);
+            int paid = energy.extractEnergy(cost, simulate);
             if (paid <= 0) {
                 return ThermoStatus.BATTERY_EMPTY;
             }
-            setChanged();
             joules *= (double) paid / cost;
         }
-        pending = move(level, joules);
-        watts = joules / AtmosTicks.SECONDS;
+        if (!simulate) {
+            setChanged();
+            pending = move(level, joules);
+            watts = joules / AtmosTicks.SECONDS;
+        }
         return working();
     }
 

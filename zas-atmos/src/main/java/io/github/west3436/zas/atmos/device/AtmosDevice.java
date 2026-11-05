@@ -57,7 +57,8 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
 
     /**
      * Says the device is off, has no power, or moves too little to show, from {@link #atmosTick}: it
-     * reads as idle after this step, with no hold, so its sound stops when it does.
+     * reads as idle after this step, with no hold, so its sound stops when it does. A device switched
+     * between steps follows this with {@link #finishActivity}, so it reads as idle at once.
      */
     protected final void reportStopped() {
         if (activity != null) {
@@ -65,8 +66,12 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
         }
     }
 
-    /** Ends a step's activity and passes the level on, if this device has ever reported any. */
-    private void finishActivity(ServerLevel server) {
+    /**
+     * Ends what has been reported so far and passes the level on, if this device has ever reported any.
+     * The base does this at the end of each step. A device switched between steps does it too, so that
+     * its level changes when its switch does.
+     */
+    protected final void finishActivity(ServerLevel server) {
         if (activity != null) {
             DeviceActivitySync.report(server, worldPosition, activity.finishStep(), AtmosTicks.now(server));
         }

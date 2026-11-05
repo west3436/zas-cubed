@@ -52,11 +52,28 @@ public final class CellWatch {
      *     the ambient
      */
     public boolean trust(AtmosphereSample sample) {
-        boolean steady = sample.state() == lastState && sample.zone().equals(lastZone);
+        boolean steady = steady(sample);
         lastState = sample.state();
         lastZone = sample.zone();
-        return settled
-                && steady
-                && (sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.AMBIENT);
+        return settled && steady && actsOn(sample);
+    }
+
+    /**
+     * What {@link #trust} would say of this reading at the next step, recording nothing.
+     *
+     * @param sample the cell's reading now
+     * @return true if the wait will be over, and the cell reads as at the last step and is zoned or the
+     *     ambient
+     */
+    public boolean wouldTrust(AtmosphereSample sample) {
+        return settling == 0 && steady(sample) && actsOn(sample);
+    }
+
+    private boolean steady(AtmosphereSample sample) {
+        return sample.state() == lastState && sample.zone().equals(lastZone);
+    }
+
+    private static boolean actsOn(AtmosphereSample sample) {
+        return sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.AMBIENT;
     }
 }

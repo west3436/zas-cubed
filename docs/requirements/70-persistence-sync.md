@@ -290,8 +290,10 @@ moved in its last atmos tick: idle below 0.05 mol, trickle from 0.05, working
 from 1 and hard from 5. A level shall rise at once, and fall only after 2 atmos
 ticks running below half of where it starts. A device that is off or has no
 power shall read as idle from that atmos tick, as shall an open pipe end or
-passive vent moving less than 0.25 mol/s net. A device that does other work,
-such as a heater, shall read as working while it runs.
+passive vent moving less than 0.25 mol/s net. A portable (CONT-018), pump, filter
+or mixer switched off shall read as idle from that moment, and a portable switched
+on shall read at once as what its next atmos tick would move. A device that does
+other work, such as a heater, shall read as working while it runs.
 
 - **Rationale:** Decision: the owner's sound decisions of 2026-11-05: a device's
   loop plays only while it moves gas, and particles show gas moving. Inferred:
@@ -321,6 +323,16 @@ lit state it already syncs (CONT-127).*
 *2026-11-05: An open end or passive vent now reads only the flow that shows
 (CLIENT-019), with no hold below it, so its loop stops with its particles
 (CONT-125).*
+
+*2026-11-05: from the owner's playtest of the S-11/S-13 world, on the heater, air
+conditioner, portable scrubber and portable pump: "Noticeable delay in the animation
+and sounds when toggling power". A switch now passes its level on when it moves, not
+at the device's next step (`AtmosDevice.finishActivity`), and
+`DeviceSoundTests.cont_018_*`, `cont_019_*` and
+`data_017_an_inline_device_switched_off_reads_idle_at_once` check it. A pump, filter
+or mixer switched on still waits for its step, which is what finds out if it has
+power and gas to move. A client hears of any of this at the player's next sync,
+within 4 game ticks (DATA-018).*
 
 #### DATA-018 · Device activity sync
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017

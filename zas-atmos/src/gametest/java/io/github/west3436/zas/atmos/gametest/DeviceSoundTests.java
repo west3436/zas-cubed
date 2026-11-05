@@ -1,15 +1,20 @@
 package io.github.west3436.zas.atmos.gametest;
 
+import io.github.west3436.zas.api.gas.GasMixture;
+import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload.Change;
 import io.github.west3436.zas.atmos.device.DeviceActivitySync;
+import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
+import io.github.west3436.zas.atmos.heater.AirConditionerMath;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterMath;
@@ -26,6 +31,8 @@ import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.gametest.TestPlayers;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.IntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -273,8 +280,8 @@ public final class DeviceSoundTests {
 
     /**
      * A heater reads as working only while it heats: past its setpoint it falls idle after device
-     * activity's hold, and switched off at its next step (CONT-127, DATA-017). The air conditioner
-     * shares the code.
+     * activity's hold, and switched off at once (CONT-127, DATA-017). The air conditioner shares the
+     * code.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_127_a_heater_reports_working_only_while_it_heats(GameTestHelper h) {
@@ -310,8 +317,8 @@ public final class DeviceSoundTests {
     }
 
     /**
-     * A portable scrubber's level follows the moles it moves, and it falls idle at its next step when
-     * switched off (CONT-127, DATA-017). The pump shares the code.
+     * A portable scrubber's level follows the moles it moves, and it falls idle at once when switched
+     * off (CONT-127, DATA-017). The pump shares the code.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_127_a_portable_reports_what_it_moves(GameTestHelper h) {
@@ -371,6 +378,298 @@ public final class DeviceSoundTests {
             BatteryTests.swap(r.battery(), ItemStack.EMPTY);
             s.cycle(r);
             h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), one(r, DeviceActivity.IDLE), "with no battery again");
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    // ---- CONT-018, CONT-019, DATA-017: a portable's switch shows at once -----------------------------
+
+    private static boolean lit(Site s, PortableDevice device) {
+        return s.level.getBlockState(device.getBlockPos()).getValue(PortableBlock.LIT);
+    }
+
+    /** A room from x0 with a portable at x0 + 2 on a full battery, past its cell's wait. */
+    private static <T extends PortableDevice> T inRoom(Site s, int x0, IntFunction<T> place) {
+        s.room(x0, x0 + 4);
+        T device = place.apply(x0 + 2);
+        BatteryTests.formZone(s, x0 + 2, 2, 2);
+        BatteryTests.swap(device.battery(), AtmosItems.BATTERY.get().full());
+        s.cycles(CellWatch.SETTLE_STEPS + 1, device);
+        return device;
+    }
+
+    /**
+     * Switches a portable with work to do on and off, in the room at x. Its block and its level follow
+     * the switch at once, its charge and its room wait for its step, and that step agrees with what
+     * the switch showed, so it doesn't go dark or change its level a moment later.
+     */
+    private static void followsItsSwitch(Site s, PortableDevice device, int x) {
+        GameTestHelper h = s.h;
+        String name = device.getBlockState().getBlock().toString();
+        FakePlayer p = player(s, "zas_switch");
+        long t = AtmosTicks.now(s.level);
+        int charge = device.energy();
+        GasMixture air = s.zone(x, 2, 2).mixture();
+
+        device.setOn(true);
+        h.assertTrue(lit(s, device), name + " isn't lit once switched on");
+        List<Change> on = told(p, t);
+        h.assertValueEqual(on.size(), 1, name + ": what it reported once switched on");
+        h.assertTrue(on.get(0).level() != DeviceActivity.IDLE, name + " reads as idle once switched on");
+        s.tick(); // anything it had asked of its room would land here
+        h.assertValueEqual(device.energy(), charge, name + ": the charge after its switch");
+        GasMixture after = s.zone(x, 2, 2).mixture();
+        s.close(after.totalMoles(), air.totalMoles(), 1e-9, name + ": the room's moles after its switch");
+        s.close(after.temperature(), air.temperature(), 1e-9, name + ": the room's temperature after its switch");
+
+        s.cycle(device);
+        h.assertTrue(lit(s, device), name + " went dark at its first step");
+        h.assertTrue(device.energy() < charge, name + " paid nothing at its first step");
+        h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), List.of(), name + ": what its first step changed");
+
+        device.setOn(false);
+        h.assertFalse(lit(s, device), name + " is still lit once switched off");
+        h.assertValueEqual(
+                told(p, t + 2 * AtmosTicks.PERIOD), one(device, DeviceActivity.IDLE), name + " switched off");
+        s.tick(); // the first step's change finishes
+        charge = device.energy();
+        s.cycle(device);
+        h.assertFalse(lit(s, device), name + " lit up at its step while off");
+        h.assertValueEqual(device.energy(), charge, name + ": the charge at its step while off");
+        h.assertValueEqual(told(p, t + 3 * AtmosTicks.PERIOD), List.of(), name + ": what its step while off changed");
+    }
+
+    /**
+     * A heater's and an air conditioner's block and level follow their switches at once, and their
+     * heat and charge wait for their steps (CONT-019, DATA-017).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_019_a_thermomachine_follows_its_switch_at_once(GameTestHelper h) {
+        Site s = new Site(h, 813);
+        try {
+            BatteryTests.clear(s);
+            HeaterBlockEntity heater = inRoom(s, 0, x -> heater(s, x, 1, 2));
+            heater.setSetpoint(HeaterMath.MAX_SETPOINT);
+            followsItsSwitch(s, heater, 2);
+            AirConditionerBlockEntity ac = inRoom(s, 6, x -> airConditioner(s, x, 1, 2));
+            ac.setSetpoint(AirConditionerMath.MIN_SETPOINT);
+            followsItsSwitch(s, ac, 8);
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    /**
+     * A portable pump's and scrubber's block and level follow their switches at once, and their gas
+     * and charge wait for their steps. On a held tank it has no cell to wait for, so it shows at once
+     * even just placed in open air (CONT-018, DATA-017).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_018_a_portable_follows_its_switch_at_once(GameTestHelper h) {
+        Site s = new Site(h, 814);
+        try {
+            BatteryTests.clear(s);
+            PortablePumpBlockEntity pump = inRoom(s, 0, x -> pump(s, x, 1, 2));
+            pump.setSiphon(true);
+            pump.setTarget(300);
+            followsItsSwitch(s, pump, 2);
+
+            PortableScrubberBlockEntity scrubber = inRoom(s, 6, x -> scrubber(s, x, 1, 2));
+            s.addKpa(8, 2, 2, CO2, 2);
+            followsItsSwitch(s, scrubber, 8);
+
+            PortableScrubberBlockEntity onTank = scrubber(s, 14, 1, 2);
+            BatteryTests.swap(onTank.battery(), AtmosItems.BATTERY.get().full());
+            ItemStack tank = new ItemStack(AtmosItems.EMPTY_TANK.get());
+            GasTankItem.setGas(tank, new GasParcel(Map.of(CO2, 1.0), 293.15));
+            onTank.tank().insertItem(0, tank, false);
+            onTank.setOn(true);
+            h.assertTrue(lit(s, onTank), "a scrubber on a tank isn't lit once switched on");
+            s.close(GasTankItem.contents(onTank.tank().tank()).moles(CO2), 1, 1e-9, "the tank after its switch");
+            h.assertValueEqual(onTank.energy(), 100_000, "the charge after its switch on a tank");
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    /** Switches on what has nothing to do: its block stays dark and it reads as idle, then and at its step. */
+    private static void staysDark(Site s, PortableDevice device, String when) {
+        FakePlayer p = player(s, "zas_dark_switch");
+        long t = AtmosTicks.now(s.level);
+        device.setOn(true);
+        s.h.assertFalse(lit(s, device), when + ": lit once switched on");
+        s.h.assertValueEqual(told(p, t), List.of(), when + ": what it reported once switched on");
+        s.cycle(device);
+        s.h.assertFalse(lit(s, device), when + ": lit at its step");
+        s.h.assertValueEqual(told(p, t + AtmosTicks.PERIOD), List.of(), when + ": what it reported at its step");
+        device.setOn(false);
+    }
+
+    /**
+     * A portable switched on with nothing to do, no charge or no room doesn't light for a moment. Its
+     * status says each is the case (CONT-018).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_018_a_portable_that_wouldnt_work_stays_dark_when_switched_on(GameTestHelper h) {
+        Site s = new Site(h, 815);
+        try {
+            BatteryTests.clear(s);
+            PortableScrubberBlockEntity scrubber = inRoom(s, 0, x -> scrubber(s, x, 1, 2));
+            s.addKpa(2, 2, 2, CO2, 2);
+            s.removeGas(2, 2, 2, CO2);
+            staysDark(s, scrubber, "a scrubber in clean air");
+            h.assertValueEqual(scrubber.status(), PortableStatus.NOTHING_TO_MOVE, "the scrubber in clean air");
+            s.addKpa(2, 2, 2, CO2, 2);
+            BatteryTests.swap(scrubber.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            staysDark(s, scrubber, "a scrubber on an empty battery");
+            h.assertValueEqual(scrubber.status(), PortableStatus.BATTERY_EMPTY, "the scrubber on an empty battery");
+            BatteryTests.swap(scrubber.battery(), ItemStack.EMPTY);
+            staysDark(s, scrubber, "a scrubber with no battery");
+            h.assertValueEqual(scrubber.status(), PortableStatus.NO_BATTERY, "the scrubber with no battery");
+
+            PortablePumpBlockEntity pump = inRoom(s, 6, x -> pump(s, x, 1, 2));
+            staysDark(s, pump, "a pump with an empty store");
+            h.assertValueEqual(pump.status(), PortableStatus.NOTHING_TO_MOVE, "the pump with an empty store");
+
+            HeaterBlockEntity heater = inRoom(s, 12, x -> heater(s, x, 1, 2));
+            heater.setSetpoint(HeaterMath.MIN_SETPOINT);
+            staysDark(s, heater, "a heater past its setpoint");
+            h.assertValueEqual(heater.status(), ThermoStatus.AT_SETPOINT, "the heater past its setpoint");
+            heater.setSetpoint(HeaterMath.MAX_SETPOINT);
+            BatteryTests.swap(heater.battery(), new ItemStack(AtmosItems.BATTERY.get()));
+            staysDark(s, heater, "a heater on an empty battery");
+            h.assertValueEqual(heater.status(), ThermoStatus.BATTERY_EMPTY, "the heater on an empty battery");
+            BatteryTests.swap(heater.battery(), ItemStack.EMPTY);
+            staysDark(s, heater, "a heater with no battery");
+            h.assertValueEqual(heater.status(), ThermoStatus.NO_BATTERY, "the heater with no battery");
+
+            // In open air, outside the rooms.
+            PortableScrubberBlockEntity outdoors = scrubber(s, 2, 1, 6);
+            BatteryTests.swap(outdoors.battery(), AtmosItems.BATTERY.get().full());
+            s.cycles(CellWatch.SETTLE_STEPS + 1, outdoors);
+            staysDark(s, outdoors, "a scrubber in open air");
+            h.assertValueEqual(outdoors.status(), PortableStatus.NO_ROOM, "the scrubber in open air");
+            HeaterBlockEntity cold = heater(s, 8, 1, 6);
+            cold.setSetpoint(HeaterMath.MAX_SETPOINT);
+            BatteryTests.swap(cold.battery(), AtmosItems.BATTERY.get().full());
+            staysDark(s, cold, "a heater in open air");
+            h.assertValueEqual(cold.status(), ThermoStatus.NO_ROOM, "the heater in open air");
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    /**
+     * Flipping its switch doesn't shorten or lengthen a portable's wait for its cell. It stays dark
+     * until the step that would work, and lights at once from then on, so a portable that has stood
+     * off for a while shows at once as well (CONT-018).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_018_a_switch_leaves_a_portables_wait_for_its_cell_alone(GameTestHelper h) {
+        Site s = new Site(h, 816);
+        try {
+            BatteryTests.clear(s);
+            s.room(0, 4);
+            PortableScrubberBlockEntity scrubber = scrubber(s, 2, 1, 2);
+            BatteryTests.formZone(s, 2, 2, 2);
+            s.addKpa(2, 2, 2, CO2, 2);
+            BatteryTests.swap(scrubber.battery(), AtmosItems.BATTERY.get().full());
+            for (int i = 0; i < CellWatch.SETTLE_STEPS; i++) {
+                flips(scrubber, true);
+                h.assertFalse(lit(s, scrubber), "lit once switched on while its cell settles");
+                s.cycle(scrubber);
+                h.assertValueEqual(scrubber.status(), PortableStatus.WAITING, "while its cell settles");
+                h.assertFalse(lit(s, scrubber), "lit at a step while its cell settles");
+            }
+            flips(scrubber, true);
+            h.assertTrue(lit(s, scrubber), "not lit once switched on with its cell settled");
+            s.cycle(scrubber);
+            h.assertValueEqual(scrubber.status(), PortableStatus.WORKING, "the step after its cell settled");
+            h.assertTrue(lit(s, scrubber), "not lit at its first working step");
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    /** Flips a switch ten times between steps, leaving it on or off as asked. */
+    private static void flips(PortableDevice device, boolean on) {
+        for (int i = 0; i < 10; i++) {
+            device.setOn(!device.on());
+        }
+        device.setOn(on);
+    }
+
+    /**
+     * A switch gets a portable no extra work. Over the same steps, a scrubber flipped between steps
+     * and on at each of them moves what one left on moves and pays the same, and one off at each of
+     * them moves nothing and pays nothing, however often it was on in between. The pump shares the
+     * code (CONT-018).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_018_toggling_a_portable_moves_no_more_than_leaving_it_on(GameTestHelper h) {
+        Site s = new Site(h, 817);
+        try {
+            BatteryTests.clear(s);
+            PortableScrubberBlockEntity left = inRoom(s, 0, x -> scrubber(s, x, 1, 2));
+            PortableScrubberBlockEntity flipped = inRoom(s, 6, x -> scrubber(s, x, 1, 2));
+            PortableScrubberBlockEntity offAtSteps = inRoom(s, 12, x -> scrubber(s, x, 1, 2));
+            for (int x : new int[] {2, 8, 14}) {
+                s.addKpa(x, 2, 2, CO2, 2);
+            }
+            left.setOn(true);
+            for (int i = 0; i < 5; i++) {
+                flips(flipped, true);
+                flips(offAtSteps, false);
+                s.cycle(left, flipped, offAtSteps);
+            }
+            double moved = left.store().moles(CO2);
+            h.assertTrue(moved > 0, "left on, it moved nothing");
+            h.assertTrue(left.energy() < 100_000, "left on, it paid nothing");
+            s.close(flipped.store().moles(CO2), moved, 1e-6, "what the flipped scrubber moved");
+            h.assertValueEqual(flipped.energy(), left.energy(), "what the flipped scrubber paid");
+            s.close(offAtSteps.store().totalMoles(), 0, 0, "what the scrubber off at its steps moved");
+            h.assertValueEqual(offAtSteps.energy(), 100_000, "what the scrubber off at its steps paid");
+            h.succeed();
+        } finally {
+            BatteryTests.clear(s);
+        }
+    }
+
+    /**
+     * A switch gets a thermomachine no extra work, as for a scrubber above. The air conditioner shares
+     * the code (CONT-019).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_019_toggling_a_thermomachine_moves_no_more_than_leaving_it_on(GameTestHelper h) {
+        Site s = new Site(h, 818);
+        try {
+            BatteryTests.clear(s);
+            HeaterBlockEntity left = inRoom(s, 0, x -> heater(s, x, 1, 2));
+            HeaterBlockEntity flipped = inRoom(s, 6, x -> heater(s, x, 1, 2));
+            HeaterBlockEntity offAtSteps = inRoom(s, 12, x -> heater(s, x, 1, 2));
+            for (HeaterBlockEntity heater : List.of(left, flipped, offAtSteps)) {
+                heater.setSetpoint(HeaterMath.MAX_SETPOINT);
+            }
+            double start = s.zone(2, 2, 2).mixture().temperature();
+            left.setOn(true);
+            for (int i = 0; i < 5; i++) {
+                flips(flipped, true);
+                flips(offAtSteps, false);
+                s.cycle(left, flipped, offAtSteps);
+            }
+            double heated = s.zone(2, 2, 2).mixture().temperature();
+            h.assertTrue(heated > start, "left on, it heated nothing");
+            h.assertTrue(left.energy() < 100_000, "left on, it paid nothing");
+            s.close(s.zone(8, 2, 2).mixture().temperature(), heated, 1e-3, "what the flipped heater heated");
+            h.assertValueEqual(flipped.energy(), left.energy(), "what the flipped heater paid");
+            s.close(s.zone(14, 2, 2).mixture().temperature(), start, 1e-3, "what the heater off at its steps heated");
+            h.assertValueEqual(offAtSteps.energy(), 100_000, "what the heater off at its steps paid");
             h.succeed();
         } finally {
             BatteryTests.clear(s);

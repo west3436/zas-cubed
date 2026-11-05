@@ -891,7 +891,10 @@ The portables, a portable pump, a portable scrubber, a heater and a freezer
 (CONT-019), shall be blocks that run on a battery in a slot (CONT-112) and
 work on their own on the zone they stand in. No area air controller shall
 power, order or list them. The portable pump and scrubber shall also work on
-a held tank.
+a held tank. A portable's block shall show its switch at once: dark when switched
+off, and working when switched on only if its next atmos tick would really work.
+Its gas and heat shall move only in its atmos ticks, so that flipping its switch
+never moves more than leaving it on.
 
 - **Rationale:** vg: vg's portable pump and scrubber, which act on the room or
   a held tank ([vg
@@ -899,7 +902,9 @@ a held tank.
   battery follows D-69, and the heater and freezer joining them D-73.
 - **Verify:** A GameTest checks each works on a room and on a held tank, and
   stops when its battery is empty, and that a controller in its room doesn't
-  power or list it.
+  power or list it. Others check its block follows its switch at once, that it
+  stays dark with no work to do, and that flipping its switch moves no more than
+  leaving it on.
 - **Changed 2026-11-02 (the owner, reviewing
   [#177](https://github.com/west3436/zas-cubed/pull/177)):** "heaters, air conditioners,
   scrubbers, and pumps are all portable devices on battery power which
@@ -929,6 +934,16 @@ stopping when the battery is empty, and a controller leaving it alone:
 `PortablePumpTests.cont_018_*` and `PortableScrubberTests.cont_018_*`
 (GameTest). The heater and the air conditioner work only on a room, and are
 checked by `BatteryTests` and `AirConditionerTests.cont_019_*`.*
+
+*2026-11-05: from the owner's playtest of the S-11/S-13 world: "Noticeable delay in
+the animation and sounds when toggling power". This stays Implemented. `setOn` now
+changes the block and the activity level (DATA-017) itself, where only the next step
+did, up to 1 s later. Switching on asks a read-only copy of the step what it would
+do. A portable pump or scrubber now reads its cell on or off, so one that has stood
+off isn't kept back another step; in its first 4 s after placing or loading it still
+waits for its cell, and stays dark. Its GUI's status line still changes at the step.
+`DeviceSoundTests.cont_018_*` and `cont_019_*` (GameTest) check this. How quickly it
+feels in play is for the owner's test world.*
 
 #### CONT-019 · Heater and freezer
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
@@ -984,6 +999,10 @@ setpoint and never below it (architecture §11.5). Checked by
 `cont_019_air_conditioner_cools_its_room_on_its_battery`,
 `cont_019_air_conditioner_holds_a_room_at_its_setpoint` and
 `cont_019_a_controller_leaves_an_air_conditioner_in_its_room_alone` (GameTest).*
+
+*2026-11-05: its block follows its switch at once, and flipping its switch moves no
+more heat than leaving it on (CONT-018), checked by `DeviceSoundTests.cont_019_*`
+(GameTest).*
 
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Implemented` · Verify: Unit
@@ -2514,11 +2533,12 @@ A pressure pump, volume pump, filter, mixer, vent, passive vent, scrubber or
 canister, and a pipe with an open end, shall each play its own looping sound to
 a player within 8 blocks while it is moving gas, and only then. Being on or
 powered isn't enough: a pump at its target, or with nothing to pump, is silent.
-A device that was switched off, shut or lost its power goes silent at its next
-step, without the level's usual hold. A device with particles (CLIENT-019) plays
-only while they show: a vent or scrubber at working or hard, and an open pipe end
-or passive vent moving at least 0.25 mol/s net, which below that goes silent at
-its next step, without the hold.
+A pump, filter or mixer switched off goes silent at once. A device that was shut
+or lost its power goes silent at its next step. Neither waits for the level's
+usual hold. A device with particles (CLIENT-019) plays only while they show: a
+vent or scrubber at working or hard, and an open pipe end or passive vent moving
+at least 0.25 mol/s net, which below that goes silent at its next step, without
+the hold.
 
 - **Rationale:** A sound that follows the gas tells a player which machines are
   doing something, and a room of machines at rest is quiet. Decision: the owner,
