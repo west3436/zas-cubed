@@ -5,8 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
@@ -72,20 +70,9 @@ public final class GasFireBlock extends Block {
         super.entityInside(state, level, pos, entity);
     }
 
-    /** Vanilla fire's crackle, and now and then a wisp of smoke. */
+    /** Now and then a wisp of smoke. Its sound is a loop for the whole fire: {@code client.GasFireLoops}. */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (random.nextInt(24) == 0) {
-            level.playLocalSound(
-                    pos.getX() + 0.5,
-                    pos.getY() + 0.5,
-                    pos.getZ() + 0.5,
-                    SoundEvents.FIRE_AMBIENT,
-                    SoundSource.BLOCKS,
-                    1.0F + random.nextFloat(),
-                    random.nextFloat() * 0.7F + 0.3F,
-                    false);
-        }
         if (random.nextInt(8) == 0 && !level.getBlockState(pos.above()).is(this)) {
             level.addParticle(
                     ParticleTypes.SMOKE,

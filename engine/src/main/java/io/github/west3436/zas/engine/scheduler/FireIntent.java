@@ -13,8 +13,12 @@ import java.util.Objects;
  * @param kind place, remove or light
  * @param block the position ({@link io.github.west3436.zas.engine.SectionKeys#block})
  * @param zoneId the hotspot's zone, or 0 if its cell is no longer zoned
+ * @param catches whether this is a {@link Kind#PLACE} of the first gas fire in its zone: gas catching
+ *     fire, not a fire spreading (FIRE-036)
+ * @param fuelMoles the moles of its zone's most plentiful fuel, for an intent that {@code catches};
+ *     otherwise 0
  */
-public record FireIntent(Kind kind, long block, long zoneId) {
+public record FireIntent(Kind kind, long block, long zoneId, boolean catches, double fuelMoles) {
     /** What to do. */
     public enum Kind {
         /** Place {@code zas:gas_fire} if the position is air. */
@@ -30,5 +34,10 @@ public record FireIntent(Kind kind, long block, long zoneId) {
 
     public FireIntent {
         Objects.requireNonNull(kind, "kind");
+    }
+
+    /** An intent that isn't gas catching fire. */
+    public FireIntent(Kind kind, long block, long zoneId) {
+        this(kind, block, zoneId, false, 0);
     }
 }

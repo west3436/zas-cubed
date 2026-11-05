@@ -219,6 +219,24 @@ public final class ReactionSet {
         return flammable ? new Flammability(true, autoignition) : Flammability.NONE;
     }
 
+    /**
+     * The moles of the most plentiful fuel in a mixture, among the reactions that need ignition and
+     * name a fuel. It says how much is there to burn, whether or not a reaction could burn it now.
+     *
+     * @param mixture the mixture; its registry must be this set's
+     * @return the moles; 0 if it holds no such fuel
+     */
+    public double fuelMoles(GasMixture mixture) {
+        requireRegistry(mixture);
+        double most = 0;
+        for (Compiled c : ignited) {
+            if (c.fuel >= 0) {
+                most = Math.max(most, mixture.moles(c.fuel));
+            }
+        }
+        return most;
+    }
+
     /** What a mixture's O₂ allows hasn't been worked out yet. */
     private static final int UNKNOWN = 0;
     /** Below the fire oxygen threshold's partial-pressure floor: no fire burns (FIRE-030). */
