@@ -49,7 +49,7 @@ subprojects {
         def props = [
             mod_version     : mod_version,
             api_version     : api_version,
-            neo_version_min : neo_version_min,
+            neo_version     : neo_version,
             minecraft_version: minecraft_version,
         ]
         inputs.properties(props)

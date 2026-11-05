@@ -131,7 +131,7 @@ vanilla.
 ## Providers
 
 #### ENV-004 · Ambient providers
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, S-06
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, S-06
 
 Mods shall be able to register a provider that supplies a dimension's ambient
 programmatically.
@@ -141,8 +141,13 @@ programmatically.
 - **Verify:** A GameTest registers a test provider and checks it sets the
   dimension's ambient.
 
+*2026-11-05: `AmbientProviders` in the API (#66).
+`env_004_provider_sets_the_dimensions_ambient` checks queries, the lookup, and a
+zone pinned in the dimension, which fills with the provider's gas;
+`s_12_ambient_providers_are_kept_but_never_called` checks a game without `zas`.*
+
 #### ENV-014 · Ambient source precedence
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-45
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-45
 
 A dimension's ambient shall come from the first of these sources that defines
 it:
@@ -155,8 +160,13 @@ it:
 - **Verify:** GameTests define a dimension's ambient from each pair of sources
   and check the higher one wins.
 
+*2026-11-05: the six `env_014_` pair tests pass (#66). The third source's data
+comes with the Ad Astra adapter in R2 (SPACE-020, D-66), so until then the
+tests fill its slot in the chain with a test-only ambient
+(`Ambients.seedForTest`).*
+
 #### ENV-019 · Provider conflicts
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-45 · Depends: ENV-004
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-45 · Depends: ENV-004
 
 If more than one provider is registered for a dimension, the one with the
 highest declared priority (default 0) shall apply. A tie goes to the
@@ -167,8 +177,12 @@ lexicographically smallest mod id.
 - **Verify:** A GameTest registers providers with different and equal
   priorities and checks which applies.
 
+*2026-11-05: `env_019_highest_priority_applies` and
+`env_019_tie_goes_to_the_smallest_mod_id` pass (#66). The mod id is the namespace
+of the id a provider registers with.*
+
 #### ENV-020 · Provider conflict warning
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-45 · Depends: ENV-019
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-45 · Depends: ENV-019
 
 When more than one provider is registered for a dimension, ZAS³ shall log one
 warning naming the providers and the one that applies.
@@ -178,8 +192,12 @@ warning naming the providers and the one that applies.
 - **Verify:** The ENV-019 GameTest checks one warning is logged with both
   providers and the winner.
 
+*2026-11-05: `env_020_one_warning_names_the_providers_and_the_winner` reads the
+log (#66). It's one warning per set of providers for a dimension: a change in who
+is registered warns again.*
+
 #### ENV-015 · Providers run on the server thread
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30, CORE-045, CORE-049
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30, CORE-045, CORE-049
 
 Providers shall be called on the server thread, and their results snapshotted
 for the simulation once per atmos tick.
@@ -187,6 +205,14 @@ for the simulation once per atmos tick.
 - **Rationale:** Decision: D-30.
 - **Verify:** Inspect the code; a GameTest checks the provider runs on the
   server thread once per atmos tick.
+
+*2026-11-05: Inspected: `DimensionAtmos.close` calls
+`Ambients.takeProviderAnswer` as a batch closes, and `ProvidedAmbients.call` is
+the only caller of a provider (#66).
+`env_015_provider_runs_on_the_server_thread_once_per_atmos_tick` and
+`env_015_provider_runs_once_per_real_atmos_tick` pass. The answer is also taken
+once at server start, so a dimension doesn't read as the fallback until its first
+batch.*
 
 #### ENV-005 · Position-dependent providers
 `Could` · `R2` · `Deferred` — moved to R2 with biome and altitude ambients (D-07), 2026-10-30. · Verify: GameTest

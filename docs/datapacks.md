@@ -236,9 +236,12 @@ atmosphere for at least one preset or exclude the dimension:
 
 - **Which ambient applies:** the variant for the active preset, or the one
   `ambient_variant` overrides it with (see [Server config](#server-config)),
-  else the file's top-level atmosphere. A
-  dimension with no ambient for the active preset, or no file at all, gets
-  standard Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 % O₂ (ENV-011).
+  else the file's top-level atmosphere. A file beats anything a mod supplies
+  through the API (ENV-014, D-45), so a pack can always have the final say. A
+  dimension with no ambient for the active preset, or no file at all, takes
+  what a [mod's provider](api-consumers.md#supplying-a-dimensions-ambient)
+  gives, or else standard Overworld air: 101.325 kPa, 293.15 K, 79 % N₂, 21 %
+  O₂ (ENV-011).
 - **Gases** must exist in the running server's gas definitions; a file
   naming an unknown gas is skipped with an error.
 - **Invalid files** are skipped with an error naming the file and field
