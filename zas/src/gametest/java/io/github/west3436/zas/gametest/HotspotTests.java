@@ -247,40 +247,51 @@ public final class HotspotTests {
 
     /**
      * FIRE-016: a hotspot spreads to each neighbouring cell that can burn with the configured chance
-     * per second. A 30 × 1 × 30 room holds 100 gas fires 3 apart, whose 400 neighbours are all
-     * different; with a chance of 0.6, about 240 of them catch in one second.
+     * per second. Each of seven 30 × 1 × 30 rooms holds 100 gas fires 3 apart, whose 400 neighbours
+     * are all different; with a chance of 0.6, about 240 of them catch in one second. It takes seven
+     * rooms rather than seven ticks because a neighbour that caught would spread in the next tick.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_016_spread_matches_the_configured_chance(GameTestHelper h) {
         with(0.6, false, () -> {
             Rooms r = rooms(h, 3);
-            room(r, 0, 30, 1, 30, StandardAir.TEMPERATURE, hydrogenInAir(0.10));
+            int count = 7;
+            for (int i = 0; i < count; i++) {
+                room(r, 33 * i, 30, 1, 30, StandardAir.TEMPERATURE, hydrogenInAir(0.10));
+            }
             BlockState fire = HotspotBlocks.GAS_FIRE.get().defaultBlockState();
-            for (int x = 1; x < 30; x += 3) {
-                for (int z = 1; z < 30; z += 3) {
-                    r.set(x + 1, 1, z + 1, fire);
+            // Once every room is built, so that no fire spreads before the tick that counts.
+            for (int i = 0; i < count; i++) {
+                for (int x = 1; x < 30; x += 3) {
+                    for (int z = 1; z < 30; z += 3) {
+                        r.set(33 * i + x + 1, 1, z + 1, fire);
+                    }
                 }
             }
             r.tick();
             int lit = 0;
             int trials = 0;
-            for (int x = 1; x < 30; x += 3) {
-                for (int z = 1; z < 30; z += 3) {
-                    h.assertTrue(gasFire(r, r.abs(x + 1, 1, z + 1)), "a fire went out");
-                    for (int[] n : new int[][] {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
-                        trials++;
-                        if (gasFire(r, r.abs(x + 1 + n[0], 1, z + 1 + n[1]))) {
-                            lit++;
+            for (int i = 0; i < count; i++) {
+                for (int x = 1; x < 30; x += 3) {
+                    for (int z = 1; z < 30; z += 3) {
+                        h.assertTrue(gasFire(r, r.abs(33 * i + x + 1, 1, z + 1)), "a fire went out");
+                        for (int[] n : new int[][] {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
+                            trials++;
+                            if (gasFire(r, r.abs(33 * i + x + 1 + n[0], 1, z + 1 + n[1]))) {
+                                lit++;
+                            }
                         }
                     }
                 }
             }
-            h.assertValueEqual(trials, 400, "trials");
+            h.assertValueEqual(trials, count * 400, "trials");
             double expected = 1 - Math.pow(1 - 0.6, seconds());
             double rate = lit / (double) trials;
-            // Binomial: σ of the rate is √(0.6 · 0.4 / 400) ≈ 0.024.
-            h.assertTrue(Math.abs(rate - expected) <= 0.08, "spread rate " + rate + ", expected " + expected);
-            empty(r, 0);
+            // Binomial: σ of the rate is √(0.6 · 0.4 / 2800) ≈ 0.0093, so 0.06 is 6.5 σ.
+            h.assertTrue(Math.abs(rate - expected) <= 0.06, "spread rate " + rate + ", expected " + expected);
+            for (int i = 0; i < count; i++) {
+                empty(r, 33 * i);
+            }
         });
         h.succeed();
     }
