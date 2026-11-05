@@ -53,7 +53,7 @@ import org.slf4j.Logger;
  *
  * <p>The preset and the override are the whole server's, so these tests run in a batch of their own,
  * and each sets them and restores them within one game tick, driving the atmos ticks it needs with
- * {@link io.github.west3436.zas.simulation.AtmosService#tickNow}. Their areas are at z = ±16384. The
+ * {@link io.github.west3436.zas.simulation.AtmosService#tickNow}. Their areas are at z = ±20480. The
  * chunk unloads are the atmosphere's alone, as in {@link PausedZoneTests}.
  */
 @GameTestHolder(ZasMod.MOD_ID)
@@ -74,7 +74,7 @@ public final class PressureDamageTests {
     // ---- helpers ------------------------------------------------------------------------
 
     private static Rooms rooms(GameTestHelper h, int index) {
-        return new Rooms(h, h.getLevel(), new BlockPos(-16384 + 256 * index, 100, 16384));
+        return new Rooms(h, h.getLevel(), new BlockPos(-20480 + 256 * index, 100, 20480));
     }
 
     /**
@@ -231,7 +231,10 @@ public final class PressureDamageTests {
                 conserved(r);
             }
             h.assertValueEqual(r.zone(3, 2, 2).id(), r.zone(7, 2, 2).id(), "the rooms didn't merge");
-            r.close(total(r.zone(3, 2, 2)), moles, "the merged zone's moles");
+            // What the rooms held, and the ambient's air in the broken window's cell, which joined them (CORE-021).
+            var air = Atmospheres.at(r.level, r.abs(11, 2, 2)).mixture();
+            double cell = air.pressure() * Geometry.FULL_VOLUME / (GasConstants.R * air.temperature());
+            r.close(total(r.zone(3, 2, 2)), moles + cell, "the merged zone's moles");
             h.assertValueEqual(r.zone(5, 2, 2).id(), r.zone(3, 2, 2).id(), "the broken window's cell");
         });
         h.succeed();
@@ -316,7 +319,7 @@ public final class PressureDamageTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void flow_007_a_break_is_vanillas_and_checks_the_world_first(GameTestHelper h) {
         ServerLevel level = h.getLevel();
-        BlockPos corner = new BlockPos(-24576, 100, 16384);
+        BlockPos corner = new BlockPos(-24576, 100, 20480);
         int cx = corner.getX() >> 4;
         int cz = corner.getZ() >> 4;
         LevelChunk chunk = level.getChunk(cx, cz);
@@ -386,7 +389,7 @@ public final class PressureDamageTests {
                 () -> inVacuum(h, end -> {
                     int index = 0;
                     for (BlockState window : List.of(GLASS, PANE)) {
-                        Rooms r = new Rooms(h, end, new BlockPos(-16384 + 256 * index++, 100, -16384));
+                        Rooms r = new Rooms(h, end, new BlockPos(-20480 + 256 * index++, 100, -20480));
                         windowRoom(r, window);
                         r.tick();
                         r.close(Atmospheres.at(end, r.abs(7, 2, 2)).mixture().pressure(), 0, "the far side's pressure");
@@ -535,7 +538,7 @@ public final class PressureDamageTests {
                 h,
                 AtmospherePreset.HARDCORE,
                 () -> inVacuum(h, end -> {
-                    Rooms r = new Rooms(h, end, new BlockPos(-16384 + 256 * 2, 100, -16384));
+                    Rooms r = new Rooms(h, end, new BlockPos(-20480 + 256 * 2, 100, -20480));
                     r.clear(0, 20);
                     r.shell(1, 5);
                     r.shell(5, 9);

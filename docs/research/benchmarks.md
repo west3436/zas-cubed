@@ -652,10 +652,11 @@ about 1 µs per tick on the worker, however far it is from breaking. 1 atm again
 vacuum never gets there at the default threshold.
 
 Breaking is on the server thread and bounded by `pressure_fragile_breaks_per_tick`:
-the GameTest `flow_007_measures_what_a_full_tick_of_breaks_costs` logged 1,160 µs for
-the default 32 glass blocks in a row, with no player nearby, on one run of cold code.
-Not measured: the packets to players nearby, or the block changes reaching the worker
-in the next batch, which cost what any 32 block changes cost.
+the GameTest `flow_007_measures_what_a_full_tick_of_breaks_costs` logged a median of
+1.1 ms (0.94 to 5.04 ms over six runs) for the default 32 glass blocks in a row, cold
+code with no player nearby, with other builds running on the machine. Not measured:
+the packets to players nearby, or the block changes reaching the worker in the next
+batch, which cost what any 32 block changes cost.
 
 ## Findings
 
