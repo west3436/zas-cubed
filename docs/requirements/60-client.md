@@ -156,8 +156,9 @@ deferred here.*
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
 
 A client shall play at most 8 looping sounds at once, chosen from those
-requested within their range: the ones that reach the player loudest, which
-among loops of one volume and range are the nearest. Each shall fade over 0.5 s
+requested within their range: the ones that will play loudest at the player,
+counting the volume in `sounds.json` and the player's sliders, which among loops
+of one volume and range are the nearest. Each shall fade over 0.5 s
 as it starts, stops or changes volume, and shall stop within 1 s of its last
 request, as soon as its chunk or the player's level is gone, and when the
 player leaves its range.
@@ -177,6 +178,15 @@ player leaves its range.
 the new one starts, so there are never more than 8. The sound engine's own
 attenuation is off: the gain falls in a straight line to 0 at each loop's range.
 Nothing has been heard yet, so the Manual part is open.*
+
+*2026-11-05: Choosing now counts what a loop will play at. It compared requested
+volumes, but the engine then multiplies by the event's volume in `sounds.json`,
+which sets the device loops' levels, so a pump at 0.35 there ranked about 3 times
+louder than it plays. By calculation, 8 pumps working hard within 5 blocks took
+every slot from a breach louder than any of them 2 blocks away. `ClientLoops` now
+gives the book that volume times the slider as a weight, 1 for an event with no
+sound data. `LoopBookTest` and `ClientLoopsTest` (Unit) check it. The client side
+hasn't run, so what plays is still unverified.*
 
 #### CLIENT-016 · Thin air
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019

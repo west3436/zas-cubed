@@ -48,8 +48,9 @@ public final class ClientSounds {
     /**
      * Asks for a looping sound, or renews the request (CLIENT-015). ZAS³ plays only the {@value
      * #MAX_LOOPS} loudest requested loops for this client, which among equal loops are the nearest,
-     * and only those within their range. It fades them in and out, applies {@link #thinAir}, and
-     * stops each one when its request lapses.
+     * and only those within their range. Loudest counts the sound's volume in {@code sounds.json} and
+     * the player's sliders. It fades them in and out, applies {@link #thinAir}, and stops each one when
+     * its request lapses.
      *
      * <p>Call it again at least every {@value #LEASE_TICKS} game ticks for as long as the source wants
      * the sound, and stop calling when it no longer does. Every game tick is fine, and is how a

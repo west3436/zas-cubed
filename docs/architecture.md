@@ -1820,6 +1820,11 @@ unverified.*
   chosen once it is silent. A chosen loop gets a bonus of 1.25 on its loudness,
   so loops about as loud don't take turns. A new voice starts only when fewer
   than 8 exist, so a swap waits for the old voice to fade.
+- **What counts as loud.** A request's volume, times what's left after distance,
+  times a weight the shell reads for it: the volume its event has in `sounds.json`
+  times its slider, as the engine reads them. An event with no sound data weighs 1.
+  The weight counts only in choosing, because the engine applies it to the sound
+  itself. A loop on a slider at 0 weighs nothing and holds no slot.
 - **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
   stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
   that forgets, or stops existing, can't leave a sound playing.

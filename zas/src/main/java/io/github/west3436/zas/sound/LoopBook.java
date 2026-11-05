@@ -19,8 +19,9 @@ import java.util.Map;
  *   <li><b>Lets lapsed leases go.</b> A request lasts {@value #LEASE_TICKS} ticks, so a loop nobody
  *       asks for again stops, whatever happened to whoever asked. Nothing has to turn a loop off.
  *   <li><b>Chooses.</b> A lease in range, in a loaded chunk and with some volume is a candidate, and
- *       the {@value #MAX_VOICES} that reach the listener loudest are chosen. Among loops of one
- *       volume and range that is the nearest. A chosen loop gets a bonus, so loops at about the same
+ *       the {@value #MAX_VOICES} that will play loudest at the listener are chosen. That counts each
+ *       request's weight, what the sound engine multiplies its volume by. Among loops of one volume,
+ *       weight and range it is the nearest. A chosen loop gets a bonus, so loops at about the same
  *       loudness don't take turns. In a vacuum nothing is chosen.
  *   <li><b>Moves the voices.</b> A voice is one playing sound. Its {@linkplain Voice#gain gain} is a
  *       fade times how much distance leaves, a straight line down to 0 at the range. The fade ramps
@@ -69,6 +70,7 @@ public final class LoopBook<S> {
         double volume;
         double pitch;
         double range;
+        double weight;
         long expires;
         double loudness;
 
@@ -161,15 +163,32 @@ public final class LoopBook<S> {
     private long now;
     private long nextOrder;
 
+    /** Asks for a loop with a weight of 1: see {@link #request(Object, Object, double, double, double, double, double, double, double)}. */
+    public void request(
+            Object source, S sound, double x, double y, double z, double volume, double pitch, double range) {
+        request(source, sound, x, y, z, volume, pitch, range, 1);
+    }
+
     /**
      * Asks for a loop, or renews it. A source and a sound together name one loop.
      *
      * @param volume its volume at the source, 0 to 1
      * @param pitch its pitch
      * @param range how far away it can be heard, in blocks, above 0
+     * @param weight what the sound engine will multiply its volume by, which the book can't see. It
+     *     counts only in choosing: the engine applies it to the gain itself. At 0 the loop isn't a
+     *     candidate.
      */
     public void request(
-            Object source, S sound, double x, double y, double z, double volume, double pitch, double range) {
+            Object source,
+            S sound,
+            double x,
+            double y,
+            double z,
+            double volume,
+            double pitch,
+            double range,
+            double weight) {
         Key key = new Key(source, sound);
         Lease<S> lease = leases.computeIfAbsent(key, k -> new Lease<>(k, sound, nextOrder++));
         lease.x = x;
@@ -178,6 +197,7 @@ public final class LoopBook<S> {
         lease.volume = volume;
         lease.pitch = pitch;
         lease.range = range;
+        lease.weight = weight;
         lease.expires = now + LEASE_TICKS;
     }
 
@@ -249,7 +269,7 @@ public final class LoopBook<S> {
             double dx = lease.x - lx;
             double dy = lease.y - ly;
             double dz = lease.z - lz;
-            double heard = lease.volume * reach(Math.sqrt(dx * dx + dy * dy + dz * dz), lease.range);
+            double heard = lease.volume * lease.weight * reach(Math.sqrt(dx * dx + dy * dy + dz * dz), lease.range);
             if (thinAir > 0 && heard > 0 && loaded.at(lease.x, lease.y, lease.z)) {
                 Voice<S> voice = voices.get(lease.key);
                 lease.loudness = voice != null && voice.chosen ? heard * KEEP_BONUS : heard;
