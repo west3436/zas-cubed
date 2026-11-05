@@ -18,7 +18,9 @@ public final class ZasCommonConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         WORKER_THREADS = builder.comment(
                         "Atmos worker threads (zas-atmos-N). Dimensions simulate in parallel with more",
-                        "than one; each dimension uses one at a time. Read when a server starts.")
+                        "than one; each dimension uses one at a time. Restart-only: read when a server",
+                        "starts.")
+                .worldRestart()
                 .defineInRange("worker_threads", 1, 1, 16);
         SPEC = builder.build();
     }
@@ -30,7 +32,7 @@ public final class ZasCommonConfig {
         container.registerConfig(ModConfig.Type.COMMON, SPEC);
     }
 
-    /** The configured worker count; 1 before the config loads. */
+    /** The configured worker count; 1 before the config loads. Restart-only (OPS-016). */
     public static int workerThreads() {
         return SPEC.isLoaded() ? WORKER_THREADS.get() : 1;
     }
