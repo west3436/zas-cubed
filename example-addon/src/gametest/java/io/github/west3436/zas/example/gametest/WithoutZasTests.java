@@ -5,6 +5,8 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.environment.AmbientDefinition;
+import io.github.west3436.zas.api.environment.AmbientProviders;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -109,6 +111,29 @@ public final class WithoutZasTests {
                 "a gas the fallback doesn't define");
         h.assertValueEqual(Atmospheres.periodTicks(), 20, "the period");
         h.succeed();
+    }
+
+    /**
+     * An ambient provider registers without ZAS³ and is kept, but nothing calls it, however many atmos
+     * periods pass, and every point stays standard air (ENV-004, D-17).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void s_12_ambient_providers_are_kept_but_never_called(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        BlockPos pos = h.absolutePos(new BlockPos(1, 2, 1));
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ExampleAddonMod.MOD_ID, "s_12_provider");
+        int[] calls = {0};
+        AmbientProviders.register(id, level.dimension(), l -> {
+            calls[0]++;
+            return AmbientDefinition.vacuum();
+        });
+        h.assertValueEqual(AmbientProviders.registered(level.dimension()).size(), 1, "the registered providers");
+        h.runAfterDelay(Atmospheres.periodTicks() * 2L + 1, () -> {
+            AmbientProviders.unregister(id, level.dimension());
+            h.assertValueEqual(calls[0], 0, "calls to the provider");
+            assertStandardAir(h, Atmospheres.at(level, pos));
+            h.succeed();
+        });
     }
 
     /** With no preset, a container's explosion breaks no blocks (API-059). */
