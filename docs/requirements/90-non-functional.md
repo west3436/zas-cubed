@@ -124,7 +124,7 @@ reported by CORE-073, a clean GEO-032 audit, and no non-finite values
 - **Verify:** The fuzz suite runs in CI as stated.
 
 #### NFR-011 · Server authority
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 
 No client packet shall change atmos state, except server-validated device GUI
 inputs (CONT-074) and the internals toggle (LIFE-029).
@@ -132,6 +132,15 @@ inputs (CONT-074) and the internals toggle (LIFE-029).
 - **Rationale:** Inferred: clients can't be trusted on a multiplayer server
   (A-03).
 - **Verify:** Inspect every client-to-server packet handler.
+
+*2026-11-05: Implemented. [Server authority](../research/server-authority.md) has the
+inspection, handler by handler: two ZAS³ payloads, the internals toggle and the tank
+settings, and the device GUIs' clicks on the game's own menu packets. No client packet
+carries a value: each sends an id the server checks, and the server works out and
+clamps the result. The inspection found no way to change atmos state. It did find both
+payloads taking presses from spectators, which the game's menu packets refuse, and
+they now refuse them too (`nfr_011_only_a_living_player_toggles_their_own_internals`,
+`nfr_011_only_a_living_player_sets_the_tank_they_hold`).*
 
 #### NFR-012 · Exploit checklist
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: CORE-036, CORE-073
@@ -190,7 +199,7 @@ watchdog logs the cause if it comes back.*
 ## Compatibility
 
 #### NFR-020 · Platform
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-09
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-09
 
 zas-cubed shall run on NeoForge `[21.1.264,)` for Minecraft 1.21.1 under Java
 21, on both dedicated servers and singleplayer. 21.1.264 is the floor because
@@ -204,6 +213,14 @@ it contains the attachment-sync privacy fix and the network hardening
 *2026-11-03: Still Accepted. The mod metadata gives `[21.1.264,)` and CI uses
 Java 21, but CI builds and tests against 21.1.265 (`neo_version`), not the
 floor the Verify plan asks for ([#69](https://github.com/west3436/zas-cubed/issues/69)).*
+
+*2026-11-05: Implemented. `neo_version` in `gradle.properties` is now 21.1.264, and it
+is also each mod's minimum in `neoforge.mods.toml`, so CI's build, unit tests and
+GameTests all run on the floor, and the two can't drift apart. This replaces
+[neoforge §1](../research/neoforge-1.21.1.md#1-toolchain)'s "build against 21.1.265".
+21.1.265 added only context to enchanted loot events
+([NeoForge #3690](https://github.com/neoforged/NeoForge/pull/3690)), which ZAS³ doesn't
+use.*
 
 #### NFR-023 · Dedicated server safety
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: NFR-020
@@ -264,7 +281,7 @@ smoke tests shall pass.
 *2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
 #### NFR-022 · Optional compat isolation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: A-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: A-01
 
 Compat code shall load only when its target mod is present. zas-cubed shall
 run fully without any optional mod installed.
@@ -272,6 +289,15 @@ run fully without any optional mod installed.
 - **Rationale:** Decision: A-01 and D-11.
 - **Verify:** A GameTest runs without any optional mod; Inspect the compat
   entry points.
+
+*2026-11-05: Implemented. `nfr_022_runs_with_no_optional_mod` checks that a GameTest
+server loads only the game, NeoForge and our own mods, so every GameTest in CI runs
+with no optional mod. The inspection found no compat entry point yet: `compat-adastra`
+holds only a `package-info` until the adapter comes in R2 (D-66), and nothing refers
+to it. No main source asks `ModList` or calls `Class.forName`. The mods' metadata lists
+only required dependencies, and `zas.mixins.json` is the one mixin config, with no
+`requiredMods`, and targets only game classes. The adapter, when it comes, needs this
+inspected again.*
 
 ## Quality and process
 

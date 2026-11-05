@@ -445,7 +445,7 @@ left full status back up. They now read such chunks only through
 levels don't change.*
 
 #### GEO-035 · Last-known state at paused interfaces
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: D-43
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43
 
 Anything that interacts with a paused zone shall see the zone's last-known
 state (composition, pressure, temperature) at that interface. This includes
@@ -455,6 +455,19 @@ queries. An unresolved region's last-known state is the ambient.
 - **Rationale:** Decision: D-43.
 - **Verify:** A GameTest checks a breathing player, a device and an API query
   at a paused zone all see its last-known state.
+
+*2026-11-05: Implemented. Devices and open pipe ends used to wait at a paused
+cell, so a network stopped rather than running against the last-known state as
+D-43 and GEO-036 ask. They now act on it, and the zone doesn't change. A device
+still waits at an unresolved cell, as a breather does (LIFE-048), because the
+ambient there is only a guess; queries report it as the ambient. The heater,
+air conditioner, pipe bursts and container failure keep their own stated rules
+for a paused cell. GameTests: `geo_035_queries_see_last_known_state`,
+`geo_035_a_breathing_player_sees_last_known_state` and
+`geo_035_an_active_zone_across_an_edge_sees_last_known_state` in
+`PausedZoneTests`; `PausedZoneDeviceTests.geo_035_*` for the passive vent, open
+pipe end, vent, scrubber, canister and portable scrubber, and the wait at an
+unresolved cell.*
 
 #### GEO-036 · Gas into paused zones is voided
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-43 · Depends: CORE-036

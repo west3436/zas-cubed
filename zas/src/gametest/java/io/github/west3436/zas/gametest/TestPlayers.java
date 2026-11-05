@@ -3,6 +3,7 @@ package io.github.west3436.zas.gametest;
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.ZasMod;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.UUID;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * Players for GameTests, shared by {@code zas}'s and {@code zas_atmos}'s.
@@ -49,6 +51,22 @@ public final class TestPlayers {
             throw new GameTestAssertException("can't end the test player's spawn protection: " + e);
         }
         return p;
+    }
+
+    /**
+     * A payload's context on the server, from {@code player}: enough to call a client-to-server
+     * payload's handler as the network would. It answers only {@link IPayloadContext#player()}.
+     */
+    public static IPayloadContext sentBy(ServerPlayer player) {
+        return (IPayloadContext) Proxy.newProxyInstance(
+                IPayloadContext.class.getClassLoader(),
+                new Class<?>[] {IPayloadContext.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("player")) {
+                        return player;
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
     }
 
     /** The hurtable player takes damage that a plain fake player shrugs off. */
