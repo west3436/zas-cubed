@@ -210,9 +210,11 @@ Fire and lit fuel blocks are heat sources through FIRE-025 instead.
 *2026-11-02: Implemented ([#40](https://github.com/west3436/zas-cubed/issues/40)).
 `data/zas/zas/thermal/sources/`, one file per block
 ([datapacks](../datapacks.md#heat-data)). They set no U, so lava, magma and
-snow use the fallback and the ice keeps 2.2. Until fluids seal (GEO-006,
-[#65](https://github.com/west3436/zas-cubed/issues/65)), lava is a source only
-beyond a wall. `heat_016_default_heat_sources` (GameTest) checks every state.*
+snow use the fallback and the ice keeps 2.2.
+`heat_016_default_heat_sources` (GameTest) checks every state.*
+
+*2026-11-05: Fluids seal now (GEO-006), so lava also warms a room it touches with
+no wall between. `geo_006_lava_beside_a_room_warms_it` checks it.*
 
 #### HEAT-007 · Lit fuel blocks
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-35 · Depends: FIRE-025

@@ -1,0 +1,5 @@
+{
+  "blocks": ["minecraft:honey_block"],
+  "sealed_faces": ["down", "up", "north", "south", "west", "east"],
+  "volume": 0
+}

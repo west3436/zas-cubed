@@ -75,6 +75,11 @@
   "commands.zas.pin.absent": "Nothing pinned at %s: no simulation",
   "commands.zas.unpin.queued": "Queued the removal of the pins of %s for the next atmos tick",
   "commands.zas.unpin.done": "Removed the pins of %s",
+  "commands.zas.pause.done": "Paused the atmosphere of %s from the next atmos tick (by %s: %s)",
+  "commands.zas.pause.status": "The atmosphere of this dimension is paused, by %s: %s",
+  "commands.zas.resume.done": "Resumed the atmosphere of %s from the next atmos tick",
+  "commands.zas.resume.not_paused": "The atmosphere of this dimension isn't paused",
+  "commands.zas.error.not_simulated": "%s isn't simulated",
   "commands.zas.zones.header": "%s: %s zones, %s cells (atmos tick %s)",
   "commands.zas.zones.line": "  Zone %s: %s cells, %s kPa, %s K",
 

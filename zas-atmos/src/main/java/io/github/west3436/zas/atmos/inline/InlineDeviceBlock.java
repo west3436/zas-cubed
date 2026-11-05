@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.inline;
 
+import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import java.util.EnumMap;
 import java.util.List;
@@ -134,7 +135,8 @@ public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeC
     private boolean joinsPipe(BlockState state, BlockPlaceContext context) {
         BlockPos pos = context.getClickedPos();
         for (Direction face : portFaces(state)) {
-            if (PipeConnector.connected(state, face, context.getLevel().getBlockState(pos.relative(face)))) {
+            if (PipeConnector.connected(state, face, context.getLevel().getBlockState(pos.relative(face)))
+                    || GasHandlers.connects(context.getLevel(), pos, state, face)) {
                 return true;
             }
         }

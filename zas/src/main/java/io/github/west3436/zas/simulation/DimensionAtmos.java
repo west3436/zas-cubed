@@ -52,6 +52,7 @@ import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.hotspot.FireIntents;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
+import io.github.west3436.zas.persistence.DimensionPause;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.reaction.ServerReactions;
 import io.github.west3436.zas.sound.IgnitionWhoomps;
@@ -106,6 +107,11 @@ import org.slf4j.Logger;
  * pins again ({@link DimensionData#releasedPins}), and its pins are taken off the records of
  * chunks that load, so a zone that was stored in unloaded chunks, or saved before an unpin queued
  * at shutdown was applied, comes back without them.
+ *
+ * <p><b>The dimension pause</b> (OPS-005). {@link #pauseSimulation} is the one way to pause the
+ * whole dimension, whoever asks; it records who and why ({@link DimensionPause}) in the dimension's
+ * saved data, and every batch closed from then on tells the engine, so the pause outlasts a restart
+ * or a rebuild of the engine with nothing to carry over.
  *
  * <p><b>Ambient providers</b> (ENV-015). Each batch close takes the answer of the dimension's
  * provider before anything reads the ambient, so the batch and every query until the next close
@@ -250,6 +256,47 @@ public final class DimensionAtmos {
     public boolean isFaulted() {
         DimensionPipeline p = pipeline;
         return p != null && p.scheduler().isFaulted();
+    }
+
+    /**
+     * Pauses this dimension's simulation from the next atmos tick, without a restart (OPS-005):
+     * every zone then behaves as a paused zone (GEO-030, GEO-035 to GEO-038), no zone forms, and the
+     * pause lasts through restarts until {@link #resumeSimulation}. Assumes nothing about who asks:
+     * an operator's command and code that has to stop the dimension both come here. Server thread.
+     *
+     * @param why who or what is pausing it, and why
+     * @return false if it was already paused, in which case the first pause and its reason stay
+     */
+    public boolean pauseSimulation(DimensionPause why) {
+        DimensionData data = DimensionData.of(level);
+        if (data.pause() != null) {
+            return false;
+        }
+        data.setPause(why);
+        LOGGER.info("The atmosphere of {} is paused by {}: {}", dimension().location(), why.by(), why.reason());
+        return true;
+    }
+
+    /**
+     * Ends the {@linkplain #pauseSimulation pause}, from the next atmos tick: zones carry on from
+     * their last-known state, and block changes held meanwhile apply (GEO-033, GEO-037). Server
+     * thread.
+     *
+     * @return false if it wasn't paused
+     */
+    public boolean resumeSimulation() {
+        DimensionData data = DimensionData.of(level);
+        if (data.pause() == null) {
+            return false;
+        }
+        data.setPause(null);
+        LOGGER.info("The atmosphere of {} resumes", dimension().location());
+        return true;
+    }
+
+    /** Why this dimension's simulation is paused, or null if it isn't (OPS-005). Server thread. */
+    public DimensionPause simulationPause() {
+        return DimensionData.of(level).pause();
     }
 
     public boolean isInFlight() {
@@ -876,6 +923,14 @@ public final class DimensionAtmos {
                 level.getSeed() ^ (long) dimension().location().toString().hashCode() * 0x9E3779B97F4A7C15L);
         DimensionData data = DimensionData.of(level);
         engine.reserveZoneIds(data.nextZoneId());
+        DimensionPause paused = data.pause();
+        if (paused != null) {
+            LOGGER.warn(
+                    "The atmosphere of {} stays paused, by {}: {}. /zas resume runs it again",
+                    dimension().location(),
+                    paused.by(),
+                    paused.reason());
+        }
         DimensionScheduler scheduler =
                 new DimensionScheduler(engine, ZasServerConfig.singleThreaded() ? null : workers);
         pipeline = new DimensionPipeline(
@@ -921,8 +976,8 @@ public final class DimensionAtmos {
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
-     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), and when a pressure difference
-     * breaks them (FLOW-007).
+     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
+     * breaks them (FLOW-007), and whether the dimension is paused (OPS-005).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -934,7 +989,8 @@ public final class DimensionAtmos {
                 .withHotspots(FireConfig.hotspots())
                 .withBlockIgnition(FireConfig.blockIgnition()
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
-                .withFragile(AirflowConfig.fragile());
+                .withFragile(AirflowConfig.fragile())
+                .withDimensionPaused(simulationPause() != null);
     }
 
     /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */

@@ -134,7 +134,7 @@ An overridden block is a single cell.
   tightness and volume follow the override.
 
 #### GEO-009 · Default overrides
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Depends: GEO-005
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Depends: GEO-005
 
 ZAS³ shall ship overrides for blocks whose collision shape misleads:
 
@@ -150,8 +150,14 @@ ZAS³ shall ship overrides for blocks whose collision shape misleads:
 - **Verify:** Inspect the shipped overrides; a GameTest checks leaves and
   fences pass gas and a honey block seals.
 
+*2026-11-05: Implemented. Inspected: the four files in
+`data/zas/zas/geometry_overrides/` match the table
+([datapacks](../datapacks.md#geometry-overrides)). `geo_009_shipped_overrides`
+checks every state of those blocks, and
+`geo_009_leaves_and_fences_pass_gas_and_honey_seals` passes in a real level.*
+
 #### GEO-006 · Fluids
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 A position holding a fluid (a source, flowing fluid, or waterlogged block)
 shall hold no gas and be gas-tight on all faces, unless overridden.
@@ -160,6 +166,11 @@ shall hold no gas and be gas-tight on all faces, unless overridden.
   treating it as a wall is simpler than modelling the fluid's volume.
 - **Verify:** A GameTest checks a water column seals a room and an overridden
   fluid doesn't.
+
+*2026-11-05: Implemented. `geo_006_water_column_seals_a_room`,
+`geo_006_waterlogged_block_seals_a_room` and
+`geo_006_overridden_fluid_does_not_seal` pass. An override also beats a waterlogged
+state, so a waterlogged fence passes gas under GEO-009's override.*
 
 #### GEO-007 · Zone-boundary blocks
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §2.3](../research/zas-core.md#23-cells-turfdm-atomdm)
