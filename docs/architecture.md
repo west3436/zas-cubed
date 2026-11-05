@@ -2290,6 +2290,9 @@ jar, so providers can be tested before real devices exist.
   and reads as working. That one line is all a device needs. The base turns it
   into a level
   (`DeviceActivity`), and a device that has never reported costs one null check.
+  A device switched between steps calls `finishActivity` itself after reporting,
+  so its level changes with its switch: a portable either way, and a pump, filter
+  or mixer when switched off.
   `DeviceActivitySync` lists each level's devices that aren't idle. Once per atmos
   tick, at a phase given by its entity id, a player is sent what differs from what
   it was last told, within 32 blocks, and told to forget what has gone idle, been
@@ -2453,7 +2456,8 @@ the cell in front of its grille).
   waits three atmos ticks after it loads, and acts only on a cell that reads
   the same state and zone twice running and is zoned or the ambient. This is
   the open pipe end's guard of §11.4, shared
-  ([#153](https://github.com/west3436/zas-cubed/issues/153)).
+  ([#153](https://github.com/west3436/zas-cubed/issues/153)). `wouldTrust` says what
+  the next step's reading would, and records nothing.
 - **Connector port** (CONT-083). Set in the floor, facing up. It connects to
   a pipe below it and a canister on it; its `connected` state shows a collar
   while a canister stands on it.
@@ -2646,6 +2650,17 @@ the cell in front of its grille).
     `.portable` package: `PortableBlock` (facing, `lit`, shape, opening the GUI,
     dropping what it holds), `PortableDevice` (the battery slot, the switch, the
     `point()`) and `PortableMenu`.
+  - **The switch** (CONT-018, DATA-017). `PortableDevice.setOn` changes `lit` and
+    the activity level itself, rather than leaving them to the next step, up to
+    1 s later. Switched off, both go at once. Switched on, it calls
+    `reportNextStep`, the step itself with `simulate` set. That reports what the
+    step would move, moving no gas or heat and asking the battery with
+    `extractEnergy(cost, true)`, and says whether it would work. Sharing the step
+    keeps the two from disagreeing, so a portable doesn't light for a moment and go
+    dark, and gas and heat still move only in a step, so a switch gets it no extra
+    work. A portable pump or scrubber reads its cell through its `CellWatch` at every
+    step, on or off, so one switched on after standing off doesn't lose a step
+    (§11.5). The GUI's status stays what the last step did.
 - **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
   in `.heater`. The heater's mirror, the same size and on the same code. Its
   setpoint runs from 73 to 293 K (default 293 K). Each atmos tick, while on, it

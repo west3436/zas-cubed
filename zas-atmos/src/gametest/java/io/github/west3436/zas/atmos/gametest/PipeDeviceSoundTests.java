@@ -200,6 +200,33 @@ public final class PipeDeviceSoundTests {
         h.succeed();
     }
 
+    /**
+     * An inline device switched off shows it before its next step: its block goes off and it reads
+     * idle. Switched on, both wait for its step, which is what finds out if it has power and gas to
+     * move (DATA-017).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void data_017_an_inline_device_switched_off_reads_idle_at_once(GameTestHelper h) {
+        Area a = new Area(h, 920);
+        PressurePumpBlockEntity pump = inline(a, AtmosBlocks.PRESSURE_PUMP.get());
+        BlockPos pos = pump.getBlockPos();
+        pump.set(4_500);
+        add(pump.input().network().gas(), 300);
+
+        pump.setOn(true);
+        h.assertFalse(a.level.getBlockState(pos).getValue(InlineDeviceBlock.ON), "on before its step");
+        reads(h, a, pos, DeviceActivity.IDLE, "switched on, before its step");
+
+        pump.step();
+        h.assertTrue(a.level.getBlockState(pos).getValue(InlineDeviceBlock.ON), "off at its step");
+        reads(h, a, pos, DeviceActivity.HARD, "moving 88 mol");
+
+        pump.setOn(false);
+        h.assertFalse(a.level.getBlockState(pos).getValue(InlineDeviceBlock.ON), "still on once switched off");
+        reads(h, a, pos, DeviceActivity.IDLE, "switched off, before its step");
+        h.succeed();
+    }
+
     /** A volume pump set to no rate moves nothing, on and powered, and reads idle. */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_125_a_volume_pump_reads_by_the_gas_it_moves(GameTestHelper h) {

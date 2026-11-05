@@ -139,7 +139,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     /**
      * Switches it on or off, with its switch's sound (CONT-126). The sound follows the switch and not
      * the power: a lease isn't saved, so a device following its power would click off and on again
-     * whenever its chunk loaded. Server side.
+     * whenever its chunk loaded. Switched off, its block and its activity level follow at once; switched
+     * on, they wait for its step, which is what finds out whether it has power and gas to move. Server
+     * side.
      */
     public void setOn(boolean on) {
         if (on != this.on) {
@@ -147,6 +149,11 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
             setChanged();
             if (level != null) {
                 AtmosSounds.play(level, worldPosition, switchSound(on));
+            }
+            if (!on && !isRemoved() && level instanceof ServerLevel server) {
+                showRunning(server, false);
+                reportStopped();
+                finishActivity(server);
             }
         }
     }
@@ -195,13 +202,17 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     @Override
     protected final void atmosTick(ServerLevel level) {
         boolean running = running();
-        BlockState state = getBlockState();
-        if (state.hasProperty(InlineDeviceBlock.ON) && state.getValue(InlineDeviceBlock.ON) != running) {
-            level.setBlock(worldPosition, state.setValue(InlineDeviceBlock.ON, running), Block.UPDATE_CLIENTS);
-        }
+        showRunning(level, running);
         status = running ? work(level) : InlineStatus.OFF;
         if (!running) {
             reportStopped();
+        }
+    }
+
+    private void showRunning(ServerLevel level, boolean running) {
+        BlockState state = getBlockState();
+        if (state.hasProperty(InlineDeviceBlock.ON) && state.getValue(InlineDeviceBlock.ON) != running) {
+            level.setBlock(worldPosition, state.setValue(InlineDeviceBlock.ON, running), Block.UPDATE_CLIENTS);
         }
     }
 

@@ -156,8 +156,11 @@ public abstract class PortableGasDevice extends PortableDevice {
             return; // the blast of a failing tank can break it
         }
         airPressure = Double.NaN;
+        // Read on or off, so a portable switched on already knows its cell is steady.
+        AtmosphereSample cell = Atmospheres.at(level, point());
+        boolean trusted = watch.trust(cell);
         if (on()) {
-            status = step(level);
+            status = step(level, cell, trusted, false);
         } else {
             status = PortableStatus.OFF;
             reportStopped();
@@ -181,8 +184,21 @@ public abstract class PortableGasDevice extends PortableDevice {
         }
     }
 
-    /** One step's work on the air. */
-    private PortableStatus step(ServerLevel level) {
+    @Override
+    protected boolean reportNextStep(ServerLevel level) {
+        AtmosphereSample cell = Atmospheres.at(level, point());
+        return step(level, cell, watch.wouldTrust(cell), true) == PortableStatus.WORKING;
+    }
+
+    /**
+     * One step's work on the air.
+     *
+     * @param cell the reading of its cell
+     * @param trusted whether to act on that reading
+     * @param simulate true to report what it would move and leave the rest: no gas moves and no charge
+     *     goes
+     */
+    private PortableStatus step(ServerLevel level, AtmosphereSample cell, boolean trusted, boolean simulate) {
         IEnergyStorage energy = battery().energy();
         if (energy == null) {
             return PortableStatus.NO_BATTERY;
@@ -190,24 +206,24 @@ public abstract class PortableGasDevice extends PortableDevice {
         ItemStack held = tank.tank();
         GasMixture air;
         if (held.isEmpty()) {
-            AtmosphereSample sample = Atmospheres.at(level, point());
-            boolean trusted = watch.trust(sample);
-            if (sample.state() != AtmosphereState.ZONED) {
+            if (cell.state() != AtmosphereState.ZONED) {
                 return PortableStatus.NO_ROOM;
             }
             if (!trusted) {
                 return PortableStatus.WAITING;
             }
-            air = sample.mixture();
+            air = cell.mixture();
         } else {
             air = GasTankItem.contents(held);
         }
-        airPressure = air.pressure();
+        if (!simulate) {
+            airPressure = air.pressure();
+        }
         Move move = plan(air);
         if (move.idle() != null) {
             return move.idle();
         }
-        double paid = pay(energy);
+        double paid = pay(energy, simulate);
         if (paid <= 0) {
             return PortableStatus.BATTERY_EMPTY;
         }
@@ -216,6 +232,9 @@ public abstract class PortableGasDevice extends PortableDevice {
         double give = move.give() * paid;
         reportMoved(
                 give + take.values().stream().mapToDouble(Double::doubleValue).sum());
+        if (simulate) {
+            return PortableStatus.WORKING;
+        }
         if (held.isEmpty()) {
             onZone(level, take, give);
         } else {
@@ -226,9 +245,9 @@ public abstract class PortableGasDevice extends PortableDevice {
     }
 
     /** Pays its battery for a step. @return the share of the step the charge paid for, 0 to 1. */
-    private double pay(IEnergyStorage energy) {
+    private double pay(IEnergyStorage energy, boolean simulate) {
         int cost = drawPerTick() * AtmosTicks.PERIOD;
-        return cost <= 0 ? 1 : (double) energy.extractEnergy(cost, false) / cost;
+        return cost <= 0 ? 1 : (double) energy.extractEnergy(cost, simulate) / cost;
     }
 
     private void onZone(ServerLevel level, Map<ResourceLocation, Double> take, double give) {

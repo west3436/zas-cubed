@@ -62,16 +62,36 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
         return on;
     }
 
-    /** Switches it on or off, with a click (CONT-127). Server side. */
+    /**
+     * Switches it on or off, with a click (CONT-127). Its block and its activity level follow at once
+     * (CONT-018, DATA-017). Its gas and heat still move only in its steps, so a switch gets it no extra
+     * work. Server side.
+     */
     public void setOn(boolean on) {
         if (on != this.on) {
             this.on = on;
             setChanged();
-            if (level != null && !level.isClientSide) {
-                level.playSound(null, worldPosition, on ? switchOnSound() : switchOffSound(), SoundSource.BLOCKS);
+            if (!isRemoved() && level instanceof ServerLevel server) {
+                server.playSound(null, worldPosition, on ? switchOnSound() : switchOffSound(), SoundSource.BLOCKS);
+                boolean working = false;
+                if (on) {
+                    working = reportNextStep(server);
+                } else {
+                    reportStopped();
+                }
+                finishActivity(server);
+                showWorking(server, working);
             }
         }
     }
+
+    /**
+     * Reports what its next step would do with things as they are now, as its step would report it,
+     * moving nothing and spending nothing, for its switch to show at once.
+     *
+     * @return whether it would work
+     */
+    protected abstract boolean reportNextStep(ServerLevel level);
 
     /** What it plays when switched on. */
     protected abstract SoundEvent switchOnSound();
