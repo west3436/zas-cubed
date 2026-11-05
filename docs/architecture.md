@@ -2180,7 +2180,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
-| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
@@ -3191,3 +3191,11 @@ there too. A server only sends a sound out to its event's range, so an event
 heard past 16 blocks is registered with the same range, and a GameTest checks
 that they agree. A loop's range comes from the client's loop manager instead.
 Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).
+
+**Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
+canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
+and sends each player in the level one `ClientboundSoundPacket`, which
+`BlastSound.heard` chooses from the blast's power and the player's distance, so
+nobody hears a near and a far sound together. These packets don't use the server's
+range check, but the events' ranges are still what the client attenuates by. Any
+other explosion goes through vanilla's code and keeps vanilla's sound.
