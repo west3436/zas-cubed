@@ -322,6 +322,42 @@ power 2.0, the power the test checks. A pig 2 blocks away falls from 10 health
 to 0.28, and glass, planks and the floor stay intact. The Manual playtest is
 still to come.*
 
+*2026-11-04: This corrects the note above on two points. A vent on siphon can't
+run on real power, because no controller mode orders it
+([#245](https://github.com/west3436/zas-cubed/issues/245)). And that chamber
+wasn't 12 % H₂ at 1 atm: only its nitrogen came out, so the room's own O₂ stayed,
+and it held 9.9 % H₂ at about 1.2 atm. `ToxinsLabTests.s_13_toxins_lab` now uses
+no test power and runs in real time. An area air controller outside the chamber,
+fed by two generators, has the igniter, a scrubber in the wall and the pressure
+pump linked with the multitool.*
+
+*A player gets the room's air out with the same line: the controller on Panic and
+the pump on (`s_13_panic_through_the_pump_empties_the_chamber`,
+`s_13_panic_at_the_highest_target_clears_the_line`). A room at 1 atm holds
+1,118 mol. It falls below 5 % of that in 83 s and below 1 % in 125 s, and the
+scrubber keeps moving: alone it stalls at about 415 mol. With the pump at
+1,100 kPa, the canister stops at 663 mol and the 470 L behind the pump takes the
+rest, 444 mol at 23 atm by then. With the pump at 4,500 kPa, the canister's side
+takes nearly all of it, 1,105 mol at 1,832 kPa, and 2 mol stay behind the pump.*
+
+*That air can't stay in the line for the burn. Opening the canister's valve
+outdoors still leaves 61 mol at 1 atm on its side, and then the exhaust stands at
+1,173 K and the mix at 823 K, which doesn't ignite. Replacing the pump, the pipe,
+the port and the canister after a run at 4,500 kPa leaves 0.07 mol in the line,
+and the exhaust comes out within 7 K of the figures below. Neither of these two
+is a kept test; each was measured once.*
+
+*The test still fills the chamber through the API, now with the room's air gone:
+12 % H₂ in O₂ at 1 atm. How a player fills it isn't tested. A redstone block fires
+the igniter, and the chamber burns to 1,648 K. On Panic, the scrubber draws the
+exhaust through the pump, set to 1,100 kPa, into the canister, where it stands at
+1,661 K. The canister fills an empty tank to 1,013 kPa: 5.13 mol at 87 % O₂. An H₂
+canister fills another to 174 kPa, 5 mol at room temperature. On a TTV with a 2 s
+timer, the valve opens and the mix is at 1,004 K. It burns within an atmos tick to
+69 atm, and the tank explodes with power 1.9, the power the test checks. A pig
+2 blocks away falls from 10 health to 1.4, and glass, planks and the floor stay
+intact. The Manual playtest is still to come.*
+
 ## Questions
 
 ### Resolved (2026-10-30)
