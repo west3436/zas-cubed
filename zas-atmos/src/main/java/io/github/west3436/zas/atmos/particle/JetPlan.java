@@ -77,7 +77,7 @@ public record JetPlan(
 
     /**
      * The least flow an open end shows, in moles per second: below it, a trickle shows nothing
-     * (CLIENT-019). A lone 70 L pipe reaches it at about 1.5 atm over its room.
+     * (CLIENT-019). A lone 70 L pipe reaches it about 0.5 atm above a large room.
      */
     static final double OPEN_END_MIN_FLOW = 0.25;
 

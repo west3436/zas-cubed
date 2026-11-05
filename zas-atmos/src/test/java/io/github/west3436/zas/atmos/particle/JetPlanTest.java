@@ -125,7 +125,7 @@ class JetPlanTest {
 
     @Test
     void client_019_a_lone_pipe_a_little_over_its_room_is_about_the_threshold() {
-        // A 70 L pipe at 1.5 atm over a large room: the open end's 0.163 of the 1.44 moles above it.
+        // A 70 L pipe 0.5 atm above a large room: the open end's 0.163 of the 1.44 moles over the room's.
         double overRoom = 0.5 * 101.325 * 70 / (8.314 * 293.15);
         assertEquals(JetPlan.OPEN_END_MIN_FLOW, 0.163 * overRoom, 0.03);
     }
