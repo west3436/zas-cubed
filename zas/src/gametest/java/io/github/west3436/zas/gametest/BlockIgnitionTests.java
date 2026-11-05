@@ -248,6 +248,7 @@ public final class BlockIgnitionTests {
      * the ignition temperature. A 20 × 1 × 20 room has a hay floor under all of its 400 cells, and
      * stone above and around. At 823 K, 250 K above hay's ignition point, the heat share is 0.55, so
      * with hay's odds of 60 the chance is 0.33. A configured ignition point above the gas lights none.
+     * Each tick's fires are put out before the next, so each of 16 ticks draws for all 400 cells.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_033_rate_matches_the_odds_and_the_heat(GameTestHelper h) {
@@ -264,11 +265,19 @@ public final class BlockIgnitionTests {
                 h.assertValueEqual(fires(r, 0, 20, 1, 20).size(), 0, "fires below the configured ignition point");
             });
             burning(h, true, new BlockIgnitionSettings(true, 573, 1), () -> {
-                r.tick();
+                int ticks = 16;
+                int lit = 0;
+                for (int i = 0; i < ticks; i++) {
+                    r.tick();
+                    for (BlockPos p : fires(r, 0, 20, 1, 20)) {
+                        r.level.setBlockAndUpdate(p, Rooms.AIR);
+                        lit++;
+                    }
+                }
                 double expected = 1 - Math.pow(1 - 0.33, seconds());
-                double rate = fires(r, 0, 20, 1, 20).size() / 400.0;
-                // Binomial: σ of the rate is √(0.33 · 0.67 / 400) ≈ 0.024.
-                h.assertTrue(Math.abs(rate - expected) <= 0.08, "ignition rate " + rate + ", expected " + expected);
+                double rate = lit / (ticks * 400.0);
+                // Binomial: σ of the rate is √(0.33 · 0.67 / 6400) ≈ 0.0059, so 0.04 is 6.8 σ.
+                h.assertTrue(Math.abs(rate - expected) <= 0.04, "ignition rate " + rate + ", expected " + expected);
             });
             clear(r, 0, 20, 1, 20);
         });
@@ -338,29 +347,43 @@ public final class BlockIgnitionTests {
     }
 
     /**
-     * FIRE-034: the chance per second is the configured one scaled by the block's ignite odds. A
-     * 20 × 1 × 20 room holds a gas fire in each of its 400 cells over a wool floor, the only flammable
-     * block any of them touches; a chance of 0.5 and wool's odds of 30 make 0.15.
+     * FIRE-034: the chance per second is the configured one scaled by the block's ignite odds. Each of
+     * eight 20 × 1 × 20 rooms holds a gas fire in each of its 400 cells over a wool floor, the only
+     * flammable block any of them touches; a chance of 0.5 and wool's odds of 30 make 0.15. It takes
+     * eight rooms rather than eight ticks because 400 gas fires burn about a third of a room's gas in a
+     * tick.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_034_rate_matches_the_configured_chance(GameTestHelper h) {
         with(0, false, () -> {
             Rooms r = rooms(h, 6);
-            room(r, 0, 20, 1, 20, Rooms.STONE, StandardAir.TEMPERATURE, hydrogenInAir(0.10));
-            for (int x = 1; x <= 20; x++) {
-                for (int z = 1; z <= 20; z++) {
-                    r.set(x, 0, z, WOOL);
-                    r.set(x, 1, z, gasFireBlock());
+            int count = 8;
+            for (int i = 0; i < count; i++) {
+                room(r, 23 * i, 20, 1, 20, Rooms.STONE, StandardAir.TEMPERATURE, hydrogenInAir(0.10));
+            }
+            // Once every room is built, so that no fire burns before the tick that counts.
+            for (int i = 0; i < count; i++) {
+                for (int x = 1; x <= 20; x++) {
+                    for (int z = 1; z <= 20; z++) {
+                        r.set(23 * i + x, 0, z, WOOL);
+                        r.set(23 * i + x, 1, z, gasFireBlock());
+                    }
                 }
             }
             burning(h, true, new BlockIgnitionSettings(true, 573, 0.5), () -> {
                 r.tick();
+                int lit = 0;
+                for (int i = 0; i < count; i++) {
+                    lit += fires(r, 23 * i, 20, 1, 20).size();
+                }
                 double expected = 1 - Math.pow(1 - 0.15, seconds());
-                double rate = fires(r, 0, 20, 1, 20).size() / 400.0;
-                // Binomial: σ of the rate is √(0.15 · 0.85 / 400) ≈ 0.018.
-                h.assertTrue(Math.abs(rate - expected) <= 0.06, "ignition rate " + rate + ", expected " + expected);
+                double rate = lit / (count * 400.0);
+                // Binomial: σ of the rate is √(0.15 · 0.85 / 3200) ≈ 0.0063, so 0.04 is 6.3 σ.
+                h.assertTrue(Math.abs(rate - expected) <= 0.04, "ignition rate " + rate + ", expected " + expected);
             });
-            clear(r, 0, 20, 1, 20);
+            for (int i = 0; i < count; i++) {
+                clear(r, 23 * i, 20, 1, 20);
+            }
         });
         h.succeed();
     }
@@ -394,7 +417,12 @@ public final class BlockIgnitionTests {
 
     /**
      * FIRE-033, FIRE-034: the game rule holds at apply too. A batch closed while the rule was on
-     * lights nothing if the rule goes off before the result is applied.
+     * lights nothing if the rule goes off before the result is applied, and the room burns once the
+     * rule is back on.
+     *
+     * <p>The batch held is the room's first, so all 54 faces draw and it asks for about 21 fires. A
+     * tick before it could light all 26 cells that have a face, about one run in 300, which leaves
+     * nothing to refuse and nothing more to light.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void fire_033_the_rule_holds_when_the_fire_is_lit(GameTestHelper h) {
@@ -403,15 +431,13 @@ public final class BlockIgnitionTests {
             room(r, 0, 3, 3, 3, HAY, 1200, AIR);
             burning(h, () -> {
                 GameRules.BooleanValue rule = r.level.getGameRules().getRule(GameRules.RULE_DOFIRETICK);
-                r.tick();
                 Rooms.service().closeNow(r.level);
                 rule.set(false, r.level.getServer());
-                int before = fires(r, 0, 3, 3, 3).size();
                 Rooms.service().applyNow(r.level);
-                h.assertValueEqual(fires(r, 0, 3, 3, 3).size(), before, "fires lit after the rule went off");
+                h.assertValueEqual(fires(r, 0, 3, 3, 3).size(), 0, "fires lit after the rule went off");
                 rule.set(true, r.level.getServer());
                 r.ticks(5);
-                h.assertTrue(fires(r, 0, 3, 3, 3).size() > before, "the room doesn't burn with the rule back on");
+                h.assertTrue(!fires(r, 0, 3, 3, 3).isEmpty(), "the room doesn't burn with the rule back on");
             });
             clear(r, 0, 3, 3, 3);
         });
