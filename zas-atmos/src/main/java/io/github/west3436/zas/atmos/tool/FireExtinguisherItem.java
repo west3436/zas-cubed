@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.tool;
 
 import io.github.west3436.zas.api.fire.Fires;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -116,7 +117,7 @@ public class FireExtinguisherItem extends Item {
 
     /**
      * One spray from {@code user}'s eye along its look: puts out every gas fire and vanilla fire block
-     * in it and plays the sounds. The spray is a line of boxes along the look, as far as {@link
+     * in it, plays the sounds and shows the particles. The spray is a line of boxes along the look, as far as {@link
      * #REACH} or the first block with collision it meets: each box is the cell at that point, and the
      * cells around it, three wide, beyond {@link #NARROW}. Where the line meets a block, the cells
      * around the one in front of the face it meets are in the spray too, so a fire on a floor or
@@ -148,6 +149,7 @@ public class FireExtinguisherItem extends Item {
             out += Fires.extinguish(
                     level, box.getKey().offset(-r, -r, -r), box.getKey().offset(r, r, r));
         }
+        GasJets.spray(level, user, reach);
         float pitch = 1.6f + level.random.nextFloat() * 0.4f;
         level.playSound(
                 null,
