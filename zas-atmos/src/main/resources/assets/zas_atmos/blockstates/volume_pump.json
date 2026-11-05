@@ -1,0 +1,50 @@
+{
+  "variants": {
+    "facing=north,on=false": {
+      "model": "zas_atmos:block/volume_pump"
+    },
+    "facing=east,on=false": {
+      "model": "zas_atmos:block/volume_pump",
+      "y": 90
+    },
+    "facing=south,on=false": {
+      "model": "zas_atmos:block/volume_pump",
+      "y": 180
+    },
+    "facing=west,on=false": {
+      "model": "zas_atmos:block/volume_pump",
+      "y": 270
+    },
+    "facing=up,on=false": {
+      "model": "zas_atmos:block/volume_pump",
+      "x": 270
+    },
+    "facing=down,on=false": {
+      "model": "zas_atmos:block/volume_pump",
+      "x": 90
+    },
+    "facing=north,on=true": {
+      "model": "zas_atmos:block/volume_pump_on"
+    },
+    "facing=east,on=true": {
+      "model": "zas_atmos:block/volume_pump_on",
+      "y": 90
+    },
+    "facing=south,on=true": {
+      "model": "zas_atmos:block/volume_pump_on",
+      "y": 180
+    },
+    "facing=west,on=true": {
+      "model": "zas_atmos:block/volume_pump_on",
+      "y": 270
+    },
+    "facing=up,on=true": {
+      "model": "zas_atmos:block/volume_pump_on",
+      "x": 270
+    },
+    "facing=down,on=true": {
+      "model": "zas_atmos:block/volume_pump_on",
+      "x": 90
+    }
+  }
+}

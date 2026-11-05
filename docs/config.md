@@ -219,6 +219,7 @@ Its FE values are starting points for playtesting (D-37). The design is in
 | `[power] recharger_rate` | `28` | What a recharger puts into its battery, in FE/t, 0 to 100,000 (CONT-113) |
 | `[power] igniter` | `20` | What an igniter draws from its controller while it has a redstone signal, in FE/t, 0 to 100,000 (CONT-105) |
 | `[power] pressure_pump` | `20` | What a pressure pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] volume_pump` | `20` | What a volume pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] fire_alarm` | `1` | A fire alarm's draw from the controller that covers it, in FE/t, 0 to 100,000 (CONT-044, CONT-065) |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |

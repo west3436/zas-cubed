@@ -61,6 +61,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CONNECTOR_PORT.get());
         out.accept(AtmosItems.VENT.get());
         out.accept(AtmosItems.PRESSURE_PUMP.get());
+        out.accept(AtmosItems.VOLUME_PUMP.get());
         out.accept(AtmosItems.SCRUBBER.get());
         out.accept(AtmosItems.PASSIVE_VENT.get());
         out.accept(AtmosItems.CANISTER.get());

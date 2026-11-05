@@ -18,6 +18,7 @@
     "zas_atmos:recharger",
     "zas_atmos:igniter",
     "zas_atmos:pressure_pump",
+    "zas_atmos:volume_pump",
     "zas_atmos:manual_valve",
     "zas_atmos:redstone_valve"
   ]

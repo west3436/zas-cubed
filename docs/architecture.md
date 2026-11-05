@@ -769,6 +769,10 @@ the lever if the per-cell cost ever matters.
   their target chunk, or with the dimension if that chunk isn't loaded; they
   are queued again after load. Queued removals complete with nothing moved
   (outcome `PAUSED`); waiting additions are cancelled, their gas saved.
+- **A stop that doesn't finish says why** (NFR-015). The game's final chunk loop
+  logs nothing while it runs, so `StopWatchdog`, a daemon thread, logs each
+  level's remaining chunk work and a dump of every thread once a stop has run
+  for 2 minutes, then every 2 minutes, at most 3 times. It only reads and logs.
 - **Level-wide state is tiny.** It is kept in a `SavedData`, `zas_atmos`, per
   dimension:
   - the zone-id counter, so saved ids are never issued again (CORE-026)
@@ -2109,6 +2113,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
+| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus` |
+| `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
 
@@ -2283,8 +2289,10 @@ the cell in front of its grille).
   network past the threshold bursts it one atmos tick later, after every member
   has stepped: a canister on the network, rated lower than a pipe, fails first,
   rather than being emptied by a burst in the same instant.
-- **Deferred:** client smoothing (CONT-070) is not built yet; S-01 doesn't need
-  it.
+- **Client smoothing** (CONT-070). Nothing is built for it. Pump and vent
+  animations are texture animations (`.png.mcmeta`), which the client plays at
+  game tick rate between the devices' 1 s steps. Only the switch between the on
+  and off models waits for a step.
 
 ### 11.5 Devices
 
@@ -2608,6 +2616,13 @@ the cell in front of its grille).
   new, and flows under 10⁻⁴ mol are skipped. It draws `[power] pressure_pump`
   FE/t (20). Its GUI has the switch and ±10 and ±100 kPa buttons, and shows its
   status, target, both pressures and its power.
+- **Volume pump** (CONT-012), in `.pump`. A `PumpBlockEntity` too, set in L/s:
+  `PumpFlow.volumePump` is its set volume at the input's conditions, never more
+  than 100 L. It has no target, so it goes on whatever the output's pressure,
+  until the line bursts (CONT-108); vg's stall at 9,000 kPa over the input isn't
+  asked for. It is set to 100 L/s when new, and draws `[power] volume_pump` FE/t
+  (20). Its GUI has the same layout, with ±1 and ±10 L/s buttons, and says if
+  its rate is 0.
 - **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
@@ -2960,8 +2975,12 @@ tanks and the valve and is what the item and the entity share.
   right-clicks in an inventory, as a bundle's contents do, only while the valve
   is closed. Taking a tank off an open valve closes it first, so the tank has
   its share. Its timer, `zas_atmos:ttv_timer`, never counts down in this form.
-  Each atmos tick its tanks react in a player's inventory or on the ground, and
-  a tank that fails destroys the stack.
+  Each atmos tick, in a player's inventory or on the ground, each tank reacts
+  and then fails if its pressure says so (§11.9). `TransferValve.step` makes
+  those two calls itself, because how a tank fails decides what becomes of the
+  TTV. A tank that leaks stays on. One that ruptures bursts alone, leaving its
+  place empty. One that explodes takes the TTV with it, and the other tank's gas
+  goes into the cell too.
 - **Its screen** (`client.TransferValveScreen`). Using a held TTV opens it, on
   the tank screen's pattern. A button sends `TransferValveSettings` (hand and
   button id); the server refuses an unknown hand or button or a hand holding no
@@ -2970,9 +2989,11 @@ tanks and the valve and is what the item and the entity share.
   adds the entity at the player's feet, tossed gently the way they face, with
   primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
   or hurt, so a timer can't be stopped. It counts its fuse down in game ticks,
-  opens its valve at 0, and at 0 s does so as it is added. Its tanks react every
-  atmos tick, and at once when the valve opens, so a mixture above autoignition
-  burns on the next game tick. A TTV that survives waits `SETTLE_TICKS` (5 s)
+  opens its valve at 0, and at 0 s does so as it is added. Its tanks get the
+  same atmos tick, and one at once when the valve opens, so a mixture above
+  autoignition burns on the next game tick, and a tank it takes past 50 atm
+  explodes then, with the entity as the blast's source. A TTV that survives
+  waits `SETTLE_TICKS` (5 s)
   and drops as an item, valve open and timer setting kept, so a dud can be
   taken away. It saves its tanks, valve, timer and countdowns.
 - **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which

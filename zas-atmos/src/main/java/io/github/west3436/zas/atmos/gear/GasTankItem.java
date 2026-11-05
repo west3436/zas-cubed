@@ -273,8 +273,9 @@ public class GasTankItem extends Item {
      * pressure says so (CONT-038), at the middle of its holder's body. The reaction goes first, so
      * that the check sees the pressure it raised in the same tick. Whatever carries a tank calls
      * this once per atmos tick ({@link AtmosTicks#due}): the tank itself while it is in a player's
-     * inventory or dropped, and a suit or a tank transfer valve for the tanks inside it. A tank
-     * anywhere else, such as a chest, waits until it is carried again (architecture §11.9).
+     * inventory or dropped, and a suit for the tank inside it. A tank transfer valve makes the same
+     * two calls itself, as how a tank fails decides what becomes of it. A tank anywhere else, such
+     * as a chest, waits until it is carried again (architecture §11.9).
      *
      * @param tank the tank's stack, changed in place, and used up if the tank is destroyed
      * @param level the level it is in

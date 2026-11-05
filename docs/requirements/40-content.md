@@ -270,6 +270,11 @@ Device animations shall be smoothed on the client between steps.
   look jerky unless the client interpolates.
 - **Verify:** Manual check that pump and vent animations play smoothly.
 
+*2026-11-04: Nothing needs building. Pump and vent animations are texture
+animations (`.png.mcmeta`, 2 game ticks a frame), which the client plays at game
+tick rate between the devices' 1 s steps; only the switch between the on and off
+models waits for a step. This stays Accepted until the manual check is done.*
+
 #### CONT-071 · Zones through the public API
 `Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-50, API-010, API-016
 
@@ -331,7 +336,7 @@ R1.*
 A network reacts once per atmos tick, run by the first of its members to step;
 a canister is a network node, so it reacts the same way, alone or on a port. A
 tank reacts while a player has it, in a worn or carried suit's slot, and
-dropped; the tank transfer valve will tick its own (CONT-103). The game offers
+dropped; the tank transfer valve ticks its own (CONT-103). The game offers
 no tick to a stack in a chest, on a mob or in an item frame, so a tank there
 waits until it is carried again ([architecture
 §11.9](../architecture.md#119-breathing-gear-cont-030-to-cont-032-cont-039-cont-090)).
@@ -471,7 +476,7 @@ temperatures, and that the pump takes no more than its input holds.
 checks a real pump's first second.*
 
 #### CONT-012 · Volume pump
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: vg quirk 1
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: vg quirk 1
 
 A volume pump shall move a set volume per second, up to 100 L/s, at the
 input's conditions, and never more (vg's max-instead-of-min bug is fixed).
@@ -482,6 +487,16 @@ input's conditions, and never more (vg's max-instead-of-min bug is fixed).
   quirk 1).
 - **Verify:** A Unit test checks the volume moved per second for settings
   below and above the limit.
+
+*2026-11-04: Implemented ([#48](https://github.com/west3436/zas-cubed/issues/48)).
+`zas_atmos:volume_pump` is built on the same base as the pressure pump
+([architecture §11.5](../architecture.md#115-devices)). `PumpFlowTest.cont_012_*`
+(Unit) checks settings below and above the limit.
+`PumpTests.cont_012_a_real_volume_pump_moves_its_set_volume` (GameTest) checks a
+real pump between two networks, its GUI's clamped steps and its draw. vg also
+stalls its volume pump when the output is 9,000 kPa over the input; this
+requirement doesn't ask for that, so a volume pump can drive a line until it
+bursts (CONT-108).*
 
 #### CONT-013 · Filter
 `Should` · `R1` · `Accepted` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
@@ -1124,8 +1139,17 @@ first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
 `cont_103_a_hot_mixture_burns_in_the_tank`,
 `cont_103_without_both_tanks_no_gas_moves`,
 `cont_103_tanks_go_on_and_come_off_in_an_inventory` and
-`cont_103_the_screen_takes_tanks_off` check it. Until CONT-038 is built, a
-TTV's tank fails only by exploding above 50 atm, without leaks or ruptures.*
+`cont_103_the_screen_takes_tanks_off` check it. A TTV's tanks fail as any tank
+does (CONT-038). One that leaks stays on, and one that ruptures bursts alone,
+leaving its place empty. One that explodes takes the TTV with it, and the other
+tank's gas goes into the cell too. The requirement doesn't say what becomes of
+the TTV, so that is for the owner to confirm.
+`cont_103_a_tank_that_explodes_destroys_the_ttv`,
+`cont_103_a_primed_ttv_goes_off_with_its_tank`,
+`cont_103_a_tank_that_ruptures_leaves_the_ttv`,
+`cont_103_a_leaking_tank_stays_on_the_ttv`,
+`cont_103_a_tank_failing_in_an_inventory_takes_the_ttv_with_it` and
+`cont_103_a_tank_failing_on_the_ground_takes_the_ttv_with_it` check that.*
 
 #### CONT-104 · TTV timer
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
@@ -1156,8 +1180,9 @@ to confirm. `cont_104_the_valve_opens_by_hand`,
 `cont_104_a_primed_valve_ticks_in_the_world`,
 `cont_104_a_primed_valve_cant_be_picked_up_or_used`,
 `cont_104_the_timer_is_clamped_to_its_range`,
-`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
-and `cont_104_a_primed_valve_is_saved` check it.*
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`,
+`cont_104_an_open_valve_wont_start_its_timer` and
+`cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest
@@ -1964,6 +1989,9 @@ it is on, running or idle. `PumpTests.cont_060_a_real_pump_runs_on_a_controller_
 (GameTest) checks a controller pays for it while it is on, and that it draws
 nothing while it is off. This stays Accepted until every device's draw is in
 the config.*
+
+*2026-11-04: The volume pump's 20 FE/t is `[power] volume_pump`, drawn in the
+same way (`PumpTests.cont_012_a_real_volume_pump_moves_its_set_volume`, GameTest).*
 
 *2026-11-04: The scrubber's 15 (30) FE/t are `[power] scrubber` and `[power]
 scrubber_panic`, drawn while it isn't off

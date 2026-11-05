@@ -16,6 +16,7 @@ import io.github.west3436.zas.atmos.portable.PortablePumpBlock;
 import io.github.west3436.zas.atmos.portable.PortableScrubberBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
+import io.github.west3436.zas.atmos.pump.VolumePumpBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
@@ -100,6 +101,10 @@ public final class AtmosBlocks {
     /** The pressure pump (CONT-011). */
     public static final DeferredBlock<PressurePumpBlock> PRESSURE_PUMP =
             BLOCKS.registerBlock("pressure_pump", PressurePumpBlock::new, metal());
+
+    /** The volume pump (CONT-012). */
+    public static final DeferredBlock<VolumePumpBlock> VOLUME_PUMP =
+            BLOCKS.registerBlock("volume_pump", VolumePumpBlock::new, metal());
 
     /** The manual valve (CONT-010). */
     public static final DeferredBlock<ManualValveBlock> MANUAL_VALVE =
