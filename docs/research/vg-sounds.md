@@ -71,7 +71,6 @@ elsewhere. It doesn't prove where a file came from.
 | `machines/looping/gas_hiss`, `machines/looping/smes_hum`, `machines/effects/smes_switch`, `machines/looping/bubbles` | The same PR, which names no source. All carry the same tag left by an MP4 container (`TXXX=isommp42` or `iso6mp41`) as the two aircraft files. `bubbles` also says Sound Forge 4.0, 1999. |
 | `effects/Explosion_Small1` to `3`, `effects/explosionsmallfar` | Added with `weapons/stickybomb_det` in a "Stickybomb Launcher" commit, a Team Fortress 2 weapon, with no source. `Explosion_Small1` says Sound Forge 5.0, 2003, twelve years before the commit. |
 | `effects/Explosion3` to `6`, `effects/bamfgas` | One 2014 sound batch with no sources. `Explosion5` is tagged `TITLE=Track 81`, `ALBUM=Album`, `ARTIST=Artist`, as a track of an effects disc would be. The others have no sign themselves and are left out only as its siblings. |
-| `machines/charge_finish` | vg #25079 links a Discord-hosted `alert12.mp3` with no source. |
 | `misc/click`, `weapons/flamethrower`, `machines/compactor` | Tags from a DASH stream (`major_brand=dash`), as a video download leaves. |
 | `effects/vacuum` | Tags from an M4A made by Google's muxer. |
 | `effects/blow` | Tagged `TITLE=Age of empires 2 villager spawn sound`. |
@@ -82,6 +81,13 @@ elsewhere. It doesn't prove where a file came from.
 source, and the file's tags are the emptied keys of an MP4 file. The owner says
 (2026-11-05) that it came from Freesound under a suitable license. The original
 sound and its author aren't recorded. See [For review](#for-review).
+
+**Used, with a gap:** `machines/charge_finish`, for the recharger filling. It came in
+vg #25079 (`83fc373f7`, 2019), which links a Discord-hosted `alert12.mp3` and names
+no source. It was left out until the owner asked for it after their playtest, and
+decided (2026-11-05) to credit it to vgstation13 contributors: it's likely a sound a
+vg player made, or one of SS13's old assets, shared and changed for so long that its
+author is unknown.
 
 **Used, no sign:** everything else in the tables. Most came in vg's first commit
 (`662c08272a`, 2010), an import with no record of each file. The wind files came
@@ -219,7 +225,7 @@ Event sounds. Every event below is in `zas_atmos`:
 | `device.controller.danger` | 1 | 0.5; range 24 | `machines/warning-buzzer` | **Weak**, as above. Gas extractor warnings, consoles | 3.51 s, 1 ch |
 | `device.firelock.open`, `.close` | 0.9, 0.8 | 0.5, 0.6 | `machines/airlock` | vg's firelock plays the default door sound | 1.28 s, 2 ch |
 | `device.firelock.force` | 0.8 | 0.4 | `effects/bang` | **Weak: silent** apart from opening. A flashbang, or headbutting a door | 0.51 s, 2 ch |
-| `device.recharger.done` | 1 | 0.3 | `machines/ping` | **vg's recharger beep is [left out](#provenance).** The robot charging station finishing an upgrade | 0.49 s, 1 ch |
+| `device.recharger.done` | 1 | 0.3 | `machines/charge_finish` | vg's rechargers and cell chargers, as they fill. [It has a gap in its record](#provenance) | 0.34 s, 2 ch |
 | `device.ttv.arm` | 1 | 0.7 | `weapons/armbomb` | A grenade being armed | 1.97 s, 2 ch |
 | `device.ttv.tick` | 1 | 0.3 | `items/assemblytick2` | An assembly timer's tick. vg's valve itself is silent | 0.20 s, 2 ch |
 | `device.ttv.open` | 1 | 0.6 | `machines/pressurehiss` | **Silent.** Cryo tubes, sleepers and suit machines opening | 1.69 s, 2 ch |

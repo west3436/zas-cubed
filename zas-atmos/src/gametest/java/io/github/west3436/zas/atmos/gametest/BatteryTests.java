@@ -8,7 +8,6 @@ import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
-import io.github.west3436.zas.atmos.battery.RechargerMenu;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
@@ -26,6 +25,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -35,6 +36,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -99,6 +102,21 @@ public final class BatteryTests {
         BlockState state =
                 AtmosBlocks.RECHARGER.get().defaultBlockState().setValue(RechargerBlock.FACING, Direction.NORTH);
         return s.place(x, y, z, state, RechargerBlockEntity.class);
+    }
+
+    /**
+     * A right-click on it, in the order the game asks a block. {@code GameTestHelper.useBlock} takes a
+     * relative position, which doesn't lead back to a block in a {@link Site}.
+     */
+    private static void rightClick(Site s, RechargerBlockEntity r, Player player) {
+        BlockPos at = r.getBlockPos();
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(at), Direction.NORTH, at, true);
+        BlockState state = s.level.getBlockState(at);
+        ItemInteractionResult result =
+                state.useItemOn(player.getMainHandItem(), s.level, player, InteractionHand.MAIN_HAND, hit);
+        if (result == ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            state.useWithoutItem(s.level, player, hit);
+        }
     }
 
     // ---- CONT-111 -------------------------------------------------------------------------
@@ -206,7 +224,7 @@ public final class BatteryTests {
      * A recharger in a controller's room, in the last group, draws 40 FE/t from the controller's
      * buffer while its battery isn't full and puts 28 FE/t into it; full, it stops drawing; in a
      * room whose controller has no power, it charges nothing. Its block shows the battery and its
-     * gauge, its GUI has no buttons, and broken it drops its battery (CONT-064, CONT-068, CONT-113).
+     * gauge, and broken it drops its battery (CONT-064, CONT-068, CONT-113).
      *
      * <p>The test runs within one game tick, so a lease, which counts game ticks, lasts all of it,
      * and a controller pays for a part once: the buffer is checked on the step that pays.
@@ -270,13 +288,6 @@ public final class BatteryTests {
             h.assertValueEqual(
                     s.level.getBlockState(r.getBlockPos()).getValue(RechargerBlock.CHARGE), 4, "the full gauge");
 
-            // The GUI shows the charge and has no buttons.
-            Player hand = h.makeMockPlayer(GameType.SURVIVAL);
-            RechargerMenu menu = (RechargerMenu) r.createMenu(1, hand.getInventory(), hand);
-            h.assertValueEqual(menu.energy(), 100_000, "the GUI's charge");
-            h.assertValueEqual(menu.capacity(), 100_000, "the GUI's capacity");
-            h.assertFalse(menu.clickMenuButton(hand, 0), "a button on the recharger's GUI");
-
             // In a room whose controller has no FE, an empty battery waits.
             s.room(6, 10);
             AreaAirControllerBlockEntity d = s.controller(8);
@@ -299,6 +310,62 @@ public final class BatteryTests {
                                     e -> e.getItem().is(AtmosItems.BATTERY.get()))
                             .isEmpty(),
                     "the broken recharger dropped no battery");
+            h.succeed();
+        } finally {
+            clear(s);
+        }
+    }
+
+    /**
+     * A recharger has no screen. A right-click with a battery puts it in, swapping with any it held,
+     * and any other takes its battery out, to an empty hand or else the inventory. With none in it,
+     * a click with anything else leaves it alone. The block shows the change at once (CONT-113).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_113_right_click_puts_a_battery_in_and_takes_it_out(GameTestHelper h) {
+        Site s = new Site(h, 18);
+        try {
+            clear(s);
+            RechargerBlockEntity r = recharger(s, 2, 1, 2);
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+
+            // Nothing to take, and a stick isn't a battery.
+            rightClick(s, r, player);
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+            rightClick(s, r, player);
+            h.assertTrue(r.battery().battery().isEmpty(), "a stick went in");
+            h.assertTrue(player.getMainHandItem().is(Items.STICK), "the stick left the hand");
+
+            // In: it leaves the hand, with its charge, and the block shows it.
+            player.setItemInHand(InteractionHand.MAIN_HAND, charged(AtmosItems.BATTERY.get(), 100));
+            rightClick(s, r, player);
+            h.assertTrue(player.getMainHandItem().isEmpty(), "the battery stayed in hand");
+            h.assertValueEqual(r.energy(), 100, "the battery's charge in the recharger");
+            h.assertTrue(s.level.getBlockState(r.getBlockPos()).getValue(RechargerBlock.BATTERY), "no battery shown");
+
+            // Out, to the empty hand.
+            rightClick(s, r, player);
+            h.assertTrue(player.getMainHandItem().is(AtmosItems.BATTERY.get()), "the battery didn't reach the hand");
+            h.assertValueEqual(Batteries.energy(player.getMainHandItem()).getEnergyStored(), 100, "its charge");
+            h.assertTrue(r.battery().battery().isEmpty(), "the battery stayed in");
+            h.assertFalse(s.level.getBlockState(r.getBlockPos()).getValue(RechargerBlock.BATTERY), "a battery shown");
+
+            // A second battery swaps with the first.
+            rightClick(s, r, player);
+            player.setItemInHand(InteractionHand.MAIN_HAND, charged(AtmosItems.BATTERY.get(), 200));
+            rightClick(s, r, player);
+            h.assertValueEqual(r.energy(), 200, "the charge of the battery swapped in");
+            h.assertValueEqual(
+                    Batteries.energy(player.getMainHandItem()).getEnergyStored(), 100, "the one swapped out");
+
+            // With a stick in hand, the battery goes to the inventory and the stick stays.
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+            rightClick(s, r, player);
+            h.assertTrue(r.battery().battery().isEmpty(), "the battery stayed in, with a stick in hand");
+            h.assertTrue(player.getMainHandItem().is(Items.STICK), "the stick left the hand");
+            h.assertTrue(
+                    player.getInventory().items.stream().anyMatch(i -> i.is(AtmosItems.BATTERY.get())),
+                    "no battery in the inventory");
             h.succeed();
         } finally {
             clear(s);

@@ -2375,6 +2375,14 @@ controller paid for. `[power] recharger` (40) and `[power] recharger_rate`
 power cut is a room whose controller has no FE, since a GameTest's lease
 outlasts its single game tick.*
 
+*2026-11-05: from the owner's playtest of the sound and particle world: "The
+recharger shouldn't have a GUI; players should just right click a battery in and
+right click to take it out." It has no GUI now. A right-click with a battery puts
+it in, swapping with any it held, and any other takes its battery out, to an empty
+hand or else the inventory. Its model still shows the battery and its charge. The
+owner chose to skip a test world for this, so
+`cont_113_right_click_puts_a_battery_in_and_takes_it_out` (GameTest) is its only check.*
+
 #### CONT-063 · Cable sharing a block with pipes
 `Should` · `R1` · `Rejected` — superseded by D-68: there is no power cable, 2026-11-01.
 

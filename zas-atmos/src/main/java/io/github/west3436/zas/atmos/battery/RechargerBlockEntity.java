@@ -8,20 +8,12 @@ import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import java.util.Locale;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -36,8 +28,8 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>It charges only on power paid for, so a lease its controller gave it while it drew nothing
  * charges nothing ({@link DevicePower#paidFor}).
  */
-public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, MenuProvider {
-    /** What the recharger did at its last atmos tick, for its GUI. */
+public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice {
+    /** What the recharger did at its last atmos tick, which its sounds follow. */
     public enum Status {
         /** Its slot is empty. */
         NO_BATTERY,
@@ -46,44 +38,12 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
         /** Its battery isn't full, and no controller powers it. */
         UNPOWERED,
         /** Charging its battery. */
-        CHARGING;
-
-        /** The status with this ordinal, or {@link #NO_BATTERY}. */
-        public static Status of(int ordinal) {
-            return ordinal >= 0 && ordinal < values().length ? values()[ordinal] : NO_BATTERY;
-        }
-
-        /** Its GUI line's translation key. */
-        public String key() {
-            return "gui.zas_atmos.recharger.status." + name().toLowerCase(Locale.ROOT);
-        }
+        CHARGING
     }
 
     private final Batteries.Slot battery = new Batteries.Slot(this::batteryChanged);
     private final DevicePower power = new DevicePower(PowerPriority.AUXILIARY, this::currentDraw, this::now);
     private Status status = Status.NO_BATTERY;
-
-    private final ContainerData data = new ContainerData() {
-        @Override
-        public int get(int index) {
-            return switch (index) {
-                case RechargerMenu.DATA_STATUS -> status.ordinal();
-                case RechargerMenu.DATA_ENERGY_LO -> energy() & 0xFFFF;
-                case RechargerMenu.DATA_ENERGY_HI -> energy() >>> 16;
-                case RechargerMenu.DATA_CAPACITY_LO -> capacity() & 0xFFFF;
-                case RechargerMenu.DATA_CAPACITY_HI -> capacity() >>> 16;
-                default -> 0;
-            };
-        }
-
-        @Override
-        public void set(int index, int value) {}
-
-        @Override
-        public int getCount() {
-            return RechargerMenu.DATA_COUNT;
-        }
-    };
 
     public RechargerBlockEntity(BlockPos pos, BlockState state) {
         super(AtmosBlockEntities.RECHARGER.get(), pos, state);
@@ -213,15 +173,5 @@ public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, 
         super.loadAdditional(tag, registries);
         battery.load(tag, registries);
         power.load(tag);
-    }
-
-    @Override
-    public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.recharger");
-    }
-
-    @Override
-    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new RechargerMenu(id, inventory, battery, data, ContainerLevelAccess.create(level, worldPosition));
     }
 }

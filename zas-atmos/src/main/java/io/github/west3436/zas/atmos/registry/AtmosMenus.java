@@ -1,7 +1,6 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
-import io.github.west3436.zas.atmos.battery.RechargerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
@@ -60,10 +59,6 @@ public final class AtmosMenus {
     /** A portable pump's switch, direction, target, battery and held tank (CONT-018). */
     public static final Supplier<MenuType<PortablePumpMenu>> PORTABLE_PUMP =
             MENUS.register("portable_pump", () -> new MenuType<>(PortablePumpMenu::new, FeatureFlags.DEFAULT_FLAGS));
-
-    /** The recharger's battery (CONT-113). */
-    public static final Supplier<MenuType<RechargerMenu>> RECHARGER =
-            MENUS.register("recharger", () -> new MenuType<>(RechargerMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     /** A pressure pump's switch and target (CONT-011). */
     public static final Supplier<MenuType<PumpMenu>> PRESSURE_PUMP = MENUS.register(
