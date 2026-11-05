@@ -65,7 +65,7 @@ public final class PipeBurstTests {
     }
 
     /** A capped run at y = 2, z = 2, closed so that nothing leaks but a burst. */
-    private static PipeNetwork run(Area a) {
+    static PipeNetwork run(Area a) {
         a.place(WEST, 2, 2, cap(Direction.EAST));
         for (int x = WEST + 1; x < EAST; x++) {
             a.place(x, 2, 2, AtmosBlocks.PIPE.get().defaultBlockState());
@@ -85,7 +85,7 @@ public final class PipeBurstTests {
     }
 
     /** Fills a network with CO2 to a pressure, at {@link Area#T}. */
-    private static void fillTo(PipeNetwork net, double kPa) {
+    static void fillTo(PipeNetwork net, double kPa) {
         GasStore gas = net.gas();
         double more = (kPa - gas.pressure()) * gas.volume() / (GasMixture.GAS_CONSTANT * T);
         gas.add(new GasParcel(Map.of(CO2, more), T));

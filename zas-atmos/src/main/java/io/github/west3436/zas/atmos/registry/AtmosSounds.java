@@ -1,8 +1,12 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import java.util.function.Supplier;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -119,6 +123,18 @@ public final class AtmosSounds {
      */
     private static DeferredHolder<SoundEvent, SoundEvent> event(String name, float range) {
         return SOUNDS.register(name, () -> SoundEvent.createFixedRangeEvent(ZasAtmosMod.id(name), range));
+    }
+
+    /**
+     * Plays an event at a block for everyone in its range, on the Blocks slider, as {@code sounds.json}
+     * sets its volume and pitch. On the server: a client's call plays nothing.
+     *
+     * @param level the level
+     * @param pos the block
+     * @param event the event
+     */
+    public static void play(Level level, BlockPos pos, Supplier<SoundEvent> event) {
+        level.playSound(null, pos, event.get(), SoundSource.BLOCKS, 1f, 1f);
     }
 
     public static void register(IEventBus modBus) {

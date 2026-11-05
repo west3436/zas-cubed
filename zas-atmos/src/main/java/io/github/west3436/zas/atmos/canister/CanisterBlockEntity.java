@@ -16,6 +16,7 @@ import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
@@ -102,10 +103,11 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         return state.hasProperty(CanisterBlock.OPEN) && state.getValue(CanisterBlock.OPEN);
     }
 
-    /** Opens or closes the valve. */
+    /** Opens or closes the valve, with its sound (CONT-126). */
     public void setValveOpen(boolean open) {
         if (level != null && valveOpen() != open) {
             level.setBlock(worldPosition, getBlockState().setValue(CanisterBlock.OPEN, open), Block.UPDATE_ALL);
+            AtmosSounds.play(level, worldPosition, open ? AtmosSounds.CANISTER_OPEN : AtmosSounds.CANISTER_CLOSE);
         }
     }
 
@@ -186,7 +188,11 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
         if (CanisterFailure.check(level, worldPosition, gas)) {
             return;
         }
-        if (!valveOpen() || gas.isEmpty()) {
+        if (!valveOpen()) {
+            reportStopped();
+            return;
+        }
+        if (gas.isEmpty()) {
             return;
         }
         AtmosphereSample sample = Atmospheres.at(level, worldPosition);
@@ -206,6 +212,7 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
             return;
         }
         GasParcel out = gas.takeFraction(n / gas.totalMoles());
+        reportMoved(out.totalMoles());
         port.add(
                 level,
                 Vec3.atCenterOf(worldPosition),

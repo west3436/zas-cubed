@@ -307,6 +307,11 @@ step). The scale's values are for the owner to judge by ear and eye. A device
 reports what it has decided to move, as its status does, so one blowing against
 a refused change still reads as moving. The vent and the scrubber report so far.*
 
+*2026-11-05: the pumps, filter, mixer, passive vent, canister and open pipe ends
+report too, and `cont_125_*` check them. A passive vent or open pipe end reports
+its net flow rather than all the gas it moves, so gases only passing each other
+at one pressure read as idle: for the owner's review, with CONT-125.*
+
 #### DATA-018 · Device activity sync
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
 
