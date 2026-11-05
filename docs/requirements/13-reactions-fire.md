@@ -4,12 +4,13 @@
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
 accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033, FIRE-034 and FIRE-035 were
-added as Drafts on 2026-11-04.
+added as Drafts on 2026-11-04. FIRE-037 was added as a Draft on 2026-11-05.
 
 **Scope.** Covers:
 - gas reactions
 - gas combustion and hotspots
 - vanilla fire, furnaces and solid fuels needing oxygen
+- the sound of a gas blast
 
 vgstation13's gas fire only burns fictional fuels
 ([zas-core §4](../research/zas-core.md#4-fire-firedm)). zas-cubed keeps the ZAS
@@ -653,3 +654,53 @@ hotter than real play; how much hotter isn't measured.*
 
 *Note 2026-11-03:* the owner moved the extinguisher, CONT-037, into R1, and it is
 built on API-057. This requirement stays rejected.
+
+## Sound
+
+#### FIRE-037 · A gas blast has its own sound, near or far
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102
+
+A tank's or canister's explosion shall play vg's explosion sounds in place of
+vanilla's: the big sounds at a power of 2 or more, the small ones below it. Each
+listener shall hear one sound, chosen by distance: for a big blast, the near sound
+out to 32 blocks and the far sound out to 256; for a small one, 8 and 128. Beyond
+that nothing shall be sent. Any other explosion, such as TNT's, shall keep
+vanilla's sound.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: vg's
+  explosions, with their far-away versions, for gas blasts, and vanilla's TNT stays
+  vanilla's. Inferred: a power of 2 is where vanilla itself changes to its large
+  explosion particles. The near sound stops at half its range because its gain is
+  almost nothing near the end of that range, when the far sound's has hardly fallen.
+- **Verify:** `BlastSoundTest` (Unit) checks the choice and that near and far meet
+  within 3 dB. `fire_037_` (GameTest) checks what the server sends to players at
+  several distances, for a blast of each size, an exploding tank and a primed TTV,
+  and that TNT sends vanilla's explosion and none of these. Manual checks how each
+  one sounds, and the step between near and far.
+
+*2026-11-05: added for review, with the behaviour built. Three things decide the
+distances, and none of them has been heard:*
+
+- *Sending one sound per player. `level.playSound` reaches everyone in the event's
+  range, so a player beside a blast would get the far sound too. So `ContainerBlast`
+  sends each player a `ClientboundSoundPacket` of its own, and gives the vanilla
+  explosion `minecraft:intentionally_empty`, the sound a client skips, because a client
+  plays an explosion's own sound at volume 4 out to 64 blocks.*
+- *Volumes. `blast.near` at 4, for 64 blocks; `blast.small` at 1, for 16, with its
+  0.6 from `sounds.json`; the far ones at 1. Above a volume of 1 the engine clamps
+  gain at 1 and only the range grows, so a higher volume would lose that 0.6.*
+- *The step. The shipped files, decoded with the game's decoder: `near1` -7.7 and
+  `near2` -6.9 dBFS in their loudest 0.4 s, `far` -9.5, so the far file is about
+  2.2 dB below the near ones. With each sound's straight line to 0, a big blast at
+  32 blocks steps from 0.50 to 0.68 (+2.7 dB) and a small one at 8 blocks from 0.30
+  to 0.37 (+1.7 dB). Had near run to the end of its range, the step at 64 would be
+  from nothing to 0.58. So a listener just past the line gets a slightly louder
+  sound than one just inside it. How that sounds is for the owner.*
+
+*A thin-air fade applies to these like any of our one-shots. The packet reaches
+the client's `ClientLevel.playSeededSound`, which plays a `SimpleSoundInstance`
+through `SoundEngine.play`, where the `PlaySoundEvent` that CLIENT-016 hooks fires.
+That is from reading the game's code; no client runs here. Because the engine clamps
+gain at 1, a near blast at volume 4 in thin air loses range before it loses gain,
+until the factor falls below 0.25: quieter at every distance, but not at its
+centre.*

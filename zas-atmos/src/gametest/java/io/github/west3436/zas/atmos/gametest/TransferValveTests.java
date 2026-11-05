@@ -6,10 +6,12 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.failure.BlastSound;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -22,6 +24,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
@@ -251,6 +254,29 @@ public final class TransferValveTests {
                     Math.abs(blasts.get(0).radius() - 1) < 1e-4,
                     "the power at 60 atm: " + blasts.get(0).radius());
         }
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /** A primed TTV's blast is a gas blast like any other: vg's sound, and none of vanilla's. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void fire_037_a_primed_ttv_plays_the_gas_blast(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 874);
+        FakePlayer p = player(a, ttv(tank(Map.of(O2, 5.5), 1400), tank(Map.of(H2, 5.0), T), 0));
+        PrimedTransferValve primed = prime(h, p);
+        ListeningPlayer close = ListeningPlayer.at(a.level, a.point(2, 2, 2));
+        ListeningPlayer.during(a.level, List.of(close), primed::tick);
+        List<Explosion> blasts = Blasts.take(a.point(2, 2, 2));
+        h.assertValueEqual(blasts.size(), 1, "explosions");
+        h.assertValueEqual(close.sounds().size(), 1, "sounds sent");
+        h.assertValueEqual(
+                close.sounds().get(0).getSound().value(),
+                (blasts.get(0).radius() >= BlastSound.BIG_POWER ? AtmosSounds.BLAST_NEAR : AtmosSounds.BLAST_SMALL)
+                        .value(),
+                "the sound");
+        h.assertValueEqual(
+                close.explosions().get(0).getExplosionSound().value(), SoundEvents.EMPTY, "the explosion's sound");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
