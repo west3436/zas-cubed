@@ -3,10 +3,18 @@ package io.github.west3436.zas.atmos.failure;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.particle.GasJets;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -24,8 +32,9 @@ public final class ContainerBlast {
     }
 
     /**
-     * A vanilla explosion. It hurts entities under either preset, and breaks blocks only where
-     * {@link Atmospheres#containerExplosionsBreakBlocks()} says so.
+     * A vanilla explosion with vg's sounds in place of vanilla's (FIRE-037). It hurts entities under
+     * either preset, and breaks blocks only where {@link Atmospheres#containerExplosionsBreakBlocks()}
+     * says so.
      *
      * @param level the level
      * @param at its centre
@@ -36,13 +45,46 @@ public final class ContainerBlast {
     public static void explode(ServerLevel level, Vec3 at, double power, @Nullable Entity source) {
         level.explode(
                 source,
+                Explosion.getDefaultDamageSource(level, source),
+                null,
                 at.x,
                 at.y,
                 at.z,
                 (float) power,
+                false,
                 Atmospheres.containerExplosionsBreakBlocks()
                         ? Level.ExplosionInteraction.BLOCK
-                        : Level.ExplosionInteraction.NONE);
+                        : Level.ExplosionInteraction.NONE,
+                ParticleTypes.EXPLOSION,
+                ParticleTypes.EXPLOSION_EMITTER,
+                BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.EMPTY));
+        playBlast(level, at, power);
+    }
+
+    /**
+     * Sends each player in the level the one sound it hears of a blast. The packets go out player by
+     * player because {@code level.playSound} sends one sound to everyone in its range, and a near
+     * listener would then hear the far sound over the near one. Everyone gets the same seed, so
+     * everyone hears the same one of the near files.
+     */
+    private static void playBlast(ServerLevel level, Vec3 at, double power) {
+        long seed = level.getRandom().nextLong();
+        for (ServerPlayer player : level.players()) {
+            BlastSound sound = BlastSound.heard(power, Math.sqrt(player.distanceToSqr(at)));
+            if (sound != null) {
+                player.connection.send(new ClientboundSoundPacket(
+                        event(sound), SoundSource.BLOCKS, at.x, at.y, at.z, sound.volume(), 1, seed));
+            }
+        }
+    }
+
+    private static Holder<SoundEvent> event(BlastSound sound) {
+        return switch (sound) {
+            case NEAR -> AtmosSounds.BLAST_NEAR;
+            case SMALL -> AtmosSounds.BLAST_SMALL;
+            case FAR -> AtmosSounds.BLAST_FAR;
+            case SMALL_FAR -> AtmosSounds.BLAST_SMALL_FAR;
+        };
     }
 
     /** The hiss of a container losing gas. */

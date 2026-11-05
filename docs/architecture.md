@@ -1830,6 +1830,11 @@ unverified.*
   chosen once it is silent. A chosen loop gets a bonus of 1.25 on its loudness,
   so loops about as loud don't take turns. A new voice starts only when fewer
   than 8 exist, so a swap waits for the old voice to fade.
+- **What counts as loud.** A request's volume, times what's left after distance,
+  times a weight the shell reads for it: the volume its event has in `sounds.json`
+  times its slider, as the engine reads them. An event with no sound data weighs 1.
+  The weight counts only in choosing, because the engine applies it to the sound
+  itself. A loop on a slider at 0 weighs nothing and holds no slot.
 - **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
   stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
   that forgets, or stops existing, can't leave a sound playing.
@@ -2198,14 +2203,14 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
-| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
+| `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
-| `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
+| `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12) and `DeviceLoops` (§11.2) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -3180,7 +3185,8 @@ client works out for itself. No client ever sees a zone (D-53).
   or tint.
 - **The plan** (`particle.JetPlan`) turns a kind and its number into particles
   per tick, how many ticks, each particle's life, how far it travels, the
-  cone's half-angle, a grey and a size. The speed comes from the distance, the
+  cone's half-angle, a grey, a size, whether they fly in or out, and how wide a
+  patch they start across. The speed comes from the distance, the
   life and the sprite's friction, so a particle ends about where it should.
   Sizes that follow moles go by ratio, between a low and a high amount, since
   gas comes in amounts many powers of ten apart.
@@ -3192,6 +3198,7 @@ client works out for itself. No client ever sees a zone (D-53).
   | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
   | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
   | `OPEN_END` | An open pipe end moves at least 0.25 mol/s net, each atmos tick (§11.4) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
+  | `DEVICE` | Never sent: the client makes it for a vent or scrubber it is told is working | Its activity level: positive out, negative in | Working: 0.3 particles per tick, travelling 1.2 blocks. Hard: 1 per tick, travelling 2.5 blocks. In a 20° cone, across most of the grille |
 
   An exploding container sends nothing, since vanilla's explosion has its own
   particles. Nothing is sent for no moles, so an empty canister shows nothing.
@@ -3206,6 +3213,15 @@ client works out for itself. No client ever sees a zone (D-53).
   a device's phase comes from the order it was added, so a few ends can share a
   game tick. Past the budget they just aren't sent, and since phases are fixed
   the same ends lose out each second.
+- **Vents and scrubbers** (`particle.DeviceJets`, CLIENT-019). These add nothing
+  to the network. Each game tick the client walks its activity table (DATA-018),
+  and for each device within 32 blocks reads its block state: `FACING` for where
+  the grille looks, and its mode for which way the gas goes, as a vent can siphon
+  as well as blow. It asks for a one-tick `DEVICE` jet from just in front of the
+  grille, unless the level is below working, the mode is off, or the block isn't
+  a vent or a scrubber. Asking again takes over the same source, which keeps what
+  it has built up towards its next particle, so a slow rate holds, and a device
+  no longer asked for stops within a game tick.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes
@@ -3230,3 +3246,11 @@ there too. A server only sends a sound out to its event's range, so an event
 heard past 16 blocks is registered with the same range, and a GameTest checks
 that they agree. A loop's range comes from the client's loop manager instead.
 Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).
+
+**Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
+canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
+and sends each player in the level one `ClientboundSoundPacket`, which
+`BlastSound.heard` chooses from the blast's power and the player's distance, so
+nobody hears a near and a far sound together. These packets don't use the server's
+range check, but the events' ranges are still what the client attenuates by. Any
+other explosion goes through vanilla's code and keeps vanilla's sound.

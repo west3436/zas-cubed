@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.particle;
 
+import io.github.west3436.zas.atmos.device.DeviceActivity;
 import java.util.random.RandomGenerator;
 
 /**
@@ -15,6 +16,7 @@ import java.util.random.RandomGenerator;
  * @param shade its grey, 0 black to 1 white: neutral, never a gas's colour (CLIENT-017)
  * @param size its size, as a multiple of the sprite's own
  * @param inward whether its particles fly toward the source, as gas drawn in, rather than away
+ * @param patch how far either way across its direction its particles start, in blocks; 0 is one point
  */
 public record JetPlan(
         double perTick,
@@ -24,7 +26,8 @@ public record JetPlan(
         double spread,
         float shade,
         float size,
-        boolean inward) {
+        boolean inward,
+        double patch) {
     /**
      * How much of its speed the sprite keeps each game tick: vanilla's poof, which is what the client
      * spawns. A particle's speed comes from this and {@link #lifetime}, so it ends {@link #distance} away.
@@ -94,6 +97,18 @@ public record JetPlan(
     private static final double OPEN_END_SPREAD = Math.toRadians(12);
 
     /**
+     * A device's game ticks: the client asks again every game tick while the device is working, so one
+     * that stops, or whose block goes, stops at once.
+     */
+    static final int DEVICE_TICKS = 1;
+
+    private static final int DEVICE_LIFETIME = 12;
+    private static final double DEVICE_SPREAD = Math.toRadians(20);
+
+    /** Most of a grille, which is the whole face of a full block. */
+    static final double DEVICE_PATCH = 0.35;
+
+    /**
      * The plan for a jet.
      *
      * @param kind what it is
@@ -111,7 +126,8 @@ public record JetPlan(
                         SPRAY_SPREAD,
                         SPRAY_SHADE,
                         1.0f,
-                        false);
+                        false,
+                        0);
             case LEAK -> {
                 double t = scale(amount, LEAK_LOW, LEAK_HIGH);
                 yield new JetPlan(
@@ -122,7 +138,8 @@ public record JetPlan(
                         LEAK_SPREAD,
                         GAS_SHADE,
                         (float) lerp(0.7, 1, t),
-                        false);
+                        false,
+                        0);
             }
             case BURST -> {
                 double t = scale(amount, BURST_LOW, BURST_HIGH);
@@ -134,7 +151,8 @@ public record JetPlan(
                         Math.PI,
                         GAS_SHADE,
                         (float) lerp(1, 1.6, t),
-                        false);
+                        false,
+                        0);
             }
             case OPEN_END -> {
                 double t = scale(Math.abs(amount), OPEN_END_MIN_FLOW, OPEN_END_MAX_FLOW);
@@ -146,7 +164,21 @@ public record JetPlan(
                         OPEN_END_SPREAD,
                         GAS_SHADE,
                         (float) lerp(0.5, 0.8, t),
-                        amount < 0);
+                        amount < 0,
+                        0);
+            }
+            case DEVICE -> {
+                boolean hard = Math.abs(amount) >= DeviceActivity.HARD;
+                yield new JetPlan(
+                        hard ? 1.0 : 0.3,
+                        DEVICE_TICKS,
+                        DEVICE_LIFETIME,
+                        hard ? 2.5 : 1.2,
+                        DEVICE_SPREAD,
+                        GAS_SHADE,
+                        hard ? 0.85f : 0.6f,
+                        amount < 0,
+                        DEVICE_PATCH);
             }
         };
     }
@@ -197,6 +229,24 @@ public record JetPlan(
      */
     public double speed() {
         return distance * (1 - FRICTION) / (1 - Math.pow(FRICTION, lifetime));
+    }
+
+    /**
+     * A random point on a square at right angles to an axis, so a jet can start across a grille.
+     *
+     * @param ax the axis, a unit vector along one of the world's axes
+     * @param ay as {@code ax}
+     * @param az as {@code ax}
+     * @param patch how far either way it goes, in blocks
+     * @param random the source of the point
+     * @return where it is from the square's middle, as {x, y, z}
+     */
+    static double[] across(double ax, double ay, double az, double patch, RandomGenerator random) {
+        double x = patch * (2 * random.nextDouble() - 1);
+        double y = patch * (2 * random.nextDouble() - 1);
+        double z = patch * (2 * random.nextDouble() - 1);
+        double along = x * ax + y * ay + z * az;
+        return new double[] {x - along * ax, y - along * ay, z - along * az};
     }
 
     /**
