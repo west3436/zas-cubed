@@ -349,6 +349,11 @@ origin is unclear is left out.
 - **Rationale:** Decision: D-26.
 - **Verify:** Inspect the CREDITS entries for source paths.
 
+*2026-11-05: This holds for vg's sounds as well as its sprites, and
+`scripts/check_credits.py` refuses a `goon/` source for either. Which sounds were
+left out for an unclear origin, and why, is in [vg
+sounds](../research/vg-sounds.md#provenance).*
+
 #### NFR-044 · Asset license
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-39, D-56
 
@@ -372,6 +377,11 @@ its license and its attribution. A CI script checks this.
 - **Changed 2026-10-31 (D-62):** assets may also come from sources other
   than vgstation13, under a license that allows adapting them under CC BY-SA
   4.0. The entry records the source, license and attribution.
+
+*2026-11-05: A vg sound's entry gives its path under vg's `sound/` and the commit,
+with no icon state, and says how the file was adapted. The script checks that a
+sound has no state, that an icon has one, and that a file under `sounds/` draws on
+vg's `sound/`.*
 
 #### NFR-046 · No NonCommercial assets
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26

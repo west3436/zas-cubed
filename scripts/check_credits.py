@@ -4,9 +4,9 @@
 Finds every file under */src/*/resources/assets/ and checks it against the
 entries in CREDITS. Fails when an asset has no entry, when an entry names a
 file that doesn't exist, when an entry is malformed, when a vg source is
-under goon/ (NFR-041), or when a third-party license isn't one that can be
-adapted under CC BY-SA 4.0 (D-62). The format is documented at the top of
-CREDITS.
+under goon/ (NFR-041), when a vg icon has no state or a vg sound has one, or
+when a third-party license isn't one that can be adapted under CC BY-SA 4.0
+(D-62). The format is documented at the top of CREDITS.
 
 Usage: python scripts/check_credits.py [repo root]
 Needs only Python 3 and its standard library.
@@ -18,13 +18,13 @@ from pathlib import Path
 
 ASSET_GLOB = "*/src/*/resources/assets/**/*"
 ASSET_PATH = re.compile(r"^[^/]+/src/[^/]+/resources/assets/.+")
-KEYS = {"path", "origin", "source", "state", "commit", "license", "attribution", "author", "notes"}
+KEYS = {"path", "origin", "source", "state", "commit", "license", "attribution", "author", "adapted", "notes"}
 ORIGINS = ("original", "vgstation13", "other")
 # Fields that only make sense for one origin, and those each origin requires.
 ONLY = {"state": "vgstation13", "commit": "vgstation13", "license": "other"}
 REQUIRED = {
     "original": (),
-    "vgstation13": ("source", "state", "commit"),
+    "vgstation13": ("source", "commit"),
     "other": ("source", "license"),
 }
 # SPDX ids of licenses whose works may be adapted and shared under CC BY-SA
@@ -86,9 +86,19 @@ def check_entry(line, entry):
             errors.append(f"{where}: origin {origin} needs '{key}'")
 
     if origin == "vgstation13":
+        # vg keeps its icons in .dmi files, with a state in each, and its sounds under sound/.
         source = entry.get("source", "")
-        if "goon" in source.replace("\\", "/").lower().split("/"):
+        paths = [p.strip().replace("\\", "/").lower() for p in source.split(",")]
+        if any("goon" in p.split("/") for p in paths):
             errors.append(f"{where}: source {source!r} is under goon/ (CC BY-NC-SA, NFR-041)")
+        if source:
+            sound = all(p.startswith("sound/") for p in paths)
+            if sound and "state" in entry:
+                errors.append(f"{where}: 'state' is for icons; source {source!r} is a sound")
+            elif not sound and "state" not in entry:
+                errors.append(f"{where}: origin vgstation13 needs 'state' for source {source!r}")
+            if sound != ("/sounds/" in entry.get("path", "")):
+                errors.append(f"{where}: source {source!r} doesn't match the asset: sounds come from vg's sound/")
         commit = entry.get("commit")
         if commit is not None and not COMMIT.match(commit):
             errors.append(f"{where}: commit {commit!r} is not a vgstation13 commit hash (7 to 40 hex digits)")
