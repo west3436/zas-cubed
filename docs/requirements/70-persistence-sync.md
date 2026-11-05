@@ -13,7 +13,7 @@ sync model is D-53. Background:
 ## Persistence
 
 #### DATA-001 · Persistent state
-`Must` · `R0` · `Accepted` · Verify: GameTest · Trace: S-09, D-54
+`Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-09, D-54
 
 Saving and reloading shall preserve, to a relative error of 1e-9 per gas:
 - each cell's zone membership, sub-cells included (D-44)
@@ -30,6 +30,14 @@ Saving and reloading shall preserve, to a relative error of 1e-9 per gas:
 *2026-11-02: zone pins, with their owners, are saved and restored now
 (API-018, `api_018_pins_survive_a_restart`). Dimension pauses (OPS-005) don't
 exist yet, so this stays Accepted.*
+
+*2026-11-05: Implemented, with OPS-005 in place.
+`data_001_a_saved_world_keeps_every_kind_of_state` saves and reloads one world
+of two dimensions holding every kind of state listed and compares each within
+1e-9. The stand-in for a restart is `AtmosService.stopForTest` and
+`startForTest`, through the real save code and byte format; a GameTest can't
+restart the server. A queued addition in a paused dimension comes back and is
+then voided, with the checker recording it, as it would have been a tick later.*
 
 #### DATA-009 · Derived state is rebuilt
 `Must` · `R0` · `Implemented` · Verify: Inspect, GameTest · Trace: D-54
