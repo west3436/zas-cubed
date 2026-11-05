@@ -279,6 +279,10 @@ past 16 blocks also needs the same number in `AtmosSounds`.
 
 ## For review
 
+*2026-11-05: the owner accepted this list as it stands. The files left out over
+provenance stay out, and `misc/fire_alarm` stays in with its gap, as there's no link to
+add. The notes below are kept as the record, and a swap stays open if that changes.*
+
 For the owner, when judging the combined world:
 
 - **The most noticeable files:** `effects/smoke` and the wind files for airflow,

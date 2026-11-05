@@ -169,7 +169,7 @@ OPS-005 does, with a logged error. The server keeps running.
   pauses and the server keeps running.
 
 #### NFR-015 · A server stop finishes
-`Must` · `R1` · `Draft` · Verify: Unit · Trace: DATA-011
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: DATA-011
 
 A server stop shall finish, or say why it hasn't: while one is still running 2
 minutes after it began, ZAS³ shall log each level's remaining chunk work and a
@@ -182,6 +182,10 @@ than 2 minutes logs nothing, and the reports can't keep the JVM alive.
 - **Verify:** Unit tests of `StopWatchdog`: a stop that finishes in time logs
   nothing, and a stuck one is reported with its threads, a limited number of
   times, from a daemon thread.
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass. The hang it would
+report, [#242](https://github.com/west3436/zas-cubed/issues/242), is left as it is by the owner's decision, so this
+watchdog logs the cause if it comes back.*
 
 ## Compatibility
 

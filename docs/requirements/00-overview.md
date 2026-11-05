@@ -358,6 +358,9 @@ timer, the valve opens and the mix is at 1,004 K. It burns within an atmos tick 
 2 blocks away falls from 10 health to 1.4, and glass, planks and the floor stay
 intact. The Manual playtest is still to come.*
 
+*2026-11-05: the owner played it on a client, which settles the Manual playtest, and
+accepted the blast's strength as it is.*
+
 ## Questions
 
 ### Resolved (2026-10-30)

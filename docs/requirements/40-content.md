@@ -15,7 +15,7 @@ central atmospherics controller, were added and accepted on 2026-11-03 (D-75).
 CONT-125 and CONT-126, the sounds of pipe devices, were added as Draft on
 2026-11-05.
 CONT-127, the other devices' sounds, and CONT-128, the fire alarm's, were added
-as Draft on 2026-11-05.
+as Draft on 2026-11-05. The owner accepted all four the same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -702,6 +702,11 @@ A scrubber shall stop once its buffer reaches 50 atm.
 Its buffer is a network member, so 50 atm is read from its network's one
 mixture (CONT-001). The sample that would pass 50 atm is cut to what reaches
 it.*
+
+*2026-11-05: the owner accepted leaving this as written for now. A lone scrubber stalls
+at about 415 mol, well short of emptying a 3×3×3 room, and a controller in Cycle then
+stays in Cycle unless a canister is on the network. It's to be revisited if players run
+into it.*
 
 #### CONT-016 · Passive vent
 `Could` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §2](../research/vg-atmos-content.md#2-devices)
@@ -2595,7 +2600,7 @@ if the player were there (CONT-074).
 ## Device sounds
 
 #### CONT-125 · Pipe devices sound while they move gas
-`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-015, DATA-017, DATA-018
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-015, DATA-017, DATA-018
 
 A pressure pump, volume pump, filter, mixer, vent, passive vent, scrubber or
 canister, and a pipe with an open end, shall each play its own looping sound to
@@ -2645,8 +2650,11 @@ through a leak dying away, that a device reads as moving only in a step that sen
 a jet. No client has run the loop's minimum level, so that one line is by inspection
 until the combined test world.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
+
 #### CONT-126 · Pipe devices sound when they change
-`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-016, CLIENT-020
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-016, CLIENT-020
 
 Each of these shall play its own sound, once per change:
 
@@ -2675,8 +2683,11 @@ running device off and on as its chunk loads, click a whole station at once in a
 blackout, and be up to a second late on a click in a GUI. A canister that bursts
 on its port sounds the port's disconnection as well as the burst.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
+
 #### CONT-127 · The other devices' sounds
-`Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
+`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
 
 A heater, air conditioner, portable pump, portable scrubber, recharger or
 generator shall play its running loop only while it is working, heard out to 8
@@ -2742,8 +2753,11 @@ gas and jets go on at each atmos tick. A leak lasts 1 to 3 atmos ticks, by how f
 1.12 s, so only the first jet has the hiss with it: for the owner to judge.
 `cont_127_a_tank_hisses_once_as_a_leak_starts` and the suit's and TTV's tests check it.*
 
+*2026-11-05: accepted by the owner. It stays Accepted until someone hears the
+recharger's `machines/charge_finish`, which replaced the sound the owner heard.*
+
 #### CONT-128 · The fire alarm's sound
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044
 
 While a fire alarm within 32 blocks shows its alarm, a client shall play
 `device.fire_alarm.alarm` once every 12 s, starting as soon as the first alarm goes
@@ -2766,6 +2780,9 @@ of the time (`FireAlarmVoice`'s `SOUND_TICKS` and `PERIOD_TICKS`). An alarm that
 and starts again within 12 s keeps the same rhythm, so a flickering one can't sound
 more often. It is one loop under the nearest-8 rule (CLIENT-015), so it can be pushed
 out by 8 louder loops.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
 
 ## R1 / R2 split
 
