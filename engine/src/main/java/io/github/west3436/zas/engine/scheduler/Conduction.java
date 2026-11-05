@@ -164,6 +164,15 @@ final class Conduction implements MembershipListener {
             membershipChanged = true;
         }
         settings = heat;
+        if (transmittance.length < palette.size()) {
+            // The geometries of single positions added since (GEO-043, API-023).
+            int from = transmittance.length;
+            transmittance = Arrays.copyOf(transmittance, palette.size());
+            for (int id = from; id < transmittance.length; id++) {
+                double u = palette.geometry(id).transmittance();
+                transmittance[id] = Double.isNaN(u) ? heat.fallbackTransmittance() : u;
+            }
+        }
         if (!heat.enabled()) {
             // Keep tracking, so links are right when it is turned on again.
             markChangedZones();

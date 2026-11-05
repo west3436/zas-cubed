@@ -849,7 +849,7 @@ Items in accessory slots shall be able to provide life support, through an
 optional compat module.
 
 #### API-023 · Seal provider
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, GEO-003, GEO-007, GEO-043
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, GEO-003, GEO-007, GEO-043
 
 Blocks shall be able to supply their geometry dynamically: gas-tight faces,
 zone-boundary faces and gas volume. Supplied geometry is a single cell, as with
@@ -860,8 +860,13 @@ GEO-005 overrides. Changes are signalled with `markDirty` (GEO-014).
 - **Verify:** A GameTest switches a test block between sealed and open through
   its provider and markDirty, and checks the zones follow.
 
+*2026-11-05: Implemented. `api_023_zones_follow_the_provider` passes, with the
+other `api_023_` GameTests in `SealProviderTests` for faces, volume, zone-boundary
+faces and an override of the block, and `PositionGeometryTest` takes a position's
+own geometry through every engine phase.*
+
 #### API-028 · Seal providers read on the server thread
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30, CORE-049 · Depends: API-023
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30, CORE-049 · Depends: API-023
 
 Seal providers shall be called on the server thread when snapshots are taken,
 and their result cached until `markDirty` (GEO-014).
@@ -869,6 +874,12 @@ and their result cached until `markDirty` (GEO-014).
 - **Rationale:** Decision: D-30.
 - **Verify:** Inspect the code; a GameTest checks the provider runs on the
   server thread and isn't called again until markDirty.
+
+*2026-11-05: Implemented. Inspected: `SealProviders.ask` is the only call of a
+provider, reached only from `SectionCapture.capture`, which runs on the server
+thread. `api_028_provider_is_kept_until_mark_dirty` passes: the provider runs on
+the server thread and isn't asked again while its section is copied again, until
+markDirty or a write of the block.*
 
 #### API-024 · Ambient provider
 `Must` · `R1` · `Rejected` — duplicate of ENV-004, 2026-10-30.

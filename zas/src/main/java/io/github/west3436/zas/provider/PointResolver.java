@@ -4,6 +4,7 @@ import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
+import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.geometry.SubCells;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -64,7 +65,7 @@ public final class PointResolver {
         if (state == null) {
             return Cell.largestOf(pos);
         }
-        Geometry g = table.geometry(state);
+        Geometry g = PositionGeometries.geometry(level, pos, state, table);
         if (g.cellCount() > 0) {
             return new Cell(pos, cellNear(state, g, pos, point), g.cellCount());
         }
@@ -87,7 +88,7 @@ public final class PointResolver {
             if (there == null) {
                 continue;
             }
-            Geometry ng = table.geometry(there);
+            Geometry ng = PositionGeometries.geometry(level, next, there, table);
             if (ng.cellCount() > 0) {
                 return new Cell(next, cellNear(there, ng, next, point), ng.cellCount());
             }
@@ -102,7 +103,7 @@ public final class PointResolver {
         if (state == null) {
             return Cell.largestOf(pos);
         }
-        Geometry g = table.geometry(state);
+        Geometry g = PositionGeometries.geometry(level, pos, state, table);
         return new Cell(pos, SubCells.largest(g), g.cellCount());
     }
 
@@ -118,7 +119,7 @@ public final class PointResolver {
         if (state == null) {
             return Vec3.atCenterOf(pos);
         }
-        Geometry g = table.geometry(state);
+        Geometry g = PositionGeometries.geometry(level, pos, state, table);
         int voxel = SubCells.voxelOf(state, g, SubCells.largest(g));
         if (voxel < 0) {
             return Vec3.atCenterOf(pos);
