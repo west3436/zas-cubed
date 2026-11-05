@@ -235,7 +235,7 @@ the cited atomic weights summed over the formula, and C_v is the cited C_p
 less R.*
 
 #### CORE-012 · Gas classification tags
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
 
 Gases shall be groupable by tags (for example breathable/oxidizer, toxic,
 flammable, inert, visible) that hazard, fire, and device logic consume.
@@ -264,6 +264,12 @@ tags when it does.*
 and the API are done, but the Verify also needs the LIFE, FIRE or CONT logic
 that reads them. CORE-012 moves to Implemented with the first of those whose
 tests exercise a tag.*
+
+*2026-11-05: Implemented, on the condition above. Device logic now reads the tags
+through `GasSelection`. `cont_015_a_scrubber_removes_co2_and_co_and_leaves_o2_and_n2`
+takes CO and N₂O through `#zas:toxic`, and
+`cont_013_a_real_filter_selects_by_gas_and_by_gas_tag` filters by `#zas:toxic` and
+`#zas:flammable`.*
 
 #### CORE-013 · Safe gas set changes
 `Should` · `R1` · `Implemented` · Verify: GameTest

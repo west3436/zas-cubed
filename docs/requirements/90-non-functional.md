@@ -217,13 +217,17 @@ a GameTest.
 server, in CI's "GameTests (dedicated server)" step.*
 
 #### NFR-021 · Injection-only mixins
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 Mixins shall be minimal and injection-based, with no `@Overwrite`.
 
 - **Rationale:** Inferred: overwrites break other mods; injections coexist
   ([neoforge §14](../research/neoforge-1.21.1.md#14-mixins--ats)).
 - **Verify:** Inspect the mixin configuration.
+
+*2026-11-05: Implemented. `zas.mixins.json` lists five mixins with six hooks: three
+`@Inject`, one `@ModifyReturnValue`, one `@WrapMethod` and one `@WrapOperation`. None
+uses `@Overwrite`.*
 
 #### NFR-024 · Documented mixins
 `Must` · `R1` · `Accepted` · Verify: Inspect
@@ -340,7 +344,7 @@ carry a checkbox confirming it.
 first item of the PR template's checklist confirms it.*
 
 #### NFR-041 · Asset sources
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26
 
 Assets derived from vgstation13 sprites shall come only from vg's CC BY-SA
 3.0 US assets, never from the CC BY-NC-SA `goon/` folder. Any sprite whose
@@ -354,8 +358,15 @@ origin is unclear is left out.
 left out for an unclear origin, and why, is in [vg
 sounds](../research/vg-sounds.md#provenance).*
 
+*2026-11-05: Implemented. All 214 vg entries in `CREDITS` have sources under vg's
+`icons/` or `sound/`, none under `goon/`. One gap is open: the owner says
+[`misc/fire_alarm`](../research/vg-sounds.md#provenance) came from Freesound under a
+suitable license, but the original sound and its author aren't recorded. If that
+license asks for attribution, the entry needs the name before release
+([#72](https://github.com/west3436/zas-cubed/issues/72)).*
+
 #### NFR-044 · Asset license
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-39, D-56
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-39, D-56
 
 All assets, derived or original, shall be licensed CC BY-SA 4.0 International
 in a separate `LICENSE-ASSETS` file. Code stays MIT.
@@ -363,8 +374,12 @@ in a separate `LICENSE-ASSETS` file. Code stays MIT.
 - **Rationale:** Decision: D-39 and D-56.
 - **Verify:** Inspect `LICENSE-ASSETS`.
 
+*2026-11-05: Implemented. `LICENSE-ASSETS` puts every file under
+`src/*/resources/assets/` under CC BY-SA 4.0, with its full text, and `LICENSE` keeps
+the code MIT.*
+
 #### NFR-045 · Asset provenance
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26, D-56, D-62
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26, D-56, D-62
 
 Every file under `assets/` shall have a `CREDITS` entry giving its origin:
 "original"; its vg source file, icon state and commit, with attribution to
@@ -383,14 +398,23 @@ with no icon state, and says how the file was adapted. The script checks that a
 sound has no state, that an icon has one, and that a file under `sounds/` draws on
 vg's `sound/`.*
 
+*2026-11-05: Implemented. CI's build job runs `scripts/check_credits.py`. All 555
+asset files have an entry, and an uncredited probe file made the script exit 1.*
+
 #### NFR-046 · No NonCommercial assets
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-26
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26
 
 No NonCommercial asset shall ship in any jar. RE:SS3D assets (CC BY-NC-SA 4.0)
 and Stationeers (proprietary) are reference and inspiration only.
 
 - **Rationale:** Decision: D-26.
 - **Verify:** Inspect the jar contents against CREDITS.
+
+*2026-11-05: Implemented. Inspected the `zas` and `zas_atmos` jars, nested API jar
+included. All 549 asset files have a `CREDITS` entry, each `original` or
+`vgstation13`, with no `goon/` source, and no image or sound sits outside `assets/`.
+No entry uses another source, and the script refuses a NonCommercial license on any
+that does.*
 
 #### NFR-042 · Distribution
 `Should` · `R1` · `Accepted` · Verify: Inspect · Trace: D-18

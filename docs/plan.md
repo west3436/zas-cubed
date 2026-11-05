@@ -62,14 +62,16 @@ Requirements first, then risk-driven work:
   They become the R1 test plan.
 - **Exit:** every R1 `Must` is *Accepted*. Tag `req-r1-baseline`.
 
-### Phase B: architecture and spikes (in progress since 2026-10-31)
+### Phase B: architecture and spikes (done 2026-11-05)
 
-**Status:** the [architecture](architecture.md) draft is ready for review.
+**Status:** the owner accepted the [architecture](architecture.md) on 2026-11-05
+([#2](https://github.com/west3436/zas-cubed/issues/2)).
 Spikes S0–S5 are done ([results](research/spikes.md)), including S0's check on
 a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77),
 [follow-up](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)).
-Still open: accepting the architecture doc
-([#2](https://github.com/west3436/zas-cubed/issues/2)).
+Two of the architecture's open items are still to measure: a large modpack
+([#79](https://github.com/west3436/zas-cubed/issues/79)) and the enclosure
+prefetch ([#80](https://github.com/west3436/zas-cubed/issues/80)).
 
 - *2026-11-01:* S6 (Ad Astra, [#9](https://github.com/west3436/zas-cubed/issues/9))
   moved out of Phase B to R2 with the Ad Astra adapter (D-66). Nothing in
@@ -213,10 +215,10 @@ ready: Hardcore zone triggers and volume-aware venting.*
 
 | Item | PR | Requirements | Left |
 |---|---|---|---|
-| Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011, CORE-013 and CORE-015 to CORE-017 *Implemented*; CORE-012 back to *Accepted* by the owner, until LIFE, FIRE or CONT reads the tags | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives: left out until a track needs them (owner). `gasesInTag` got a default, like `breathability` ([#138](https://github.com/west3436/zas-cubed/pull/138)) |
+| Gas set and gas tags | [#130](https://github.com/west3436/zas-cubed/pull/130) | CORE-011, CORE-013 and CORE-015 to CORE-017 *Implemented*; CORE-012 back to *Accepted* by the owner, until LIFE, FIRE or CONT reads the tags; *Implemented* 2026-11-05, now that the scrubber and filter read them | Heats of fusion for O₂, N₂, H₂O, H₂ and CO, which no checked reference gives: left out until a track needs them (owner). `gasesInTag` got a default, like `breathability` ([#138](https://github.com/west3436/zas-cubed/pull/138)) |
 | Zone-boundary blocks | [#133](https://github.com/west3436/zas-cubed/pull/133) | GEO-007, GEO-044, CORE-034 and CORE-067 *Implemented*; [#107](https://github.com/west3436/zas-cubed/issues/107) fixed | None for CLIENT-011, which the owner's overlay check made *Implemented* (#31). A door opening onto open air still costs a bounded breach fill each time, until GEO-021 and GEO-027 |
 | The preset | [#128](https://github.com/west3436/zas-cubed/pull/128) | OPS-015 *Implemented*; OPS-007 stays *Accepted* until the options it lists have users | Per-world presets: NeoForge shares `config/zas-server.toml` between singleplayer worlds that have no `serverconfig` copy. The owner chose to have `/zas preset` write the world's own copy ([#139](https://github.com/west3436/zas-cubed/issues/139)) |
-| Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stays *Accepted* | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. The owner kept `@LevelThread` and the `Hazard` and `Protection` values; LIFE confirms or trims the values before 1.0.0 |
+| Breathability helper | [#131](https://github.com/west3436/zas-cubed/pull/131) | API-014 stayed *Accepted*; *Implemented* 2026-11-05 | The API and the no-ZAS³ fallback only. The verdict needs LIFE and API-022 (#34 to #36); until then `zas` answers with vanilla's verdict, marked interim. The owner kept `@LevelThread` and the `Hazard` and `Protection` values; LIFE confirms or trims the values before 1.0.0 |
 | Hardcore zone triggers | [#136](https://github.com/west3436/zas-cubed/pull/136) | CORE-056 stays *Accepted* | The fuel generator (CONT) joins `#zas:combustion` when it exists. Fire spreading in the open under Hardcore runs a bounded fill per new fire block, a cost like a door opening to air, with the same mitigation |
 | Volume-aware venting | [#134](https://github.com/west3436/zas-cubed/pull/134) | CORE-035 and CORE-068 *Implemented* | Zone-to-zone sharing is now volume-aware by default too: two 27-cell rooms halve their difference in about 18 s rather than 4 s, two 1,000-cell rooms in about 9 minutes. `[atmos] venting = FAITHFUL` gives ZAS's rates, about 4 s at any size |
 
@@ -454,9 +456,9 @@ _Updated 2026-11-05._
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
      #117~~ *Accepted 2026-11-01.*
-   - review the [architecture](architecture.md)
+   - ~~review the [architecture](architecture.md)
      ([#2](https://github.com/west3436/zas-cubed/issues/2)) and accept it or
-     send changes. That closes Phase B.
+     send changes~~ *Accepted 2026-11-05, which closes Phase B.*
    - ~~from the R1 foundation: look at the boundary colours in the debug
      overlay (CLIENT-011)~~ *Checked by the owner 2026-11-01. The other
      foundation questions were decided the same day: see the table in
@@ -472,9 +474,15 @@ _Updated 2026-11-05._
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*.
    ~~S-11 and S-13~~ *pass on main 2026-11-04 (#214 to #243; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
-   owner's combined test world still to play. Next, S-09 and S-10, then the rest
-   of #49 and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
-   electrolyzer).
+   owner's combined test world still to play.
+   - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
+     and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
+     electrolyzer).
+   - **Before them,** the R1 work with little or no code so far, not yet
+     scheduled as a round: the gas-handler capability and seal providers (#60),
+     ambient providers (#66), dimension pause and region reset (#67), default
+     block overrides and moving-block geometry (#65), fuzzing and fault isolation
+     (#69), and block damage (#45).
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
      owner's second combined test world to play and its *Draft* IDs to accept.
@@ -484,12 +492,11 @@ _Updated 2026-11-05._
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      display units and language (#57), magnetic boots (#49) and insulating
      station walls (#179).
-   - Follow-ups from R0 to fold in along the way: zone-creation speed
-     ([#120](https://github.com/west3436/zas-cubed/issues/120)), idle-zone cost
-     ([#121](https://github.com/west3436/zas-cubed/issues/121)), saved
-     operations keeping their sub-cell
-     ([#122](https://github.com/west3436/zas-cubed/issues/122)), and sub-cells
-     of position-dependent shapes, with GEO-043
-     ([#123](https://github.com/west3436/zas-cubed/issues/123)).
+   - Follow-ups from R0: saved operations keeping their sub-cell
+     ([#122](https://github.com/west3436/zas-cubed/issues/122)). Zone-creation
+     speed and idle-zone cost, both inside their budgets, are now part of S-10's
+     work ([#68](https://github.com/west3436/zas-cubed/issues/68)), and sub-cells
+     of position-dependent shapes go with GEO-043
+     ([#65](https://github.com/west3436/zas-cubed/issues/65)).
 5. **After R1:** the reference integrations, Mekanism and Ad Astra
    (D-11, D-66; see [After R1](#after-r1-already-queued)).
