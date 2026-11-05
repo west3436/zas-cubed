@@ -105,6 +105,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.PORTABLE_SCRUBBER.get(), PortableGasScreen<PortableScrubberMenu>::new);
         event.register(AtmosMenus.RECHARGER.get(), RechargerScreen::new);
         event.register(AtmosMenus.PRESSURE_PUMP.get(), PumpScreen::pressure);
+        event.register(AtmosMenus.VOLUME_PUMP.get(), PumpScreen::volume);
     }
 
     /**
