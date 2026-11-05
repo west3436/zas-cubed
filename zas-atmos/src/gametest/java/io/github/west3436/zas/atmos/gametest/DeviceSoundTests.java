@@ -32,6 +32,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
@@ -54,13 +55,29 @@ public final class DeviceSoundTests {
 
     /** Takes what a block played: exactly these events, at volume 1 and pitch 1 on the Blocks slider. */
     @SafeVarargs
-    private static void played(
+    static void played(
             GameTestHelper h, BlockPos block, String when, DeferredHolder<SoundEvent, SoundEvent>... events) {
-        List<SoundLog.Played> sounds = SoundLog.take(Vec3.atCenterOf(block));
+        heard(h, Vec3.atCenterOf(block), SoundSource.BLOCKS, when, events);
+    }
+
+    /** Takes what played at a point: exactly these events, at volume 1 and pitch 1 on this slider. */
+    @SafeVarargs
+    static void heard(
+            GameTestHelper h,
+            Vec3 at,
+            SoundSource slider,
+            String when,
+            DeferredHolder<SoundEvent, SoundEvent>... events) {
+        List<SoundLog.Played> sounds = SoundLog.take(at);
         h.assertTrue(sounds.size() == events.length, when + ": played " + sounds);
         for (int i = 0; i < events.length; i++) {
+            SoundLog.Played sound = sounds.get(i);
             h.assertTrue(
-                    sounds.get(i).is(events[i]), when + ": played " + sounds.get(i) + ", not " + events[i].getId());
+                    sound.id().equals(events[i].getId())
+                            && sound.channel() == slider
+                            && sound.volume() == 1
+                            && sound.pitch() == 1,
+                    when + ": played " + sound + ", not " + events[i].getId());
         }
     }
 

@@ -2191,7 +2191,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure` and `zas_atmos:tank_low`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -3104,16 +3104,18 @@ is in [crafting.md](crafting.md), and a crafted one is full.
   the user aims at goes out. Each box goes to zas-api's `Fires.extinguish`
   (API-057), which removes the gas fires and vanilla fire blocks in it; the
   engine drops a removed gas fire's hotspot at its next tick.
-- **Sound.** Each spray plays vanilla's `block.fire.extinguish` quietly at the
-  user, with a high pitch; a spray that put something out also plays it as
-  vanilla's dowsed fire does, at the spray's end. Empty, it clicks
-  (`block.dispenser.fail`) and says so on the action bar.
+- **Sound.** `device.extinguisher.spray` plays at the user's eye as the use
+  starts, then every `SPRAY_SOUND_INTERVAL` (32) ticks while it is held, about as
+  long as the sound is, since five a second would pile up. A spray that put
+  something out also plays vanilla's `block.fire.extinguish` as its dowsed fire
+  does, at the spray's end. Empty, it plays `device.extinguisher.empty` and says
+  so on the action bar.
 - **Particles.** Each spray sends a `SPRAY` jet (§11.12) from the hand, along
   the look, as far as the spray went. The cone's 14° half-angle is about as wide
   as the 3 blocks the spray puts out at its full reach. It has no in-use pose.
 - **Charges.** In the stack's `zas_atmos:charges` (a new stack is full), shown
   on the item bar in water blue and in the tooltip. Using it on a water source
-  block while it isn't full refills it, with the bucket's fill sound; the
+  block while it isn't full refills it, with `device.extinguisher.refill`; the
   water stays. There is no crafting-grid refill.
 - **What it doesn't do.** It doesn't put out burning entities, cool anything
   or change the gas: a fire whose zone still has the O₂ and heat can light
@@ -3253,6 +3255,34 @@ plays a machine's `on` or `off`, and only if the switch moved. The recharger pla
 `on` as it starts charging, `done` as its battery fills and `off` if it stops
 short. The generator plays `on` and `off` as its `lit` changes, so not between one
 piece of fuel and the next.
+
+**Other devices' events** (CONT-127). The server plays these at volume 1 and pitch 1,
+as they happen:
+
+| Device | Event | Plays when |
+|---|---|---|
+| Igniter | `click` | Its signal comes or goes |
+| | `spark` | It lights, then every `SPARK_STEPS` (3) atmos ticks while lit |
+| Area air controller | `on`, `off` | It gains or loses power |
+| | `warning`, `danger` | It rises to danger 1 or danger 2 |
+| Firelock | `open`, `close` | `FirelockBlock.setOpen` moves it, whatever asked |
+| | `force` | A crowbar forces it, on top of the move, or a lockdown refuses a hand |
+| Tank transfer valve | `arm` | Its timer starts |
+| | `tick` | Each second for the last 30 s of its timer, and every 5 s before |
+| | `open` | Its timer runs out, or a hand opens it |
+| | `device.valve.close` | A hand closes it |
+| Tank | `close`, `open` | Its distribution pressure reaches 0, or leaves it |
+| | `low` | A breath takes it under `LOW_SECONDS` (60) of breath |
+| Fire extinguisher | `spray`, `refill`, `empty` | §11.10 |
+| Container | `leak`, `burst` | `ContainerBlast.hiss` and `burst` |
+
+A controller decides from the panel saved in its block state, so a chunk coming
+back plays nothing. It plays nothing while its danger stays or falls. `Internals`
+belongs to `zas.life`, and no API tells this mod about its switch (CONT-095), so a
+tank's `open` and `close` follow the settings screen's pressure instead. A tank's
+`supply` doesn't know who is breathing, so the breath that crosses the line sets
+`zas_atmos:tank_low`, and the tank's next atmos tick plays `low` at its holder and
+clears it. A tank has to be run down past the line again to warn again.
 
 **Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
 canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
