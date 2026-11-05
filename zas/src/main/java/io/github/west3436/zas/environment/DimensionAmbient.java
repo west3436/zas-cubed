@@ -11,14 +11,16 @@ import java.util.TreeSet;
  * A dimension's datapack ambient definition (ENV-001): the ambient for each preset (ENV-010)
  * and whether the dimension is excluded from simulation (ENV-007).
  *
- * <p>A preset with no ambient here falls through to the next source, which in R0 is the
- * fallback (ENV-011, ENV-014).
+ * <p>A preset with no ambient here falls through to the next source (ENV-014).
  *
  * @param normal the ambient under the Normal preset, if defined
  * @param hardcore the ambient under the Hardcore preset, if defined
  * @param excluded whether the dimension is excluded from simulation
  */
 public record DimensionAmbient(Optional<Ambient> normal, Optional<Ambient> hardcore, boolean excluded) {
+    /** A definition that defines nothing, as if there were none. */
+    public static final DimensionAmbient NONE = new DimensionAmbient(Optional.empty(), Optional.empty(), false);
+
     public DimensionAmbient {
         Objects.requireNonNull(normal, "normal");
         Objects.requireNonNull(hardcore, "hardcore");

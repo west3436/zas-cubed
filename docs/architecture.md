@@ -110,7 +110,7 @@ The engine sees the world only through these types, all in
 |---|---|
 | `GeometryPalette` | Dense table: geometry id → face masks (6 × 16×16 bits), volume, sub-cells with per-face footprints, flags (zone boundary, fluid, heat source). Built by `zas` from block states (§4.1). |
 | `SectionSnapshot` | Section key, chunk lifecycle and block generations, `short[4096]` geometry ids or a compact palette-indexed form, plus per-position overrides (position-dependent shapes, seal providers) |
-| `Ambient` | A dimension's ambient: partial pressures by gas id and a temperature; no gas is a vacuum (ENV-001, ENV-003). Built by `zas` from datapacks (`Ambients.ambient(dimension)`) |
+| `Ambient` | A dimension's ambient: partial pressures by gas id and a temperature; no gas is a vacuum (ENV-001, ENV-003). Built by `zas` from datapacks and providers (`Ambients.ambient(dimension)`, ENV-014) |
 | `Batch` | Atmos tick number; section snapshots; chunk lifecycle events with their saved shares; ambient definitions per dimension; queued operations with sequence numbers; rejections from the previous apply; config snapshot |
 | `Result` | Atmos tick number; immutable zone snapshot table; per-component membership; per-operation outcomes; edge flow records (FLOW-001); world-write intents with the block generations they assumed; events; conservation ledger entries |
 
@@ -291,7 +291,12 @@ Requirements: CORE-036, CORE-048, CORE-070, CORE-074, D-43.
   it into a `SectionSnapshot`.
 - Evaluate position-dependent shapes and seal providers for dirty positions
   (API-028).
-- Read ambient providers (ENV-015).
+- Read ambient providers (ENV-015). *Implemented
+  ([#66](https://github.com/west3436/zas-cubed/issues/66)):*
+  `DimensionAtmos.close` calls `Ambients.takeProviderAnswer` first, in every
+  dimension, an excluded one included. `ProvidedAmbients` keeps the answer, which
+  the batch and every query read until the next close, and is the only place a
+  provider is called, so NFR-013's guard has one place to go.
 - Hand off the op queue (a list swap).
 
 **Per apply:**
@@ -1911,7 +1916,7 @@ sound, and nothing here runs for it.*
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block), and their `BlockCapability`/`ItemCapability` constants |
-| `.api.environment` | `AmbientDefinition`, `AmbientProvider` |
+| `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
@@ -1933,6 +1938,8 @@ sound, and nothing here runs for it.*
   - capabilities still exist, because capability objects are created by name
     in the API jar
   - no events fire
+  - ambient providers register, since `AmbientProviders` is in the API jar, but
+    nothing calls them (ENV-004)
 - **Consumers** should call the API from common setup or later. If they need
   it during construction, they declare `ordering = "AFTER"` on an optional
   `zas` dependency. *Spike (S0):* `isPresent()` was then already true at

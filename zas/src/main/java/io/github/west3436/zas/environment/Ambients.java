@@ -16,24 +16,34 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
 /**
  * Each dimension's ambient atmosphere on the running server (ENV-001, ENV-010, ENV-011,
  * ENV-003, ENV-007).
  *
- * <p>A dimension's ambient is its datapack definition's variant for the active preset (or the
- * variant the {@code ambient_variant} preset option overrides it with), or
- * {@link Ambient#STANDARD_AIR} if it has none (ENV-011). Providers (ENV-004) and seeded
- * ambients (SPACE-020) slot in between in R1 (ENV-014). The atmos scheduler puts {@link
- * #ambient(ResourceKey)} into each dimension's {@code Batch} (architecture §2.3) and skips
- * dimensions where {@link #isExcluded(ResourceKey)} holds.
+ * <p>A dimension's ambient comes from the first of these that defines it (ENV-014, D-45):
+ *
+ * <ol>
+ *   <li>its datapack definition's variant for the active preset, or the variant the {@code
+ *       ambient_variant} preset option overrides it with;
+ *   <li>its registered provider's answer (ENV-004, ENV-019), which {@link #takeProviderAnswer} takes
+ *       once per atmos tick (ENV-015);
+ *   <li>a seeded ambient from another mod's data (SPACE-020), which comes in R2 with the Ad Astra
+ *       adapter (D-66), so only a test fills this slot for now ({@link #seedForTest});
+ *   <li>{@link Ambient#STANDARD_AIR} (ENV-011).
+ * </ol>
+ *
+ * <p>The atmos scheduler puts {@link #ambient(ResourceKey)} into each dimension's {@code Batch}
+ * (architecture §2.3) and skips dimensions where {@link #isExcluded(ResourceKey)} holds.
  *
  * <p>Definitions reload with {@code /reload}. A definition naming a gas the running server
  * doesn't have is logged and skipped. Lookups may be called from any thread; the variant is read
@@ -52,6 +62,12 @@ public final class Ambients {
     /** Ambients GameTests put in place of a dimension's own, by dimension. */
     private static final Map<ResourceLocation, Ambient> testOverrides = new ConcurrentHashMap<>();
 
+    /** Definitions GameTests put in place of a dimension's own, by dimension. */
+    private static final Map<ResourceLocation, DimensionAmbient> testDefinitions = new ConcurrentHashMap<>();
+
+    /** Ambients seeded from another mod's data, by dimension: ENV-014's third source (SPACE-020). */
+    private static final Map<ResourceLocation, Ambient> seeded = new ConcurrentHashMap<>();
+
     private Ambients() {}
 
     /**
@@ -65,6 +81,9 @@ public final class Ambients {
         gameBus.addListener((AddReloadListenerEvent e) -> e.addListener(new AmbientLoader()));
         // After the gas registry fixes the server's gases at normal priority.
         gameBus.addListener(EventPriority.LOW, (ServerAboutToStartEvent e) -> serverStarting());
+        // So a provider's dimension doesn't read as the fallback until its first atmos tick.
+        gameBus.addListener(
+                (ServerStartedEvent e) -> e.getServer().getAllLevels().forEach(Ambients::takeProviderAnswer));
         gameBus.addListener((ServerStoppedEvent e) -> serverStopped());
     }
 
@@ -78,19 +97,43 @@ public final class Ambients {
 
     /** The ambient of a dimension in a preset's variant (ENV-010). */
     public static Ambient ambient(ResourceKey<Level> dimension, AtmospherePreset variant) {
-        Ambient override = testOverrides.get(dimension.location());
+        ResourceLocation id = dimension.location();
+        Ambient override = testOverrides.get(id);
         if (override != null) {
             return override;
         }
-        DimensionAmbient definition = active.get(dimension.location());
-        return definition == null
-                ? Ambient.STANDARD_AIR
-                : definition.ambient(variant).orElse(Ambient.STANDARD_AIR);
+        DimensionAmbient definition = definitionOf(id);
+        if (definition != null) {
+            Optional<Ambient> ambient = definition.ambient(variant);
+            if (ambient.isPresent()) {
+                return ambient.get();
+            }
+        }
+        Ambient provided = ProvidedAmbients.answer(id);
+        if (provided != null) {
+            return provided;
+        }
+        Ambient seed = seeded.get(id);
+        return seed != null ? seed : Ambient.STANDARD_AIR;
+    }
+
+    /**
+     * Takes the answer of a level's provider for this atmos tick (ENV-015), which every lookup then
+     * reads until the next. The atmos scheduler calls this as it closes a batch, whether or not the
+     * dimension simulates, since an excluded one keeps its ambient (ENV-018). Server thread.
+     */
+    public static void takeProviderAnswer(ServerLevel level) {
+        ProvidedAmbients.refresh(level);
     }
 
     /** The datapack definition of a dimension, if it has a valid one. */
     public static Optional<DimensionAmbient> definition(ResourceKey<Level> dimension) {
-        return Optional.ofNullable(active.get(dimension.location()));
+        return Optional.ofNullable(definitionOf(dimension.location()));
+    }
+
+    private static DimensionAmbient definitionOf(ResourceLocation dimension) {
+        DimensionAmbient test = testDefinitions.get(dimension);
+        return test != null ? test : active.get(dimension);
     }
 
     /**
@@ -98,7 +141,7 @@ public final class Ambients {
      * server config (ENV-007). An excluded dimension keeps its ambient (ENV-018).
      */
     public static boolean isExcluded(ResourceKey<Level> dimension) {
-        DimensionAmbient definition = active.get(dimension.location());
+        DimensionAmbient definition = definitionOf(dimension.location());
         return (definition != null && definition.excluded()) || ZasServerConfig.excludes(dimension.location());
     }
 
@@ -115,6 +158,36 @@ public final class Ambients {
             testOverrides.remove(dimension.location());
         } else {
             testOverrides.put(dimension.location(), ambient);
+        }
+    }
+
+    /**
+     * Gives a dimension another datapack definition, as a {@code /reload} that loaded it would, until
+     * cleared: for GameTests. The GameTest server has only the vanilla dimensions, and zas ships a
+     * definition for each, so a test of what comes after a definition (ENV-014) borrows one with
+     * {@link DimensionAmbient#NONE}. Any thread.
+     *
+     * @param definition the definition, or null to give the dimension back its own
+     */
+    public static void overrideDefinitionForTest(ResourceKey<Level> dimension, DimensionAmbient definition) {
+        if (definition == null) {
+            testDefinitions.remove(dimension.location());
+        } else {
+            testDefinitions.put(dimension.location(), definition);
+        }
+    }
+
+    /**
+     * Fills ENV-014's third source for a dimension until cleared: for GameTests, until the Ad Astra
+     * adapter fills it in R2 (SPACE-020, D-66). Any thread.
+     *
+     * @param ambient the seeded ambient, or null for none
+     */
+    public static void seedForTest(ResourceKey<Level> dimension, Ambient ambient) {
+        if (ambient == null) {
+            seeded.remove(dimension.location());
+        } else {
+            seeded.put(dimension.location(), ambient);
         }
     }
 
@@ -147,6 +220,9 @@ public final class Ambients {
         running = false;
         active = Map.of();
         testOverrides.clear();
+        testDefinitions.clear();
+        seeded.clear();
+        ProvidedAmbients.serverStopped();
     }
 
     /** Checks the loaded definitions against the running server's gases and puts them in force. */
