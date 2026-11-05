@@ -1266,6 +1266,27 @@ public final class ZoneGraph {
         GasMixture gas = z.mixture().removeFraction(1);
         ledger.record(LedgerCategory.AMBIENT, gas, -1);
         drainPruned(gas);
+        unzone(z);
+    }
+
+    /**
+     * Resets a zone to the ambient by operator command (OPS-013): as {@link #dissolve}, except that
+     * it needs no equivalence to the ambient, its pins go with it, and its gas is a sink attributed
+     * to whoever asked rather than an exchange with the ambient (CORE-036).
+     *
+     * @param source who asked
+     * @return the gas removed
+     */
+    public GasMixture reset(Zone z, String source) {
+        GasMixture gas = z.mixture().removeFraction(1);
+        ledger.recordOperator(source, gas);
+        drainPruned(gas);
+        unzone(z);
+        return gas;
+    }
+
+    /** Destroys a zone whose gas has gone: its cells become unzoned, and its edges ambient ones. */
+    private void unzone(Zone z) {
         for (Edge e : new ArrayList<>(z.edges)) {
             removeEdge(e);
             Zone other = e.other(z);

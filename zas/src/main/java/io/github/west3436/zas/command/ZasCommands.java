@@ -17,6 +17,7 @@ import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
@@ -193,6 +194,12 @@ public final class ZasCommands {
                                 .then(Commands.argument("to", BlockPosArgument.blockPos())
                                         .executes(ctx -> vent(ctx, null))
                                         .then(gasArgument().executes(ctx -> vent(ctx, gas(ctx))))))));
+
+        // OPS-013: region reset.
+        root.then(Commands.literal("reset")
+                .then(Commands.argument("from", BlockPosArgument.blockPos())
+                        .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                .executes(ZasCommands::reset))));
 
         // OPS-017: zone pins (API-017, API-050).
         root.then(Commands.literal("pin")
@@ -733,6 +740,78 @@ public final class ZasCommands {
         return count;
     }
 
+    /** A cell a reset can name its zone by. */
+    private record ZoneCell(BlockPos pos, int sub) {}
+
+    /**
+     * {@code /zas reset <from> <to>}: resets every zone with a cell in a region to the ambient
+     * (OPS-013), as of the published table. Every cell of a position counts, so a pane between two
+     * rooms resets both. A zone goes whole: a part left zoned beside its unzoned cells would take
+     * them straight back in (GEO-023).
+     */
+    private static int reset(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        AtmosService service = service();
+        ServerLevel level = source.getLevel();
+        if (Ambients.isExcluded(level.dimension())) {
+            throw NOT_SIMULATED.create(level.dimension().location().toString());
+        }
+        BlockPos from = BlockPosArgument.getLoadedBlockPos(ctx, level, "from");
+        BlockPos to = BlockPosArgument.getLoadedBlockPos(ctx, level, "to");
+        checkRegion(from, to);
+        DimensionAtmos d = service.dimensionFor(level);
+        AtmosSnapshot snapshot = d.published();
+        GeometryTable table = Geometries.table();
+        Map<Long, ZoneCell> zones = new LinkedHashMap<>();
+        for (BlockPos p : BlockPos.betweenClosed(from, to)) {
+            if (!level.isLoaded(p)) {
+                continue;
+            }
+            int cells = PositionGeometries.geometry(level, p, level.getBlockState(p), table)
+                    .cells()
+                    .size();
+            for (int sub = 0; sub < cells; sub++) {
+                ZoneView z = snapshot.zoneAt(p.asLong(), sub);
+                if (z != null) {
+                    zones.putIfAbsent(z.id(), new ZoneCell(p.immutable(), sub));
+                }
+            }
+        }
+        if (zones.isEmpty()) {
+            reply(source, Component.translatable("commands.zas.reset.none"));
+            return 0;
+        }
+        SourceId by = sourceOf(source);
+        List<CompletableFuture<MutationResult>> futures = new ArrayList<>();
+        for (ZoneCell cell : zones.values()) {
+            futures.add(d.reset(cell.pos(), cell.sub(), by));
+        }
+        reply(source, Component.translatable("commands.zas.reset.queued", futures.size(), by.toString()));
+        whenDone(source, CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)), ignored -> {
+            int reset = 0;
+            int paused = 0;
+            double moved = 0;
+            for (CompletableFuture<MutationResult> f : futures) {
+                MutationResult m = f.join();
+                if (m.outcome() == MutationOutcome.ZONE) {
+                    reset++;
+                    moved += m.moved().totalMoles();
+                } else if (m.outcome() == MutationOutcome.PAUSED) {
+                    paused++;
+                }
+            }
+            int resetZones = reset;
+            double total = moved;
+            source.sendSuccess(
+                    () -> Component.translatable("commands.zas.reset.done", resetZones, num(total), by.toString()),
+                    true);
+            if (paused > 0) {
+                reply(source, Component.translatable("commands.zas.reset.paused", paused));
+            }
+        });
+        return futures.size();
+    }
+
     private static void checkRegion(BlockPos from, BlockPos to) throws CommandSyntaxException {
         long blocks = (long) (Math.abs(from.getX() - to.getX()) + 1)
                 * (Math.abs(from.getY() - to.getY()) + 1)
@@ -876,6 +955,16 @@ public final class ZasCommands {
                         "commands.zas.checker.ledger", registry.definition(gas).id(), String.join(", ", parts)));
             }
         }
+        // Who the operator sink is attributed to (OPS-013).
+        r.byOperator().forEach((operator, moles) -> {
+            List<String> parts = new ArrayList<>();
+            for (int gas = 0; gas < registry.size() && gas < moles.length; gas++) {
+                if (moles[gas] != 0) {
+                    parts.add(registry.definition(gas).id() + " " + num(moles[gas]));
+                }
+            }
+            out.add(Component.translatable("commands.zas.checker.operator", operator, String.join(", ", parts)));
+        });
         for (ConservationReport.Violation v : r.violations()) {
             out.add(Component.translatable(
                     "commands.zas.checker.violation",

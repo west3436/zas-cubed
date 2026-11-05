@@ -91,6 +91,7 @@ public final class DimensionPipeline {
      *     zones
      * @param fireEvents zones that caught fire or stopped burning (API-031), without rejected
      *     zones
+     * @param pressureBreaks fragile blocks to break (FLOW-007), without those read from a rejected zone
      */
     public record Applied(
             long tick,
@@ -102,7 +103,8 @@ public final class DimensionPipeline {
             Throwable fault,
             long[] changedChunks,
             List<FireIntent> fireIntents,
-            List<FireEvent> fireEvents) {}
+            List<FireEvent> fireEvents,
+            List<PressureBreak> pressureBreaks) {}
 
     private final DimensionScheduler scheduler;
     private final World world;
@@ -318,6 +320,20 @@ public final class DimensionPipeline {
     }
 
     /**
+     * Queues a reset of the zone at one sub-cell of a position to the ambient for the next batch
+     * (OPS-013): {@code sub} as in {@link GasOp#sub()}, -1 for the largest cell. It isn't saved with
+     * its chunk.
+     *
+     * @param source who asked, whom the gas removed is attributed to
+     * @return its sequence number
+     */
+    public long reset(long block, int sub, String source) {
+        long seq = nextSeq++;
+        enqueue(GasOp.reset(seq, block, sub, source));
+        return seq;
+    }
+
+    /**
      * Queues a saved addition again, under a new sequence number (DATA-011). Its outcome has no
      * caller to go to.
      *
@@ -350,6 +366,7 @@ public final class DimensionPipeline {
             case PIN -> pin(op.block(), op.sub(), op.source());
             case UNPIN -> unpin(op.source());
             case IGNITE -> ignite(op.block(), op.source());
+            case RESET -> reset(op.block(), op.sub(), op.source());
             case ADD_HEAT, REMOVE_HEAT ->
                 heat(
                         op.block(),
@@ -643,7 +660,17 @@ public final class DimensionPipeline {
         Result result = scheduler.await();
         if (result == null) {
             return new Applied(
-                    tick, List.of(), List.of(), 0, 0, null, scheduler.fault(), new long[0], List.of(), List.of());
+                    tick,
+                    List.of(),
+                    List.of(),
+                    0,
+                    0,
+                    null,
+                    scheduler.fault(),
+                    new long[0],
+                    List.of(),
+                    List.of(),
+                    List.of());
         }
         List<Integer> rejectedIndices = new ArrayList<>();
         List<Long> rejectedZones = new ArrayList<>();
@@ -710,6 +737,12 @@ public final class DimensionPipeline {
                 fireEvents.add(e);
             }
         }
+        List<PressureBreak> breaks = new ArrayList<>();
+        for (PressureBreak b : result.pressureBreaks()) {
+            if (!rejectedSet.contains(b.highZone()) && !rejectedSet.contains(b.lowZone())) {
+                breaks.add(b);
+            }
+        }
         hotspots = result.hotspots().withRejected(hotspots, rejectedSet);
         published = snapshot;
         flows = result.flows();
@@ -728,7 +761,8 @@ public final class DimensionPipeline {
                 null,
                 toArray(changed),
                 intents,
-                fireEvents);
+                fireEvents,
+                breaks);
     }
 
     /** The chunks of zones whose published state differs between two tables. */

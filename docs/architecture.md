@@ -1226,8 +1226,30 @@ and spectators are never moved and are sent no openings to be pushed by
 low to stand in has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
 through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
-into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
-aren't done.
+into the hole reaches it. Impact damage (FLOW-005) isn't done.
+
+Block damage (FLOW-007, FLOW-015, FLOW-016) is decided on the worker and done on
+the server thread, as a world-write intent (§3.3). After a tick's exchange,
+`FragileBlocks` compares the pressures on a fragile block's sides: its own cells
+and the cells beside it that reach the shared face, a zoned cell reading its
+zone's pressure and any other the ambient's. Blocks come from an index in the
+section mirror of the states `Geometries` flags from `#zas:pressure_fragile`. A
+single pass over the zones spares looking at any block while no live zone differs
+by more than the threshold from the ambient or from another live zone, which 1 atm
+against a vacuum can't at the default. Off, or with no such difference, the mirror
+doesn't even scan a section for them. A block holds while a side is a paused zone
+or an unresolved region (GEO-035), or in an unloaded chunk (GEO-034): those numbers
+aren't live, and the break would be held (GEO-037) or would pull the chunk up. A
+section the mirror lacks, which holds no zoned cell, is asked for when reading it as
+the ambient would break the block, and only when the mirror will keep it. A tick asks
+for at most `pressure_fragile_breaks_per_tick` breaks, in key order, and keeps nothing
+between ticks: what's left is found again next tick from the world as it is then.
+`PressureBreak`s go back in the `Result`, those reading a rejected zone are dropped,
+and `PressureBreaks.apply` checks each against the block now, without touching a
+chunk that isn't at full status or whose saved zones are still to come, and breaks it
+with `ServerLevel.destroyBlock`. From there on it is a block change like any other,
+so the zones meet through the usual path, with nothing for the conservation checker
+to explain (CORE-073).
 
 Showing airflow is separate from pushing with it, and wider (CLIENT-003,
 DATA-015). At each atmos tick `VisibleFlows` picks a player's list: every exported

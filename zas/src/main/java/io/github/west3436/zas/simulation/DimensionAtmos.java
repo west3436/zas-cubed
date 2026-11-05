@@ -1,6 +1,7 @@
 package io.github.west3436.zas.simulation;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.airflow.PressureBreaks;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.FireExtinguishedEvent;
 import io.github.west3436.zas.api.event.FireIgnitedEvent;
@@ -511,6 +512,30 @@ public final class DimensionAtmos {
     }
 
     /**
+     * Queues a reset to the ambient of the zone at sub-cell {@code sub} of a position (OPS-013): its
+     * cells revert to unzoned, and its gas is removed and attributed to {@code source}. The result
+     * says {@link MutationOutcome#ZONE} with the gas removed, {@link MutationOutcome#PAUSED} if the
+     * zone was paused and is left as it was, or {@link MutationOutcome#AMBIENT} if no zone is there
+     * any more. In an excluded dimension there are no zones, so it completes at once.
+     */
+    public CompletableFuture<MutationResult> reset(BlockPos pos, int sub, SourceId source) {
+        CompletableFuture<MutationResult> future = new CompletableFuture<>();
+        if (isFaulted()) {
+            future.completeExceptionally(faulted());
+            return future;
+        }
+        ensureEngine();
+        DimensionPipeline pl = pipeline;
+        if (pl == null) {
+            future.complete(new MutationResult(MutationOutcome.AMBIENT, GasParcel.EMPTY));
+            return future;
+        }
+        Pending p = new Pending(future, false, pos.immutable(), sub, GasParcel.EMPTY, Map.of(), source);
+        pending.put(pl.reset(pos.asLong(), sub, source.toString()), p);
+        return future;
+    }
+
+    /**
      * Puts out every fire block in a box, now (API-057). A gas fire the batch in flight asks for in
      * the box isn't placed. Server thread.
      *
@@ -871,7 +896,11 @@ public final class DimensionAtmos {
 
     /** An operation with its amounts indexed by the current gas registry instead of {@code from}. */
     private GasOp remap(GasOp op, GasRegistry from) {
-        if (from == registry || op.kind().isPin() || op.kind().isHeat() || op.kind() == GasOp.Kind.IGNITE) {
+        if (from == registry
+                || op.kind().isPin()
+                || op.kind().isHeat()
+                || op.kind() == GasOp.Kind.IGNITE
+                || op.kind() == GasOp.Kind.RESET) {
             return op;
         }
         double[] moles = new double[registry.size()];
@@ -975,8 +1004,8 @@ public final class DimensionAtmos {
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
-     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), and whether the dimension is
-     * paused (OPS-005).
+     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
+     * breaks them (FLOW-007), and whether the dimension is paused (OPS-005).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -988,6 +1017,7 @@ public final class DimensionAtmos {
                 .withHotspots(FireConfig.hotspots())
                 .withBlockIgnition(FireConfig.blockIgnition()
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
+                .withFragile(AirflowConfig.fragile())
                 .withDimensionPaused(simulationPause() != null);
     }
 
@@ -1244,6 +1274,7 @@ public final class DimensionAtmos {
                     return false;
                 },
                 this::gasCaught);
+        PressureBreaks.apply(level, a.pressureBreaks(), chunk -> isChunkLoaded(chunk) && !isSettling(chunk));
         // API-031, after the blocks: a listener finds the fire's blocks as the event says.
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());

@@ -8,8 +8,7 @@ R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
 [airflow class tags](#airflow-classes), [reactions](#reactions) and
 [ignition sources](#ignition-sources), [fuel profiles](#fuel-profiles) and
-[block ignition](#block-ignition). The rest of OPS-002's list (the other entity
-tags) arrives with its features in R1. Every format
+[block ignition](#block-ignition). Every format
 reports invalid files the same way ([Invalid files](#invalid-files)).
 
 ## Gases
@@ -668,6 +667,7 @@ a file at the same path adds its entries, unless it says `"replace": true`.
 | `#zas:leaf_plants` | `#minecraft:leaves` | Plants that make O₂ at `leaf_photosynthesis_rate` (CONT-057) |
 | `#zas:ignition_sources` | nothing | Blocks that ignite a flammable mixture while they are there (API-053, FIRE-014); one with a boolean `lit` property only while lit. `zas_atmos`'s igniter is in it. See [Ignition sources](#ignition-sources) |
 | `#zas:zone_boundary` | `#minecraft:doors`, `#minecraft:trapdoors` | Open, they pass gas but keep the zones on either side apart (GEO-007); see [Zone boundaries](#zone-boundaries) |
+| `#zas:pressure_fragile` | `#c:glass_blocks`, `#c:glass_panes` (glass and panes of every colour, tinted glass, and any mod's glass in those tags) | Under Hardcore, a pressure difference across one above the threshold breaks it (FLOW-007); see [Pressure-fragile blocks](#pressure-fragile-blocks) |
 
 A trigger counts when it starts: a fire appears, a block is lit or a plant is
 placed. A crop growing or a lit furnace turning doesn't count. The tags apply
@@ -678,6 +678,40 @@ preset's (`combustion_forms_zones`, `planting_forms_zones`,
 `#zas:combustion` with a `lit` property, and `zas_atmos`'s firelock joins
 `#zas:zone_boundary`. `zas_atmos`'s generator isn't in `#zas:combustion`: it
 doesn't use the air (D-35, CONT-067).
+
+### Pressure-fragile blocks
+
+A block in `#zas:pressure_fragile` breaks when the pressure difference across it
+exceeds the threshold (FLOW-007), so at the default of 150 kPa a window holds
+1 atm against a vacuum and blows out on overpressure (FLOW-015). Whether blocks
+break at all is the preset's: `block_pressure_damage` is on under Hardcore, off
+under Normal, and either can override it (FLOW-016). The tag only chooses the
+blocks. A tag can't hold a number, so the threshold is one value for the whole
+tag, `[airflow] pressure_fragile_threshold_kpa`
+([config.md](config.md#server-zas-servertoml)).
+
+- **Across a block.** A block's sides are its own cells, as with a pane's two
+  halves, and the open cells beside it. A cell in a zone reads the zone's
+  pressure, and any other cell the dimension's ambient. The difference is between
+  the highest and lowest of them. A solid block beside it isn't a side, so of two
+  layers of glass neither sees a difference, and both hold.
+- **What holds for now.** A block holds while one of its sides is a paused zone
+  (in a paused dimension every zone is) or an unresolved region, or is in an
+  unloaded chunk, or in a chunk whose saved zones aren't back yet, however large
+  the difference looks. Those numbers are a last-known state or a guess. It is
+  judged again each atmos tick, so it breaks when the far side comes back, if the
+  difference is still there. Nothing is loaded to find out.
+- **The break** is vanilla's, as if with no tool, with the block's own sound and
+  particles. It drops what the block's loot table gives without a tool: nothing
+  for glass and panes, which need silk touch, and itself for a plain block added
+  to the tag. The `doTileDrops` game rule applies, and a waterlogged block leaves
+  its water. To the atmosphere it is a block change like any other.
+- **How many.** A dimension breaks at most `[airflow]
+  pressure_fragile_breaks_per_tick` blocks per atmos tick. The rest break in later
+  ticks, if the difference is still there, so a chain of windows goes over several
+  ticks rather than in one.
+
+A change to the tag applies after `/reload`, from the dimension's next atmos tick.
 
 ## Ignition sources
 

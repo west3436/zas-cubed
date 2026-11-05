@@ -2,6 +2,9 @@ package io.github.west3436.zas.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.core.file.FileNotFoundAction;
+import com.electronwill.nightconfig.core.io.ParsingException;
+import com.electronwill.nightconfig.core.io.WritingException;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import com.electronwill.nightconfig.toml.TomlFormat;
 import com.electronwill.nightconfig.toml.TomlWriter;
@@ -10,6 +13,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Optional;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -34,7 +38,8 @@ import org.slf4j.Logger;
  *
  * <p>NeoForge keeps watching the shared file for the rest of the session. If that file changes,
  * NeoForge reloads the config from it; a listener at the highest priority puts the copy's values
- * back, so the world keeps its own.
+ * back, so the world keeps its own. It doesn't watch the copy, so {@link #pickUpEdits} looks at it
+ * as each atmos tick closes, which keeps a hand edit of the copy live as well (OPS-016).
  *
  * <p>A dedicated server is unchanged: it has one world, and saves go to the file it read, whichever
  * that is.
@@ -63,6 +68,9 @@ public final class WorldConfigCopy {
 
     /** The copy this session made, which the loaded config doesn't know about; null if none. */
     private static volatile @Nullable Path active;
+
+    /** When the copy last changed, as of this class's last read or write of it. Server thread. */
+    private static @Nullable FileTime activeModified;
 
     private WorldConfigCopy() {}
 
@@ -136,14 +144,67 @@ public final class WorldConfigCopy {
         if (copy == null || config.getSpec() != ZasServerConfig.SPEC || same(path(config), copy)) {
             return;
         }
-        try (CommentedFileConfig file =
-                CommentedFileConfig.builder(copy, TomlFormat.instance()).sync().build()) {
+        if (read(copy, config)) {
+            LOGGER.info("The server config was reloaded from {}; kept this world's own, {}", path(config), copy);
+        }
+    }
+
+    /**
+     * Applies a hand edit of the copy made this session, which NeoForge doesn't watch (OPS-016).
+     * Called as an atmos tick closes, so the edit applies from that tick. It costs one look at the
+     * file's time, and nothing without a copy. A copy that can't be read, as can happen half way
+     * through an editor's save, leaves the values as they are, and is read again when it next
+     * changes. Server thread.
+     */
+    public static void pickUpEdits() {
+        Path copy = active;
+        if (copy == null) {
+            return;
+        }
+        FileTime modified = modified(copy);
+        if (modified == null || modified.equals(activeModified)) {
+            return;
+        }
+        activeModified = modified;
+        ZasServerConfig.modConfig().ifPresent(config -> {
+            if (read(copy, config)) {
+                LOGGER.info("Applied the edit of this world's own server config, {}", copy);
+            }
+        });
+    }
+
+    /**
+     * Puts a copy's values into the loaded config. As in NeoForge's own load, a value the config
+     * wouldn't accept, or a missing one, takes its default, with a warning for the operator.
+     *
+     * @return whether it could read the copy; if not, the config is as it was
+     */
+    private static boolean read(Path copy, ModConfig config) {
+        try (CommentedFileConfig file = CommentedFileConfig.builder(copy, TomlFormat.instance())
+                .onFileNotFound(FileNotFoundAction.THROW_ERROR)
+                .sync()
+                .build()) {
             file.load();
+            ZasServerConfig.SPEC.correct(
+                    file,
+                    (action, key, was, now) ->
+                            LOGGER.warn("{}: {} can't be {}, so it is {}", copy, String.join(".", key), was, now));
             CommentedConfig values = (CommentedConfig) config.getLoadedConfig().config();
             values.putAll(file);
+        } catch (ParsingException | WritingException e) {
+            LOGGER.warn("Couldn't read {}, so the server config stays as it was: {}", copy, e.toString());
+            return false;
         }
         ZasServerConfig.SPEC.afterReload();
-        LOGGER.info("The server config was reloaded from {}; kept this world's own, {}", path(config), copy);
+        return true;
+    }
+
+    private static @Nullable FileTime modified(Path file) {
+        try {
+            return Files.getLastModifiedTime(file);
+        } catch (IOException gone) {
+            return null;
+        }
     }
 
     /** For GameTests: forgets the copy made this session, after the test has deleted it. */
@@ -162,6 +223,7 @@ public final class WorldConfigCopy {
             throw new UncheckedIOException(ex);
         }
         new TomlWriter().write(config.getLoadedConfig().config(), file, WritingMode.REPLACE_ATOMIC);
+        activeModified = modified(file);
     }
 
     static @Nullable Path path(ModConfig config) {

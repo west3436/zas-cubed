@@ -25,7 +25,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] period_ticks` | `20` | The atmos tick period in game ticks, 2 to 200 (CORE-041). Rates are per second, so the period changes smoothness and cost, not behaviour |
 | `[atmos] apply_delay_ticks` | `10` | Game ticks from closing a batch to applying its result; must be less than `period_ticks` |
 | `[atmos] server_budget_ms` | `10` | Server-thread time per game tick for atmos work, in ms (CORE-047, NFR-002) |
-| `[atmos] single_threaded` | `false` | Debug: run the simulation on the server thread. Results are identical (CORE-071) |
+| `[atmos] single_threaded` | `false` | **Restart-only.** Debug: run the simulation on the server thread. Results are identical (CORE-071) |
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
 | `[heat] enabled` | `true` | Whether zones conduct heat through their walls, to and from heat sources, and radiate it to a vacuum (HEAT-001, HEAT-004) |
@@ -52,6 +52,8 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
 | `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
 | `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
+| `[airflow] pressure_fragile_threshold_kpa` | `150.0` | The pressure difference a block in [`#zas:pressure_fragile`](datapacks.md#pressure-fragile-blocks) holds, 0 to 100,000 kPa; it breaks at more than this (FLOW-007, FLOW-015). Whether blocks break at all is the preset option `block_pressure_damage`. `enabled` and `disabled_dimensions`, which are about pushing entities, don't change it |
+| `[airflow] pressure_fragile_breaks_per_tick` | `32` | The most blocks a pressure difference breaks in a dimension per atmos tick, 1 to 4,096; the rest break in later ticks, if the difference is still there (FLOW-007) |
 | `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). A gas fire at or above its fuel's autoignition temperature doesn't need it (FIRE-035). The fuel generator doesn't use the air (CONT-067) |
 | `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030, FIRE-035) |
 | `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
@@ -63,18 +65,36 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[profiling] log_interval_seconds` | `0` | Seconds between profiling reports in the server log; 0 is off (OPS-012) |
 
 The sharing table and thresholds join the server config as their features
-land in R1. NeoForge reloads the file when it changes on disk, so an edit made
-while the server runs applies without a restart: the preset, its options and
-the excluded dimensions from the next lookup (for the simulation, its next
-atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
-`[heat]` from the next atmos tick (a change to the fallback or the thickness
-finds every wall's paths again), the thread mode when a dimension's simulation
-starts, `[breathing]`, `[hazards]` and `[protection]` from each entity's next
-check, `[airflow]` from the next game tick (which differences the engine
-reports, from the next atmos tick), `[fire]` from the next check (for gas
-fires, the next atmos tick), and `[commands]` and `[profiling]` at once.
-OPS-016's guarantee that every server
-setting applies without a restart is R1.
+land in R1.
+
+### When changes apply (OPS-016)
+
+NeoForge reloads a config file when it changes on disk, so an edit made while
+the server runs needs no restart. Every server setting, in this file and in
+[`zas_atmos-server.toml`](#content-mod-zas_atmos-servertoml), is live unless
+it is marked **Restart-only**. Nothing holds on to an old value, so whatever
+reads a setting gets the new one the next time it runs:
+
+| Settings | Apply from |
+|---|---|
+| `preset`, `[preset_options]`, `excluded_dimensions` | The next lookup; for the simulation, its next atmos tick |
+| `[atmos]`, except `single_threaded` | The next atmos tick |
+| `[heat]` | The next atmos tick. A change to the fallback or the thickness finds every wall's paths again |
+| `[breathing]`, `[hazards]`, `[protection]` | Each entity's next check, up to `check_interval_ticks` away |
+| `[airflow]` | The next game tick; which differences the engine reports and which blocks break, the next atmos tick |
+| `[fire]` | The next check; for gas fires, the next atmos tick |
+| `[commands]` | At once. A player's client only updates its command suggestions when it next joins or its op status changes, but the server decides who can run a command |
+| `[profiling]` | At once |
+| `zas_atmos-server.toml` | Each device's next step, or the next explosion |
+
+**Restart-only** settings keep the value they had when the server started, and
+a reload doesn't change them: the two that choose the threads, `[atmos]
+single_threaded` and the common config's `worker_threads`. In singleplayer,
+leaving the world and loading it again counts as a restart.
+
+A value the config wouldn't accept takes its default when the file is read,
+with a warning in the log. A file that doesn't parse leaves the values as they
+are until it does.
 
 ### Hazards
 
@@ -148,10 +168,8 @@ warning in the log.
 | `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a plant in `#zas:leaf_plants`, such as a leaf block (CONT-057) |
 | `container_explosions_break_blocks` | `false` | `true` | Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107) |
 
-Every option acts today except `block_pressure_damage`, which is in the file and
-in `/zas preset` already, marked "not used yet" with the requirement it waits
-for, and takes effect when that feature lands. The space-mod compat mode
-(SPACE-004) joins in R2 with the Ad Astra adapter (D-66).
+Every option acts today. The space-mod compat mode (SPACE-004) joins in R2 with
+the Ad Astra adapter (D-66).
 
 Zone triggers that aren't options: Normal's triggers (CORE-055), API calls
 (which include devices, leaks and `/zas gas`) and breaches of zones, form
@@ -173,8 +191,8 @@ names the file it wrote:
 - **A singleplayer world without one:** the first change writes one. It holds
   the whole config with the change, and `/zas preset` says it made it. The
   shared `config/zas-server.toml` isn't touched, so the other worlds that read
-  it keep their values. The copy is read from the world's next load; until then
-  the change is already in effect, and later changes go to the copy too.
+  it keep their values. The change is already in effect, and later changes go
+  to the copy too.
 - **A dedicated server:** the change goes to the file it read, the world's copy
   if it has one, else `config/zas-server.toml`, as before.
 
@@ -184,7 +202,7 @@ A copy written by hand works the same way, and can be as short as one line,
 For the rest of the session that made a copy, NeoForge still watches
 `config/zas-server.toml`. Editing that file reloads the config from it, and ZAS³
 then puts the copy's values back, so the world keeps its own. Edit the world's
-copy instead, which applies from its next load. A player who joins over LAN in
+copy instead, which applies from the next atmos tick. A player who joins over LAN in
 that session is sent the shared file, as NeoForge sends the file it read; this
 only matters for values a client reads, and none of the preset's options are
 read by a client.
@@ -201,7 +219,8 @@ preset = "NORMAL"
 ## Content mod: `zas_atmos-server.toml`
 
 `zas_atmos` has a server config of its own, per world like the framework's.
-Its FE values are starting points for playtesting (D-37). The design is in
+Its FE values are starting points for playtesting (D-37). Every key is live
+([When changes apply](#when-changes-apply-ops-016)). The design is in
 [architecture §11](architecture.md#11-the-content-mod-zas_atmos).
 
 | Key | Default | Meaning |
@@ -235,7 +254,7 @@ Its FE values are starting points for playtesting (D-37). The design is in
 
 | Key | Default | Meaning |
 |---|---|---|
-| `worker_threads` | `1` | Atmos worker threads, 1 to 16 (architecture §3.1). Read when a server starts |
+| `worker_threads` | `1` | **Restart-only.** Atmos worker threads, 1 to 16 (architecture §3.1). Read when a server starts |
 
 ## Client: `zas-client.toml`
 
