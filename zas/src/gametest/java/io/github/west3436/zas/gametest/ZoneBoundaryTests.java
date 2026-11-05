@@ -72,7 +72,7 @@ public final class ZoneBoundaryTests {
     // ---- Helpers ----------------------------------------------------------------------
 
     /** Rooms in a row from x = 10, each 3 × 3 × 3 inside, with a door in each shared wall. */
-    private static Rooms row(GameTestHelper h, int index, int rooms, boolean open) {
+    static Rooms row(GameTestHelper h, int index, int rooms, boolean open) {
         Rooms r = new Rooms(h, index);
         r.clear(8, 0, 12 + 4 * rooms, 6);
         for (int i = 0; i < rooms; i++) {
@@ -85,14 +85,14 @@ public final class ZoneBoundaryTests {
     }
 
     /** Sets both halves of the door at x, lower half first, as placing one does. */
-    private static void door(Rooms r, int x, boolean open) {
+    static void door(Rooms r, int x, boolean open) {
         BlockState d = DOOR.setValue(DoorBlock.OPEN, open);
         r.set(x, 1, 2, d.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
         r.set(x, 2, 2, d.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
     }
 
     /** The interior point of room {@code i} of a row. */
-    private static int centre(int i) {
+    static int centre(int i) {
         return 12 + 4 * i;
     }
 
