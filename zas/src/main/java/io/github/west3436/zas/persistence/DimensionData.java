@@ -21,7 +21,9 @@ import net.minecraft.world.level.saveddata.SavedData;
  *       {@link io.github.west3436.zas.engine.persist.ChunkRecordCodec record};
  *   <li>the owners whose pins were taken off (API-017) and who haven't pinned since: a zone stored
  *       in chunks keeps the pins it was saved with, so when it loads these owners' pins are taken
- *       off it. The list is optional in the file, so older saves read with none.
+ *       off it. The list is optional in the file, so older saves read with none;
+ *   <li>the {@linkplain DimensionPause pause} of the dimension's simulation, if it has one
+ *       (OPS-005). Also optional in the file, so older saves read as running.
  * </ul>
  *
  * <p>Versioned (DATA-003). Unreadable contents are dropped with a warning (DATA-004). Server
@@ -38,10 +40,21 @@ public final class DimensionData extends SavedData {
     private byte[] queued;
     private final TreeSet<String> released = new TreeSet<>();
     private final Set<String> releasedView = Collections.unmodifiableSet(released);
+    private DimensionPause pause;
 
     /** The dimension's data, created empty if it has none. */
     public static DimensionData of(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(FACTORY, NAME);
+    }
+
+    /**
+     * Replaces the dimension's data with what it would read back from its file, as a restart does.
+     * For tests, which can't restart the server.
+     */
+    public static void reloadForTest(ServerLevel level) {
+        HolderLookup.Provider registries = level.registryAccess();
+        CompoundTag written = of(level).save(new CompoundTag(), registries);
+        level.getDataStorage().set(NAME, load(written, registries));
     }
 
     private static DimensionData load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -62,6 +75,10 @@ public final class DimensionData extends SavedData {
         for (int i = 0; i < owners.size(); i++) {
             d.released.add(owners.getString(i));
         }
+        if (tag.contains("pause", Tag.TAG_COMPOUND)) {
+            CompoundTag pause = tag.getCompound("pause");
+            d.pause = new DimensionPause(pause.getString("by"), pause.getString("reason"));
+        }
         return d;
     }
 
@@ -78,6 +95,12 @@ public final class DimensionData extends SavedData {
                 owners.add(StringTag.valueOf(owner));
             }
             tag.put("released_pins", owners);
+        }
+        if (pause != null) {
+            CompoundTag p = new CompoundTag();
+            p.putString("by", pause.by());
+            p.putString("reason", pause.reason());
+            tag.put("pause", p);
         }
         return tag;
     }
@@ -129,6 +152,17 @@ public final class DimensionData extends SavedData {
     /** Saves queued additions whose chunk isn't loaded, replacing any; null for none. */
     public void putQueued(byte[] bytes) {
         queued = bytes;
+        setDirty();
+    }
+
+    /** The pause of the dimension's simulation, or null while it runs (OPS-005). */
+    public DimensionPause pause() {
+        return pause;
+    }
+
+    /** Sets the pause of the dimension's simulation; null for none (OPS-005). */
+    public void setPause(DimensionPause pause) {
+        this.pause = pause;
         setDirty();
     }
 }

@@ -791,7 +791,7 @@ the lever if the per-cell cost ever matters.
   - queued additions that couldn't be assigned to a loaded chunk
   - the owners whose pins were taken off and who haven't pinned since
     (API-017, §6.6)
-  - dimension pause flags (OPS-005) once they exist (R1)
+  - the dimension's pause, who asked and why (OPS-005, §4.6)
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
@@ -871,6 +871,17 @@ GameTest changes the palette with `Geometries.overrideForTest`.
   it was unloaded are found.
 - **Never force-load.** The engine never adds chunk tickets (GEO-034): the
   platform only ever reads chunks with `getChunkNow`.
+- **Pausing a whole dimension** (OPS-005). `DimensionAtmos.pauseSimulation`
+  takes a `DimensionPause` naming who asks and why, and assumes nothing else:
+  an operator's `/zas pause` and code that must stop the dimension (NFR-014)
+  both come through it. It is saved in `DimensionData`, and each batch's
+  `EngineSettings.dimensionPaused` tells the engine, so a restart or a palette
+  rebuild has nothing to carry over. In the engine every zone then pauses and
+  the rules above apply. Beyond them, nothing is classified, so nothing can
+  change a zone's cells: an operation that would form a zone is treated as at an
+  unresolved region, and breaches, rebuilt zones' surfaces and refreshed cells
+  wait for the first batch that resumes the dimension. Loading and unloading
+  carry on, since they move state and don't simulate it.
 
 ### 4.7 Zone-boundary blocks (GEO-007, GEO-044, CORE-034, CORE-067)
 
