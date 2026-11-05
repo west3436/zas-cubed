@@ -43,6 +43,17 @@ class DeviceJetsTest {
         }
     }
 
+    /** The same constant starts a vent's or scrubber's loop, so this is where its sound starts too. */
+    @Test
+    void client_019_a_jet_starts_at_the_lowest_level_that_plays_a_loop() {
+        for (int level = DeviceActivity.IDLE; level <= DeviceActivity.HARD; level++) {
+            boolean plays = level >= DeviceJets.MIN_LEVEL;
+            assertEquals(plays, DeviceJets.vent(VentMode.BLOW, level) != 0, "a vent at " + level);
+            assertEquals(plays, DeviceJets.vent(VentMode.SIPHON, level) != 0, "a siphoning vent at " + level);
+            assertEquals(plays, DeviceJets.scrubber(ScrubberMode.SCRUB, level) != 0, "a scrubber at " + level);
+        }
+    }
+
     @Test
     void client_019_a_device_switched_off_shows_nothing_whatever_the_table_says() {
         // Its block state and its level come by different packets, so for a moment they can disagree.

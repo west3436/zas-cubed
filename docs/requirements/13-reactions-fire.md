@@ -697,12 +697,14 @@ the owner's to judge by ear:*
 - *The limit: 5 s within 16 blocks. A second room catching next door within 5 s plays
   nothing.*
 
-*A loop can lag a fire going out by up to 1.25 s: 5 ticks to the next look, the 10-tick
-lease, then the 10-tick fade.*
+*A loop can lag a fire going out by up to 0.9 s: 4 ticks to the next look, the 4-tick
+lease, then the 10-tick fade. It looks every 4 ticks to keep up with that lease
+(CLIENT-015); it was every 5 until 2026-11-05.*
 
 *The look's cost, with its grouping and choosing, once warmed up: 2 µs with no fire in
 the 27 chunk sections it covers, 143 µs with one fire in each, because the 35,937 blocks
-it covers are then all read, and 423 µs when all of them are fire. It runs every 5 ticks.
+it covers are then all read, and 423 µs when all of them are fire. It ran every 5 ticks
+when that was timed, and runs every 4 now.
 This was timed on a server's level, whose chunks are the same class as a client's, on a
 machine busy with other builds, so it gives an order of magnitude and no more. No client
 has run it. A section that once held a fire can go on being read after the fire has gone,

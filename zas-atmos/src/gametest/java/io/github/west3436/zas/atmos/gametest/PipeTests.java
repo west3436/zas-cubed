@@ -5,11 +5,15 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
+import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.particle.GasJets;
@@ -21,9 +25,13 @@ import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
+import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
+import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
+import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.gametest.TestPlayers;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,7 +218,7 @@ public final class PipeTests {
     }
 
     /** An empty pipe with one connection, a cap to its west, in a {@link #room}, its end settled. */
-    private static PipeBlockEntity endInRoom(Area a) {
+    static PipeBlockEntity endInRoom(Area a) {
         room(a);
         cap(a, 1, 1, 2, Direction.EAST);
         pipe(a, 2, 1, 2);
@@ -222,14 +230,14 @@ public final class PipeTests {
     }
 
     /** The atmos ticks a newly placed open end waits, moving nothing. */
-    private static void settle(Area a) {
+    static void settle(Area a) {
         for (int i = 0; i < PipeBlockEntity.SETTLE_STEPS; i++) {
             a.step();
         }
     }
 
     /** What an end's next atmos tick moves, with the moles it has now. */
-    private static PipeBlockEntity.Flow flowNow(Area a, PipeBlockEntity pipe) {
+    static PipeBlockEntity.Flow flowNow(Area a, PipeBlockEntity pipe) {
         GasStore gas = pipe.network().gas();
         return PipeBlockEntity.openEndFlow(
                 gas.moles(), gas.volume(), a.zone(2, 2, 2).mixture(), false, PipeBlockEntity.OPEN_END_RATIO);
@@ -400,6 +408,99 @@ public final class PipeTests {
         a.step();
         h.assertTrue(JetLog.take(a.point(2, 1, 2)).isEmpty(), "a capped pipe sent a jet");
         h.succeed();
+    }
+
+    /**
+     * A pump at (2, 2, 2) facing east in the open air, on test power and off, with one pipe on each
+     * side, so each pipe is an open end. It waits in real time, since an addition to the open air
+     * doesn't complete in atmos ticks run by {@code tickNow} within one game tick.
+     */
+    private static <T extends PumpBlockEntity> T pumpInOpenAir(Area a, Block block) {
+        a.forceLoad(true);
+        a.clear(-1, 0, 6, 5);
+        place(a, 2, 2, 2, block.defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST));
+        pipe(a, 1, 2, 2);
+        pipe(a, 3, 2, 2);
+        T pump = a.entity(2, 2, 2);
+        pump.power().setTestPowered(true);
+        return pump;
+    }
+
+    /** Passes once both sides of a new pump have drawn in the air, to within 2 kPa of it. */
+    private static void airDrawnIn(Area a, PumpBlockEntity pump) {
+        double air = Atmospheres.at(a.level, a.point(2, 4, 2)).mixture().pressure();
+        a.h.assertTrue(air > 100, "the open air is at " + air + " kPa");
+        for (PipeNetwork side : List.of(pump.input().network(), pump.output().network())) {
+            double kPa = side.gas().pressure();
+            a.h.assertTrue(Math.abs(kPa - air) < 2, "a side is at " + kPa + " kPa, in " + air + " kPa of air");
+        }
+    }
+
+    /** Passes once a pump has shown its flow: out of its output's end, and in at its input's. */
+    private static void jetsBothWays(Area a, Vec3 near, List<GasJet> seen) {
+        seen.addAll(JetLog.take(near));
+        Vec3 outMouth = a.point(3, 2, 2).add(GasJets.PIPE_MOUTH, 0, 0);
+        Vec3 inMouth = a.point(1, 2, 2).add(-GasJets.PIPE_MOUTH, 0, 0);
+        boolean out = false;
+        boolean in = false;
+        for (GasJet jet : seen) {
+            Vec3 at = new Vec3(jet.x(), jet.y(), jet.z());
+            out |= at.distanceTo(outMouth) < 1e-6 && jet.dx() == 1 && jet.amount() >= 0.25;
+            in |= at.distanceTo(inMouth) < 1e-6 && jet.dx() == -1 && jet.amount() <= -0.25;
+        }
+        a.h.assertTrue(out, "no jet out of the output's end, in " + seen);
+        a.h.assertTrue(in, "no jet in at the input's end, in " + seen);
+    }
+
+    /**
+     * A running pressure pump between two open ends in 1 atm air shows nothing at its default target,
+     * as the air already holds its output there, and shows its flow, out of one end and in at the
+     * other, once it is set above that. The pump itself has no particles.
+     */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void client_019_a_pressure_pump_shows_flow_only_past_its_target(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 930);
+        PressurePumpBlockEntity pump = pumpInOpenAir(a, AtmosBlocks.PRESSURE_PUMP.get());
+        h.assertValueEqual(pump.setting(), PressurePumpBlockEntity.DEFAULT_TARGET, "a new pump's target");
+        Vec3 near = a.point(2, 2, 2);
+        List<GasJet> seen = new ArrayList<>();
+        h.startSequence()
+                .thenWaitUntil(() -> airDrawnIn(a, pump))
+                .thenExecute(() -> {
+                    JetLog.take(near);
+                    pump.setOn(true);
+                })
+                .thenIdle(10 * AtmosTicks.PERIOD)
+                .thenExecute(() -> {
+                    h.assertValueEqual(JetLog.take(near), List.of(), "jets at its default target");
+                    h.assertValueEqual(pump.status(), InlineStatus.TARGET_REACHED, "its status at its default target");
+                    pump.set(300);
+                })
+                .thenWaitUntil(() -> jetsBothWays(a, near, seen))
+                .thenExecute(() -> h.assertValueEqual(pump.status(), InlineStatus.MOVING, "its status past its target"))
+                .thenExecute(() -> a.forceLoad(false))
+                .thenSucceed();
+    }
+
+    /** The same rig with a running volume pump shows its flow as new, since it moves its rate regardless. */
+    @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void client_019_a_volume_pump_shows_flow_at_its_default_rate(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 931);
+        VolumePumpBlockEntity pump = pumpInOpenAir(a, AtmosBlocks.VOLUME_PUMP.get());
+        h.assertValueEqual(pump.setting(), VolumePumpBlockEntity.DEFAULT_RATE, "a new pump's rate");
+        Vec3 near = a.point(2, 2, 2);
+        List<GasJet> seen = new ArrayList<>();
+        h.startSequence()
+                .thenWaitUntil(() -> airDrawnIn(a, pump))
+                .thenExecute(() -> {
+                    JetLog.take(near);
+                    pump.setOn(true);
+                })
+                .thenWaitUntil(() -> jetsBothWays(a, near, seen))
+                .thenExecute(() -> a.forceLoad(false))
+                .thenSucceed();
     }
 
     /** A flowing end's jet goes to players within 16 blocks only: half the reach of a burst. */
