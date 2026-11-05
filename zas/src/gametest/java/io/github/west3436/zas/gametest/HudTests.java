@@ -250,6 +250,26 @@ public final class HudTests {
     }
 
     /**
+     * Alerts judge what reaches the player: a filter's wearer is shown no toxin alert for the CO it
+     * keeps out of its breath, while the bare player beside it is (API-022).
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_008_a_filter_hides_the_gas_it_stops(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 304)) {
+            Map<ResourceLocation, Double> kPa = air(StandardAir.PRESSURE);
+            kPa.put(CO, 2.0);
+            lab.room(0, kPa, StandardAir.TEMPERATURE);
+            FakePlayer masked = lab.player(0);
+            masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+            h.assertValueEqual(synced(h, masked, "masked").toxins(), HudLevels.NONE, "masked: toxins");
+            AtmosHudPayload bare = synced(h, lab.player(0), "bare");
+            h.assertTrue(bare.toxins() != HudLevels.NONE, "bare: no toxin alert");
+            h.assertValueEqual(bare.toxinGas(), Optional.of(CO), "bare: gas shown");
+        }
+        h.succeed();
+    }
+
+    /**
      * A hazard switched off has no alert (LIFE-031), and a creative player none at all (LIFE-037).
      */
     @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)

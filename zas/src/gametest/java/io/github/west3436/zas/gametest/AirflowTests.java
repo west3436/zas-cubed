@@ -489,8 +489,9 @@ public final class AirflowTests {
 
     /**
      * Worn airflow resistance r scales the push by (1 − r) (FLOW-012). The GameTest's suit piece
-     * (r = 0.5) halves it and an anvil, given r = 1 by the test pack's protection data, stops it.
-     * The test checks both for mobs the server pushes beside a breach, and for players: the sync
+     * (r = 0.5) halves it, a zombie's own r = 0.25 takes a quarter off it (API-022), and an anvil,
+     * given r = 1 by the test pack's protection data, stops it.
+     * The test checks these for mobs the server pushes beside a breach, and for players: the sync
      * carries the resistance, the client's push uses it, and it scales the onset impulse.
      */
     @GameTest(template = "empty")
@@ -505,12 +506,16 @@ public final class AirflowTests {
             half.setItemSlot(EquipmentSlot.FEET, new ItemStack(TestLifeSupport.item()));
             Zombie still = s.spawn(EntityType.ZOMBIE, HOLE_X - 3);
             still.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.ANVIL));
+            Zombie own = s.spawn(EntityType.ZOMBIE, HOLE_X - 3);
+            own.addTag(TestLifeSupport.ENTITY_TAG);
             close(h, Airflow.resistance(bare), 0, "the bare zombie's resistance");
             close(h, Airflow.resistance(half), 0.5, "the suited zombie's resistance");
             close(h, Airflow.resistance(still), 1, "the anvil-shod zombie's resistance");
+            close(h, Airflow.resistance(own), 0.25, "the resistance a zombie gives itself");
             Airflow.step(s.r.level);
             h.assertTrue(vx(bare) < -0.01, "the bare zombie wasn't pushed: " + vx(bare));
             close(h, vx(half), vx(bare) / 2, "the suited zombie's push");
+            close(h, vx(own), vx(bare) * 0.75, "the push on a zombie with its own resistance");
             h.assertValueEqual(still.getDeltaMovement(), Vec3.ZERO, "the anvil-shod zombie");
 
             // Players, pushed by their clients.

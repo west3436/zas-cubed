@@ -35,7 +35,9 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *       #tank});
  *   <li>on a zombie with the entity tag {@link #ENTITY_TAG}, {@link ILifeSupport#ENTITY} giving
  *       low-pressure protection to vacuum, sealed breathing and airflow resistance 0.25, and, with
- *       the tag {@link #OWN_TANK_TAG} too, a tank of its own: {@link #OWN_TANK}.
+ *       the tag {@link #OWN_TANK_TAG} too, a tank of its own: {@link #OWN_TANK};
+ *   <li>on a pig, which breathes as a zombie doesn't, with the entity tag {@link #EVERY_PART_TAG},
+ *       {@link ILifeSupport#ENTITY} giving every part: {@link #EVERY_PART}.
  * </ul>
  */
 @EventBusSubscriber(modid = ZasMod.MOD_ID)
@@ -130,6 +132,58 @@ public final class TestLifeSupport {
         @Override
         public Optional<IInternalSupply> internalSupply() {
             return Optional.of(OWN_TANK);
+        }
+    };
+
+    /** The entity tag that gives a pig {@link #EVERY_PART}. */
+    public static final String EVERY_PART_TAG = "zas_test_every_part";
+
+    /** A tagged pig's own tank: 1 mol of O2 at 293.15 K in 10 L, delivered at 21.3 kPa; {@link TestSupply#refill}. */
+    public static final TestSupply PIG_TANK = new TestSupply();
+
+    /**
+     * What a tagged pig gives itself: pressure from 0 to 1,000 kPa, temperature from 0 to 1,000 K,
+     * sealed breathing, gas filtering, airflow resistance 0.5 and {@link #PIG_TANK}.
+     */
+    public static final ILifeSupport EVERY_PART = new ILifeSupport() {
+        @Override
+        public double minPressure() {
+            return 0;
+        }
+
+        @Override
+        public double maxPressure() {
+            return 1000;
+        }
+
+        @Override
+        public double minTemperature() {
+            return 0;
+        }
+
+        @Override
+        public double maxTemperature() {
+            return 1000;
+        }
+
+        @Override
+        public boolean sealedBreathing() {
+            return true;
+        }
+
+        @Override
+        public boolean gasFiltering() {
+            return true;
+        }
+
+        @Override
+        public double airflowResistance() {
+            return 0.5;
+        }
+
+        @Override
+        public Optional<IInternalSupply> internalSupply() {
+            return Optional.of(PIG_TANK);
         }
     };
 
@@ -285,5 +339,9 @@ public final class TestLifeSupport {
             }
             return zombie.getTags().contains(OWN_TANK_TAG) ? OWN_WITH_TANK : OWN;
         });
+        event.registerEntity(
+                ILifeSupport.ENTITY,
+                EntityType.PIG,
+                (pig, context) -> pig.getTags().contains(EVERY_PART_TAG) ? EVERY_PART : null);
     }
 }

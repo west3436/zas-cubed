@@ -1662,7 +1662,14 @@ client breathing sync (LIFE-023): the server sends each player its own state
   - **Airflow resistance** is the highest of the pieces' and the entity's own
     (`WornProtection.airflowResistance`), which scales airflow's push
     (FLOW-012).
-  - **Gas filtering** is carried but not yet applied.
+  - **Gas filtering** comes from the head slot or the entity itself
+    (`WornProtection.gasFiltering`). `BreathingRules` takes the `#zas:toxic`
+    gases out of the breath, from the atmosphere or internals, at the same
+    temperature and volume, so the other gases keep their partial pressures,
+    and the verdict lists `GAS_FILTERING`. Only what is breathed changes: the
+    filter holds nothing and doesn't wear out, the zone keeps its gas, and a
+    tank's draw and exhale carry its gas on unfiltered (LIFE-045). The gas mask
+    itself (CONT-088) is still to come.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -1994,8 +2001,9 @@ breathing or not, and `IMMUNE` for an entity in `#zas:atmosphere_immune`.
 *Implemented ([#36](https://github.com/west3436/zas-cubed/issues/36)):* worn
 and built-in protection, listed as `PRESSURE` and `THERMAL` where it is rated
 for the conditions, and breathing from internals, listed as `SEALED_BREATHING`
-with source `INTERNALS`. **Not yet built:** gas filtering, so no verdict lists
-`GAS_FILTERING`.
+with source `INTERNALS`. *Implemented
+([#60](https://github.com/west3436/zas-cubed/issues/60)):* gas filtering, listed
+as `GAS_FILTERING` for a breather with a filter, whatever is in its breath.
 `Breathing.oxygenMinimum()` gives the server's configured minimum; the
 fallback, and a provider without it, give 16 kPa.
 
