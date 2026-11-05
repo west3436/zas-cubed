@@ -91,6 +91,10 @@
   "commands.zas.gas.filled": "Filled: added %s mol of %s at %s positions (by %s)",
   "commands.zas.gas.vent_queued": "Queued venting %s zones for the next atmos tick, as %s",
   "commands.zas.gas.vented": "Vented: removed %s mol from %s zones (by %s)",
+  "commands.zas.reset.none": "No zones in that region",
+  "commands.zas.reset.queued": "Queued resetting %s zones for the next atmos tick, as %s",
+  "commands.zas.reset.done": "Reset %s zones to the ambient: removed %s mol (by %s)",
+  "commands.zas.reset.paused": "%s paused zones were left as they were",
 
   "commands.zas.audit.started": "Auditing %s sections; the result follows from the atmos worker",
   "commands.zas.audit.clean": "Geometry audit: no differences in %2$s sections and %3$s zones",
@@ -121,6 +125,7 @@
   "commands.zas.checker.conserved": "Invariant check of atmos tick %s: conserved (%s violations)",
   "commands.zas.checker.violations": "Invariant check of atmos tick %s: %s violations",
   "commands.zas.checker.ledger": "  %s: %s",
+  "commands.zas.checker.operator": "  Removed by %s: %s",
   "commands.zas.checker.violation": "  %s changed by %s mol that no source or sink explains (expected %s, found %s)",
 
   "commands.zas.profile.header": "Atmos profile of %s (%s), over %s atmos ticks",

@@ -318,6 +318,20 @@ public final class DimensionPipeline {
     }
 
     /**
+     * Queues a reset of the zone at one sub-cell of a position to the ambient for the next batch
+     * (OPS-013): {@code sub} as in {@link GasOp#sub()}, -1 for the largest cell. It isn't saved with
+     * its chunk.
+     *
+     * @param source who asked, whom the gas removed is attributed to
+     * @return its sequence number
+     */
+    public long reset(long block, int sub, String source) {
+        long seq = nextSeq++;
+        enqueue(GasOp.reset(seq, block, sub, source));
+        return seq;
+    }
+
+    /**
      * Queues a saved addition again, under a new sequence number (DATA-011). Its outcome has no
      * caller to go to.
      *
@@ -350,6 +364,7 @@ public final class DimensionPipeline {
             case PIN -> pin(op.block(), op.sub(), op.source());
             case UNPIN -> unpin(op.source());
             case IGNITE -> ignite(op.block(), op.source());
+            case RESET -> reset(op.block(), op.sub(), op.source());
             case ADD_HEAT, REMOVE_HEAT ->
                 heat(
                         op.block(),
