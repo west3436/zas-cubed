@@ -81,8 +81,9 @@ Added 10 mol of Oxygen at 0 64 0, into a zone (by command:alex)
 
 ## Zone pins (OPS-017)
 
-A pinned zone is never dissolved into the ambient (API-017, D-64). Mods pin
-zones through the API; these commands do the same by hand.
+A pinned zone is never dissolved into the ambient (API-017, D-64); only an
+operator's [region reset](#region-reset-ops-013) removes one. Mods pin zones
+through the API; these commands do the same by hand.
 
 | Command | What it does |
 |---|---|
@@ -106,6 +107,42 @@ Zone 12: 27 cells, 27000 L, enclosed, active
 Queued the removal of the pins of command:alex for the next atmos tick
 Removed the pins of command:alex
 ```
+
+## Region reset (OPS-013)
+
+Puts griefed or broken atmospheres back to the ambient.
+
+| Command | What it does |
+|---|---|
+| `/zas reset <from> <to>` | Resets every zone with a cell in the region: its cells revert to unzoned, holding the ambient, and its gas is removed |
+
+```
+> /zas reset 0 64 0 3 66 3
+Queued resetting 1 zones for the next atmos tick, as command:alex
+Reset 1 zones to the ambient: removed 1132.42 mol (by command:alex)
+```
+
+- **A zone goes whole,** even with one cell in the region, because a part left
+  zoned beside unzoned cells would take them back in (GEO-023). Every cell of a
+  block counts, so a region on a pane between two rooms resets both.
+- **The gas is recorded against you.** Unlike a gas edit, a reset isn't an API
+  call: the conservation checker records it as an `operator` sink and names who
+  ran it, as `command:<player>` (CORE-036). A checker report covers one atmos
+  tick, so it shows this only if the checker ran on the tick of the reset: run
+  `/zas checker run` just before the reset, or keep the checker on and read
+  `/zas checker report` straight after. The command's result line stays: it goes
+  to other operators and the server log, as vanilla admin commands do.
+- **A paused zone is left as it was,** since a paused zone keeps its state
+  (GEO-030), and the command says how many it skipped. Load its chunks or resume
+  the dimension, then reset it.
+- **A pinned zone resets too, and its pins go with it.** A device that needs the
+  zone pins it again, which forms a new one if the room is enclosed (API-050).
+- **Zones beside it may start venting.** A zone with an edge to a reset zone now
+  opens onto ambient cells, as beside a dissolved zone (CORE-076).
+
+Gas added to an enclosed room later forms a new zone, holding the ambient and
+that gas (CORE-055). The region covers at most 32,768 blocks and needs loaded
+corners. Refused in a dimension excluded from simulation (ENV-007).
 
 ## Dimension pause (OPS-005)
 
