@@ -229,7 +229,7 @@ ambient composition and temperature, never by a subset of gases.
 ## Changes and exclusion
 
 #### ENV-006 · Live ambient changes
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §9](../research/zas-core.md#9-quirks-dont-replicate-blindly)
 
 Existing ambient edges shall pick up a changed ambient within one atmos tick.
 The change may come from a datapack reload or from a provider, for example a
@@ -242,16 +242,38 @@ planetary day/night temperature.
   temperature and checks a zone beside it moves toward the new value from the
   next tick.
 
-#### ENV-017 · Small ambient changes don't wake edges
-`Must` · `R1` · `Accepted` · Verify: Unit, Bench · Depends: CORE-006, CORE-066
+*2026-11-05: `env_006_a_reloaded_datapack_moves_a_zone_from_the_next_atmos_tick`
+really reloads a pack, and
+`env_006_a_providers_changing_answer_moves_a_zone_every_atmos_tick` does the same
+through a provider (#66). The zone in both is a pinned room with a hole, the only
+zone that can stay beside an ambient that matches it (D-63, D-64).*
 
-A change to the ambient shall wake a sleeping ambient edge only once the new
-ambient is no longer equivalent (CORE-006) to the mixture the zone snapped to.
+#### ENV-017 · Ambient changes add no extra work
+`Must` · `R1` · `Implemented` · Verify: Unit, Bench · Trace: D-63, D-64 · Depends: CORE-006, CORE-066
+
+A change to the ambient shall add no extra work: it wakes no edge and adds no
+exchange.
 
 - **Rationale:** Inferred: providers may change an ambient slightly every tick
-  (day/night), and waking every edge each time would cost too much.
-- **Verify:** Unit tests check a small change leaves an edge asleep and a
-  large one wakes it; Bench measures a provider changing every tick.
+  (day/night), which mustn't cost much.
+- **Verify:** Unit tests check a sleeping edge stays asleep and exchange calls
+  don't change when the ambient does; Bench measures a provider changing every
+  tick.
+
+*2026-11-05: reworded; the owner chose this over revisiting D-64. It used to say
+that a change wakes a sleeping ambient edge only once it breaks equivalence with
+the mixture the zone snapped to. No such edge exists: a zone that matches its
+ambient dissolves (D-63) unless pinned, and a pinned one keeps exchanging (D-64),
+so ambient edges never sleep and nothing snaps (#66).*
+
+*2026-11-05: `AmbientChangeTest`'s `env_017_` tests pass. The ambient bench has
+the same exchange calls per tick with a still ambient and a changing one in every
+world ([benchmarks](../research/benchmarks.md#ambient-changing-every-tick-env-017)).
+Walls still conduct toward the new temperature (HEAT-001), since that's the change
+doing its job, which costs each zone a heat step: within noise for S-10, and about
+0.25 ms of worker time per atmos tick with 1,000 more rooms. The bench found one
+real cost, resolving every zone's heat links on each change, which is gone
+(`env_017_a_changing_ambient_resolves_no_links_unless_it_turns_to_vacuum`).*
 
 #### ENV-007 · Excluded dimensions
 `Must` · `R0` · `Implemented` · Verify: GameTest

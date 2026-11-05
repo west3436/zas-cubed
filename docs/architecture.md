@@ -998,8 +998,11 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   - an unzoned cell in a vacuum ambient is a radiating face (HEAT-004);
   - sources and the ground are reservoirs.
 
-  A zone's reservoirs sum to one conductance G and a weighted mean
-  temperature. A pair's conductance is the mean of what each side found, so
+  A zone's sources sum to one conductance and a weighted temperature, and its
+  ground and open-air links to one conductance to the ambient. Each step reads
+  the ambient's temperature from the tick's batch, and combines them into one G
+  and a weighted mean temperature, so a provider changing the ambient every tick
+  costs no resolution (ENV-017). A pair's conductance is the mean of what each side found, so
   it is symmetric even where the two sides see different areas, such as a
   pane's partition seen from one half.
 - **The step.** First, each zone moves toward its reservoirs exactly: T' =
@@ -1023,8 +1026,8 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   arrives in its section or next to it, since a line may have stopped at a
   section the mirror lacked. Changing the fallback U or the wall thickness
   rebuilds every link. Resolution runs again whenever any of this happens or
-  the ambient changes. Otherwise a tick costs one pass over the zones and
-  pairs.
+  the ambient turns to or from a vacuum. Otherwise a tick costs one pass over
+  the zones and pairs.
 - **Components and rejection.** Two zones that exchanged heat are in one
   exchange component (§3.3). If a chunk under one unloads mid-tick, both are
   restored, so no energy is made or lost. A reservoir is outside the graph,
