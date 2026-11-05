@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * Applies the hotspot phase's world writes on the server thread, with the result (architecture §5,
@@ -50,7 +51,8 @@ public final class FireIntents {
 
     /**
      * Places and removes gas fires and lights vanilla fires as the intents ask, in their order, in
-     * loaded chunks only.
+     * loaded chunks only. An intent in a chunk that isn't at full status does nothing: reading the
+     * block through the level would pull that chunk back up (GEO-034).
      *
      * @param loaded whether a chunk ({@link net.minecraft.world.level.ChunkPos#toLong}) is loaded, as
      *     the atmosphere sees it
@@ -69,7 +71,11 @@ public final class FireIntents {
                 continue;
             }
             BlockPos pos = BlockPos.of(i.block());
-            BlockState here = level.getBlockState(pos);
+            LevelChunk chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null) {
+                continue;
+            }
+            BlockState here = chunk.getBlockState(pos);
             boolean done = switch (i.kind()) {
                 case PLACE ->
                     here.isAir() && !blocked.test(i.block()) && level.setBlock(pos, gasFire, Block.UPDATE_ALL);
