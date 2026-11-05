@@ -48,7 +48,12 @@ final class Station {
     private final List<int[]> blast = new ArrayList<>();
 
     Station(int periodTicks, boolean withOps) {
-        BenchWorld world = new BenchWorld(Ambient.VACUUM, BenchWorld.AIR).loadChunks(-4, -4, 12, 10);
+        this(periodTicks, withOps, Ambient.VACUUM);
+    }
+
+    /** The station in another ambient than S-10's vacuum (ENV-017). */
+    Station(int periodTicks, boolean withOps, Ambient ambient) {
+        BenchWorld world = new BenchWorld(ambient, BenchWorld.AIR).loadChunks(-4, -4, 12, 10);
         this.h = new Harness(world, periodTicks);
         this.withOps = withOps;
         build(world);

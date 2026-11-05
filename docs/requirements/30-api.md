@@ -397,6 +397,10 @@ and `life_020_suited_and_helmetless_players_in_vacuum` and
 the gas mask (CONT-088, under API-022). The `Hazard` and `Protection` values still
 get confirmed or trimmed before the API freezes at 1.0.0.*
 
+*2026-11-05: A breather with a filter (API-022) now reports `GAS_FILTERING`, and
+its verdict's breath is without the `#zas:toxic` gases. The gas mask isn't built
+yet, so only a mod's item, an entity or a data file gives one.*
+
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020
 
@@ -805,7 +809,7 @@ throws, removes the pipe or a pump from inside a fill, or is in a chunk that's a
 Nothing catches a handler's exception yet: that's for NFR-013, in `GasHandlers`.*
 
 #### API-022 · Life-support capability
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-07, S-06, S-08
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-07, S-06, S-08
 
 Items in armor slots, and entities, shall be able to provide:
 - breathable gas from an internal supply
@@ -847,6 +851,29 @@ gates internals. `life_028_the_first_tank_found` checks a test tank item and a
 test entity's own tank. Gas filtering (CONT-088) and airflow resistance
 (FLOW-012) are still to be applied, so it stays Accepted.*
 
+*2026-11-05: Implemented ([#60](https://github.com/west3436/zas-cubed/issues/60)).
+FLOW-012 had already applied airflow resistance, so what was left was gas
+filtering, which LIFE now honours: a filter in the head slot, or an entity's own,
+takes the `#zas:toxic` gases out of the breath, from the atmosphere or from
+internals, and the verdict lists `GAS_FILTERING`. It supplies no O₂, and nothing
+leaves the zone or stays in the filter, so it never wears out. The gas mask itself
+(CONT-088) is still to come. The plan's test item and test entity, part by part:*
+
+| Part | Test item | Test entity |
+|---|---|---|
+| Internal supply | `life_028_the_first_tank_found` | `api_022_a_test_entity_gets_every_part` |
+| Pressure | `life_020_suited_and_helmetless_players_in_vacuum` | `api_022_a_test_entity_gets_every_part` |
+| Thermal | `life_025_partial_suits_at_450_k` | `api_022_a_test_entity_gets_every_part` |
+| Airflow resistance | `flow_012_resistance_scales_the_push` | `flow_012_resistance_scales_the_push` |
+| Sealed breathing | `life_021_internals_need_a_seal` | `api_022_a_test_entity_gets_every_part` |
+| Gas filtering | `api_022_a_filter_keeps_toxic_gases_out_of_the_breath` | `api_022_a_test_entity_gets_every_part` |
+
+*`api_022_a_filter_supplies_no_oxygen` checks a filter leaves its wearer short of
+O₂ without O₂ around, `api_022_a_filter_works_on_a_tanks_breath` that it cleans a
+tank's breath while the tank's gas goes on into the room, and
+`client_008_a_filter_hides_the_gas_it_stops` that the HUD shows no alert for a
+gas it stops.*
+
 #### API-027 · Accessory slots
 `Could` · `R2` · `Deferred` — moved to R2: an accessory mod is an optional dependency outside the API (API-003), 2026-10-30. · Verify: GameTest
 
@@ -854,7 +881,7 @@ Items in accessory slots shall be able to provide life support, through an
 optional compat module.
 
 #### API-023 · Seal provider
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, GEO-003, GEO-007, GEO-043
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, GEO-003, GEO-007, GEO-043
 
 Blocks shall be able to supply their geometry dynamically: gas-tight faces,
 zone-boundary faces and gas volume. Supplied geometry is a single cell, as with
@@ -865,8 +892,13 @@ GEO-005 overrides. Changes are signalled with `markDirty` (GEO-014).
 - **Verify:** A GameTest switches a test block between sealed and open through
   its provider and markDirty, and checks the zones follow.
 
+*2026-11-05: Implemented. `api_023_zones_follow_the_provider` passes, with the
+other `api_023_` GameTests in `SealProviderTests` for faces, volume, zone-boundary
+faces and an override of the block, and `PositionGeometryTest` takes a position's
+own geometry through every engine phase.*
+
 #### API-028 · Seal providers read on the server thread
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30, CORE-049 · Depends: API-023
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30, CORE-049 · Depends: API-023
 
 Seal providers shall be called on the server thread when snapshots are taken,
 and their result cached until `markDirty` (GEO-014).
@@ -874,6 +906,12 @@ and their result cached until `markDirty` (GEO-014).
 - **Rationale:** Decision: D-30.
 - **Verify:** Inspect the code; a GameTest checks the provider runs on the
   server thread and isn't called again until markDirty.
+
+*2026-11-05: Implemented. Inspected: `SealProviders.ask` is the only call of a
+provider, reached only from `SectionCapture.capture`, which runs on the server
+thread. `api_028_provider_is_kept_until_mark_dirty` passes: the provider runs on
+the server thread and isn't asked again while its section is copied again, until
+markDirty or a write of the block.*
 
 #### API-024 · Ambient provider
 `Must` · `R1` · `Rejected` — duplicate of ENV-004, 2026-10-30.

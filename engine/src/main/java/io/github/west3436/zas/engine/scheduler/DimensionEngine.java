@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.scheduler;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.EngineLog;
 import io.github.west3436.zas.engine.Face;
+import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
@@ -96,6 +97,7 @@ public final class DimensionEngine {
     private final CellSpace space;
     private final ZoneGraph graph;
     private final GeometryPalette palette;
+    private boolean paletteFullLogged;
 
     private Ambient ambient;
     private Phase.Listener phases = Phase.Listener.NONE;
@@ -147,7 +149,8 @@ public final class DimensionEngine {
      * @param registry the gases; fixed for the engine's lifetime
      * @param config mixture settings
      * @param classifierFactory builds the classifier over this engine's mirror
-     * @param palette the geometry palette section snapshots refer to
+     * @param palette the geometry palette section snapshots refer to; the engine works on its own
+     *     extensible copy, which takes in the geometries of single positions (GEO-043, API-023)
      * @param minSectionY the dimension's lowest section y
      * @param maxSectionY its highest section y
      * @param ambient the dimension's ambient until a batch brings another
@@ -165,7 +168,8 @@ public final class DimensionEngine {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.config = Objects.requireNonNull(config, "config");
         this.log = config.log();
-        this.palette = Objects.requireNonNull(palette, "palette");
+        this.palette = Objects.requireNonNull(palette, "palette").extensible();
+        palette = this.palette;
         this.mirror = new SectionMirror(minSectionY, maxSectionY);
         this.classifier = Objects.requireNonNull(classifierFactory.create(mirror, palette), "classifier");
         this.space = Objects.requireNonNull(classifier.space(), "cell space");
@@ -211,14 +215,40 @@ public final class DimensionEngine {
         return graph;
     }
 
+    /** For tests: how many times the heat phase has resolved every zone's links (ENV-017). */
+    long heatResolutions() {
+        return conduction.resolutions();
+    }
+
     /** The section mirror. Same thread rule as {@link #graph()}. */
     public SectionMirror mirror() {
         return mirror;
     }
 
-    /** The geometry palette the mirrored sections' ids index. */
+    /** The geometry palette the mirrored sections' ids index. Same thread rule as {@link #graph()}. */
     public GeometryPalette palette() {
         return palette;
+    }
+
+    /**
+     * A snapshot with its overrides' geometries given ids in this engine's palette (GEO-043,
+     * API-023), as the mirror holds it. Same thread rule as {@link #graph()}.
+     */
+    public SectionSnapshot resolve(SectionSnapshot snapshot) {
+        return snapshot.resolved(this::internOverride);
+    }
+
+    private int internOverride(Geometry geometry) {
+        int before = palette.size();
+        int id = palette.internExtra(geometry);
+        if (id < 0 && !paletteFullLogged) {
+            paletteFullLogged = true;
+            log.warn("The geometry palette is full; a block with its own geometry uses its block state's instead");
+        }
+        if (palette.size() != before) {
+            hotspots.geometriesAdded();
+        }
+        return id;
     }
 
     public Classifier classifier() {
@@ -618,7 +648,7 @@ public final class DimensionEngine {
         TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
         heldTruth.clear();
         for (SectionSource source : batch.sections()) {
-            SectionSnapshot s = source.decode();
+            SectionSnapshot s = resolve(source.decode());
             if (s.key() != source.key()) {
                 log.warn("Section capture decoded to the wrong key; skipped");
                 continue;

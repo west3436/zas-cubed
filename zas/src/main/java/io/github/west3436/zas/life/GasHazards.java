@@ -1,9 +1,13 @@
 package io.github.west3436.zas.life;
 
 import io.github.west3436.zas.api.gas.GasMixture;
+import io.github.west3436.zas.api.gas.GasTags;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
@@ -29,6 +33,21 @@ final class GasHazards {
     static final int EFFECT_GRACE_TICKS = 20;
 
     private GasHazards() {}
+
+    /**
+     * A breath as a filter leaves it (API-022, CONT-088): without the {@code #zas:toxic} gases, at the
+     * same temperature and volume, so the other gases keep their partial pressures. It only changes
+     * what is breathed: the gases stay where they were, so a filter holds nothing and never wears out.
+     */
+    static GasMixture filtered(GasMixture breath) {
+        Set<ResourceLocation> toxic = GasTags.gases(GasTags.TOXIC);
+        if (Collections.disjoint(breath.moles().keySet(), toxic)) {
+            return breath;
+        }
+        Map<ResourceLocation, Double> kept = new HashMap<>(breath.moles());
+        kept.keySet().removeAll(toxic);
+        return new GasMixture(kept, breath.temperature(), breath.volume());
+    }
 
     /** Whether a breath holds a gas at a partial pressure its profile makes harmful, at once or once sustained. */
     static boolean harmful(GasMixture breath) {

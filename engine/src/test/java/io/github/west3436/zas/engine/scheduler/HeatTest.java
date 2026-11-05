@@ -17,6 +17,7 @@ import io.github.west3436.zas.engine.heat.HeatMath;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import java.util.BitSet;
 import java.util.Random;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -188,6 +189,104 @@ class HeatTest {
         add(deep, X, Y, Z, 30, 350);
         deep.step();
         assertStep(deep, X, Y, Z, 6 * STONE / 5, 250, "ground at 5");
+    }
+
+    /**
+     * ENV-006, ENV-017: a wall's conduction to the open air and the ground uses the ambient
+     * temperature of the tick, without resolving the zone's links again.
+     */
+    @Test
+    void env_006_conduction_follows_the_ambient_temperature_from_the_next_tick() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR);
+        sim.world.room(X, Y, Z, X, Y, Z);
+        add(sim, X, Y, Z, 30, 350);
+        sim.step();
+        for (double t : new double[] {250, 400, 280.5}) {
+            sim.world.ambient = withTemperature(Ambient.STANDARD_AIR, t);
+            assertStep(sim, X, Y, Z, 6 * STONE, t, "open air at " + t);
+        }
+        // To the ground, behind three layers of stone on every side.
+        Sim ground = sim(Ambient.vacuum(250), SOLID);
+        ground.world.set(X, Y, Z, AIR);
+        add(ground, X, Y, Z, 30, 350);
+        ground.step();
+        for (double t : new double[] {200, 300.5}) {
+            ground.world.ambient = Ambient.vacuum(t);
+            assertStep(ground, X, Y, Z, 6 * STONE / 3, t, "ground at " + t);
+        }
+    }
+
+    /** ENV-006: a zone beside a heat source and the ambient moves to the mean of the two, weighted by G. */
+    @Test
+    void env_006_a_changed_ambient_keeps_a_zones_heat_sources() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR);
+        sim.world.room(X, Y, Z, X, Y, Z);
+        sim.world.set(X + 1, Y, Z, LAVA);
+        add(sim, X, Y, Z, 30, 350);
+        sim.step();
+        for (double t : new double[] {250, 400}) {
+            sim.world.ambient = withTemperature(Ambient.STANDARD_AIR, t);
+            double g = 5 * STONE + STONE;
+            assertStep(sim, X, Y, Z, g, (5 * STONE * t + STONE * 1450) / g, "at " + t);
+        }
+    }
+
+    /**
+     * ENV-006: an ambient that loses or gains its gas changes what the walls do: an open-air wall
+     * conducts to an ambient with gas and radiates to a vacuum.
+     */
+    @Test
+    void env_006_a_wall_radiates_once_the_ambient_is_a_vacuum_and_conducts_again_after() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR);
+        sim.world.room(X, Y, Z, X, Y, Z);
+        add(sim, X, Y, Z, 30, 350);
+        sim.step();
+        assertStep(sim, X, Y, Z, 6 * STONE, Ambient.STANDARD_AIR.temperature(), "with gas");
+
+        sim.world.ambient = Ambient.vacuum(250);
+        ZoneView before = sim.zoneAt(X, Y, Z);
+        sim.step();
+        double t = before.temperature();
+        double flux = HeatMath.radiativeFlux(STONE, t, 250, HeatSettings.DEFAULT.emissivity());
+        double g = 6 * flux / (t - 250);
+        double expected = 250 + (t - 250) * Math.exp(-g * dt(sim) / heatCapacity(before));
+        assertEquals(expected, sim.zoneAt(X, Y, Z).temperature(), 1e-7, "radiating");
+
+        sim.world.ambient = Ambient.STANDARD_AIR;
+        assertStep(sim, X, Y, Z, 6 * STONE, Ambient.STANDARD_AIR.temperature(), "with gas again");
+    }
+
+    /**
+     * ENV-017: an ambient changing every tick resolves no links, which is O(zones + links). Only one
+     * that loses or gains all its gas does, since that's what decides whether a wall radiates.
+     */
+    @Test
+    void env_017_a_changing_ambient_resolves_no_links_unless_it_turns_to_vacuum() {
+        Sim sim = sim(Ambient.STANDARD_AIR, AIR);
+        sim.world.room(X, Y, Z, X, Y, Z);
+        add(sim, X, Y, Z, 30, 350);
+        sim.steps(3);
+        long resolutions = sim.engine.heatResolutions();
+        for (int tick = 1; tick <= 20; tick++) {
+            double scale = 1 + tick * 0.01;
+            TreeMap<String, Double> pressures = new TreeMap<>();
+            Ambient.STANDARD_AIR.partialPressures().forEach((gas, p) -> pressures.put(gas, p * scale));
+            sim.world.ambient = new Ambient(pressures, 293.15 + tick);
+            sim.step();
+        }
+        assertEquals(resolutions, sim.engine.heatResolutions(), "with gas throughout");
+        for (int tick = 1; tick <= 5; tick++) {
+            sim.world.ambient = Ambient.vacuum(100 + tick);
+            sim.step();
+        }
+        assertEquals(resolutions + 1, sim.engine.heatResolutions(), "turning to vacuum, then staying one");
+        sim.world.ambient = Ambient.STANDARD_AIR;
+        sim.step();
+        assertEquals(resolutions + 2, sim.engine.heatResolutions(), "with gas again");
+    }
+
+    private static Ambient withTemperature(Ambient ambient, double temperature) {
+        return new Ambient(ambient.partialPressures(), temperature);
     }
 
     /** HEAT-013: the two halves of a pane, each in its own room, exchange heat at the pane's U. */

@@ -644,6 +644,10 @@ tick.
 *2026-10-30: for ambient edges, a change to the ambient wakes the edge only
 once it breaks equivalence (ENV-017), added during the ENV review.*
 
+*2026-11-05: that note no longer applies. Ambient edges never sleep (D-63, D-64),
+so a change to the ambient has nothing to wake. The owner reworded ENV-017 to say
+so.*
+
 #### CORE-034 · Door-separated zones never merge
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [zas-core §3.2](../research/zas-core.md#32-edge-exchange-math)
 

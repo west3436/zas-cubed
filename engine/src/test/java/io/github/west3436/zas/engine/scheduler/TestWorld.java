@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
@@ -9,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.LongPredicate;
 
@@ -28,6 +30,7 @@ final class TestWorld implements DimensionPipeline.World {
     private final Set<Long> dirty = new HashSet<>();
     private final Set<Long> unloaded = new HashSet<>();
     private final Map<Long, Long> generations = new HashMap<>();
+    private final Map<Long, TreeMap<Integer, Geometry>> overrides = new HashMap<>();
     private long stamp;
     private final int background;
     Ambient ambient;
@@ -54,6 +57,23 @@ final class TestWorld implements DimensionPipeline.World {
             a[index] = (short) id;
             dirty.add(key);
         }
+        return this;
+    }
+
+    /**
+     * Gives a position a geometry of its own, as a seal provider's answer does (API-023); null takes
+     * it away.
+     */
+    TestWorld override(int x, int y, int z, Geometry geometry) {
+        long key = SectionKeys.sectionOfBlock(x, y, z);
+        TreeMap<Integer, Geometry> own = overrides.computeIfAbsent(key, k -> new TreeMap<>());
+        int index = SectionKeys.index(x & 15, y & 15, z & 15);
+        if (geometry == null) {
+            own.remove(index);
+        } else {
+            own.put(index, geometry);
+        }
+        dirty.add(key);
         return this;
     }
 
@@ -121,6 +141,17 @@ final class TestWorld implements DimensionPipeline.World {
         long chunk = SectionKeys.chunkOf(section);
         long gen = lifecycleGeneration(chunk);
         short[] a = sections.get(section);
+        TreeMap<Integer, Geometry> own = overrides.get(section);
+        if (own != null && !own.isEmpty()) {
+            short[] ids = a;
+            if (ids == null) {
+                ids = new short[SectionSnapshot.SIZE];
+                Arrays.fill(ids, (short) background);
+            }
+            int[] indices = own.keySet().stream().mapToInt(Integer::intValue).toArray();
+            return SectionSource.of(SectionSnapshot.withOverrides(
+                    section, gen, gen, ids, indices, own.values().toArray(Geometry[]::new)));
+        }
         SectionSnapshot s = a == null
                 ? SectionSnapshot.uniform(section, gen, gen, background)
                 : SectionSnapshot.of(section, gen, gen, a);

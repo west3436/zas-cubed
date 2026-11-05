@@ -36,10 +36,11 @@ import java.util.Set;
  * linked through that block (HEAT-013).
  *
  * <p><b>Resolution.</b> A link to a cell is resolved each time membership changes: the cell's zone,
- * or the ambient if it is unzoned. A zone's links to sources, the ground and an ambient with gas
- * become a total conductance and a weighted temperature; links to an unzoned cell in a vacuum
- * ambient radiate (HEAT-004); links between two zones become one conductance per pair, the mean of
- * what each side found, so the pair is symmetric.
+ * or the ambient if it is unzoned. A zone's links to sources become a total conductance and a
+ * weighted temperature, and its links to the ground and an ambient with gas a total conductance to
+ * the ambient, whose temperature each step reads, so a change of temperature needs no resolution
+ * (ENV-017); links to an unzoned cell in a vacuum ambient radiate (HEAT-004); links between two
+ * zones become one conductance per pair, the mean of what each side found, so the pair is symmetric.
  *
  * <p><b>The step.</b> Each zone moves toward its reservoirs, then each pair exchanges, by the exact
  * exponential steps of {@link HeatMath}, so nothing overshoots (HEAT-006) and pairs conserve
@@ -78,7 +79,8 @@ final class Conduction implements MembershipListener {
     private final List<Long> arrivedSections = new ArrayList<>();
     private boolean membershipChanged = true;
     private Resolved resolved;
-    private Ambient resolvedFor;
+    private boolean resolvedForVacuum;
+    private long resolutions;
 
     /** Zone pairs that exchanged heat in the last tick, as {@code {a, b}}, a < b. */
     private final List<long[]> exchanged = new ArrayList<>();
@@ -162,6 +164,15 @@ final class Conduction implements MembershipListener {
             membershipChanged = true;
         }
         settings = heat;
+        if (transmittance.length < palette.size()) {
+            // The geometries of single positions added since (GEO-043, API-023).
+            int from = transmittance.length;
+            transmittance = Arrays.copyOf(transmittance, palette.size());
+            for (int id = from; id < transmittance.length; id++) {
+                double u = palette.geometry(id).transmittance();
+                transmittance[id] = Double.isNaN(u) ? heat.fallbackTransmittance() : u;
+            }
+        }
         if (!heat.enabled()) {
             // Keep tracking, so links are right when it is turned on again.
             markChangedZones();
@@ -174,9 +185,12 @@ final class Conduction implements MembershipListener {
             relinked = true;
         }
         dirty.clear();
-        if (relinked || membershipChanged || resolved == null || !ambient.equals(resolvedFor)) {
+        // Only whether the ambient has gas decides what a link resolves to. Its temperature is read
+        // each step, so an ambient changing every tick costs no resolution (ENV-017).
+        if (relinked || membershipChanged || resolved == null || ambient.isVacuum() != resolvedForVacuum) {
             resolved = resolve(ambient);
-            resolvedFor = ambient;
+            resolvedForVacuum = ambient.isVacuum();
+            resolutions++;
             membershipChanged = false;
         }
         step(resolved, dt, ambient);
@@ -406,11 +420,16 @@ final class Conduction implements MembershipListener {
 
     // ---- Resolution -----------------------------------------------------------------------
 
-    /** Every zone's reservoirs and radiating walls, and the zone pairs, as of now. */
+    /**
+     * Every zone's reservoirs and radiating walls, and the zone pairs, as of now. A zone's reservoirs
+     * are its heat sources, a conductance and a weighted temperature, and the ambient's conductance,
+     * which holds at any ambient temperature.
+     */
     private record Resolved(
             long[] zones,
-            double[] reservoirG,
-            double[] reservoirGT,
+            double[] sourceG,
+            double[] sourceGT,
+            double[] ambientG,
             double[][] radiatingU,
             double[][] radiatingArea,
             long[] pairA,
@@ -420,8 +439,9 @@ final class Conduction implements MembershipListener {
     private Resolved resolve(Ambient ambient) {
         int n = graph.zoneCount();
         long[] zones = new long[n];
-        double[] resG = new double[n];
-        double[] resGT = new double[n];
+        double[] srcG = new double[n];
+        double[] srcGT = new double[n];
+        double[] ambG = new double[n];
         double[][] radU = new double[n][];
         double[][] radA = new double[n][];
         // Each side's half of a pair's conductance, in the order found: zones in id order, then links.
@@ -429,7 +449,6 @@ final class Conduction implements MembershipListener {
         long[] halfB = new long[64];
         double[] halfG = new double[64];
         int halves = 0;
-        double tAmbient = ambient.temperature();
         boolean vacuum = ambient.isVacuum();
         double[] radiatingU = new double[8];
         double[] radiatingA = new double[8];
@@ -437,8 +456,7 @@ final class Conduction implements MembershipListener {
         for (Zone z : graph.zones()) {
             zones[i] = z.id();
             ZoneLinks l = linksOf(z);
-            double g = l.sourceG() + l.groundG();
-            double gt = l.sourceGT() + l.groundG() * tAmbient;
+            double toAmbient = l.groundG();
             int radiating = 0;
             for (int k = 0; k < l.cells().length; k++) {
                 Zone far = graph.zoneOf(l.cells()[k]);
@@ -464,8 +482,7 @@ final class Conduction implements MembershipListener {
                         }
                         radiatingA[r] += l.cellArea()[k];
                     } else {
-                        g += ua;
-                        gt += ua * tAmbient;
+                        toAmbient += ua;
                     }
                 } else {
                     // Each side finds the pair; the conductance is the mean of what they found.
@@ -480,8 +497,9 @@ final class Conduction implements MembershipListener {
                     halves++;
                 }
             }
-            resG[i] = g;
-            resGT[i] = gt;
+            srcG[i] = l.sourceG();
+            srcGT[i] = l.sourceGT();
+            ambG[i] = toAmbient;
             // In order of U, so the sum over them doesn't depend on the order links were found.
             Integer[] order = new Integer[radiating];
             for (int r = 0; r < radiating; r++) {
@@ -526,8 +544,9 @@ final class Conduction implements MembershipListener {
         int count = p + 1;
         return new Resolved(
                 zones,
-                resG,
-                resGT,
+                srcG,
+                srcGT,
+                ambG,
                 radU,
                 radA,
                 Arrays.copyOf(pa, count),
@@ -546,8 +565,8 @@ final class Conduction implements MembershipListener {
             }
             GasMixture m = z.mixture();
             double t = m.temperature();
-            double g = r.reservoirG()[i];
-            double gt = r.reservoirGT()[i];
+            double g = r.sourceG()[i] + r.ambientG()[i];
+            double gt = r.sourceGT()[i] + r.ambientG()[i] * tBackground;
             double[] radU = r.radiatingU()[i];
             if (radU.length > 0 && t != tBackground) {
                 for (int k = 0; k < radU.length; k++) {
@@ -645,6 +664,11 @@ final class Conduction implements MembershipListener {
     /** For tests and the bench: the cached links of a zone, building them if needed. */
     ZoneLinks linksFor(Zone zone) {
         return linksOf(zone);
+    }
+
+    /** For tests: how many times every zone's links have been resolved (ENV-017). */
+    long resolutions() {
+        return resolutions;
     }
 
     /** For the bench: how many zones have cached links. */
