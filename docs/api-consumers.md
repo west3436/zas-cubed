@@ -202,7 +202,9 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
   there. A chunk that has left the client is the only removal the manager sees for
   itself.
 - **At most 8 loops** play on a client (`MAX_LOOPS`), across every mod: the ones
-  that reach the player loudest, within their ranges.
+  that will play loudest at the player, within their ranges. That counts your
+  sound's volume in `sounds.json` and the player's sliders, so a level set there
+  ranks as it plays.
 - **The range is the request's.** The volume falls in a straight line to 0 there,
   and `attenuation_distance` in `sounds.json` isn't used. Use a mono sound so it
   pans, and don't mark it `stream`.
