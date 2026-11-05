@@ -2405,8 +2405,10 @@ the cell in front of its grille).
   ZAS's one-connection rule (CORE-031): r·(n_p·V_z − n_z·V_p)/(V_p + V_z) moles
   out, with r = 0.163 per second; the ambient is an infinite reservoir,
   r·(n_p − c·V_p). Gases leaving and entering are one change on its port.
-  Flows under 10⁻⁴ mol are skipped, so a settled end goes quiet, and nothing
-  moves while the cell is paused or unresolved. An end also waits for its
+  Flows under 10⁻⁴ mol are skipped, so a settled end goes quiet. At a paused
+  zone it exchanges with the zone's last-known state, so what leaves the pipe
+  is voided and what enters is supplied (GEO-035, GEO-036, GEO-038); nothing
+  moves while the cell is unresolved. An end also waits for its
   first three atmos ticks after it loads, and moves gas only when its cell
   reads the same state and zone twice running: a chunk's zones reach the
   published state a little after the chunk loads, and until then an enclosed
@@ -2462,10 +2464,18 @@ the cell in front of its grille).
   through a `ZonePort` (CONT-071, CONT-072).
 - **Reading the cell.** A device that acts on a cell uses a `CellWatch`: it
   waits three atmos ticks after it loads, and acts only on a cell that reads
-  the same state and zone twice running and is zoned or the ambient. This is
-  the open pipe end's guard of §11.4, shared
+  the same state and zone twice running and is zoned, paused or the ambient.
+  This is the open pipe end's guard of §11.4, shared
   ([#153](https://github.com/west3436/zas-cubed/issues/153)). `wouldTrust` says what
   the next step's reading would, and records nothing.
+- **At a paused zone** (GEO-035, D-43) a device goes by the zone's last-known
+  state, as it would at any zone: a vent's bounds, a canister's release and a
+  scrubber's sample all read it, and it never changes. What the device sends is
+  voided and what it draws is supplied (GEO-036, GEO-038), so its network keeps
+  running. A vent blowing into a paused zone below its bound therefore empties
+  its network into nothing, as one blowing into space would. A device holds at
+  an unresolved cell instead, since the ambient reading there is only a guess
+  (LIFE-048 holds a breather's check the same way).
 - **Connector port** (CONT-083). Set in the floor, facing up. It connects to
   a pipe below it and a canister on it; its `connected` state shows a collar
   while a canister stands on it.
