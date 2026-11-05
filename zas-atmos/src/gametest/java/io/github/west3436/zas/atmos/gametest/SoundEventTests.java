@@ -3,17 +3,22 @@ package io.github.west3436.zas.atmos.gametest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -36,6 +41,26 @@ public final class SoundEventTests {
         }
         h.assertTrue(!registered.isEmpty(), "no sound events are registered");
         h.assertValueEqual(registered, new TreeSet<>(definedEvents().keySet()), "the registered sound events");
+        h.succeed();
+    }
+
+    /**
+     * A server plays a sound at full volume whatever the air, since only each client knows the air
+     * around its own player and fades the sound for itself (CLIENT-016). Someone in the air beside
+     * a device in a vacuum still has to get the sound. {@link SoundLog} counts it where it played and
+     * reports it once.
+     */
+    @GameTest(template = "empty")
+    public static void client_016_a_server_plays_a_sound_in_full_for_each_client_to_fade(GameTestHelper h) {
+        SoundLog.listen();
+        BlockPos pos = h.absolutePos(new BlockPos(1, 2, 1));
+        h.getLevel().playSound(null, pos, AtmosSounds.PIPE_LEAK.get(), SoundSource.BLOCKS, 1f, 1f);
+        Vec3 at = Vec3.atCenterOf(pos);
+        h.assertValueEqual(SoundLog.take(at.add(0, 5, 0)).size(), 0, "sounds five blocks above it");
+        List<SoundLog.Played> played = SoundLog.take(at);
+        h.assertValueEqual(played.size(), 1, "sounds played there");
+        h.assertTrue(played.get(0).is(AtmosSounds.PIPE_LEAK), "it played " + played.get(0));
+        h.assertValueEqual(SoundLog.take(at).size(), 0, "sounds reported again");
         h.succeed();
     }
 

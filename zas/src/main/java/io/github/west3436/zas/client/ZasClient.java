@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.airflow.AirflowReceiver;
 import io.github.west3436.zas.airflow.HeldFlows;
+import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.debug.ClientDebugOverlay;
 import io.github.west3436.zas.hud.ClientAtmosHud;
 import io.github.west3436.zas.hud.ClientListenerAir;
@@ -58,6 +59,8 @@ public final class ZasClient {
         // Looping sounds and thin air (CLIENT-015, CLIENT-016).
         ClientLoops.register();
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientListenerAir.clear());
+        ThinAirOneShots.register();
+        ClientSounds.fadeInThinAir(ZasMod.MOD_ID);
 
         // Airflow's particles (CLIENT-003).
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> AirflowParticles.tick());

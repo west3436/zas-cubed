@@ -192,8 +192,10 @@ pressure the client doesn't know yet counts as being in normal air.
   fade where the player is first warned, and a straight line in amplitude is
   roughly what falling density does to a sound.
 - **Verify:** `ThinAirTest` and `LoopBookTest` (Unit) check the curve and that a
-  vacuum leaves no voice playing; `client_016_*` (GameTest) check the factor in
-  rooms and in open air; Manual checks how the fade sounds.
+  vacuum leaves no voice playing; `ThinAirOneShotsTest` (Unit) checks which
+  one-shots fade and by how much; `client_016_*` (GameTest) check the factor in
+  rooms and in open air; Manual checks how the fade sounds, and that a real
+  one-shot from a server fades.
 
 *2026-11-05: added for review, with the curve built (`sound.ThinAir`), for the
 owner to judge by ear: 0 at 1 kPa or below, 0.08 at 5, 0.18 at 10, 0.39 at 20,
@@ -202,6 +204,16 @@ player, so a sealed suit in a vacuum hears silence. The open air reads as its
 dimension's ambient pressure, so it is normal air in a breathable dimension and
 a vacuum in an airless one. Nothing has been heard yet, so the Manual part is
 open.*
+
+*2026-11-05: one-shots fade too, on the client as each sound starts
+(`client.ThinAirOneShots`, on NeoForge's `PlaySoundEvent`), for every event in a
+namespace a mod gives `ClientSounds.fadeInThinAir` (API-060). A server plays a
+sound for everyone in range and only each client knows its own player's air, so
+nothing that plays a sound has to do anything, and it must not multiply by the
+factor as well. In a vacuum the sound is dropped, and its subtitle with it. A
+sound above volume 1 keeps full gain and loses range until the factor brings it
+below 1, since the engine works out both from the volume, so a near blast at
+volume 4 starts to lose gain at a factor of 0.25.*
 
 #### CLIENT-017 · Gas particle limits
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-53
