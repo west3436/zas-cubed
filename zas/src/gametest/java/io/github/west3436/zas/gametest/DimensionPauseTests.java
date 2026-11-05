@@ -64,11 +64,14 @@ public final class DimensionPauseTests {
         }
     }
 
-    /** A sealed room from x 10 to 21, across the chunk border at 16, with its zone formed. */
+    /**
+     * A sealed room from x 10 to 21, across the chunk border at 16, with its zone formed, and enough
+     * gas that a hole doesn't vent it down to the ambient within a few atmos ticks.
+     */
     private static ZoneInfo room(GameTestHelper h, Rooms r) {
         r.clear(8, 23);
         r.shell(10, 21);
-        MutationResult m = r.settle(GasMutations.add(r.level, r.point(12, 2, 2), oxygen(40), source("ops_005")));
+        MutationResult m = r.settle(GasMutations.add(r.level, r.point(12, 2, 2), oxygen(4000), source("ops_005")));
         h.assertValueEqual(m.outcome(), MutationOutcome.ZONE, "the room didn't zone");
         return r.zone(12, 2, 2);
     }
