@@ -50,7 +50,7 @@ sources and javadoc jars.
 - **Verify:** Inspect the published artifact for sources and javadoc jars.
 
 #### API-006 · Works without ZAS³
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-17, S-12
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-17, S-12
 
 A consumer mod that bundles the API shall run without ZAS³ installed, and
 nothing crashes.
@@ -59,8 +59,11 @@ nothing crashes.
 - **Verify:** A GameTest runs the example addon without ZAS³ and checks the
   S-12 scenario completes without errors.
 
+*2026-11-05: Implemented. CI's "S-12 API without ZAS³" step runs the example addon
+alone, and the `s_12_` GameTests in `WithoutZasTests` pass with no errors (API-048).*
+
 #### API-009 · Safe defaults without ZAS³
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-17, S-12
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-17, S-12
 
 Without ZAS³, every API call shall return safe defaults:
 - ambient queries return standard air (ENV-011)
@@ -72,14 +75,22 @@ Without ZAS³, every API call shall return safe defaults:
 - **Verify:** A GameTest without ZAS³ checks each kind of call returns its
   listed default.
 
+*2026-11-05: Implemented. On the example addon's GameTest server,
+`s_12_queries_return_standard_air` checks the ambient queries,
+`s_12_mutations_complete_absent` the gas and heat mutations, and the
+`api_014_fallback_` tests vanilla's breathing verdict, underwater included.*
+
 #### API-040 · Presence check
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-17
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-17
 
 The API shall let consumers check whether a real implementation is present.
 
 - **Rationale:** Inferred: consumers need to turn atmosphere features (HUD,
   gear) on or off depending on whether the atmosphere is real.
 - **Verify:** GameTests check the answer with and without ZAS³ installed.
+
+*2026-11-05: Implemented. `api_040_present_with_zas` checks the answer with ZAS³,
+and `s_12_api_absent_without_zas` without it.*
 
 #### API-002 · Semantic versioning
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
@@ -326,7 +337,7 @@ provider's new methods have defaults that give `ABSENT`. Checked by
 `s_12_mutations_complete_absent` without ZAS³.*
 
 #### API-014 · Breathability helper
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-06
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-06
 
 The API shall answer "can this entity breathe here, and is it protected?",
 taking into account LIFE rules and every life-support provider. This is the
@@ -376,6 +387,14 @@ underwater, a harmful gas, an exempt player, an untagged mob and the minimum.*
 verdict the server last synced (LIFE-023), without the breath gas, while its
 eyes are where the server last checked them; for other entities, and before
 the first sync, with vanilla's. Still Accepted, for internals and suits.*
+
+*2026-11-05: Implemented. Internals and suits exist now, and the GameTests the
+Verify names pass: `api_014_breathes_the_open_air` in air,
+`api_014_vacuum_zone_is_low_oxygen` in a vacuum, `s_08_breathing_gear` on internals,
+and `life_020_suited_and_helmetless_players_in_vacuum` and
+`life_025_partial_suits_at_450_k` in a suit. Nothing reports `GAS_FILTERING` until
+the gas mask (CONT-088, under API-022). The `Hazard` and `Protection` values still
+get confirmed or trimmed before the API freezes at 1.0.0.*
 
 #### API-019 · Standalone mixture reactions
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, D-50, FIRE-001, API-020

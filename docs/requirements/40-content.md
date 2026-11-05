@@ -1890,7 +1890,7 @@ The content's crafting progression shall be documented.
 [docs/crafting.md](../crafting.md).*
 
 #### CONT-059 · Data-driven recipes
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 Recipes shall be data-driven, so packs can override them.
 
@@ -1902,8 +1902,11 @@ Recipes shall be data-driven, so packs can override them.
 `cont_059_datapack_overrides_recipe` loads a data pack that replaces the pipe
 cap's recipe and checks that its version wins.*
 
+*2026-11-05: Implemented. The recipes are plain data and that GameTest passes,
+which is all the Verify asks.*
+
 #### CONT-052 · Packaging
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-16, D-38
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-38
 
 All SS13 content shall ship as a separate mod from the same repository, with
 the ID `zas_atmos` and display name "ZAS³ Atmospherics" (D-38). It depends on
@@ -1913,8 +1916,11 @@ the framework mod `zas`.
 - **Verify:** Inspect the build: two jars, with the content mod's metadata
   depending on `zas`.
 
+*2026-11-05: Implemented. The build makes two jars, `zas` and `zas_atmos`. The
+second's metadata gives that ID and display name, and requires `zas`.*
+
 #### CONT-095 · Public API only
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-16, D-50, API-001
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-50, API-001
 
 The content mod shall use only the public API.
 
@@ -1923,13 +1929,23 @@ The content mod shall use only the public API.
 - **Verify:** Inspect: a build check fails if the content mod uses framework
   internals.
 
+*2026-11-05: Implemented. The compiler is the build check: the main source set
+compiles against `zas-api` alone, with `zas` only at run time
+(`zas-atmos/build.gradle`). A probe class importing from `zas.provider` and
+`zas.engine` failed `:zas-atmos:compileJava` with "package does not exist". Only the
+GameTests may use the framework's test hooks.*
+
 #### CONT-096 · Framework works alone
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-16
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-16
 
 The framework mod shall be fully usable without the content mod.
 
 - **Rationale:** Decision: D-16.
 - **Verify:** GameTests for the framework run without the content mod.
+
+*2026-11-05: Implemented. `:zas:runGameTestServer`, which CI runs on every PR, runs
+the framework's GameTests without `zas_atmos`. The `zas` build has no dependency on
+it.*
 
 ## Power
 
