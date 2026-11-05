@@ -181,6 +181,22 @@ BlockGeometry.markDirty(level, pos);
 - **Threads:** `markDirty` is server thread only, and throws otherwise.
 - **Without ZAS³** nothing asks the provider, and `markDirty` does nothing.
 
+## A block whose shape depends on where it is or on its data
+
+Give the block `BlockBehaviour.Properties.dynamicShape()`, as Minecraft asks of
+any block whose collision shape isn't fixed by its block state. ZAS³ then reads
+the shape in the level at each position, with an empty collision context, and
+derives the block's gas cells from it (GEO-043):
+
+- **It is kept**, as a seal provider's answer is: read once on the server thread
+  when the block's section is copied for an atmos tick, until the block state at
+  that position is written or you call `BlockGeometry.markDirty(level, pos)`
+  (GEO-014). So call `markDirty` whenever the data behind the shape changes.
+- **It isn't followed while it moves.** Only what is read counts, so a shape that
+  animates may be caught mid-motion (GEO-042). Give such a block a seal provider
+  that answers with the state it settles into.
+- **A datapack override wins**, and the shape isn't read.
+
 ## Supplying a dimension's ambient
 
 A mod can give a dimension its open air from code, such as a planet's thin air

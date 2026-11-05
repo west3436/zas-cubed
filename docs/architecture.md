@@ -415,10 +415,31 @@ context (GEO-041).
    asks nothing again. The worker gives each override's geometry an id in the
    engine's own extensible copy of the palette, so the table's palette never
    changes. A datapack override of a seal-provider block leaves it unflagged:
-   the pack has the last word.
+   the pack has the last word. *Implemented
+   ([#65](https://github.com/west3436/zas-cubed/issues/65)):* a state is flagged
+   if its block says `dynamicShape`, as one must whose shape depends on position
+   or data, or if its shape at the origin differs from its shape at four other
+   positions. Scaffolding and powder snow are left out, since only the entity
+   changes their shapes. So is a state holding a fluid, and any block with an
+   override. `PositionGeometries` reads the shape with an empty context in the
+   level, and derives each distinct set of voxels once; a shape equal to the
+   block state's needs no snapshot override. Of a shape with several cells it
+   keeps the voxel to cell map too, so `PointResolver` finds the cell a point is
+   in ([#123](https://github.com/west3436/zas-cubed/issues/123)). The fallback to
+   the largest cell is left for a position not read yet, or a broken shape. A
+   shape that throws leaves the block state's geometry, as at derivation.
 6. **`dynamicShape` blocks** (179 vanilla states, including moving pistons and
    shulker boxes) use the geometry of their settled state (GEO-042), from a
-   data table of state → settled state.
+   data table of state → settled state. *Implemented
+   ([#65](https://github.com/west3436/zas-cubed/issues/65)):* no data table was
+   needed. A moving piston takes the table geometry of
+   `PistonMovingBlockEntity#getMovedState`, from the moment the motion starts, so
+   its cells don't change again when it ends. A shulker box stays unflagged, so
+   it has the geometry derived at the origin, where it has no block entity and is
+   closed. A modded block that animates its shape is read once and kept until its
+   state is written or `markDirty` is called, so it isn't tracked. Such a block
+   should give a seal provider, or a pack an override, if the moment read isn't
+   the settled one.
 
 **The seal test** between two cells in adjacent positions: the shared face is
 gas-tight wherever `coverage(a, d) | coverage(b, d.opposite())` is full.

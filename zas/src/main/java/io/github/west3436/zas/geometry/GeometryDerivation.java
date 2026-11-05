@@ -15,6 +15,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.PowderSnowBlock;
+import net.minecraft.world.level.block.ScaffoldingBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -37,12 +40,21 @@ import org.slf4j.Logger;
  *
  * <p>So is a state holding a fluid, a source, flowing or waterlogged, which is gas-tight and holds no
  * gas whatever its shape (GEO-006).
+ *
+ * <p>So is a state whose shape may depend on its position or its data, with {@link
+ * Geometry#FLAG_POSITIONAL}, so that {@link PositionGeometries} works it out per position (GEO-042,
+ * GEO-043).
  */
 public final class GeometryDerivation {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     /** A position holding a fluid (GEO-006): as a full block, with {@link Geometry#FLAG_FLUID}. */
     private static final Geometry FLUID = Geometry.SOLID.withFlags(Geometry.FLAG_FLUID);
+
+    /** Where a state's shape is compared with its shape at the origin (GEO-043). */
+    private static final BlockPos[] PROBES = {
+        new BlockPos(1, 0, 0), new BlockPos(0, 0, 1), new BlockPos(5, 64, -3), new BlockPos(-11, -7, 13)
+    };
 
     private static volatile GeometryTable derived;
 
@@ -109,6 +121,39 @@ public final class GeometryDerivation {
         return t;
     }
 
+    /**
+     * Whether a state's geometry is worked out per position (GEO-042, GEO-043): its block says its
+     * shape is dynamic, as a block must if the shape depends on position or data, or its shape differs
+     * from one position to another. Three vanilla kinds of dynamic block are left out, since nothing
+     * about the position matters to their geometry: a shulker box only animates, and settles closed,
+     * which is its shape at the origin, and scaffolding and powder snow only look at the entity, which
+     * the empty context hasn't got.
+     *
+     * @param atOrigin the state's shape at the origin
+     */
+    static boolean positional(BlockState state, VoxelShape atOrigin) {
+        Block block = state.getBlock();
+        if (block instanceof ShulkerBoxBlock || block instanceof ScaffoldingBlock || block instanceof PowderSnowBlock) {
+            return false;
+        }
+        if (block.hasDynamicShape()) {
+            return true;
+        }
+        BitSet voxels = null;
+        for (BlockPos probe : PROBES) {
+            VoxelShape there = state.getCollisionShape(EmptyBlockGetter.INSTANCE, probe, CollisionContext.empty());
+            if (there != atOrigin) {
+                if (voxels == null) {
+                    voxels = rasterize(atOrigin);
+                }
+                if (!rasterize(there).equals(voxels)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** The hotspot flags of a state: {@link Geometry#FLAG_GAS_FIRE}, {@link Geometry#FLAG_FIRE} or none. */
     static int fireFlags(BlockState state) {
         if (state.getBlock() instanceof GasFireBlock) {
@@ -141,6 +186,7 @@ public final class GeometryDerivation {
         int failures = 0;
         for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
             int id;
+            boolean positional = false;
             try {
                 VoxelShape shape = collisionShape(state);
                 Integer known = byShape.get(shape);
@@ -150,6 +196,7 @@ public final class GeometryDerivation {
                     byShape.put(shape, known);
                 }
                 id = known;
+                positional = positional(state, shape);
             } catch (RuntimeException e) {
                 // A broken modded shape mustn't stop the server; treat the block as solid.
                 if (failures++ == 0) {
@@ -162,6 +209,9 @@ public final class GeometryDerivation {
                 id = palette.intern(palette.geometry(id).withFlags(fire));
             }
             id = occupied(palette, id, state);
+            if (positional) {
+                id = palette.intern(palette.geometry(id).withFlags(Geometry.FLAG_POSITIONAL));
+            }
             if (!state.getFluidState().isEmpty()) {
                 // A fluid leaves no room for gas, whatever the block's shape (GEO-006). An override
                 // comes later, so it still has the last word.
