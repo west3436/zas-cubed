@@ -4,7 +4,6 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
-import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
@@ -80,24 +79,7 @@ public class PipeBlockEntity extends PipeNodeEntity {
                 sample.mixture(),
                 sample.state() == AtmosphereState.AMBIENT,
                 1 - Math.pow(1 - OPEN_END_RATIO, AtmosTicks.SECONDS));
-        if (flow.out().isEmpty() && flow.in().isEmpty()) {
-            return;
-        }
-        Vec3 point = Vec3.atCenterOf(worldPosition);
-        GasParcel out = pipe.take(flow.out());
-        if (flow.in().isEmpty()) {
-            port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
-        } else if (out.isEmpty()) {
-            port.remove(level, point, flow.in(), r -> deliver(r.moved()));
-        } else {
-            port.exchange(
-                    level,
-                    point,
-                    out,
-                    flow.in(),
-                    r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())),
-                    r -> deliver(r.moved()));
-        }
+        exchange(level, port, Vec3.atCenterOf(worldPosition), flow);
     }
 
     /**

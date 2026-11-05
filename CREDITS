@@ -1981,6 +1981,10 @@ state: base, bezel
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: vg's passive vent grille, its square rings with the corners' diagonals and a cross through the middle, in vg's bezel, on the vent's casing.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/passive_vent.json
+origin: original
+notes: Picks the passive vent's model by facing, six ways.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/passive_vent.json
 origin: original
 notes: The vent's cube facing north, with the passive grille; its sides and back are vent_side.png and vent_back.png.

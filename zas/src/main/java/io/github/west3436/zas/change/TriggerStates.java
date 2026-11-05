@@ -26,7 +26,9 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
  *       with {@code lit=true}, such as a lit furnace or campfire. A modded fuel block, such as the
  *       fuel generator (CONT-067), joins by being in the tag with a boolean {@code lit} property.
  *   <li><b>Planting</b> ({@link ZoneTrigger#PLANTING}, CONT-053): every state of a block in the
- *       {@value #PLANTS_TAG} tag, the plants that photosynthesise.
+ *       {@value #PLANTS_TAG} tag, the plants that photosynthesise. That tag holds {@value
+ *       #CROP_PLANTS_TAG} and {@value #LEAF_PLANTS_TAG}. A plant in the second makes O2 at the leaf
+ *       rate and any other at the crop rate (CONT-057), so the table also flags those states.
  * </ul>
  *
  * <p>A write is a trigger when it gives the position a flag its old state didn't have: fire
@@ -37,7 +39,8 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
  * come from a scan (CORE-054).
  *
  * <p>The table is rebuilt from the tags whenever the server binds them (start and {@code /reload});
- * until then nothing is a trigger. Reads are safe from any thread.
+ * until then nothing is a trigger. {@link #generation()} tells a reader that keeps positions of
+ * plants that the tags may have changed. Reads are safe from any thread.
  */
 public final class TriggerStates {
     /** The combustion tag's id. */
@@ -45,6 +48,12 @@ public final class TriggerStates {
 
     /** The plants tag's id. */
     public static final String PLANTS_TAG = "zas:plants";
+
+    /** The id of the tag of plants at the crop rate, which {@value #PLANTS_TAG} holds. */
+    public static final String CROP_PLANTS_TAG = "zas:crop_plants";
+
+    /** The id of the tag of plants at the leaf rate, which {@value #PLANTS_TAG} holds. */
+    public static final String LEAF_PLANTS_TAG = "zas:leaf_plants";
 
     /** Blocks whose burning states are combustion zone triggers (CORE-056, FIRE-024). */
     public static final TagKey<Block> COMBUSTION =
@@ -54,13 +63,25 @@ public final class TriggerStates {
     public static final TagKey<Block> PLANTS =
             TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "plants"));
 
+    /** Plants that make O2 at the crop rate (CONT-057), as does anything else in {@link #PLANTS} but {@link #LEAF_PLANTS}. */
+    public static final TagKey<Block> CROP_PLANTS =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "crop_plants"));
+
+    /** Plants that make O2 at the leaf rate (CONT-057). */
+    public static final TagKey<Block> LEAF_PLANTS =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "leaf_plants"));
+
     /** The flag of a combustion state. */
     public static final int COMBUSTION_FLAG = 1;
 
     /** The flag of a plant state. */
     public static final int PLANTING_FLAG = 2;
 
+    /** The flag of a state of a block in {@value #LEAF_PLANTS_TAG}. */
+    public static final int LEAF_PLANT_FLAG = 4;
+
     private static volatile byte[] byStateId = new byte[0];
+    private static volatile int generation;
     private static volatile Set<Block> combustionForTest = Set.of();
 
     private TriggerStates() {}
@@ -89,6 +110,26 @@ public final class TriggerStates {
             fresh &= ~PLANTING_FLAG;
         }
         return fresh;
+    }
+
+    /**
+     * Whether a write from state id {@code oldId} to {@code nowId} makes the position a plant or
+     * stops it being one, whatever the preset: what photosynthesis keeps track of (CONT-053). A crop
+     * growing or leaves updating their distance aren't. Any thread.
+     */
+    public static boolean plantChanged(int oldId, int nowId) {
+        byte[] table = byStateId;
+        return ((flags(table, oldId) ^ flags(table, nowId)) & PLANTING_FLAG) != 0;
+    }
+
+    /** A state's flags: any of {@link #COMBUSTION_FLAG}, {@link #PLANTING_FLAG} and {@link #LEAF_PLANT_FLAG}. */
+    public static int flags(BlockState state) {
+        return flags(byStateId, Block.getId(state));
+    }
+
+    /** How many times the table has been built: it changes when the tags may have. Any thread. */
+    public static int generation() {
+        return generation;
     }
 
     /** Whether a state is combustion: a block in {@value #COMBUSTION_TAG}, burning. */
@@ -136,7 +177,13 @@ public final class TriggerStates {
                 mark(table, state, PLANTING_FLAG);
             }
         }
+        for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(LEAF_PLANTS)) {
+            for (BlockState state : holder.value().getStateDefinition().getPossibleStates()) {
+                mark(table, state, LEAF_PLANT_FLAG);
+            }
+        }
         byStateId = table;
+        generation++;
     }
 
     /**

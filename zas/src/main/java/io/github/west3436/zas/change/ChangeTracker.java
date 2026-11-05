@@ -43,6 +43,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  *       ({@link ZoneTrigger#COMBUSTION}) or a plant ({@link ZoneTrigger#PLANTING}), marks the
  *       position in that trigger's set (CORE-056). Which states start one is a table read per
  *       state ({@link TriggerStates}); the preset is read only for a write that starts one;
+ *   <li>if the write makes the position a plant or stops it being one, marks it in the plant
+ *       changes, under either preset (CONT-053);
  *   <li>if the new state is a redstone spark or another spark ignition source, queues an ignition
  *       ({@link IgnitionEvents}, FIRE-015); with none on, as by default, that is one read.
  * </ul>
@@ -50,8 +52,10 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <p>Repeated changes to a position coalesce into one dirty bit until the scheduler drains them
  * with {@link #drain(ServerLevel, LongPredicate)} at batch close (GEO-012); so do triggers, which
  * the scheduler takes with {@link #drainTriggers(ServerLevel)} and turns into zone-forming
- * operations. Writes made off the server thread are queued and folded in, in arrival order, on the
- * server thread before any query and at the end of every server tick.
+ * operations, and plant changes, which photosynthesis takes with {@link
+ * #drainPlantChanges(ServerLevel, LongPredicate)}. Writes made off the server thread are queued and
+ * folded in, in arrival order, on the server thread before any query and at the end of every server
+ * tick.
  *
  * <p>Everything except {@link #onBlockWrite} must be called on the server thread.
  */
@@ -73,8 +77,10 @@ public final class ChangeTracker {
         final DirtySections combustion = new DirtySections();
         /** Positions where planting happened since the last drain (CORE-056). */
         final DirtySections planting = new DirtySections();
+        /** Positions that became a plant or stopped being one since the last drain (CONT-053). */
+        final DirtySections plantChanges = new DirtySections();
 
-        void record(int x, int y, int z, boolean geometryChanged, int triggers) {
+        void record(int x, int y, int z, boolean geometryChanged, int triggers, boolean plantChanged) {
             generations.bumpBlock(SectionKeys.chunk(x >> 4, z >> 4));
             if (geometryChanged) {
                 dirty.mark(x, y, z);
@@ -87,10 +93,14 @@ public final class ChangeTracker {
                     planting.mark(x, y, z);
                 }
             }
+            if (plantChanged) {
+                plantChanges.mark(x, y, z);
+            }
         }
     }
 
-    private record OffThreadWrite(ServerLevel level, long pos, boolean geometryChanged, int triggers) {}
+    private record OffThreadWrite(
+            ServerLevel level, long pos, boolean geometryChanged, int triggers, boolean plantChanged) {}
 
     /**
      * A Hardcore zone trigger that started at a block position (CORE-056): combustion or planting
@@ -120,12 +130,13 @@ public final class ChangeTracker {
         int nowId = Block.getId(now);
         boolean geometryChanged = geometryChanged(oldId, nowId);
         int triggers = TriggerStates.started(oldId, nowId);
+        boolean plantChanged = TriggerStates.plantChanged(oldId, nowId);
         IgnitionEvents.onBlockWrite(level, pos, now);
         if (level.getServer().isSameThread()) {
-            dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers);
+            dimension(level).record(pos.getX(), pos.getY(), pos.getZ(), geometryChanged, triggers, plantChanged);
             Burners.onBlockWrite(level, pos, old, now);
         } else {
-            OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged, triggers));
+            OFF_THREAD.add(new OffThreadWrite(level, pos.asLong(), geometryChanged, triggers, plantChanged));
         }
     }
 
@@ -187,6 +198,18 @@ public final class ChangeTracker {
             s.forEachIndex(i ->
                     out.add(new Trigger(new BlockPos(x0 + (i & 15), y0 + (i >> 8), z0 + ((i >> 4) & 15)), trigger)));
         }
+    }
+
+    /**
+     * Removes the positions in {@code level} that became a plant or stopped being one since the last
+     * drain, and returns the sections {@code interest} accepts (section keys, {@link SectionKeys}),
+     * sorted as {@link #drain(ServerLevel)} does; the rest are dropped without further work.
+     * Photosynthesis passes the sections it keeps plants for (CONT-053). Server thread.
+     */
+    public static List<DirtySection> drainPlantChanges(ServerLevel level, LongPredicate interest) {
+        flushOffThread();
+        Dimension d = LEVELS.get(level);
+        return d == null || d.plantChanges.isEmpty() ? List.of() : d.plantChanges.drain(interest);
     }
 
     /**
@@ -271,7 +294,8 @@ public final class ChangeTracker {
                             BlockPos.getY(w.pos()),
                             BlockPos.getZ(w.pos()),
                             w.geometryChanged(),
-                            w.triggers());
+                            w.triggers(),
+                            w.plantChanged());
         }
     }
 
@@ -290,6 +314,7 @@ public final class ChangeTracker {
             d.dirty.removeChunk(pos.x, pos.z);
             d.combustion.removeChunk(pos.x, pos.z);
             d.planting.removeChunk(pos.x, pos.z);
+            d.plantChanges.removeChunk(pos.x, pos.z);
         }
     }
 

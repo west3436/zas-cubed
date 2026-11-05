@@ -144,15 +144,14 @@ warning in the log.
 | `combustion_forms_zones` | `false` | `true` | Whether a fire starting, or a furnace or campfire being lit, forms a zone in an enclosed, unzoned area: the blocks in `#zas:combustion` (CORE-056, FIRE-024) |
 | `planting_forms_zones` | `false` | `true` | Whether placing a crop, sapling or leaves forms a zone in an enclosed, unzoned area: the blocks in `#zas:plants` (CORE-056, CONT-053) |
 | `block_pressure_damage` | `false` | `true` | Whether a pressure difference breaks blocks in `zas:pressure_fragile`, such as glass (FLOW-007, FLOW-016) |
-| `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a lit crop or sapling in a zone makes from CO₂ at light 15, in mol/h (CONT-057) |
-| `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a lit leaf block (CONT-057) |
+| `crop_photosynthesis_rate` | `0.125` | `0.0625` | The O₂ a plant in `#zas:crop_plants`, such as a crop or sapling, makes from CO₂ in a zone at light 15, in mol/h. It scales linearly with the light, from 0 at light 0 (CONT-053, CONT-057) |
+| `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a plant in `#zas:leaf_plants`, such as a leaf block (CONT-057) |
 | `container_explosions_break_blocks` | `false` | `true` | Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107) |
 
-`ambient_variant`, `combustion_forms_zones` and `planting_forms_zones` act
-today. The others are in the file and in `/zas preset` already, marked "not
-used yet" with the requirement they wait for, and take effect when that
-feature lands. The space-mod compat mode (SPACE-004) joins in R2 with the Ad
-Astra adapter (D-66).
+Every option acts today except `block_pressure_damage`, which is in the file and
+in `/zas preset` already, marked "not used yet" with the requirement it waits
+for, and takes effect when that feature lands. The space-mod compat mode
+(SPACE-004) joins in R2 with the Ad Astra adapter (D-66).
 
 Zone triggers that aren't options: Normal's triggers (CORE-055), API calls
 (which include devices, leaks and `/zas gas`) and breaches of zones, form
