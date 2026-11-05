@@ -1862,6 +1862,14 @@ unverified.*
   and sent to it if it changed. It is whole kPa capped at 50, so normal air sends
   nothing after the first. A client that hasn't been told, or has left a server,
   counts as normal air, and an unresolved point leaves the last reading standing.
+- **One-shots** (`client.ThinAirOneShots`). A server plays a sound for everyone in
+  range, so the fade happens on each client, in NeoForge's `PlaySoundEvent`, the
+  one place every sound passes through. A non-ticking sound in a namespace given
+  to `ClientSounds.fadeInThinAir` plays at the factor's share of its volume, or
+  not at all at 0. So whatever plays a sound, on either side, plays its event as
+  usual and doesn't multiply by the factor. Vanilla's sounds and loops are left
+  alone. Each mod gives its own namespace, since `zas` knows nothing of the mods
+  built on it.
 
 ## 6. API module
 
@@ -1878,7 +1886,7 @@ unverified.*
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
-| `.api.client` | `ClientSounds` (`thinAir()`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
+| `.api.client` | `ClientSounds` (`thinAir()`, `fadeInThinAir(namespace)`, `fadesInThinAir(namespace)`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)

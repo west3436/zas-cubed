@@ -2,7 +2,9 @@ package io.github.west3436.zas.api;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
@@ -23,6 +25,15 @@ class ClientSoundsTest {
     @Test
     void api_060_a_listener_hears_normally_without_zas() {
         assertEquals(1, ClientSounds.thinAir());
+    }
+
+    @Test
+    void api_060_a_mod_gives_its_own_namespace() {
+        assertFalse(ClientSounds.fadesInThinAir("zas_test_given"));
+        ClientSounds.fadeInThinAir("zas_test_given");
+        assertTrue(ClientSounds.fadesInThinAir("zas_test_given"));
+        assertFalse(ClientSounds.fadesInThinAir("minecraft"));
+        assertThrows(NullPointerException.class, () -> ClientSounds.fadeInThinAir(null));
     }
 
     @Test

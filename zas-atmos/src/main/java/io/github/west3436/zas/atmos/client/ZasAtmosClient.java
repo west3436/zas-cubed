@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
@@ -47,6 +48,7 @@ public final class ZasAtmosClient {
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
         DeviceLoops.register(NeoForge.EVENT_BUS);
+        ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
