@@ -1167,12 +1167,22 @@ aren't done.
 Showing airflow is separate from pushing with it, and wider (CLIENT-003,
 DATA-015). At each atmos tick `VisibleFlows` picks a player's list: every exported
 edge's openings within 32 blocks, whichever zone the player is in and in any game
-mode, with the differences in whole kPa. The server sends the list, as an
-`AirflowEffectsPayload`, only if it differs from the last it sent the player, and
-every 10 s as a failsafe. The client holds the last list in `HeldFlows`, so a
-steady breach goes on showing with no packets; a newer list replaces it, and an
-empty one ends it. `AirflowParticlePlan` turns the list into each game tick's
-particles, with no Minecraft classes, and `client.AirflowParticles` starts them.
+mode, with the differences in whole kPa and the moles per second through those
+openings. The engine records that flow on each `Edge` as it exchanges, and exports
+it with the edge. The server sends the list, as an `AirflowEffectsPayload`, only if
+it differs from the last it sent the player, and every 10 s as a failsafe. The
+client holds the last list in `HeldFlows`, so a steady breach goes on showing with
+no packets; a newer list replaces it, and an empty one ends it.
+`AirflowParticlePlan` turns the list into each game tick's particles, with no
+Minecraft classes, and `client.AirflowParticles` starts them.
+
+`AirflowSoundPlan` turns the same list into loops (CLIENT-010), also with no
+Minecraft classes: openings grouped by 8-block grid cell, the 2 sources loudest at
+the listener, and a hiss and a wind for each. `client.AirflowSounds` asks
+`ClientSounds.loop` for them each game tick while the list has them. It never stops
+a sound. When the list changes or ends it stops asking, and the loop manager's lease
+ends the sound, so a flow that ends can't leave a loop playing. Thin air is the
+manager's too.
 
 *Implemented in part ([#42](https://github.com/west3436/zas-cubed/issues/42)):*
 ignition sources (FIRE-014, FIRE-015), in `io.github.west3436.zas.ignition`.

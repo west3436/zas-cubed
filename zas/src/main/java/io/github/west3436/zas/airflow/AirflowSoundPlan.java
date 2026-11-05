@@ -16,6 +16,9 @@ import java.util.Map;
  *       of its flow. So many edges at one breach add up to one sound, and a cell's source keeps its
  *       identity as the listener moves. A wide breach is several sources, of which a listener hears
  *       the {@value #MAX_SOURCES} loudest at most, so it can't use up the client's loop slots.
+ *   <li><b>Two loops a source:</b> a hiss, which says where the leak is, and the wind of the class
+ *       its pressure difference reaches (FLOW-011), which gives it body: {@link #loops}. So a client
+ *       plays at most {@value #MAX_LOOPS} airflow loops.
  *   <li><b>Loudness</b> follows the moles per second through the source's openings, and no flow is
  *       silence: {@link #volume}. It is capped, so a source can't be a roar however much it adds up.
  *   <li><b>Pitch</b> follows the pressure difference: {@link #pitch}.
@@ -26,12 +29,18 @@ public final class AirflowSoundPlan {
     public static final double RANGE = 16;
 
     /** The most sources a listener hears at once. */
-    public static final int MAX_SOURCES = 3;
+    public static final int MAX_SOURCES = 2;
+
+    /** The most airflow loops a client plays at once: each source's hiss and wind. */
+    public static final int MAX_LOOPS = 2 * MAX_SOURCES;
 
     /** The side of the grid's cells, blocks. */
     public static final int CELL = 8;
 
-    /** The moles per second at which a source reaches full volume. */
+    /**
+     * The moles per second at which a source reaches full volume. One hole in a big room at one
+     * atmosphere is about 27, and many holes about 69 ({@code FlowExportTest}).
+     */
     private static final double FULL_VOLUME_MOLES = 64;
 
     /** The difference at which a source plays at the sound's own pitch, kPa: one atmosphere. */
@@ -70,7 +79,58 @@ public final class AirflowSoundPlan {
         }
     }
 
-    /** A source's volume for this flow, 0 to 1, in proportion to it: 0 for none, 1 from the full. */
+    /** The sounds a source can play. */
+    public enum Sound {
+        HISS,
+        WIND_LIGHT,
+        WIND_MOB,
+        WIND_HEAVY
+    }
+
+    /**
+     * One looping sound to ask for.
+     *
+     * @param source names its source: a source and a sound together name one loop
+     * @param sound the sound
+     * @param x where it is
+     * @param volume its volume at the source, 0 to 1
+     * @param pitch its pitch
+     */
+    public record Loop(long source, Sound sound, double x, double y, double z, float volume, float pitch) {}
+
+    /** The wind for a pressure difference: the heaviest class it reaches, and light below them all. */
+    public static Sound wind(double kpa, double mobKpa, double heavyKpa) {
+        if (kpa >= heavyKpa) {
+            return Sound.WIND_HEAVY;
+        }
+        return kpa >= mobKpa ? Sound.WIND_MOB : Sound.WIND_LIGHT;
+    }
+
+    /**
+     * The loops to ask for now: each source's hiss and wind, at most {@value #MAX_LOOPS}.
+     *
+     * @param flows what the client holds
+     * @param px the listener's position
+     * @param mobKpa the mob class's threshold (FLOW-011)
+     * @param heavyKpa the heavy class's threshold (FLOW-011)
+     */
+    public static List<Loop> loops(
+            List<VisibleFlow> flows, double px, double py, double pz, double mobKpa, double heavyKpa) {
+        List<Source> sources = plan(flows, px, py, pz);
+        List<Loop> loops = new ArrayList<>(sources.size() * 2);
+        for (Source s : sources) {
+            float volume = s.volume();
+            float pitch = s.pitch();
+            loops.add(new Loop(s.key(), Sound.HISS, s.x(), s.y(), s.z(), volume, pitch));
+            loops.add(new Loop(s.key(), wind(s.kpa(), mobKpa, heavyKpa), s.x(), s.y(), s.z(), volume, pitch));
+        }
+        return loops;
+    }
+
+    /**
+     * A source's volume for this flow, 0 to 1, in proportion to it: 0 for none, 1 from the full. This
+     * is the one place loudness is decided, so another rule goes here.
+     */
     public static float volume(double molesPerSecond) {
         return (float) Math.min(1, Math.max(0, molesPerSecond) / FULL_VOLUME_MOLES);
     }

@@ -116,7 +116,7 @@ class AirflowSoundPlanTest {
     }
 
     @Test
-    void client_010_a_wide_breach_takes_at_most_three_slots_the_loudest_where_the_listener_is() {
+    void client_010_a_wide_breach_is_at_most_two_sources_the_loudest_where_the_listener_is() {
         // Openings in a line along z, a cell apart, each as strong: the listener is near z = 40.
         List<VisibleFlow> flows = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
@@ -128,5 +128,18 @@ class AirflowSoundPlanTest {
             assertTrue(Math.abs(s.z() - 40.5) <= AirflowSoundPlan.CELL + 0.5, "a far source: " + s);
         }
         assertEquals(40.5, sources.get(0).z(), 1e-6);
+    }
+
+    @Test
+    void client_010_a_big_breach_a_listener_is_far_from_can_lose_to_a_small_one_beside_it() {
+        // Loudness at the listener decides, not the source's own: 27 mol/s 15 blocks away against
+        // 12 mol/s 1 block away.
+        List<VisibleFlow> flows =
+                List.of(flow(101, 27, at(16, 64, 0)), flow(101, 12, at(0, 64, 0)), flow(101, 12, at(0, 64, 8)));
+        List<AirflowSoundPlan.Source> sources = AirflowSoundPlan.plan(flows, 1, 64.5, 0.5);
+        assertEquals(2, sources.size());
+        assertEquals(0, sources.get(0).x(), 1e-6);
+        assertEquals(0.5, sources.get(0).z(), 1e-6);
+        assertEquals(8.5, sources.get(1).z(), 1e-6);
     }
 }
