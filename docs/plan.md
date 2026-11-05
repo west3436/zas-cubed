@@ -328,24 +328,39 @@ passed. The owner's in-game checks come afterwards, in one combined test world.
 |---|---|---|---|
 | Zone rebuild flake | [#214](https://github.com/west3436/zas-cubed/pull/214) | None | Closes [#209](https://github.com/west3436/zas-cubed/issues/209) |
 | Gas fire's look | [#215](https://github.com/west3436/zas-cubed/pull/215) | CLIENT-013 *Implemented* after the owner's check | Closes [#31](https://github.com/west3436/zas-cubed/issues/31) |
-| Photosynthesis and S-11 | [#229](https://github.com/west3436/zas-cubed/pull/229) | CONT-053, CONT-057, S-11 | The owner's check of the O₂ pace. A greenhouse's empty start and the night rate are for review |
+| Photosynthesis and S-11 | [#229](https://github.com/west3436/zas-cubed/pull/229) | CONT-053, CONT-057, S-11 | A greenhouse's empty start and the night rate are for review |
 | Container reactions | [#220](https://github.com/west3436/zas-cubed/pull/220) | CONT-100 | Tanks in chests, on mobs and in item frames don't tick, so they don't react or fail until carried |
 | Tank failure | [#222](https://github.com/west3436/zas-cubed/pull/222) | CONT-038, CONT-107, CONT-109; API-059 added as *Draft* | A blast from a carried tank gives no kill credit. Block pressure damage is all that OPS-007 still waits on |
 | Canister failure | [#233](https://github.com/west3436/zas-cubed/pull/233) | CONT-085, CONT-101, CONT-102 | CONT-085's 1,273 K means the air around a canister, not the gas inside (dated note). No GameTest covers a canister in a paused or unresolved cell |
 | Pipe bursts | [#223](https://github.com/west3436/zas-cubed/pull/223) | CONT-108 | A burst comes one tick late |
 | Valves | [#225](https://github.com/west3436/zas-cubed/pull/225); a fix in [#231](https://github.com/west3436/zas-cubed/pull/231) | CONT-010, CONT-075 | A redstone valve at a chunk's edge can still bring the far chunk back, through the game's own neighbour updates. An unreproduced pipe report at a chunk's edge ([#226](https://github.com/west3436/zas-cubed/issues/226)) |
-| Pumps | [#231](https://github.com/west3436/zas-cubed/pull/231), [#240](https://github.com/west3436/zas-cubed/pull/240) | CONT-011, CONT-076, CONT-012 | CONT-070 needs the owner's check, and no code. A volume pump has no stall, so it can drive a line until it bursts |
+| Pumps | [#231](https://github.com/west3436/zas-cubed/pull/231), [#240](https://github.com/west3436/zas-cubed/pull/240) | CONT-011, CONT-076, CONT-012 | CONT-070 *Implemented* after the owner's check, with no code. A volume pump has no stall, so it can drive a line until it bursts |
 | Filter and mixer | [#217](https://github.com/west3436/zas-cubed/pull/217), [#237](https://github.com/west3436/zas-cubed/pull/237) | CONT-013, CONT-077 | A GUI button flips the side port until the wrench exists (CONT-035) |
-| Scrubber and the controller's parts | [#216](https://github.com/west3436/zas-cubed/pull/216), [#227](https://github.com/west3436/zas-cubed/pull/227), [#234](https://github.com/west3436/zas-cubed/pull/234) | CONT-015, CONT-079 to CONT-081, CONT-041, CONT-064, CONT-072 | CONT-049 needs the owner's check. A lone scrubber can't empty a room, and stalls a controller in Cycle. A vent loses gas if stepped on a busy port, which the schedule never does |
+| Scrubber and the controller's parts | [#216](https://github.com/west3436/zas-cubed/pull/216), [#227](https://github.com/west3436/zas-cubed/pull/227), [#234](https://github.com/west3436/zas-cubed/pull/234) | CONT-015, CONT-079 to CONT-081, CONT-041, CONT-064, CONT-072 | CONT-049 *Implemented* after the owner's check. A lone scrubber can't empty a room, and stalls a controller in Cycle. A vent loses gas if stepped on a busy port, which the schedule never does |
 | Passive vent | [#236](https://github.com/west3436/zas-cubed/pull/236) | CONT-016 | None |
 | Portables | [#218](https://github.com/west3436/zas-cubed/pull/218), [#230](https://github.com/west3436/zas-cubed/pull/230), [#235](https://github.com/west3436/zas-cubed/pull/235) | CONT-019, CONT-087, CONT-018 | The portable scrubber has no outlet. The portable pump's siphon has no rate limit. A failing tank in a portable isn't tested |
-| Tank transfer valve and S-13 | [#224](https://github.com/west3436/zas-cubed/pull/224), [#238](https://github.com/west3436/zas-cubed/pull/238) | CONT-103, CONT-104, S-13's GameTest | S-13's manual playtest. Nothing tells the player the chamber must lose its air first |
+| Tank transfer valve and S-13 | [#224](https://github.com/west3436/zas-cubed/pull/224), [#238](https://github.com/west3436/zas-cubed/pull/238) | CONT-103, CONT-104, S-13's GameTest | Nothing tells the player the chamber must lose its air first |
 | Fire follow-ups | [#219](https://github.com/west3436/zas-cubed/pull/219), [#228](https://github.com/west3436/zas-cubed/pull/228), [#241](https://github.com/west3436/zas-cubed/pull/241) | FIRE-032, FIRE-033, FIRE-034 and FIRE-035, all *Draft*, closing [#211](https://github.com/west3436/zas-cubed/issues/211) and [#212](https://github.com/west3436/zas-cubed/issues/212); dated notes on FIRE-030 and D-49 | Large hot zones aren't benchmarked, so check them at S-10. A very hot sealed room can relight as a gas fire burning its CO |
 | Extinguisher recipe and filled canisters | [#221](https://github.com/west3436/zas-cubed/pull/221) | CONT-086 | The owner's approval of the recipe |
 | Server stops | [#239](https://github.com/west3436/zas-cubed/pull/239), [#243](https://github.com/west3436/zas-cubed/pull/243) | NFR-015 added as *Draft* | Fires no longer pull chunks back up. The stop hang stays open ([#232](https://github.com/west3436/zas-cubed/issues/232), [#242](https://github.com/west3436/zas-cubed/issues/242)), with a watchdog to report it |
 
 The GameTests are `PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and_lit_crops_make_o2`,
 `s_11_normal_greenhouse_stays_unzoned` and `ToxinsLabTests.s_13_toxins_lab`.
+
+*2026-11-05: the owner played this round's world.* 24 of its 28 checks passed,
+which settles CONT-049, CONT-070, S-13's manual playtest and the O₂ pace. The four
+it flagged were changed the same day. None of those changes has run on a client
+yet, so each goes in the owner's second combined world. The owner also asked why a
+running pressure pump showed no flow where a volume pump did: a new one's target
+is one atmosphere, so in 1 atm air it has nothing to do. A GameTest now covers
+this, and pumps didn't change.
+
+| Flagged | PR | Change |
+|---|---|---|
+| Air sounds outlasted their particles | [#269](https://github.com/west3436/zas-cubed/pull/269) | Air loops follow the particles' thresholds, and clients hear of changes within 4 ticks. A passive vent gains particles |
+| Portables lagged when switched | [#268](https://github.com/west3436/zas-cubed/pull/268) | The model and running sound change at the press. Gas and heat still move only in the normal step |
+| A tank's leak hissed each second | [#272](https://github.com/west3436/zas-cubed/pull/272) | One hiss as a leak starts |
+| Tanks went on a TTV only by right-click | [#273](https://github.com/west3436/zas-cubed/pull/273) | Two tank slots on its screen. Start in creative now uses the TTV up |
 
 *2026-11-05: sound and particles on main.* The scope was airflow particles and
 sound, sounds for every device, gas fire and gas blast sounds, and particles for
@@ -473,8 +488,8 @@ _Updated 2026-11-05._
    *done 2026-11-03 (#188 to #199, #202 to #207; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*.
    ~~S-11 and S-13~~ *pass on main 2026-11-04 (#214 to #243; see
-   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
-   owner's combined test world still to play.
+   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
+   played its combined test world the next day.
    - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
      and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
      electrolyzer).
