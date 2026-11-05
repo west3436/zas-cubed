@@ -223,15 +223,19 @@ public final class Geometries {
      * lies closed and where it lies open. Its cells join the space on its other sides, and opening
      * or closing it only adds or removes openings across those faces, which never splits a zone
      * (GEO-044). A block that doesn't open, or seals the same faces either way, keeps zones apart
-     * across every face, so its cells are zones of their own.
+     * across every face, so its cells are zones of their own. A waterlogged state has the faces of
+     * its dry state: it seals every face either way (GEO-006), but its panel lies in the same place.
      *
      * @param state the state
      * @param geometry the geometry of any state of the block
      */
     public static int boundaryFlags(BlockState state, Function<BlockState, Geometry> geometry) {
         if (state.hasProperty(BlockStateProperties.OPEN)) {
-            Geometry here = geometry.apply(state);
-            Geometry toggled = geometry.apply(state.cycle(BlockStateProperties.OPEN));
+            BlockState dry = state.hasProperty(BlockStateProperties.WATERLOGGED)
+                    ? state.setValue(BlockStateProperties.WATERLOGGED, false)
+                    : state;
+            Geometry here = geometry.apply(dry);
+            Geometry toggled = geometry.apply(dry.cycle(BlockStateProperties.OPEN));
             int flags = 0;
             for (Face f : Face.values()) {
                 if (here.isFaceFull(f) != toggled.isFaceFull(f)) {

@@ -288,9 +288,9 @@ data/<namespace>/zas/geometry_overrides/<path>.json
 
 ```json
 {
-  "blocks": ["minecraft:honey_block", "#minecraft:leaves"],
-  "sealed_faces": ["down", "up", "north", "south", "west", "east"],
-  "volume": 0
+  "blocks": ["minecraft:sponge", "#mymod:gratings"],
+  "sealed_faces": ["down", "up"],
+  "volume": 600
 }
 ```
 
@@ -304,6 +304,22 @@ data/<namespace>/zas/geometry_overrides/<path>.json
 - When several overrides match a block, one naming the block directly beats
   one matching it through a tag; between equals, the file whose id sorts last
   wins.
+- **Shipped overrides** (GEO-009), in `data/zas/zas/geometry_overrides/`, are for
+  blocks whose collision shape misleads. To change one, ship a file at the same
+  path, which replaces it. A file naming a block directly also beats `leaves.json`
+  and the tags in `fences.json`:
+
+  | File | Blocks | Geometry |
+  |---|---|---|
+  | `leaves.json` | `#minecraft:leaves` | Permeable, 1,000 L |
+  | `scaffolding.json` | scaffolding | Permeable, 1,000 L |
+  | `fences.json` | `#minecraft:fences`, `#minecraft:fence_gates`, iron bars | Permeable, 1,000 L |
+  | `honey_block.json` | honey block | Gas-tight, 0 L |
+
+- **Fluids** (GEO-006): a position holding a fluid, whether a source, flowing or
+  a waterlogged block, holds no gas and is gas-tight on every face. An override
+  has the last word over that too, for a fluid block or a waterlogged state. So a
+  waterlogged fence, leaf or iron bar passes gas under the shipped overrides.
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)).
 - **When it applies:** overrides load when the server starts and reload with
@@ -363,9 +379,8 @@ data/<namespace>/zas/thermal/<path>.json
   | `snow_block.json` | snow block | 268 K |
 
   These set no U, so lava, magma and snow conduct at the fallback, and the ice
-  at `ice.json`'s 2.2. A source acts only at the far end of a wall: until
-  fluids seal (GEO-006), lava is open space, so lava inside a room, or beside
-  one with nothing between, isn't a source to it.
+  at `ice.json`'s 2.2. Lava seals (GEO-006), so it warms a room it touches
+  directly, through its own layer, as well as through any wall between.
 
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)).
