@@ -31,6 +31,15 @@
 #   commit       the vgstation13 commit hash, 7 to 40 hex digits.
 #   attribution  optional; defaults to "vgstation13 contributors, CC BY-SA 3.0 US".
 #
+# A sound taken from vgstation13. Its source is the file under vg's sound/, and
+# it has no state. "adapted" says how the file was changed, if it was:
+#
+#   path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/hum.ogg
+#   origin: vgstation13
+#   source: sound/ambience/ambiatm1.ogg
+#   commit: 0123456789ab
+#   adapted: Mixed to mono, cut to a loop and levelled.
+#
 # An asset taken or adapted from any other source:
 #
 #   path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/hiss.ogg
@@ -2655,3 +2664,89 @@ source: icons/mob/screen_alarms.dmi
 state: carbon_temp4
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
+
+# Sounds (docs/research/vg-sounds.md)
+
+path: zas/src/main/resources/assets/zas/sounds/airflow/hiss.ogg
+origin: vgstation13
+source: sound/effects/smoke.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 0.6 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds/airflow/wind_light.ogg
+origin: vgstation13
+source: sound/effects/wind/wind_2_1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 1.5 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds/airflow/wind_mob.ogg
+origin: vgstation13
+source: sound/effects/wind/wind_4_1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 1.5 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds/airflow/wind_heavy.ogg
+origin: vgstation13
+source: sound/effects/wind/wind_5_1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 1.5 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds/fire/loop.ogg
+origin: vgstation13
+source: sound/misc/comfyfire.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 0.4 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds/fire/ignite.ogg
+origin: vgstation13
+source: sound/effects/bamf.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Kept the right channel only, as the two partly cancel, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/blast/near1.ogg
+origin: vgstation13
+source: sound/effects/Explosion1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/blast/near2.ogg
+origin: vgstation13
+source: sound/effects/Explosion2.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/blast/far.ogg
+origin: vgstation13
+source: sound/effects/explosionfar.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/hum.ogg
+origin: vgstation13
+source: sound/ambience/ambiatm1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 0.6 s crossfade, levelled, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/hiss.ogg
+origin: vgstation13
+source: sound/effects/smoke.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 0.6 s crossfade, levelled, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/rush.ogg
+origin: vgstation13
+source: sound/machines/hiss.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, cut to a loop with a 0.5 s crossfade, levelled, re-encoded.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/engine.ogg
+origin: vgstation13
+source: sound/ambience/ambieng1.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Mixed to mono, cut to a loop with a 0.4 s crossfade, levelled, re-encoded.
+
+path: zas/src/main/resources/assets/zas/sounds.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds.json
+origin: original

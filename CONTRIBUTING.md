@@ -56,8 +56,10 @@ and its `origin`; blank lines separate entries:
 
 - **`origin: original`:** drawn from scratch. Nothing else is needed.
 - **`origin: vgstation13`:** `source` (the `.dmi` path in the vg
-  repository), `state` (the icon state) and `commit` (the vg commit hash).
-  Use only vg's CC BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder
+  repository), `state` (the icon state) and `commit` (the vg commit hash). A
+  sound's `source` is its path under vg's `sound/`, with no `state`, and
+  `adapted` says how the file was changed (`docs/research/vg-sounds.md`). Use
+  only vg's CC BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder
   (NFR-041).
 - **`origin: other`:** `source` (a URL, or a description), `license` (an
   SPDX id: `CC0-1.0`, `CC-BY-3.0`, `CC-BY-4.0`, `CC-BY-SA-3.0` or
