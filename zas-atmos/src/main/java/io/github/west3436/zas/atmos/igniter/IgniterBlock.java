@@ -1,8 +1,10 @@
 package io.github.west3436.zas.atmos.igniter;
 
 import com.mojang.serialization.MapCodec;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -83,6 +85,7 @@ public class IgniterBlock extends BaseEntityBlock {
                     now = now.setValue(LIT, false);
                 }
                 level.setBlock(pos, now, Block.UPDATE_CLIENTS);
+                level.playSound(null, pos, AtmosSounds.IGNITER_CLICK.get(), SoundSource.BLOCKS);
             }
         }
         super.neighborChanged(state, level, pos, neighbor, from, moving);

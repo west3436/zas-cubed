@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +36,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -380,9 +383,32 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         status = s;
         BlockState state = getBlockState();
         if (state.hasProperty(AreaAirControllerBlock.STATUS) && state.getValue(AreaAirControllerBlock.STATUS) != s) {
+            for (SoundEvent sound : soundsOf(state.getValue(AreaAirControllerBlock.STATUS), s)) {
+                level.playSound(null, getBlockPos(), sound, SoundSource.BLOCKS);
+            }
             level.setBlock(getBlockPos(), state.setValue(AreaAirControllerBlock.STATUS, s), 3);
             level.updateNeighborsAt(AreaAirControllerBlock.wall(state, getBlockPos()), state.getBlock());
         }
+    }
+
+    /**
+     * What a change of panel sounds like (CONT-127): its switch when power comes or goes, and its
+     * alarm only when the danger rises, not while it stays or falls. The panel is saved with the
+     * block, so a chunk coming back plays nothing.
+     */
+    private static List<SoundEvent> soundsOf(ControllerStatus was, ControllerStatus now) {
+        List<SoundEvent> sounds = new ArrayList<>(2);
+        if (was == ControllerStatus.UNPOWERED) {
+            sounds.add(AtmosSounds.CONTROLLER_ON.get());
+        } else if (now == ControllerStatus.UNPOWERED) {
+            sounds.add(AtmosSounds.CONTROLLER_OFF.get());
+        }
+        if (now == ControllerStatus.DANGER2) {
+            sounds.add(AtmosSounds.CONTROLLER_DANGER.get());
+        } else if (now == ControllerStatus.DANGER1 && was != ControllerStatus.DANGER2) {
+            sounds.add(AtmosSounds.CONTROLLER_WARNING.get());
+        }
+        return sounds;
     }
 
     // ---- Settings, for the GUI and tests -------------------------------------------------

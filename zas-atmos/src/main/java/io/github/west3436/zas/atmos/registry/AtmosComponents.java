@@ -8,7 +8,9 @@ import java.util.function.Supplier;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.Unit;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -30,6 +32,14 @@ public final class AtmosComponents {
     /** A gas tank's distribution pressure in kPa, 0 to 304 (LIFE-044); without it, the tank's default. */
     public static final Supplier<DataComponentType<Double>> DISTRIBUTION_PRESSURE = COMPONENTS.registerComponentType(
             "distribution_pressure", b -> b.persistent(Codec.DOUBLE).networkSynchronized(ByteBufCodecs.DOUBLE));
+
+    /**
+     * A gas tank that has fallen to its last minute of breath and hasn't said so yet (CONT-127): set
+     * by the breath that took it there, which doesn't know who is breathing, and cleared by the tank's
+     * next atmos tick, which does.
+     */
+    public static final Supplier<DataComponentType<Unit>> TANK_LOW = COMPONENTS.registerComponentType(
+            "tank_low", b -> b.persistent(Codec.unit(Unit.INSTANCE)).networkSynchronized(StreamCodec.unit(Unit.INSTANCE)));
 
     /** The tank in a suit chestplate's tank slot (CONT-090): one stack, or none. */
     public static final Supplier<DataComponentType<ItemContainerContents>> SUIT_TANK = COMPONENTS.registerComponentType(

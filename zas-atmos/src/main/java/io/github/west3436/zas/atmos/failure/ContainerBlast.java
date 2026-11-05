@@ -3,8 +3,8 @@ package io.github.west3436.zas.atmos.failure;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.particle.GasJets;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -47,7 +47,7 @@ public final class ContainerBlast {
 
     /** The hiss of a container losing gas. */
     public static void hiss(ServerLevel level, Vec3 at) {
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.4f, 1.6f);
+        level.playSound(null, at.x, at.y, at.z, AtmosSounds.CONTAINER_LEAK.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
     }
 
     /**
@@ -58,7 +58,7 @@ public final class ContainerBlast {
      * @param moles the moles it let out, which size the particles
      */
     public static void burst(ServerLevel level, Vec3 at, double moles) {
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.5f, 1.8f);
+        level.playSound(null, at.x, at.y, at.z, AtmosSounds.CONTAINER_BURST.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
         GasJets.burst(level, at, moles);
     }
 }

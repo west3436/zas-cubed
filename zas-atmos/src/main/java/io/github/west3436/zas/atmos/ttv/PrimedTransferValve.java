@@ -3,13 +3,13 @@ package io.github.west3436.zas.atmos.ttv;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -52,6 +52,9 @@ public class PrimedTransferValve extends Entity {
 
     private static final int TICKS_PER_SECOND = 20;
 
+    /** The seconds left from which its timer ticks each second. */
+    public static final int TICK_EVERY_SECOND_FROM = 30;
+
     private TransferValve valve = new TransferValve(ItemStack.EMPTY, ItemStack.EMPTY, false);
     private int timer = TransferValve.DEFAULT_TIMER;
     private int fuse = timer * TICKS_PER_SECOND;
@@ -80,7 +83,15 @@ public class PrimedTransferValve extends Entity {
         primed.setYRot(player.getDirection().toYRot());
         primed.arm(TransferValveItem.valve(stack), TransferValveItem.timer(stack));
         level.addFreshEntity(primed);
-        level.playSound(null, primed.getX(), primed.getY(), primed.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS);
+        level.playSound(
+                null,
+                primed.getX(),
+                primed.getY(),
+                primed.getZ(),
+                AtmosSounds.TTV_ARM.get(),
+                SoundSource.BLOCKS,
+                1.0f,
+                1.0f);
         return primed;
     }
 
@@ -92,6 +103,19 @@ public class PrimedTransferValve extends Entity {
         if (seconds <= 0 && !valve.isOpen()) {
             openValve();
         }
+    }
+
+    /**
+     * Whether its timer ticks audibly with this many game ticks left (CONT-127): each second for the
+     * last {@value #TICK_EVERY_SECOND_FROM} s, and every 5 s before that, since a timer can run for 10
+     * minutes.
+     */
+    public static boolean ticksAt(int fuse) {
+        if (fuse <= 0 || fuse % TICKS_PER_SECOND != 0) {
+            return false;
+        }
+        int seconds = fuse / TICKS_PER_SECOND;
+        return seconds <= TICK_EVERY_SECOND_FROM || seconds % 5 == 0;
     }
 
     /** The timer it was started with, s. */
@@ -128,7 +152,7 @@ public class PrimedTransferValve extends Entity {
         valve.open();
         nextStep = 0;
         publish();
-        level().playSound(null, getX(), getY(), getZ(), SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0f, 0.8f);
+        level().playSound(null, getX(), getY(), getZ(), AtmosSounds.TTV_OPEN.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
     }
 
     /** Tells clients what they draw: the tanks, whose tints follow their kinds, and the valve. */
@@ -158,8 +182,12 @@ public class PrimedTransferValve extends Entity {
     }
 
     private void serverTick(ServerLevel level) {
-        if (!valve.isOpen() && --fuse <= 0) {
-            openValve();
+        if (!valve.isOpen()) {
+            if (--fuse <= 0) {
+                openValve();
+            } else if (ticksAt(fuse)) {
+                level.playSound(null, getX(), getY(), getZ(), AtmosSounds.TTV_TICK.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+            }
         }
         if (--nextStep <= 0) {
             nextStep = AtmosTicks.PERIOD;

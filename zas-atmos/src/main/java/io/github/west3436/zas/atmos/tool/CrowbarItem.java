@@ -1,9 +1,11 @@
 package io.github.west3436.zas.atmos.tool;
 
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -43,6 +45,7 @@ public class CrowbarItem extends Item {
     public static boolean force(ServerLevel level, BlockPos lower, Player player) {
         boolean open = !level.getBlockState(lower).getValue(FirelockBlock.OPEN);
         FirelockBlock.setOpen(level, lower, open, player);
+        level.playSound(null, lower, AtmosSounds.FIRELOCK_FORCE.get(), SoundSource.BLOCKS);
         if (player != null) {
             player.displayClientMessage(
                     Component.translatable(

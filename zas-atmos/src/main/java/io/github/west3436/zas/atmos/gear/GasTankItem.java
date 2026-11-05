@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +24,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Unit;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
@@ -52,6 +55,12 @@ public class GasTankItem extends Item {
 
     /** The temperature tanks are filled at, K. */
     public static final double FILL_K = StandardAir.TEMPERATURE;
+
+    /** The seconds of breath left at which a tank warns its wearer (CONT-127). */
+    public static final double LOW_SECONDS = 60;
+
+    /** One second's breath at the distribution pressure, L: vg's 0.5 L per 8 s (LIFE-043). */
+    private static final double BREATH_LITRES_PER_SECOND = 0.5 / 8;
 
     /** The client's hook that opens a tank's settings screen; set by the client entry point. */
     public static Consumer<InteractionHand> settingsScreen = hand -> {};
@@ -249,11 +258,32 @@ public class GasTankItem extends Item {
 
             @Override
             public GasParcel draw(double moles) {
+                boolean plenty = breathSeconds(stack) >= LOW_SECONDS;
                 GasParcel taken = take(stack, moles);
+                if (plenty && breathSeconds(stack) < LOW_SECONDS) {
+                    stack.set(AtmosComponents.TANK_LOW.get(), Unit.INSTANCE);
+                }
                 changed.run();
                 return taken;
             }
         };
+    }
+
+    /**
+     * How long a tank can go on delivering at its distribution pressure: LIFE-046's internals stop when
+     * its pressure falls to that, and LIFE-043's breath takes the same volume at that pressure each
+     * second.
+     *
+     * @return the seconds of breath left, 0 or less once it can't deliver; infinite at a distribution
+     *     pressure of 0, as nothing is drawn
+     */
+    public static double breathSeconds(ItemStack stack) {
+        double distribution = distributionPressure(stack);
+        if (!(distribution > 0)) {
+            return Double.POSITIVE_INFINITY;
+        }
+        double volume = ((GasTankItem) stack.getItem()).volume;
+        return (contents(stack).pressure() - distribution) * volume / (distribution * BREATH_LITRES_PER_SECOND);
     }
 
     /** A tank's life support: its gas, as an internal supply (LIFE-028). */
@@ -270,8 +300,9 @@ public class GasTankItem extends Item {
 
     /**
      * One atmos tick of a tank, wherever it is: its gas reacts (CONT-100), then it fails if its
-     * pressure says so (CONT-038), at the middle of its holder's body. The reaction goes first, so
-     * that the check sees the pressure it raised in the same tick. Whatever carries a tank calls
+     * pressure says so (CONT-038), at the middle of its holder's body, and a breath that took it to
+     * its last minute is heard (CONT-127). The reaction goes first, so that the check sees the
+     * pressure it raised in the same tick. Whatever carries a tank calls
      * this once per atmos tick ({@link AtmosTicks#due}): the tank itself while it is in a player's
      * inventory or dropped, and a suit for the tank inside it. A tank transfer valve makes the same
      * two calls itself, as how a tank fails decides what becomes of it. A tank anywhere else, such
@@ -285,7 +316,19 @@ public class GasTankItem extends Item {
     public static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
         boolean reacted = ContainerReactions.react(tank, ((GasTankItem) tank.getItem()).volume);
         ContainerFailure.Verdict verdict = TankFailure.check(level, TankFailure.pointOf(holder), tank, null);
-        return reacted || verdict.kind() != ContainerFailure.Kind.NONE;
+        boolean warned = tank.remove(AtmosComponents.TANK_LOW.get()) != null;
+        if (warned && !tank.isEmpty()) {
+            level.playSound(
+                    null,
+                    holder.getX(),
+                    holder.getY(),
+                    holder.getZ(),
+                    AtmosSounds.TANK_LOW.get(),
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    1.0f);
+        }
+        return reacted || warned || verdict.kind() != ContainerFailure.Kind.NONE;
     }
 
     @Override
