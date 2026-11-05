@@ -264,7 +264,7 @@ smoke tests shall pass.
 *2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
 #### NFR-022 · Optional compat isolation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: A-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: A-01
 
 Compat code shall load only when its target mod is present. zas-cubed shall
 run fully without any optional mod installed.
@@ -272,6 +272,15 @@ run fully without any optional mod installed.
 - **Rationale:** Decision: A-01 and D-11.
 - **Verify:** A GameTest runs without any optional mod; Inspect the compat
   entry points.
+
+*2026-11-05: Implemented. `nfr_022_runs_with_no_optional_mod` checks that a GameTest
+server loads only the game, NeoForge and our own mods, so every GameTest in CI runs
+with no optional mod. The inspection found no compat entry point yet: `compat-adastra`
+holds only a `package-info` until the adapter comes in R2 (D-66), and nothing refers
+to it. No main source asks `ModList` or calls `Class.forName`. The mods' metadata lists
+only required dependencies, and `zas.mixins.json` is the one mixin config, with no
+`requiredMods`, and targets only game classes. The adapter, when it comes, needs this
+inspected again.*
 
 ## Quality and process
 
