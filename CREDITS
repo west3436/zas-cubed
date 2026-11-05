@@ -126,6 +126,14 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/volume_pump.json
 origin: original
 notes: The volume pump's six facings, on and off, with the existing volume_pump and volume_pump_on models.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/filter.json
+origin: original
+notes: The filter's six facings, on and off, with its side port on either side, with the existing filter models.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/mixer.json
+origin: original
+notes: The mixer's six facings, on and off, with its side port on either side, with the existing mixer models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/scrubber.json
 origin: original
 notes: The scrubber's six facings and four modes, with the existing scrubber models.

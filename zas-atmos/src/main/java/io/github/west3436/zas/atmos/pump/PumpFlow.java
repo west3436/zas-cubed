@@ -17,6 +17,11 @@ public final class PumpFlow {
 
     private PumpFlow() {}
 
+    /** A target clamped to 0–{@link #MAX_TARGET}; NaN is 0. */
+    public static double clampTarget(double kpa) {
+        return Double.isNaN(kpa) ? 0 : Math.max(0, Math.min(MAX_TARGET, kpa));
+    }
+
     /**
      * One side of a pump: the mixture it takes gas from or adds gas to.
      *

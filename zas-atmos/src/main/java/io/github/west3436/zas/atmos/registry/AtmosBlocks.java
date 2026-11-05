@@ -4,11 +4,13 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
+import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
+import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -105,6 +107,12 @@ public final class AtmosBlocks {
     /** The volume pump (CONT-012). */
     public static final DeferredBlock<VolumePumpBlock> VOLUME_PUMP =
             BLOCKS.registerBlock("volume_pump", VolumePumpBlock::new, metal());
+
+    /** The filter (CONT-013). */
+    public static final DeferredBlock<FilterBlock> FILTER = BLOCKS.registerBlock("filter", FilterBlock::new, metal());
+
+    /** The mixer (CONT-077). */
+    public static final DeferredBlock<MixerBlock> MIXER = BLOCKS.registerBlock("mixer", MixerBlock::new, metal());
 
     /** The manual valve (CONT-010). */
     public static final DeferredBlock<ManualValveBlock> MANUAL_VALVE =

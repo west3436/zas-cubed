@@ -2120,12 +2120,10 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; and `ContainerBlast`, their explosion |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
 | `igniter` | The igniter (§11.5) |
-| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus` |
+| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
-| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus` |
-| `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
-| `filter`, `mixer` | What a filter and a mixer move in a step (`FilterMath`, `MixerMath`; CONT-013, CONT-077). Their blocks aren't built yet |
+| `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
@@ -2633,6 +2631,51 @@ the cell in front of its grille).
   asked for. It is set to 100 L/s when new, and draws `[power] volume_pump` FE/t
   (20). Its GUI has the same layout, with ±1 and ±10 L/s buttons, and says if
   its rate is 0.
+- **Devices with a side port**, in `.inline`: the filter and the mixer. A
+  `SidePortBlock` adds port 2, and `mirrored`, to an inline device. The port is
+  to the right of the way its gas goes, or to the left while `mirrored`, as the
+  `_mirrored` models show. Facing up or down, the models turn about the x axis,
+  so the side port stays east, or west while `mirrored`. A structure's rotation
+  or mirror takes the side port with it, except that a vertical device's side
+  port can't point north or south, so it takes the other side instead.
+  - `SidePortEntity` holds the target and `flip`, which cycles `mirrored` and
+    calls `portsChanged`. The port keeps its share of the gas and joins any pipe
+    on the new side, and the pipe it left keeps its own share. The GUI's button
+    flips it until the wrench exists (CONT-035).
+  - Building one port's network can dissolve another that it reaches, so
+    `networks` asks for all three and then again, and a step uses only the
+    second answers. A device idles as `SAME_NETWORK` only when all three ports
+    are one network. With two in one network it still runs, and `FilterMath` and
+    `MixerMath` take gas out before adding any, so none is lost or made.
+  - `SidePortMenu` adds the target's slot and buttons and the flip to the base.
+    `SidePortScreen` draws them in a row under the switch, which sits lower than
+    a pump's to clear the extra port line.
+- **Filter** (CONT-013), in `.filter`. Gas comes in at the back, the gases its
+  `GasSelection` holds leave by the side outlet, and the rest leaves by the
+  front. `FilterMath.moles` takes an even slice of the input, the least of 100 L
+  at the input's conditions and what brings each outlet to the target
+  (`PumpFlow.molesToTarget`, for the part of the slice going there). It stops
+  once either outlet is at the target, even if the input holds nothing for that
+  outlet, so neither outlet ever passes it. New, it selects what a scrubber does:
+  CO₂ and `#zas:toxic`. It draws `[power] filter` FE/t (20).
+  - `FilterOption.offered` is what its GUI offers. The API can't list every gas
+    or tag, so this is the tags ZAS³ ships, their gases, standard air's gases,
+    the gases in its input line and whatever it already selects. A datapack gas
+    in none of those appears once it is in the line.
+  - The server makes that list when the GUI opens and sends it in the open
+    packet (`FilterBlock.useWithoutItem`). `FilterMenu` adds a data slot per
+    entry saying whether it's on. A button sends only an entry's place in the
+    list, which the server checks against its own, so a client can't select
+    anything the list doesn't hold.
+- **Mixer** (CONT-077), in `.mixer`. Gas comes in at the back and the side and
+  leaves by the front, up to a target. The back's share is set in whole percent,
+  50 when new, and the side's is the rest. `MixerMath.moles` asks each input for
+  moles in proportion to its fraction over its temperature, so each makes up its
+  fraction of the pressure the output gains. Together they're asked for what
+  brings the output to the target (`PumpFlow.molesToTarget`). Each gives at most
+  100 L at its own conditions, and when one can't give what it's asked for, both
+  scale by the same factor. An input with a fraction of 0 is never asked for gas,
+  so it can be empty. It draws `[power] mixer` FE/t (20).
 - **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, recharger or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and

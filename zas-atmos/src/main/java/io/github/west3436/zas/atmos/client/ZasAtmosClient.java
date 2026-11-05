@@ -107,6 +107,8 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.RECHARGER.get(), RechargerScreen::new);
         event.register(AtmosMenus.PRESSURE_PUMP.get(), PumpScreen::pressure);
         event.register(AtmosMenus.VOLUME_PUMP.get(), PumpScreen::volume);
+        event.register(AtmosMenus.FILTER.get(), FilterScreen::new);
+        event.register(AtmosMenus.MIXER.get(), MixerScreen::new);
     }
 
     /**
