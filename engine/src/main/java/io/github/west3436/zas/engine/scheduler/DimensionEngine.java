@@ -1202,7 +1202,13 @@ public final class DimensionEngine {
         long cell = space.cellAt(op.block(), op.sub());
         Zone zone = cell == CellSpace.NO_CELL ? null : graph.zoneOf(cell);
         if (zone == null) {
-            return new OpOutcome(op.seq(), OpOutcome.Outcome.AMBIENT, 0, moved, graph.ambient().temperature(), -1);
+            return new OpOutcome(
+                    op.seq(),
+                    OpOutcome.Outcome.AMBIENT,
+                    0,
+                    moved,
+                    graph.ambient().temperature(),
+                    -1);
         }
         long id = zone.id();
         double temperature = zone.mixture().temperature();
