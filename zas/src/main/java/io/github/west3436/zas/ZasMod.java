@@ -15,6 +15,7 @@ import io.github.west3436.zas.gas.GasRegistryEvents;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.hotspot.HotspotBlocks;
 import io.github.west3436.zas.hud.AtmosHud;
+import io.github.west3436.zas.hud.ListenerAir;
 import io.github.west3436.zas.ignition.IgnitionEvents;
 import io.github.west3436.zas.ignition.IgnitionSources;
 import io.github.west3436.zas.life.Breathers;
@@ -25,6 +26,7 @@ import io.github.west3436.zas.provider.ZasApiProviderImpl;
 import io.github.west3436.zas.reaction.ServerReactions;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.StopWatchdog;
+import io.github.west3436.zas.sound.ZasSounds;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -40,6 +42,7 @@ public final class ZasMod {
         // in their own constructors (architecture §6.2).
         ZasApiProviderImpl.install(NeoForge.EVENT_BUS);
         HotspotBlocks.register(modBus);
+        ZasSounds.register(modBus);
         Geometries.register(NeoForge.EVENT_BUS);
         ChangeTracker.register(NeoForge.EVENT_BUS);
         TriggerStates.register(NeoForge.EVENT_BUS);
@@ -60,6 +63,7 @@ public final class ZasMod {
         Internals.register(modBus);
         Photosynthesis.register(NeoForge.EVENT_BUS);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
+        ListenerAir.register(modBus, NeoForge.EVENT_BUS);
         FuelProfiles.register(NeoForge.EVENT_BUS);
         BlockIgnitions.register(NeoForge.EVENT_BUS);
         Burners.register(NeoForge.EVENT_BUS);

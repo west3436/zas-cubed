@@ -1068,7 +1068,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Respiration and photosynthesis | queue ops with source attribution | respiration per breather on its own cadence; photosynthesis a pass over the known plants, spread across game ticks; both aggregated per zone per atmos tick | LIFE-005, CONT-053 |
 | Airflow | `Result` edge flow records | each game tick, entities within range of active edges only | FLOW-001 to FLOW-019 |
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` and light vanilla fires | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027, FIRE-033, FIRE-034 |
-| Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, D-53 |
+| Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, DATA-019, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
@@ -1805,6 +1805,48 @@ helmet and analyzer triggers of CLIENT-001 and the internals indicator
   icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
   The state is cleared on logout.
 
+### Looping sounds and thin air
+
+*Built, Draft until the owner's review (CLIENT-015, CLIENT-016, DATA-019,
+API-060, API-061). Nobody can hear anything in CI, so how they sound is
+unverified.*
+
+- **The rules** (`sound.LoopBook`, no game classes). A caller asks for a loop:
+  a source, a sound, a position, a volume, a pitch and a range. A source and a
+  sound name one loop. Each game tick the book drops lapsed requests, chooses
+  the 8 candidates that reach the listener loudest, ramps each voice towards its
+  volume times the thin-air factor, and releases a voice that is no longer
+  chosen once it is silent. A chosen loop gets a bonus of 1.25 on its loudness,
+  so loops about as loud don't take turns. A new voice starts only when fewer
+  than 8 exist, so a swap waits for the old voice to fade.
+- **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
+  stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
+  that forgets, or stops existing, can't leave a sound playing.
+- **Gain.** A voice's gain is its fade times a straight line from 1 at the source
+  to 0 at its range. The fade takes 0.5 s, whichever way and however far it goes,
+  and the distance part follows the listener at once. The instance plays with the
+  engine's attenuation off, so `attenuation_distance` in `sounds.json` isn't used,
+  and the engine still pans a mono sound by position. Loops mustn't be marked
+  `stream`: streamed sounds share a pool of 8 channels with the music.
+- **The shell** (`client.ClientLoops`, `client.LoopSoundInstance`). It runs the
+  book at the end of each client tick, at the camera's position, and starts or
+  stops an instance per voice. It drops everything when the level changes or the
+  player logs out. A source in a chunk the client doesn't hold isn't a candidate,
+  whoever keeps asking. An instance the engine dropped is replaced, once a
+  second at most, as after a change of audio device. A loop has no instance
+  while its slider is at 0, because the engine keeps ticking one it cut off that
+  way, and reports it as active. An instance whose shell stops tending it stops
+  by itself after 2 seconds. While the game is paused neither side ticks, so no
+  lease runs out.
+- **Thin air** (`sound.ThinAir`, `hud.ListenerAir`, `hud.ClientListenerAir`). The
+  factor is a straight line from 0 at 1 kPa to 1 at 50 kPa, read from the real
+  pressure at the eyes. The HUD's state can't give it: its pressure is what
+  reaches the player through its protection, and it has none without an alert.
+  Every 5 game ticks, staggered by entity id, each player's reading is worked out
+  and sent to it if it changed. It is whole kPa capped at 50, so normal air sends
+  nothing after the first. A client that hasn't been told, or has left a server,
+  counts as normal air, and an unresolved point leaves the last reading standing.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)
@@ -1820,6 +1862,7 @@ helmet and analyzer triggers of CLIENT-001 and the internals indicator
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
 | `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
+| `.api.client` | `ClientSounds` (`thinAir()`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
 ### 6.2 Installation and fallback (API-006, API-009, API-040)
@@ -1857,6 +1900,10 @@ helmet and analyzer triggers of CLIENT-001 and the internals indicator
   `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`),
   `oxygenMinimum` to 16 kPa, `molarHeatCapacity` to the shipped values for
   N₂ and O₂ and nothing for other gases, and `atmosPeriodTicks` to 20.
+- **The client's sound service is separate.** `ClientSounds` holds a
+  `ClientSoundProvider` that only the physical client installs, from `ZasClient`.
+  A dedicated server, like a game without `zas`, keeps the defaults: every
+  listener hears normally and loops play nothing.
 
 #### Breathability (API-014)
 
@@ -2120,7 +2167,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -3089,6 +3136,18 @@ client works out for itself. No client ever sees a zone (D-53).
   per tick, how many ticks, each particle's life, how far it travels, the
   cone's half-angle, a grey and a size. The speed comes from the distance, the
   life and the sprite's friction, so a particle ends about where it should.
+  Sizes that follow moles go by ratio, between a low and a high amount, since
+  gas comes in amounts many powers of ten apart.
+- **The kinds:**
+
+  | Kind | Sent when | Its number | Shape |
+  |---|---|---|---|
+  | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
+  | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
+  | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
+
+  An exploding container sends nothing, since vanilla's explosion has its own
+  particles. Nothing is sent for no moles, so an empty canister shows nothing.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes
@@ -3101,3 +3160,13 @@ client works out for itself. No client ever sees a zone (D-53).
   (`minecraft:poof`), and sets its speed, life, grey and size, so there is no new
   texture and no gas's colour. It ends every jet when the client's level changes,
   and makes none while the game is paused.
+
+### 11.13 Sounds (CLIENT-020, CLIENT-021)
+
+`AtmosSounds`, and `zas.sound.ZasSounds` for the framework, register one sound
+event for each thing that happens, named for it: `zas_atmos:device.pump.run`,
+`zas:fire.ignite`. Everything about how an event sounds is in the mod's
+`sounds.json`: the file, and its pitch, volume and range. So devices can share
+vg's few files at different pitches, and a sound can be swapped with no code
+change. Which vg file each event uses, and why, is in [vg
+sounds](research/vg-sounds.md).

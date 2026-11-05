@@ -50,6 +50,65 @@ class JetPlanTest {
     }
 
     @Test
+    void client_018_size_goes_by_ratio_and_stops_at_each_end() {
+        assertEquals(0, JetPlan.scale(0.5, 1, 100), EPS);
+        assertEquals(0, JetPlan.scale(1, 1, 100), EPS);
+        assertEquals(0.5, JetPlan.scale(10, 1, 100), EPS);
+        assertEquals(1, JetPlan.scale(100, 1, 100), EPS);
+        assertEquals(1, JetPlan.scale(1e9, 1, 100), EPS);
+        assertEquals(1, JetPlan.scale(Double.POSITIVE_INFINITY, 1, 100), EPS);
+        assertEquals(0, JetPlan.scale(Double.NaN, 1, 100), EPS);
+        assertEquals(0, JetPlan.scale(-5, 1, 100), EPS);
+    }
+
+    @Test
+    void client_018_a_bigger_leak_is_a_bigger_jet() {
+        JetPlan small = JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_LOW);
+        JetPlan middle = JetPlan.of(GasJetKind.LEAK, 1);
+        JetPlan big = JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_HIGH);
+        assertTrue(small.particles() < middle.particles() && middle.particles() < big.particles());
+        assertTrue(small.distance() < middle.distance() && middle.distance() < big.distance());
+        assertTrue(small.size() < big.size());
+        assertEquals(big, JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_HIGH * 100));
+        assertEquals(small, JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_LOW / 100));
+    }
+
+    @Test
+    void client_018_a_leak_is_a_narrow_jet_that_flies_its_distance() {
+        JetPlan plan = JetPlan.of(GasJetKind.LEAK, 1);
+        assertTrue(plan.spread() < Math.toRadians(30), "not a jet: " + plan.spread());
+        assertEquals(plan.distance(), travelled(plan), EPS);
+    }
+
+    @Test
+    void client_018_a_bigger_burst_is_a_bigger_cloud() {
+        // A 70 L tank at 40 atm, and a canister at its 90 atm rating.
+        JetPlan tank = JetPlan.of(GasJetKind.BURST, 116);
+        JetPlan canister = JetPlan.of(GasJetKind.BURST, 3700);
+        assertTrue(tank.particles() < canister.particles());
+        assertTrue(tank.distance() < canister.distance());
+        assertTrue(tank.size() < canister.size());
+    }
+
+    @Test
+    void client_018_a_burst_runs_from_fewest_to_most_in_every_direction() {
+        JetPlan small = JetPlan.of(GasJetKind.BURST, JetPlan.BURST_LOW);
+        JetPlan big = JetPlan.of(GasJetKind.BURST, JetPlan.BURST_HIGH);
+        assertEquals(JetPlan.BURST_FEWEST, small.particles(), EPS);
+        assertEquals(JetPlan.BURST_MOST, big.particles(), EPS);
+        assertEquals(Math.PI, big.spread(), EPS);
+        assertEquals(big.distance(), travelled(big), EPS);
+    }
+
+    @Test
+    void client_017_the_biggest_burst_fits_a_sources_cap() {
+        JetPlan big = JetPlan.of(GasJetKind.BURST, JetPlan.BURST_HIGH);
+        assertTrue(big.perTick() <= JetEmitters.PER_SOURCE, big.perTick() + " a tick");
+        JetPlan leak = JetPlan.of(GasJetKind.LEAK, JetPlan.LEAK_HIGH);
+        assertTrue(leak.perTick() <= JetEmitters.PER_SOURCE, leak.perTick() + " a tick");
+    }
+
+    @Test
     void client_018_a_cone_stays_within_its_half_angle() {
         Random random = new Random(1);
         double[][] axes = {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0.6, 0, 0.8}, {0.48, 0.6, 0.64}};
