@@ -207,7 +207,8 @@ public abstract class PortableGasDevice extends PortableDevice {
         ItemStack held = tank.tank();
         GasMixture air;
         if (held.isEmpty()) {
-            if (cell.state() != AtmosphereState.ZONED) {
+            // A paused zone is still a room, at its last-known state (GEO-035).
+            if (cell.state() != AtmosphereState.ZONED && cell.state() != AtmosphereState.PAUSED) {
                 return PortableStatus.NO_ROOM;
             }
             if (!trusted) {

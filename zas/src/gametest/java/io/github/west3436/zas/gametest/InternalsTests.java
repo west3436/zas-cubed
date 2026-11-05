@@ -33,6 +33,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -115,6 +116,26 @@ public final class InternalsTests {
     }
 
     // ---- LIFE-029 -----------------------------------------------------------------------------
+
+    /** The toggle's handler switches the sender's own internals, and refuses a spectator or a dead sender (NFR-011). */
+    @GameTest(template = "empty")
+    public static void nfr_011_only_a_living_player_toggles_their_own_internals(GameTestHelper h) {
+        FakePlayer sender = TestPlayers.hurtable(h.getLevel(), "zas_toggle_sender");
+        FakePlayer other = TestPlayers.hurtable(h.getLevel(), "zas_toggle_other");
+        Internals.handleToggle(Internals.TogglePayload.INSTANCE, TestPlayers.sentBy(sender));
+        h.assertTrue(Internals.on(sender), "the toggle didn't reach the sender");
+        h.assertFalse(Internals.on(other), "the toggle reached another player");
+
+        sender.setGameMode(GameType.SPECTATOR);
+        Internals.handleToggle(Internals.TogglePayload.INSTANCE, TestPlayers.sentBy(sender));
+        h.assertTrue(Internals.on(sender), "a spectator toggled");
+
+        sender.setGameMode(GameType.SURVIVAL);
+        sender.setHealth(0);
+        Internals.handleToggle(Internals.TogglePayload.INSTANCE, TestPlayers.sentBy(sender));
+        h.assertTrue(Internals.on(sender), "a dead player toggled");
+        h.succeed();
+    }
 
     /**
      * Internals are off until toggled, stay as toggled, and are saved with the entity (LIFE-029).

@@ -10,7 +10,7 @@ public enum PortableStatus {
     NO_BATTERY,
     /** Switched on, with work to do and an empty battery. */
     BATTERY_EMPTY,
-    /** It holds no tank and its cell isn't in a zone: open air, unresolved or paused. */
+    /** It holds no tank and its cell isn't in a zone: open air, or unresolved. */
     NO_ROOM,
     /** It is waiting for the air around it to settle (CONT-018, as a vent does). */
     WAITING,
