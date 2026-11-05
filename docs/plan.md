@@ -297,19 +297,53 @@ condensed combined test world.
 |---|---|---|---|
 | Shared fire chemistry | [#188](https://github.com/west3436/zas-cubed/pull/188) | FIRE-030; FIRE-005's CO share | None |
 | Reactions | [#190](https://github.com/west3436/zas-cubed/pull/190), [#193](https://github.com/west3436/zas-cubed/pull/193), [#196](https://github.com/west3436/zas-cubed/pull/196) | FIRE-001 to FIRE-006, FIRE-031; API-019, API-020 | None |
-| Vanilla fire and fuels | [#194](https://github.com/west3436/zas-cubed/pull/194), [#197](https://github.com/west3436/zas-cubed/pull/197) | FIRE-020 to FIRE-022, FIRE-024, FIRE-025, FIRE-027; HEAT-007; CONT-067 | Fire can still burn away a block whose cell lacks O₂ at a zone's edge (M4 skipped). Vanilla's fire-spread check and campfire lighting aren't hooked |
+| Vanilla fire and fuels | [#194](https://github.com/west3436/zas-cubed/pull/194), [#197](https://github.com/west3436/zas-cubed/pull/197) | FIRE-020 to FIRE-022, FIRE-024, FIRE-025, FIRE-027; HEAT-007; CONT-067 | ~~Fire can still burn away a block whose cell lacks O₂ at a zone's edge (M4 skipped).~~ *`FireBlockMixin` has had M4 since #194; it has no GameTest of its own.* Vanilla's fire-spread check and campfire lighting aren't hooked |
 | Hotspots and the gas fire | [#191](https://github.com/west3436/zas-cubed/pull/191), [#202](https://github.com/west3436/zas-cubed/pull/202), [#206](https://github.com/west3436/zas-cubed/pull/206) | FIRE-010, FIRE-011, FIRE-013, FIRE-016 to FIRE-019; DATA-009's hotspot part; CLIENT-013, after the owner's look at the gas fire (2026-11-04) | None |
 | Fire API | [#203](https://github.com/west3436/zas-cubed/pull/203) | API-031; API-055 to API-058 added, accepted by the owner and *Implemented* | None |
 | Ignition sources | [#189](https://github.com/west3436/zas-cubed/pull/189) | FIRE-014, FIRE-015; API-053 added, accepted by the owner and *Implemented* | None |
 | Igniter | [#192](https://github.com/west3436/zas-cubed/pull/192) | CONT-105, FIRE-006's GameTest | None |
 | Fire alarm | [#199](https://github.com/west3436/zas-cubed/pull/199) | CONT-044 | None |
-| Fire extinguisher | [#195](https://github.com/west3436/zas-cubed/pull/195), [#198](https://github.com/west3436/zas-cubed/pull/198), [#204](https://github.com/west3436/zas-cubed/pull/204) | CONT-037; D-74 (its sprite stays at vg's 32 × 32) | No recipe yet, so creative only. No spray particle or in-use pose |
+| Fire extinguisher | [#195](https://github.com/west3436/zas-cubed/pull/195), [#198](https://github.com/west3436/zas-cubed/pull/198), [#204](https://github.com/west3436/zas-cubed/pull/204) | CONT-037; D-74 (its sprite stays at vg's 32 × 32) | ~~No recipe yet, so creative only.~~ *Recipe added in [#221](https://github.com/west3436/zas-cubed/pull/221), for the owner to approve.* No spray particle or in-use pose |
 | S-03 and S-04 GameTests | [#205](https://github.com/west3436/zas-cubed/pull/205) | S-03, S-04 | None |
 | `geo_010` flake | [#207](https://github.com/west3436/zas-cubed/pull/207) | None | Closes [#159](https://github.com/west3436/zas-cubed/issues/159) |
 
 The GameTests are `FireStationTests.s_03_gas_leak_in_a_sealed_workshop`,
 `FireScenarioTests.s_04_room_fire_suffocates_and_rekindles_under_hardcore` and
 `s_04_room_fire_stays_vanilla_under_normal`. FIRE-012 stays in R2.
+
+*2026-11-04: S-11 and S-13 pass on main.* The scope was photosynthesis, reactions
+and failure in containers, pipe bursts, valves, pumps, the filter and mixer, the
+scrubber, the passive vent, the portables, the tank transfer valve, two fire
+follow-ups and the extinguisher's recipe. The compressor and electrolyzer, the
+rest of [#49](https://github.com/west3436/zas-cubed/issues/49), open pipe ends and GUI textures stayed out. The owner left the
+question from [#211](https://github.com/west3436/zas-cubed/issues/211) of how far hot fires burn to the coordinator's judgement,
+which gave FIRE-035: a gas fire at or above its fuel's autoignition point skips
+FIRE-030's 14 % O₂ limit and keeps the 10 kPa floor. It makes S-03's fire much
+hotter, so it stays *Draft* until the owner has seen it. Every PR merged once CI
+passed. The owner's in-game checks come afterwards, in one combined test world.
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Zone rebuild flake | [#214](https://github.com/west3436/zas-cubed/pull/214) | None | Closes [#209](https://github.com/west3436/zas-cubed/issues/209) |
+| Gas fire's look | [#215](https://github.com/west3436/zas-cubed/pull/215) | CLIENT-013 *Implemented* after the owner's check | Closes [#31](https://github.com/west3436/zas-cubed/issues/31) |
+| Photosynthesis and S-11 | [#229](https://github.com/west3436/zas-cubed/pull/229) | CONT-053, CONT-057, S-11 | The owner's check of the O₂ pace. A greenhouse's empty start and the night rate are for review |
+| Container reactions | [#220](https://github.com/west3436/zas-cubed/pull/220) | CONT-100 | Tanks in chests, on mobs and in item frames don't tick, so they don't react or fail until carried |
+| Tank failure | [#222](https://github.com/west3436/zas-cubed/pull/222) | CONT-038, CONT-107, CONT-109; API-059 added as *Draft* | A blast from a carried tank gives no kill credit. Block pressure damage is all that OPS-007 still waits on |
+| Canister failure | [#233](https://github.com/west3436/zas-cubed/pull/233) | CONT-085, CONT-101, CONT-102 | CONT-085's 1,273 K means the air around a canister, not the gas inside (dated note). No GameTest covers a canister in a paused or unresolved cell |
+| Pipe bursts | [#223](https://github.com/west3436/zas-cubed/pull/223) | CONT-108 | A burst comes one tick late |
+| Valves | [#225](https://github.com/west3436/zas-cubed/pull/225); a fix in [#231](https://github.com/west3436/zas-cubed/pull/231) | CONT-010, CONT-075 | A redstone valve at a chunk's edge can still bring the far chunk back, through the game's own neighbour updates. An unreproduced pipe report at a chunk's edge ([#226](https://github.com/west3436/zas-cubed/issues/226)) |
+| Pumps | [#231](https://github.com/west3436/zas-cubed/pull/231), [#240](https://github.com/west3436/zas-cubed/pull/240) | CONT-011, CONT-076, CONT-012 | CONT-070 needs the owner's check, and no code. A volume pump has no stall, so it can drive a line until it bursts |
+| Filter and mixer | [#217](https://github.com/west3436/zas-cubed/pull/217), [#237](https://github.com/west3436/zas-cubed/pull/237) | CONT-013, CONT-077 | A GUI button flips the side port until the wrench exists (CONT-035) |
+| Scrubber and the controller's parts | [#216](https://github.com/west3436/zas-cubed/pull/216), [#227](https://github.com/west3436/zas-cubed/pull/227), [#234](https://github.com/west3436/zas-cubed/pull/234) | CONT-015, CONT-079 to CONT-081, CONT-041, CONT-064, CONT-072 | CONT-049 needs the owner's check. A lone scrubber can't empty a room, and stalls a controller in Cycle. A vent loses gas if stepped on a busy port, which the schedule never does |
+| Passive vent | [#236](https://github.com/west3436/zas-cubed/pull/236) | CONT-016 | None |
+| Portables | [#218](https://github.com/west3436/zas-cubed/pull/218), [#230](https://github.com/west3436/zas-cubed/pull/230), [#235](https://github.com/west3436/zas-cubed/pull/235) | CONT-019, CONT-087, CONT-018 | The portable scrubber has no outlet. The portable pump's siphon has no rate limit. A failing tank in a portable isn't tested |
+| Tank transfer valve and S-13 | [#224](https://github.com/west3436/zas-cubed/pull/224), [#238](https://github.com/west3436/zas-cubed/pull/238) | CONT-103, CONT-104, S-13's GameTest | S-13's manual playtest. Nothing tells the player the chamber must lose its air first |
+| Fire follow-ups | [#219](https://github.com/west3436/zas-cubed/pull/219), [#228](https://github.com/west3436/zas-cubed/pull/228), [#241](https://github.com/west3436/zas-cubed/pull/241) | FIRE-032, FIRE-033, FIRE-034 and FIRE-035, all *Draft*, closing [#211](https://github.com/west3436/zas-cubed/issues/211) and [#212](https://github.com/west3436/zas-cubed/issues/212); dated notes on FIRE-030 and D-49 | Large hot zones aren't benchmarked, so check them at S-10. A very hot sealed room can relight as a gas fire burning its CO |
+| Extinguisher recipe and filled canisters | [#221](https://github.com/west3436/zas-cubed/pull/221) | CONT-086 | The owner's approval of the recipe |
+| Server stops | [#239](https://github.com/west3436/zas-cubed/pull/239), [#243](https://github.com/west3436/zas-cubed/pull/243) | NFR-015 added as *Draft* | Fires no longer pull chunks back up. The stop hang stays open ([#232](https://github.com/west3436/zas-cubed/issues/232), [#242](https://github.com/west3436/zas-cubed/issues/242)), with a watchdog to report it |
+
+The GameTests are `PhotosynthesisTests.s_11_hardcore_greenhouse_forms_a_zone_and_lit_crops_make_o2`,
+`s_11_normal_greenhouse_stays_unzoned` and `ToxinsLabTests.s_13_toxins_lab`.
 
 | Track | Area | Notes |
 |---|---|---|
@@ -390,7 +424,7 @@ The GameTests are `FireStationTests.s_03_gas_leak_in_a_sealed_workshop`,
 
 ## Immediate next steps
 
-_Updated 2026-11-03._
+_Updated 2026-11-04._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -410,10 +444,15 @@ _Updated 2026-11-03._
 4. **Widen out scenario by scenario:** ~~S-02, S-05 and S-08~~ *done
    2026-11-03 (#167 to #177, #180, #182, #183)*. ~~S-03 and S-04 (fire)~~
    *done 2026-11-03 (#188 to #199, #202 to #207; see
-   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Next,
-   S-11 and S-13, on the rest of #47, #48, #50 and #52 (pumps, filters
-   and scrubbers).
-   - From the fire round: a recipe for the extinguisher.
+   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*.
+   ~~S-11 and S-13~~ *pass on main 2026-11-04 (#214 to #243; see
+   [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
+   owner's combined test world still to play. Next, S-09 and S-10, then the rest
+   of #49 and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
+   electrolyzer).
+   - From this round, for the owner: accept the *Draft* IDs (FIRE-032 to FIRE-035,
+     API-059, NFR-015), approve the extinguisher's recipe, and choose what to do
+     about a stop hanging on a server running behind (#242).
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      airflow particles and sound (#57), magnetic boots (#49) and insulating
      station walls (#179).
