@@ -123,7 +123,8 @@ of the face and moving through it towards the low side. Each opening starts
 kPa / 200 particles a tick, up to 1, so 0.1 at 20 kPa and 0.5 at 101 kPa. Their
 speed is 0.1 + 0.35 × kPa / 101.325 blocks a tick, up to 0.6. One edge starts at
 most 8 a tick and a client at most 32, spent on the nearest edge first. The
-Particles setting scales the density: All 1, Decreased 0.4, Minimal none. With
+Particles setting scales the density by vanilla's own shares: All 1, Decreased
+2/3, Minimal none. With
 airflow switched off (FLOW-014) there are none. `AirflowParticlePlanTest` checks
 the curves, the caps, the setting, the direction and the 32 blocks;
 `client_003_players_within_32_blocks_are_sent_the_breach` and
