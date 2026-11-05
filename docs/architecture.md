@@ -1,8 +1,9 @@
 # ZAS³ architecture
 
-**Status:** Draft, 2026-10-31 (Phase B). For review against the
-`req-r1-baseline` requirements. The Phase B exit asks for this doc to be
-accepted, the NFR numbers set, and the mixin list known.
+**Status:** Accepted by the owner, 2026-11-05, which closes Phase B
+([#2](https://github.com/west3436/zas-cubed/issues/2)). Written from 2026-10-31
+against the `req-r1-baseline` requirements. The items still open are in
+[§9](#9-open-items).
 
 **Inputs:**
 
