@@ -53,6 +53,7 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -89,8 +90,12 @@ import net.neoforged.bus.api.IEventBus;
  * the life-support capability (API-022); internals join it with #36.
  */
 public final class ZasApiProviderImpl implements ZasApiProvider {
-    /** One cell of each ambient seen, by value; ambients are few. */
-    private final Map<Ambient, AtmosphereSample> ambientSamples = new ConcurrentHashMap<>();
+    /**
+     * One cell of each dimension's ambient as last asked. By dimension rather than by value, since a
+     * provider may give a new ambient every atmos tick (ENV-006).
+     */
+    private final Map<ResourceKey<Level>, AmbientCell> ambientCells = new ConcurrentHashMap<>();
+
     /** The tags of the gas set last asked about. */
     private volatile TagSets tagSets = TagSets.of(GasRegistry.EMPTY);
 
@@ -388,9 +393,16 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
 
     /** One cell of the level's dimension's ambient. Excluded dimensions keep theirs (ENV-018). */
     private AtmosphereSample ambientSample(Level level) {
-        return ambientSamples.computeIfAbsent(
-                Ambients.ambient(level.dimension()), ambient -> AtmosphereSample.ambient(Ambients.cell(ambient)));
+        Ambient ambient = Ambients.ambient(level.dimension());
+        AmbientCell cell = ambientCells.get(level.dimension());
+        if (cell == null || !cell.ambient().equals(ambient)) {
+            cell = new AmbientCell(ambient, AtmosphereSample.ambient(Ambients.cell(ambient)));
+            ambientCells.put(level.dimension(), cell);
+        }
+        return cell.sample();
     }
+
+    private record AmbientCell(Ambient ambient, AtmosphereSample sample) {}
 
     /** A zone's whole mixture. */
     static GasMixture mixture(ZoneView zone, GasRegistry registry) {
