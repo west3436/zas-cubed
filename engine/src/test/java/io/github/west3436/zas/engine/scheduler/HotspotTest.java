@@ -183,7 +183,13 @@ class HotspotTest {
         assertEquals(MIDDLE, o.ignition().block());
         assertEquals(f.zone().id(), o.zoneId());
         assertEquals(
-                List.of(new FireIntent(FireIntent.Kind.PLACE, MIDDLE, f.zone().id())), a.fireIntents());
+                List.of(new FireIntent(
+                        FireIntent.Kind.PLACE,
+                        MIDDLE,
+                        f.zone().id(),
+                        true,
+                        f.zone().moles(H2))),
+                a.fireIntents());
         assertEquals(0, f.hotspots().size(), "pending until the block is there");
         assertTrue(f.events.isEmpty());
         double h2 = f.zone().moles(H2);
@@ -278,6 +284,99 @@ class HotspotTest {
         OpOutcome.Ignition i = f.sim.outcomes.get(again).ignition();
         assertEquals(OpOutcome.IgnitionStatus.IGNITED, i.status());
         assertTrue(i.block() != MIDDLE, "the refused position waits; a neighbour lights");
+    }
+
+    // ---- FIRE-036: gas catching fire -------------------------------------------------------
+
+    private static List<FireIntent> catches(FireSim f) {
+        return f.intents.stream().filter(FireIntent::catches).toList();
+    }
+
+    /** The first gas fire in a zone catches, with the zone's fuel. The fires it spreads to don't. */
+    @Test
+    void fire_036_only_the_first_gas_fire_of_a_zone_catches() {
+        FireSim f = new FireSim(Ambient.STANDARD_AIR, 1).room(h2For(0.10));
+        f.step();
+        double h2 = f.zone().moles(H2);
+        f.sim.pipeline.ignite(MIDDLE, "test");
+        f.steps(4);
+        assertTrue(f.intents.size() > 1, "the fire spread");
+        assertEquals(1, catches(f).size(), "catches");
+        FireIntent first = catches(f).get(0);
+        assertEquals(MIDDLE, first.block());
+        assertEquals(h2, first.fuelMoles(), 1e-9, "its fuel");
+        for (FireIntent i : f.intents) {
+            if (!i.catches()) {
+                assertEquals(0, i.fuelMoles(), "a spread carries no fuel");
+            }
+        }
+    }
+
+    /** A second ignition lights a new fire in a zone that already burns, and that isn't catching. */
+    @Test
+    void fire_036_another_ignition_in_a_burning_zone_does_not_catch() {
+        FireSim f = new FireSim(Ambient.STANDARD_AIR, 0).room(h2For(0.10));
+        f.step();
+        f.sim.pipeline.ignite(MIDDLE, "test");
+        f.steps(2);
+        long again = f.sim.pipeline.ignite(SectionKeys.block(0, 64, 0), "test");
+        f.step();
+        assertEquals(
+                OpOutcome.IgnitionStatus.IGNITED,
+                f.sim.outcomes.get(again).ignition().status());
+        assertEquals(2, f.intents.size(), "two fires");
+        assertEquals(1, catches(f).size(), "catches");
+    }
+
+    /**
+     * Once a zone's gas fires are out, lighting it again is catching again. A fire that keeps relighting
+     * is the mod's to limit, by area, because the engine has no sound and a zone says nothing of where
+     * a listener is.
+     */
+    @Test
+    void fire_036_a_fire_that_went_out_catches_again() {
+        FireSim f = new FireSim(Ambient.STANDARD_AIR, 0).room(h2For(0.10));
+        f.step();
+        f.sim.pipeline.ignite(MIDDLE, "test");
+        f.steps(2);
+        assertEquals(1, catches(f).size(), "catches");
+        f.sim.world.set(1, 65, 1, AIR);
+        f.step();
+        f.sim.pipeline.ignite(MIDDLE, "test");
+        f.step();
+        assertEquals(2, catches(f).size(), "catches after it went out");
+    }
+
+    /** Autoignition is gas catching fire too. */
+    @Test
+    void fire_036_autoignition_catches() {
+        TreeMap<String, Double> air = new TreeMap<>(Ambient.STANDARD_AIR.partialPressures());
+        FireSim f = new FireSim(new Ambient(air, 900), 0);
+        f.sim.world.room(0, 64, 0, 2, 66, 2);
+        double[] m = new double[REGISTRY.size()];
+        m[H2] = f.sim.world.ambient.moles(Ambient.NITROGEN, 27_000) / 0.79 * 0.1;
+        f.sim.pipeline.add(SectionKeys.block(1, 65, 1), m, 900, LedgerCategory.API, true, "test");
+        f.steps(3);
+        assertEquals(1, catches(f).size(), "catches");
+    }
+
+    /**
+     * A vanilla fire in plain air counts as a burning zone, but no gas caught. In hydrogen, the gas
+     * catches when the fire first spreads through it as a gas fire, not when the vanilla fire appears.
+     */
+    @Test
+    void fire_036_a_vanilla_fire_catches_only_when_it_lights_gas() {
+        FireSim air = new FireSim(Ambient.STANDARD_AIR, 1).room(0);
+        air.sim.world.set(1, 65, 1, FIRE);
+        air.steps(4);
+        assertEquals(FireEvent.Kind.IGNITED, air.events.get(0).kind(), "the zone counts as burning");
+        assertTrue(catches(air).isEmpty(), "plain air caught");
+
+        FireSim gas = new FireSim(Ambient.STANDARD_AIR, 1).room(h2For(0.10));
+        gas.sim.world.set(1, 65, 1, FIRE);
+        gas.steps(4);
+        assertEquals(1, catches(gas).size(), "catches");
+        assertTrue(catches(gas).get(0).block() != MIDDLE, "it caught beside the vanilla fire");
     }
 
     // ---- FIRE-010: autoignition -----------------------------------------------------------

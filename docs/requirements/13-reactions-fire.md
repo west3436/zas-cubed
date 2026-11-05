@@ -4,13 +4,14 @@
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
 accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033, FIRE-034 and FIRE-035 were
-added as Drafts on 2026-11-04. FIRE-037 was added as a Draft on 2026-11-05.
+added as Drafts on 2026-11-04. FIRE-036 and FIRE-037 were added as Drafts on
+2026-11-05.
 
 **Scope.** Covers:
 - gas reactions
 - gas combustion and hotspots
 - vanilla fire, furnaces and solid fuels needing oxygen
-- the sound of a gas blast
+- the sound of a gas fire and a gas blast
 
 vgstation13's gas fire only burns fictional fuels
 ([zas-core §4](../research/zas-core.md#4-fire-firedm)). zas-cubed keeps the ZAS
@@ -656,6 +657,62 @@ hotter than real play; how much hotter isn't measured.*
 built on API-057. This requirement stays rejected.
 
 ## Sound
+
+#### FIRE-036 · A gas fire has its own sound
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-016, CLIENT-020, FIRE-014, FIRE-018
+
+Gas fire blocks within 16 blocks of a player shall play `zas:fire.loop` in place
+of vanilla's crackle, as at most 3 loops however big the fire, each louder as its
+part of the fire grows, up to a limit. A loop shall stop once its blocks are gone
+or their chunk has left the client. Gas catching fire shall play `zas:fire.ignite`
+once, scaled by its fuel: when a gas fire is placed in a zone that has none, not
+for a fire that spreads, and at most once every 5 s within 16 blocks. Vanilla fire
+shall keep vanilla's sound, and lighting one in air that can't burn shall play
+nothing.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: a gas fire
+  loop and an ignition whoomp, and vanilla fire keeps vanilla's sounds. Inferred: a
+  big fire mustn't take all 8 of a client's loops (CLIENT-015), and a fire that keeps
+  relighting mustn't repeat its whoomp.
+- **Verify:** `FireLoopGroupsTest`, `IgnitionWhoompsTest` and `fire_036_` in
+  `HotspotTest` (Unit) check the grouping, the curves, the limit by area and which
+  placements catch. `fire_036_` (GameTest) checks that one ignition plays one whoomp
+  however far it spreads, that relighting nearby stays quiet, that a vanilla fire
+  plays none until it lights gas, and that the scan behind the loop finds only the
+  gas fires there now and loads no chunk. Manual checks how they sound.
+
+*2026-11-05: added for review, with the behaviour built (architecture, "The sound
+of a gas fire"). Nothing has been heard, so the Manual part is open, and these are
+the owner's to judge by ear:*
+
+- *The loop's volume: 0.4 for one block, up the same step for each doubling, to 1
+  at 64 blocks in one 8-block cube. `fire.loop` is quiet to begin with, at -34 dBFS
+  RMS, as vanilla's fire is. Its range is 16 blocks.*
+- *Three loops at once. Each cube has one of five pitches from 0.94 to 1.06, because
+  cubes that start in the same round would otherwise play the same file in step.*
+- *The whoomp's volume: 0.4 up to 1 mol of fuel, then 0.6 more for each ten times
+  the fuel, up to 3. Above 1 it doesn't get louder at the source, because the game
+  clamps it, but it carries further: 26 blocks for the 112 mol in a 27-cell room at
+  10 % H₂, and 48 at most.*
+- *The limit: 5 s within 16 blocks. A second room catching next door within 5 s plays
+  nothing.*
+
+*A loop can lag a fire going out by up to 1.25 s: 5 ticks to the next look, the 10-tick
+lease, then the 10-tick fade.*
+
+*The look's cost, with its grouping and choosing, once warmed up: 2 µs with no fire in
+the 27 chunk sections it covers, 143 µs with one fire in each, because the 35,937 blocks
+it covers are then all read, and 423 µs when all of them are fire. It runs every 5 ticks.
+This was timed on a server's level, whose chunks are the same class as a client's, on a
+machine busy with other builds, so it gives an order of magnitude and no more. No client
+has run it. A section that once held a fire can go on being read after the fire has gone,
+because a palette keeps its old entries until it is rebuilt. That costs what a section
+with a fire costs.*
+
+*A thin-air fade applies to the whoomp like any of our one-shots, and `client.GasFireLoops`
+asks through `ClientSounds.loop`, which fades by itself. A whoomp above volume 1 in thin
+air loses range before it loses gain, as a near blast does (FIRE-037). That is from
+reading the game's code; no client runs here.*
 
 #### FIRE-037 · A gas blast has its own sound, near or far
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102

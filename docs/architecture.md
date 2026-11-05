@@ -1871,6 +1871,30 @@ unverified.*
   alone. Each mod gives its own namespace, since `zas` knows nothing of the mods
   built on it.
 
+### The sound of a gas fire
+
+*Built, Draft until the owner's review (FIRE-036). Vanilla fire keeps vanilla's
+sound, and nothing here runs for it.*
+
+- **The loop** (`client.GasFireLoops`, `hotspot.GasFireScan`, `sound.FireLoopGroups`).
+  Every 5 game ticks the client finds the gas fire blocks within 16 blocks of the
+  camera and asks for a loop for each of the 3 loudest groups. The scan asks each
+  chunk section's palette first, and reads a section's blocks only if it may hold a
+  gas fire. It never loads a chunk. A group is the fire blocks in one 8-block cube
+  fixed in the world, so a loop follows its fire as the fire changes. Each round
+  starts from the blocks as they are, so there is nothing to clear when a fire goes
+  out or a chunk leaves: nobody asks, and the 10-tick lease lapses.
+- **The whoomp** (`Hotspots`, `FireIntents`, `DimensionAtmos.gasCaught`,
+  `sound.IgnitionWhoomps`). `Hotspots` marks the `FireIntent` of the first gas fire
+  in a zone with no gas fire, whatever started it: an ignition, autoignition, or a
+  vanilla fire spreading into gas. A rejected component's intents are dropped, and
+  come again marked when the work is redone. The server plays the sound when it has
+  placed that block, so a refused block plays nothing and the sound comes with what
+  it describes. `FireIgnitedEvent` can't serve here. It fires for a vanilla fire in
+  plain air, not when that fire later lights gas, and a tick after the block appears.
+  `IgnitionWhoomps`, one per dimension, keeps a fire that goes out and relights from
+  playing it every time.
+
 ## 6. API module
 
 ### 6.1 Package layout (`zas-api`)
