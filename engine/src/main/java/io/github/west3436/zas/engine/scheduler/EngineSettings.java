@@ -22,6 +22,8 @@ import java.util.Objects;
  *     burn with them (FIRE-011)
  * @param hotspots hotspot spread (FIRE-016)
  * @param blockIgnition how hot gas and gas fires set blocks alight (FIRE-033, FIRE-034)
+ * @param dimensionPaused whether the whole dimension is paused (OPS-005): every zone behaves as a
+ *     paused zone, and nothing is classified, so no zone forms, until a batch says otherwise
  */
 public record EngineSettings(
         ExchangeSettings exchange,
@@ -31,10 +33,11 @@ public record EngineSettings(
         FireSettings fire,
         ReactionSet reactions,
         HotspotSettings hotspots,
-        BlockIgnitionSettings blockIgnition) {
+        BlockIgnitionSettings blockIgnition,
+        boolean dimensionPaused) {
     /**
      * The default exchange, heat, fire threshold, hotspot spread and block ignition at a 1 s period,
-     * with the checker, airflow and reactions off.
+     * with the checker, airflow and reactions off, and the dimension running.
      */
     public static final EngineSettings DEFAULT = new EngineSettings(
             ExchangeSettings.DEFAULT,
@@ -56,6 +59,19 @@ public record EngineSettings(
         if (Double.isNaN(airflowKpa) || airflowKpa < 0) {
             throw new IllegalArgumentException("airflowKpa must be >= 0: " + airflowKpa);
         }
+    }
+
+    /** Settings for a dimension that is running. */
+    public EngineSettings(
+            ExchangeSettings exchange,
+            boolean checkConservation,
+            HeatSettings heat,
+            double airflowKpa,
+            FireSettings fire,
+            ReactionSet reactions,
+            HotspotSettings hotspots,
+            BlockIgnitionSettings blockIgnition) {
+        this(exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, blockIgnition, false);
     }
 
     /** Settings with the default block ignition. */
@@ -116,42 +132,77 @@ public record EngineSettings(
                 fire,
                 reactions,
                 hotspots,
-                blockIgnition);
+                blockIgnition,
+                dimensionPaused);
     }
 
     public EngineSettings withConservationCheck(boolean on) {
-        return new EngineSettings(exchange, on, heat, airflowKpa, fire, reactions, hotspots, blockIgnition);
+        return new EngineSettings(
+                exchange, on, heat, airflowKpa, fire, reactions, hotspots, blockIgnition, dimensionPaused);
     }
 
     public EngineSettings withHeat(HeatSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, settings, airflowKpa, fire, reactions, hotspots, blockIgnition);
+                exchange,
+                checkConservation,
+                settings,
+                airflowKpa,
+                fire,
+                reactions,
+                hotspots,
+                blockIgnition,
+                dimensionPaused);
     }
 
     /** These settings exporting the openings of edges at or above {@code kpa} (FLOW-001). */
     public EngineSettings withAirflow(double kpa) {
-        return new EngineSettings(exchange, checkConservation, heat, kpa, fire, reactions, hotspots, blockIgnition);
+        return new EngineSettings(
+                exchange, checkConservation, heat, kpa, fire, reactions, hotspots, blockIgnition, dimensionPaused);
     }
 
     /** These settings with a fire oxygen threshold (FIRE-030). */
     public EngineSettings withFire(FireSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, heat, airflowKpa, settings, reactions, hotspots, blockIgnition);
+                exchange,
+                checkConservation,
+                heat,
+                airflowKpa,
+                settings,
+                reactions,
+                hotspots,
+                blockIgnition,
+                dimensionPaused);
     }
 
     /** These settings with a set of reactions (FIRE-001). */
     public EngineSettings withReactions(ReactionSet set) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, set, hotspots, blockIgnition);
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, set, hotspots, blockIgnition, dimensionPaused);
     }
 
     /** These settings with hotspot spread settings (FIRE-016). */
     public EngineSettings withHotspots(HotspotSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, heat, airflowKpa, fire, reactions, settings, blockIgnition);
+                exchange,
+                checkConservation,
+                heat,
+                airflowKpa,
+                fire,
+                reactions,
+                settings,
+                blockIgnition,
+                dimensionPaused);
     }
 
     /** These settings with block ignition settings (FIRE-033, FIRE-034). */
     public EngineSettings withBlockIgnition(BlockIgnitionSettings settings) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, settings);
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, settings, dimensionPaused);
+    }
+
+    /** These settings with the whole dimension paused or running (OPS-005). */
+    public EngineSettings withDimensionPaused(boolean paused) {
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, blockIgnition, paused);
     }
 }
