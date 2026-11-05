@@ -280,6 +280,15 @@ smoke tests shall pass.
 
 *2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
+*2026-11-05: Stays Accepted. `-Pcompat.matrix=true` runs the GameTests with the matrix's
+server mods, by hand or from the nightly Compatibility matrix workflow, and never on a
+PR. Run once headless: all 692 GameTests pass on a dedicated server, S-01 to S-04 among
+them, with ModernFix 5.27.27, FerriteCore 7.0.3 and Lithium 0.15.4. Sodium 0.8.13 can't be
+tested there: it isn't loaded on a server, and all its mixins are client mixins. Left:
+the client launch with all four mods, which has to be by hand and hasn't been run. It
+repeats with the headless run before each release:
+[release checklist](../release-checklist.md#compatibility-matrix-nfr-025).*
+
 #### NFR-022 · Optional compat isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: A-01
 
