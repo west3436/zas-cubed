@@ -241,6 +241,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         }
         if (shown == VentMode.OFF) {
             status = VentStatus.OFF;
+            reportStopped();
             return;
         }
         Vec3 point = airPoint();
@@ -264,6 +265,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
             }
             double n = VentFlow.blow(
                     zone.pressure(), zone.volume(), net.totalMoles(), net.volume(), net.temperature(), settings);
+            reportMoved(n);
             GasParcel out = net.takeFraction(n / net.totalMoles());
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
         } else {
@@ -287,6 +289,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                     net.volume(),
                     net.temperature(),
                     settings);
+            reportMoved(n);
             double total = zone.totalMoles();
             Map<ResourceLocation, Double> want = new TreeMap<>();
             zone.moles().forEach((gas, m) -> {

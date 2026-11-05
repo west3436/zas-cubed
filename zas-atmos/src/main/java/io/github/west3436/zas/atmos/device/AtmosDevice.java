@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The base of every block entity that steps once per atmos tick (D-31, CONT-006): devices, and
@@ -22,8 +23,45 @@ import net.minecraft.world.level.block.state.BlockState;
  * io.github.west3436.zas.atmos.power.PoweredDevice}.
  */
 public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.Member {
+    /** How hard it reads as working (DATA-017): made by its first report, so most pay nothing. */
+    private @Nullable DeviceActivity activity;
+
     protected AtmosDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    /**
+     * Says how many moles of gas this step moves, so nearby players can hear and see how hard the
+     * device is working (DATA-017, DATA-018). A device that moves gas calls this from {@link
+     * #atmosTick}, with what it has decided to move, and that is all it has to do. A step with no
+     * call counts as moving none, and the level then falls after a short hold.
+     *
+     * @param moles the moles it moves in this step; more than one call adds up
+     */
+    protected final void reportMoved(double moles) {
+        if (moles > 0) {
+            if (activity == null) {
+                activity = new DeviceActivity();
+            }
+            activity.moved(moles);
+        }
+    }
+
+    /**
+     * Says the device is off or has no power, from {@link #atmosTick}: it reads as idle after this
+     * step, with no hold, so its sound stops when it is switched off.
+     */
+    protected final void reportStopped() {
+        if (activity != null) {
+            activity.stopNow();
+        }
+    }
+
+    /** Ends a step's activity and passes the level on, if this device has ever reported any. */
+    private void finishActivity(ServerLevel server) {
+        if (activity != null) {
+            DeviceActivitySync.report(server, worldPosition, activity.finishStep(), AtmosTicks.now(server));
+        }
     }
 
     /**
@@ -56,6 +94,9 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
             if (!isRemoved()) {
                 atmosTick(server);
             }
+            if (!isRemoved()) {
+                finishActivity(server);
+            }
         }
     }
 
@@ -86,6 +127,7 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
         super.setRemoved();
         if (level instanceof ServerLevel server) {
             DeviceTicker.remove(server, this);
+            forgetActivity(server);
         }
     }
 
@@ -94,6 +136,13 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
         super.onChunkUnloaded();
         if (level instanceof ServerLevel server) {
             DeviceTicker.remove(server, this);
+            forgetActivity(server);
+        }
+    }
+
+    private void forgetActivity(ServerLevel server) {
+        if (activity != null) {
+            DeviceActivitySync.remove(server, worldPosition);
         }
     }
 }

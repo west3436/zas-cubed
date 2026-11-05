@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos;
 
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
@@ -39,6 +40,7 @@ public final class ZasAtmosMod {
         AtmosServerConfig.register(container);
         DeviceTicker.register(NeoForge.EVENT_BUS);
         CanisterFailure.register(NeoForge.EVENT_BUS);
+        DeviceActivitySync.register(NeoForge.EVENT_BUS);
     }
 
     /** An id in this mod's namespace. */

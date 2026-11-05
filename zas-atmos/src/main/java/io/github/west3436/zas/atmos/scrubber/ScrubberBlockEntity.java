@@ -237,6 +237,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
         }
         if (shown == ScrubberMode.OFF) {
             status = ScrubberStatus.OFF;
+            reportStopped();
             return;
         }
         Vec3 point = airPoint();
@@ -264,6 +265,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
             return;
         }
         status = ScrubberStatus.MOVING;
+        reportMoved(total);
         port.remove(level, point, want, r -> deliver(r.moved()));
     }
 

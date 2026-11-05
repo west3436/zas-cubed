@@ -280,6 +280,64 @@ message is 1 byte of payload and 19 bytes as a packet, before the connection's
 framing. Normal air and anything above it read the same, so they send nothing
 after the first reading.*
 
+#### DATA-017 · Device activity
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53
+
+A device that moves gas shall have an activity level, read from the moles it
+moved in its last atmos tick: idle below 0.05 mol, trickle from 0.05, working
+from 1 and hard from 5. A level shall rise at once, and fall only after 2 atmos
+ticks running below half of where it starts. A device that is off or has no
+power shall read as idle from that atmos tick.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: a device's
+  loop plays only while it moves gas, and particles show gas moving. Inferred:
+  moles are what every gas device has in common. The scale's ends are set by
+  what devices do at 1 atm and 293 K: filling a vacuum from a full line moves
+  8 mol/s and a siphoning scrubber 21, and a scrubber on trace CO₂ moves under
+  0.01.
+- **Verify:** `DeviceActivityTest` (Unit) checks the thresholds and the
+  hysteresis; `data_017_*` (GameTests) check the vent and the scrubber.
+
+*2026-11-05: added for review, with the behaviour built
+(`device.DeviceActivity`, `AtmosDevice.reportMoved`, one line in a device's
+step). The scale's values are for the owner to judge by ear and eye. A device
+reports what it has decided to move, as its status does, so one blowing against
+a refused change still reads as moving. The vent and the scrubber report so far.*
+
+#### DATA-018 · Device activity sync
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
+
+The activity level of each device that isn't idle within 32 blocks of a player
+shall be sent to that player only, at most once per atmos tick, and only what
+has changed. A player shall be told to forget a device that goes idle, is
+removed, has not stepped for 3 s, or is over 40 blocks away.
+
+- **Rationale:** Decision: D-53 allows this, as it carries nothing of a zone, and
+  the owner's sound decisions of 2026-11-05 need it. Inferred: 32 blocks matches
+  airflow's range (DATA-015) and is further than a loop is heard, so a client
+  knows of a device before the player can hear or see it. The gap up to 40 blocks
+  stops a player on the edge from being told again and again.
+- **Verify:** `ClientDeviceActivityTest` (Unit) checks the client's table;
+  `data_018_*` (GameTests) check who is told, the rate, that nothing changed
+  means nothing sent, each way of forgetting, and the bytes.
+
+*2026-11-05: added for review, with the behaviour built
+(`device.DeviceActivitySync`, `device.ClientDeviceActivity`). It is its own
+payload rather than a block state, which would rebuild the block's model and
+relight it, or a block entity update, which by the packet formats comes to about
+30 bytes a device, unbatched, for everyone tracking the chunk.*
+
+*Measured bytes, before the connection's framing: 9 for each change, and 21 for
+a message with its packet id and channel name, so 30 for one device. A message
+holds at most 127 changes and the rest wait for the next, so one player can never
+cost more than 1,164 B/s.*
+
+*Estimated for a large station, with 200 devices within 32 blocks of a player. A
+settled station sends nothing. All 200 starting at once costs 1,842 bytes across
+2 messages. All of them filling rooms over a minute, each going through hard,
+working, trickle and idle, is about 13 changes a second, or 140 B/s. There's no
+bench yet, so DATA-006 is still to be measured with this included.*
+
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
 
