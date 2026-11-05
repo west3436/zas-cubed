@@ -222,6 +222,11 @@ public final class DimensionEngine {
         return graph;
     }
 
+    /** For tests: how many times the heat phase has resolved every zone's links (ENV-017). */
+    long heatResolutions() {
+        return conduction.resolutions();
+    }
+
     /** The section mirror. Same thread rule as {@link #graph()}. */
     public SectionMirror mirror() {
         return mirror;
