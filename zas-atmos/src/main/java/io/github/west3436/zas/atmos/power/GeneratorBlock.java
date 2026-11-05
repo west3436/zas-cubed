@@ -79,10 +79,12 @@ public class GeneratorBlock extends HorizontalDirectionalBlock implements Entity
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
             Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide || type != AtmosBlockEntities.GENERATOR.get()) {
+        if (type != AtmosBlockEntities.GENERATOR.get()) {
             return null;
         }
-        return (l, p, s, be) -> ((GeneratorBlockEntity) be).serverTick();
+        return level.isClientSide
+                ? (l, p, s, be) -> GeneratorBlockEntity.clientTick(s, p)
+                : (l, p, s, be) -> ((GeneratorBlockEntity) be).serverTick();
     }
 
     @Override

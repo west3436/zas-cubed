@@ -2958,7 +2958,7 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   (D-35, CONT-067): it isn't in `#zas:combustion` and has no fuel profile, so
   lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
   no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
-  takes only fuel, and shows the burn time and stored FE.
+  takes only fuel, and shows the burn time and stored FE. Its sounds are in §11.13.
 
 ### 11.8 Firelocks
 
@@ -3238,6 +3238,21 @@ there too. A server only sends a sound out to its event's range, so an event
 heard past 16 blocks is registered with the same range, and a GameTest checks
 that they agree. A loop's range comes from the client's loop manager instead.
 Which vg file each event uses, and why, is in [vg sounds](research/vg-sounds.md).
+
+**Machines** (CONT-127). The heater, air conditioner, portable pump, portable
+scrubber and recharger report their activity (§11.2) and each has a `DeviceLoops`
+line, so a client plays its `run` loop within 8 blocks while it works.
+`ThermoMachineBlockEntity` and the recharger report as running, and
+`PortableGasDevice` the moles it moved. The generator has no activity to report,
+as it isn't an `AtmosDevice`: its block entity has a client ticker that asks for
+the loop while its block shows `lit`. That adds no sync, and when the block goes
+or its chunk unloads the ticker stops, so the request lapses.
+
+Their one-shots come from the server when their state changes. `PortableDevice.setOn`
+plays a machine's `on` or `off`, and only if the switch moved. The recharger plays
+`on` as it starts charging, `done` as its battery fills and `off` if it stops
+short. The generator plays `on` and `off` as its `lit` changes, so not between one
+piece of fuel and the next.
 
 **Gas blasts (FIRE-037).** `ContainerBlast.explode` is the one place a tank, a
 canister or a primed TTV explodes. It gives the vanilla explosion the empty sound
