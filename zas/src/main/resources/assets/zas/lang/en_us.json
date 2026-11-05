@@ -184,5 +184,9 @@
   "message.zas.internals.off": "Internals off",
   "message.zas.internals.no_seal": "Internals on, but nothing seals your breathing: wear a mask or a helmet",
   "message.zas.internals.no_tank": "Internals on, but you have no tank",
-  "message.zas.internals.empty": "Internals on, but the tank can't deliver: it is empty or set to 0 kPa"
+  "message.zas.internals.empty": "Internals on, but the tank can't deliver: it is empty or set to 0 kPa",
+  "subtitles.zas.airflow.hiss": "Air hisses",
+  "subtitles.zas.airflow.wind": "Wind rushes",
+  "subtitles.zas.fire.loop": "Gas fire burns",
+  "subtitles.zas.fire.ignite": "Gas ignites"
 }

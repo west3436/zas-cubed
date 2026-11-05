@@ -72,4 +72,6 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // The shipped sounds, which tests read as files.
+    systemProperty 'zas_atmos.resources', file('src/main/resources').absolutePath
 }

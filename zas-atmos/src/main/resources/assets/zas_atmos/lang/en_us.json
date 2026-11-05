@@ -230,5 +230,22 @@
   "gui.zas_atmos.ttv.start": "Start timer",
   "gui.zas_atmos.ttv.take_first": "Take first tank",
   "gui.zas_atmos.ttv.take_second": "Take second tank",
-  "gui.zas_atmos.ttv.hint": "Right-click a tank onto the valve in your inventory to fit it."
+  "gui.zas_atmos.ttv.hint": "Right-click a tank onto the valve in your inventory to fit it.",
+  "subtitles.zas_atmos.blast.near": "Gas explosion",
+  "subtitles.zas_atmos.blast.far": "Distant explosion",
+  "subtitles.zas_atmos.device.pump.run": "Pump hums",
+  "subtitles.zas_atmos.device.volume_pump.run": "Volume pump hums",
+  "subtitles.zas_atmos.device.filter.run": "Filter hums",
+  "subtitles.zas_atmos.device.mixer.run": "Mixer hums",
+  "subtitles.zas_atmos.device.vent.run": "Vent blows",
+  "subtitles.zas_atmos.device.passive_vent.run": "Passive vent breathes",
+  "subtitles.zas_atmos.device.scrubber.run": "Scrubber hisses",
+  "subtitles.zas_atmos.device.canister.run": "Canister hisses",
+  "subtitles.zas_atmos.device.pipe.leak": "Pipe leaks",
+  "subtitles.zas_atmos.device.heater.run": "Heater hums",
+  "subtitles.zas_atmos.device.air_conditioner.run": "Air conditioner blows",
+  "subtitles.zas_atmos.device.portable_pump.run": "Portable pump hums",
+  "subtitles.zas_atmos.device.portable_scrubber.run": "Portable scrubber hisses",
+  "subtitles.zas_atmos.device.recharger.run": "Recharger hums",
+  "subtitles.zas_atmos.device.generator.run": "Generator runs"
 }

@@ -1,0 +1,81 @@
+{
+  "blast.near": {
+    "subtitle": "subtitles.zas_atmos.blast.near",
+    "sounds": ["zas_atmos:blast/near1", "zas_atmos:blast/near2"]
+  },
+  "blast.small": {
+    "subtitle": "subtitles.zas_atmos.blast.near",
+    "sounds": [
+      { "name": "zas_atmos:blast/near1", "pitch": 1.5, "volume": 0.6 },
+      { "name": "zas_atmos:blast/near2", "pitch": 1.5, "volume": 0.6 }
+    ]
+  },
+  "blast.far": {
+    "subtitle": "subtitles.zas_atmos.blast.far",
+    "sounds": [{ "name": "zas_atmos:blast/far", "attenuation_distance": 256 }]
+  },
+  "blast.small_far": {
+    "subtitle": "subtitles.zas_atmos.blast.far",
+    "sounds": [{ "name": "zas_atmos:blast/far", "pitch": 1.5, "volume": 0.5, "attenuation_distance": 128 }]
+  },
+  "device.pump.run": {
+    "subtitle": "subtitles.zas_atmos.device.pump.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "volume": 0.35, "attenuation_distance": 8 }]
+  },
+  "device.volume_pump.run": {
+    "subtitle": "subtitles.zas_atmos.device.volume_pump.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 0.85, "volume": 0.35, "attenuation_distance": 8 }]
+  },
+  "device.filter.run": {
+    "subtitle": "subtitles.zas_atmos.device.filter.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 1.2, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.mixer.run": {
+    "subtitle": "subtitles.zas_atmos.device.mixer.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 1.35, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.vent.run": {
+    "subtitle": "subtitles.zas_atmos.device.vent.run",
+    "sounds": [{ "name": "zas_atmos:device/rush", "volume": 0.35, "attenuation_distance": 8 }]
+  },
+  "device.passive_vent.run": {
+    "subtitle": "subtitles.zas_atmos.device.passive_vent.run",
+    "sounds": [{ "name": "zas_atmos:device/rush", "pitch": 0.75, "volume": 0.2, "attenuation_distance": 8 }]
+  },
+  "device.scrubber.run": {
+    "subtitle": "subtitles.zas_atmos.device.scrubber.run",
+    "sounds": [{ "name": "zas_atmos:device/hiss", "volume": 0.25, "attenuation_distance": 8 }]
+  },
+  "device.canister.run": {
+    "subtitle": "subtitles.zas_atmos.device.canister.run",
+    "sounds": [{ "name": "zas_atmos:device/hiss", "pitch": 1.25, "volume": 0.4, "attenuation_distance": 8 }]
+  },
+  "device.pipe.leak": {
+    "subtitle": "subtitles.zas_atmos.device.pipe.leak",
+    "sounds": [{ "name": "zas_atmos:device/hiss", "pitch": 1.4, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.heater.run": {
+    "subtitle": "subtitles.zas_atmos.device.heater.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 0.7, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.air_conditioner.run": {
+    "subtitle": "subtitles.zas_atmos.device.air_conditioner.run",
+    "sounds": [{ "name": "zas_atmos:device/rush", "pitch": 1.15, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.portable_pump.run": {
+    "subtitle": "subtitles.zas_atmos.device.portable_pump.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 0.92, "volume": 0.4, "attenuation_distance": 8 }]
+  },
+  "device.portable_scrubber.run": {
+    "subtitle": "subtitles.zas_atmos.device.portable_scrubber.run",
+    "sounds": [{ "name": "zas_atmos:device/hiss", "pitch": 0.85, "volume": 0.3, "attenuation_distance": 8 }]
+  },
+  "device.recharger.run": {
+    "subtitle": "subtitles.zas_atmos.device.recharger.run",
+    "sounds": [{ "name": "zas_atmos:device/hum", "pitch": 1.8, "volume": 0.2, "attenuation_distance": 8 }]
+  },
+  "device.generator.run": {
+    "subtitle": "subtitles.zas_atmos.device.generator.run",
+    "sounds": [{ "name": "zas_atmos:device/engine", "volume": 0.45, "attenuation_distance": 8 }]
+  }
+}

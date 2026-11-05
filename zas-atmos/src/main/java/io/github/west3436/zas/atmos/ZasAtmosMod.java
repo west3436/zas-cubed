@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.registry.AtmosCreativeTab;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -36,6 +37,7 @@ public final class ZasAtmosMod {
         AtmosMenus.register(modBus);
         AtmosCreativeTab.register(modBus);
         AtmosCapabilities.register(modBus);
+        AtmosSounds.register(modBus);
         AtmosServerConfig.register(container);
         DeviceTicker.register(NeoForge.EVENT_BUS);
         CanisterFailure.register(NeoForge.EVENT_BUS);
