@@ -13,6 +13,8 @@ public enum ControllerMode {
     REPLACEMENT("replacement"),
     /** Scrubbers panic; vents off. */
     PANIC("panic"),
+    /** Scrubbers siphon; vents siphon the zone into their networks, with no floor on its pressure. */
+    SIPHON("siphon"),
     /** Scrubbers panic until the zone is below 5 % of 1 atm, then Fill; vents off. */
     CYCLE("cycle"),
     /** Scrubbers off; vents blow to target, then Scrubbing at 95 % of target. */
@@ -54,6 +56,7 @@ public enum ControllerMode {
     public VentOrder vent(ControllerPreset preset) {
         return switch (this) {
             case SCRUBBING, REPLACEMENT, FILL -> VentOrder.blow(preset.targetPressure());
+            case SIPHON -> VentOrder.siphon(0);
             case PANIC, CYCLE, OFF -> VentOrder.OFF;
         };
     }
@@ -63,6 +66,7 @@ public enum ControllerMode {
         return switch (this) {
             case SCRUBBING -> ScrubberOrder.scrub(ControllerPreset.SCRUB_GASES, ControllerPreset.SCRUB_TAGS);
             case REPLACEMENT, PANIC, CYCLE -> ScrubberOrder.PANIC;
+            case SIPHON -> ScrubberOrder.SIPHON;
             case FILL, OFF -> ScrubberOrder.OFF;
         };
     }

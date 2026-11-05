@@ -2916,16 +2916,19 @@ pressure's safe band, min1 to max1 (101 kPa for Human).
 | Scrubbing | `SCRUB` CO₂ and `#zas:toxic` | `blow(target)` |
 | Replacement | `PANIC` | `blow(target)` |
 | Panic | `PANIC` | `OFF` |
+| Siphon | `SIPHON` | `siphon(0)` |
 | Cycle | `PANIC`, then Fill below 5.07 kPa | `OFF` |
 | Fill | `OFF` | `blow(target)`, then Scrubbing at 95 % of target |
 | Off | `OFF` | `OFF` |
 
 **Device control.** `VentControl` and `ScrubberControl` are the controller's
 side of the vent and scrubber. The vent (#48) implements `VentControl` by
-mapping `VentOrder.OFF` to its own off setting and `VentOrder.blow(t)` to
-blowing with external bound `t` (and internal bound 0). The scrubber (§11.5)
-implements `ScrubberControl` by mapping `ScrubberOrder.scrub(gases, tags)` to
-scrubbing that selection, and `PANIC` and `OFF` to those modes.
+mapping `VentOrder.OFF` to its own off setting, `VentOrder.blow(t)` to blowing
+with external bound `t` (and internal bound 0), and `VentOrder.siphon(t)` to
+siphoning with external bound `t` (and internal bound 5,066 kPa, below what bursts
+a pipe). The scrubber (§11.5) implements `ScrubberControl` by mapping
+`ScrubberOrder.scrub(gases, tags)` to scrubbing that selection, and `SIPHON`,
+`PANIC` and `OFF` to those modes.
 
 **Redstone** (CONT-048). The block is a signal source of 7 at danger 1 and 15
 at danger 2. It powers the wall behind it strongly, as a lever does.

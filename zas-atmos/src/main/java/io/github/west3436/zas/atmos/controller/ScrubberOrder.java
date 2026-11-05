@@ -6,8 +6,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * What an area air controller tells its scrubbers (CONT-041, CONT-079): off, scrub some gases, or
- * panic, and who sent it.
+ * What an area air controller tells its scrubbers (CONT-041, CONT-079): off, scrub some gases, siphon
+ * or panic, and who sent it.
  *
  * <p>The modes' orders ({@link ControllerMode#scrubber}) have no sender; a controller adds its own
  * position with {@link #from} before it gives one, so a scrubber knows its controller from the first
@@ -23,10 +23,12 @@ public record ScrubberOrder(Mode mode, List<ResourceLocation> gases, List<GasTag
     public enum Mode {
         OFF,
         SCRUB,
+        SIPHON,
         PANIC
     }
 
     public static final ScrubberOrder OFF = new ScrubberOrder(Mode.OFF, List.of(), List.of());
+    public static final ScrubberOrder SIPHON = new ScrubberOrder(Mode.SIPHON, List.of(), List.of());
     public static final ScrubberOrder PANIC = new ScrubberOrder(Mode.PANIC, List.of(), List.of());
 
     public ScrubberOrder {

@@ -602,6 +602,9 @@ empty, or the vent is waiting for the air in front to settle).
 `VentFlowTest.cont_014_an_idle_vent_says_why` (Unit) and
 `GasDeviceTests.cont_014_an_idle_vent_says_why` (GameTest) check each reason.*
 
+*2026-11-05: a controller's Siphon mode (CONT-041) is how a vent siphons on real
+power.*
+
 #### CONT-078 · Vent rate
 `Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
 
@@ -665,6 +668,9 @@ siphon (keeps its whole sample) and panic (siphon at the panic rate).
 `cont_079_panic_is_siphon_at_the_panic_rate` (GameTest) each run a step in a
 mixed room and check every gas in the room and the network. A sample's other
 gases are never removed, so "keeps only" is a removal of the kept gases alone.*
+
+*2026-11-05: a controller's Siphon mode (CONT-041) is how a scrubber siphons on real
+power.*
 
 #### CONT-080 · Scrubber rate
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
@@ -1527,6 +1533,7 @@ The area air controller shall command its vents and scrubbers in these modes:
 | Scrubbing | Scrub the preset's gases | Blow to the middle of the safe band (101 kPa for Human) |
 | Replacement | Panic | Blow to target |
 | Panic | Panic | Off |
+| Siphon | Siphon | Siphon down to 0 kPa |
 | Cycle | Panic until below 5 % of 1 atm, then switch to Fill | Off |
 | Fill | Off | Blow to target; switch to Scrubbing at 95 % of target |
 | Off | Off | Off |
@@ -1555,6 +1562,12 @@ off. This stays Accepted until the scrubber follows its orders.*
 in a mixed room. It checks each one's settings and block state and what it does
 to the gas, and that Cycle switches to Fill and Fill to Scrubbing by
 themselves.*
+
+*2026-11-05: the owner accepted a Siphon mode
+([#245](https://github.com/west3436/zas-cubed/issues/245)). No mode ordered a part to
+siphon and a controlled part's GUI is locked, so neither a vent nor a scrubber could
+siphon on real power. `cont_041_modes_command_vents_and_scrubbers` and
+`cont_041_a_real_vent_and_scrubber_follow_each_mode` (GameTests) cover it.*
 
 #### CONT-048 · Controller redstone
 `Must` · `R1` · `Implemented` · Verify: GameTest

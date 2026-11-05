@@ -249,7 +249,7 @@ public final class ControllerTests {
             player.setPos(s.point(2, 1, 2));
             h.assertTrue(menu.stillValid(player), "a player in the room can't use the menu");
 
-            for (int bad : new int[] {-1, 6, 9, 12, 19, 24, 29, 37, 1000}) {
+            for (int bad : new int[] {-1, 7, 9, 12, 19, 24, 29, 37, 1000}) {
                 h.assertFalse(menu.clickMenuButton(player, bad), "button " + bad + " was accepted");
             }
             h.assertValueEqual(c.preset(), ControllerPreset.HUMAN, "a refused button changed the preset");
@@ -316,13 +316,19 @@ public final class ControllerTests {
             s.cycle(c);
             ControllerPreset p = ControllerPreset.HUMAN;
             for (ControllerMode m : List.of(
-                    ControllerMode.SCRUBBING, ControllerMode.REPLACEMENT, ControllerMode.PANIC, ControllerMode.OFF)) {
+                    ControllerMode.SCRUBBING,
+                    ControllerMode.REPLACEMENT,
+                    ControllerMode.PANIC,
+                    ControllerMode.SIPHON,
+                    ControllerMode.OFF)) {
                 c.setMode(m);
                 s.cycle(c);
                 h.assertValueEqual(vent.last(), m.vent(p).from(c.getBlockPos()), m + ": the vent's order");
                 h.assertValueEqual(scrubber.last(), m.scrubber(p).from(c.getBlockPos()), m + ": the scrubber's order");
             }
             h.assertValueEqual(ControllerMode.SCRUBBING.vent(p), VentOrder.blow(101), "Scrubbing blows to 101 kPa");
+            h.assertValueEqual(ControllerMode.SIPHON.vent(p), VentOrder.siphon(0), "Siphon has no floor");
+            h.assertValueEqual(ControllerMode.SIPHON.scrubber(p), ScrubberOrder.SIPHON, "Siphon: the scrubber");
 
             c.setMode(ControllerMode.CYCLE);
             s.cycle(c);

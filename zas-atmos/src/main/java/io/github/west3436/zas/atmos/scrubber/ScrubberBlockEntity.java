@@ -157,8 +157,8 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
     /**
      * An area air controller's order (CONT-041): sets the scrubber and makes it controlled for the
      * next {@link DevicePower#LEASE_TICKS} game ticks. A controller orders its scrubbers every atmos
-     * tick, so one stays controlled while a controller covers it. Panic and off leave the selection
-     * alone. The same order every atmos tick changes nothing.
+     * tick, so one stays controlled while a controller covers it. Panic, siphon and off leave the
+     * selection alone. The same order every atmos tick changes nothing.
      */
     @Override
     public void scrubberOrder(ScrubberOrder order) {
@@ -173,6 +173,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
         controlledUntil = now() + DevicePower.LEASE_TICKS;
         switch (order.mode()) {
             case OFF -> command(ScrubberMode.OFF, selection);
+            case SIPHON -> command(ScrubberMode.SIPHON, selection);
             case PANIC -> command(ScrubberMode.PANIC, selection);
             case SCRUB -> command(ScrubberMode.SCRUB, GasSelection.of(order.gases(), order.tags()));
         }

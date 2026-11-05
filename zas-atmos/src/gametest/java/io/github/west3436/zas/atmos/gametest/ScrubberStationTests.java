@@ -155,6 +155,26 @@ public final class ScrubberStationTests {
                     "Panic: the room's moles");
             s.close(vent.network().gas().totalMoles(), netBefore, 1e-9, "Panic: the vent's network");
 
+            // Siphon: both take the room's air into their networks, on real power.
+            c.setMode(ControllerMode.SIPHON);
+            s.cycles(2, c, vent, scrubber); // anything in flight lands
+            h.assertValueEqual(scrubber.mode(), ScrubberMode.SIPHON, "Siphon: the scrubber");
+            h.assertValueEqual(vent.settings(), VentSettings.siphon(0), "Siphon: the vent");
+            h.assertValueEqual(shown(s, scrubber), ScrubberMode.SIPHON, "Siphon: the scrubber's state");
+            h.assertValueEqual(shown(s, vent), VentMode.SIPHON, "Siphon: the vent's state");
+            h.assertTrue(vent.power().draw() > 0, "Siphon: the vent draws nothing");
+            h.assertTrue(scrubber.power().draw() > 0, "Siphon: the scrubber draws nothing");
+            before = s.zone(4, 2, 2).mixture();
+            netBefore = vent.network().gas().totalMoles();
+            double scrubberNetBefore = scrubber.network().gas().totalMoles();
+            s.cycle(c, vent, scrubber);
+            s.cycle(c, vent, scrubber); // the first one's gas lands
+            h.assertTrue(s.zone(4, 2, 2).mixture().totalMoles() < before.totalMoles(), "Siphon: the room didn't fall");
+            h.assertTrue(vent.network().gas().totalMoles() > netBefore, "Siphon: the vent's network didn't rise");
+            h.assertTrue(
+                    scrubber.network().gas().totalMoles() > scrubberNetBefore,
+                    "Siphon: the scrubber's network didn't rise");
+
             // Cycle: as Panic, until the room is below 5 % of 1 atm, then Fill.
             s.empty(4, 2, 2);
             s.addKpa(4, 2, 2, N2, 6);
