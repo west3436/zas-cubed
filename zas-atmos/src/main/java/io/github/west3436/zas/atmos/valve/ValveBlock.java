@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.valve;
 
+import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.EnumMap;
@@ -94,7 +95,8 @@ public abstract class ValveBlock extends BaseEntityBlock implements PipeConnecto
         for (Direction.AxisDirection sign : Direction.AxisDirection.values()) {
             Direction d = Direction.fromAxisAndDirection(state.getValue(AXIS), sign);
             BlockPos next = context.getClickedPos().relative(d);
-            if (PipeConnector.connected(state, d, context.getLevel().getBlockState(next))) {
+            if (PipeConnector.connected(state, d, context.getLevel().getBlockState(next))
+                    || GasHandlers.connects(context.getLevel(), context.getClickedPos(), state, d)) {
                 count++;
             }
         }

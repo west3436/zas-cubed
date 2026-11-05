@@ -93,12 +93,39 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      * tick left it overpressured (CONT-108); otherwise its mixture reacts through the API, with no
      * ignition source (CONT-100). A device's own step comes after this, so it sees the pressure the
      * reaction left, and a canister on the network, rated lower than a pipe, fails before the pipe
-     * can burst.
+     * can burst. Its gas handlers' turn comes next (API-025, API-026), for the same reason.
      */
     @Override
     protected void beforeAtmosTick(ServerLevel level) {
         atmosTurn(level, network(), this);
+        if (!isRemoved()) {
+            exchangeWithHandlers(level);
+        }
     }
+
+    /** A transfer with each gas handler beside it; any of them may remove it. */
+    private void exchangeWithHandlers(ServerLevel level) {
+        int faces = GasHandlers.faces(level, worldPosition, getBlockState());
+        followHandlers(level, faces);
+        if (faces == 0) {
+            return;
+        }
+        GasHandlers.Buffer buffer = new GasHandlers.Buffer(() -> network().gas(), this::deliver, this::isRemoved);
+        for (Direction d : Direction.values()) {
+            if (GasHandlers.has(faces, d) && !isRemoved()) {
+                GasHandlers.exchange(level, worldPosition, getBlockState(), d, buffer);
+            }
+        }
+    }
+
+    /**
+     * Told each step which faces connect to a gas handler, for a node whose block shows it: a pipe's
+     * arms. The default does nothing.
+     *
+     * @param level the level
+     * @param faces a mask for {@link GasHandlers#has}
+     */
+    protected void followHandlers(ServerLevel level, int faces) {}
 
     /** A member's turn in its network's atmos tick: the first to step runs it for them all. */
     static void atmosTurn(ServerLevel level, PipeNetwork net, PipeNode node) {
@@ -167,8 +194,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
     }
 
     /**
-     * Puts gas that arrived from a zone into the network, or, if the node has been removed since,
-     * releases it at the node's position.
+     * Puts gas that arrived from a zone or a gas handler into the network, or, if the node has been
+     * removed since, releases it at the node's position.
      *
      * @param gas the gas
      */
