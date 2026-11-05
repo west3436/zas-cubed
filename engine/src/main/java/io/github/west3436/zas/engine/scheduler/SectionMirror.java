@@ -31,6 +31,15 @@ public final class SectionMirror implements SectionLookup {
     /** Per mirrored section with flagged positions, those positions' block keys, ascending. */
     private final TreeMap<Long, long[]> flagged = new TreeMap<>();
 
+    /** Which geometry ids {@link #fragile} lists; null until {@link #indexFragile} is called. */
+    private IntPredicate fragileIds;
+
+    /** Per mirrored section with fragile positions (FLOW-007), those positions' block keys, ascending. */
+    private final TreeMap<Long, long[]> fragile = new TreeMap<>();
+
+    /** Sections {@link #fragile} doesn't reflect yet: it is brought up to date only when asked for. */
+    private final Set<Long> fragileStale = new HashSet<>();
+
     /**
      * @param minSectionY the dimension's lowest section y
      * @param maxSectionY its highest section y
@@ -119,8 +128,28 @@ public final class SectionMirror implements SectionLookup {
         flaggedIds = ids;
         flagged.clear();
         for (SectionSnapshot s : sections.values()) {
-            index(s);
+            index(s, flaggedIds, flagged);
         }
+    }
+
+    /**
+     * Keeps an index of the mirrored positions of fragile blocks (FLOW-007), apart from {@link
+     * #flagged}, which the hotspot phase walks every tick. Fragile blocks are looked at only when a
+     * pressure difference could break one, so a section is scanned only then, not each time it arrives.
+     */
+    void indexFragile(IntPredicate ids) {
+        fragileIds = ids;
+        fragile.clear();
+        fragileStale.addAll(sections.keySet());
+    }
+
+    /** Each mirrored section's fragile positions, block keys ascending, in ascending section key order. */
+    Iterable<long[]> fragile() {
+        for (long key : fragileStale) {
+            index(sections.get(key), fragileIds, fragile);
+        }
+        fragileStale.clear();
+        return fragile.values();
     }
 
     /** The block keys ({@link SectionKeys#block}) of every flagged mirrored position, ascending. */
@@ -149,16 +178,16 @@ public final class SectionMirror implements SectionLookup {
                 SectionKeys.blockX(block) & 15, SectionKeys.blockY(block) & 15, SectionKeys.blockZ(block) & 15);
     }
 
-    private void index(SectionSnapshot s) {
+    private static void index(SectionSnapshot s, IntPredicate ids, TreeMap<Long, long[]> index) {
         long key = s.key();
-        if (s.isUniform() && !flaggedIds.test(s.geometryId(0))) {
-            flagged.remove(key);
+        if (s.isUniform() && !ids.test(s.geometryId(0))) {
+            index.remove(key);
             return;
         }
         long[] found = null;
         int n = 0;
         for (int i = 0; i < SectionSnapshot.SIZE; i++) {
-            if (flaggedIds.test(s.geometryId(i))) {
+            if (ids.test(s.geometryId(i))) {
                 if (found == null) {
                     found = new long[16];
                 } else if (n == found.length) {
@@ -171,11 +200,11 @@ public final class SectionMirror implements SectionLookup {
             }
         }
         if (n == 0) {
-            flagged.remove(key);
+            index.remove(key);
         } else {
             long[] blocks = Arrays.copyOf(found, n);
             Arrays.sort(blocks);
-            flagged.put(key, blocks);
+            index.put(key, blocks);
         }
     }
 
@@ -185,13 +214,18 @@ public final class SectionMirror implements SectionLookup {
     SectionSnapshot put(SectionSnapshot snapshot) {
         unavailable.remove(snapshot.key());
         unloadedChunks.remove(SectionKeys.chunkOf(snapshot.key()));
-        index(snapshot);
+        index(snapshot, flaggedIds, flagged);
+        if (fragileIds != null) {
+            fragileStale.add(snapshot.key());
+        }
         return sections.put(snapshot.key(), snapshot);
     }
 
     void remove(long key) {
         sections.remove(key);
         flagged.remove(key);
+        fragile.remove(key);
+        fragileStale.remove(key);
     }
 
     void chunkLoaded(long chunk) {

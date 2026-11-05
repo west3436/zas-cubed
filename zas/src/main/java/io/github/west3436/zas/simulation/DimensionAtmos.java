@@ -1,6 +1,7 @@
 package io.github.west3436.zas.simulation;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.airflow.PressureBreaks;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.FireExtinguishedEvent;
 import io.github.west3436.zas.api.event.FireIgnitedEvent;
@@ -975,8 +976,8 @@ public final class DimensionAtmos {
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
-     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), and whether the dimension is
-     * paused (OPS-005).
+     * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
+     * breaks them (FLOW-007), and whether the dimension is paused (OPS-005).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -988,6 +989,7 @@ public final class DimensionAtmos {
                 .withHotspots(FireConfig.hotspots())
                 .withBlockIgnition(FireConfig.blockIgnition()
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
+                .withFragile(AirflowConfig.fragile())
                 .withDimensionPaused(simulationPause() != null);
     }
 
@@ -1244,6 +1246,7 @@ public final class DimensionAtmos {
                     return false;
                 },
                 this::gasCaught);
+        PressureBreaks.apply(level, a.pressureBreaks(), chunk -> isChunkLoaded(chunk) && !isSettling(chunk));
         // API-031, after the blocks: a listener finds the fire's blocks as the event says.
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());

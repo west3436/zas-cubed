@@ -36,7 +36,7 @@ except settings marked restart-only, such as the thread count.
   next atmos tick.
 
 #### OPS-002 · Datapack formats
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-04
 
 The following shall be data-driven, with documented JSON formats:
 - gases
@@ -56,6 +56,11 @@ The following shall be data-driven, with documented JSON formats:
 *2026-11-03: Still Accepted. [Datapack formats](../datapacks.md) has a section
 for every listed format except the `zas:pressure_fragile` tag, which comes with
 Hardcore block damage ([#45](https://github.com/west3436/zas-cubed/issues/45)).*
+
+*2026-11-05: [Datapack formats](../datapacks.md#pressure-fragile-blocks) now
+documents `zas:pressure_fragile` too. Inspected against the code: each `data/zas/zas/`
+folder and reload listener has its section, as do the entity tags and the block tags
+the code reads, so the whole list is documented.*
 
 #### OPS-008 · Datapack validation
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: OPS-002
@@ -258,6 +263,12 @@ rates.*
 `cont_057_rates_at_light_15_and_7_under_each_preset` and
 `cont_057_each_rate_is_configured_on_its_own` check them under both presets and
 with overrides. Still waiting: block pressure damage.*
+
+*2026-11-05: block pressure damage is wired (FLOW-007, FLOW-016,
+[#45](https://github.com/west3436/zas-cubed/issues/45)): each atmos tick reads
+`block_pressure_damage`, and `flow_016_normal_holds_and_the_override_turns_damage_on`,
+`flow_016_hardcore_can_override_damage_off` and the `flow_007_` GameTests check it
+under both presets and with overrides either way. No listed option waits any more.*
 
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007

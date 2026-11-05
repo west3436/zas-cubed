@@ -70,8 +70,9 @@ import java.util.TreeSet;
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
- * Result}: the zone table, the exchange components with the chunks they span, operation outcomes
- * and open-air events (CORE-058).
+ * Result}: the zone table, the exchange components with the chunks they span, operation outcomes,
+ * open-air events (CORE-058) and the fragile blocks the tick's pressures break ({@link
+ * FragileBlocks}, FLOW-007).
  *
  * <p><b>Paused zones</b> (GEO-030 to GEO-038, architecture §4.6). A zone pauses while any chunk
  * it spans is unloaded, while it waits for chunks its saved shares list, or while it opens onto a
@@ -137,6 +138,9 @@ public final class DimensionEngine {
     /** The hotspot phase (FIRE-010 to FIRE-019). */
     private final Hotspots hotspots;
 
+    /** Which fragile blocks each tick's pressures break (FLOW-007). */
+    private final FragileBlocks fragile;
+
     private AtmosSnapshot lastSnapshot;
 
     // The last tick's undo point, kept until the next tick in case its components are rejected.
@@ -195,6 +199,7 @@ public final class DimensionEngine {
         this.membership = new MembershipTracker(space.naming(), graph::cellVolume);
         this.conduction = new Conduction(graph, mirror, palette, space.naming(), membership);
         this.hotspots = new Hotspots(graph, space, mirror, palette);
+        this.fragile = new FragileBlocks(graph, space, mirror, palette);
         graph.setMembershipListener(
                 MembershipListener.both(MembershipListener.both(membership, conduction), hotspots.igniter()));
         this.lastSnapshot = AtmosSnapshot.empty(registry);
@@ -217,6 +222,11 @@ public final class DimensionEngine {
     /** How many zones have their flammable faces cached (FIRE-033). Same thread rule as {@link #graph()}. */
     int cachedFlammableZones() {
         return hotspots.igniter().cachedZones();
+    }
+
+    /** How many fragile blocks have been judged (FLOW-007). Same thread rule as {@link #graph()}. */
+    public long fragileBlocksJudged() {
+        return fragile.judged();
     }
 
     // ---- Queries (owner thread) -----------------------------------------------
@@ -258,6 +268,7 @@ public final class DimensionEngine {
         }
         if (palette.size() != before) {
             hotspots.geometriesAdded();
+            fragile.geometriesAdded();
         }
         return id;
     }
@@ -517,6 +528,13 @@ public final class DimensionEngine {
         }
         AtmosSnapshot snapshot = snapshot(tick);
         retain();
+        List<PressureBreak> breaks =
+                fragile.find(batch.settings().fragile(), block -> snapshot.heldAt(block, -1), section -> {
+                    // Only a section retain() keeps: another would be asked for again every other tick.
+                    if (membership.hasSection(section) || bordersZoned(section)) {
+                        requested.add(section);
+                    }
+                });
 
         undoMembership = undo;
         undoMixtures = undoCopies;
@@ -547,7 +565,8 @@ public final class DimensionEngine {
                 flows(batch.settings().airflowKpa()),
                 fireIntents,
                 fireEvents,
-                hotspots.table());
+                hotspots.table(),
+                breaks);
         phases.finished();
         return result;
     }

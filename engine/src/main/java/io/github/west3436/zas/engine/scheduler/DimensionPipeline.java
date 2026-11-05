@@ -91,6 +91,7 @@ public final class DimensionPipeline {
      *     zones
      * @param fireEvents zones that caught fire or stopped burning (API-031), without rejected
      *     zones
+     * @param pressureBreaks fragile blocks to break (FLOW-007), without those read from a rejected zone
      */
     public record Applied(
             long tick,
@@ -102,7 +103,8 @@ public final class DimensionPipeline {
             Throwable fault,
             long[] changedChunks,
             List<FireIntent> fireIntents,
-            List<FireEvent> fireEvents) {}
+            List<FireEvent> fireEvents,
+            List<PressureBreak> pressureBreaks) {}
 
     private final DimensionScheduler scheduler;
     private final World world;
@@ -626,7 +628,17 @@ public final class DimensionPipeline {
         Result result = scheduler.await();
         if (result == null) {
             return new Applied(
-                    tick, List.of(), List.of(), 0, 0, null, scheduler.fault(), new long[0], List.of(), List.of());
+                    tick,
+                    List.of(),
+                    List.of(),
+                    0,
+                    0,
+                    null,
+                    scheduler.fault(),
+                    new long[0],
+                    List.of(),
+                    List.of(),
+                    List.of());
         }
         List<Integer> rejectedIndices = new ArrayList<>();
         List<Long> rejectedZones = new ArrayList<>();
@@ -693,6 +705,12 @@ public final class DimensionPipeline {
                 fireEvents.add(e);
             }
         }
+        List<PressureBreak> breaks = new ArrayList<>();
+        for (PressureBreak b : result.pressureBreaks()) {
+            if (!rejectedSet.contains(b.highZone()) && !rejectedSet.contains(b.lowZone())) {
+                breaks.add(b);
+            }
+        }
         hotspots = result.hotspots().withRejected(hotspots, rejectedSet);
         published = snapshot;
         flows = result.flows();
@@ -711,7 +729,8 @@ public final class DimensionPipeline {
                 null,
                 toArray(changed),
                 intents,
-                fireEvents);
+                fireEvents,
+                breaks);
     }
 
     /** The chunks of zones whose published state differs between two tables. */

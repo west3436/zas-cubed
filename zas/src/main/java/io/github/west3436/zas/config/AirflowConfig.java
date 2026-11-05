@@ -1,13 +1,16 @@
 package io.github.west3436.zas.config;
 
 import io.github.west3436.zas.engine.flow.FlowSettings;
+import io.github.west3436.zas.engine.flow.FragileSettings;
 import java.util.List;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
  * The server config's {@code [airflow]} section (FLOW-001 to FLOW-014): the switches, the force
- * model, each class's threshold and the per-tick cap. None of them is preset-controlled.
+ * model, each class's threshold and the per-tick cap, and what a pressure difference does to fragile
+ * blocks (FLOW-007, FLOW-015). None of them is preset-controlled: whether blocks break at all is the
+ * preset option {@link PresetOptions#BLOCK_PRESSURE_DAMAGE} (FLOW-016).
  *
  * <p>Each getter reads the loaded config on each call, so an edited file applies from the next
  * read, and gives the default while no world's config is loaded. Any thread.
@@ -35,6 +38,8 @@ public final class AirflowConfig {
     public static ModConfigSpec.DoubleValue MOB_KPA;
     public static ModConfigSpec.DoubleValue HEAVY_KPA;
     public static ModConfigSpec.IntValue MAX_ENTITIES;
+    public static ModConfigSpec.DoubleValue FRAGILE_KPA;
+    public static ModConfigSpec.IntValue MAX_BREAKS;
 
     private AirflowConfig() {}
 
@@ -79,6 +84,14 @@ public final class AirflowConfig {
                         "The most entities airflow moves in one dimension each game tick. Beyond it, the entities",
                         "near openings take turns.")
                 .defineInRange("max_entities_per_tick", DEFAULT_MAX_ENTITIES, 1, 100_000);
+        FRAGILE_KPA = builder.comment(
+                        "The pressure difference, kPa, that a block in #zas:pressure_fragile holds: it breaks at",
+                        "more than this. Whether they break at all is the preset option block_pressure_damage.")
+                .defineInRange("pressure_fragile_threshold_kpa", FragileSettings.DEFAULT_THRESHOLD_KPA, 0.0, 100_000.0);
+        MAX_BREAKS = builder.comment(
+                        "The most blocks a pressure difference breaks in one dimension each atmos tick. The rest",
+                        "break in later ticks, if the difference is still there.")
+                .defineInRange("pressure_fragile_breaks_per_tick", FragileSettings.DEFAULT_MAX_BREAKS, 1, 4096);
         builder.pop();
     }
 
@@ -128,5 +141,18 @@ public final class AirflowConfig {
     /** The per-tick cap (FLOW-013). */
     public static int maxEntitiesPerTick() {
         return loaded() ? MAX_ENTITIES.get() : DEFAULT_MAX_ENTITIES;
+    }
+
+    /**
+     * When a pressure difference breaks fragile blocks: never unless the preset option says so
+     * (FLOW-007, FLOW-016), otherwise above the threshold (FLOW-015).
+     */
+    public static FragileSettings fragile() {
+        if (!PresetOptions.BLOCK_PRESSURE_DAMAGE.get()) {
+            return FragileSettings.OFF;
+        }
+        return loaded()
+                ? new FragileSettings(FRAGILE_KPA.get(), MAX_BREAKS.get())
+                : new FragileSettings(FragileSettings.DEFAULT_THRESHOLD_KPA, FragileSettings.DEFAULT_MAX_BREAKS);
     }
 }

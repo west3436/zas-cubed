@@ -101,6 +101,12 @@ public record Geometry(
      */
     public static final int FLAG_IGNITION_SOURCE = 1 << 7;
 
+    /**
+     * The block is in {@code zas:pressure_fragile}: a pressure difference across it above the threshold
+     * breaks it (FLOW-007). The bit is above the six {@link #boundaryFlag} bits, which use 8 to 13.
+     */
+    public static final int FLAG_PRESSURE_FRAGILE = 1 << 14;
+
     private static final List<FaceMask> NO_MASKS =
             List.of(FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY);
     private static final List<FaceMask> ALL_MASKS =
@@ -268,11 +274,11 @@ public record Geometry(
     }
 
     /**
-     * This shape with the heat and fire data of another geometry: for the geometry of a single
-     * position, which is still that of its block (GEO-043, API-023).
+     * This shape with the heat and fire data of another geometry, and whether pressure breaks it: for
+     * the geometry of a single position, which is still that of its block (GEO-043, API-023, FLOW-007).
      */
     public Geometry withDataOf(Geometry block) {
-        int kept = FLAG_HEAT_SOURCE | FLAG_FIRE | FLAG_GAS_FIRE | FLAG_IGNITION_SOURCE;
+        int kept = FLAG_HEAT_SOURCE | FLAG_FIRE | FLAG_GAS_FIRE | FLAG_IGNITION_SOURCE | FLAG_PRESSURE_FRAGILE;
         return new Geometry(
                 coverage,
                 cells,

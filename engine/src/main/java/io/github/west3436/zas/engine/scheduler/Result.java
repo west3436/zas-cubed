@@ -34,6 +34,7 @@ import java.util.Objects;
  * @param fireIntents gas-fire blocks to place or remove (FIRE-018), in the order they arose
  * @param fireEvents zones that caught fire or stopped burning (API-031), in zone id order
  * @param hotspots the hotspots burning after the tick (FIRE-011, API-055)
+ * @param pressureBreaks fragile blocks to break (FLOW-007), in the order they were found
  */
 public record Result(
         long tick,
@@ -50,7 +51,8 @@ public record Result(
         List<FlowEdge> flows,
         List<FireIntent> fireIntents,
         List<FireEvent> fireEvents,
-        HotspotTable hotspots) {
+        HotspotTable hotspots,
+        List<PressureBreak> pressureBreaks) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
@@ -64,6 +66,7 @@ public record Result(
         fireIntents = List.copyOf(fireIntents);
         fireEvents = List.copyOf(fireEvents);
         Objects.requireNonNull(hotspots, "hotspots");
+        pressureBreaks = List.copyOf(pressureBreaks);
     }
 
     @Override
