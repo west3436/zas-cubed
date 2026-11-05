@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
 import io.github.west3436.zas.engine.GeometryPalette;
@@ -13,6 +14,7 @@ import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.flow.FragileSettings;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -102,6 +104,40 @@ class FragileBlocksTest {
                 List.of(new PressureBreak(
                         SectionKeys.block(3, 65, 1), sim.zoneAt(1, 65, 1).id(), 0)),
                 a.pressureBreaks());
+    }
+
+    /** Glass that a seal provider has answered for: every face sealed, as the block's own data says. */
+    private static Geometry glassWithItsOwnGeometry() {
+        return Geometry.declared(EnumSet.allOf(Face.class), 0, Geometry.FLAG_POSITIONAL)
+                .withDataOf(PALETTE.geometry(GLASS));
+    }
+
+    /**
+     * A fragile block with a geometry of its own (API-023) is still fragile. The engine's palette takes
+     * that geometry in after the engine has started, so not every fragile id is known at the start.
+     */
+    @Test
+    void flow_007_a_fragile_block_with_its_own_geometry_still_breaks() {
+        Sim sim = sim(Ambient.VACUUM);
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        sim.add(1, 65, 1, molesFor(101, 27), 0);
+        assertEquals(List.of(), blocks(sim.step()));
+        sim.world.override(3, 65, 1, glassWithItsOwnGeometry());
+        assertEquals(List.of(), blocks(sim.step()), "101 kPa against a vacuum holds");
+        sim.add(1, 65, 1, molesFor(59, 27), 0);
+        assertEquals(List.of(SectionKeys.block(3, 65, 1)), blocks(sim.step()));
+    }
+
+    /** The first fragile geometry the engine sees can be a position's, with sections already mirrored. */
+    @Test
+    void flow_007_the_first_fragile_geometry_can_come_with_a_position() {
+        Sim sim = new Sim(new TestWorld(Ambient.VACUUM), TestWorld.PALETTE).withoutHeat();
+        sim.settings = sim.settings.withFragile(ON);
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        sim.add(1, 65, 1, molesFor(160, 27), 0);
+        assertEquals(List.of(), blocks(sim.step()), "no fragile block yet");
+        sim.world.override(3, 65, 1, glassWithItsOwnGeometry());
+        assertEquals(List.of(SectionKeys.block(3, 65, 1)), blocks(sim.step()));
     }
 
     /** FLOW-007 says "exceeds": a difference of exactly the threshold holds. */

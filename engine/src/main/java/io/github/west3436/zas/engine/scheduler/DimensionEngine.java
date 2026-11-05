@@ -257,6 +257,7 @@ public final class DimensionEngine {
         }
         if (palette.size() != before) {
             hotspots.geometriesAdded();
+            fragile.geometriesAdded();
         }
         return id;
     }

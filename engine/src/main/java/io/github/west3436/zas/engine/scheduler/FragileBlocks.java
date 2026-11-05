@@ -8,6 +8,7 @@ import io.github.west3436.zas.engine.flow.FragileSettings;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.LongConsumer;
 import java.util.function.LongPredicate;
@@ -53,7 +54,11 @@ final class FragileBlocks {
     private final CellSpace space;
     private final SectionMirror mirror;
     private final GeometryPalette palette;
-    private final boolean any;
+
+    /** Whether each geometry is fragile. */
+    private boolean[] fragile = new boolean[0];
+
+    private boolean any;
 
     private double ambient;
     private LongPredicate unresolved = block -> false;
@@ -79,16 +84,23 @@ final class FragileBlocks {
         this.space = space;
         this.mirror = mirror;
         this.palette = palette;
+        geometriesAdded();
+    }
+
+    /**
+     * The palette took in the geometries of single positions (GEO-043, API-023). Call before a
+     * snapshot that uses them reaches the mirror.
+     */
+    void geometriesAdded() {
+        int from = fragile.length;
         int n = palette.size();
-        boolean[] fragile = new boolean[n];
-        boolean found = false;
-        for (int id = 0; id < n; id++) {
+        fragile = Arrays.copyOf(fragile, n);
+        for (int id = from; id < n; id++) {
             fragile[id] = palette.geometry(id).hasFlag(Geometry.FLAG_PRESSURE_FRAGILE);
-            found |= fragile[id];
-        }
-        any = found;
-        if (found) {
-            mirror.indexFragile(id -> id >= 0 && id < n && fragile[id]);
+            if (fragile[id] && !any) {
+                any = true;
+                mirror.indexFragile(i -> i >= 0 && i < fragile.length && fragile[i]);
+            }
         }
     }
 

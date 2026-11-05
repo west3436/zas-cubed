@@ -274,11 +274,11 @@ public record Geometry(
     }
 
     /**
-     * This shape with the heat and fire data of another geometry: for the geometry of a single
-     * position, which is still that of its block (GEO-043, API-023).
+     * This shape with the heat and fire data of another geometry, and whether pressure breaks it: for
+     * the geometry of a single position, which is still that of its block (GEO-043, API-023, FLOW-007).
      */
     public Geometry withDataOf(Geometry block) {
-        int kept = FLAG_HEAT_SOURCE | FLAG_FIRE | FLAG_GAS_FIRE | FLAG_IGNITION_SOURCE;
+        int kept = FLAG_HEAT_SOURCE | FLAG_FIRE | FLAG_GAS_FIRE | FLAG_IGNITION_SOURCE | FLAG_PRESSURE_FRAGILE;
         return new Geometry(
                 coverage,
                 cells,
