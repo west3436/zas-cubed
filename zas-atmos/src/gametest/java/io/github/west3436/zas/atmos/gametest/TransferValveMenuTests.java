@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -45,6 +46,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -424,7 +426,7 @@ public final class TransferValveMenuTests {
         h.succeed();
     }
 
-    /** The hand valve needs both tanks however they came, and greys out nothing a test can't see. */
+    /** The hand valve needs both tanks, however they came. */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_104_the_hand_valve_needs_both_tanks_from_slots(GameTestHelper h) {
         Area a = new Area(h, 933);
@@ -498,9 +500,7 @@ public final class TransferValveMenuTests {
     }
 
     private record TakeWay(
-            String name,
-            BiConsumer<TransferValveMenu, TestPlayer> take,
-            java.util.function.Function<TestPlayer, ItemStack> result) {}
+            String name, BiConsumer<TransferValveMenu, TestPlayer> take, Function<TestPlayer, ItemStack> result) {}
 
     /** A shift-click with nowhere to go changes nothing: the valve doesn't close for a tank that stays. */
     @GameTest(template = "empty", batch = BATCH)
@@ -822,7 +822,7 @@ public final class TransferValveMenuTests {
                 }),
                 new Change("another hotbar slot selected", p -> p.getInventory().selected = 5),
                 new Change("the player's drop key, with no screen to stop it", p -> p.drop(false)),
-                new Change("the player a spectator", p -> p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR)));
+                new Change("the player a spectator", p -> p.setGameMode(GameType.SPECTATOR)));
 
         for (Change change : changes) {
             ItemStack stack = loaded();
@@ -1182,9 +1182,13 @@ public final class TransferValveMenuTests {
         ServerPlayer p = realPlayer(a, stack, sent);
         p.getInventory().setItem(9, oxygen());
 
-        stack.use(a.level, p, InteractionHand.MAIN_HAND);
+        // As a right-click does: the game may put a new stack in the hand after using the old one, and
+        // a menu that compares stacks would then close as soon as it opened.
+        p.gameMode.useItem(p, a.level, stack, InteractionHand.MAIN_HAND);
         h.assertTrue(p.containerMenu instanceof TransferValveMenu, "using it opened " + p.containerMenu);
         TransferValveMenu menu = (TransferValveMenu) p.containerMenu;
+        p.tick();
+        h.assertTrue(p.containerMenu == menu, "the screen closed after being opened");
 
         click(p, slotOf(9), 0, ClickType.PICKUP);
         h.assertFalse(menu.getCarried().isEmpty(), "the click took nothing from the inventory");
@@ -1209,10 +1213,20 @@ public final class TransferValveMenuTests {
         p.closeContainer();
         h.assertValueEqual(TransferValveItem.tankCount(stack), 1, "tanks on after closing");
 
+        // The same for a creative player, whose hand the game treats differently after use.
+        p.setGameMode(GameType.CREATIVE);
+        p.gameMode.useItem(p, a.level, stack, InteractionHand.MAIN_HAND);
+        h.assertTrue(p.containerMenu instanceof TransferValveMenu, "using it in creative opened " + p.containerMenu);
+        AbstractContainerMenu creative = p.containerMenu;
+        p.tick();
+        h.assertTrue(p.containerMenu == creative, "the screen closed after being opened in creative");
+        p.closeContainer();
+        p.setGameMode(GameType.SURVIVAL);
+
         // A stack of two has no screen of its own, as it can't be loaded.
         stack.set(DataComponents.MAX_STACK_SIZE, 2);
         stack.setCount(2);
-        stack.use(a.level, p, InteractionHand.MAIN_HAND);
+        p.gameMode.useItem(p, a.level, stack, InteractionHand.MAIN_HAND);
         h.assertTrue(p.containerMenu == p.inventoryMenu, "a stack of two opened a screen");
         a.clear(-1, -1, 5, 5);
         h.succeed();
