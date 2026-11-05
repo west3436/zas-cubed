@@ -281,7 +281,7 @@
   },
   "device.recharger.done": {
     "subtitle": "subtitles.zas_atmos.device.recharger.done",
-    "sounds": [{ "name": "zas_atmos:device/ping", "volume": 0.3 }]
+    "sounds": [{ "name": "zas_atmos:device/charge_finish", "volume": 0.3 }]
   },
   "device.ttv.arm": {
     "subtitle": "subtitles.zas_atmos.device.ttv.arm",

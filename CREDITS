@@ -2842,11 +2842,13 @@ source: sound/effects/bang.ogg
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
 
-path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/ping.ogg
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/charge_finish.ogg
 origin: vgstation13
-source: sound/machines/ping.ogg
+source: sound/machines/charge_finish.ogg
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
-adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
+attribution: vgstation13 contributors, CC BY-SA 3.0 US
+notes: vg PR #25079 links a Discord-hosted file and names no source. Credited to vgstation13 contributors by the owner's decision, 2026-11-05: it's likely a vg player's own, or one of SS13's old shared assets whose author is unknown.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/arm.ogg
 origin: vgstation13

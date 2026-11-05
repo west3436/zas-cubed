@@ -2233,7 +2233,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
-| `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger, with its menu (§11.5) |
+| `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
@@ -2731,9 +2731,9 @@ the cell in front of its grille).
   but only on paid-for power (`paidFor()`), so a lease it got while it drew
   nothing charges nothing. Its block state's `battery` and `charge` (0–4,
   by `RechargerBlock.gauge`) pick the `recharger` and `recharger_0` to
-  `recharger_4` models. Broken, it drops its battery. Its GUI has the
-  battery slot and no buttons, and shows its status (charging, full, no
-  power, no battery) and the battery's charge.
+  `recharger_4` models. Broken, it drops its battery. It has no GUI: a
+  right-click with a battery puts it in, swapping with any it held, and any other
+  takes its battery out, to an empty hand or else the inventory.
 - **Igniter** (CONT-105), in `.igniter`. A floor plate 2 px thick, and a
   controller's part like the recharger, in the auxiliary group. Its block
   state's `powered` follows the redstone signal as its neighbours change, and
@@ -2840,7 +2840,7 @@ the cell in front of its grille).
   100 L at its own conditions, and when one can't give what it's asked for, both
   scale by the same factor. An input with a fraction of 0 is never asked for gas,
   so it can be empty. It draws `[power] mixer` FE/t (20).
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, recharger or inline device with an empty hand opens its
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump or inline device with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
