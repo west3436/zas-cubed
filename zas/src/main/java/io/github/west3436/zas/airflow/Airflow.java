@@ -72,6 +72,10 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       in the swimming pose, so the flow carries it through, and let up once it can stand
  *       ({@link #crawl}, FLOW-019). Both sides do it: the server first, from further off, so it
  *       never refuses the client's move into the opening.
+ *   <li><b>Showing the flow</b>: each atmos tick, a player whose nearby airflow changed is sent it
+ *       ({@link AirflowEffectsPayload}, {@link VisibleFlows}, DATA-015) for its client's particles
+ *       (CLIENT-003). That is separate from the openings that push the player: wider, and sent
+ *       to creative players and spectators too.
  * </ul>
  */
 public final class Airflow {
@@ -116,6 +120,14 @@ public final class Airflow {
         int inRange;
         final Set<UUID> synced = new HashSet<>();
         final Set<UUID> pushed = new HashSet<>();
+        final Map<UUID, Shown> shown = new HashMap<>();
+    }
+
+    /** What a player's client was last sent to show, and at which game tick (DATA-015). */
+    private record Shown(ServerPlayer player, List<VisibleFlow> flows, long sentAt) {
+        boolean stillIn(ServerLevel level) {
+            return !player.isRemoved() && player.level() == level;
+        }
     }
 
     private Airflow() {}
@@ -144,7 +156,9 @@ public final class Airflow {
         event.registrar("1")
                 .playToClient(AirflowSyncPayload.TYPE, AirflowSyncPayload.STREAM_CODEC, AirflowReceiver::handleSync)
                 .playToClient(
-                        AirflowImpulsePayload.TYPE, AirflowImpulsePayload.STREAM_CODEC, AirflowReceiver::handleImpulse);
+                        AirflowImpulsePayload.TYPE, AirflowImpulsePayload.STREAM_CODEC, AirflowReceiver::handleImpulse)
+                .playToClient(
+                        AirflowEffectsPayload.TYPE, AirflowEffectsPayload.STREAM_CODEC, AirflowReceiver::handleEffects);
     }
 
     // ---- The push, shared by the server and the client ------------------------------------
@@ -346,6 +360,7 @@ public final class Airflow {
             st.tick = tick;
             st.field = FlowField.of(p.flows());
             syncPlayers(level, d, table, st, settings);
+            showPlayers(level, st);
         }
         st.processed = 0;
         st.inRange = 0;
@@ -402,6 +417,12 @@ public final class Airflow {
         }
         st.synced.clear();
         st.pushed.clear();
+        for (Shown shown : st.shown.values()) {
+            if (shown.stillIn(level)) {
+                send(shown.player(), new AirflowEffectsPayload(List.of()));
+            }
+        }
+        st.shown.clear();
         st.field = FlowField.EMPTY;
         st.tick = NONE;
         st.processed = 0;
@@ -507,6 +528,44 @@ public final class Airflow {
         }
     }
 
+    /** Tells each player in the level about changes in the airflow it should show (DATA-015). */
+    private static void showPlayers(ServerLevel level, LevelState st) {
+        if (st.field.isEmpty() && st.shown.isEmpty()) {
+            return;
+        }
+        // Whoever comes back later has dropped what it held, so must be sent it again.
+        st.shown.values().removeIf(shown -> !shown.stillIn(level));
+        long now = level.getGameTime();
+        for (ServerPlayer player : level.players()) {
+            showPlayer(st, player, now);
+        }
+    }
+
+    /**
+     * Sends a player the airflow it should show (CLIENT-003), if that changed ({@link
+     * VisibleFlows#shouldSend}). A respawned or reconnected player is a new {@link ServerPlayer},
+     * so it counts as having been sent nothing.
+     */
+    private static void showPlayer(LevelState st, ServerPlayer player, long now) {
+        UUID id = player.getUUID();
+        Shown last = st.shown.get(id);
+        if (last != null && last.player() != player) {
+            last = null;
+        }
+        Vec3 c = player.getBoundingBox().getCenter();
+        List<VisibleFlow> flows = VisibleFlows.near(st.field, c.x, c.y, c.z);
+        List<VisibleFlow> before = last == null ? List.of() : last.flows();
+        if (!VisibleFlows.shouldSend(before, flows, last == null ? 0 : now - last.sentAt())) {
+            return;
+        }
+        send(player, new AirflowEffectsPayload(flows));
+        if (flows.isEmpty()) {
+            st.shown.remove(id);
+        } else {
+            st.shown.put(id, new Shown(player, flows, now));
+        }
+    }
+
     /**
      * The zone an entity's centre is in, {@link FlowEdge#AMBIENT} in the open air, or {@link
      * #UNRESOLVED} where the atmosphere isn't known: an unloaded or settling chunk, a held region or
@@ -553,6 +612,17 @@ public final class Airflow {
             return;
         }
         syncPlayer(level, d, d.pipeline().published(), st, AirflowConfig.settings(), player);
+    }
+
+    /**
+     * For GameTests: tells one player about the airflow to show as each atmos tick does, for a
+     * player the level doesn't list, as if at game tick {@code now}. Server thread.
+     */
+    public static void showForTest(ServerLevel level, ServerPlayer player, long now) {
+        LevelState st = STATES.get(level.dimension());
+        if (st != null) {
+            showPlayer(st, player, now);
+        }
     }
 
     /**

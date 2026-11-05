@@ -83,4 +83,9 @@ public final class AirflowReceiver {
     static void handleImpulse(AirflowImpulsePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> Airflow.applyImpulse(context.player(), payload));
     }
+
+    static void handleEffects(AirflowEffectsPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> HeldFlows.CLIENT.accept(
+                payload.flows(), context.player().level().dimension().location()));
+    }
 }

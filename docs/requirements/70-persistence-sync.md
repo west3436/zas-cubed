@@ -220,6 +220,40 @@ difference changes.
 - **Verify:** A GameTest checks airflow packets reach only players within 32
   blocks, at most once per tick; Bench measures bytes.
 
+*2026-11-05: Checked for CLIENT-003 and CLIENT-010. What the client had wasn't
+enough, and the rule above wasn't what the code did. FLOW-017's
+`AirflowSyncPayload` goes out every atmos tick while a player is near airflow,
+changed or not, and lapses without one. It holds only what pushes that player:
+within the push range plus 8 blocks, on edges beside its zone, at or above its
+class's threshold, and nothing for creative players or spectators. So it stays
+as it is, and is a known exception to "only when it changes": the push must not
+outlive the flow by more than a moment.*
+
+*Showing airflow has its own payload, `AirflowEffectsPayload`: every exported
+edge's openings within 32 blocks, whatever the player's zone or game mode, each
+with its block, the face the flow leaves by, and the edge's difference in whole
+kPa. No zone ids. At an atmos tick the server sends a player its whole list if
+it differs from the last it sent, so a difference that moved by a whole kPa or
+an opening coming into range or leaving. A steady breach sends nothing, and the
+client holds the list. A newer list replaces it, so an edge missing from one has
+ended, and an empty list ends them all. As a failsafe against a client showing a
+flow that ended, a list that isn't empty is sent again every 10 s, and the client
+drops it after 30 s with no packet, on leaving the dimension or on logging out.*
+
+*Measured bytes, before about 21 of packet id and channel name: 1 for an empty
+list; 15 for one hole; 47 for a 3 × 3 hole (4 an opening); and at most 1,129, for
+the largest list, 32 edges and 256 openings. An edge with over 64 openings in
+range is sampled evenly. So a steady one-hole breach costs about 4 B/s, and one
+whose difference is moving at most about 36 B/s. FLOW-017's payload, for
+comparison, is 89 bytes every second for one hole. `AirflowEffectsPayloadTest`, `HeldFlowsTest` and
+`VisibleFlowsTest` check the format, the holding and the selection;
+`data_015_a_steady_breach_is_held_until_it_ends`,
+`data_015_at_most_once_per_atmos_tick`,
+`data_015_airflow_off_ends_what_clients_show` and
+`data_015_a_new_player_object_is_sent_it_again` (GameTests) check the sending.
+There's no bench yet, and FLOW-017's payload is the exception above, so this stays
+Accepted.*
+
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
 

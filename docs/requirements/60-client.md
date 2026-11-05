@@ -116,6 +116,20 @@ lower-pressure side, to players within 32 blocks.
 - **Verify:** Manual check of particles at a breach, and none beyond 32
   blocks.
 
+*2026-11-05: Built ([#57](https://github.com/west3436/zas-cubed/issues/57)).
+Each game tick the client starts vanilla's white smoke sprite, tinted a neutral
+pale grey in code, at each opening it was sent (DATA-015), just on the high side
+of the face and moving through it towards the low side. Each opening starts
+kPa / 200 particles a tick, up to 1, so 0.1 at 20 kPa and 0.5 at 101 kPa. Their
+speed is 0.1 + 0.35 × kPa / 101.325 blocks a tick, up to 0.6. One edge starts at
+most 8 a tick and a client at most 32, spent on the nearest edge first. The
+Particles setting scales the density: All 1, Decreased 0.4, Minimal none. With
+airflow switched off (FLOW-014) there are none. `AirflowParticlePlanTest` checks
+the curves, the caps, the setting, the direction and the 32 blocks;
+`client_003_players_within_32_blocks_are_sent_the_breach` and
+`client_003_an_edge_shows_from_the_lowest_class_threshold` (GameTests) check what
+the server sends. It stays Accepted until the owner checks how it looks.*
+
 #### CLIENT-010 · Airflow sound
 `Should` · `R1` · `Accepted` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
 
