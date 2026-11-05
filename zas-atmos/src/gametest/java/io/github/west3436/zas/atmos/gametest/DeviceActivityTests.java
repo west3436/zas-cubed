@@ -7,17 +7,24 @@ import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload.Change;
 import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.particle.DeviceJets;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
+import io.github.west3436.zas.atmos.particle.JetPlan;
 import io.github.west3436.zas.atmos.scrubber.GasSelection;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.scrubber.ScrubberStatus;
+import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
 import io.github.west3436.zas.atmos.vent.VentStatus;
 import io.github.west3436.zas.gametest.TestPlayers;
@@ -34,12 +41,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Telling clients how hard devices are working (DATA-017, DATA-018).
+ * Telling clients how hard devices are working (DATA-017, DATA-018), and what a client shows for it
+ * (CLIENT-019).
  *
  * <p>A fake player has no connection and isn't in the server's player list, so these ask {@link
  * DeviceActivitySync#syncAt} what it would send. Each runs within one game tick, and passes the sync
@@ -405,6 +414,114 @@ public final class DeviceActivityTests {
         }
         h.assertTrue(s.status() == ScrubberStatus.NOTHING, "its status: " + s.status());
         h.assertValueEqual(told(h, player(a, 2, 2), AtmosTicks.now(a.level)), List.of(), "nothing to take");
+        h.succeed();
+    }
+
+    // ---- CLIENT-019: what a client makes of what it is told ---------------------------------------
+
+    /** The level a player is told of the one device working near it, or idle if it is told of none. */
+    private static int toldLevel(Area a) {
+        List<Change> changes = told(a.h, player(a, 2, 2), AtmosTicks.now(a.level));
+        a.h.assertTrue(changes.size() <= 1, "told of more than one device: " + changes);
+        return changes.isEmpty() ? DeviceActivity.IDLE : changes.get(0).level();
+    }
+
+    /** A vent filling a vacuum blows out of its grille at its hardest: the owner's first example. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_vent_filling_a_vacuum_shows_blowing_out_of_its_grille(GameTestHelper h) {
+        Area a = new Area(h, 874);
+        GasDeviceTests.room(a);
+        a.settle(GasMutations.remove(
+                a.level, a.point(2, 2, 2), a.zone(2, 2, 2).mixture().moles(), Area.SOURCE));
+        VentBlockEntity vent = GasDeviceTests.ventRig(a);
+        vent.network().gas().add(new GasParcel(Map.of(N2, 1_500.0), T));
+        vent.command(VentSettings.blow(50));
+        settle(a, vent);
+        BlockState state = vent.getBlockState();
+        h.assertValueEqual(state.getValue(VentBlock.FACING), Direction.EAST, "the way its grille looks");
+        double amount = DeviceJets.vent(state.getValue(VentMode.PROPERTY), toldLevel(a));
+        h.assertTrue(amount == DeviceActivity.HARD, "its jet's amount: " + amount);
+        h.assertFalse(JetPlan.of(GasJetKind.DEVICE, amount).inward(), "it shows gas going in");
+        h.succeed();
+    }
+
+    /** A vent can siphon as well as blow, and shows which: gas going in, and nothing once it is off. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_vent_siphoning_shows_drawing_in_until_it_is_off(GameTestHelper h) {
+        Area a = new Area(h, 875);
+        a.box(0, 0, 4, 4);
+        a.fill(2, 2, 2, Map.of(N2, 1_000.0));
+        VentBlockEntity vent = GasDeviceTests.ventRig(a);
+        vent.command(VentSettings.siphon(0));
+        settle(a, vent);
+        double amount = DeviceJets.vent(vent.getBlockState().getValue(VentMode.PROPERTY), toldLevel(a));
+        h.assertTrue(amount == -DeviceActivity.HARD, "its jet's amount: " + amount);
+        h.assertTrue(JetPlan.of(GasJetKind.DEVICE, amount).inward(), "it shows gas going out");
+
+        vent.command(VentSettings.OFF);
+        a.step();
+        // The state says off at once, so it shows nothing even with the table's old level.
+        h.assertValueEqual(vent.getBlockState().getValue(VentMode.PROPERTY), VentMode.OFF, "its state");
+        h.assertTrue(
+                DeviceJets.vent(vent.getBlockState().getValue(VentMode.PROPERTY), DeviceActivity.HARD) == 0,
+                "a vent that is off shows a jet");
+        h.succeed();
+    }
+
+    /** A vent with no power has its state say off too, whatever it was set to. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_vent_without_power_shows_nothing(GameTestHelper h) {
+        Area a = new Area(h, 876);
+        a.box(0, 0, 4, 4);
+        a.fill(2, 2, 2, Map.of(N2, 1_000.0));
+        VentBlockEntity vent = GasDeviceTests.ventRig(a);
+        vent.command(VentSettings.siphon(0));
+        settle(a, vent);
+        vent.power().setTestPowered(false);
+        a.step();
+        h.assertValueEqual(vent.getBlockState().getValue(VentMode.PROPERTY), VentMode.OFF, "its state");
+        h.succeed();
+    }
+
+    /** A scrubber working hard draws in at its hardest: the owner's second example. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_scrubber_working_hard_shows_drawing_in(GameTestHelper h) {
+        Area a = new Area(h, 877);
+        ScrubberBlockEntity s = scrubberRig(a, Map.of(N2, 800.0, Area.O2, 200.0));
+        s.command(ScrubberMode.PANIC, GasSelection.DEFAULT);
+        settle(a, s);
+        BlockState state = s.getBlockState();
+        h.assertValueEqual(state.getValue(ScrubberBlock.FACING), Direction.EAST, "the way its grille looks");
+        double amount = DeviceJets.scrubber(state.getValue(ScrubberMode.PROPERTY), toldLevel(a));
+        h.assertTrue(amount == -DeviceActivity.HARD, "its jet's amount: " + amount);
+        h.assertTrue(JetPlan.of(GasJetKind.DEVICE, amount).inward(), "it shows gas going out");
+        h.succeed();
+    }
+
+    /** A scrubber on 10 kPa of CO2 is working, not working hard, so it shows the smaller jet. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_scrubber_on_a_fair_amount_shows_the_smaller_jet(GameTestHelper h) {
+        Area a = new Area(h, 878);
+        ScrubberBlockEntity s = scrubberRig(a, Map.of(N2, 800.0, Area.O2, 200.0, ControllerPreset.CO2, 110.0));
+        s.command(ScrubberMode.SCRUB, GasSelection.DEFAULT);
+        settle(a, s);
+        double amount = DeviceJets.scrubber(s.getBlockState().getValue(ScrubberMode.PROPERTY), toldLevel(a));
+        h.assertTrue(amount == -DeviceActivity.WORKING, "its jet's amount: " + amount);
+        h.succeed();
+    }
+
+    /** A scrubber on 1 kPa of CO2 is really running, and only trickling, so it shows nothing. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_scrubber_at_a_trickle_shows_nothing(GameTestHelper h) {
+        Area a = new Area(h, 879);
+        ScrubberBlockEntity s = scrubberRig(a, Map.of(N2, 800.0, Area.O2, 200.0, ControllerPreset.CO2, 11.0));
+        s.command(ScrubberMode.SCRUB, GasSelection.DEFAULT);
+        settle(a, s);
+        h.assertTrue(s.status() == ScrubberStatus.MOVING, "the scrubber isn't moving gas: " + s.status());
+        int level = toldLevel(a);
+        h.assertValueEqual(level, DeviceActivity.TRICKLE, "its level");
+        double amount = DeviceJets.scrubber(s.getBlockState().getValue(ScrubberMode.PROPERTY), level);
+        h.assertTrue(amount == 0, "a trickle shows a jet: " + amount);
         h.succeed();
     }
 }

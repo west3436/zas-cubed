@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.DeviceActivity;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -153,6 +154,67 @@ class JetPlanTest {
         assertTrue(plan.ticks() > AtmosTicks.PERIOD, "there would be a gap each atmos tick");
         assertTrue(plan.ticks() <= AtmosTicks.PERIOD + 5, "it would run on too long after the flow stops");
         assertEquals(plan.distance(), travelled(plan), EPS);
+    }
+
+    @Test
+    void client_019_a_device_working_hard_shows_more_than_one_just_working() {
+        JetPlan working = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.WORKING);
+        JetPlan hard = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.HARD);
+        assertTrue(working.perTick() < hard.perTick());
+        assertTrue(working.distance() < hard.distance());
+        assertTrue(working.size() < hard.size());
+        assertEquals(working.distance(), travelled(working), EPS);
+        assertEquals(hard.distance(), travelled(hard), EPS);
+    }
+
+    @Test
+    void client_019_a_device_is_the_same_size_either_way() {
+        JetPlan out = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.HARD);
+        JetPlan in = JetPlan.of(GasJetKind.DEVICE, -DeviceActivity.HARD);
+        assertFalse(out.inward());
+        assertTrue(in.inward());
+        assertEquals(out.perTick(), in.perTick(), EPS);
+        assertEquals(out.distance(), in.distance(), EPS);
+        assertEquals(out.size(), in.size(), EPS);
+    }
+
+    @Test
+    void client_019_a_device_is_light() {
+        // At its hardest, the most of its particles in the air at once: a dozen or so.
+        JetPlan hard = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.HARD);
+        assertTrue(hard.perTick() * hard.lifetime() <= 12, hard.perTick() * hard.lifetime() + " in the air");
+        assertTrue(hard.perTick() <= JetEmitters.PER_SOURCE, hard.perTick() + " a tick");
+    }
+
+    @Test
+    void client_019_only_a_device_starts_across_a_patch() {
+        assertEquals(
+                JetPlan.DEVICE_PATCH,
+                JetPlan.of(GasJetKind.DEVICE, DeviceActivity.HARD).patch(),
+                EPS);
+        for (GasJetKind kind : GasJetKind.values()) {
+            if (kind != GasJetKind.DEVICE) {
+                assertEquals(0, JetPlan.of(kind, 1).patch(), EPS, kind.name());
+            }
+        }
+    }
+
+    @Test
+    void client_019_a_patch_stays_across_its_axis_and_fills_it() {
+        Random random = new Random(4);
+        double[][] axes = {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}};
+        for (double[] axis : axes) {
+            double widest = 0;
+            for (int i = 0; i < 2000; i++) {
+                double[] p = JetPlan.across(axis[0], axis[1], axis[2], 0.35, random);
+                assertEquals(0, p[0] * axis[0] + p[1] * axis[1] + p[2] * axis[2], EPS, "it left the plane");
+                for (double v : p) {
+                    assertTrue(Math.abs(v) <= 0.35 + EPS, "it left the patch: " + v);
+                    widest = Math.max(widest, Math.abs(v));
+                }
+            }
+            assertTrue(widest > 0.33, "it never got near the edge: " + widest);
+        }
     }
 
     @Test
