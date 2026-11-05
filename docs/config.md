@@ -52,6 +52,8 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[airflow] mob_threshold_kpa` | `65.0` | The least difference that moves players, mobs and `#zas:airflow/mob` (FLOW-011) |
 | `[airflow] heavy_threshold_kpa` | `85.0` | The least difference that moves `#zas:airflow/heavy` (FLOW-011) |
 | `[airflow] max_entities_per_tick` | `256` | The most entities airflow moves in a dimension per game tick; beyond it they take turns (FLOW-013) |
+| `[airflow] pressure_fragile_threshold_kpa` | `150.0` | The pressure difference a block in [`#zas:pressure_fragile`](datapacks.md#pressure-fragile-blocks) holds, 0 to 100,000 kPa; it breaks at more than this (FLOW-007, FLOW-015). Whether blocks break at all is the preset option `block_pressure_damage`. `enabled` and `disabled_dimensions`, which are about pushing entities, don't change it |
+| `[airflow] pressure_fragile_breaks_per_tick` | `32` | The most blocks a pressure difference breaks in a dimension per atmos tick, 1 to 4,096; the rest break in later ticks, if the difference is still there (FLOW-007) |
 | `[fire] oxygen_minimum_fraction` | `0.14` | The least O₂ mole fraction any fire needs, 0 to 1: gas fires, vanilla fire, furnaces and campfires (FIRE-030). A gas fire at or above its fuel's autoignition temperature doesn't need it (FIRE-035). The fuel generator doesn't use the air (CONT-067) |
 | `[fire] oxygen_minimum_kpa` | `10.0` | The least O₂ partial pressure any fire needs, in kPa, whatever the fraction, so nothing burns in a thin atmosphere (FIRE-030, FIRE-035) |
 | `[fire] incomplete_below_fraction` | `0.18` | The O₂ fraction below which fuels burn incompletely: a share of their carbon forms CO instead of CO₂, rising linearly to all of it at `oxygen_minimum_fraction`, with the heat released reduced to match (FIRE-005) |
@@ -71,7 +73,7 @@ atmos tick), the `[atmos]` timing and venting model from the next atmos tick,
 finds every wall's paths again), the thread mode when a dimension's simulation
 starts, `[breathing]`, `[hazards]` and `[protection]` from each entity's next
 check, `[airflow]` from the next game tick (which differences the engine
-reports, from the next atmos tick), `[fire]` from the next check (for gas
+reports and which blocks break, from the next atmos tick), `[fire]` from the next check (for gas
 fires, the next atmos tick), and `[commands]` and `[profiling]` at once.
 OPS-016's guarantee that every server
 setting applies without a restart is R1.
@@ -148,10 +150,8 @@ warning in the log.
 | `leaf_photosynthesis_rate` | `0.0625` | `0.03125` | The same for a plant in `#zas:leaf_plants`, such as a leaf block (CONT-057) |
 | `container_explosions_break_blocks` | `false` | `true` | Whether tank and canister explosions break blocks; they hurt entities either way (CONT-107) |
 
-Every option acts today except `block_pressure_damage`, which is in the file and
-in `/zas preset` already, marked "not used yet" with the requirement it waits
-for, and takes effect when that feature lands. The space-mod compat mode
-(SPACE-004) joins in R2 with the Ad Astra adapter (D-66).
+Every option acts today. The space-mod compat mode (SPACE-004) joins in R2 with
+the Ad Astra adapter (D-66).
 
 Zone triggers that aren't options: Normal's triggers (CORE-055), API calls
 (which include devices, leaks and `/zas gas`) and breaches of zones, form

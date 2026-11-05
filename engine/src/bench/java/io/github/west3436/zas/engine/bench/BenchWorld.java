@@ -38,6 +38,8 @@ final class BenchWorld implements DimensionPipeline.World {
     static final int DOOR_EAST_CLOSED;
     /** An open door in a wall running east to west, joining the room north of it. */
     static final int DOOR_SOUTH;
+    /** A solid block a pressure difference breaks (FLOW-007). */
+    static final int WINDOW;
 
     static final GeometryPalette PALETTE;
     static final int MIN_SECTION_Y = -4;
@@ -49,6 +51,7 @@ final class BenchWorld implements DimensionPipeline.World {
         DOOR_EAST = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, east));
         DOOR_EAST_CLOSED = b.intern(Geometry.declared(Set.of(Face.EAST), Geometry.FULL_VOLUME, east));
         DOOR_SOUTH = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, Geometry.boundaryFlag(Face.SOUTH)));
+        WINDOW = b.intern(Geometry.SOLID.withFlags(Geometry.FLAG_PRESSURE_FRAGILE));
         PALETTE = b.build();
     }
 

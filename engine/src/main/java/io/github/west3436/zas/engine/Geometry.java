@@ -101,6 +101,12 @@ public record Geometry(
      */
     public static final int FLAG_IGNITION_SOURCE = 1 << 7;
 
+    /**
+     * The block is in {@code zas:pressure_fragile}: a pressure difference across it above the threshold
+     * breaks it (FLOW-007). The bit is above the six {@link #boundaryFlag} bits, which use 8 to 13.
+     */
+    public static final int FLAG_PRESSURE_FRAGILE = 1 << 14;
+
     private static final List<FaceMask> NO_MASKS =
             List.of(FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY, FaceMask.EMPTY);
     private static final List<FaceMask> ALL_MASKS =

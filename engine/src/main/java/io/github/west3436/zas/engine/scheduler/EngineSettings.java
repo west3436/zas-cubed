@@ -2,6 +2,7 @@ package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.fire.BlockIgnitionSettings;
 import io.github.west3436.zas.engine.fire.FireSettings;
+import io.github.west3436.zas.engine.flow.FragileSettings;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
@@ -22,6 +23,7 @@ import java.util.Objects;
  *     burn with them (FIRE-011)
  * @param hotspots hotspot spread (FIRE-016)
  * @param blockIgnition how hot gas and gas fires set blocks alight (FIRE-033, FIRE-034)
+ * @param fragile when a pressure difference breaks fragile blocks (FLOW-007)
  */
 public record EngineSettings(
         ExchangeSettings exchange,
@@ -31,10 +33,11 @@ public record EngineSettings(
         FireSettings fire,
         ReactionSet reactions,
         HotspotSettings hotspots,
-        BlockIgnitionSettings blockIgnition) {
+        BlockIgnitionSettings blockIgnition,
+        FragileSettings fragile) {
     /**
      * The default exchange, heat, fire threshold, hotspot spread and block ignition at a 1 s period,
-     * with the checker, airflow and reactions off.
+     * with the checker, airflow, reactions and block pressure damage off.
      */
     public static final EngineSettings DEFAULT = new EngineSettings(
             ExchangeSettings.DEFAULT,
@@ -44,7 +47,8 @@ public record EngineSettings(
             FireSettings.DEFAULT,
             ReactionSet.EMPTY,
             HotspotSettings.DEFAULT,
-            BlockIgnitionSettings.DEFAULT);
+            BlockIgnitionSettings.DEFAULT,
+            FragileSettings.OFF);
 
     public EngineSettings {
         Objects.requireNonNull(exchange, "exchange");
@@ -53,6 +57,7 @@ public record EngineSettings(
         Objects.requireNonNull(reactions, "reactions");
         Objects.requireNonNull(hotspots, "hotspots");
         Objects.requireNonNull(blockIgnition, "blockIgnition");
+        Objects.requireNonNull(fragile, "fragile");
         if (Double.isNaN(airflowKpa) || airflowKpa < 0) {
             throw new IllegalArgumentException("airflowKpa must be >= 0: " + airflowKpa);
         }
@@ -67,7 +72,16 @@ public record EngineSettings(
             FireSettings fire,
             ReactionSet reactions,
             HotspotSettings hotspots) {
-        this(exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, BlockIgnitionSettings.DEFAULT);
+        this(
+                exchange,
+                checkConservation,
+                heat,
+                airflowKpa,
+                fire,
+                reactions,
+                hotspots,
+                BlockIgnitionSettings.DEFAULT,
+                FragileSettings.OFF);
     }
 
     /** Settings with the default hotspot spread. */
@@ -116,42 +130,52 @@ public record EngineSettings(
                 fire,
                 reactions,
                 hotspots,
-                blockIgnition);
+                blockIgnition,
+                fragile);
     }
 
     public EngineSettings withConservationCheck(boolean on) {
-        return new EngineSettings(exchange, on, heat, airflowKpa, fire, reactions, hotspots, blockIgnition);
+        return new EngineSettings(exchange, on, heat, airflowKpa, fire, reactions, hotspots, blockIgnition, fragile);
     }
 
     public EngineSettings withHeat(HeatSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, settings, airflowKpa, fire, reactions, hotspots, blockIgnition);
+                exchange, checkConservation, settings, airflowKpa, fire, reactions, hotspots, blockIgnition, fragile);
     }
 
     /** These settings exporting the openings of edges at or above {@code kpa} (FLOW-001). */
     public EngineSettings withAirflow(double kpa) {
-        return new EngineSettings(exchange, checkConservation, heat, kpa, fire, reactions, hotspots, blockIgnition);
+        return new EngineSettings(
+                exchange, checkConservation, heat, kpa, fire, reactions, hotspots, blockIgnition, fragile);
     }
 
     /** These settings with a fire oxygen threshold (FIRE-030). */
     public EngineSettings withFire(FireSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, heat, airflowKpa, settings, reactions, hotspots, blockIgnition);
+                exchange, checkConservation, heat, airflowKpa, settings, reactions, hotspots, blockIgnition, fragile);
     }
 
     /** These settings with a set of reactions (FIRE-001). */
     public EngineSettings withReactions(ReactionSet set) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, set, hotspots, blockIgnition);
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, set, hotspots, blockIgnition, fragile);
     }
 
     /** These settings with hotspot spread settings (FIRE-016). */
     public EngineSettings withHotspots(HotspotSettings settings) {
         return new EngineSettings(
-                exchange, checkConservation, heat, airflowKpa, fire, reactions, settings, blockIgnition);
+                exchange, checkConservation, heat, airflowKpa, fire, reactions, settings, blockIgnition, fragile);
     }
 
     /** These settings with block ignition settings (FIRE-033, FIRE-034). */
     public EngineSettings withBlockIgnition(BlockIgnitionSettings settings) {
-        return new EngineSettings(exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, settings);
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, settings, fragile);
+    }
+
+    /** These settings with block pressure damage's threshold and cap (FLOW-007, FLOW-015). */
+    public EngineSettings withFragile(FragileSettings settings) {
+        return new EngineSettings(
+                exchange, checkConservation, heat, airflowKpa, fire, reactions, hotspots, blockIgnition, settings);
     }
 }

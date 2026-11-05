@@ -29,7 +29,7 @@ public final class EngineBench {
             }
         }
         if (cases.isEmpty()) {
-            cases = List.of("fill", "zones", "s10", "scaling", "changes", "toggle", "airflow");
+            cases = List.of("fill", "zones", "s10", "scaling", "changes", "toggle", "airflow", "fragile");
         }
         environment(quick);
         long start = System.nanoTime();
@@ -42,9 +42,10 @@ public final class EngineBench {
                 case "changes" -> ChangeBench.run(quick);
                 case "toggle" -> DoorBench.run(quick);
                 case "airflow" -> FlowBench.run(quick);
+                case "fragile" -> FragileBench.run(quick);
                 default ->
-                    throw new IllegalArgumentException(
-                            "unknown case " + c + "; expected fill, zones, s10, scaling, changes, toggle or airflow");
+                    throw new IllegalArgumentException("unknown case " + c
+                            + "; expected fill, zones, s10, scaling, changes, toggle, airflow or fragile");
             }
         }
         System.out.printf("_All cases took %.0f s._%n", (System.nanoTime() - start) / 1e9);

@@ -78,7 +78,7 @@ public final class PresetOptions {
             true,
             "Whether a pressure difference breaks blocks in the zas:pressure_fragile tag, such as glass",
             "FLOW-007, FLOW-016",
-            "FLOW-007");
+            null);
 
     /**
      * O2 a lit crop or sapling in a zone makes from CO2 at light 15, in mol/h (CONT-057, D-61): the

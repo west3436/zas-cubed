@@ -54,6 +54,13 @@ public final class Geometries {
     public static final TagKey<Block> ZONE_BOUNDARY =
             TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "zone_boundary"));
 
+    /**
+     * Blocks a pressure difference breaks (FLOW-007): by default glass and glass panes. The states are
+     * flagged {@link Geometry#FLAG_PRESSURE_FRAGILE}; the threshold is {@code [airflow]}'s.
+     */
+    public static final TagKey<Block> PRESSURE_FRAGILE =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "pressure_fragile"));
+
     private static volatile List<GeometryOverride> overrides = List.of();
     private static volatile List<GeometryOverride> testOverrides = List.of();
     private static volatile List<ThermalData> thermal = List.of();
@@ -120,10 +127,11 @@ public final class Geometries {
     public static void rebuildForTest() {
         current = CompletableFuture.completedFuture(build(
                 resolve(allOverrides()),
-                boundaryBlocks(),
+                taggedBlocks(ZONE_BOUNDARY),
                 resolveThermal(thermal),
                 sourceStates(),
-                BlockIgnitions.flammableStates()));
+                BlockIgnitions.flammableStates(),
+                taggedBlocks(PRESSURE_FRAGILE)));
     }
 
     static void setOverrides(List<GeometryOverride> loaded) {
@@ -164,12 +172,13 @@ public final class Geometries {
             return;
         }
         Map<Block, GeometryOverride> byBlock = resolve(allOverrides());
-        List<Block> boundaries = boundaryBlocks();
+        List<Block> boundaries = taggedBlocks(ZONE_BOUNDARY);
+        List<Block> fragile = taggedBlocks(PRESSURE_FRAGILE);
         Map<Block, double[]> heat = resolveThermal(thermal);
         int[] sources = sourceStates();
         List<BlockIgnitions.Flammable> flammable = BlockIgnitions.flammableStates();
         current = CompletableFuture.supplyAsync(
-                () -> build(byBlock, boundaries, heat, sources, flammable), Util.backgroundExecutor());
+                () -> build(byBlock, boundaries, heat, sources, flammable, fragile), Util.backgroundExecutor());
     }
 
     private static void onServerStarted(ServerStartedEvent event) {
@@ -205,10 +214,10 @@ public final class Geometries {
         return ids.stream().mapToInt(Integer::intValue).sorted().toArray();
     }
 
-    /** The blocks tagged {@link #ZONE_BOUNDARY}, in registry order. Read on the thread that bound the tags. */
-    static List<Block> boundaryBlocks() {
+    /** The blocks in a tag, in registry order. Read on the thread that bound the tags. */
+    static List<Block> taggedBlocks(TagKey<Block> tag) {
         List<Block> out = new ArrayList<>();
-        for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(ZONE_BOUNDARY)) {
+        for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(tag)) {
             out.add(holder.value());
         }
         out.sort(Comparator.comparingInt(BuiltInRegistries.BLOCK::getId));
@@ -318,16 +327,23 @@ public final class Geometries {
      * The derived table with the overrides applied, then the zone boundaries marked: each tagged
      * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
      * block's heat data added to its states' geometries; then the ignition sources flagged; then the
-     * flammable states given their odds and ignition temperatures (FIRE-033, FIRE-034).
+     * flammable states given their odds and ignition temperatures (FIRE-033, FIRE-034); then the
+     * fragile blocks flagged (FLOW-007).
      */
     private static GeometryTable build(
             Map<Block, GeometryOverride> byBlock,
             List<Block> boundaries,
             Map<Block, double[]> heat,
             int[] sources,
-            List<BlockIgnitions.Flammable> flammable) {
+            List<BlockIgnitions.Flammable> flammable,
+            List<Block> fragile) {
         GeometryTable derived = GeometryDerivation.derived();
-        if (byBlock.isEmpty() && boundaries.isEmpty() && heat.isEmpty() && sources.length == 0 && flammable.isEmpty()) {
+        if (byBlock.isEmpty()
+                && boundaries.isEmpty()
+                && heat.isEmpty()
+                && sources.length == 0
+                && flammable.isEmpty()
+                && fragile.isEmpty()) {
             return derived;
         }
         GeometryPalette.Builder palette = derived.palette().toBuilder();
@@ -379,6 +395,15 @@ public final class Geometries {
             if (stateId >= 0 && stateId < byStateId.length) {
                 byStateId[stateId] =
                         palette.intern(palette.geometry(byStateId[stateId]).withIgnition(f.odds(), f.temperature()));
+            }
+        }
+        for (Block block : fragile) {
+            for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+                int stateId = Block.getId(state);
+                if (stateId >= 0 && stateId < byStateId.length) {
+                    byStateId[stateId] = palette.intern(
+                            palette.geometry(byStateId[stateId]).withFlags(Geometry.FLAG_PRESSURE_FRAGILE));
+                }
             }
         }
         return new GeometryTable(palette.build(), byStateId, derived.distinctShapes(), overridden, marked);
