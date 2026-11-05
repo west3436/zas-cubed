@@ -7,8 +7,9 @@ import java.util.Deque;
  * When gas catching fire plays its whoomp, and how loud (FIRE-036), with no game classes.
  *
  * <p>A fire that keeps relighting would otherwise whoomp each time it does, so a whoomp silences
- * others within {@value #RADIUS} blocks for {@value #QUIET_TICKS} game ticks. One instance covers one
- * dimension. Not thread-safe: the server thread only.
+ * others within {@value #RADIUS} blocks for {@value #QUIET_TICKS} game ticks. A much louder one plays
+ * anyway: it carries further, so a listener may not have heard the one that would silence it. One
+ * instance covers one dimension. Not thread-safe: the server thread only.
  */
 public final class IgnitionWhoomps {
     /** How far a whoomp silences others, in blocks: the range of one at volume 1. */
@@ -16,6 +17,12 @@ public final class IgnitionWhoomps {
 
     /** How long a whoomp silences others, in game ticks: 5 s. */
     public static final int QUIET_TICKS = 100;
+
+    /**
+     * How much louder than a recent whoomp another must be to play through its quiet: about three times
+     * the fuel. A room relighting on slowly rising fuel stays quiet.
+     */
+    static final double LOUDER_BY = 0.3;
 
     /** The volume of the smallest whoomp. */
     static final double SMALLEST_VOLUME = 0.4;
@@ -26,7 +33,7 @@ public final class IgnitionWhoomps {
     /** What ten times the fuel adds to the volume. */
     static final double VOLUME_PER_DECADE = 0.6;
 
-    private record Whoomp(int x, int y, int z, long tick) {}
+    private record Whoomp(int x, int y, int z, long tick, float volume) {}
 
     private final Deque<Whoomp> recent = new ArrayDeque<>();
 
@@ -37,9 +44,10 @@ public final class IgnitionWhoomps {
      * @param y where
      * @param z where
      * @param tick the game tick
-     * @return false if another played nearby too recently
+     * @param volume its {@linkplain #volume volume}
+     * @return false if another played nearby too recently, and this one isn't much louder
      */
-    public boolean allow(int x, int y, int z, long tick) {
+    public boolean allow(int x, int y, int z, long tick, float volume) {
         while (!recent.isEmpty() && tick - recent.peekFirst().tick() >= QUIET_TICKS) {
             recent.removeFirst();
         }
@@ -47,11 +55,11 @@ public final class IgnitionWhoomps {
             long dx = w.x() - x;
             long dy = w.y() - y;
             long dz = w.z() - z;
-            if (dx * dx + dy * dy + dz * dz <= (long) RADIUS * RADIUS) {
+            if (dx * dx + dy * dy + dz * dz <= (long) RADIUS * RADIUS && volume < w.volume() + LOUDER_BY) {
                 return false;
             }
         }
-        recent.addLast(new Whoomp(x, y, z, tick));
+        recent.addLast(new Whoomp(x, y, z, tick, volume));
         return true;
     }
 

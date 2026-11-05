@@ -666,7 +666,8 @@ of vanilla's crackle, as at most 3 loops however big the fire, each louder as it
 part of the fire grows, up to a limit. A loop shall stop once its blocks are gone
 or their chunk has left the client. Gas catching fire shall play `zas:fire.ignite`
 once, scaled by its fuel: when a gas fire is placed in a zone that has none, not
-for a fire that spreads, and at most once every 5 s within 16 blocks. Vanilla fire
+for a fire that spreads, and at most once every 5 s within 16 blocks, unless at
+least 0.3 louder than the last. Vanilla fire
 shall keep vanilla's sound, and lighting one in air that can't burn shall play
 nothing.
 
@@ -715,6 +716,16 @@ with a fire costs.*
 asks through `ClientSounds.loop`, which fades by itself. A whoomp above volume 1 in thin
 air loses range before it loses gain, as a near blast does (FIRE-037). That is from
 reading the game's code; no client runs here.*
+
+*2026-11-05: from the owner's playtest of the sound and particle world, standing 29
+and 25 blocks from two rooms lit in turn: "Couldn't hear the whoomp for either." The
+likely cause: the small room's whoomp reaches 26 blocks, and it then silenced the
+large room's, 7 blocks away, for 5 s. A whoomp at least 0.3 louder than a recent one,
+about three times the fuel, now plays through the limit, so a quiet one nobody heard
+can't silence a bigger one next door, and the bullet above about a second room no
+longer holds for a much bigger one. The owner chose to skip a retest, so nobody has
+heard the result, and the cause isn't proven. `fire_036_a_much_louder_whoomp_plays_through_the_quiet`
+(Unit) checks the rule.*
 
 #### FIRE-037 · A gas blast has its own sound, near or far
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102

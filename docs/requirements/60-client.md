@@ -319,6 +319,13 @@ canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests
 and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
 these either, so this stays Draft.*
 
+*2026-11-05: from the owner's playtest of the sound and particle world, on a leak's
+jet picking a new direction each atmos tick: "Just have it choose one direction." A
+leak now chooses one as it starts and keeps it until it stops. The tank's
+`zas_atmos:leaking` mark holds it, so a tank leaking again chooses again.
+`client_018_a_leak_keeps_one_direction` (GameTest) passes. The owner chose to skip a
+retest, so nobody has seen the result.*
+
 #### CLIENT-019 · Flow particles
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018
 
