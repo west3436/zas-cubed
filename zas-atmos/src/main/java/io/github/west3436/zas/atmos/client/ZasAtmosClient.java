@@ -7,6 +7,7 @@ import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
@@ -54,9 +55,9 @@ public final class ZasAtmosClient {
         DeviceLoops.add(AtmosBlocks.VOLUME_PUMP, AtmosSounds.VOLUME_PUMP_RUN);
         DeviceLoops.add(AtmosBlocks.FILTER, AtmosSounds.FILTER_RUN);
         DeviceLoops.add(AtmosBlocks.MIXER, AtmosSounds.MIXER_RUN);
-        DeviceLoops.add(AtmosBlocks.VENT, AtmosSounds.VENT_RUN);
+        DeviceLoops.add(AtmosBlocks.VENT, AtmosSounds.VENT_RUN, DeviceJets.MIN_LEVEL);
         DeviceLoops.add(AtmosBlocks.PASSIVE_VENT, AtmosSounds.PASSIVE_VENT_RUN);
-        DeviceLoops.add(AtmosBlocks.SCRUBBER, AtmosSounds.SCRUBBER_RUN);
+        DeviceLoops.add(AtmosBlocks.SCRUBBER, AtmosSounds.SCRUBBER_RUN, DeviceJets.MIN_LEVEL);
         DeviceLoops.add(AtmosBlocks.CANISTER, AtmosSounds.CANISTER_RUN);
         DeviceLoops.add(AtmosBlocks.PIPE, AtmosSounds.PIPE_LEAK);
 

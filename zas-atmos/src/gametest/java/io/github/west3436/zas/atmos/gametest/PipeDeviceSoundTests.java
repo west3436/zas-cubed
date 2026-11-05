@@ -24,6 +24,7 @@ import io.github.west3436.zas.atmos.inline.InlineDeviceMenu;
 import io.github.west3436.zas.atmos.inline.InlineStatus;
 import io.github.west3436.zas.atmos.inline.SidePortEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlockEntity;
+import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBurst;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -368,6 +369,96 @@ public final class PipeDeviceSoundTests {
         add(capped.network().gas(), 100);
         a.step();
         reads(h, a, capped.getBlockPos(), DeviceActivity.IDLE, "with no open end");
+        h.succeed();
+    }
+
+    /**
+     * An open end's loop goes with its jet. Each step of a leak dying away, it reads as moving only in
+     * a step that sends a jet, with no hold, and it falls silent while gas still trickles out. Capped,
+     * it is silent from that step too.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_125_an_open_pipe_ends_loop_goes_with_its_jet(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 933);
+        PipeBlockEntity pipe = PipeTests.endInRoom(a);
+        BlockPos pos = pipe.getBlockPos();
+        Vec3 near = Vec3.atCenterOf(pos);
+        add(pipe.network().gas(), 100);
+        JetLog.take(near);
+        boolean shown = false;
+        double silentAt = -1;
+        for (int i = 0; i < 80; i++) {
+            double flow = PipeTests.flowNow(a, pipe).net();
+            a.step();
+            List<GasJet> jets = JetLog.take(near);
+            int level = level(a, pos);
+            h.assertValueEqual(
+                    level != DeviceActivity.IDLE, !jets.isEmpty(), "reading against jets at " + flow + " mol");
+            shown |= !jets.isEmpty();
+            if (jets.isEmpty() && silentAt < 0) {
+                silentAt = flow;
+            }
+        }
+        h.assertTrue(shown, "the leak never showed");
+        h.assertTrue(silentAt > 0.05 && silentAt < 0.25, "it fell silent at " + silentAt + " mol, not in the tail");
+
+        add(pipe.network().gas(), 100);
+        a.step();
+        reads(h, a, pos, DeviceActivity.HARD, "leaking again");
+        JetLog.take(near);
+        PipeTests.cap(a, 3, 1, 2, Direction.WEST);
+        h.assertFalse(pipe.isOpen(), "the capped pipe is still open");
+        a.step();
+        reads(h, a, pos, DeviceActivity.IDLE, "capped, the step it stops");
+        h.assertValueEqual(JetLog.take(near), List.of(), "jets once capped");
+        h.succeed();
+    }
+
+    /**
+     * A passive vent's loop goes with its jet too, and within its threshold it is silent at once. Gas
+     * still moves, unheard, after the jet has stopped and until the threshold.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_125_a_passive_vents_loop_goes_with_its_jet(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 934);
+        PassiveVentBlockEntity v = PassiveVentTests.rig(a);
+        BlockPos pos = v.getBlockPos();
+        for (int i = 0; i < PipeBlockEntity.SETTLE_STEPS + 2; i++) {
+            a.step();
+        }
+        double room = a.zone(2, 2, 2).mixture().pressure();
+        PassiveVentTests.network(v, N2, room + 100);
+        Vec3 near = Vec3.atCenterOf(pos);
+        JetLog.take(near);
+        boolean shown = false;
+        double silentAt = -1;
+        for (int i = 0; i < 60; i++) {
+            double gap =
+                    v.network().gas().pressure() - a.zone(2, 2, 2).mixture().pressure();
+            a.step();
+            List<GasJet> jets = JetLog.take(near);
+            int level = level(a, pos);
+            h.assertValueEqual(
+                    level != DeviceActivity.IDLE, !jets.isEmpty(), "reading against jets at " + gap + " kPa");
+            shown |= !jets.isEmpty();
+            if (jets.isEmpty() && silentAt < 0) {
+                silentAt = gap;
+            }
+        }
+        h.assertTrue(shown, "it never showed");
+        h.assertTrue(
+                silentAt > PassiveVentBlockEntity.THRESHOLD_KPA,
+                "it fell silent at " + silentAt + " kPa, not above its threshold");
+
+        PassiveVentTests.network(v, N2, a.zone(2, 2, 2).mixture().pressure() + 300);
+        a.step();
+        reads(h, a, pos, DeviceActivity.HARD, "equalizing again");
+        PassiveVentTests.network(
+                v, N2, a.zone(2, 2, 2).mixture().pressure() + PassiveVentBlockEntity.THRESHOLD_KPA * 0.8);
+        a.step();
+        reads(h, a, pos, DeviceActivity.IDLE, "within its threshold, the step it gets there");
         h.succeed();
     }
 

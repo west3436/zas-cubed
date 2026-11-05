@@ -1924,7 +1924,7 @@ The content's crafting progression shall be documented.
 [docs/crafting.md](../crafting.md).*
 
 #### CONT-059 · Data-driven recipes
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 Recipes shall be data-driven, so packs can override them.
 
@@ -1936,8 +1936,11 @@ Recipes shall be data-driven, so packs can override them.
 `cont_059_datapack_overrides_recipe` loads a data pack that replaces the pipe
 cap's recipe and checks that its version wins.*
 
+*2026-11-05: Implemented. The recipes are plain data and that GameTest passes,
+which is all the Verify asks.*
+
 #### CONT-052 · Packaging
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-16, D-38
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-38
 
 All SS13 content shall ship as a separate mod from the same repository, with
 the ID `zas_atmos` and display name "ZAS³ Atmospherics" (D-38). It depends on
@@ -1947,8 +1950,11 @@ the framework mod `zas`.
 - **Verify:** Inspect the build: two jars, with the content mod's metadata
   depending on `zas`.
 
+*2026-11-05: Implemented. The build makes two jars, `zas` and `zas_atmos`. The
+second's metadata gives that ID and display name, and requires `zas`.*
+
 #### CONT-095 · Public API only
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-16, D-50, API-001
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-50, API-001
 
 The content mod shall use only the public API.
 
@@ -1957,13 +1963,23 @@ The content mod shall use only the public API.
 - **Verify:** Inspect: a build check fails if the content mod uses framework
   internals.
 
+*2026-11-05: Implemented. The compiler is the build check: the main source set
+compiles against `zas-api` alone, with `zas` only at run time
+(`zas-atmos/build.gradle`). A probe class importing from `zas.provider` and
+`zas.engine` failed `:zas-atmos:compileJava` with "package does not exist". Only the
+GameTests may use the framework's test hooks.*
+
 #### CONT-096 · Framework works alone
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-16
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-16
 
 The framework mod shall be fully usable without the content mod.
 
 - **Rationale:** Decision: D-16.
 - **Verify:** GameTests for the framework run without the content mod.
+
+*2026-11-05: Implemented. `:zas:runGameTestServer`, which CI runs on every PR, runs
+the framework's GameTests without `zas_atmos`. The `zas` build has no dependency on
+it.*
 
 ## Power
 
@@ -2533,10 +2549,15 @@ canister, and a pipe with an open end, shall each play its own looping sound to
 a player within 8 blocks while it is moving gas, and only then. Being on or
 powered isn't enough: a pump at its target, or with nothing to pump, is silent.
 A device that was switched off, shut or lost its power goes silent at its next
-step, without the level's usual hold.
+step, without the level's usual hold. A device with particles (CLIENT-019) plays
+only while they show: a vent or scrubber at working or hard, and an open pipe end
+or passive vent moving at least 0.25 mol/s net, which below that goes silent at
+its next step, without the hold.
 
 - **Rationale:** A sound that follows the gas tells a player which machines are
-  doing something, and a room of machines at rest is quiet.
+  doing something, and a room of machines at rest is quiet. Decision: the owner,
+  2026-11-05: the air sound should go with the air particles, on anything that has
+  them.
 - **Verify:** `cont_125_*` (GameTests) build each kind but the vent and the
   scrubber, which `data_017_*` cover. Each reads the level a player beside it
   would be told: idle off, unpowered, at its target and with nothing to move,
@@ -2549,6 +2570,26 @@ its step (DATA-017), and one line for each in `ZasAtmosClient` gives it its loop
 A passive vent and an open pipe end report the net flow, so gases only passing
 each other at one pressure are silent, as they show no particles (CLIENT-019).
 How loud each loop should be is for the owner to judge by ear.*
+
+*2026-11-05: The owner, after playing it: "it's specifically the wooshing air sound
+that doesn't align with the air particles so is applicable to anything that uses
+those". A pipe's loop went on through the slow tail of a leak after its particles
+had stopped, and a vent's and a scrubber's played from trickle with none showing.
+Now each follows one rule. A vent or scrubber plays from `DeviceJets.MIN_LEVEL`,
+the level its particles start at. An open end or passive vent reports only flow
+that passes `JetPlan.showsFlow`, and says it has stopped otherwise, so there is no
+hold. So a passive vent has particles now too (CLIENT-019). The other machines have
+no particles and still play from trickle. What this silences, by calculation from
+DATA-017's scale and the 0.25 mol/s: a scrubber below about 5 kPa of the gas it
+takes (it moves 0.2 mol/s on 1 kPa of CO₂, and 1 is working), or about 2.5 once
+it is working, a vent moving under 1 mol/s, and the last of a leak: under about
+9 kPa above its room for a lone passive vent, whose gas goes on moving down to
+0.5 kPa.
+`cont_125_an_open_pipe_ends_loop_goes_with_its_jet` and
+`cont_125_a_passive_vents_loop_goes_with_its_jet` (GameTests) check, step by step
+through a leak dying away, that a device reads as moving only in a step that sends
+a jet. No client has run the loop's minimum level, so that one line is by inspection
+until the combined test world.*
 
 #### CONT-126 · Pipe devices sound when they change
 `Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-016, CLIENT-020
@@ -2600,7 +2641,7 @@ of state, for what really happens to them:
 - **Tank:** its supply is shut off or started, or it reaches its last minute of
   breath.
 - **Fire extinguisher:** it sprays, is refilled or is empty.
-- **Container:** it leaks or bursts.
+- **Container:** a leak starts, once however long it lasts, or it bursts.
 
 These replace the vanilla sounds that stood in for them.
 
@@ -2638,6 +2679,14 @@ left plays its on sound when it starts charging again.*
   plays one from each controller in earshot.*
 - *Adding and taking a TTV's tanks keep vanilla's bundle sounds, as no event covers
   them.*
+
+*2026-11-05: from the owner's playtest of the S-11/S-13 world: "Leak: the hiss sound
+repeats three times instead of just playing once." A leak now hisses once, as it
+starts, marked by `zas_atmos:leaking`, and again only if the tank has held since. Its
+gas and jets go on at each atmos tick. A leak lasts 1 to 3 atmos ticks, by how far over
+30 atm it starts, and its jets pulse for 0.8 s at 0, 1 and 2 s, against a hiss of about
+1.12 s, so only the first jet has the hiss with it: for the owner to judge.
+`cont_127_a_tank_hisses_once_as_a_leak_starts` and the suit's and TTV's tests check it.*
 
 #### CONT-128 · The fire alarm's sound
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044

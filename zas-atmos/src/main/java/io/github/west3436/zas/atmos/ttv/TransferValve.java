@@ -29,7 +29,7 @@ public final class TransferValve {
     public enum Step {
         /** Nothing happened to the tanks. */
         QUIET,
-        /** A tank's gas changed, so a holder that keeps a copy writes it back. */
+        /** A tank changed, so a holder that keeps a copy writes it back. */
         CHANGED,
         /** A tank exploded, destroying the TTV. */
         DESTROYED
@@ -194,6 +194,7 @@ public final class TransferValve {
     public Step step(ServerLevel level, Entity holder, @Nullable Entity source) {
         Vec3 at = TankFailure.pointOf(holder);
         boolean changed = react(first);
+        changed |= TankFailure.leaking(first);
         Kind kind = TankFailure.check(level, at, first, source).kind();
         if (kind == Kind.EXPLODE) {
             release(level, at, second);
@@ -201,6 +202,7 @@ public final class TransferValve {
         }
         changed |= kind != Kind.NONE;
         changed |= react(second);
+        changed |= TankFailure.leaking(second);
         kind = TankFailure.check(level, at, second, source).kind();
         if (kind == Kind.EXPLODE) {
             release(level, at, first);

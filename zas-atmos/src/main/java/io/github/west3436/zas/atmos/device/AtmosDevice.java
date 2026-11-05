@@ -56,8 +56,8 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     }
 
     /**
-     * Says the device is off or has no power, from {@link #atmosTick}: it reads as idle after this
-     * step, with no hold, so its sound stops when it is switched off.
+     * Says the device is off, has no power, or moves too little to show, from {@link #atmosTick}: it
+     * reads as idle after this step, with no hold, so its sound stops when it does.
      */
     protected final void reportStopped() {
         if (activity != null) {

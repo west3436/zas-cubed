@@ -193,7 +193,7 @@ A client shall play at most 8 looping sounds at once, chosen from those
 requested within their range: the ones that will play loudest at the player,
 counting the volume in `sounds.json` and the player's sliders, which among loops
 of one volume and range are the nearest. Each shall fade over 0.5 s
-as it starts, stops or changes volume, and shall stop within 1 s of its last
+as it starts, stops or changes volume, and shall stop within 0.7 s of its last
 request, as soon as its chunk or the player's level is gone, and when the
 player leaves its range.
 
@@ -221,6 +221,16 @@ every slot from a breach louder than any of them 2 blocks away. `ClientLoops` no
 gives the book that volume times the slider as a weight, 1 for an event with no
 sound data. `LoopBookTest` and `ClientLoopsTest` (Unit) check it. The client side
 hasn't run, so what plays is still unverified.*
+
+*2026-11-05: The owner, after playing it: "The sound persists longer than the
+animation does; they should be more in sync". A request now lasts 4 game ticks
+rather than 10, so a loop is silent 14 ticks after its last request, down from 20:
+the lease, then the fade. Airflow, device loops and the generator ask every game
+tick, and the fire alarm while it sounds, so a shorter lease doesn't touch them
+while they play. The gas fire asked every 5, which would have dipped each loop
+between looks, so it now looks every 4 (FIRE-036). `LoopBookTest` and
+`FireLoopGroupsTest` (Unit) check the 14 ticks and that a steady fire doesn't dip.
+Nobody has heard this, so the Manual part stays open.*
 
 #### CLIENT-016 · Thin air
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
@@ -312,9 +322,10 @@ these either, so this stays Draft.*
 #### CLIENT-019 · Flow particles
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018
 
-An open pipe end (CONT-004) moving at least 0.25 mol/s net shall show particles
-scaled by its flow, moving out of its mouth while gas leaves and into it while
-gas enters, and none below that. A vent or scrubber at activity level working or
+An open pipe end (CONT-004) or passive vent (CONT-016) moving at least 0.25 mol/s
+net shall show particles scaled by its flow, moving out of its mouth while gas
+leaves and into it while gas enters, and none below that. A vent or scrubber at
+activity level working or
 hard (DATA-017) shall show particles sized by that level, blowing out of the
 grille of a blowing vent and drawn into the grille of a siphoning vent or of a
 scrubber, and none below working.
@@ -349,6 +360,24 @@ They stop within a game tick of the device stopping, and count toward CLIENT-017
 limits. `DeviceJetsTest`, `JetPlanTest` and `JetEmittersTest` (Unit) and the
 `client_019_*` tests in `DeviceActivityTests` (GameTests) pass. Nobody has seen
 these either, so this stays Draft.*
+
+*2026-11-05: A passive vent now shows as an open end does, so that its loop has
+particles to go with (CONT-125). The jet starts 0.55 blocks from the block's middle,
+just in front of the middle of its grille, and looks the way the grille does.
+Being an open end's jet, it comes from one point rather than across the grille, as
+a vent's does: for the owner to judge by eye. It counts toward the same 20 flowing
+jets a second, so it adds nothing to the cap on bytes.
+`client_019_a_passive_vent_sends_a_jet_at_its_grille` (GameTest) passes. Nobody has
+seen it.*
+
+*2026-11-05: A pump has no particles of its own, by the owner's decision: what shows
+is the flow out of the open ends of the pipes on it. In the open air, a running
+pressure pump with a pipe on each side, at its default 101.325 kPa, reads
+`TARGET_REACHED` and sends no jets over 10 atmos ticks, because the air already
+holds its output there. Set to 300 kPa it sends one out of its output's end and
+one in at its input's. A volume pump at its default 100 L/s sends both at once,
+since it moves its rate regardless. `client_019_a_pressure_pump_shows_flow_only_past_its_target`
+and `client_019_a_volume_pump_shows_flow_at_its_default_rate` (GameTests) pass.*
 
 ## Sound files
 

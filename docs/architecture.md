@@ -1,8 +1,9 @@
 # ZAS³ architecture
 
-**Status:** Draft, 2026-10-31 (Phase B). For review against the
-`req-r1-baseline` requirements. The Phase B exit asks for this doc to be
-accepted, the NFR numbers set, and the mixin list known.
+**Status:** Accepted by the owner, 2026-11-05, which closes Phase B
+([#2](https://github.com/west3436/zas-cubed/issues/2)). Written from 2026-10-31
+against the `req-r1-baseline` requirements. The items still open are in
+[§9](#9-open-items).
 
 **Inputs:**
 
@@ -1070,7 +1071,7 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 | Fire and fuel blocks | mixins (§7) query the published snapshot; worker intents place or remove `zas:gas_fire` and light vanilla fires | on vanilla ticks; intents at apply | FIRE-018 to FIRE-027, FIRE-033, FIRE-034 |
 | Client sync | own-player state; nearby edge flows | ≤ 4 Hz on thresholds; ≤ once per atmos tick | DATA-005, DATA-014, DATA-015, DATA-019, D-53 |
 | Devices (`zas_atmos`) | API queries and asynchronous mutations, one outstanding per port | once per atmos tick, spread across game ticks | D-31, D-50, CONT-006 |
-| Device activity (`zas_atmos`) | what each device moved in its last step | what changed, within 32 blocks, ≤ once per atmos tick per player | DATA-017, DATA-018, D-53 |
+| Device activity (`zas_atmos`) | what each device moved in its last step | what changed, within 32 blocks, ≤ once per 4 game ticks per player | DATA-017, DATA-018, D-53 |
 | Commands, profiler, audit | published snapshot; audit requests a fresh snapshot of a region and diffs it on the worker | on demand | OPS-003, OPS-004, OPS-010, GEO-032 |
 
 *Implemented (#30):* the `/zas` commands ([commands.md](commands.md)) read
@@ -1835,9 +1836,13 @@ unverified.*
   times its slider, as the engine reads them. An event with no sound data weighs 1.
   The weight counts only in choosing, because the engine applies it to the sound
   itself. A loop on a slider at 0 weighs nothing and holds no slot.
-- **Leases.** A request lasts 10 game ticks. Nothing turns a loop off: a caller
-  stops asking, and the loop fades within 0.5 s of the request lapsing. A caller
-  that forgets, or stops existing, can't leave a sound playing.
+- **Leases.** A request lasts 4 game ticks. Nothing turns a loop off: a caller
+  stops asking, and the loop fades within 0.5 s of the request lapsing, so it is
+  silent 0.7 s after the last one. A caller that forgets, or stops existing, can't
+  leave a sound playing. The lease is short so that a sound stops about when what
+  it goes with does: a jet's last particles live 8 to 12 ticks, and airflow's up
+  to 16. A caller has to keep asking at least that often, and all ask every tick
+  but the gas fire, which looks as often as the lease needs.
 - **Gain.** A voice's gain is its fade times a straight line from 1 at the source
   to 0 at its range. The fade takes 0.5 s, whichever way and however far it goes,
   and the distance part follows the listener at once. The instance plays with the
@@ -1877,13 +1882,13 @@ unverified.*
 sound, and nothing here runs for it.*
 
 - **The loop** (`client.GasFireLoops`, `hotspot.GasFireScan`, `sound.FireLoopGroups`).
-  Every 5 game ticks the client finds the gas fire blocks within 16 blocks of the
+  Every 4 game ticks the client finds the gas fire blocks within 16 blocks of the
   camera and asks for a loop for each of the 3 loudest groups. The scan asks each
   chunk section's palette first, and reads a section's blocks only if it may hold a
   gas fire. It never loads a chunk. A group is the fire blocks in one 8-block cube
   fixed in the world, so a loop follows its fire as the fire changes. Each round
   starts from the blocks as they are, so there is nothing to clear when a fire goes
-  out or a chunk leaves: nobody asks, and the 10-tick lease lapses.
+  out or a chunk leaves: nobody asks, and the lease lapses.
 - **The whoomp** (`Hotspots`, `FireIntents`, `DimensionAtmos.gasCaught`,
   `sound.IgnitionWhoomps`). `Hotspots` marks the `FireIntent` of the first gas fire
   in a zone with no gas fire, whatever started it: an ignition, autoignition, or a
@@ -2215,7 +2220,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
-| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure` and `zas_atmos:tank_low`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
+| `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, `zas_atmos:tank_low` and `zas_atmos:leaking`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
@@ -2286,12 +2291,13 @@ jar, so providers can be tested before real devices exist.
   `tickNow`.
 - **Activity** (DATA-017, DATA-018; Draft until the owner's review). A device that
   moves gas calls `reportMoved(moles)` in its step, and `reportStopped()` when it
-  is off. A device that moves no gas, such as a heater, calls `reportRunning()`,
+  is off, or for an open end or passive vent when its flow is too small to show.
+  A device that moves no gas, such as a heater, calls `reportRunning()`,
   and reads as working. That one line is all a device needs. The base turns it
   into a level
   (`DeviceActivity`), and a device that has never reported costs one null check.
-  `DeviceActivitySync` lists each level's devices that aren't idle. Once per atmos
-  tick, at a phase given by its entity id, a player is sent what differs from what
+  `DeviceActivitySync` lists each level's devices that aren't idle. Every 4 game
+  ticks, at a phase given by its entity id, a player is sent what differs from what
   it was last told, within 32 blocks, and told to forget what has gone idle, been
   removed or is over 40 blocks away. A device that hasn't stepped for 3 s reads as
   idle, so a stuck port or a chunk out of full status can't leave a loop running.
@@ -2301,7 +2307,9 @@ jar, so providers can be tested before real devices exist.
   chunk has left the client, because the server wouldn't say it again.
   `client.DeviceLoops.add(block, sound)` gives a kind of device its loop: each
   client tick it asks `ClientSounds.loop` for every listed device of that kind
-  within 8 blocks, as loud as its level (0.35, 0.6 or 1).
+  within 8 blocks, as loud as its level (0.35, 0.6 or 1). A third argument, the
+  lowest level it plays at, is for a device whose loop goes with particles: a
+  vent and a scrubber pass `DeviceJets.MIN_LEVEL`, the level theirs start at.
 - **Switch sounds** (CONT-126; Draft until the owner's review). A device plays
   its on or off sound where its switch or a controller's order changes
   (`InlineDeviceEntity.setOn`, `VentBlockEntity.command`,
@@ -2542,6 +2550,9 @@ the cell in front of its grille).
     cell (`PipeBlockEntity.openEndFlow`, CONT-004), on one `ZonePort`. Each gas
     moves by its own gap, so a mixture spreads both ways. Within 0.5 kPa nothing
     moves, whatever the gases.
+  - It shows and sounds as an open end does (§11.12, CONT-125): an `OPEN_END` jet
+    from just in front of its grille, and a loop, while it moves at least
+    0.25 mol/s net. Below that its gas goes on moving, unseen and unheard.
 - **Scrubber** (CONT-015, CONT-079 to CONT-081), in `.scrubber`.
   - Shaped like the vent: a full block whose grille faces any of six ways,
     facing the player who places it, with a pipe only on its back. Its 200 L
@@ -3241,12 +3252,13 @@ client works out for itself. No client ever sees a zone (D-53).
   | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
   | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
   | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
-  | `OPEN_END` | An open pipe end moves at least 0.25 mol/s net, each atmos tick (§11.4) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
+  | `OPEN_END` | An open pipe end or passive vent moves at least 0.25 mol/s net, each atmos tick (§11.4, §11.5) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
   | `DEVICE` | Never sent: the client makes it for a vent or scrubber it is told is working | Its activity level: positive out, negative in | Working: 0.3 particles per tick, travelling 1.2 blocks. Hard: 1 per tick, travelling 2.5 blocks. In a 20° cone, across most of the grille |
 
   An exploding container sends nothing, since vanilla's explosion has its own
   particles. Nothing is sent for no moles, so an empty canister shows nothing.
-  An open end looks away from its one connection, and a lone pipe every way. Its
+  An open end looks away from its one connection, a lone pipe every way, and a
+  passive vent the way its grille does. Its
   22 ticks run a little past the next atmos tick, so a flowing end's jets run
   into each other and one that stops goes quiet within about a second.
 - **What is sent.** A jet goes to players within its kind's range: 16 blocks for
@@ -3266,6 +3278,12 @@ client works out for itself. No client ever sees a zone (D-53).
   a vent or a scrubber. Asking again takes over the same source, which keeps what
   it has built up towards its next particle, so a slow rate holds, and a device
   no longer asked for stops within a game tick.
+- **The sound goes with them** (CONT-125). A device with these particles has one
+  rule for both: a vent's or scrubber's loop starts at `DeviceJets.MIN_LEVEL`, and
+  `PipeNodeEntity.exchange` reports an open end's or passive vent's flow only if
+  it passes `JetPlan.showsFlow`, with no hold below it. A pump shows nothing itself:
+  what shows is the flow out of the open ends of the pipes on it, so a pressure
+  pump whose output the air already holds at its target shows nothing.
 - **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
   as a source that ends by itself when its plan runs out, so nothing stays on
   if the server stops sending; a new jet of the same kind at the same place takes
@@ -3324,7 +3342,7 @@ as they happen:
 | Tank | `close`, `open` | Its distribution pressure reaches 0, or leaves it |
 | | `low` | A breath takes it under `LOW_SECONDS` (60) of breath |
 | Fire extinguisher | `spray`, `refill`, `empty` | §11.10 |
-| Container | `leak`, `burst` | `ContainerBlast.hiss` and `burst` |
+| Container | `leak`, as a leak starts; `burst` | `ContainerBlast.hiss` and `burst` |
 
 A controller decides from the panel saved in its block state, so a chunk coming
 back plays nothing. It plays nothing while its danger stays or falls. `Internals`
@@ -3333,6 +3351,14 @@ tank's `open` and `close` follow the settings screen's pressure instead. A tank'
 `supply` doesn't know who is breathing, so the breath that crosses the line sets
 `zas_atmos:tank_low`, and the tank's next atmos tick plays `low` at its holder and
 clears it. A tank has to be run down past the line again to warn again.
+
+A tank is an item with no memory, so `TankFailure.check` marks one that starts to
+leak with `zas_atmos:leaking` and plays `leak` only when it sets the mark. The first
+check that finds the tank holding clears it, so a tank that is refilled and leaks
+again is heard again. Its gas and jets still go at every leaking atmos tick. That
+check changes the stack under a `NONE` verdict, so a holder that keeps a copy of a
+tank (a suit, a TTV) asks `TankFailure.leaking` before it checks, and writes the copy
+back if so.
 
 **The fire alarm** (CONT-128). A server plays only `reset`, as an alarm goes from
 `alarm` to `normal`. Each client plays the alarm itself, from the block state it

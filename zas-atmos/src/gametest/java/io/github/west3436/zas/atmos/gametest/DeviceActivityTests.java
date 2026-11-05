@@ -111,9 +111,10 @@ public final class DeviceActivityTests {
         h.succeed();
     }
 
-    /** DATA-018: however often it is asked, a player gets at most one message per atmos tick. */
+    /** DATA-018: however often it is asked, a player gets at most one message every 4 game ticks. */
     @GameTest(template = "empty", batch = BATCH)
-    public static void data_018_at_most_once_per_atmos_tick(GameTestHelper h) {
+    public static void data_018_at_most_once_every_4_ticks(GameTestHelper h) {
+        h.assertValueEqual(DeviceActivitySync.SEND_TICKS, 4, "game ticks between messages");
         Area a = new Area(h, 761);
         TestDevice.Entity d = device(a, 0, 0, 8);
         step(a);
@@ -124,8 +125,8 @@ public final class DeviceActivityTests {
         step(a);
         step(a);
         h.assertValueEqual(told(h, p, t), List.of(), "again in the same game tick");
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD - 1), List.of(), "before the next atmos tick");
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), one(d, DeviceActivity.WORKING), "at the next");
+        h.assertValueEqual(told(h, p, t + DeviceActivitySync.SEND_TICKS - 1), List.of(), "before the next is due");
+        h.assertValueEqual(told(h, p, t + DeviceActivitySync.SEND_TICKS), one(d, DeviceActivity.WORKING), "when it is");
         h.succeed();
     }
 
@@ -191,7 +192,8 @@ public final class DeviceActivityTests {
         d.moves = 0;
         d.stopping = true;
         step(a);
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD), one(d, DeviceActivity.IDLE), "after one step");
+        h.assertValueEqual(
+                told(h, p, t + DeviceActivitySync.SEND_TICKS), one(d, DeviceActivity.IDLE), "after one step");
         h.succeed();
     }
 
@@ -293,17 +295,21 @@ public final class DeviceActivityTests {
         FakePlayer p = player(a, 6, 6);
         long t = AtmosTicks.now(a.level);
         h.assertValueEqual(told(h, p, t).size(), DeviceActivityPayload.MAX_CHANGES, "the first message");
-        h.assertValueEqual(told(h, p, t + AtmosTicks.PERIOD).size(), 17, "the second message");
-        h.assertValueEqual(told(h, p, t + 2 * AtmosTicks.PERIOD), List.of(), "then nothing");
+        h.assertValueEqual(told(h, p, t + DeviceActivitySync.SEND_TICKS).size(), 17, "the second message");
+        h.assertValueEqual(told(h, p, t + 2 * DeviceActivitySync.SEND_TICKS), List.of(), "then nothing");
         h.succeed();
     }
 
-    /** DATA-018: the bytes, measured: 9 a change, and 21 a message with its channel's name. */
+    /**
+     * DATA-018: the bytes, measured: 9 a change, and 21 a message with its channel's name. So however
+     * much a station changes, a player costs at most 1,230 B/s.
+     */
     @GameTest(template = "empty", batch = BATCH)
     public static void data_018_what_a_message_costs(GameTestHelper h) {
         FriendlyByteBuf name = new FriendlyByteBuf(Unpooled.buffer());
         ResourceLocation.STREAM_CODEC.encode(name, DeviceActivityPayload.TYPE.id());
-        h.assertValueEqual(1 + name.readableBytes(), 20, "a packet's id and channel");
+        int overhead = 1 + name.readableBytes();
+        h.assertValueEqual(overhead, 20, "a packet's id and channel");
         for (int n : new int[] {0, 1, 10, DeviceActivityPayload.MAX_CHANGES}) {
             List<Change> changes = new ArrayList<>();
             for (int i = 0; i < n; i++) {
@@ -313,7 +319,12 @@ public final class DeviceActivityTests {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             DeviceActivityPayload.CODEC.encode(buf, payload);
             h.assertValueEqual(buf.readableBytes(), 1 + 9 * n, "bytes for " + n + " changes");
+            int bytes = buf.readableBytes();
             h.assertValueEqual(DeviceActivityPayload.CODEC.decode(buf), payload, "the round trip of " + n);
+            if (n == DeviceActivityPayload.MAX_CHANGES) {
+                int perSecond = (overhead + bytes) * 20 / DeviceActivitySync.SEND_TICKS;
+                h.assertValueEqual(perSecond, 1_230, "the most a player costs, in B/s");
+            }
         }
         h.succeed();
     }
@@ -522,6 +533,7 @@ public final class DeviceActivityTests {
         h.assertValueEqual(level, DeviceActivity.TRICKLE, "its level");
         double amount = DeviceJets.scrubber(s.getBlockState().getValue(ScrubberMode.PROPERTY), level);
         h.assertTrue(amount == 0, "a trickle shows a jet: " + amount);
+        h.assertTrue(level < DeviceJets.MIN_LEVEL, "a trickle would play its loop");
         h.succeed();
     }
 }

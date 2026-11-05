@@ -8,7 +8,9 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.particle.GasJets;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Unit;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -42,14 +44,16 @@ public final class TankFailure {
      * <ul>
      *   <li>Holding, nothing changes.
      *   <li>Leaking, some of its gas goes into the cell at {@code at} ({@link
-     *       ContainerFailure#leakMoles}), and the stack stays.
+     *       ContainerFailure#leakMoles}), and the stack stays. It hisses as the leak starts, and not
+     *       again until it has held at a check and then leaked again (CONT-127).
      *   <li>Rupturing, the stack is used up ({@link ItemStack#isEmpty()} is then true), and all its
      *       gas goes into the cell.
      *   <li>Exploding, the same, then a vanilla explosion at {@code at} with the capped power, which
      *       breaks blocks only if the preset says so (CONT-107).
      * </ul>
      *
-     * <p>The stack changes in place, so a holder that keeps a copy, as a suit does, writes it back.
+     * <p>The stack changes in place, so a holder that keeps a copy, as a suit does, writes it back
+     * if the verdict isn't {@code NONE} or the tank was {@linkplain #leaking leaking} before the check.
      * It is used up before the explosion, so a holder killed by the blast doesn't drop it.
      *
      * @param level the level
@@ -66,11 +70,13 @@ public final class TankFailure {
         GasMixture gas = GasTankItem.contents(tank);
         Verdict verdict = ContainerFailure.tank(gas.pressure(), ContainerBlast.powerCap());
         switch (verdict.kind()) {
-            case NONE -> {}
+            case NONE -> tank.remove(AtmosComponents.LEAKING.get());
             case LEAK -> {
                 GasParcel lost = GasTankItem.take(tank, ContainerFailure.leakMoles(gas.totalMoles(), gas.pressure()));
                 GasMutations.add(level, at, lost, RELEASE);
-                ContainerBlast.hiss(level, at);
+                if (tank.set(AtmosComponents.LEAKING.get(), Unit.INSTANCE) == null) {
+                    ContainerBlast.hiss(level, at);
+                }
                 GasJets.leak(level, at, lost.totalMoles());
             }
             case RUPTURE -> ContainerBlast.burst(level, at, release(level, at, tank));
@@ -80,6 +86,17 @@ public final class TankFailure {
             }
         }
         return verdict;
+    }
+
+    /**
+     * Whether a tank was leaking at its last check. The check that finds it holding again clears this,
+     * changing the stack under a {@code NONE} verdict, so a holder of a copy asks before it checks.
+     *
+     * @param tank the tank's stack
+     * @return whether it is in the middle of a leak
+     */
+    public static boolean leaking(ItemStack tank) {
+        return tank.has(AtmosComponents.LEAKING.get());
     }
 
     /**
