@@ -23,7 +23,7 @@ side = "BOTH"
 [[dependencies.zas_atmos]]
 modId = "neoforge"
 type = "required"
-versionRange = "[${neo_version_min},)"
+versionRange = "[${neo_version},)"
 ordering = "NONE"
 side = "BOTH"
 

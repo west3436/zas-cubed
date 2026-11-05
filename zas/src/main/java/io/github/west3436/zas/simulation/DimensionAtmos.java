@@ -106,6 +106,10 @@ import org.slf4j.Logger;
  * chunks that load, so a zone that was stored in unloaded chunks, or saved before an unpin queued
  * at shutdown was applied, comes back without them.
  *
+ * <p><b>Ambient providers</b> (ENV-015). Each batch close takes the answer of the dimension's
+ * provider before anything reads the ambient, so the batch and every query until the next close
+ * see one value. It happens whether or not the dimension has an engine.
+ *
  * <p><b>Persistence</b> (architecture §4.5). The dimension is the {@link AtmosPersistence.Store}
  * of its level: a chunk saves {@link DimensionPipeline#recordFor its record}, built from the
  * published table, and a loaded chunk's saved record goes to the pipeline. At server stop the
@@ -1055,6 +1059,8 @@ public final class DimensionAtmos {
             apply();
         }
         long start = System.nanoTime();
+        // Every dimension, even one with no engine: an excluded one keeps its ambient (ENV-018).
+        Ambients.takeProviderAnswer(level);
         ensureEngine();
         DimensionPipeline p = pipeline;
         closedAtGameTick = gameTick;
