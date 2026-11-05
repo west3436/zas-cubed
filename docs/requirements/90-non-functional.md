@@ -285,7 +285,7 @@ run fully without any optional mod installed.
 ## Quality and process
 
 #### NFR-030 · Engine coverage
-`Should` · `R1` · `Accepted` · Verify: Inspect
+`Should` · `R1` · `Implemented` · Verify: Inspect
 
 The `:core` engine module shall have at least 80 % line coverage from unit
 tests.
@@ -293,6 +293,11 @@ tests.
 - **Rationale:** Inferred: the engine carries the conservation and physics
   guarantees, so it needs the most test coverage.
 - **Verify:** Inspect the coverage report in CI.
+
+*2026-11-05: Implemented, at 91.5 % (6,760 of 7,389 lines). `:core` here is the
+`engine` project today. CI's Engine coverage step puts each run's figure, by package,
+on the run's summary page, with the full JaCoCo report as an artifact, and warns under
+80 %. `./gradlew :engine:jacocoTestReport` writes the same report locally.*
 
 #### NFR-032 · Scenario tests
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: README rule 5
