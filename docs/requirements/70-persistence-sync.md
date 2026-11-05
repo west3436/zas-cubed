@@ -182,6 +182,12 @@ No zone geometry or per-cell data is sent otherwise. Gas definitions
 - **Verify:** Inspect the packet types; a GameTest records the packets sent to
   a player.
 
+*2026-11-05: The owner's sound decisions add two things to this list. One is a
+player's own pressure for thin air (DATA-019). The other is how hard each device
+nearby is working (DATA-017), which comes with its sync (DATA-018) in the same
+round. All three are Draft until the owner's review, and none carries zone
+geometry or per-cell data.*
+
 *2026-11-05: Gas particles (CLIENT-018) are sent as well, in place of vanilla's
 particle packets, which a client can't cap. Each is one event: what happened, a
 place, a direction and one number. Like vanilla's, they are sent to nearby
@@ -253,6 +259,26 @@ comparison, is 89 bytes every second for one hole. `AirflowEffectsPayloadTest`, 
 `data_015_a_new_player_object_is_sent_it_again` (GameTests) check the sending.
 There's no bench yet, and FLOW-017's payload is the exception above, so this stays
 Accepted.*
+
+#### DATA-019 · Listener pressure sync
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
+
+The real pressure at a player's eyes, in whole kPa up to 50, shall be sent to
+that player only, at most 4 times a second, and only when it changes. It shall
+be the same whatever the player wears and whatever its game mode.
+
+- **Rationale:** Decision: D-53 allows a player's own atmosphere state. Inferred:
+  the HUD's state (DATA-014) can't serve, because its pressure is what reaches
+  the player through its protection and it has none without an alert, so a
+  sealed suit in a vacuum, or anyone in creative, would read as normal air.
+- **Verify:** `ThinAirTest` (Unit) checks a new client counts as normal air;
+  `data_019_*` (GameTests) check the triggers, the rate, the reading under each
+  game mode and the payload.
+
+*2026-11-05: added for review, with the behaviour built (`hud.ListenerAir`). A
+message is 1 byte of payload and 19 bytes as a packet, before the connection's
+framing. Normal air and anything above it read the same, so they send nothing
+after the first reading.*
 
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
