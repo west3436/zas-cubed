@@ -2607,7 +2607,7 @@ of state, for what really happens to them:
 - **Tank:** its supply is shut off or started, or it reaches its last minute of
   breath.
 - **Fire extinguisher:** it sprays, is refilled or is empty.
-- **Container:** it leaks or bursts.
+- **Container:** a leak starts, once however long it lasts, or it bursts.
 
 These replace the vanilla sounds that stood in for them.
 
@@ -2645,6 +2645,14 @@ left plays its on sound when it starts charging again.*
   plays one from each controller in earshot.*
 - *Adding and taking a TTV's tanks keep vanilla's bundle sounds, as no event covers
   them.*
+
+*2026-11-05: from the owner's playtest of the S-11/S-13 world: "Leak: the hiss sound
+repeats three times instead of just playing once." A leak now hisses once, as it
+starts, marked by `zas_atmos:leaking`, and again only if the tank has held since. Its
+gas and jets go on at each atmos tick. A leak lasts 1 to 3 atmos ticks, by how far over
+30 atm it starts, and its jets pulse for 0.8 s at 0, 1 and 2 s, against a hiss of about
+1.12 s, so only the first jet has the hiss with it: for the owner to judge.
+`cont_127_a_tank_hisses_once_as_a_leak_starts` and the suit's and TTV's tests check it.*
 
 #### CONT-128 · The fire alarm's sound
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044

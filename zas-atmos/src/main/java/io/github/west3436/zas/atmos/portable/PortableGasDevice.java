@@ -174,6 +174,7 @@ public abstract class PortableGasDevice extends PortableDevice {
         ItemStack held = tank.tank();
         if (held.getItem() instanceof GasTankItem item) {
             changed |= ContainerReactions.react(held, item.volume());
+            changed |= TankFailure.leaking(held);
             changed |= TankFailure.check(level, point(), held, null).kind() != ContainerFailure.Kind.NONE;
         }
         if (changed) {

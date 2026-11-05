@@ -315,6 +315,7 @@ public class GasTankItem extends Item {
      */
     public static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
         boolean reacted = ContainerReactions.react(tank, ((GasTankItem) tank.getItem()).volume);
+        boolean wasLeaking = TankFailure.leaking(tank);
         ContainerFailure.Verdict verdict = TankFailure.check(level, TankFailure.pointOf(holder), tank, null);
         boolean warned = tank.remove(AtmosComponents.TANK_LOW.get()) != null;
         if (warned && !tank.isEmpty()) {
@@ -328,7 +329,7 @@ public class GasTankItem extends Item {
                     1.0f,
                     1.0f);
         }
-        return reacted || warned || verdict.kind() != ContainerFailure.Kind.NONE;
+        return reacted || warned || wasLeaking || verdict.kind() != ContainerFailure.Kind.NONE;
     }
 
     @Override
