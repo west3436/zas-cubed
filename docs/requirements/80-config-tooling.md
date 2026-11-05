@@ -26,7 +26,7 @@ There shall be three config tiers:
 - **Verify:** Inspect the config files.
 
 #### OPS-016 · Live config changes
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 Server config changes shall apply from the next atmos tick without a restart,
 except settings marked restart-only, such as the thread count.
@@ -34,6 +34,16 @@ except settings marked restart-only, such as the thread count.
 - **Rationale:** Inferred: tuning a running server shouldn't need a restart.
 - **Verify:** A GameTest changes a server setting and checks it applies on the
   next atmos tick.
+
+*2026-11-05: Implemented. `ops_016_a_setting_applies_on_the_next_atmos_tick`
+changes the venting model with a room venting and checks what the room loses on
+the very next atmos tick, each way. The other `ops_016_*` GameTests cover `[heat]
+enabled`, the atmos period, a reload across each kind of setting, and a hand edit
+of a world's own copy. The two restart-only settings, `[atmos] single_threaded`
+and the common config's `worker_threads`, are marked in the config spec and in
+[config.md](../config.md#when-changes-apply-ops-016). A setting read by a periodic
+check, such as `[hazards]` by an entity's breath check, shows at that check, which
+can come after the next atmos tick.*
 
 #### OPS-002 · Datapack formats
 `Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-04
