@@ -1898,7 +1898,7 @@ sound, and nothing here runs for it.*
   it describes. `FireIgnitedEvent` can't serve here. It fires for a vanilla fire in
   plain air, not when that fire later lights gas, and a tick after the block appears.
   `IgnitionWhoomps`, one per dimension, keeps a fire that goes out and relights from
-  playing it every time.
+  playing it every time. A whoomp at least 0.3 louder than a recent one plays anyway.
 
 ## 6. API module
 
