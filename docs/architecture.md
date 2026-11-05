@@ -2139,7 +2139,8 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's payload (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models |
+| `particle` | Gas particles (§11.12): the server's sends (`GasJets`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`), which hold no game classes |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, and `GasJetParticles` (§11.12) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -3017,6 +3018,9 @@ is in [crafting.md](crafting.md), and a crafted one is full.
   user, with a high pitch; a spray that put something out also plays it as
   vanilla's dowsed fire does, at the spray's end. Empty, it clicks
   (`block.dispenser.fail`) and says so on the action bar.
+- **Particles.** Each spray sends a `SPRAY` jet (§11.12) from the hand, along
+  the look, as far as the spray went. The cone's 14° half-angle is about as wide
+  as the 3 blocks the spray puts out at its full reach. It has no in-use pose.
 - **Charges.** In the stack's `zas_atmos:charges` (a new stack is full), shown
   on the item bar in water blue and in the tooltip. Using it on a water source
   block while it isn't full refills it, with the bucket's fill sound; the
@@ -3070,3 +3074,30 @@ tanks and the valve and is what the item and the entity share.
   1 for the first and 2 for the second, tinted by the tank's kind. Clients are
   sent the tanks and the valve as entity data. The item uses the same tints on
   its sprite's layers 1 and 2, and `zas_atmos:tanks` picks its sprite.
+
+### 11.12 Gas particles (CLIENT-017 to CLIENT-019)
+
+What players see of gas moving: an event from the server, and particles the
+client works out for itself. No client ever sees a zone (D-53).
+
+- **The server** (`particle.GasJets`) sends a `particle.GasJet` when something
+  happens: its kind, a place, a direction (none means every direction) and one
+  number, which each kind defines. It goes to players within the kind's range,
+  in place of vanilla's particle packets, whose particles a client can't cap
+  or tint.
+- **The plan** (`particle.JetPlan`) turns a kind and its number into particles
+  per tick, how many ticks, each particle's life, how far it travels, the
+  cone's half-angle, a grey and a size. The speed comes from the distance, the
+  life and the sprite's friction, so a particle ends about where it should.
+- **The limits** (`particle.JetEmitters`, CLIENT-017). A client holds each jet
+  as a source that ends by itself when its plan runs out, so nothing stays on
+  if the server stops sending; a new jet of the same kind at the same place takes
+  over from the old. Each game tick a source makes at most 40 particles, and
+  all of them at most 120, scaled by the Particles setting. When more are wanted
+  than that, they are shared out evenly, nearest source first, and what doesn't
+  fit is dropped. A source more than 32 blocks from the camera makes none, as
+  vanilla's particles don't.
+- **The particles** (`client.GasJetParticles`). It spawns vanilla's poof
+  (`minecraft:poof`), and sets its speed, life, grey and size, so there is no new
+  texture and no gas's colour. It ends every jet when the client's level changes,
+  and makes none while the game is paused.
