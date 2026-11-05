@@ -8,11 +8,15 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.particle.GasJet;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.engine.scheduler.HotspotSettings;
 import io.github.west3436.zas.gametest.TestPlayers;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
@@ -238,6 +242,110 @@ public final class ExtinguisherTests {
             InteractionResultHolder<ItemStack> again = stack.use(s.level, p, InteractionHand.MAIN_HAND);
             h.assertFalse(again.getResult().consumesAction(), "an empty extinguisher started a spray");
             h.assertFalse(p.isUsingItem(), "an empty extinguisher is in use");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /** The one jet the server sent around a site, which fails if there are none or more. */
+    private static GasJet oneJet(GameTestHelper h, Site s) {
+        List<GasJet> jets = JetLog.take(s.point(1, 2, 2));
+        h.assertValueEqual(jets.size(), 1, "jets sent");
+        return jets.get(0);
+    }
+
+    /**
+     * What the server sends for a spray in the open: one jet, from near the eye, along the look, as
+     * far as the 5-block reach. It reaches a player 31 blocks away, and not one 33 blocks away.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_spray_sends_a_jet_along_the_look(GameTestHelper h) {
+        Site s = new Site(h, 75);
+        JetLog.listen();
+        try {
+            floor(s);
+            FakePlayer p = holder(s, "zas_client_018_spray", 1, 2, Vec3.ZERO);
+            p.setYRot(-90);
+            p.setXRot(0);
+            p.getMainHandItem().use(s.level, p, InteractionHand.MAIN_HAND);
+            JetLog.take(s.point(1, 2, 2));
+            sprayTick(p);
+
+            GasJet jet = oneJet(h, s);
+            h.assertValueEqual(jet.kind(), GasJetKind.SPRAY, "the jet's kind");
+            h.assertTrue(
+                    Math.abs(jet.dx() - 1) < 1e-4 && Math.abs(jet.dy()) < 1e-4 && Math.abs(jet.dz()) < 1e-4,
+                    "the jet isn't along the look: " + jet);
+            Vec3 from = new Vec3(jet.x(), jet.y(), jet.z());
+            h.assertTrue(from.distanceTo(p.getEyePosition()) < 1, "the jet starts away from the user: " + from);
+            h.assertTrue(from.x > p.getEyePosition().x, "the jet starts behind the eye: " + from);
+            double along = from.x - p.getEyePosition().x + jet.amount();
+            h.assertTrue(Math.abs(along - FireExtinguisherItem.REACH) < 1e-4, "the jet's reach is " + along);
+
+            FakePlayer near = holder(s, "zas_client_018_near", 1, 2, Vec3.ZERO);
+            near.moveTo(jet.x() + 31, jet.y(), jet.z());
+            h.assertTrue(GasJets.reaches(near, jet), "a player 31 blocks away isn't sent it");
+            near.moveTo(jet.x() + 33, jet.y(), jet.z());
+            h.assertFalse(GasJets.reaches(near, jet), "a player 33 blocks away is sent it");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /** A wall stops the jet where it stops the spray: at the wall's face, 2.5 blocks from the eye. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_spray_stopped_by_a_wall_is_shorter(GameTestHelper h) {
+        Site s = new Site(h, 76);
+        JetLog.listen();
+        try {
+            floor(s);
+            for (int y = 1; y <= 4; y++) {
+                for (int z = 0; z <= 6; z++) {
+                    s.set(4, y, z, Site.STONE);
+                }
+            }
+            FakePlayer p = holder(s, "zas_client_018_wall", 1, 2, Vec3.ZERO);
+            p.setYRot(-90);
+            p.setXRot(0);
+            p.getMainHandItem().use(s.level, p, InteractionHand.MAIN_HAND);
+            JetLog.take(s.point(1, 2, 2));
+            sprayTick(p);
+
+            GasJet jet = oneJet(h, s);
+            double along = jet.x() - p.getEyePosition().x + jet.amount();
+            h.assertTrue(Math.abs(along - 2.5) < 1e-4, "the jet's reach is " + along + ", not 2.5");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /**
+     * Held, it sends one jet per spray and none between them, and none once it is empty: an empty
+     * extinguisher clicks and shows nothing.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_only_a_spray_sends_a_jet(GameTestHelper h) {
+        Site s = new Site(h, 77);
+        JetLog.listen();
+        try {
+            floor(s);
+            FakePlayer p = holder(s, "zas_client_018_dry", 1, 2, Vec3.atCenterOf(s.abs(6, 2, 2)));
+            ItemStack stack = p.getMainHandItem();
+            FireExtinguisherItem.setCharges(stack, 2);
+            stack.use(s.level, p, InteractionHand.MAIN_HAND);
+            JetLog.take(s.point(1, 2, 2));
+            int start = p.getUseItemRemainingTicks();
+            for (int t = 0; t < FireExtinguisherItem.SPRAY_INTERVAL; t++) {
+                p.getUseItem().onUseTick(s.level, p, start - t);
+            }
+            h.assertValueEqual(JetLog.take(s.point(1, 2, 2)).size(), 1, "jets in one spray interval");
+            p.getUseItem().onUseTick(s.level, p, start - FireExtinguisherItem.SPRAY_INTERVAL);
+            h.assertValueEqual(JetLog.take(s.point(1, 2, 2)).size(), 1, "jets at the last charge");
+            p.getUseItem().onUseTick(s.level, p, start - 2 * FireExtinguisherItem.SPRAY_INTERVAL);
+            h.assertValueEqual(JetLog.take(s.point(1, 2, 2)).size(), 0, "jets once it is empty");
             h.succeed();
         } finally {
             s.clear();

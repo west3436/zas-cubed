@@ -28,6 +28,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 /** The content mod's client entry point: block and item tints, device GUIs and item model properties. */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
@@ -44,6 +45,7 @@ public final class ZasAtmosClient {
                 .setScreen(new TransferValveScreen(hand, Component.translatable("item.zas_atmos.tank_transfer_valve")));
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
+        GasJetParticles.register(NeoForge.EVENT_BUS);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
