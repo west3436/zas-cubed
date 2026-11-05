@@ -4,8 +4,10 @@ import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.LongFunction;
+import java.util.function.LongPredicate;
 
 /**
  * The cell topology of the world as a set of section snapshots and the geometry palette their ids
@@ -167,6 +169,80 @@ public final class SectionTopology implements ResolvableTopology {
                 }
             }
         }
+    }
+
+    @Override
+    public Column column(long cell, LongPredicate stopAt) {
+        int x = CellIds.x(cell);
+        int y = CellIds.y(cell);
+        int z = CellIds.z(cell);
+        int sub = CellIds.sub(cell);
+        if (!inWorld(x, y, z)) {
+            return Column.SEALED;
+        }
+        SectionSnapshot s = sections.apply(SectionKeys.sectionOfBlock(x, y, z));
+        if (s == null) {
+            return Column.UNKNOWN;
+        }
+        int id = s.geometryId(SectionKeys.index(x & 15, y & 15, z & 15));
+        if (sub >= table.cellCount(id)) {
+            return Column.SEALED;
+        }
+        while (true) {
+            int above = y + 1;
+            if (!inWorld(x, above, z)) {
+                return reachesFace(id, sub, Face.UP) ? Column.OPEN : Column.SEALED;
+            }
+            if ((above >> 4) != (y >> 4)) {
+                s = sections.apply(SectionKeys.sectionOfBlock(x, above, z));
+                if (s == null) {
+                    return reachesFace(id, sub, Face.UP) ? Column.UNKNOWN : Column.SEALED;
+                }
+            }
+            int nid = s.geometryId(SectionKeys.index(x & 15, above & 15, z & 15));
+            int count = table.cellCount(nid);
+            if (count == 0) {
+                return Column.SEALED;
+            }
+            long[] bits = table.connections(id, Face.UP, nid);
+            int next = -1;
+            for (int c = 0; c < count && next < 0; c++) {
+                if (ConnectionTable.connected(bits, sub, c) && !stopAt.test(CellIds.pack(x, above, z, c))) {
+                    next = c;
+                }
+            }
+            if (next < 0) {
+                return Column.SEALED;
+            }
+            y = above;
+            id = nid;
+            sub = next;
+        }
+    }
+
+    /** The keys of a cell's section and the ones above it up to the top of the world, lowest first. */
+    public long[] columnSections(long cell) {
+        int sx = CellIds.x(cell) >> 4;
+        int sz = CellIds.z(cell) >> 4;
+        int first = CellIds.y(cell) >> 4;
+        long[] out = new long[Math.max(0, (maxY >> 4) - first + 1)];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = SectionKeys.section(sx, first + i, sz);
+        }
+        return out;
+    }
+
+    @Override
+    public long[] columnGaps(long cell) {
+        long[] all = columnSections(cell);
+        long[] out = new long[all.length];
+        int n = 0;
+        for (long k : all) {
+            if (sections.apply(k) == null) {
+                out[n++] = k;
+            }
+        }
+        return Arrays.copyOf(out, n);
     }
 
     /** Whether gas in the cell could cross the face if the neighbour were air. */

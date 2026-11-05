@@ -652,6 +652,10 @@ public final class DimensionEngine {
     private long[] geometry(Batch batch, CellSet surfaces, List<Long> resuming) {
         for (long chunk : batch.unloadedChunks()) {
             mirror.chunkUnloaded(chunk);
+            classifier.chunkUnloaded(chunk);
+        }
+        for (long section : batch.changedOutsideMirror()) {
+            classifier.sectionChanged(section);
         }
         for (long chunk : batch.loadedChunks()) {
             mirror.chunkLoaded(chunk);
@@ -717,6 +721,9 @@ public final class DimensionEngine {
                     s = SectionSnapshot.of(s.key(), s.lifecycleGeneration(), s.blockGeneration(), ids);
                     changed = Arrays.copyOf(applied, a);
                 }
+            }
+            if (changed.length > 0) {
+                classifier.sectionChanged(s.key());
             }
             for (int index : changed) {
                 space.forEachCellAt(blockAt(base, index), changedCells::add);

@@ -23,6 +23,7 @@ import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.zone.Edge;
 import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -208,6 +209,75 @@ class BreachTest {
         double end = a.mixture().pressure();
         assertTrue(end < start, "the room vents: " + start + " -> " + end);
         assertTrue(end >= AMBIENT.pressure() - EPS);
+    }
+
+    /** A seed with nothing over it up to the top of the world vents with no fill. */
+    @Test
+    void geo_021_breach_open_straight_up_takes_no_fill() {
+        // Zone A with a shaft over its ceiling, up to the top of the world at y = 15.
+        TestWorld world = new TestWorld().box(0, 0, 0, 2, 2, 2, AIR).box(1, 4, 1, 1, 15, 1, AIR);
+        SectionTopology t = world.topology(-16, 15);
+        ZoneGraph graph = TestWorld.graph(t, AMBIENT);
+        Zone a = zoneAt(graph, t, cell(0, 0, 0));
+        long[] seeds = BreachResolver.breachSeeds(graph, t, breakWall(world, graph, 1, 3, 1));
+
+        List<Long> fills = new ArrayList<>();
+        EnclosureFill fill = new EnclosureFill();
+        fill.onFill(fills::add);
+        List<Breach> breaches = new BreachResolver(fill, new OpenCells()).classify(graph, t, seeds);
+        assertEquals(1, breaches.size());
+        Breach.Vent vent = assertInstanceOf(Breach.Vent.class, breaches.get(0));
+        assertEquals(FillResult.Open.Reason.OPEN_COLUMN, vent.reason());
+        assertArrayEquals(new long[] {a.id()}, vent.zones());
+        assertEquals(List.of(), fills);
+    }
+
+    /** A seed whose column runs out of the view is held for the rest of it, with no fill. */
+    @Test
+    void geo_021_breach_with_a_column_out_of_view_holds_without_a_fill() {
+        TestWorld world = new TestWorld().box(0, 0, 0, 2, 2, 2, AIR).box(1, 4, 1, 1, 15, 1, AIR);
+        world.forget(SectionKeys.section(0, 1, 0));
+        SectionTopology t = world.topology(-16, 31);
+        ZoneGraph graph = TestWorld.graph(t, AMBIENT);
+        Zone a = zoneAt(graph, t, cell(0, 0, 0));
+        long[] seeds = BreachResolver.breachSeeds(graph, t, breakWall(world, graph, 1, 3, 1));
+
+        List<Long> fills = new ArrayList<>();
+        EnclosureFill fill = new EnclosureFill();
+        fill.onFill(fills::add);
+        Breach.Hold hold = assertInstanceOf(
+                Breach.Hold.class,
+                new BreachResolver(fill, new OpenCells())
+                        .classify(graph, t, seeds)
+                        .get(0));
+        assertArrayEquals(new long[] {a.id()}, hold.zones());
+        assertArrayEquals(new long[] {SectionKeys.section(0, 1, 0)}, hold.missingSections());
+        assertEquals(List.of(), fills);
+    }
+
+    /** A seed a fill has found open vents with no second fill. */
+    @Test
+    void geo_027_breach_known_open_takes_no_fill() {
+        TestWorld world = new TestWorld().box(0, 0, 0, 2, 2, 2, AIR).box(4, 0, 0, 13, 2, 9, AIR);
+        SectionTopology t = world.topology();
+        ZoneGraph graph = TestWorld.graph(t, AMBIENT);
+        Zone a = zoneAt(graph, t, cell(0, 0, 0));
+        long[] seeds = BreachResolver.breachSeeds(graph, t, breakWall(world, graph, 3, 1, 1));
+
+        List<Long> fills = new ArrayList<>();
+        EnclosureFill fill = new EnclosureFill(100);
+        fill.onFill(fills::add);
+        BreachResolver resolver = new BreachResolver(fill, new OpenCells());
+        Breach.Vent first = assertInstanceOf(
+                Breach.Vent.class, resolver.classify(graph, t, seeds).get(0));
+        assertEquals(FillResult.Open.Reason.BOUND, first.reason());
+        assertEquals(1, fills.size());
+
+        Breach.Vent second = assertInstanceOf(
+                Breach.Vent.class, resolver.classify(graph, t, seeds).get(0));
+        assertEquals(FillResult.Open.Reason.KNOWN_OPEN, second.reason());
+        assertArrayEquals(new long[] {a.id()}, second.zones());
+        assertEquals(1, fills.size());
     }
 
     @Test

@@ -36,6 +36,10 @@ public sealed interface Breach {
      * ambient, {@link io.github.west3436.zas.engine.zone.ZoneGraph#exchange()} dissolves it
      * (CORE-076).
      *
+     * <p>A vent found without a fill (GEO-021, GEO-027) has seen only its one seed and the zones beside
+     * it, so another seed of the region gets a vent of its own. Since a vent changes nothing, that makes
+     * no difference.
+     *
      * @param reason why the region is open
      */
     record Vent(long[] seeds, long[] zones, FillResult.Open.Reason reason) implements Breach {
@@ -54,7 +58,8 @@ public sealed interface Breach {
      * connection.
      *
      * @param missingSections the sections the region reaches that the view doesn't hold, sorted by
-     *     {@link io.github.west3436.zas.engine.SectionKeys#compare}
+     *     {@link io.github.west3436.zas.engine.SectionKeys#compare}; from a hold made with no fill
+     *     (GEO-021), only the ones in its one seed's column
      */
     record Hold(long[] seeds, long[] zones, long[] missingSections) implements Breach {
         public Hold {

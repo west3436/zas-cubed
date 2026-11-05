@@ -419,7 +419,16 @@ public final class DimensionPipeline {
         if (scheduler.isInFlight()) {
             throw new IllegalStateException("batch " + closedTick + " hasn't been applied");
         }
-        long[] dirty = world.drainDirty(this::mirrors);
+        // A change in a section the worker doesn't mirror needs no copy, but it needs telling of: a
+        // classification may rest on that section (GEO-027).
+        List<Long> changedOutsideMirror = new ArrayList<>();
+        long[] dirty = world.drainDirty(k -> {
+            if (mirrors(k)) {
+                return true;
+            }
+            changedOutsideMirror.add(k);
+            return false;
+        });
         TreeSet<Long> keys = new TreeSet<>(SectionKeys::compare);
         for (long k : dirty) {
             keys.add(k);
@@ -517,7 +526,8 @@ public final class DimensionPipeline {
                 pendingRejection,
                 settings,
                 records,
-                toArray(unloadedListed));
+                toArray(unloadedListed),
+                toArray(changedOutsideMirror));
         loads.clear();
         unloads.clear();
         pendingRejection = null;
@@ -541,6 +551,13 @@ public final class DimensionPipeline {
                         keys.add(k);
                     }
                 }
+            }
+        }
+        // The column check looks all the way up (GEO-021).
+        for (int y = Math.max(minSectionY, cy + r + 1); y <= maxSectionY; y++) {
+            long k = SectionKeys.section(cx, y, cz);
+            if (!mirrors(k)) {
+                keys.add(k);
             }
         }
     }

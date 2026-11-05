@@ -52,7 +52,11 @@ public sealed interface FillResult {
             /** It has more cells than the bound (GEO-020). */
             BOUND,
             /** It reaches the edge of the world (GEO-031). */
-            OUTSIDE_WORLD
+            OUTSIDE_WORLD,
+            /** Straight up from the cell, nothing seals it from the top of the world; no fill ran (GEO-021). */
+            OPEN_COLUMN,
+            /** It was found open before and no block has changed on the way out; no fill ran (GEO-027). */
+            KNOWN_OPEN
         }
     }
 
