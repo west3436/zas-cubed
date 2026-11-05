@@ -17,10 +17,24 @@ import java.util.Objects;
  * @param otherPressure {@code other}'s pressure, or the ambient's, kPa
  * @param cells each opening's cell on {@code zone}'s side
  * @param otherCells each opening's cell on the other side
+ * @param molesPerSecond the net moles per second across the edge in the tick's exchange, never
+ *     negative (CLIENT-010)
  */
-public record FlowEdge(long zone, long other, double pressure, double otherPressure, long[] cells, long[] otherCells) {
+public record FlowEdge(
+        long zone,
+        long other,
+        double pressure,
+        double otherPressure,
+        long[] cells,
+        long[] otherCells,
+        double molesPerSecond) {
     /** The {@link #other} of an ambient edge. */
     public static final long AMBIENT = -1;
+
+    /** An edge whose flow in moles isn't of interest, as for pushing entities. */
+    public FlowEdge(long zone, long other, double pressure, double otherPressure, long[] cells, long[] otherCells) {
+        this(zone, other, pressure, otherPressure, cells, otherCells, 0);
+    }
 
     public FlowEdge {
         Objects.requireNonNull(cells, "cells");
