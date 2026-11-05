@@ -176,6 +176,41 @@ boolean burning = Fires.isBurning(level, zone);
 - **Without ZAS³** there are no hotspots, an ignition completes at once with
   `ABSENT` and `extinguish` removes nothing.
 
+## Sound on the client
+
+`ClientSounds` plays looping sounds and tells you how much thin air leaves of a
+sound (API-060 and API-061, Draft until the owner's review). It refers to no
+client-only class, so it is safe to call from code a server also loads.
+
+```java
+// A machine's hum, from a client tick, for as long as the machine is running:
+if (machine.isRunning()) {
+    ClientSounds.loop(new LoopRequest(
+            pos.immutable(), MY_HUM.value(), SoundSource.BLOCKS,
+            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+            0.4f, 1.0f, 8.0));
+}
+// A one-shot of your own, quietened by thin air:
+level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) ClientSounds.thinAir(), 1.0f, false);
+```
+
+- **A request is a lease.** It lasts 10 game ticks (`LEASE_TICKS`). Keep asking
+  while the source wants the sound, every tick if its volume or pitch changes, and
+  stop asking when it doesn't. There is nothing to turn off, and a source that
+  forgets stops anyway.
+- **Only ask while the source exists.** A block's source checks its block is still
+  there. A chunk that has left the client is the only removal the manager sees for
+  itself.
+- **At most 8 loops** play on a client (`MAX_LOOPS`), across every mod: the ones
+  that reach the player loudest, within their ranges.
+- **The range is the request's.** The volume falls in a straight line to 0 there,
+  and `attenuation_distance` in `sounds.json` isn't used. Use a mono sound so it
+  pans, and don't mark it `stream`.
+- **Only your own sounds should fade.** A loop has `thinAir()` applied already.
+  Multiply a one-shot's volume by it, and leave vanilla's sounds alone.
+- **Without ZAS³**, and on a dedicated server, `thinAir()` is 1 and a loop plays
+  nothing.
+
 ## Versioning and the compatibility check
 
 The API has its own semver, separate from the mod version (API-002). `check`,
