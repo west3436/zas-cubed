@@ -31,8 +31,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A pipe segment (CONT-001, CONT-007): a 4 px tube with an arm toward each connected neighbour. It
- * connects on every face to any neighbour that offers a connection back ({@link PipeConnector}),
- * and it can be dyed (CONT-114).
+ * connects on every face to any neighbour that offers a connection back ({@link PipeConnector}) or
+ * provides a gas handler ({@link GasHandlers}, API-025), and it can be dyed (CONT-114).
  */
 public class PipeBlock extends BaseEntityBlock implements PipeConnector {
     public static final MapCodec<PipeBlock> CODEC = simpleCodec(PipeBlock::new);
@@ -130,10 +130,12 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
         return true;
     }
 
-    private BlockState connect(BlockState state, BlockGetter level, BlockPos pos) {
+    private BlockState connect(BlockState state, Level level, BlockPos pos) {
         for (Direction d : Direction.values()) {
             state = state.setValue(
-                    CONNECTIONS.get(d), PipeConnector.connected(state, d, level.getBlockState(pos.relative(d))));
+                    CONNECTIONS.get(d),
+                    PipeConnector.connected(state, d, level.getBlockState(pos.relative(d)))
+                            || GasHandlers.connects(level, pos, state, d));
         }
         return state;
     }
@@ -151,7 +153,10 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
             LevelAccessor level,
             BlockPos pos,
             BlockPos neighbourPos) {
-        return state.setValue(CONNECTIONS.get(face), PipeConnector.connected(state, face, neighbour));
+        return state.setValue(
+                CONNECTIONS.get(face),
+                PipeConnector.connected(state, face, neighbour)
+                        || GasHandlers.connects(level, neighbourPos, state, face, neighbour));
     }
 
     @Override

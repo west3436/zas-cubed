@@ -107,6 +107,48 @@ Queued the removal of the pins of command:alex for the next atmos tick
 Removed the pins of command:alex
 ```
 
+## Dimension pause (OPS-005)
+
+Stops the simulation in the dimension the command runs in, without a restart,
+for instance to look into a dimension that is misbehaving. The server and other
+dimensions keep running.
+
+| Command | What it does |
+|---|---|
+| `/zas pause [<reason>]` | Pauses the dimension from the next atmos tick, recording who paused it and why. If it is already paused, it says by whom and why, and the first pause stays. Refused in a dimension excluded from simulation (ENV-007) |
+| `/zas resume` | Ends the pause from the next atmos tick |
+
+While a dimension is paused, every zone behaves as a zone with a chunk unloaded
+does (GEO-030), whatever its chunks are doing:
+
+- It keeps its gas, and reads as `paused` with its last-known state (GEO-035).
+  It doesn't exchange, burn, react, conduct heat or dissolve.
+- Gas sent to it is voided, and gas drawn from it is supplied at its last-known
+  state, without changing it. The conservation checker records both (GEO-036,
+  GEO-038). Devices keep working against that state.
+- Block changes touching it are held until the dimension resumes, then apply in
+  order (GEO-037).
+
+Two things follow for places with no zone. No zone forms: gas that would form
+one is voided, as at an unresolved region. Open air still reads and acts as the
+ambient. Chunks keep loading and unloading, and zones in them keep their saved
+state.
+
+The pause is saved with the dimension, so it lasts through restarts until
+`/zas resume`; the server log says so when the dimension starts. `/zas zones`
+shows who paused the dimension and why.
+
+```
+> /zas pause fixing a leak
+Paused the atmosphere of minecraft:overworld from the next atmos tick (by command:alex: fixing a leak)
+> /zas zones
+minecraft:overworld: 3 zones, 2400 cells (atmos tick 1042)
+The atmosphere of this dimension is paused, by command:alex: fixing a leak
+  ...
+> /zas resume
+Resumed the atmosphere of minecraft:overworld from the next atmos tick
+```
+
 ## Audit and the invariant checker (OPS-010)
 
 ### `/zas audit <from> <to> [repair]`

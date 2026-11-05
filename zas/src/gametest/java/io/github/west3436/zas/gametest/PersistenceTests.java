@@ -11,13 +11,20 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.PinResult;
+import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.mutation.ZonePins;
+import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
+import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ChunkRecord;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.ZoneShare;
@@ -26,6 +33,7 @@ import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryOverride;
 import io.github.west3436.zas.persistence.AtmosPersistence;
+import io.github.west3436.zas.persistence.DimensionPause;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -48,6 +57,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -75,6 +86,12 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class PersistenceTests {
     private PersistenceTests() {}
+
+    /** A glass pane running north to south: its west half is sub-cell 0, its east half sub-cell 1. */
+    private static final BlockState PANE = Blocks.GLASS_PANE
+            .defaultBlockState()
+            .setValue(IronBarsBlock.NORTH, true)
+            .setValue(IronBarsBlock.SOUTH, true);
 
     /** The batch of the restart tests, apart from tests that leave work pending in other levels. */
     private static final String RESTART = "data_restart";
@@ -469,6 +486,183 @@ public final class PersistenceTests {
             h.assertTrue(r.zone(35, 2, 2).id().value() > before.id().value(), "a zone id was reissued");
             h.succeed();
         });
+    }
+
+    /**
+     * DATA-001's check: one world holding every kind of state the requirement lists, saved and
+     * reloaded once, with each compared within a relative error of 1e-9. The smaller tests here go
+     * further into each kind. The world has two dimensions, because a paused dimension voids its
+     * queued additions: the Nether runs, and the End is paused.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
+    public static void data_001_a_saved_world_keeps_every_kind_of_state(GameTestHelper h) {
+        ServerLevel nether = restartLevel(h);
+        ServerLevel end = h.getLevel().getServer().getLevel(Level.END);
+        if (end == null) {
+            throw new GameTestAssertException("no End");
+        }
+        try {
+            Rooms.withoutHeat(() -> saveAndReloadEveryKindOfState(h, nether, end));
+        } finally {
+            service().dimensionFor(end).resumeSimulation();
+        }
+        h.succeed();
+    }
+
+    private static void saveAndReloadEveryKindOfState(GameTestHelper h, ServerLevel nether, ServerLevel end) {
+        SourceId source = source("data_001");
+        Rooms n = new Rooms(h, nether, 978);
+        n.clear(8, 72);
+        // A crosses a chunk border. It shares a wall with B, and a glass pane in that wall has its
+        // west half in A and its east half in B (D-44).
+        n.shell(10, 21);
+        n.shell(21, 30);
+        n.set(21, 2, 2, PANE);
+        n.shell(42, 53); // C: a block change is held for it
+        n.shell(66, 70); // D: its chunk unloads with an addition queued for it
+        n.settle(GasMutations.add(nether, n.point(12, 2, 2), new GasParcel(Map.of(O2, 300.0, N2, 900.0), 310), source));
+        n.settle(GasMutations.add(nether, n.point(25, 2, 2), new GasParcel(Map.of(O2, 40.0, N2, 120.0), 350), source));
+        n.settle(GasMutations.add(nether, n.point(44, 2, 2), oxygen(4000), source));
+        n.settle(GasMutations.add(nether, n.point(68, 2, 2), oxygen(60), source));
+        SourceId owner = SourceId.of("zas_gametest", "data_001");
+        PinResult pin = n.settle(ZonePins.pin(nether, n.point(12, 2, 2), owner));
+        h.assertValueEqual(pin.outcome(), PinOutcome.ZONE, "A's pin");
+
+        DimensionAtmos running = n.dimension();
+        byte[] eastOfC = running.simulateUnload(n.chunk(48));
+        n.tick();
+        n.set(42, 2, 2, AIR);
+        n.tick();
+        ZoneInfo c = n.zone(44, 2, 2);
+        h.assertTrue(c.paused(), "C didn't pause with its chunk unloaded");
+        h.assertFalse(c.breached(), "the change applied to a paused zone");
+
+        ZoneInfo a = n.zone(12, 2, 2);
+        ZoneInfo b = n.zone(25, 2, 2);
+        ZoneInfo d = n.zone(68, 2, 2);
+        Map<String, Long> cells = membership(n, 10, 30);
+        cells.putAll(membership(n, 66, 70));
+        h.assertValueEqual(cells.get("21 2 2 0"), a.id().value(), "the pane's west half");
+        h.assertValueEqual(cells.get("21 2 2 1"), b.id().value(), "the pane's east half");
+        h.assertValueEqual(cells.size(), a.cellCount() + b.cellCount() + d.cellCount(), "cells compared");
+
+        // Queued at the last moment: one saved with its chunk, and one saved with the dimension,
+        // since its chunk unloads before the stop (DATA-011). Each is at its zone's temperature.
+        GasMutations.add(
+                nether,
+                n.point(12, 2, 2),
+                new GasParcel(Map.of(O2, 4.0), a.mixture().temperature()),
+                source);
+        GasMutations.add(
+                nether,
+                n.point(68, 2, 2),
+                new GasParcel(Map.of(O2, 3.0), d.mixture().temperature()),
+                source);
+        byte[] chunkOfD = running.simulateUnload(n.chunk(64));
+
+        Rooms e = new Rooms(h, end, 979);
+        e.clear(8, 23);
+        e.shell(10, 21);
+        e.settle(GasMutations.add(end, e.point(12, 2, 2), new GasParcel(Map.of(O2, 500.0, N2, 100.0), 330), source));
+        DimensionPause why = new DimensionPause("zas:gametest", "data_001");
+        h.assertTrue(e.dimension().pauseSimulation(why), "pausing the End");
+        e.tick();
+        ZoneInfo paused = e.zone(12, 2, 2);
+        h.assertTrue(paused.paused(), "the End's zone didn't pause");
+        Map<String, Long> pausedCells = membership(e, 10, 21);
+        // Voided after the restart, since the dimension is paused then too (OPS-005).
+        GasMutations.add(end, e.point(12, 2, 2), oxygen(5), source);
+
+        Map<Long, byte[]> savedNether =
+                new HashMap<>(service().stopForTest(nether, n.chunkKey(0), n.chunkKey(16), n.chunkKey(32)));
+        long[] held =
+                decode(h, running, savedNether.get(n.chunkKey(32)), n.chunk(32)).heldBlocks();
+        h.assertTrue(Arrays.stream(held).anyMatch(k -> k == blockKey(n, 42, 2, 2)), "the held change wasn't saved");
+        savedNether.put(n.chunkKey(48), eastOfC);
+        savedNether.put(n.chunkKey(64), chunkOfD);
+        Map<Long, byte[]> savedEnd = service().stopForTest(end, e.chunkKey(0), e.chunkKey(16));
+        DimensionAtmos reloadedNether = service().startForTest(nether, savedNether);
+        DimensionAtmos reloadedEnd = service().startForTest(end, savedEnd);
+        // Covers the first atmos tick only, which is the one that voids the End's queued addition.
+        CompletableFuture<ConservationReport> firstTick = reloadedEnd.checkConservation();
+        n.ticks(3);
+        e.ticks(3);
+
+        // Each cell's zone, sub-cells included. C is left out: its held change has applied.
+        Map<String, Long> cellsAfter = membership(n, 10, 30);
+        cellsAfter.putAll(membership(n, 66, 70));
+        h.assertValueEqual(cellsAfter, cells, "each cell's zone");
+        h.assertValueEqual(membership(e, 10, 21), pausedCells, "each cell's zone in the End");
+
+        // Each zone's mixture and temperature, and the queued additions, once.
+        keptWithin(h, nether, a, Map.of(O2, 4.0), "A");
+        keptWithin(h, nether, b, Map.of(), "B");
+        keptWithin(h, nether, d, Map.of(O2, 3.0), "D");
+        keptWithin(h, end, paused, Map.of(), "the End's zone");
+
+        // Pins.
+        h.assertValueEqual(
+                reloadedNether.published().zone(a.id().value()).pins(), List.of(owner.toString()), "A's pins");
+        h.assertValueEqual(reloadedNether.published().zone(b.id().value()).pins(), List.of(), "B's pins");
+
+        // The held change, now that C's chunks are all back.
+        ZoneInfo cAfter = Atmospheres.zoneAt(nether, n.abs(44, 2, 2))
+                .orElseThrow(() -> new GameTestAssertException("C didn't come back"));
+        h.assertFalse(cAfter.paused(), "C is paused with its chunks back");
+        h.assertTrue(
+                cAfter.breached() || cAfter.cellCount() > c.cellCount(), "the held change didn't apply: " + cAfter);
+
+        // The pause, and the addition it voided, which the checker records.
+        h.assertValueEqual(reloadedEnd.simulationPause(), why, "the End's pause");
+        h.assertTrue(e.zone(12, 2, 2).paused(), "the End's zone resumed");
+        ConservationReport report = e.settle(firstTick);
+        h.assertTrue(report != null && report.conserved(), "the checker reported " + report);
+        within(h, report.voided(reloadedEnd.registry().indexOf(O2.toString())), 5, "O2 voided in the End");
+    }
+
+    /** The zone of each cell in the rooms between two area x, as "x y z sub" to zone id. */
+    private static Map<String, Long> membership(Rooms r, int x0, int x1) {
+        AtmosSnapshot table = r.dimension().published();
+        Map<String, Long> out = new TreeMap<>();
+        for (int x = x0; x <= x1; x++) {
+            for (int y = 0; y <= 4; y++) {
+                for (int z = 0; z <= 4; z++) {
+                    for (int sub = 0; sub <= 1; sub++) {
+                        ZoneView zone = table.zoneAt(blockKey(r, x, y, z), sub);
+                        if (zone != null) {
+                            out.put(x + " " + y + " " + z + " " + sub, zone.id());
+                        }
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    private static long blockKey(Rooms r, int x, int y, int z) {
+        BlockPos p = r.abs(x, y, z);
+        return SectionKeys.block(p.getX(), p.getY(), p.getZ());
+    }
+
+    /** Checks a zone came back with each gas, plus what was queued for it, and its temperature. */
+    private static void keptWithin(
+            GameTestHelper h, ServerLevel level, ZoneInfo saved, Map<ResourceLocation, Double> queued, String what) {
+        ZoneInfo loaded = Atmospheres.zone(level, saved.id())
+                .orElseThrow(() -> new GameTestAssertException(what + " didn't come back"));
+        h.assertValueEqual(
+                loaded.mixture().moles().keySet(), saved.mixture().moles().keySet(), what + "'s gases");
+        saved.mixture()
+                .moles()
+                .forEach((gas, moles) -> within(
+                        h, loaded.mixture().moles(gas), moles + queued.getOrDefault(gas, 0.0), what + ": " + gas));
+        within(h, loaded.mixture().temperature(), saved.mixture().temperature(), what + "'s temperature");
+    }
+
+    /** DATA-001's relative error, with no allowance near zero. */
+    private static void within(GameTestHelper h, double actual, double expected, String what) {
+        h.assertTrue(
+                Math.abs(actual - expected) <= Rooms.REL * Math.abs(expected),
+                what + ": expected " + expected + ", got " + actual);
     }
 
     /**

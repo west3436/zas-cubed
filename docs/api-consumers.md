@@ -119,6 +119,46 @@ static void capabilities(RegisterCapabilitiesEvent event) {
   default), so keep it cheap. Without ZAS³ the capabilities still exist, but
   nothing reads them.
 
+## Gas handlers
+
+A block that stores gas provides `IGasHandler` (API-021), so others can fill and
+drain it. The context is the face being asked about, or null for no face in
+particular:
+
+```java
+@SubscribeEvent // on the mod bus
+static void capabilities(RegisterCapabilitiesEvent event) {
+    event.registerBlockEntity(IGasHandler.BLOCK, MyBlocks.TANK_ENTITY.get(), (tank, side) -> tank);
+}
+```
+
+- **Methods:**
+  - `contents()`: the moles, temperature and volume it holds now;
+  - `fill(gas, action)`: returns what it took, no more of any gas than it was
+    offered;
+  - `drain(moles, action)`: returns what it gave, at its temperature.
+- **Modes.** `Action.SIMULATE` changes nothing and says what `Action.EXECUTE`
+  would do now.
+- **Pipes.** ZAS³'s pipes and devices connect to any block that provides it
+  (API-025). A pipe grows an arm toward it, and a device connects on the faces it
+  would join a pipe on. A canister connects only to a connector port, so put a
+  port between one and a handler. The handler doesn't join the network and adds
+  no volume to it.
+- **Transfers.** Each atmos tick, the node on that face moves each gas toward an
+  equal concentration on both sides, as far as your handler lets it, whichever
+  way that is (API-026). What you refuse stays in the network. ZAS³ executes
+  directly, without simulating first. It asks for `contents()` each atmos tick,
+  so keep that cheap, and calls `fill` and `drain` only when gas has to move.
+  While your chunk is away, it calls nothing.
+- **Conservation.** ZAS³ takes what it offers out of the network first and takes
+  back what you don't say you took, and it adds all that `drain` returns. Gas is
+  conserved as long as your returns are true.
+- **If it comes or goes.** ZAS³ looks the capability up anew each atmos tick, so a
+  pipe's arm follows it within an atmos tick. Other mods may cache it, so call
+  `level.invalidateCapabilities(pos)` when it changes.
+- **Threads:** ZAS³ makes every call on the server thread. Without ZAS³ or its
+  content mod the capability still exists, but nothing here calls it.
+
 ## Keeping a zone: pins
 
 A zone that matches the ambient can be dissolved (CORE-052, CORE-076). To keep

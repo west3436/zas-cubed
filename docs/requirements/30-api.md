@@ -746,7 +746,7 @@ Checked by `api_020_a_code_reaction_type_runs_in_a_zone` (GameTest) and the
 `api_020_` tests in `CodeTypesTest` (zas) and `ReactionSetTest` (engine).*
 
 #### API-021 · Gas handler capability
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-12
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-12
 
 Blocks shall be able to expose a gas-handler capability that fills and drains
 mixtures, with simulate and execute modes.
@@ -756,8 +756,15 @@ mixtures, with simulate and execute modes.
 - **Verify:** A GameTest fills and drains a test block in simulate and execute
   modes.
 
+*2026-11-05: Implemented ([#60](https://github.com/west3436/zas-cubed/issues/60)).
+`IGasHandler`, next to `ILifeSupport`, with its sided `BLOCK` capability:
+`contents`, and `fill` and `drain` that simulate or execute.
+`api_021_a_block_fills_and_drains_in_both_modes` runs the plan on a test block, and
+`s_12_the_gas_handler_capability_exists_without_zas` checks that asking for it is
+safe without ZAS³.*
+
 #### API-025 · Pipes connect to gas handlers
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-12 · Depends: API-021
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-12 · Depends: API-021
 
 ZAS³ pipes and devices shall connect to any block that provides the
 gas-handler capability.
@@ -766,8 +773,21 @@ gas-handler capability.
 - **Verify:** A GameTest connects a pipe to a test gas handler and checks gas
   moves.
 
+*2026-11-05: Implemented ([#60](https://github.com/west3436/zas-cubed/issues/60)).
+A node connects to a neighbour that provides the capability on any face where it
+offers a connection, and a pipe grows an arm that counts against an open end.
+`api_025_a_pipe_connects_to_a_handler_and_gas_moves` runs the plan,
+`api_025_every_pipe_device_connects_to_a_handler` covers caps, connector ports,
+vents, scrubbers, passive vents, open valves, pumps, filters and mixers,
+`api_025_a_sided_handler_connects_on_its_side` a capability on one face only,
+`api_025_an_arm_follows_the_capability` a capability or block that goes and returns,
+and `api_025_a_placed_device_lines_up_with_a_handler` placement. A canister connects
+only to a connector port (CONT-083), so it reaches a handler through a port, and a
+shut valve stays connected and moves no gas:
+`api_025_a_canister_and_a_shut_valve_move_no_gas`.*
+
 #### API-026 · Capability transfers on the server thread
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30, CORE-049, CORE-069
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30, CORE-049, CORE-069
 
 Transfers through the gas-handler capability shall run on the server thread
 when results are applied, exchanging gas with buffers inside the pipe network.
@@ -775,6 +795,18 @@ when results are applied, exchanging gas with buffers inside the pipe network.
 - **Rationale:** Decision: D-30.
 - **Verify:** Inspect the code; a GameTest asserts the thread during a
   transfer.
+
+*2026-11-05: Implemented ([#60](https://github.com/west3436/zas-cubed/issues/60)).
+Inspected: `GasHandlers` makes every call into a handler. Its transfers run only from
+a node's step, which `DeviceTicker` runs on the server thread, and it refuses any
+other thread. They move gas between the handler and the network's store, with no
+zone involved. `api_026_transfers_run_on_the_server_thread` asserts the thread of
+every call under the game's own ticks, and the refusal.
+`api_026_gas_is_conserved_both_ways_with_the_checker_on` holds each gas's total over
+a room, a pipe and a handler with CORE-073's checker on. The `api_026_` tests also
+cover a handler that refuses, takes part of a transfer, overstates what it took,
+throws, removes the pipe or a pump from inside a fill, or is in a chunk that's away.
+Nothing catches a handler's exception yet: that's for NFR-013, in `GasHandlers`.*
 
 #### API-022 · Life-support capability
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-07, S-06, S-08
