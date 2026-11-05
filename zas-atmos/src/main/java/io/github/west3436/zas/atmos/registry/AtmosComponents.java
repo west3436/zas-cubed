@@ -43,12 +43,12 @@ public final class AtmosComponents {
             b -> b.persistent(Codec.unit(Unit.INSTANCE)).networkSynchronized(StreamCodec.unit(Unit.INSTANCE)));
 
     /**
-     * A gas tank in the middle of a leak (CONT-038, CONT-127): set by the check that hisses as it starts,
-     * and cleared by the first that finds the tank holding, so that one leak hisses once.
+     * A gas tank in the middle of a leak (CONT-038, CONT-127, CLIENT-018): the way its jet points, in
+     * radians around the vertical. Set by the check that hisses as it starts, and cleared by the first
+     * that finds the tank holding, so that one leak hisses once and keeps one direction.
      */
-    public static final Supplier<DataComponentType<Unit>> LEAKING = COMPONENTS.registerComponentType(
-            "leaking",
-            b -> b.persistent(Codec.unit(Unit.INSTANCE)).networkSynchronized(StreamCodec.unit(Unit.INSTANCE)));
+    public static final Supplier<DataComponentType<Float>> LEAKING = COMPONENTS.registerComponentType(
+            "leaking", b -> b.persistent(Codec.FLOAT).networkSynchronized(ByteBufCodecs.FLOAT));
 
     /** The tank in a suit chestplate's tank slot (CONT-090): one stack, or none. */
     public static final Supplier<DataComponentType<ItemContainerContents>> SUIT_TANK = COMPONENTS.registerComponentType(
