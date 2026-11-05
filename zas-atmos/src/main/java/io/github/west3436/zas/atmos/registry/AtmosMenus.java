@@ -6,6 +6,7 @@ import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.portable.PortablePumpMenu;
 import io.github.west3436.zas.atmos.portable.PortableScrubberMenu;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
 import io.github.west3436.zas.atmos.pump.PumpMenu;
@@ -52,6 +53,10 @@ public final class AtmosMenus {
     /** A portable scrubber's switch, battery and held tank (CONT-018). */
     public static final Supplier<MenuType<PortableScrubberMenu>> PORTABLE_SCRUBBER = MENUS.register(
             "portable_scrubber", () -> new MenuType<>(PortableScrubberMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    /** A portable pump's switch, direction, target, battery and held tank (CONT-018). */
+    public static final Supplier<MenuType<PortablePumpMenu>> PORTABLE_PUMP =
+            MENUS.register("portable_pump", () -> new MenuType<>(PortablePumpMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     /** The recharger's battery (CONT-113). */
     public static final Supplier<MenuType<RechargerMenu>> RECHARGER =

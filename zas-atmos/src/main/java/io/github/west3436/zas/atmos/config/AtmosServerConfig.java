@@ -37,6 +37,9 @@ public final class AtmosServerConfig {
     /** The portable scrubber's draw from its battery while it moves gas, in FE/t (CONT-018). */
     public static final ModConfigSpec.IntValue PORTABLE_SCRUBBER_DRAW;
 
+    /** The portable pump's draw from its battery while it moves gas, in FE/t (CONT-018). */
+    public static final ModConfigSpec.IntValue PORTABLE_PUMP_DRAW;
+
     /** The recharger's draw from its controller while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_DRAW;
 
@@ -96,6 +99,8 @@ public final class AtmosServerConfig {
                 .defineInRange("air_conditioner_watts", 5_000, 0, 1_000_000);
         PORTABLE_SCRUBBER_DRAW = builder.comment("Portable scrubber, from its battery while it moves gas (CONT-018)")
                 .defineInRange("portable_scrubber", 15, 0, 100_000);
+        PORTABLE_PUMP_DRAW = builder.comment("Portable pump, from its battery while it moves gas (CONT-018)")
+                .defineInRange("portable_pump", 20, 0, 100_000);
         RECHARGER_DRAW = builder.comment("Recharger, from its controller while it charges (CONT-113)")
                 .defineInRange("recharger", 40, 0, 100_000);
         RECHARGER_RATE = builder.comment("What a recharger puts into its battery while it charges, in FE/t (CONT-113)")

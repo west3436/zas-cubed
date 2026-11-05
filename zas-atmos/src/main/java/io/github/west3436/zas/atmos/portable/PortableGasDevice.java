@@ -10,6 +10,8 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
+import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.failure.TankFailure;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
@@ -37,7 +39,8 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * air and the store, and it pays its battery its draw over the tick, only if there is something to
  * move. With too little charge left it moves what the charge pays for, then stops. A zone's gas moves
  * through one {@link ZonePort}, so one change is outstanding at a time (CONT-072), and a tank's moves
- * at once. Its store and a held tank react each atmos tick, on or off (CONT-100).
+ * at once. Its store and a held tank react each atmos tick, on or off (CONT-100), and a held tank
+ * fails by its pressure (CONT-038).
  *
  * <p>Its item carries the store's gas, as a canister's does: a player who mines it gets the gas with
  * the item, one who breaks it in creative destroys the gas, and removed any other way it releases the
@@ -148,19 +151,27 @@ public abstract class PortableGasDevice extends PortableDevice {
     @Override
     protected void atmosTick(ServerLevel level) {
         watch.step();
-        react();
+        holdGas(level);
+        if (isRemoved()) {
+            return; // the blast of a failing tank can break it
+        }
         airPressure = Double.NaN;
         status = on() ? step(level) : PortableStatus.OFF;
         showWorking(level, status == PortableStatus.WORKING);
     }
 
-    /** The gas it holds reacts, on or off (CONT-100): its store's and a held tank's. */
-    private void react() {
-        boolean reacted = ContainerReactions.react(store);
-        if (tank.tank().getItem() instanceof GasTankItem item) {
-            reacted |= ContainerReactions.react(tank.tank(), item.volume());
+    /**
+     * What happens to the gas it holds, on or off: its store and a held tank react (CONT-100), then the
+     * tank fails if its pressure says so (CONT-038), where the portable stands.
+     */
+    private void holdGas(ServerLevel level) {
+        boolean changed = ContainerReactions.react(store);
+        ItemStack held = tank.tank();
+        if (held.getItem() instanceof GasTankItem item) {
+            changed |= ContainerReactions.react(held, item.volume());
+            changed |= TankFailure.check(level, point(), held, null).kind() != ContainerFailure.Kind.NONE;
         }
-        if (reacted) {
+        if (changed) {
             setChanged();
         }
     }
