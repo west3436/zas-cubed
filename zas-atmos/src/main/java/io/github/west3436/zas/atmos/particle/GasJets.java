@@ -76,15 +76,15 @@ public final class GasJets {
     }
 
     /**
-     * A tank leaks: a jet from it, level and in a random direction, since a tank has no way up.
+     * A tank leaks: a level jet from it, since a tank has no way up, the way its leak chose as it began.
      *
      * @param level the level
      * @param at where the tank is
      * @param moles the moles it let out this atmos tick; none sends nothing
+     * @param angle the jet's direction around the vertical, in radians
      */
-    public static void leak(ServerLevel level, Vec3 at, double moles) {
+    public static void leak(ServerLevel level, Vec3 at, double moles, float angle) {
         if (moles > 0) {
-            double angle = level.random.nextDouble() * 2 * Math.PI;
             send(
                     level,
                     new GasJet(

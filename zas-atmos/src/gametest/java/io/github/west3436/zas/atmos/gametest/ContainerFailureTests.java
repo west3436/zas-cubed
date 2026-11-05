@@ -32,6 +32,7 @@ import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.gametest.TestPlayers;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -166,6 +167,31 @@ public final class ContainerFailureTests {
         JetLog.take(at);
         h.assertValueEqual(TankFailure.check(a.level, at, t, null), Verdict.NONE, "at 30 atm");
         h.assertTrue(JetLog.take(at).isEmpty(), "a tank that stopped leaking sent a jet");
+        a.tick();
+        h.succeed();
+    }
+
+    /** A leak's jets all point the way it chose as it started, until it stops. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_leak_keeps_one_direction(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 950);
+        GasDeviceTests.room(a);
+        Vec3 at = a.point(2, 2, 2);
+
+        ItemStack t = tank(39.9);
+        List<GasJet> jets = new ArrayList<>();
+        for (int i = 0; i < 8 && TankFailure.check(a.level, at, t, null).kind() == Kind.LEAK; i++) {
+            jets.addAll(JetLog.take(at));
+            a.tick();
+        }
+        h.assertTrue(jets.size() >= 2, "too few jets to compare: " + jets);
+        for (GasJet jet : jets) {
+            h.assertTrue(
+                    jet.dx() == jets.get(0).dx() && jet.dz() == jets.get(0).dz(),
+                    "the leak changed direction: " + jets);
+        }
+        h.assertFalse(TankFailure.leaking(t), "the tank is still marked as leaking");
         a.tick();
         h.succeed();
     }

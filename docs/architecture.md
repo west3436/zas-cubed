@@ -3265,7 +3265,7 @@ client works out for itself. No client ever sees a zone (D-53).
   | Kind | Sent when | Its number | Shape |
   |---|---|---|---|
   | `SPRAY` | An extinguisher sprays (§11.10) | Its reach from the nozzle, blocks | 10 particles over the 4 ticks to the next spray, in a 14° cone |
-  | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level and in a random direction, travelling 1 to 3 blocks |
+  | `LEAK` | A tank leaks, each atmos tick (§11.9) | The moles it lost, 0.1 to 10 | 12 to 48 particles over 16 ticks, in a 10° cone, level, in the direction its leak chose as it started, travelling 1 to 3 blocks |
   | `BURST` | A tank or canister ruptures, or a pipe bursts (§11.4, §11.9) | The moles it let out, 1 to 5,000 | 16 to 120 particles over 3 ticks, every way, travelling 1.5 to 6 blocks |
   | `OPEN_END` | An open pipe end or passive vent moves at least 0.25 mol/s net, each atmos tick (§11.4, §11.5) | Its net moles per second, 0.25 to 64: positive out, negative in | 0.2 to 2.5 particles per tick over 22 ticks, in a 12° cone, travelling 0.6 to 2.5 blocks, out of the mouth or into it |
   | `DEVICE` | Never sent: the client makes it for a vent or scrubber it is told is working | Its activity level: positive out, negative in | Working: 0.3 particles per tick, travelling 1.2 blocks. Hard: 1 per tick, travelling 2.5 blocks. In a 20° cone, across most of the grille |
@@ -3370,7 +3370,8 @@ clears it. A tank has to be run down past the line again to warn again.
 A tank is an item with no memory, so `TankFailure.check` marks one that starts to
 leak with `zas_atmos:leaking` and plays `leak` only when it sets the mark. The first
 check that finds the tank holding clears it, so a tank that is refilled and leaks
-again is heard again. Its gas and jets still go at every leaking atmos tick. That
+again is heard again. Its gas and jets still go at every leaking atmos tick, and the jets keep the direction
+the mark holds, chosen as the leak starts. That
 check changes the stack under a `NONE` verdict, so a holder that keeps a copy of a
 tank (a suit, a TTV) asks `TankFailure.leaking` before it checks, and writes the copy
 back if so.

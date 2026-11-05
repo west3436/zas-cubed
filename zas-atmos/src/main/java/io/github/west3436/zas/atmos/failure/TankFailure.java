@@ -10,7 +10,7 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Unit;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -74,10 +74,13 @@ public final class TankFailure {
             case LEAK -> {
                 GasParcel lost = GasTankItem.take(tank, ContainerFailure.leakMoles(gas.totalMoles(), gas.pressure()));
                 GasMutations.add(level, at, lost, RELEASE);
-                if (tank.set(AtmosComponents.LEAKING.get(), Unit.INSTANCE) == null) {
+                Float angle = tank.get(AtmosComponents.LEAKING.get());
+                if (angle == null) {
+                    angle = level.random.nextFloat() * Mth.TWO_PI;
+                    tank.set(AtmosComponents.LEAKING.get(), angle);
                     ContainerBlast.hiss(level, at);
                 }
-                GasJets.leak(level, at, lost.totalMoles());
+                GasJets.leak(level, at, lost.totalMoles(), angle);
             }
             case RUPTURE -> ContainerBlast.burst(level, at, release(level, at, tank));
             case EXPLODE -> {
