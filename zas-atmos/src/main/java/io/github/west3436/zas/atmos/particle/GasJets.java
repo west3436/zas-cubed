@@ -30,7 +30,7 @@ public final class GasJets {
     static final double NOZZLE_BELOW = 0.25;
 
     /** How far from a pipe's middle its open end's mouth is, in blocks: just past its 4 px core. */
-    static final double MOUTH = 0.2;
+    public static final double PIPE_MOUTH = 0.2;
 
     /**
      * The most flowing jets a player is sent in a second: about 1.2 KiB/s of 60-byte packets at most,
@@ -113,14 +113,17 @@ public final class GasJets {
     }
 
     /**
-     * An open pipe end moves gas: a small jet from its mouth, unless it is only a trickle (CLIENT-019).
+     * An open pipe end or a passive vent moves gas: a small jet from its mouth, unless it is only a
+     * trickle (CLIENT-019).
      *
      * @param level the level
-     * @param pos the pipe
+     * @param pos the block
      * @param outward the way the end looks out; null for a pipe with no connection, open every way
      * @param molesPerSecond its net flow: positive out of the pipe, negative into it
+     * @param mouth how far from the block's middle the jet starts, in blocks
      */
-    public static void openEnd(ServerLevel level, BlockPos pos, @Nullable Direction outward, double molesPerSecond) {
+    public static void openEnd(
+            ServerLevel level, BlockPos pos, @Nullable Direction outward, double molesPerSecond, double mouth) {
         if (!JetPlan.showsFlow(molesPerSecond)) {
             return;
         }
@@ -129,14 +132,14 @@ public final class GasJets {
         if (outward == null) {
             send(level, new GasJet(GasJetKind.OPEN_END, at.x, at.y, at.z, 0, 0, 0, amount));
         } else {
-            Vec3 mouth = at.add(Vec3.atLowerCornerOf(outward.getNormal()).scale(MOUTH));
+            Vec3 from = at.add(Vec3.atLowerCornerOf(outward.getNormal()).scale(mouth));
             send(
                     level,
                     new GasJet(
                             GasJetKind.OPEN_END,
-                            mouth.x,
-                            mouth.y,
-                            mouth.z,
+                            from.x,
+                            from.y,
+                            from.z,
                             outward.getStepX(),
                             outward.getStepY(),
                             outward.getStepZ(),

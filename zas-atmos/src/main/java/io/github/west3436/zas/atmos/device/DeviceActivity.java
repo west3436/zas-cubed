@@ -18,7 +18,7 @@ package io.github.west3436.zas.atmos.device;
  *
  * <p>A level rises at once. It falls only once {@value #HOLD_STEPS} steps running have read below its
  * falling bound, so a device that moves gas every other step holds steady. A device that was switched
- * off says so ({@link #stopNow}) and drops at once.
+ * off, or whose flow no longer shows, says so ({@link #stopNow}) and drops at once.
  *
  * <p>Platform-free. Server thread only.
  */
@@ -26,7 +26,7 @@ public final class DeviceActivity {
     /** Not moving gas, or next to none. No loop and no particles. */
     public static final int IDLE = 0;
 
-    /** Moving a little: a quiet loop, and no particles. */
+    /** Moving a little: a quiet loop on a machine with no particles, and nothing from a vent or scrubber. */
     public static final int TRICKLE = 1;
 
     /** Moving a fair amount. */
@@ -59,7 +59,10 @@ public final class DeviceActivity {
         }
     }
 
-    /** The device has stopped, as when switched off: this step's level is {@link #IDLE}, at once. */
+    /**
+     * The device has stopped, as when switched off or when a flow falls below what shows: this step's
+     * level is {@link #IDLE}, at once.
+     */
     public void stopNow() {
         stopped = true;
     }

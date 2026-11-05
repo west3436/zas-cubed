@@ -30,8 +30,8 @@ public final class FireLoopGroups {
     /** How far away a source can be heard, in blocks: the range each loop asks for. */
     public static final double RANGE = 16;
 
-    /** How often the blocks are looked at, in game ticks: often enough to keep a loop's 10-tick lease. */
-    public static final int SCAN_TICKS = 5;
+    /** How often the blocks are looked at, in game ticks: as often as a loop's lease needs. */
+    public static final int SCAN_TICKS = LoopBook.LEASE_TICKS;
 
     /** The volume of a source of one block. */
     static final double SMALLEST_VOLUME = 0.4;

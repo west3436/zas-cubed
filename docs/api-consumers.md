@@ -194,10 +194,9 @@ if (machine.isRunning()) {
 level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) ClientSounds.thinAir(), 1.0f, false);
 ```
 
-- **A request is a lease.** It lasts 10 game ticks (`LEASE_TICKS`). Keep asking
-  while the source wants the sound, every tick if its volume or pitch changes, and
-  stop asking when it doesn't. There is nothing to turn off, and a source that
-  forgets stops anyway.
+- **A request is a lease.** It lasts 4 game ticks (`LEASE_TICKS`). Keep asking
+  every tick while the source wants the sound, and stop asking when it doesn't.
+  There is nothing to turn off, and a source that forgets stops anyway.
 - **Only ask while the source exists.** A block's source checks its block is still
   there. A chunk that has left the client is the only removal the manager sees for
   itself.
