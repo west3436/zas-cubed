@@ -133,6 +133,61 @@ pressure difference, audible within 16 blocks.
 Sounds heard by a player in low pressure shall be attenuated, falling silent
 in vacuum. Sound from the player's own suit is exempt.
 
+*2026-11-05: The owner decided only our new sounds fade in thin air, and that
+is CLIENT-016. Damping vanilla's sounds, and the suit's exemption, stay
+deferred here.*
+
+#### CLIENT-015 · Looping sounds
+`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
+
+A client shall play at most 8 looping sounds at once, chosen from those
+requested within their range: the ones that reach the player loudest, which
+among loops of one volume and range are the nearest. Each shall fade over 0.5 s
+as it starts, stops or changes volume, and shall stop within 1 s of its last
+request, as soon as its chunk or the player's level is gone, and when the
+player leaves its range.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05 set the
+  nearest 8 and the 8-block range of a running device. Loudness decides between
+  loops of different volumes and ranges, so a row of quiet machines can't mute
+  a breach or a fire. Inferred: a loop that outlives its source is the worst
+  bug sound can have, so a request is a lease that lapses, and nothing has to
+  turn a loop off.
+- **Verify:** `LoopBookTest` (Unit) checks the choice, the fades and the leases,
+  through random comings and goings; Manual checks the sound of a fade and a
+  swap, and that no loop remains after leaving a world.
+
+*2026-11-05: added for review, with the manager built
+(`sound.LoopBook`, `client.ClientLoops`). A swap fades the old voice out before
+the new one starts, so there are never more than 8. The sound engine's own
+attenuation is off: the gain falls in a straight line to 0 at each loop's range.
+Nothing has been heard yet, so the Manual part is open.*
+
+#### CLIENT-016 · Thin air
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
+
+This mod's new sounds shall fade for a listener in thin air, by the real
+pressure at the listener's eyes: in a straight line from exact silence at 1 kPa
+to full volume at 50 kPa. Vanilla's sounds shall not change. A listener whose
+pressure the client doesn't know yet counts as being in normal air.
+
+- **Rationale:** Decision: the owner's sound decisions of 2026-11-05: only our
+  new sounds fade, and a listener in a vacuum hears no airflow at all. Inferred:
+  50 kPa is the HUD's low-pressure warning (CLIENT-008), so the sound starts to
+  fade where the player is first warned, and a straight line in amplitude is
+  roughly what falling density does to a sound.
+- **Verify:** `ThinAirTest` and `LoopBookTest` (Unit) check the curve and that a
+  vacuum leaves no voice playing; `client_016_*` (GameTest) check the factor in
+  rooms and in open air; Manual checks how the fade sounds.
+
+*2026-11-05: added for review, with the curve built (`sound.ThinAir`), for the
+owner to judge by ear: 0 at 1 kPa or below, 0.08 at 5, 0.18 at 10, 0.39 at 20,
+0.59 at 30, 0.80 at 40 and 1 from 50. It reads the air, not what reaches the
+player, so a sealed suit in a vacuum hears silence. The open air reads as its
+dimension's ambient pressure, so it is normal air in a breathable dimension and
+a vacuum in an airless one. Nothing has been heard yet, so the Manual part is
+open.*
+
 ## Debug rendering
 
 #### CLIENT-005 · Debug zone overlay

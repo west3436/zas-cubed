@@ -182,6 +182,12 @@ No zone geometry or per-cell data is sent otherwise. Gas definitions
 - **Verify:** Inspect the packet types; a GameTest records the packets sent to
   a player.
 
+*2026-11-05: The owner's sound decisions add to this list. The first addition
+is a player's own pressure for thin air (DATA-019). The second is how hard each
+device nearby is working (DATA-017), which comes with its sync (DATA-018) in the
+same round. All three are Draft until the owner's review, and none carries zone
+geometry or per-cell data.*
+
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 
@@ -214,6 +220,26 @@ difference changes.
 - **Rationale:** Decision: D-53.
 - **Verify:** A GameTest checks airflow packets reach only players within 32
   blocks, at most once per tick; Bench measures bytes.
+
+#### DATA-019 · Listener pressure sync
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
+
+The real pressure at a player's eyes, in whole kPa up to 50, shall be sent to
+that player only, at most 4 times a second, and only when it changes. It shall
+be the same whatever the player wears and whatever its game mode.
+
+- **Rationale:** Decision: D-53 allows a player's own atmosphere state. Inferred:
+  the HUD's state (DATA-014) can't serve, because its pressure is what reaches
+  the player through its protection and it has none without an alert, so a
+  sealed suit in a vacuum, or anyone in creative, would read as normal air.
+- **Verify:** `ThinAirTest` (Unit) checks a new client counts as normal air;
+  `data_019_*` (GameTests) check the triggers, the rate, the reading under each
+  game mode and the payload.
+
+*2026-11-05: added for review, with the behaviour built (`hud.ListenerAir`). A
+message is 1 byte of payload and 19 bytes as a packet, before the connection's
+framing. Normal air and anything above it read the same, so they send nothing
+after the first reading.*
 
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
