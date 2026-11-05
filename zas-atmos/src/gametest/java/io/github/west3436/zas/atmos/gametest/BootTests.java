@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.neoforged.api.distmarker.Dist;
@@ -20,6 +21,20 @@ public final class BootTests {
         h.assertTrue(FMLEnvironment.dist == Dist.DEDICATED_SERVER, "not a dedicated server");
         h.assertTrue(ModList.get().isLoaded("zas"), "zas is not loaded");
         h.assertTrue(ModList.get().isLoaded(ZasAtmosMod.MOD_ID), "zas_atmos is not loaded");
+        h.succeed();
+    }
+
+    /**
+     * In the compatibility matrix's run, the matrix's server mods really are there, so that the rest
+     * of the suite passing says something (NFR-025). Any other run has nothing to check.
+     */
+    @GameTest(template = "empty")
+    public static void nfr_025_the_matrix_mods_are_loaded(GameTestHelper h) {
+        if (Boolean.getBoolean("zas.compatMatrix")) {
+            for (String mod : List.of("modernfix", "ferritecore", "lithium")) {
+                h.assertTrue(ModList.get().isLoaded(mod), mod + " is not loaded");
+            }
+        }
         h.succeed();
     }
 }
