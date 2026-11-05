@@ -182,6 +182,11 @@ No zone geometry or per-cell data is sent otherwise. Gas definitions
 - **Verify:** Inspect the packet types; a GameTest records the packets sent to
   a player.
 
+*2026-11-05: Gas particles (CLIENT-018) are sent as well, in place of vanilla's
+particle packets, which a client can't cap. Each is one event: what happened, a
+place, a direction and one number. Like vanilla's, they are sent to nearby
+players only. They carry nothing about a zone, so this keeps to D-53.*
+
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 

@@ -5,6 +5,7 @@ import io.github.west3436.zas.atmos.controller.ControllerSync;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
+import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.ttv.TransferValveSettings;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -68,6 +69,7 @@ public final class AtmosCapabilities {
     private static void payloads(RegisterPayloadHandlersEvent event) {
         event.registrar(PROTOCOL)
                 .playToClient(ControllerSync.TYPE, ControllerSync.CODEC, ControllerSync::handle)
+                .playToClient(GasJet.TYPE, GasJet.CODEC, GasJet::handle)
                 .playToServer(TankSettings.TYPE, TankSettings.CODEC, TankSettings::handle)
                 .playToServer(TransferValveSettings.TYPE, TransferValveSettings.CODEC, TransferValveSettings::handle);
     }

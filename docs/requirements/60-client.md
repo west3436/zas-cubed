@@ -133,6 +133,46 @@ pressure difference, audible within 16 blocks.
 Sounds heard by a player in low pressure shall be attenuated, falling silent
 in vacuum. Sound from the player's own suit is exempt.
 
+#### CLIENT-017 · Gas particle limits
+`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-53
+
+Gas particles (CLIENT-018, CLIENT-019) shall be vanilla sprites tinted in
+neutral greys in code, follow Minecraft's Particles setting (all at All, two
+thirds at Decreased, none at Minimal), and be capped per client at 40 per source
+and 120 in total per game tick.
+
+- **Rationale:** Decision: the owner, 2026-11-05: no new art, never gas-coloured
+  because gas visibility is R2 (CLIENT-002), and a large station mustn't drown
+  a client.
+- **Verify:** Unit tests of the caps and the setting; Manual check of the tints
+  and of a station under each setting.
+
+*2026-11-05: Built. A client spawns vanilla's poof and sets its grey, speed and
+life. `JetEmittersTest` (Unit) passes; when more particles are wanted than the
+total allows, they are shared out evenly, nearest source first, and the rest
+are dropped. Nobody has seen them yet, so the numbers are for the owner to
+judge.*
+
+#### CLIENT-018 · Spray, leak and burst particles
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-037, CONT-038, CONT-085, CONT-108 · Depends: CLIENT-017
+
+A fire extinguisher (CONT-037) shall show a cone of particles along its reach
+while it sprays. A tank that leaks (CONT-038) shall show a jet, and a tank or
+canister that ruptures, or a pipe that bursts (CONT-108), a burst, each sized by
+the moles it lets out.
+
+- **Rationale:** Decision: the owner, 2026-11-05: players should see where gas
+  is coming from and how much of it there is.
+- **Verify:** Unit tests of the sizes; GameTests of what the server sends; Manual
+  check of how they look.
+
+*2026-11-05: The spray is built. The server sends each spray with its nozzle,
+look and reach, stopped short by a wall as the spray is, to players within 32
+blocks. `JetPlanTest` (Unit) and `client_018_a_spray_sends_a_jet_along_the_look`,
+`client_018_a_spray_stopped_by_a_wall_is_shorter` and
+`client_018_only_a_spray_sends_a_jet` (GameTests) pass. Leaks and bursts are
+next, and nobody has seen any of it yet.*
+
 ## Debug rendering
 
 #### CLIENT-005 · Debug zone overlay
