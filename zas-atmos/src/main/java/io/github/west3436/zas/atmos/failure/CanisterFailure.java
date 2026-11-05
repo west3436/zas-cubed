@@ -45,13 +45,21 @@ public final class CanisterFailure {
             return false;
         }
         Vec3 at = Vec3.atCenterOf(pos);
+        double moles = shareOf(level, pos);
         level.removeBlock(pos, false);
         if (verdict.kind() == Kind.EXPLODE) {
             ContainerBlast.explode(level, at, verdict.power(), null);
         } else {
-            ContainerBlast.burst(level, at);
+            ContainerBlast.burst(level, at, moles);
         }
         return true;
+    }
+
+    /** The moles a canister lets out when it goes, read before it does: its share of its network's gas. */
+    private static double shareOf(ServerLevel level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof CanisterBlockEntity canister
+                ? canister.share().totalMoles()
+                : 0;
     }
 
     /**
@@ -79,8 +87,9 @@ public final class CanisterFailure {
         }
         for (BlockPos pos : event.getAffectedBlocks()) {
             if (level.getBlockEntity(pos) instanceof CanisterBlockEntity) {
+                double moles = shareOf(level, pos);
                 level.removeBlock(pos, false);
-                ContainerBlast.burst(level, Vec3.atCenterOf(pos));
+                ContainerBlast.burst(level, Vec3.atCenterOf(pos), moles);
             }
         }
     }

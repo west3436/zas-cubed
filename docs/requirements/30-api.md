@@ -9,7 +9,8 @@ owner accepted both on 2026-11-03. API-053, the ignition source tag, and
 API-055 to API-058, the fire API, were added as Draft on 2026-11-03
 ([#42](https://github.com/west3436/zas-cubed/issues/42)); the owner accepted all
 five the same day. API-059, whether container explosions break blocks, was added
-as Draft on 2026-11-04 for CONT-107.
+as Draft on 2026-11-04 for CONT-107. API-060 and API-061, the client's sound API,
+were added as Draft on 2026-11-05 for CLIENT-015 and CLIENT-016.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -542,6 +543,41 @@ without ZAS³.
 `api_059_container_explosions_break_no_blocks_without_zas` (Unit),
 `api_059_container_explosions_follow_the_preset` (GameTest) and
 `s_12_container_explosions_break_no_blocks` (GameTest, without ZAS³).*
+
+#### API-060 · Thin-air factor
+`Should` · `R1` · `Draft` · Verify: Unit, Inspect · Trace: CLIENT-016, CONT-095 · Depends: API-009
+
+The API shall give the volume factor for the local player's air, 0 to 1, from any
+thread: 1 without ZAS³ and on a dedicated server.
+
+- **Rationale:** Inferred: the content mod may use only the API (CONT-095), and
+  its one-shot sounds must fade in thin air as the framework's do.
+- **Verify:** A Unit test checks the fallback's 1; Inspect checks the API refers
+  to no client-only class, so a server can load it.
+
+*2026-11-05: added for review, with the behaviour built.
+`ClientSounds.thinAir()`, with `api_060_a_listener_hears_normally_without_zas`
+(Unit).*
+
+#### API-061 · Looping sounds through the API
+`Should` · `R1` · `Draft` · Verify: Unit, Inspect, Manual · Trace: CLIENT-015, CONT-095 · Depends: API-009
+
+The API shall let a mod's client code ask for a looping sound: a source, a sound,
+its channel, a position, a volume, a pitch and a range. A request lasts 10 game
+ticks unless renewed. Without ZAS³, and on a dedicated server, a request does
+nothing.
+
+- **Rationale:** Inferred: the content mod may use only the API (CONT-095), and
+  its running devices need loops; one manager keeps the limit of CLIENT-015 for
+  every mod.
+- **Verify:** Unit tests check the fallback and the request's checks; Inspect
+  checks the API refers to no client-only class; Manual checks a loop through
+  the API in the combined test world.
+
+*2026-11-05: added for review, with the behaviour built. `ClientSounds.loop`
+and `LoopRequest`, with `ClientSounds.install` for `zas`'s client entry point.
+`ClientSoundProvider` has a default for each method, as architecture §6.2 asks
+of a provider.*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009

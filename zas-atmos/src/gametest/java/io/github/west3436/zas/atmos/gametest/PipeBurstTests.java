@@ -9,18 +9,23 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.particle.GasJet;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.pipe.PipeBurst;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -128,6 +133,46 @@ public final class PipeBurstTests {
             }
         }
         a.close(left, 0, "gas left in the remaining segments");
+        h.succeed();
+    }
+
+    /**
+     * Just below the threshold the server sends nothing. Just above, it sends one burst, from the
+     * segment that went, in every direction, of all the network held (CLIENT-018).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_018_a_pipe_burst_sends_a_burst_of_the_whole_network(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 866);
+        a.box(0, 0, 8, 4);
+        PipeNetwork net = run(a);
+        a.tick();
+        a.tick();
+        double room = Atmospheres.at(a.level, a.abs(4, 2, 2)).mixture().pressure();
+        Vec3 near = a.point(4, 2, 2);
+
+        fillTo(net, room + PipeBurst.THRESHOLD_KPA - 1);
+        JetLog.take(near);
+        a.step();
+        h.assertTrue(JetLog.take(near).isEmpty(), "a network just below the threshold sent a jet");
+
+        fillTo(net, room + PipeBurst.THRESHOLD_KPA + 1);
+        double all = net.gas().totalMoles();
+        a.step();
+        h.assertValueEqual(segmentsLeft(a), SEGMENTS - 1, "segments just above the threshold");
+
+        List<GasJet> jets = JetLog.take(near);
+        h.assertValueEqual(jets.size(), 1, "jets sent");
+        GasJet jet = jets.get(0);
+        h.assertValueEqual(jet.kind(), GasJetKind.BURST, "the jet's kind");
+        h.assertTrue(jet.dx() == 0 && jet.dy() == 0 && jet.dz() == 0, "a burst has a direction: " + jet);
+        h.assertTrue(Math.abs(jet.amount() - all) / all < 1e-6, "the jet's moles: " + jet.amount() + ", not " + all);
+        BlockPos from = BlockPos.containing(jet.x(), jet.y(), jet.z());
+        h.assertFalse(a.level.getBlockEntity(from) instanceof PipeNodeEntity, "the jet isn't where a segment went");
+        h.assertTrue(
+                from.getY() == a.abs(0, 2, 0).getY()
+                        && from.getZ() == a.abs(0, 0, 2).getZ(),
+                "off the run");
         h.succeed();
     }
 

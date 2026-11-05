@@ -7,6 +7,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.particle.GasJets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
@@ -84,7 +85,9 @@ public final class PipeBurst {
         BlockPos pos = ((PipeNodeEntity) chosen).getBlockPos();
         GasParcel all = net.gas().drain();
         level.destroyBlock(pos, false);
-        GasMutations.add(level, Vec3.atCenterOf(pos), all, SOURCE);
+        Vec3 at = Vec3.atCenterOf(pos);
+        GasMutations.add(level, at, all, SOURCE);
+        GasJets.burst(level, at, all.totalMoles());
         return true;
     }
 
