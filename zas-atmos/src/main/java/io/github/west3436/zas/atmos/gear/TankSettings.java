@@ -15,8 +15,9 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * A press of a button on a held tank's settings screen (LIFE-044), sent to the server. It carries
- * only the hand and the button's id: the server refuses an unknown hand or button, and a hand not
- * holding a tank, and clamps the distribution pressure to 0–304 kPa.
+ * only the hand and the button's id: the server refuses an unknown hand or button, a hand not
+ * holding a tank and a sender who is dead or spectating, and clamps the distribution pressure to
+ * 0–304 kPa.
  *
  * @param hand the hand's ordinal
  * @param button the button's id
@@ -50,7 +51,10 @@ public record TankSettings(int hand, int button) implements CustomPacketPayload 
     /** Handles a press on the server. */
     public static void handle(TankSettings press, IPayloadContext context) {
         InteractionHand hand = handOf(press.hand);
-        if (hand != null && context.player() instanceof ServerPlayer player && player.isAlive()) {
+        if (hand != null
+                && context.player() instanceof ServerPlayer player
+                && player.isAlive()
+                && !player.isSpectator()) {
             apply(player, player.getItemInHand(hand), press);
         }
     }

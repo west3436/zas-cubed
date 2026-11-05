@@ -124,7 +124,7 @@ reported by CORE-073, a clean GEO-032 audit, and no non-finite values
 - **Verify:** The fuzz suite runs in CI as stated.
 
 #### NFR-011 · Server authority
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 
 No client packet shall change atmos state, except server-validated device GUI
 inputs (CONT-074) and the internals toggle (LIFE-029).
@@ -132,6 +132,15 @@ inputs (CONT-074) and the internals toggle (LIFE-029).
 - **Rationale:** Inferred: clients can't be trusted on a multiplayer server
   (A-03).
 - **Verify:** Inspect every client-to-server packet handler.
+
+*2026-11-05: Implemented. [Server authority](../research/server-authority.md) has the
+inspection, handler by handler: two ZAS³ payloads, the internals toggle and the tank
+settings, and the device GUIs' clicks on the game's own menu packets. No client packet
+carries a value: each sends an id the server checks, and the server works out and
+clamps the result. The inspection found no way to change atmos state. It did find both
+payloads taking presses from spectators, which the game's menu packets refuse, and
+they now refuse them too (`nfr_011_only_a_living_player_toggles_their_own_internals`,
+`nfr_011_only_a_living_player_sets_the_tank_they_hold`).*
 
 #### NFR-012 · Exploit checklist
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: CORE-036, CORE-073
