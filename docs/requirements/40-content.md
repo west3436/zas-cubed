@@ -266,13 +266,16 @@ entities, which wait until it returns.
 checks a vent there.*
 
 #### CONT-070 · Client smoothing
-`Must` · `R1` · `Accepted` · Verify: Manual
+`Must` · `R1` · `Implemented` · Verify: Manual
 
 Device animations shall be smoothed on the client between steps.
 
 - **Rationale:** Inferred: devices step once per second, so animations would
   look jerky unless the client interpolates.
 - **Verify:** Manual check that pump and vent animations play smoothly.
+
+*2026-11-05: Implemented, on the owner's check in the S-11/S-13 world: the running pumps'
+animation and a controlled vent's both play smoothly. No code was needed.*
 
 *2026-11-04: Nothing needs building. Pump and vent animations are texture
 animations (`.png.mcmeta`, 2 game ticks a frame), which the client plays at game
@@ -1629,7 +1632,7 @@ removal. CORE-052's timed collection isn't built yet, so "outlasts" is checked
 against an opened room, which dissolves an unpinned zone at once.*
 
 #### CONT-049 · Controller device list
-`Must` · `R1` · `Accepted` · Verify: Manual
+`Must` · `R1` · `Implemented` · Verify: Manual
 
 The controller's GUI shall list every device it controls and show whether each
 came from the zone or from a link.
@@ -1640,6 +1643,9 @@ came from the zone or from a link.
   links.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
+
+*2026-11-05: Implemented, on the owner's check in the S-11/S-13 world: the list showed the
+vent as in its zone and the scrubber outside it as linked.*
 
 *2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)). The GUI lists each part with its position, whether
 it is in the zone, linked or both, and whether it has power. This stays
