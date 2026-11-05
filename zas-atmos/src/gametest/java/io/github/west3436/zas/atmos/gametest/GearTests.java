@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import java.util.Map;
@@ -24,6 +25,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -386,6 +388,82 @@ public final class GearTests {
         close(h, GasTankItem.contents(cursor[0]).totalMoles(), after, 1e-12, "the tank taken out");
         h.assertTrue(SuitItem.tank(worn).isEmpty(), "the slot still holds a tank");
         close(h, Internals.find(p).orElseThrow().distributionPressure(), 101.3, 0, "then the offhand's air tank");
+        h.succeed();
+    }
+
+    // ---- CONT-127 -------------------------------------------------------------------------------
+
+    /**
+     * A tank's seconds of breath: what it holds over its distribution pressure, at LIFE-043's 0.5 L per
+     * 8 s. A breath that takes it under a minute plays its warning at its next atmos tick, once, at its
+     * holder. More breaths don't repeat it, and one filled again can warn again (CONT-127).
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_device_sounds")
+    public static void cont_127_a_tank_warns_once_at_its_last_minute(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 809);
+        FakePlayer p = player(s, "zas_cont_127_low");
+        Vec3 at = p.position();
+        ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
+        double line = 21.3 + GasTankItem.LOW_SECONDS * 21.3 * (0.5 / 8) / 70;
+        GasParcel plenty = GasTankItem.fill(Map.of(StandardAir.OXYGEN, 1.0), line + 0.05, 70);
+        GasTankItem.setGas(tank, plenty);
+        close(h, GasTankItem.breathSeconds(tank), 60 + 0.05 * 70 / (21.3 * (0.5 / 8)), 1e-6, "seconds of breath");
+
+        h.assertFalse(GasTankItem.atmosTick(tank, s.level, p), "a tank with plenty changed");
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "with plenty");
+
+        double breath =
+                0.1 * 70 / (GasMixture.GAS_CONSTANT * GasTankItem.contents(tank).temperature());
+        IInternalSupply supply = support(h, tank).internalSupply().orElseThrow();
+        supply.draw(breath);
+        h.assertTrue(GasTankItem.breathSeconds(tank) < GasTankItem.LOW_SECONDS, "the breath left a minute or more");
+        h.assertTrue(GasTankItem.atmosTick(tank, s.level, p), "the warned tank wasn't written back");
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "under a minute", AtmosSounds.TANK_LOW);
+
+        h.assertFalse(GasTankItem.atmosTick(tank, s.level, p), "the tank changed a second time");
+        supply.draw(breath);
+        h.assertFalse(GasTankItem.atmosTick(tank, s.level, p), "another breath warned again");
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "still under a minute");
+
+        GasTankItem.setGas(tank, plenty);
+        supply.draw(breath);
+        GasTankItem.atmosTick(tank, s.level, p);
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "filled and run down again", AtmosSounds.TANK_LOW);
+
+        GasTankItem.setDistributionPressure(tank, 0);
+        h.assertTrue(GasTankItem.breathSeconds(tank) == Double.POSITIVE_INFINITY, "a closed tank runs out");
+        h.succeed();
+    }
+
+    /**
+     * A tank's settings play its closing as its distribution pressure reaches 0, and its opening as it
+     * leaves 0, and nothing for a change while it stays open or shut (CONT-127).
+     */
+    @GameTest(template = "empty", batch = "zas_atmos_device_sounds")
+    public static void cont_127_a_tank_plays_as_its_supply_closes_and_opens(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 810);
+        FakePlayer p = player(s, "zas_cont_127_valve");
+        Vec3 at = p.position();
+        ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
+        int main = InteractionHand.MAIN_HAND.ordinal();
+
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.UP_1));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "turned up");
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.CLOSE));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "closed", AtmosSounds.TANK_CLOSE);
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.CLOSE));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "closed again");
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.UP_1));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "raised from 0", AtmosSounds.TANK_OPEN);
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.DOWN_10));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "lowered past 0", AtmosSounds.TANK_CLOSE);
+        TankSettings.apply(p, tank, new TankSettings(main, TankSettings.DEFAULT));
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "back to the default", AtmosSounds.TANK_OPEN);
+
+        h.assertFalse(TankSettings.apply(p, tank, new TankSettings(main, 6)), "an unknown button was taken");
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "an unknown button");
         h.succeed();
     }
 }

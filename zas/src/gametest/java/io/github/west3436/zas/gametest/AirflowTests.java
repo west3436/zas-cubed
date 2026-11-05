@@ -722,10 +722,13 @@ public final class AirflowTests {
                             && opening.z() == hole.getZ(),
                     "not at the hole: " + opening);
             h.assertValueEqual(opening.nx(), -1, "the flow's direction, into the room");
+            h.assertTrue(
+                    flow.molesPerSecond() > 1 && flow.molesPerSecond() < 100,
+                    "the flow through the hole: " + flow.molesPerSecond());
 
             ByteBuf buf = Unpooled.buffer();
             AirflowEffectsPayload.STREAM_CODEC.encode(buf, sent);
-            h.assertValueEqual(buf.readableBytes(), 15, "the bytes for one hole");
+            h.assertValueEqual(buf.readableBytes(), 16, "the bytes for one hole");
 
             h.assertTrue(s.show(s.player(HOLE_X + 28), now) != null, "28 blocks away");
             h.assertTrue(s.show(s.player(HOLE_X - 15), now) != null, "inside the breached room");

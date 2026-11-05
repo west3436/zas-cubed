@@ -1,6 +1,9 @@
 package io.github.west3436.zas.atmos.particle;
 
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import java.util.function.Consumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -9,9 +12,10 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Tells nearby clients about {@link GasJet}s (CLIENT-018). Server thread.
+ * Tells nearby clients about {@link GasJet}s (CLIENT-018, CLIENT-019). Server thread.
  *
  * <p>What the jets look like is up to each client: this only says what happened, where, and how much.
  */
@@ -25,7 +29,18 @@ public final class GasJets {
     /** How far below the eye it is, in blocks. */
     static final double NOZZLE_BELOW = 0.25;
 
+    /** How far from a pipe's middle its open end's mouth is, in blocks: just past its 4 px core. */
+    static final double MOUTH = 0.2;
+
+    /**
+     * The most flowing jets a player is sent in a second: about 1.2 KiB/s of 60-byte packets at most,
+     * however large the station, within DATA-006's 2 KiB/s.
+     */
+    static final int FLOWING_PER_SECOND = 20;
+
     private static final Vec3 UP = new Vec3(0, 1, 0);
+
+    private static final SendLimiter FLOWING = new SendLimiter(FLOWING_PER_SECOND, AtmosTicks.PERIOD);
 
     /** For GameTests: sees every jet the server sends, whoever is near; null sees none. */
     private static volatile Consumer<GasJet> hook;
@@ -97,6 +112,38 @@ public final class GasJets {
         }
     }
 
+    /**
+     * An open pipe end moves gas: a small jet from its mouth, unless it is only a trickle (CLIENT-019).
+     *
+     * @param level the level
+     * @param pos the pipe
+     * @param outward the way the end looks out; null for a pipe with no connection, open every way
+     * @param molesPerSecond its net flow: positive out of the pipe, negative into it
+     */
+    public static void openEnd(ServerLevel level, BlockPos pos, @Nullable Direction outward, double molesPerSecond) {
+        if (!JetPlan.showsFlow(molesPerSecond)) {
+            return;
+        }
+        Vec3 at = Vec3.atCenterOf(pos);
+        float amount = (float) molesPerSecond;
+        if (outward == null) {
+            send(level, new GasJet(GasJetKind.OPEN_END, at.x, at.y, at.z, 0, 0, 0, amount));
+        } else {
+            Vec3 mouth = at.add(Vec3.atLowerCornerOf(outward.getNormal()).scale(MOUTH));
+            send(
+                    level,
+                    new GasJet(
+                            GasJetKind.OPEN_END,
+                            mouth.x,
+                            mouth.y,
+                            mouth.z,
+                            outward.getStepX(),
+                            outward.getStepY(),
+                            outward.getStepZ(),
+                            amount));
+        }
+    }
+
     /** A unit vector to the side of the hand the user is using, level; zero looking straight up or down. */
     private static Vec3 side(Vec3 look, LivingEntity user) {
         Vec3 right = look.cross(UP);
@@ -118,7 +165,9 @@ public final class GasJets {
             if (reaches(player, jet)
                     && !(player instanceof FakePlayer)
                     && player.connection != null
-                    && player.connection.hasChannel(GasJet.TYPE)) {
+                    && player.connection.hasChannel(GasJet.TYPE)
+                    && (!jet.kind().flowing()
+                            || FLOWING.allow(player.getUUID(), level.getServer().getTickCount()))) {
                 player.connection.send(jet);
             }
         }

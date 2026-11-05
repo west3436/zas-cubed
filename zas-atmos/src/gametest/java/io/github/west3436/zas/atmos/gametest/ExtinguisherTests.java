@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.particle.GasJets;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.engine.scheduler.HotspotSettings;
@@ -24,6 +25,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.item.ItemStack;
@@ -368,6 +370,58 @@ public final class ExtinguisherTests {
                     FireExtinguisherItem.charges(stack), FireExtinguisherItem.CHARGES, "charges after a refill");
             h.assertFalse(p.isUsingItem(), "refilling started a spray");
             h.assertTrue(s.level.getFluidState(s.abs(4, 0, 2)).isSource(), "the water source went with the refill");
+            h.succeed();
+        } finally {
+            s.clear();
+        }
+    }
+
+    /**
+     * Held use sprays five times a second, but its sound comes once per 32 game ticks, about as long as
+     * the sound is. It plays its click when empty, and its refill at the water (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_an_extinguisher_plays_its_spray_refill_and_click(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 807);
+        try {
+            floor(s);
+            s.set(4, 0, 2, Blocks.WATER.defaultBlockState());
+            FakePlayer p = holder(s, "zas_cont_127_spray", 1, 2, s.point(12, 3, 2));
+            Vec3 feet = p.position();
+            Vec3 eye = new Vec3(p.getX(), p.getEyeY(), p.getZ());
+            ItemStack stack = p.getMainHandItem();
+
+            stack.use(s.level, p, InteractionHand.MAIN_HAND);
+            int start = p.getUseItemRemainingTicks();
+            for (int held = 0; held < 2 * FireExtinguisherItem.SPRAY_SOUND_INTERVAL; held++) {
+                stack.onUseTick(s.level, p, start - held);
+            }
+            h.assertValueEqual(FireExtinguisherItem.charges(stack), FireExtinguisherItem.CHARGES - 16, "charges used");
+            DeviceSoundTests.heard(
+                    h,
+                    eye,
+                    SoundSource.PLAYERS,
+                    "two sounds' length of spraying",
+                    AtmosSounds.EXTINGUISHER_SPRAY,
+                    AtmosSounds.EXTINGUISHER_SPRAY);
+            p.stopUsingItem();
+
+            FireExtinguisherItem.setCharges(stack, 0);
+            p.lookAt(EntityAnchorArgument.Anchor.EYES, s.point(12, 3, 2));
+            stack.use(s.level, p, InteractionHand.MAIN_HAND);
+            DeviceSoundTests.heard(h, feet, SoundSource.PLAYERS, "used empty", AtmosSounds.EXTINGUISHER_EMPTY);
+
+            FireExtinguisherItem.setCharges(stack, 3);
+            p.lookAt(EntityAnchorArgument.Anchor.EYES, s.point(4, 0, 2).add(0, 0.2, 0));
+            stack.use(s.level, p, InteractionHand.MAIN_HAND);
+            h.assertValueEqual(FireExtinguisherItem.charges(stack), FireExtinguisherItem.CHARGES, "after a refill");
+            DeviceSoundTests.heard(
+                    h,
+                    Vec3.atCenterOf(s.abs(4, 0, 2)),
+                    SoundSource.PLAYERS,
+                    "refilled",
+                    AtmosSounds.EXTINGUISHER_REFILL);
             h.succeed();
         } finally {
             s.clear();

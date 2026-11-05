@@ -15,9 +15,9 @@ import java.util.Map;
  * the lowest class threshold, and for creative players and spectators too.
  *
  * <p>The server sends a player's whole list when it changes: when a difference changes by a whole
- * kPa, or an opening comes into range, leaves it, or changes direction. So a steady breach sends
- * nothing; the client holds the last list ({@link HeldFlows}), and an edge that is missing from a
- * newer list has ended. As a failsafe against a client left showing a flow that ended, a list that
+ * kPa, the flow in moles by a step, or an opening comes into range, leaves it, or changes
+ * direction. So a steady breach sends nothing; the client holds the last list ({@link HeldFlows}),
+ * and an edge that is missing from a newer list has ended. As a failsafe against a client left showing a flow that ended, a list that
  * isn't empty is sent again every {@value #RESEND_TICKS} game ticks and lapses on the client after
  * {@value HeldFlows#LAPSE_TICKS}.
  */
@@ -73,7 +73,12 @@ public final class VisibleFlows {
         List<VisibleFlow> out = new ArrayList<>(keys.size());
         for (EdgeKey key : keys) {
             List<FlowField.Opening> openings = edges.get(key);
-            out.add(new VisibleFlow((int) Math.round(openings.get(0).difference()), sample(openings, cap)));
+            double moles = 0;
+            for (FlowField.Opening o : openings) {
+                moles += o.molesPerSecond();
+            }
+            out.add(new VisibleFlow(
+                    (int) Math.round(openings.get(0).difference()), VisibleFlow.step(moles), sample(openings, cap)));
         }
         return out;
     }

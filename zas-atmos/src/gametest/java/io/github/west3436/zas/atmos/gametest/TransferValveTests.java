@@ -6,10 +6,12 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.failure.BlastSound;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -22,6 +24,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
@@ -251,6 +255,29 @@ public final class TransferValveTests {
                     Math.abs(blasts.get(0).radius() - 1) < 1e-4,
                     "the power at 60 atm: " + blasts.get(0).radius());
         }
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /** A primed TTV's blast is a gas blast like any other: vg's sound, and none of vanilla's. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void fire_037_a_primed_ttv_plays_the_gas_blast(GameTestHelper h) {
+        Blasts.listen();
+        Area a = new Area(h, 874);
+        FakePlayer p = player(a, ttv(tank(Map.of(O2, 5.5), 1400), tank(Map.of(H2, 5.0), T), 0));
+        PrimedTransferValve primed = prime(h, p);
+        ListeningPlayer close = ListeningPlayer.at(a.level, a.point(2, 2, 2));
+        ListeningPlayer.during(a.level, List.of(close), primed::tick);
+        List<Explosion> blasts = Blasts.take(a.point(2, 2, 2));
+        h.assertValueEqual(blasts.size(), 1, "explosions");
+        h.assertValueEqual(close.sounds().size(), 1, "sounds sent");
+        h.assertValueEqual(
+                close.sounds().get(0).getSound().value(),
+                (blasts.get(0).radius() >= BlastSound.BIG_POWER ? AtmosSounds.BLAST_NEAR : AtmosSounds.BLAST_SMALL)
+                        .value(),
+                "the sound");
+        h.assertValueEqual(
+                close.explosions().get(0).getExplosionSound().value(), SoundEvents.EMPTY, "the explosion's sound");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }
@@ -707,6 +734,70 @@ public final class TransferValveTests {
         h.assertFalse(
                 TransferValveSettings.apply(p, new TransferValveSettings(MAIN, TransferValveSettings.TAKE_FIRST)),
                 "it took a tank that isn't there");
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /**
+     * A primed TTV plays its arming once, then its timer: each second for the last 30 s and every 5 s
+     * before. It plays its opening once when the timer runs out, then nothing (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_primed_ttv_arms_ticks_and_opens(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 881);
+        PrimedTransferValve primed = prime(h, player(a, coldMix(41)));
+        DeviceSoundTests.heard(h, primed.position(), SoundSource.BLOCKS, "primed", AtmosSounds.TTV_ARM);
+
+        int ticks = 0;
+        int opens = 0;
+        while (!primed.valve().isOpen()) {
+            primed.tick();
+            for (SoundLog.Played sound : SoundLog.take(primed.position())) {
+                if (sound.is(AtmosSounds.TTV_TICK)) {
+                    ticks++;
+                } else if (sound.is(AtmosSounds.TTV_OPEN)) {
+                    opens++;
+                } else {
+                    h.fail("a primed TTV played " + sound);
+                }
+            }
+        }
+        h.assertValueEqual(ticks, 32, "ticks of a 41 s timer: 40 s, 35 s and each of the last 30 s");
+        h.assertValueEqual(opens, 1, "openings");
+        for (int i = 0; i < 5; i++) {
+            primed.tick();
+        }
+        DeviceSoundTests.heard(h, primed.position(), SoundSource.BLOCKS, "lying open");
+
+        h.assertFalse(PrimedTransferValve.ticksAt(0), "at 0 s, when it opens instead");
+        h.assertTrue(PrimedTransferValve.ticksAt(20), "at 1 s");
+        h.assertFalse(PrimedTransferValve.ticksAt(19), "between seconds");
+        h.assertTrue(PrimedTransferValve.ticksAt(30 * 20), "at 30 s");
+        h.assertFalse(PrimedTransferValve.ticksAt(31 * 20), "at 31 s");
+        h.assertTrue(PrimedTransferValve.ticksAt(600 * 20), "at the longest timer");
+        primed.discard();
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
+    }
+
+    /** Moved by hand, the valve plays its opening or its closing, and a refused press nothing (CONT-127). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_the_valve_plays_as_it_moves_by_hand(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 882);
+        FakePlayer p = player(a, coldMix(TransferValve.DEFAULT_TIMER));
+        Vec3 at = p.position();
+        TransferValveSettings valve = new TransferValveSettings(MAIN, TransferValveSettings.VALVE);
+
+        TransferValveSettings.apply(p, valve);
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "opened", AtmosSounds.TTV_OPEN);
+        TransferValveSettings.apply(p, valve);
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "closed", AtmosSounds.VALVE_CLOSE);
+
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get()));
+        h.assertFalse(TransferValveSettings.apply(p, valve), "a TTV with no tanks opened");
+        DeviceSoundTests.heard(h, at, SoundSource.PLAYERS, "refused");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }

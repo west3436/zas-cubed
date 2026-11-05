@@ -186,7 +186,8 @@ public class PrimedTransferValve extends Entity {
             if (--fuse <= 0) {
                 openValve();
             } else if (ticksAt(fuse)) {
-                level.playSound(null, getX(), getY(), getZ(), AtmosSounds.TTV_TICK.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+                level.playSound(
+                        null, getX(), getY(), getZ(), AtmosSounds.TTV_TICK.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
             }
         }
         if (--nextStep <= 0) {

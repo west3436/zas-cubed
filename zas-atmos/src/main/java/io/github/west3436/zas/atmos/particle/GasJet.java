@@ -2,13 +2,13 @@ package io.github.west3436.zas.atmos.particle;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import java.util.function.Consumer;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * One burst of gas particles, which the server tells nearby clients about (CLIENT-017, CLIENT-018).
+ * One burst of gas particles, which the server tells nearby clients about (CLIENT-017 to CLIENT-019).
  * It carries a place, a direction and one number, and nothing about any zone (D-53). The client works
  * out the particles from them, and keeps to its own limits ({@link JetEmitters}).
  *
@@ -25,7 +25,7 @@ public record GasJet(GasJetKind kind, double x, double y, double z, float dx, fl
         implements CustomPacketPayload {
     public static final Type<GasJet> TYPE = new Type<>(ZasAtmosMod.id("gas_jet"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, GasJet> CODEC =
+    public static final StreamCodec<FriendlyByteBuf, GasJet> CODEC =
             StreamCodec.of((buf, jet) -> jet.write(buf), GasJet::read);
 
     /**
@@ -34,7 +34,7 @@ public record GasJet(GasJetKind kind, double x, double y, double z, float dx, fl
      */
     public static Consumer<GasJet> receiver;
 
-    private void write(RegistryFriendlyByteBuf buf) {
+    private void write(FriendlyByteBuf buf) {
         buf.writeEnum(kind);
         buf.writeDouble(x);
         buf.writeDouble(y);
@@ -45,7 +45,7 @@ public record GasJet(GasJetKind kind, double x, double y, double z, float dx, fl
         buf.writeFloat(amount);
     }
 
-    private static GasJet read(RegistryFriendlyByteBuf buf) {
+    private static GasJet read(FriendlyByteBuf buf) {
         return new GasJet(
                 buf.readEnum(GasJetKind.class),
                 buf.readDouble(),

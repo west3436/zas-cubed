@@ -4,8 +4,10 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.ignition.IgnitionSources;
 import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -148,6 +150,53 @@ public final class IgniterTests {
         h.assertFalse(ig.signal(), "a signal after the redstone block went");
         h.assertFalse(ig.lit(), "still sparks after the signal went");
         h.assertFalse(IgnitionSources.isStanding(a.get(2, 1, 2)), "still an ignition source without a signal");
+        h.succeed();
+    }
+
+    /**
+     * An igniter clicks as its signal comes and goes, and sparks as it lights and every 3 s while lit.
+     * With no signal or no power it doesn't spark (CONT-127).
+     */
+    @GameTest(template = "empty")
+    public static void cont_127_an_igniter_clicks_and_sparks(GameTestHelper h) {
+        SoundLog.listen();
+        Area a = new Area(h, 883);
+        try {
+            a.box(0, 0, 4, 4);
+            a.place(1, 1, 2, AtmosBlocks.IGNITER.get().defaultBlockState());
+            IgniterBlockEntity ig = a.entity(1, 1, 2);
+            ig.power().setTestPowered(true);
+            BlockPos at = a.abs(1, 1, 2);
+            ig.step();
+            DeviceSoundTests.played(h, at, "with no signal");
+
+            a.set(0, 1, 2, Blocks.REDSTONE_BLOCK.defaultBlockState());
+            DeviceSoundTests.played(h, at, "as the signal comes", AtmosSounds.IGNITER_CLICK);
+            for (int i = 0; i < 7; i++) {
+                ig.step();
+            }
+            DeviceSoundTests.played(
+                    h,
+                    at,
+                    "seven steps lit",
+                    AtmosSounds.IGNITER_SPARK,
+                    AtmosSounds.IGNITER_SPARK,
+                    AtmosSounds.IGNITER_SPARK);
+
+            a.set(0, 1, 2, Area.STONE);
+            DeviceSoundTests.played(h, at, "as the signal goes", AtmosSounds.IGNITER_CLICK);
+            ig.step();
+            DeviceSoundTests.played(h, at, "out");
+
+            ig.power().setTestPowered(false);
+            a.set(0, 1, 2, Blocks.REDSTONE_BLOCK.defaultBlockState());
+            DeviceSoundTests.played(h, at, "a signal with no power", AtmosSounds.IGNITER_CLICK);
+            ig.step();
+            DeviceSoundTests.played(h, at, "no spark with no power");
+            a.tick();
+        } finally {
+            a.clear(-1, -1, 5, 5);
+        }
         h.succeed();
     }
 }

@@ -28,6 +28,8 @@ public final class Edge {
     int openingsVersion;
     int openingsAVersion;
     int openingsBVersion;
+    /** The net moles per second of its last exchange; 0 if it didn't exchange. */
+    double molesPerSecond;
 
     /** @param b the other zone, or null for an ambient edge */
     Edge(Zone a, Zone b) {
@@ -67,6 +69,14 @@ public final class Edge {
 
     public boolean isSleeping() {
         return sleeping;
+    }
+
+    /**
+     * The moles per second that crossed the edge in the last exchange, net of what crossed the other
+     * way, never negative; 0 if it didn't exchange (CLIENT-010).
+     */
+    public double molesPerSecond() {
+        return molesPerSecond;
     }
 
     /** Whether the edge still exists: false once its last connection closed or a side was destroyed. */

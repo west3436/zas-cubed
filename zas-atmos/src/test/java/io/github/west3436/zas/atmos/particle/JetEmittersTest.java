@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.atmos.device.DeviceActivity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -165,6 +166,165 @@ class JetEmittersTest {
         assertTrue(east && west, "it only went one way");
         tick(ParticleDensity.ALL);
         assertEquals(0, emitters.sources());
+    }
+
+    /** Runs an open end's jet long enough to make some particles. */
+    private void openEnd(double molesPerSecond) {
+        emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, molesPerSecond);
+        for (int i = 0; i < 10; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        assertTrue(spawned.size() > 0, "it made nothing");
+    }
+
+    @Test
+    void client_019_gas_going_out_flies_away_from_the_mouth() {
+        openEnd(4);
+        for (Spawned s : spawned) {
+            assertTrue(s.x >= 1, "it started behind the mouth: " + s.x);
+            assertTrue(s.vx > 0, "it isn't flying away: " + s.vx);
+        }
+    }
+
+    @Test
+    void client_019_gas_going_in_flies_into_the_mouth() {
+        openEnd(-4);
+        JetPlan plan = JetPlan.of(GasJetKind.OPEN_END, -4);
+        for (Spawned s : spawned) {
+            assertTrue(s.x > 1 + plan.distance() * 0.5, "it started too near the mouth: " + s.x);
+            assertTrue(s.vx < 0, "it isn't flying in: " + s.vx);
+            // Fly it the rest of its life, as the sprite's friction would, and see where it ends.
+            double at = s.x;
+            double speed = s.vx;
+            for (int i = 0; i < 8; i++) {
+                at += speed;
+                speed *= JetPlan.FRICTION;
+            }
+            assertEquals(1, at, 0.5, "it ended away from the mouth");
+        }
+    }
+
+    @Test
+    void client_019_a_flow_that_stops_goes_quiet_by_itself() {
+        emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, 4);
+        for (int i = 0; i < JetPlan.OPEN_END_TICKS; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        int made = spawned.size();
+        assertTrue(made > 0);
+        for (int i = 0; i < 40; i++) {
+            tick(ParticleDensity.ALL);
+        }
+        assertEquals(made, spawned.size(), "it kept going with no new word from the server");
+        assertEquals(0, emitters.sources());
+    }
+
+    @Test
+    void client_019_a_flow_that_goes_on_never_stops_or_piles_up() {
+        // The server sends one every atmos tick: one source, on for good, at its plan's rate.
+        double perTick = JetPlan.of(GasJetKind.OPEN_END, 4).perTick();
+        int ticks = 0;
+        for (int second = 0; second < 10; second++) {
+            emitters.add(GasJetKind.OPEN_END, 1, 0, 0, 1, 0, 0, 4);
+            assertEquals(1, emitters.sources());
+            for (int i = 0; i < 20; i++) {
+                tick(ParticleDensity.ALL);
+                ticks++;
+            }
+        }
+        assertEquals(perTick * ticks, spawned.size(), 1.0);
+    }
+
+    /** A device the client asks for each game tick, as it does while the device is working. */
+    private void device(double level, int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            emitters.add(GasJetKind.DEVICE, 1, 0, 0, 1, 0, 0, level);
+            tick(ParticleDensity.ALL);
+        }
+    }
+
+    @Test
+    void client_019_a_vent_blows_out_across_its_grille() {
+        device(DeviceActivity.HARD, 200);
+        assertTrue(spawned.size() > 100);
+        double widest = 0;
+        for (Spawned s : spawned) {
+            assertTrue(s.x >= 1, "it started behind the grille: " + s.x);
+            assertTrue(s.vx > 0, "it isn't blowing out: " + s.vx);
+            widest = Math.max(widest, Math.abs(s.y));
+        }
+        assertTrue(widest > JetPlan.DEVICE_PATCH * 0.8, "they all start in the middle: " + widest);
+    }
+
+    @Test
+    void client_019_a_scrubber_draws_in_to_its_grille() {
+        device(-DeviceActivity.HARD, 200);
+        JetPlan plan = JetPlan.of(GasJetKind.DEVICE, -DeviceActivity.HARD);
+        assertTrue(spawned.size() > 100);
+        for (Spawned s : spawned) {
+            assertTrue(s.x > 1 + plan.distance() * 0.5, "it started too near the grille: " + s.x);
+            assertTrue(s.vx < 0, "it isn't drawn in: " + s.vx);
+            // Fly it the rest of its life, as the sprite's friction would, and see where it ends.
+            double at = s.x;
+            double speed = s.vx;
+            for (int i = 0; i < plan.lifetime(); i++) {
+                at += speed;
+                speed *= JetPlan.FRICTION;
+            }
+            assertEquals(1, at, 0.5, "it ended away from the grille");
+        }
+    }
+
+    @Test
+    void client_019_a_working_device_keeps_its_slow_rate_however_often_it_is_asked_for() {
+        // Fewer than one a tick: each ask takes over, and must keep what has built up.
+        double perTick = JetPlan.of(GasJetKind.DEVICE, DeviceActivity.WORKING).perTick();
+        assertTrue(perTick < 1, "this test needs a rate under one a tick");
+        int ticks = 1000;
+        device(DeviceActivity.WORKING, ticks);
+        assertEquals(perTick * ticks, spawned.size(), 1.0);
+        assertEquals(1, emitters.sources());
+    }
+
+    @Test
+    void client_019_a_device_no_longer_asked_for_stops_at_once() {
+        device(DeviceActivity.HARD, 50);
+        int made = spawned.size();
+        tick(ParticleDensity.ALL);
+        assertEquals(made, spawned.size(), "it made a particle after it stopped");
+        assertEquals(0, emitters.sources());
+    }
+
+    @Test
+    void client_019_a_device_follows_a_vent_that_changes_its_way() {
+        device(DeviceActivity.HARD, 20);
+        assertTrue(spawned.size() > 0);
+        spawned.clear();
+        device(-DeviceActivity.HARD, 20);
+        assertTrue(spawned.size() > 0);
+        for (Spawned s : spawned) {
+            assertTrue(s.vx < 0, "it still blows out: " + s.vx);
+        }
+        assertEquals(1, emitters.sources());
+    }
+
+    @Test
+    void client_017_a_station_of_working_devices_stays_within_the_total() {
+        for (ParticleDensity density : ParticleDensity.values()) {
+            emitters.clear();
+            int cap = (int) Math.round(JetEmitters.TOTAL * density.keep());
+            for (int t = 0; t < 40; t++) {
+                // More than the sources it keeps: the same few hundred devices asked for every tick.
+                for (int i = 0; i < JetEmitters.MAX_SOURCES + 100; i++) {
+                    emitters.add(GasJetKind.DEVICE, i % 16, (i / 16) % 16, i / 256, 1, 0, 0, DeviceActivity.HARD);
+                }
+                spawned.clear();
+                tick(density);
+                assertTrue(spawned.size() <= cap, density + ": " + spawned.size() + " in a tick");
+                assertTrue(emitters.sources() <= JetEmitters.MAX_SOURCES);
+            }
+            emitters.clear();
+        }
     }
 
     @Test

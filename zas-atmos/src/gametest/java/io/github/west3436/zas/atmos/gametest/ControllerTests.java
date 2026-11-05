@@ -17,6 +17,7 @@ import io.github.west3436.zas.atmos.controller.Thresholds;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
@@ -527,6 +528,54 @@ public final class ControllerTests {
             h.assertFalse(c.powered(), "powered with an empty buffer");
             h.assertValueEqual(c.status(), ControllerStatus.UNPOWERED, "the panel");
             h.assertValueEqual(vent.orders.size(), orders, "an unpowered controller gave orders");
+        });
+    }
+
+    // ---- CONT-127 -------------------------------------------------------------------------
+
+    /**
+     * A controller plays its switch as power comes and goes, and its warning and danger as its danger
+     * rises, once each. While the danger stays or falls it plays nothing (CONT-127).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_127_a_controller_plays_as_its_power_and_danger_change(GameTestHelper h) {
+        SoundLog.listen();
+        Site s = new Site(h, 808);
+        run(h, s, () -> {
+            s.clear();
+            AreaAirControllerBlockEntity c = poweredRoom(s, 0);
+            BlockPos at = c.getBlockPos();
+            s.cycles(2, c);
+            h.assertTrue(c.powered(), "the controller has no power");
+            DeviceSoundTests.played(h, at, "as it gets power", AtmosSounds.CONTROLLER_ON);
+
+            s.addKpa(2, 2, 2, CO2, 6);
+            s.cycles(2, c);
+            h.assertValueEqual(c.status(), ControllerStatus.DANGER1, "at 6 kPa of CO2");
+            DeviceSoundTests.played(h, at, "rising to danger 1", AtmosSounds.CONTROLLER_WARNING);
+
+            s.addKpa(2, 2, 2, CO2, 5);
+            s.cycles(2, c);
+            h.assertValueEqual(c.status(), ControllerStatus.DANGER2, "at 11 kPa of CO2");
+            DeviceSoundTests.played(h, at, "rising to danger 2", AtmosSounds.CONTROLLER_DANGER);
+
+            s.removeGas(2, 2, 2, CO2);
+            s.cycles(12, c);
+            h.assertValueEqual(c.status(), ControllerStatus.SAFE, "with the CO2 gone");
+            DeviceSoundTests.played(h, at, "falling");
+
+            s.set(2, 2, 0, Site.STONE);
+            c.buffer().set(0);
+            s.cycle(c);
+            h.assertValueEqual(c.status(), ControllerStatus.UNPOWERED, "with no FE");
+            DeviceSoundTests.played(h, at, "as it loses power", AtmosSounds.CONTROLLER_OFF);
+
+            s.addKpa(2, 2, 2, CO2, 11);
+            s.set(2, 2, 0, TestParts.battery().defaultBlockState());
+            s.cycles(2, c);
+            h.assertValueEqual(c.status(), ControllerStatus.DANGER2, "powered in danger");
+            DeviceSoundTests.played(
+                    h, at, "getting power in danger", AtmosSounds.CONTROLLER_ON, AtmosSounds.CONTROLLER_DANGER);
         });
     }
 }

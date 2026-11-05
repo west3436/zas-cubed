@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
@@ -48,6 +49,7 @@ public final class ZasAtmosClient {
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
         DeviceLoops.register(NeoForge.EVENT_BUS);
+        ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
 
         // Running machines' loops (CONT-127). The generator's isn't here: it plays from its own ticker.
         DeviceLoops.add(AtmosBlocks.HEATER, AtmosSounds.HEATER_RUN);

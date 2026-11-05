@@ -48,6 +48,7 @@ public record AirflowEffectsPayload(List<VisibleFlow> flows) implements CustomPa
         buf.writeLong(BlockPos.asLong(origin.x(), origin.y(), origin.z()));
         for (VisibleFlow flow : p.flows()) {
             VarInt.write(buf, flow.kpa());
+            VarInt.write(buf, flow.flowStep());
             VarInt.write(buf, flow.openings().size());
             for (VisibleOpening o : flow.openings()) {
                 VarInt.write(buf, zigzag(o.x() - origin.x()));
@@ -73,6 +74,7 @@ public record AirflowEffectsPayload(List<VisibleFlow> flows) implements CustomPa
         List<VisibleFlow> flows = new ArrayList<>(count);
         for (int f = 0; f < count; f++) {
             int kpa = VarInt.read(buf);
+            int flowStep = VarInt.read(buf);
             int n = VarInt.read(buf);
             if (n < 0 || n > VisibleFlows.MAX_OPENINGS_PER_FLOW) {
                 throw new IllegalArgumentException("bad opening count: " + n);
@@ -84,7 +86,7 @@ public record AirflowEffectsPayload(List<VisibleFlow> flows) implements CustomPa
                 int z = oz + unzigzag(VarInt.read(buf));
                 openings.add(new VisibleOpening(x, y, z, buf.readByte()));
             }
-            flows.add(new VisibleFlow(kpa, openings));
+            flows.add(new VisibleFlow(kpa, flowStep, openings));
         }
         return new AirflowEffectsPayload(flows);
     }

@@ -122,6 +122,129 @@ class LoopBookTest {
         assertEquals(LoopBook.MAX_VOICES, book.voices().size());
     }
 
+    // ---- Choosing by what will play: a breach against machines -----------------------------------
+
+    /** What {@code sounds.json} gives a pump's loop. */
+    private static final double PUMP_LEVEL = 0.35;
+
+    /** What {@code sounds.json} gives airflow's hiss. */
+    private static final double HISS_LEVEL = 0.7;
+
+    /** A one-hole breach at 1 atm, 2 blocks away with a range of 16, reaches the listener at 0.37. */
+    private static final double BREACH_VOLUME = 0.37 / (1 - 2.0 / 16);
+
+    /** 8 machines within 5 blocks. Their request alone reaches the listener at 0.375 or more. */
+    private static final double[] MACHINES = {3, -3, 4, -4, 4.5, -4.5, 5, -5};
+
+    /** A machine working hard, whose request has a volume of 1, and a level of its own. */
+    private void wantMachines(double level) {
+        for (int i = 0; i < MACHINES.length; i++) {
+            book.request(i, "pump", MACHINES[i], 0, 0, 1, 1, RANGE, level);
+        }
+    }
+
+    private void wantBreach(double level) {
+        book.request("breach", "hiss", 2, 0, 0, BREACH_VOLUME, 1, 16, level);
+    }
+
+    private long playing(String sound) {
+        return book.voices().stream().filter(v -> v.sound().equals(sound)).count();
+    }
+
+    @Test
+    void client_015_a_breach_outranks_8_machines_that_play_quieter() {
+        for (int i = 0; i < LoopBook.FADE_TICKS + 2; i++) {
+            wantMachines(PUMP_LEVEL);
+            wantBreach(HISS_LEVEL);
+            tick();
+            checkInvariants();
+        }
+        assertEquals(1, playing("hiss"), "the breach isn't playing");
+        assertEquals(LoopBook.MAX_VOICES - 1, playing("pump"), "the machines");
+        double hiss = book.voices().stream()
+                        .filter(v -> v.sound().equals("hiss"))
+                        .findFirst()
+                        .orElseThrow()
+                        .gain()
+                * HISS_LEVEL;
+        for (Voice<String> v : book.voices()) {
+            if (v.sound().equals("pump")) {
+                assertTrue(v.gain() * PUMP_LEVEL < hiss, () -> "a machine at x = " + v.x() + " plays louder");
+            }
+        }
+    }
+
+    /** The bug, kept in view: by the requests' volumes alone, the machines take every slot. */
+    @Test
+    void client_015_by_volume_alone_those_machines_would_mute_the_breach() {
+        for (int i = 0; i < LoopBook.FADE_TICKS + 2; i++) {
+            wantMachines(1);
+            wantBreach(1);
+            tick();
+        }
+        assertEquals(0, playing("hiss"), "the breach is playing");
+        assertEquals(LoopBook.MAX_VOICES, playing("pump"), "the machines");
+    }
+
+    /** A breach that opens among 8 machines already playing takes a slot, once one has faded. */
+    @Test
+    void client_015_a_breach_takes_a_slot_from_machines_already_playing() {
+        for (int i = 0; i < 30; i++) {
+            wantMachines(PUMP_LEVEL);
+            tick();
+        }
+        assertEquals(LoopBook.MAX_VOICES, playing("pump"), "the machines");
+        for (int i = 0; i < LoopBook.FADE_TICKS + 2; i++) {
+            wantMachines(PUMP_LEVEL);
+            wantBreach(HISS_LEVEL);
+            tick();
+            checkInvariants();
+        }
+        assertEquals(1, playing("hiss"), "the breach isn't playing");
+        assertEquals(LoopBook.MAX_VOICES - 1, playing("pump"), "the machines");
+    }
+
+    /** The engine multiplies by a sound's level itself, so counting it in the gain would count it twice. */
+    @Test
+    void client_015_a_weight_counts_in_choosing_and_not_in_the_gain() {
+        for (int i = 0; i < LoopBook.FADE_TICKS + 2; i++) {
+            book.request(1, "pump", 4, 0, 0, 1, 1, RANGE, PUMP_LEVEL);
+            tick();
+        }
+        assertEquals(0.5, onlyVoice().gain(), 1e-9);
+    }
+
+    /** A loop on a slider at 0 plays nothing, so it mustn't hold a slot from one that does. */
+    @Test
+    void client_015_a_loop_with_a_weight_of_0_holds_no_slot() {
+        for (int i = 0; i < 5; i++) {
+            wantMachines(0);
+            wantBreach(HISS_LEVEL);
+            tick();
+        }
+        assertEquals(0, playing("pump"), "the machines");
+        assertEquals(1, playing("hiss"), "the breach");
+    }
+
+    /** The slider going down lets its loops go, with a fade, and coming back up brings them back. */
+    @Test
+    void client_015_a_weight_that_changes_counts_from_the_next_request() {
+        for (int i = 0; i < 30; i++) {
+            wantMachines(PUMP_LEVEL);
+            tick();
+        }
+        assertEquals(LoopBook.MAX_VOICES, playing("pump"), "playing");
+        for (int i = 0; i < LoopBook.FADE_TICKS + 1; i++) {
+            wantMachines(0);
+            tick();
+            checkInvariants();
+        }
+        assertTrue(book.voices().isEmpty(), "still playing at a weight of 0");
+        wantMachines(PUMP_LEVEL);
+        tick();
+        assertEquals(LoopBook.MAX_VOICES, playing("pump"), "back again");
+    }
+
     @Test
     void client_015_a_source_with_no_volume_plays_nothing() {
         for (int i = 0; i < 5; i++) {

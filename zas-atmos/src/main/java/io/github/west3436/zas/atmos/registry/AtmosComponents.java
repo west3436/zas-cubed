@@ -39,7 +39,8 @@ public final class AtmosComponents {
      * next atmos tick, which does.
      */
     public static final Supplier<DataComponentType<Unit>> TANK_LOW = COMPONENTS.registerComponentType(
-            "tank_low", b -> b.persistent(Codec.unit(Unit.INSTANCE)).networkSynchronized(StreamCodec.unit(Unit.INSTANCE)));
+            "tank_low",
+            b -> b.persistent(Codec.unit(Unit.INSTANCE)).networkSynchronized(StreamCodec.unit(Unit.INSTANCE)));
 
     /** The tank in a suit chestplate's tank slot (CONT-090): one stack, or none. */
     public static final Supplier<DataComponentType<ItemContainerContents>> SUIT_TANK = COMPONENTS.registerComponentType(
