@@ -235,10 +235,8 @@ in `flammability` and in every step, so hotspots and containers (`burn`,
 (FIRE-005). No new config key: `[fire] oxygen_minimum_kpa` is the floor. The #211
 room burns 332 of its 340 mol of H₂, in 1,443 parcels with one hotspot (52 of them
 to reach 14 %), and stops at 8.3 mol, the 0.1 % floor, with O₂ at 12.5 % and
-192 kPa, at 3,237 K. A vanilla fire that goes out below 0.14 in gas this hot can
-leave a gas fire burning its CO in its place: a two-cell room under Hardcore, burned
-in 30 s steps, is at 1,485 K with 1.6 % CO when its fire goes out
-(`fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore`). Checked by the
+192 kPa, at 3,237 K. A vanilla fire that goes out below 0.14 in gas hot enough can
+come back as a gas fire burning its CO: see the note on FIRE-024. Checked by the
 `fire_035_` tests in `FireSettingsTest`,
 `ReactionSetTest`, `BlockIgniterTest` and `StandaloneReactionsTest`, and
 `fire_035_a_hot_room_burns_below_14_percent_and_a_cooler_one_does_not`,
@@ -639,6 +637,16 @@ with CO forming below 18 %, and goes out between 12 % and 14 %.*
 *2026-11-03: the generator left `#zas:combustion` (D-35, CONT-067);
 `core_056_lit_generator_forms_no_zone_under_hardcore` checks it forms no
 zone.*
+
+*2026-11-04: with FIRE-035 (Draft), a fire that goes out in gas hot enough can
+come back as a gas fire burning its CO, and that goes out too. The test allows at
+most one such lighting and checks the room ends with no fire of either kind. In
+`fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore`, one logged run
+had the fire out at 1,572 K with 0.79 mol of CO and 13.2 % O₂. A gas fire then
+burned the CO to 0.08 mol, the 0.1 % floor, and was out after 8 ticks at 12.8 %
+O₂. It stayed out for the 20 ticks the test then waits, and wool in the walls lit
+no vanilla fire. The test's 30 s burn steps against 1 s atmos ticks make that room
+hotter than real play; how much hotter isn't measured.*
 
 #### FIRE-023 · Extinguishing
 `Should` · `R1` · `Rejected` — covered by FIRE-017, FIRE-020 and FIRE-030 plus vanilla water; the extinguisher is CONT-037 (R2), 2026-10-30.
