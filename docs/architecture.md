@@ -400,6 +400,12 @@ context (GEO-041).
    `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
    default none) and `volume` (litres, 0 to 1,000). A block named directly
    beats a tag match; between equals, the file whose id sorts last wins.
+   *Implemented ([#65](https://github.com/west3436/zas-cubed/issues/65)):*
+   GEO-009's four files ship in `data/zas/zas/geometry_overrides/`. A state
+   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table,
+   so an override, applied after it, still wins, as GEO-006 asks. Boundary faces
+   come from a waterlogged state's dry state, since a fluid seals alike open or
+   closed.
 5. **Position-dependent states** (*spike (S2):* 32 in vanilla, found by
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
@@ -534,7 +540,8 @@ drives it.
   2-bit sub-cell index into a `long`: x and z cover Minecraft's whole world
   (−30,000,000 to 29,999,999, past the world border at ±29,999,984), y runs
   from −512 to 511, and a block has at most 4 cells, the most any vanilla
-  shape has (crossed panes, fences and walls; the `geo_004` GameTest checks
+  shape has (crossed panes and walls, and fences by shape, though the shipped
+  override makes those one cell; the `geo_004` GameTest checks
   every vanilla state). Faces leading outside the build height, or beyond the
   ids' range, count as open (GEO-031's default). Through
   `ResolvableTopology` it also reports the faces that reach sections not in the
@@ -1049,10 +1056,9 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 - **Shipped sources** (HEAT-016), in `data/zas/zas/thermal/sources/`: lava
   1,450 K, magma block 1,000 K, ice 273 K, packed ice 263 K, blue ice 253 K
   and snow block 268 K. Lava has no U of its own, so it conducts at the
-  fallback; the ice keeps its 2.2. Until fluids seal (GEO-006, #65), lava is
-  open space to the geometry, so it is a source only at the far end of a
-  wall: lava inside a zone, or beside a room with no wall between, isn't
-  seen.
+  fallback; the ice keeps its 2.2. Fluids seal (GEO-006), so lava is a wall to
+  the geometry: it warms a room it touches directly, through its own layer, as
+  well as through any wall between.
 - **Heat operations** (API-013, HEAT-010). Adding or removing heat at a
   point is a `GasOp` of kind `ADD_HEAT` or `REMOVE_HEAT` carrying joules and
   no moles. It is queued, classified and run in phase 3 like a gas mutation,
@@ -1760,8 +1766,8 @@ loaded world (NFR-003).
 **The pass.** Each period the known plants are walked once, spread over the
 period's game ticks a section at a time, as devices are (D-31). A plant counts if
 its zone is unpaused and holds CO₂ and light reaches it. A full block has no cell
-of its own, so leaves, until GEO-009 makes them permeable, count towards their
-first zoned neighbour. Light levels are summed as integers per zone, one sum per
+of its own, so it counts towards its first zoned neighbour; leaves have a cell
+(GEO-009), so they count towards the zone they are in. Light levels are summed as integers per zone, one sum per
 rate. At the period's end each zone gets one removal of CO₂, and when that is
 applied the moles actually removed come back as O₂ at the removed gas's
 temperature, sharing `Respiration.turn`. So a zone stops when its CO₂ runs out,
