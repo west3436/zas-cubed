@@ -180,6 +180,48 @@ BlockGeometry.markDirty(level, pos);
 - **Threads:** `markDirty` is server thread only, and throws otherwise.
 - **Without ZAS³** nothing asks the provider, and `markDirty` does nothing.
 
+## Supplying a dimension's ambient
+
+A mod can give a dimension its open air from code, such as a planet's thin air
+or a temperature that follows the time of day (ENV-004). Register a provider
+for the dimension from common setup, or whenever the dimension appears:
+
+```java
+ResourceKey<Level> dimension = ResourceKey.create(
+        Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath("mymod", "mars"));
+AmbientProviders.register(
+        ResourceLocation.fromNamespaceAndPath("mymod", "mars_air"),
+        dimension,
+        level -> new AmbientDefinition(
+                Map.of(ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide"), 0.6),
+                210 + 20 * Math.sin(level.getTimeOfDay(1) * 2 * Math.PI)));
+```
+
+`AmbientDefinition` holds partial pressures in kPa and a temperature in K.
+`AmbientDefinition.vacuum(temperature)` and `AmbientDefinition.standardAir(temperature)`
+cover the common cases.
+
+- **Who wins** (ENV-014, D-45): a datapack definition of the dimension, then a
+  provider, then an ambient seeded from another mod's data (R2), then standard
+  air. Pack authors have the final say, so a datapack file overrides your
+  provider. Return `null` to define nothing for now: the next source applies.
+- **Two providers for one dimension** (ENV-019, ENV-020): the highest priority
+  applies (`register` takes one; the default is 0). A tie goes to the
+  lexicographically smallest mod id, the namespace of the provider's id. Only
+  the one that applies is called, and ZAS³ logs one warning naming them all.
+- **Threads and timing** (ENV-015): ZAS³ calls the provider once per atmos tick
+  of its dimension, on the server thread, as the tick's batch closes, even while
+  a datapack definition overrides it. Its answer holds until the next one, for
+  the simulation and for every query, and queries never call it. Keep it cheap,
+  since it counts against the server thread's budget, and don't load chunks from
+  it.
+- **Gases** must exist on the server. An answer naming an unknown gas is skipped
+  with a warning, as if the provider had returned `null`.
+- **Position:** a provider answers for a whole dimension. Ambients that vary by
+  position are for R2 (ENV-005).
+- **Without ZAS³** the provider is kept and never called, and every point stays
+  standard air.
+
 ## Fire
 
 A fire in a zone burns as hotspots, one per block: a vanilla fire block in the

@@ -199,7 +199,7 @@ watchdog logs the cause if it comes back.*
 ## Compatibility
 
 #### NFR-020 · Platform
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-09
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-09
 
 zas-cubed shall run on NeoForge `[21.1.264,)` for Minecraft 1.21.1 under Java
 21, on both dedicated servers and singleplayer. 21.1.264 is the floor because
@@ -213,6 +213,14 @@ it contains the attachment-sync privacy fix and the network hardening
 *2026-11-03: Still Accepted. The mod metadata gives `[21.1.264,)` and CI uses
 Java 21, but CI builds and tests against 21.1.265 (`neo_version`), not the
 floor the Verify plan asks for ([#69](https://github.com/west3436/zas-cubed/issues/69)).*
+
+*2026-11-05: Implemented. `neo_version` in `gradle.properties` is now 21.1.264, and it
+is also each mod's minimum in `neoforge.mods.toml`, so CI's build, unit tests and
+GameTests all run on the floor, and the two can't drift apart. This replaces
+[neoforge §1](../research/neoforge-1.21.1.md#1-toolchain)'s "build against 21.1.265".
+21.1.265 added only context to enchanted loot events
+([NeoForge #3690](https://github.com/neoforged/NeoForge/pull/3690)), which ZAS³ doesn't
+use.*
 
 #### NFR-023 · Dedicated server safety
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: NFR-020
@@ -273,7 +281,7 @@ smoke tests shall pass.
 *2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
 #### NFR-022 · Optional compat isolation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: A-01
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: A-01
 
 Compat code shall load only when its target mod is present. zas-cubed shall
 run fully without any optional mod installed.
@@ -281,6 +289,15 @@ run fully without any optional mod installed.
 - **Rationale:** Decision: A-01 and D-11.
 - **Verify:** A GameTest runs without any optional mod; Inspect the compat
   entry points.
+
+*2026-11-05: Implemented. `nfr_022_runs_with_no_optional_mod` checks that a GameTest
+server loads only the game, NeoForge and our own mods, so every GameTest in CI runs
+with no optional mod. The inspection found no compat entry point yet: `compat-adastra`
+holds only a `package-info` until the adapter comes in R2 (D-66), and nothing refers
+to it. No main source asks `ModList` or calls `Class.forName`. The mods' metadata lists
+only required dependencies, and `zas.mixins.json` is the one mixin config, with no
+`requiredMods`, and targets only game classes. The adapter, when it comes, needs this
+inspected again.*
 
 ## Quality and process
 
