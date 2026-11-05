@@ -1235,7 +1235,8 @@ public final class DimensionAtmos {
 
     /** Gas caught fire: its whoomp, unless another has just played nearby (FIRE-036). */
     private void gasCaught(BlockPos pos, double fuelMoles) {
-        if (whoomps.allow(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime())) {
+        float volume = IgnitionWhoomps.volume(fuelMoles);
+        if (whoomps.allow(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime(), volume)) {
             level.playSound(
                     null,
                     pos.getX() + 0.5,
@@ -1243,7 +1244,7 @@ public final class DimensionAtmos {
                     pos.getZ() + 0.5,
                     ZasSounds.FIRE_IGNITE.get(),
                     SoundSource.BLOCKS,
-                    IgnitionWhoomps.volume(fuelMoles),
+                    volume,
                     1);
         }
     }

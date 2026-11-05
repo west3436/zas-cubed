@@ -16,7 +16,7 @@ class IgnitionWhoompsTest {
         IgnitionWhoomps whoomps = new IgnitionWhoomps();
         int played = 0;
         for (long tick = 0; tick < 400; tick += 20) {
-            if (whoomps.allow(0, 64, 0, tick)) {
+            if (whoomps.allow(0, 64, 0, tick, 1f)) {
                 played++;
             }
         }
@@ -27,39 +27,53 @@ class IgnitionWhoompsTest {
     @Test
     void fire_036_the_quiet_ends_after_5_seconds() {
         IgnitionWhoomps whoomps = new IgnitionWhoomps();
-        assertTrue(whoomps.allow(0, 64, 0, 1000));
-        assertFalse(whoomps.allow(0, 64, 0, 1000 + IgnitionWhoomps.QUIET_TICKS - 1));
-        assertTrue(whoomps.allow(0, 64, 0, 1000 + IgnitionWhoomps.QUIET_TICKS));
+        assertTrue(whoomps.allow(0, 64, 0, 1000, 1f));
+        assertFalse(whoomps.allow(0, 64, 0, 1000 + IgnitionWhoomps.QUIET_TICKS - 1, 1f));
+        assertTrue(whoomps.allow(0, 64, 0, 1000 + IgnitionWhoomps.QUIET_TICKS, 1f));
     }
 
     /** A refused whoomp doesn't start the quiet again, so a steady relight still plays on time. */
     @Test
     void fire_036_a_refused_whoomp_does_not_extend_the_quiet() {
         IgnitionWhoomps whoomps = new IgnitionWhoomps();
-        assertTrue(whoomps.allow(0, 64, 0, 0));
-        assertFalse(whoomps.allow(0, 64, 0, 99));
-        assertTrue(whoomps.allow(0, 64, 0, 100));
+        assertTrue(whoomps.allow(0, 64, 0, 0, 1f));
+        assertFalse(whoomps.allow(0, 64, 0, 99, 1f));
+        assertTrue(whoomps.allow(0, 64, 0, 100, 1f));
     }
 
     /** The limit is by area: within 16 blocks counts, whichever cell or chunk it falls in, and beyond doesn't. */
     @Test
     void fire_036_the_limit_is_by_area() {
         IgnitionWhoomps whoomps = new IgnitionWhoomps();
-        assertTrue(whoomps.allow(0, 64, 0, 0));
-        assertFalse(whoomps.allow(IgnitionWhoomps.RADIUS, 64, 0, 1), "at the radius, over a chunk border");
-        assertFalse(whoomps.allow(-1, 64, 0, 1), "next door, over a chunk border");
-        assertTrue(whoomps.allow(IgnitionWhoomps.RADIUS + 1, 64, 0, 1), "just past the radius");
-        assertTrue(whoomps.allow(0, 64, 100, 1), "a fire elsewhere has its own");
+        assertTrue(whoomps.allow(0, 64, 0, 0, 1f));
+        assertFalse(whoomps.allow(IgnitionWhoomps.RADIUS, 64, 0, 1, 1f), "at the radius, over a chunk border");
+        assertFalse(whoomps.allow(-1, 64, 0, 1, 1f), "next door, over a chunk border");
+        assertTrue(whoomps.allow(IgnitionWhoomps.RADIUS + 1, 64, 0, 1, 1f), "just past the radius");
+        assertTrue(whoomps.allow(0, 64, 100, 1, 1f), "a fire elsewhere has its own");
     }
 
     /** Each whoomp is checked against all the recent ones, not only the last. */
     @Test
     void fire_036_every_recent_whoomp_counts() {
         IgnitionWhoomps whoomps = new IgnitionWhoomps();
-        assertTrue(whoomps.allow(0, 64, 0, 0));
-        assertTrue(whoomps.allow(100, 64, 0, 1));
-        assertFalse(whoomps.allow(0, 64, 1, 2), "beside the older one");
-        assertFalse(whoomps.allow(100, 64, 1, 2), "beside the newer one");
+        assertTrue(whoomps.allow(0, 64, 0, 0, 1f));
+        assertTrue(whoomps.allow(100, 64, 0, 1, 1f));
+        assertFalse(whoomps.allow(0, 64, 1, 2, 1f), "beside the older one");
+        assertFalse(whoomps.allow(100, 64, 1, 2, 1f), "beside the newer one");
+    }
+
+    /** A much louder whoomp carries further, so a quiet one nobody heard doesn't silence it. */
+    @Test
+    void fire_036_a_much_louder_whoomp_plays_through_the_quiet() {
+        IgnitionWhoomps whoomps = new IgnitionWhoomps();
+        float small = IgnitionWhoomps.volume(112);
+        float large = IgnitionWhoomps.volume(1510);
+        assertTrue(whoomps.allow(0, 64, 0, 0, small), "the small room");
+        assertFalse(whoomps.allow(7, 64, 4, 1, small), "a room as big, next door");
+        assertFalse(whoomps.allow(7, 64, 4, 1, IgnitionWhoomps.volume(112 * 2)), "with twice the fuel");
+        assertTrue(whoomps.allow(7, 64, 4, 1, large), "the large room, next door");
+        assertFalse(whoomps.allow(0, 64, 0, 2, small), "the small room again, after the large");
+        assertFalse(whoomps.allow(0, 64, 0, 2, large), "the large room relighting");
     }
 
     /** The volume climbs with the log of the fuel, between its limits. */
