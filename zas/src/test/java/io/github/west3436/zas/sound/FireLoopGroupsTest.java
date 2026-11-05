@@ -173,6 +173,30 @@ class FireLoopGroupsTest {
         assertEquals(pitch, FireLoopGroups.pitch(new FireLoopGroups.Source(3, -2, 7)), "fixed by its cube");
     }
 
+    /** Each scan renews a loop's lease before it lapses, so a steady fire's loops don't dip between them. */
+    @Test
+    void fire_036_a_steady_fires_loops_hold_between_scans() {
+        FireLoopGroups groups = new FireLoopGroups();
+        LoopBook<String> book = new LoopBook<>();
+        double[] gains = new double[FireLoopGroups.MAX_SOURCES];
+        for (int tick = 0; tick < 100; tick++) {
+            if (tick % FireLoopGroups.SCAN_TICKS == 0) {
+                box(groups, 0, 0, 0, 23, 7, 23);
+                for (FireLoopGroups.Group g : groups.choose(12, 4, 12)) {
+                    book.request(g.source(), "fire", g.x(), g.y(), g.z(), g.volume(), g.pitch(), FireLoopGroups.RANGE);
+                }
+            }
+            book.tick(12, 4, 12, 1, (x, y, z) -> true);
+            int i = 0;
+            for (LoopBook.Voice<String> voice : book.voices()) {
+                if (tick > LoopBook.FADE_TICKS + 1) {
+                    assertEquals(gains[i], voice.gain(), 1e-9, "voice " + i + " at tick " + tick);
+                }
+                gains[i++] = voice.gain();
+            }
+        }
+    }
+
     /** Fed to the loop book, a fire's loops play while it burns and all stop once it has gone. */
     @Test
     void fire_036_the_loops_stop_when_the_fire_goes_out() {

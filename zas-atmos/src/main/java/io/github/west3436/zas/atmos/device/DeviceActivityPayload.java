@@ -10,15 +10,19 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * How hard the devices near a player are working (DATA-018): what has changed since it was last told,
- * sent to that player alone at most once per atmos tick. Each change is 9 bytes, a block position and
+ * sent to that player alone at most every 4 game ticks. Each change is 9 bytes, a block position and
  * a level. A message adds 1 byte of count, and 20 as a packet, for its id and its channel's name. It
  * carries no zone data (D-53).
  *
  * @param changes what changed; a change to {@link DeviceActivity#IDLE} means forget that device
  */
 public record DeviceActivityPayload(List<Change> changes) implements CustomPacketPayload {
-    /** The most changes in a message, which keeps its count to 1 byte; the rest wait for the next atmos tick. */
-    public static final int MAX_CHANGES = 127;
+    /**
+     * The most changes in a message; the rest wait for the next. At 5 messages a second that holds a
+     * player to 1,230 B/s, whatever a station does, and tells it as many changes a second as a message
+     * of 127 once a second did.
+     */
+    public static final int MAX_CHANGES = 25;
 
     public static final Type<DeviceActivityPayload> TYPE = new Type<>(ZasAtmosMod.id("activity"));
 

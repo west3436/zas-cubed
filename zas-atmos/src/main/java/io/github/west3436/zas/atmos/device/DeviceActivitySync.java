@@ -30,9 +30,10 @@ import org.jetbrains.annotations.Nullable;
  * its loop and show its particles. It stays within D-53: a level per device, and nothing of a zone.
  *
  * <p>Each level holds its devices that aren't {@linkplain DeviceActivity#IDLE idle}, and each player
- * what it was last told. Once per atmos tick, at a phase given by its entity id, a player is sent
- * what differs: a device within {@value #RANGE} blocks that is new or has changed, and an idle or
- * removed one it knew of. One that it knew of stays listed out to {@value #FORGET_RANGE} blocks, so a
+ * what it was last told. Every {@value #SEND_TICKS} game ticks, at a phase given by its entity id, a
+ * player is sent what differs, so a sound starts and stops close to its device's step: a device within
+ * {@value #RANGE} blocks that is new or has changed, and an idle or removed one it knew of. One that
+ * it knew of stays listed out to {@value #FORGET_RANGE} blocks, so a
  * player walking along the edge doesn't keep being told. Nothing changed means nothing is sent, so a
  * station that has settled costs nothing, however big it is.
  *
@@ -48,6 +49,9 @@ public final class DeviceActivitySync {
 
     /** How far away a device a player knows of is before it is told to forget it, in blocks. */
     public static final int FORGET_RANGE = 40;
+
+    /** How often a player is sent what has changed, in game ticks. */
+    public static final int SEND_TICKS = 4;
 
     /** How long a device's level lasts without another step, in game ticks. */
     public static final int STALE_TICKS = 3 * AtmosTicks.PERIOD;
@@ -102,7 +106,7 @@ public final class DeviceActivitySync {
             WORKING.values().forEach(working -> sweep(working, now));
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (Math.floorMod(now + player.getId(), AtmosTicks.PERIOD) == 0) {
+            if (Math.floorMod(now + player.getId(), SEND_TICKS) == 0) {
                 syncAt(player, now, payload -> send(player, payload));
             }
         }
@@ -149,7 +153,7 @@ public final class DeviceActivitySync {
 
     /**
      * Passes a player what it needs to know at game tick {@code now} to {@code out}, if there is
-     * anything and it is due: at least {@value AtmosTicks#PERIOD} ticks have passed since the last.
+     * anything and it is due: at least {@value #SEND_TICKS} ticks have passed since the last.
      *
      * @return the payload passed on, or null if none was
      */
@@ -161,7 +165,7 @@ public final class DeviceActivitySync {
             told.known.clear();
             told.dimension = dimension;
         }
-        if (told.sent >= 0 && now - told.sent < AtmosTicks.PERIOD) {
+        if (told.sent >= 0 && now - told.sent < SEND_TICKS) {
             return null;
         }
         Long2ObjectOpenHashMap<Working> working = WORKING.get(dimension);

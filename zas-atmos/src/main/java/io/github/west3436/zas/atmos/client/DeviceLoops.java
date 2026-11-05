@@ -23,9 +23,10 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * Plays a device's loop while the server says it is working (DATA-018, CLIENT-015). A kind of device
- * gets its sound with one line, {@link #add}. Each client tick this asks for the loop of every working
- * device within {@value #RANGE} blocks whose block is still there, as loud as its level, and the
- * looping sounds' manager does the rest: a device that stops being asked for fades out by itself.
+ * gets its sound with one line, {@link #add}. Each client tick this asks for the loop of every device
+ * working at its kind's lowest level or above, within {@value #RANGE} blocks and whose block is still
+ * there, as loud as its level, and the looping sounds' manager does the rest: a device that stops
+ * being asked for fades out by itself.
  *
  * <p>It also keeps the client's table to the current level, so it runs whether or not any sound has
  * been added. Client thread only.
@@ -34,23 +35,36 @@ public final class DeviceLoops {
     /** How far a working device is heard, in blocks: the owner's decision of 2026-11-05. */
     public static final double RANGE = 8;
 
-    private record Loop(Supplier<? extends Block> block, Supplier<? extends SoundEvent> sound) {}
+    private record Loop(Supplier<? extends Block> block, Supplier<? extends SoundEvent> sound, int minLevel) {}
 
     /** Added but not looked up yet: the registries aren't ready when a mod's constructor runs. */
     private static final List<Loop> ADDED = new ArrayList<>();
 
-    private static final Map<Block, Supplier<? extends SoundEvent>> BY_BLOCK = new IdentityHashMap<>();
+    private static final Map<Block, Loop> BY_BLOCK = new IdentityHashMap<>();
 
     private DeviceLoops() {}
 
     /**
-     * Gives a kind of device its loop, from the client entry point.
+     * Gives a kind of device its loop, from the client entry point, playing whenever the server says
+     * it is doing anything.
      *
      * @param block its block, as the registry's holder
      * @param sound the loop, as the registry's holder
      */
     public static void add(Supplier<? extends Block> block, Supplier<? extends SoundEvent> sound) {
-        ADDED.add(new Loop(block, sound));
+        add(block, sound, DeviceActivity.TRICKLE);
+    }
+
+    /**
+     * Gives a kind of device its loop, from the client entry point, playing from a level up: for one
+     * whose loop goes with particles that start at that level.
+     *
+     * @param block its block, as the registry's holder
+     * @param sound the loop, as the registry's holder
+     * @param minLevel the lowest {@link DeviceActivity} level it plays at
+     */
+    public static void add(Supplier<? extends Block> block, Supplier<? extends SoundEvent> sound, int minLevel) {
+        ADDED.add(new Loop(block, sound, minLevel));
     }
 
     /** Registers the listeners. Called once, from the client entry point. */
@@ -66,7 +80,7 @@ public final class DeviceLoops {
             return;
         }
         for (Loop loop : ADDED) {
-            BY_BLOCK.put(loop.block().get(), loop.sound());
+            BY_BLOCK.put(loop.block().get(), loop);
         }
         ADDED.clear();
         if (BY_BLOCK.isEmpty()) {
@@ -86,12 +100,11 @@ public final class DeviceLoops {
                                     SectionPos.blockToSectionCoord(at.getZ()))) {
                 return;
             }
-            Supplier<? extends SoundEvent> sound =
-                    BY_BLOCK.get(level.getBlockState(at).getBlock());
-            if (sound != null) {
+            Loop loop = BY_BLOCK.get(level.getBlockState(at).getBlock());
+            if (loop != null && activity >= loop.minLevel()) {
                 ClientSounds.loop(new LoopRequest(
                         at.immutable(),
-                        sound.get(),
+                        loop.sound().get(),
                         SoundSource.BLOCKS,
                         x,
                         y,

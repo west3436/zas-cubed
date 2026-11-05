@@ -10,6 +10,9 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.particle.DeviceJets;
+import io.github.west3436.zas.atmos.particle.GasJet;
+import io.github.west3436.zas.atmos.particle.GasJetKind;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
@@ -17,6 +20,7 @@ import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,6 +28,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -176,6 +181,47 @@ public final class PassiveVentTests {
             a.close(v.network().volume(), PipeVolumes.VENT + PipeVolumes.PIPE, "the passive vent and its one pipe");
             h.assertFalse(v instanceof PoweredDevice, "a passive vent draws power");
         }
+        h.succeed();
+    }
+
+    /**
+     * CLIENT-019: a passive vent shows what it moves as an open end does, from just in front of its
+     * grille: out while its network is above the room, in while it is below, and nothing within its
+     * threshold.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void client_019_a_passive_vent_sends_a_jet_at_its_grille(GameTestHelper h) {
+        JetLog.listen();
+        Area a = new Area(h, 932);
+        PassiveVentBlockEntity v = rig(a);
+        steps(a, 5);
+        Vec3 mouth = a.point(0, 2, 2).add(DeviceJets.MOUTH, 0, 0);
+
+        network(v, N2, room(a) + 300);
+        GasStore gas = v.network().gas();
+        double flow = PipeBlockEntity.openEndFlow(
+                        gas.moles(), gas.volume(), a.zone(2, 2, 2).mixture(), false, RATIO)
+                .net();
+        JetLog.take(mouth);
+        a.step();
+        List<GasJet> jets = JetLog.take(mouth);
+        h.assertValueEqual(jets.size(), 1, "jets blowing out");
+        GasJet out = jets.get(0);
+        h.assertValueEqual(out.kind(), GasJetKind.OPEN_END, "the jet's kind");
+        h.assertTrue(out.dx() == 1 && out.dy() == 0 && out.dz() == 0, "the jet doesn't look east: " + out);
+        h.assertTrue(
+                new Vec3(out.x(), out.y(), out.z()).distanceTo(mouth) < 1e-6, "the jet isn't at its grille: " + out);
+        h.assertTrue(Math.abs(out.amount() - flow) < 1e-3, "the jet's flow is " + out.amount() + ", not " + flow);
+
+        v.network().gas().drain();
+        a.step();
+        jets = JetLog.take(mouth);
+        h.assertValueEqual(jets.size(), 1, "jets drawing in");
+        h.assertTrue(jets.get(0).dx() == 1 && jets.get(0).amount() < 0, "the jet doesn't draw in: " + jets.get(0));
+
+        network(v, N2, room(a) + PassiveVentBlockEntity.THRESHOLD_KPA * 0.8);
+        a.step();
+        h.assertValueEqual(JetLog.take(mouth), List.of(), "jets within its threshold");
         h.succeed();
     }
 

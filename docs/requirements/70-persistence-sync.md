@@ -289,7 +289,8 @@ A device that moves gas shall have an activity level, read from the moles it
 moved in its last atmos tick: idle below 0.05 mol, trickle from 0.05, working
 from 1 and hard from 5. A level shall rise at once, and fall only after 2 atmos
 ticks running below half of where it starts. A device that is off or has no
-power shall read as idle from that atmos tick. A portable (CONT-018), pump, filter
+power shall read as idle from that atmos tick, as shall an open pipe end or
+passive vent moving less than 0.25 mol/s net. A portable (CONT-018), pump, filter
 or mixer switched off shall read as idle from that moment, and a portable switched
 on shall read at once as what its next atmos tick would move. A device that does
 other work, such as a heater, shall read as working while it runs.
@@ -319,6 +320,10 @@ air conditioner and recharger report running, and `cont_127_*` check them. The
 generator isn't an atmospherics device, so it doesn't report: its loop follows the
 lit state it already syncs (CONT-127).*
 
+*2026-11-05: An open end or passive vent now reads only the flow that shows
+(CLIENT-019), with no hold below it, so its loop stops with its particles
+(CONT-125).*
+
 *2026-11-05: from the owner's playtest of the S-11/S-13 world, on the heater, air
 conditioner, portable scrubber and portable pump: "Noticeable delay in the animation
 and sounds when toggling power". A switch now passes its level on when it moves, not
@@ -326,14 +331,14 @@ at the device's next step (`AtmosDevice.finishActivity`), and
 `DeviceSoundTests.cont_018_*`, `cont_019_*` and
 `data_017_an_inline_device_switched_off_reads_idle_at_once` check it. A pump, filter
 or mixer switched on still waits for its step, which is what finds out if it has
-power and gas to move. A client hears of any of this at the player's next sync
-(DATA-018).*
+power and gas to move. A client hears of any of this at the player's next sync,
+within 4 game ticks (DATA-018).*
 
 #### DATA-018 · Device activity sync
 `Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
 
 The activity level of each device that isn't idle within 32 blocks of a player
-shall be sent to that player only, at most once per atmos tick, and only what
+shall be sent to that player only, at most once every 4 game ticks, and only what
 has changed. A player shall be told to forget a device that goes idle, is
 removed, has not stepped for 3 s, or is over 40 blocks away.
 
@@ -354,14 +359,26 @@ relight it, or a block entity update, which by the packet formats comes to about
 
 *Measured bytes, before the connection's framing: 9 for each change, and 21 for
 a message with its packet id and channel name, so 30 for one device. A message
-holds at most 127 changes and the rest wait for the next, so one player can never
-cost more than 1,164 B/s.*
+holds at most 25 changes and the rest wait for the next, so one player can never
+cost more than 1,230 B/s.*
 
 *Estimated for a large station, with 200 devices within 32 blocks of a player. A
-settled station sends nothing. All 200 starting at once costs 1,842 bytes across
-2 messages. All of them filling rooms over a minute, each going through hard,
-working, trickle and idle, is about 13 changes a second, or 140 B/s. There's no
-bench yet, so DATA-006 is still to be measured with this included.*
+settled station sends nothing. All 200 starting at once costs 1,968 bytes across
+8 messages, over 1.4 s. All of them filling rooms over a minute, each going through
+hard, working, trickle and idle, is about 13 changes a second, or at most 225 B/s
+if they land in all 5 of a second's messages. There's no bench yet, so DATA-006 is
+still to be measured with this included.*
+
+*2026-11-05: A player is now sent what has changed every 4 game ticks rather than
+every 20, so a loop starts and stops within 4 ticks of its device's step rather
+than up to a second later, for the owner's wish that sound and particles go
+together (CONT-125). A level still changes only at a step, at most once a second a
+device, so there are no more changes than before. What can rise is the messages
+they come in: up to 4 more a second at 21 bytes each, at most 84 B/s more for a
+player. A message also holds at most 25 changes rather than 127: at 5 messages a
+second 127 would have let the limit rise to 5,820 B/s, past DATA-006's 2 KiB/s. It
+is now 1,230 B/s rather than 1,164, at 125 changes a second rather than 127.
+`data_018_what_a_message_costs` measures the bytes and checks that figure.*
 
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
