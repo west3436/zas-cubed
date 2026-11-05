@@ -287,7 +287,8 @@ A device that moves gas shall have an activity level, read from the moles it
 moved in its last atmos tick: idle below 0.05 mol, trickle from 0.05, working
 from 1 and hard from 5. A level shall rise at once, and fall only after 2 atmos
 ticks running below half of where it starts. A device that is off or has no
-power shall read as idle from that atmos tick.
+power shall read as idle from that atmos tick. A device that does other work,
+such as a heater, shall read as working while it runs.
 
 - **Rationale:** Decision: the owner's sound decisions of 2026-11-05: a device's
   loop plays only while it moves gas, and particles show gas moving. Inferred:

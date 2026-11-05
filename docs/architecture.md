@@ -2239,7 +2239,9 @@ jar, so providers can be tested before real devices exist.
   `tickNow`.
 - **Activity** (DATA-017, DATA-018; Draft until the owner's review). A device that
   moves gas calls `reportMoved(moles)` in its step, and `reportStopped()` when it
-  is off. That one line is all a device needs. The base turns it into a level
+  is off. A device that moves no gas, such as a heater, calls `reportRunning()`,
+  and reads as working. That one line is all a device needs. The base turns it
+  into a level
   (`DeviceActivity`), and a device that has never reported costs one null check.
   `DeviceActivitySync` lists each level's devices that aren't idle. Once per atmos
   tick, at a phase given by its entity id, a player is sent what differs from what

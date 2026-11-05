@@ -38,6 +38,9 @@ public final class DeviceActivity {
     /** Moles per atmos tick at which each level starts. */
     private static final double[] RISES = {0, 0.05, 1, 5};
 
+    /** What a device that moves no gas counts as moving while it runs: enough to read as working. */
+    static final double RUNNING_MOLES = RISES[WORKING];
+
     /** A level falls below this fraction of where it starts. */
     private static final double FALL_RATIO = 0.5;
 

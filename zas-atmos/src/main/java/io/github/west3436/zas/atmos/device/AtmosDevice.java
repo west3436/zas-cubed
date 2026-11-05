@@ -48,6 +48,14 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     }
 
     /**
+     * Says a device that moves no gas, such as a heater, is running in this step, from {@link
+     * #atmosTick}. It reads as {@linkplain DeviceActivity#WORKING working} for as long as it says so.
+     */
+    protected final void reportRunning() {
+        reportMoved(DeviceActivity.RUNNING_MOLES);
+    }
+
+    /**
      * Says the device is off or has no power, from {@link #atmosTick}: it reads as idle after this
      * step, with no hold, so its sound stops when it is switched off.
      */

@@ -180,6 +180,15 @@ class DeviceActivityTest {
     }
 
     @Test
+    void data_017_a_device_that_moves_no_gas_reads_as_working_while_it_runs() {
+        DeviceActivity a = new DeviceActivity();
+        assertEquals(WORKING, step(a, DeviceActivity.RUNNING_MOLES));
+        for (int t = 0; t < 10; t++) {
+            assertEquals(WORKING, step(a, DeviceActivity.RUNNING_MOLES), "step " + t);
+        }
+    }
+
+    @Test
     void data_017_a_loop_is_louder_at_each_level_and_silent_when_idle() {
         assertEquals(0f, DeviceActivity.volume(IDLE));
         assertTrue(DeviceActivity.volume(TRICKLE) > 0);
