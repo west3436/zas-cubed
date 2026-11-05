@@ -10,7 +10,8 @@ API-055 to API-058, the fire API, were added as Draft on 2026-11-03
 ([#42](https://github.com/west3436/zas-cubed/issues/42)); the owner accepted all
 five the same day. API-059, whether container explosions break blocks, was added
 as Draft on 2026-11-04 for CONT-107. API-060 and API-061, the client's sound API,
-were added as Draft on 2026-11-05 for CLIENT-015 and CLIENT-016.
+were added as Draft on 2026-11-05 for CLIENT-015 and CLIENT-016. The owner
+accepted all three on 2026-11-05.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -546,7 +547,7 @@ The API shall give the atmos tick period in game ticks, 20 without ZAS³.
 ticks.*
 
 #### API-059 · Whether container explosions break blocks
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CONT-107, OPS-007, CONT-095 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CONT-107, OPS-007, CONT-095 · Depends: API-009
 
 The API shall say whether explosions of gas containers break blocks: the
 preset's `container_explosions_break_blocks`, with any override, or false
@@ -563,8 +564,10 @@ without ZAS³.
 `api_059_container_explosions_follow_the_preset` (GameTest) and
 `s_12_container_explosions_break_no_blocks` (GameTest, without ZAS³).*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
+
 #### API-060 · Thin-air factor
-`Should` · `R1` · `Draft` · Verify: Unit, Inspect · Trace: CLIENT-016, CONT-095 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, Inspect · Trace: CLIENT-016, CONT-095 · Depends: API-009
 
 The API shall give the volume factor for the local player's air, 0 to 1, from any
 thread: 1 without ZAS³ and on a dedicated server.
@@ -585,8 +588,11 @@ the client that hears it, and `zas` knows nothing of the mods built on it, so
 each names its own namespace. With `api_060_a_mod_gives_its_own_namespace`
 (Unit).*
 
+*2026-11-05: accepted by the owner, and Implemented: its test passes, and `zas-api`
+imports no client-only class.*
+
 #### API-061 · Looping sounds through the API
-`Should` · `R1` · `Draft` · Verify: Unit, Inspect, Manual · Trace: CLIENT-015, CONT-095 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, Inspect, Manual · Trace: CLIENT-015, CONT-095 · Depends: API-009
 
 The API shall let a mod's client code ask for a looping sound: a source, a sound,
 its channel, a position, a volume, a pitch and a range. A request lasts 4 game
@@ -609,6 +615,10 @@ of a provider.*
 after what it goes with (CLIENT-015). A mod has to ask at least that often, and
 every tick is the simple way. `api_061_the_api_states_the_books_lease` (Unit) checks
 that `ClientSounds.LEASE_TICKS` is what the manager does.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, `zas-api` imports
+no client-only class, and the loops the owner heard in the sound and particle world
+come through it (`DeviceLoops`, `FireAlarmSounds`, `GeneratorBlockEntity`).*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009

@@ -5,7 +5,7 @@ with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules). FIRE-006 and FIRE-031 were added and
 accepted on 2026-10-31 (D-57). FIRE-032, FIRE-033, FIRE-034 and FIRE-035 were
 added as Drafts on 2026-11-04. FIRE-036 and FIRE-037 were added as Drafts on
-2026-11-05.
+2026-11-05. The owner accepted all six on 2026-11-05.
 
 **Scope.** Covers:
 - gas reactions
@@ -104,7 +104,7 @@ these limits and autoignition points. Checked by the `fire_003_` tests in
 [#211](https://github.com/west3436/zas-cubed/issues/211)).*
 
 #### FIRE-032 · Flammability limits widen with temperature
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-003, FIRE-010, [#211](https://github.com/west3436/zas-cubed/issues/211)
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-003, FIRE-010, [#211](https://github.com/west3436/zas-cubed/issues/211)
 
 Above 298 K, a fuel's lower flammability limit shall fall and its upper limit
 rise, each by 0.75 · (T − 298) / ΔH꜀ percentage points, with T in K and ΔH꜀ the
@@ -137,6 +137,8 @@ upper at 100 %. At and below 298 K the declared limits shall apply.
 2,700 K short of O₂ no longer stops at the fire oxygen threshold: it burns on to
 the floor, or to O₂ at 10 kPa. `fire_035_the_211_room_burns_past_14_percent_to_the_fuel_floor`
 replaces the test that said it stopped.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 #### FIRE-005 · Incomplete combustion
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-49, LIFE-041
@@ -208,7 +210,7 @@ autoignition temperature burn below the 0.14 fraction, keeping the 10 kPa floor.
 Every other fire keeps this requirement whole.*
 
 #### FIRE-035 · A gas fire at autoignition needs only the O₂ floor
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-031, FIRE-032, [#211](https://github.com/west3436/zas-cubed/issues/211) · Depends: FIRE-010, FIRE-030
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: S-03, S-13, FIRE-031, FIRE-032, [#211](https://github.com/west3436/zas-cubed/issues/211) · Depends: FIRE-010, FIRE-030
 
 A gas fire whose fuel is at or above that fuel's autoignition temperature
 (FIRE-010) shall not need FIRE-030's O₂ fraction, and shall still need its O₂
@@ -244,6 +246,8 @@ come back as a gas fire burning its CO: see the note on FIRE-024. Checked by the
 `fire_035_a_hot_room_burns_below_14_percent_and_a_cooler_one_does_not`,
 `fire_035_a_vanilla_fire_in_hot_gas_keeps_the_oxygen_fraction` and
 `fire_035_a_hot_network_below_14_percent_burns` (GameTests).*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 #### FIRE-031 · Combustion in containers
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: D-57, FIRE-011 · Depends: API-019
@@ -558,7 +562,7 @@ on: the block below it, or else the first flammable block next to it. Checked
 by `fire_022_fire_burns_its_profile_and_a_tag_overrides_it`.*
 
 #### FIRE-033 · Hot gas ignites blocks
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-020, FIRE-030
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-020, FIRE-030
 
 A flammable block next to an air cell of a zone whose temperature is at or above
 the block's ignition temperature shall catch fire, with a chance per second for
@@ -587,8 +591,10 @@ tests in `BlockIgnitionSettingsTest`, `BlockIgniterTest` (Unit) and
 `fire_033_a_planks_room_lights_only_when_hot` and
 `fire_033_rate_matches_the_odds_and_the_heat`.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
+
 #### FIRE-034 · Gas fires light the blocks next to them
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-018, FIRE-030
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: S-04, [#212](https://github.com/west3436/zas-cubed/issues/212) · Depends: FIRE-018, FIRE-030
 
 A cell with a gas fire beside a flammable block shall light it, with a chance per
 second for each such block of `[fire] hotspot_block_ignite_chance × odds / 100`
@@ -609,6 +615,8 @@ burned this tick. Checked by the `fire_034_` tests in `BlockIgnitionSettingsTest
 `BlockIgniterTest` (Unit) and `BlockIgnitionTests` (GameTest), among them
 `fire_034_a_gas_fire_lights_wool_not_stone` and
 `fire_034_rate_matches_the_configured_chance`.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 #### FIRE-024 · Combustion as a zone trigger (Hardcore)
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-14, S-04
@@ -659,7 +667,7 @@ built on API-057. This requirement stays rejected.
 ## Sound
 
 #### FIRE-036 · A gas fire has its own sound
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-016, CLIENT-020, FIRE-014, FIRE-018
+`Should` · `R1` · `Accepted` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-016, CLIENT-020, FIRE-014, FIRE-018
 
 Gas fire blocks within 16 blocks of a player shall play `zas:fire.loop` in place
 of vanilla's crackle, as at most 3 loops however big the fire, each louder as its
@@ -727,8 +735,11 @@ longer holds for a much bigger one. The owner chose to skip a retest, so nobody 
 heard the result, and the cause isn't proven. `fire_036_a_much_louder_whoomp_plays_through_the_quiet`
 (Unit) checks the rule.*
 
+*2026-11-05: accepted by the owner. It stays Accepted until someone hears a whoomp at
+the distance that failed: the fix above hasn't been heard.*
+
 #### FIRE-037 · A gas blast has its own sound, near or far
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102
 
 A tank's or canister's explosion shall play vg's explosion sounds in place of
 vanilla's: the big sounds at a power of 2 or more, the small ones below it. Each
@@ -774,3 +785,6 @@ That is from reading the game's code; no client runs here. Because the engine cl
 gain at 1, a near blast at volume 4 in thin air loses range before it loses gain,
 until the factor falls below 0.25: quieter at every distance, but not at its
 centre.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*

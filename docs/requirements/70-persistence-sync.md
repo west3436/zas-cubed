@@ -263,7 +263,7 @@ There's no bench yet, and FLOW-017's payload is the exception above, so this sta
 Accepted.*
 
 #### DATA-019 · Listener pressure sync
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
 
 The real pressure at a player's eyes, in whole kPa up to 50, shall be sent to
 that player only, at most 4 times a second, and only when it changes. It shall
@@ -282,8 +282,10 @@ message is 1 byte of payload and 19 bytes as a packet, before the connection's
 framing. Normal air and anything above it read the same, so they send nothing
 after the first reading.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
+
 #### DATA-017 · Device activity
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53
 
 A device that moves gas shall have an activity level, read from the moles it
 moved in its last atmos tick: idle below 0.05 mol, trickle from 0.05, working
@@ -334,8 +336,10 @@ or mixer switched on still waits for its step, which is what finds out if it has
 power and gas to move. A client hears of any of this at the player's next sync,
 within 4 game ticks (DATA-018).*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
+
 #### DATA-018 · Device activity sync
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-015, D-53 · Depends: DATA-005, DATA-017
 
 The activity level of each device that isn't idle within 32 blocks of a player
 shall be sent to that player only, at most once every 4 game ticks, and only what
@@ -379,6 +383,8 @@ player. A message also holds at most 25 changes rather than 127: at 5 messages a
 second 127 would have let the limit rise to 5,820 B/s, past DATA-006's 2 KiB/s. It
 is now 1,230 B/s rather than 1,164, at 125 changes a second rather than 127.
 `data_018_what_a_message_costs` measures the bytes and checks that figure.*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 #### DATA-006 · Bandwidth budget
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10

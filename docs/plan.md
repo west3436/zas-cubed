@@ -390,6 +390,21 @@ never left and reopened, so that one is untested on a client.
 | A leak's jet looked twitchy | [#276](https://github.com/west3436/zas-cubed/pull/276) | A leak chooses one direction as it starts, and keeps it |
 | No whoomp heard from two rooms lit in turn at a distance | [#275](https://github.com/west3436/zas-cubed/pull/275) | A whoomp at least 0.3 louder plays through the 5 s limit. The small room was out of range by design, and likely silenced the large one. Unproven |
 
+*2026-11-05: the owner accepted every decision left open by this round and by S-11/S-13.*
+Each went as recommended or as built:
+
+| Decision | Result |
+|---|---|
+| The *Draft* IDs | FIRE-032 to FIRE-037, API-059 to API-061, CONT-125 to CONT-128, CLIENT-015 to CLIENT-021, DATA-017 to DATA-019 and NFR-015 are accepted. All are Implemented except four: FIRE-036, CLIENT-018 and CONT-127 wait for someone to hear or see the changes above, and CLIENT-015 for a Save and Quit on a client |
+| The extinguisher's recipe | Approved as shipped |
+| S-13's strength | Stays at power 1.9 |
+| Siphoning on real power ([#245](https://github.com/west3436/zas-cubed/issues/245)) | A Siphon mode on the controller, [#279](https://github.com/west3436/zas-cubed/pull/279). Nobody has seen its button yet |
+| A stop hanging on a server running behind ([#242](https://github.com/west3436/zas-cubed/issues/242)) | Left as it is. NFR-015's watchdog logs the cause if it comes back, and the issue stays open |
+| The portable pump's siphon | Capped at 150 L of the air a second, as a release is, [#280](https://github.com/west3436/zas-cubed/pull/280) |
+| A lone scrubber stalling (CONT-081) | Left as written, to revisit if players run into it |
+| Sound files left out over provenance | They stay out |
+| A link for `misc/fire_alarm` | None to add, so its credit keeps its gap |
+
 | Item | PR | Requirements | Left |
 |---|---|---|---|
 | Sound files | [#251](https://github.com/west3436/zas-cubed/pull/251), [#254](https://github.com/west3436/zas-cubed/pull/254) | CLIENT-020, CLIENT-021 added as *Draft*; notes on NFR-041, NFR-045 | The owner's ear on each choice. No loop's join has been checked. The origin of `misc/fire_alarm` is recorded only as Freesound |
@@ -515,11 +530,9 @@ _Updated 2026-11-05._
      (#69), and block damage (#45).
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
-     played its combined test world the same day, and its *Draft* IDs are still to
-     accept.
-   - From this round, for the owner: accept the *Draft* IDs (FIRE-032 to FIRE-035,
-     API-059, NFR-015), approve the extinguisher's recipe, and choose what to do
-     about a stop hanging on a server running behind (#242).
+     played its combined test world the same day, and accepted its *Draft* IDs.
+   - ~~From this round, for the owner: the *Draft* IDs, the extinguisher's recipe and
+     a stop hanging on a server running behind (#242)~~ *accepted 2026-11-05*.
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      display units and language (#57), magnetic boots (#49) and insulating
      station walls (#179).

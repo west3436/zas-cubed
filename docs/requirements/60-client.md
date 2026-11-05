@@ -198,7 +198,7 @@ is CLIENT-016. Damping vanilla's sounds, and the suit's exemption, stay
 deferred here.*
 
 #### CLIENT-015 · Looping sounds
-`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
+`Should` · `R1` · `Accepted` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
 
 A client shall play at most 8 looping sounds at once, chosen from those
 requested within their range: the ones that will play loudest at the player,
@@ -243,8 +243,12 @@ between looks, so it now looks every 4 (FIRE-036). `LoopBookTest` and
 `FireLoopGroupsTest` (Unit) check the 14 ticks and that a steady fire doesn't dip.
 Nobody has heard this, so the Manual part stays open.*
 
+*2026-11-05: accepted by the owner. It stays Accepted until a client shows no loop
+remains after leaving a world: the world was never left and reopened in the owner's
+playthrough.*
+
 #### CLIENT-016 · Thin air
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
 
 This mod's new sounds shall fade for a listener in thin air, by the real
 pressure at the listener's eyes: in a straight line from exact silence at 1 kPa
@@ -280,8 +284,11 @@ sound above volume 1 keeps full gain and loses range until the factor brings it
 below 1, since the engine works out both from the volume, so a near blast at
 volume 4 starts to lose gain at a factor of 0.25.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
+
 #### CLIENT-017 · Gas particle limits
-`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-53
+`Should` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: D-53
 
 Gas particles (CLIENT-018, CLIENT-019) shall be vanilla sprites tinted in
 neutral greys in code, follow Minecraft's Particles setting (all at All, two
@@ -300,8 +307,11 @@ total allows, they are shared out evenly, nearest source first, and the rest
 are dropped. Nobody has seen them yet, so the numbers are for the owner to
 judge.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
+
 #### CLIENT-018 · Spray, leak and burst particles
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-037, CONT-038, CONT-085, CONT-108 · Depends: CLIENT-017
+`Should` · `R1` · `Accepted` · Verify: Unit, GameTest, Manual · Trace: CONT-037, CONT-038, CONT-085, CONT-108 · Depends: CLIENT-017
 
 A fire extinguisher (CONT-037) shall show a cone of particles along its reach
 while it sprays. A tank that leaks (CONT-038) shall show a jet, and a tank or
@@ -337,8 +347,11 @@ leak now chooses one as it starts and keeps it until it stops. The tank's
 `client_018_a_leak_keeps_one_direction` (GameTest) passes. The owner chose to skip a
 retest, so nobody has seen the result.*
 
+*2026-11-05: accepted by the owner. It stays Accepted until someone sees a leak keep
+one direction.*
+
 #### CLIENT-019 · Flow particles
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018
 
 An open pipe end (CONT-004) or passive vent (CONT-016) moving at least 0.25 mol/s
 net shall show particles scaled by its flow, moving out of its mouth while gas
@@ -397,10 +410,13 @@ one in at its input's. A volume pump at its default 100 L/s sends both at once,
 since it moves its rate regardless. `client_019_a_pressure_pump_shows_flow_only_past_its_target`
 and `client_019_a_volume_pump_shows_flow_at_its_default_rate` (GameTests) pass.*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
+passed it in the sound and particle world.*
+
 ## Sound files
 
 #### CLIENT-020 · Sound events resolve
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-007, CLIENT-010, NFR-045
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-007, CLIENT-010, NFR-045
 
 Every sound event `zas` and `zas_atmos` register shall be defined in their
 `sounds.json`, every file an event names shall exist, every file shipped shall
@@ -424,8 +440,10 @@ range.
 `client_020_atmos_registered_events_are_defined` and
 `client_020_atmos_event_ranges_match_sounds_json` (GameTests).*
 
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
+
 #### CLIENT-021 · Sound files are mono Vorbis
-`Must` · `R1` · `Draft` · Verify: Unit · Trace: CLIENT-010
+`Must` · `R1` · `Implemented` · Verify: Unit · Trace: CLIENT-010
 
 Every sound file `zas` and `zas_atmos` ship shall be mono Ogg Vorbis, readable
 by Minecraft's decoder.
@@ -439,6 +457,8 @@ by Minecraft's decoder.
 *2026-11-05: added for review, with the behaviour built.
 `client_021_every_file_is_mono_vorbis` and
 `client_021_every_file_decodes_with_the_games_decoder` (Unit, one set per mod).*
+
+*2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 ## Debug rendering
 
