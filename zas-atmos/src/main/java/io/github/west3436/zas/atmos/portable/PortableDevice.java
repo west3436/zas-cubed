@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.portable;
 
 import io.github.west3436.zas.atmos.battery.Batteries;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -9,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,6 +36,11 @@ public abstract class PortableDevice extends AtmosDevice implements MenuProvider
     /** Its battery slot. */
     public Batteries.Slot battery() {
         return battery;
+    }
+
+    /** The items it drops when broken: its battery. */
+    public List<ItemStack> heldItems() {
+        return List.of(battery.battery());
     }
 
     /** The FE in its battery; 0 with none. */

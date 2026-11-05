@@ -12,11 +12,14 @@ import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
+import io.github.west3436.zas.atmos.portable.PortableScrubberBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlock;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
+import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -47,6 +50,14 @@ public final class AtmosBlocks {
 
     /** A vent (CONT-014). */
     public static final DeferredBlock<VentBlock> VENT = BLOCKS.registerBlock("vent", VentBlock::new, metal());
+    /** A scrubber (CONT-015). */
+    public static final DeferredBlock<ScrubberBlock> SCRUBBER =
+            BLOCKS.registerBlock("scrubber", ScrubberBlock::new, metal());
+
+    /** The passive vent: it equalizes with the room, with no power (CONT-016). */
+    public static final DeferredBlock<PassiveVentBlock> PASSIVE_VENT =
+            BLOCKS.registerBlock("passive_vent", PassiveVentBlock::new, metal());
+
     /** The area air controller, a wall panel (CONT-040, D-68). */
     public static final DeferredBlock<AreaAirControllerBlock> AREA_AIR_CONTROLLER =
             BLOCKS.registerBlock("area_air_controller", AreaAirControllerBlock::new, metal().strength(1.5f, 4.8f));
@@ -69,6 +80,10 @@ public final class AtmosBlocks {
     /** The air conditioner, the requirements' freezer (CONT-019). */
     public static final DeferredBlock<AirConditionerBlock> AIR_CONDITIONER =
             BLOCKS.registerBlock("air_conditioner", AirConditionerBlock::new, metal());
+
+    /** The portable scrubber (CONT-018). */
+    public static final DeferredBlock<PortableScrubberBlock> PORTABLE_SCRUBBER =
+            BLOCKS.registerBlock("portable_scrubber", PortableScrubberBlock::new, metal());
 
     /** The recharger (CONT-113). */
     public static final DeferredBlock<RechargerBlock> RECHARGER =

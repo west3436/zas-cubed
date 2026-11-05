@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.ArrayList;
@@ -177,6 +178,36 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
             network().gas().add(gas);
         } else if (level instanceof ServerLevel server) {
             GasMutations.add(server, Vec3.atCenterOf(worldPosition), gas, RELEASE);
+        }
+    }
+
+    /**
+     * Makes an {@linkplain PipeBlockEntity#openEndFlow open end's flow} through a port, as one change
+     * if it goes both ways. What the zone doesn't take comes back, and what leaves it arrives with the
+     * result. A flow of nothing does nothing.
+     *
+     * @param level the level
+     * @param port the port, which isn't busy
+     * @param point where the gas goes
+     * @param flow what moves
+     */
+    protected void exchange(ServerLevel level, ZonePort port, Vec3 point, PipeBlockEntity.Flow flow) {
+        if (flow.out().isEmpty() && flow.in().isEmpty()) {
+            return;
+        }
+        GasParcel out = network().gas().take(flow.out());
+        if (flow.in().isEmpty()) {
+            port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
+        } else if (out.isEmpty()) {
+            port.remove(level, point, flow.in(), r -> deliver(r.moved()));
+        } else {
+            port.exchange(
+                    level,
+                    point,
+                    out,
+                    flow.in(),
+                    r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())),
+                    r -> deliver(r.moved()));
         }
     }
 

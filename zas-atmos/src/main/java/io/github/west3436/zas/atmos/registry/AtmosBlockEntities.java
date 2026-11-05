@@ -12,10 +12,13 @@ import io.github.west3436.zas.atmos.igniter.IgniterBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlockEntity;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlockEntity;
+import io.github.west3436.zas.atmos.portable.PortableScrubberBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
+import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
+import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
@@ -56,6 +59,16 @@ public final class AtmosBlockEntities {
             () -> BlockEntityType.Builder.of(VentBlockEntity::new, AtmosBlocks.VENT.get())
                     .build(null));
 
+    public static final Supplier<BlockEntityType<ScrubberBlockEntity>> SCRUBBER = BLOCK_ENTITIES.register(
+            "scrubber",
+            () -> BlockEntityType.Builder.of(ScrubberBlockEntity::new, AtmosBlocks.SCRUBBER.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<PassiveVentBlockEntity>> PASSIVE_VENT = BLOCK_ENTITIES.register(
+            "passive_vent",
+            () -> BlockEntityType.Builder.of(PassiveVentBlockEntity::new, AtmosBlocks.PASSIVE_VENT.get())
+                    .build(null));
+
     public static final Supplier<BlockEntityType<AreaAirControllerBlockEntity>> AREA_AIR_CONTROLLER =
             BLOCK_ENTITIES.register(
                     "area_air_controller",
@@ -87,6 +100,13 @@ public final class AtmosBlockEntities {
             "air_conditioner",
             () -> BlockEntityType.Builder.of(AirConditionerBlockEntity::new, AtmosBlocks.AIR_CONDITIONER.get())
                     .build(null));
+
+    public static final Supplier<BlockEntityType<PortableScrubberBlockEntity>> PORTABLE_SCRUBBER =
+            BLOCK_ENTITIES.register(
+                    "portable_scrubber",
+                    () -> BlockEntityType.Builder.of(
+                                    PortableScrubberBlockEntity::new, AtmosBlocks.PORTABLE_SCRUBBER.get())
+                            .build(null));
 
     public static final Supplier<BlockEntityType<RechargerBlockEntity>> RECHARGER = BLOCK_ENTITIES.register(
             "recharger",

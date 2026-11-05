@@ -22,6 +22,7 @@ import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.FireConfig;
+import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -312,6 +313,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     @Override
     public int atmosPeriodTicks() {
         return ZasServerConfig.scheduler().periodTicks();
+    }
+
+    /** The preset's option (API-059, CONT-107, OPS-007): its override, or the active preset's default. */
+    @Override
+    public boolean containerExplosionsBreakBlocks() {
+        return PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.get();
     }
 
     /**

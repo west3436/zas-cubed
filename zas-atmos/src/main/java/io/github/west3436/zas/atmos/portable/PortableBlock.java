@@ -23,8 +23,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /**
  * A portable (CONT-018, D-73): a floor machine that runs on the battery in its slot and works on its
  * own on the zone it stands in. Its front faces the player who places it, and its {@link #LIT}
- * property is true while it works. Used with an empty hand it opens its GUI, and broken it drops its
- * battery.
+ * property is true while it works. Used with an empty hand it opens its GUI, and broken it drops
+ * what it holds ({@link PortableDevice#heldItems()}).
  *
  * <p>It isn't a full block: gas passes around it, so it stands in its room's cell.
  */
@@ -90,8 +90,8 @@ public abstract class PortableBlock extends BaseEntityBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PortableDevice device) {
-            Containers.dropItemStack(
-                    level, pos.getX(), pos.getY(), pos.getZ(), device.battery().battery());
+            device.heldItems()
+                    .forEach(item -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), item));
         }
         super.onRemove(state, level, pos, newState, moved);
     }

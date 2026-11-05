@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -50,6 +51,24 @@ public record GasSelection(Set<ResourceLocation> gases, Set<GasTag> tags) implem
             }
         }
         return false;
+    }
+
+    /** The same selection with a gas added, or taken away if it was selected by name. */
+    public GasSelection toggled(ResourceLocation gas) {
+        Set<ResourceLocation> next = new TreeSet<>(gases);
+        if (!next.remove(gas)) {
+            next.add(gas);
+        }
+        return new GasSelection(next, tags);
+    }
+
+    /** The same selection with a tag added, or taken away if it was selected. */
+    public GasSelection toggled(GasTag tag) {
+        Set<GasTag> next = new HashSet<>(tags);
+        if (!next.remove(tag)) {
+            next.add(tag);
+        }
+        return new GasSelection(gases, next);
     }
 
     /**
