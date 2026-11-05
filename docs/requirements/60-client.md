@@ -253,6 +253,45 @@ canister has nothing to show. The `client_018_*` tests in `ContainerFailureTests
 and `PipeBurstTests` (GameTests) and `JetPlanTest` (Unit) pass. Nobody has seen
 these either, so this stays Draft.*
 
+## Sound files
+
+#### CLIENT-020 · Sound events resolve
+`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: CLIENT-007, CLIENT-010, NFR-045
+
+Every sound event `zas` and `zas_atmos` register shall be defined in their
+`sounds.json`, every file an event names shall exist, every file shipped shall
+be named by an event, and every event shall have a subtitle in `en_us`.
+
+- **Rationale:** Inferred: a missing file only logs a warning and plays silence,
+  which nobody can catch without hearing it. Subtitles are how a player who can't
+  hear a sound still gets it, and they must be translatable (CLIENT-007). Files
+  nothing plays would only grow the jar.
+- **Verify:** Unit tests check the files and subtitles; a GameTest checks the
+  registered events against `sounds.json`.
+
+*2026-11-05: added for review, with the behaviour built.
+`client_020_every_event_names_files_that_exist`,
+`client_020_every_file_is_named_by_an_event` and
+`client_020_every_event_has_a_translated_subtitle` (Unit, one set per mod), and
+`client_020_registered_events_are_defined` and
+`client_020_atmos_registered_events_are_defined` (GameTests).*
+
+#### CLIENT-021 · Sound files are mono Vorbis
+`Must` · `R1` · `Draft` · Verify: Unit · Trace: CLIENT-010
+
+Every sound file `zas` and `zas_atmos` ship shall be mono Ogg Vorbis, readable
+by Minecraft's decoder.
+
+- **Rationale:** Inferred: Minecraft only attenuates mono sounds with distance,
+  so a stereo file would be as loud across the base as beside the device, which
+  breaks every range this round sets.
+- **Verify:** A Unit test reads each file's Vorbis header for the channel count;
+  another decodes each file with the game's decoder.
+
+*2026-11-05: added for review, with the behaviour built.
+`client_021_every_file_is_mono_vorbis` and
+`client_021_every_file_decodes_with_the_games_decoder` (Unit, one set per mod).*
+
 ## Debug rendering
 
 #### CLIENT-005 · Debug zone overlay

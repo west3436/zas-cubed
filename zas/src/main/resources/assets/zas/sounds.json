@@ -1,0 +1,26 @@
+{
+  "airflow.hiss": {
+    "subtitle": "subtitles.zas.airflow.hiss",
+    "sounds": [{ "name": "zas:airflow/hiss", "volume": 0.7, "attenuation_distance": 16 }]
+  },
+  "airflow.light": {
+    "subtitle": "subtitles.zas.airflow.wind",
+    "sounds": [{ "name": "zas:airflow/wind_light", "attenuation_distance": 16 }]
+  },
+  "airflow.mob": {
+    "subtitle": "subtitles.zas.airflow.wind",
+    "sounds": [{ "name": "zas:airflow/wind_mob", "attenuation_distance": 16 }]
+  },
+  "airflow.heavy": {
+    "subtitle": "subtitles.zas.airflow.wind",
+    "sounds": [{ "name": "zas:airflow/wind_heavy", "attenuation_distance": 16 }]
+  },
+  "fire.loop": {
+    "subtitle": "subtitles.zas.fire.loop",
+    "sounds": [{ "name": "zas:fire/loop", "attenuation_distance": 16 }]
+  },
+  "fire.ignite": {
+    "subtitle": "subtitles.zas.fire.ignite",
+    "sounds": ["zas:fire/ignite"]
+  }
+}
