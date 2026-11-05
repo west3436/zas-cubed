@@ -105,7 +105,7 @@ exceed their threshold. Example: water vapor as mist. Addon gases such as
 Cl₂ (yellow-green) define their own colour.
 
 #### CLIENT-003 · Airflow particles
-`Should` · `R1` · `Accepted` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
 
 An active edge whose pressure difference is at or above FLOW-011's lowest class
 threshold shall show particles at its openings, moving toward the
@@ -131,8 +131,13 @@ the curves, the caps, the setting, the direction and the 32 blocks;
 `client_003_an_edge_shows_from_the_lowest_class_threshold` (GameTests) check what
 the server sends. It stays Accepted until the owner checks how it looks.*
 
+*2026-11-05: Implemented, on the owner's check in the sound and particle world:
+the smoke at a breach, and fewer then none under the Decreased and Minimal
+settings. Nobody walked past 32 blocks by hand, so
+`client_003_players_within_32_blocks_are_sent_the_breach` stands for that part.*
+
 #### CLIENT-010 · Airflow sound
-`Should` · `R1` · `Accepted` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: FLOW-001, FLOW-011, DATA-015
 
 Such an edge shall play a looping hiss whose volume follows the moles per second
 through its openings and whose pitch rises with the pressure difference, audible
@@ -175,6 +180,12 @@ hole, not the room. `AirflowSoundPlan` holds the rest, with no game classes:*
 `AirflowSoundLoopsTest` runs the loops through the real `LoopBook`, for the slots,
 the vacuum, a steady breach staying in the same voices, and nothing left once the
 flow ends.*
+
+*2026-11-05: Implemented, on the owner's check in the sound and particle world: the
+hiss at a cupboard, a big room and a weak leak, fading by 18 blocks, stopping when
+sealed, and fading away as the listener's air thins. The owner passed the loudness
+as built, so the rule stays moles per second with no room-size term, and a weak leak
+stays as quiet as it is.*
 
 #### CLIENT-004 · Low-pressure sound
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; damping every sound needs sound-engine hooks, and no R1 scenario needs it), 2026-10-31. · Verify: Manual

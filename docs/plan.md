@@ -375,6 +375,21 @@ air. Every PR merged once CI passed. CI has no client, so nothing here has been
 heard or seen, and every *Draft* ID above waits on the owner's combined test
 world.
 
+*2026-11-05: the owner played that world.* 39 of its 42 checks passed, on main at
+666e793, which also tried the S-11/S-13 fixes above on a client for the first time.
+That settles CLIENT-003 and CLIENT-010, keeps airflow's loudness rule and weak leaks
+as built, and keeps a scrubber on 1 kPa silent. The rest of the table's checks passed,
+but its *Draft* IDs still wait for the owner to accept them. The three it flagged were
+changed the same day, and the owner chose to skip a retest, so nobody has seen or
+heard those. Save and Quit was marked as passing, but the log shows the world was
+never left and reopened, so that one is untested on a client.
+
+| Flagged | PR | Change |
+|---|---|---|
+| The recharger's screen and its sound | [#277](https://github.com/west3436/zas-cubed/pull/277) | No screen: right-click a battery in or out. Plays vg's own `machines/charge_finish`, credited to vgstation13 contributors by the owner's decision |
+| A leak's jet looked twitchy | [#276](https://github.com/west3436/zas-cubed/pull/276) | A leak chooses one direction as it starts, and keeps it |
+| No whoomp heard from two rooms lit in turn at a distance | [#275](https://github.com/west3436/zas-cubed/pull/275) | A whoomp at least 0.3 louder plays through the 5 s limit. The small room was out of range by design, and likely silenced the large one. Unproven |
+
 | Item | PR | Requirements | Left |
 |---|---|---|---|
 | Sound files | [#251](https://github.com/west3436/zas-cubed/pull/251), [#254](https://github.com/west3436/zas-cubed/pull/254) | CLIENT-020, CLIENT-021 added as *Draft*; notes on NFR-041, NFR-045 | The owner's ear on each choice. No loop's join has been checked. The origin of `misc/fire_alarm` is recorded only as Freesound |
@@ -499,8 +514,9 @@ _Updated 2026-11-05._
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
      (#69), and block damage (#45).
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
-     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*, with the
-     owner's second combined test world to play and its *Draft* IDs to accept.
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
+     played its combined test world the same day, and its *Draft* IDs are still to
+     accept.
    - From this round, for the owner: accept the *Draft* IDs (FIRE-032 to FIRE-035,
      API-059, NFR-015), approve the extinguisher's recipe, and choose what to do
      about a stop hanging on a server running behind (#242).
