@@ -18,7 +18,7 @@ public final class ClientSounds {
      * again within this time stops, whatever happened to whoever asked: this is what keeps a
      * forgotten loop from playing forever.
      */
-    public static final int LEASE_TICKS = 10;
+    public static final int LEASE_TICKS = 4;
 
     /** The most loops a client plays at once. */
     public static final int MAX_LOOPS = 8;

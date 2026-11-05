@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.sound.LoopBook.Voice;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -359,6 +360,27 @@ class LoopBookTest {
         want(1, 0, 0.2);
         tick();
         assertEquals(0.2, onlyVoice().gain(), 1e-9);
+    }
+
+    /** CLIENT-015: 0.7 s from the last request to silence: its lease, then its fade. */
+    @Test
+    void client_015_a_loop_is_silent_14_ticks_after_its_last_request() {
+        run(LoopBook.FADE_TICKS + 2, Map.of(1, 0.0));
+        Voice<String> voice = onlyVoice();
+        want(1, 0.0);
+        for (int t = 1; t < 14; t++) {
+            tick();
+            assertTrue(voice.alive() && voice.gain() > 0, "silent after " + t + " ticks");
+        }
+        tick();
+        assertEquals(0, voice.gain(), 1e-9);
+        assertFalse(voice.alive());
+    }
+
+    /** API-061: what the API tells a mod about its requests is what the book does. */
+    @Test
+    void api_061_the_api_states_the_books_lease() {
+        assertEquals(LoopBook.LEASE_TICKS, ClientSounds.LEASE_TICKS);
     }
 
     @Test

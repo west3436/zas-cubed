@@ -5,10 +5,12 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.particle.JetPlan;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -193,10 +195,16 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      * @param flow what moves
      */
     protected void exchange(ServerLevel level, ZonePort port, Vec3 point, PipeBlockEntity.Flow flow) {
+        // Its loop goes with its jet, so a flow that has tailed off is silent as well as unseen.
+        double net = flow.net();
+        if (JetPlan.showsFlow(net / AtmosTicks.SECONDS)) {
+            reportMoved(Math.abs(net));
+        } else {
+            reportStopped();
+        }
         if (flow.out().isEmpty() && flow.in().isEmpty()) {
             return;
         }
-        reportMoved(Math.abs(flow.net()));
         GasParcel out = network().gas().take(flow.out());
         if (flow.in().isEmpty()) {
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));

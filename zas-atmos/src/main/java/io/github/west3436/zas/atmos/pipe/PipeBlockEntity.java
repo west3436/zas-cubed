@@ -67,10 +67,12 @@ public class PipeBlockEntity extends PipeNodeEntity {
         // no open end needs it.
         network();
         if (!isOpen()) {
+            reportStopped();
             return;
         }
         AtmosphereSample sample = Atmospheres.at(level, worldPosition);
         if (!cellWatch().trust(sample)) {
+            reportStopped();
             return; // settling, a passing reading, or a paused or unresolved cell
         }
         GasStore pipe = network().gas();
@@ -81,7 +83,12 @@ public class PipeBlockEntity extends PipeNodeEntity {
                 sample.state() == AtmosphereState.AMBIENT,
                 1 - Math.pow(1 - OPEN_END_RATIO, AtmosTicks.SECONDS));
         exchange(level, port, Vec3.atCenterOf(worldPosition), flow);
-        GasJets.openEnd(level, worldPosition, PipeBlock.openFace(getBlockState()), flow.net() / AtmosTicks.SECONDS);
+        GasJets.openEnd(
+                level,
+                worldPosition,
+                PipeBlock.openFace(getBlockState()),
+                flow.net() / AtmosTicks.SECONDS,
+                GasJets.PIPE_MOUTH);
     }
 
     /**

@@ -40,8 +40,11 @@ public final class LoopBook<S> {
     /** The most voices that exist at once: the owner's nearest 8. */
     public static final int MAX_VOICES = 8;
 
-    /** How many game ticks a request lasts. */
-    public static final int LEASE_TICKS = 10;
+    /**
+     * How many game ticks a request lasts. Short, so a sound stops soon after what it goes with: with
+     * the fade, 0.7 s from the last request to silence, about as long as a jet's last particles live.
+     */
+    public static final int LEASE_TICKS = 4;
 
     /** How many game ticks a fade takes: half a second. */
     public static final int FADE_TICKS = 10;

@@ -2499,10 +2499,15 @@ canister, and a pipe with an open end, shall each play its own looping sound to
 a player within 8 blocks while it is moving gas, and only then. Being on or
 powered isn't enough: a pump at its target, or with nothing to pump, is silent.
 A device that was switched off, shut or lost its power goes silent at its next
-step, without the level's usual hold.
+step, without the level's usual hold. A device with particles (CLIENT-019) plays
+only while they show: a vent or scrubber at working or hard, and an open pipe end
+or passive vent moving at least 0.25 mol/s net, which below that goes silent at
+its next step, without the hold.
 
 - **Rationale:** A sound that follows the gas tells a player which machines are
-  doing something, and a room of machines at rest is quiet.
+  doing something, and a room of machines at rest is quiet. Decision: the owner,
+  2026-11-05: the air sound should go with the air particles, on anything that has
+  them.
 - **Verify:** `cont_125_*` (GameTests) build each kind but the vent and the
   scrubber, which `data_017_*` cover. Each reads the level a player beside it
   would be told: idle off, unpowered, at its target and with nothing to move,
@@ -2515,6 +2520,26 @@ its step (DATA-017), and one line for each in `ZasAtmosClient` gives it its loop
 A passive vent and an open pipe end report the net flow, so gases only passing
 each other at one pressure are silent, as they show no particles (CLIENT-019).
 How loud each loop should be is for the owner to judge by ear.*
+
+*2026-11-05: The owner, after playing it: "it's specifically the wooshing air sound
+that doesn't align with the air particles so is applicable to anything that uses
+those". A pipe's loop went on through the slow tail of a leak after its particles
+had stopped, and a vent's and a scrubber's played from trickle with none showing.
+Now each follows one rule. A vent or scrubber plays from `DeviceJets.MIN_LEVEL`,
+the level its particles start at. An open end or passive vent reports only flow
+that passes `JetPlan.showsFlow`, and says it has stopped otherwise, so there is no
+hold. So a passive vent has particles now too (CLIENT-019). The other machines have
+no particles and still play from trickle. What this silences, by calculation from
+DATA-017's scale and the 0.25 mol/s: a scrubber below about 5 kPa of the gas it
+takes (it moves 0.2 mol/s on 1 kPa of CO₂, and 1 is working), or about 2.5 once
+it is working, a vent moving under 1 mol/s, and the last of a leak: under about
+9 kPa above its room for a lone passive vent, whose gas goes on moving down to
+0.5 kPa.
+`cont_125_an_open_pipe_ends_loop_goes_with_its_jet` and
+`cont_125_a_passive_vents_loop_goes_with_its_jet` (GameTests) check, step by step
+through a leak dying away, that a device reads as moving only in a step that sends
+a jet. No client has run the loop's minimum level, so that one line is by inspection
+until the combined test world.*
 
 #### CONT-126 · Pipe devices sound when they change
 `Should` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: [#57](https://github.com/west3436/zas-cubed/issues/57) · Depends: CLIENT-016, CLIENT-020

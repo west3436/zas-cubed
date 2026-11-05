@@ -570,7 +570,7 @@ each names its own namespace. With `api_060_a_mod_gives_its_own_namespace`
 `Should` · `R1` · `Draft` · Verify: Unit, Inspect, Manual · Trace: CLIENT-015, CONT-095 · Depends: API-009
 
 The API shall let a mod's client code ask for a looping sound: a source, a sound,
-its channel, a position, a volume, a pitch and a range. A request lasts 10 game
+its channel, a position, a volume, a pitch and a range. A request lasts 4 game
 ticks unless renewed. Without ZAS³, and on a dedicated server, a request does
 nothing.
 
@@ -585,6 +585,11 @@ nothing.
 and `LoopRequest`, with `ClientSounds.install` for `zas`'s client entry point.
 `ClientSoundProvider` has a default for each method, as architecture §6.2 asks
 of a provider.*
+
+*2026-11-05: A request lasts 4 game ticks rather than 10, so a sound stops sooner
+after what it goes with (CLIENT-015). A mod has to ask at least that often, and
+every tick is the simple way. `api_061_the_api_states_the_books_lease` (Unit) checks
+that `ClientSounds.LEASE_TICKS` is what the manager does.*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
