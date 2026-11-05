@@ -331,7 +331,7 @@ R1.*
 A network reacts once per atmos tick, run by the first of its members to step;
 a canister is a network node, so it reacts the same way, alone or on a port. A
 tank reacts while a player has it, in a worn or carried suit's slot, and
-dropped; the tank transfer valve will tick its own (CONT-103). The game offers
+dropped; the tank transfer valve ticks its own (CONT-103). The game offers
 no tick to a stack in a chest, on a mob or in an item frame, so a tank there
 waits until it is carried again ([architecture
 §11.9](../architecture.md#119-breathing-gear-cont-030-to-cont-032-cont-039-cont-090)).
@@ -1117,8 +1117,17 @@ first. `cont_103_opening_moves_the_gas_and_closing_shares_it_by_volume`,
 `cont_103_a_hot_mixture_burns_in_the_tank`,
 `cont_103_without_both_tanks_no_gas_moves`,
 `cont_103_tanks_go_on_and_come_off_in_an_inventory` and
-`cont_103_the_screen_takes_tanks_off` check it. Until CONT-038 is built, a
-TTV's tank fails only by exploding above 50 atm, without leaks or ruptures.*
+`cont_103_the_screen_takes_tanks_off` check it. A TTV's tanks fail as any tank
+does (CONT-038). One that leaks stays on, and one that ruptures bursts alone,
+leaving its place empty. One that explodes takes the TTV with it, and the other
+tank's gas goes into the cell too. The requirement doesn't say what becomes of
+the TTV, so that is for the owner to confirm.
+`cont_103_a_tank_that_explodes_destroys_the_ttv`,
+`cont_103_a_primed_ttv_goes_off_with_its_tank`,
+`cont_103_a_tank_that_ruptures_leaves_the_ttv`,
+`cont_103_a_leaking_tank_stays_on_the_ttv`,
+`cont_103_a_tank_failing_in_an_inventory_takes_the_ttv_with_it` and
+`cont_103_a_tank_failing_on_the_ground_takes_the_ttv_with_it` check that.*
 
 #### CONT-104 · TTV timer
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
@@ -1149,8 +1158,9 @@ to confirm. `cont_104_the_valve_opens_by_hand`,
 `cont_104_a_primed_valve_ticks_in_the_world`,
 `cont_104_a_primed_valve_cant_be_picked_up_or_used`,
 `cont_104_the_timer_is_clamped_to_its_range`,
-`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`
-and `cont_104_a_primed_valve_is_saved` check it.*
+`cont_104_an_item_never_runs_its_timer`, `cont_104_a_dud_drops_as_an_item_again`,
+`cont_104_an_open_valve_wont_start_its_timer` and
+`cont_104_a_primed_valve_is_saved` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest

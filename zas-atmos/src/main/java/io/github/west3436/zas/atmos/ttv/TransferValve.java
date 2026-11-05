@@ -1,13 +1,17 @@
 package io.github.west3436.zas.atmos.ttv;
 
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.atmos.failure.ContainerFailure.Kind;
+import io.github.west3436.zas.atmos.failure.TankFailure;
+import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Two gas tanks joined by a valve (CONT-103): what a tank transfer valve is, whether it is an item
@@ -27,7 +31,7 @@ public final class TransferValve {
         QUIET,
         /** A tank's gas changed, so a holder that keeps a copy writes it back. */
         CHANGED,
-        /** A tank's failure destroyed the TTV. */
+        /** A tank exploded, destroying the TTV. */
         DESTROYED
     }
 
@@ -39,15 +43,6 @@ public final class TransferValve {
 
     /** A new TTV's timer, s (CONT-104). */
     public static final int DEFAULT_TIMER = 10;
-
-    /** The pressure above which a tank explodes, atm (CONT-038). */
-    private static final double EXPLODES_ATM = 50;
-
-    /** The explosion's power per atm above that (CONT-038). */
-    private static final double ATM_PER_POWER = 10;
-
-    /** The greatest power of a container's explosion (CONT-109). */
-    private static final double MAX_POWER = 16;
 
     private ItemStack first;
     private ItemStack second;
@@ -165,37 +160,48 @@ public final class TransferValve {
     }
 
     /**
-     * One atmos tick of the tanks' gas: each tank reacts what it holds (CONT-100), and a tank past
-     * its limit fails (CONT-038).
+     * One atmos tick of the tanks' gas: each tank reacts what it holds (CONT-100), then fails if its
+     * pressure says so (CONT-038). These are the calls {@link GasTankItem#atmosTick} makes, but here
+     * how a tank failed matters. A tank that leaks stays on, and one that ruptures bursts alone,
+     * leaving its place empty. A tank that explodes takes the TTV with it, and the other tank's gas
+     * goes into the cell too.
      *
      * @param level the level it is in
      * @param holder who or what holds it, or the primed TTV itself
+     * @param source the entity an explosion comes from: a primed TTV itself, and null for a TTV that
+     *     something carries, which it would otherwise spare
      * @return what it came to
      */
-    public Step step(ServerLevel level, Entity holder) {
-        boolean changed = atmosTick(first, level, holder);
-        changed |= atmosTick(second, level, holder);
-        Vec3 at = holder.getBoundingBox().getCenter();
-        if (explodes(level, at, first) || explodes(level, at, second)) {
+    public Step step(ServerLevel level, Entity holder, @Nullable Entity source) {
+        Vec3 at = TankFailure.pointOf(holder);
+        boolean changed = react(first);
+        Kind kind = TankFailure.check(level, at, first, source).kind();
+        if (kind == Kind.EXPLODE) {
+            release(level, at, second);
             return Step.DESTROYED;
         }
+        changed |= kind != Kind.NONE;
+        changed |= react(second);
+        kind = TankFailure.check(level, at, second, source).kind();
+        if (kind == Kind.EXPLODE) {
+            release(level, at, first);
+            return Step.DESTROYED;
+        }
+        changed |= kind != Kind.NONE;
         return changed ? Step.CHANGED : Step.QUIET;
     }
 
-    private static boolean atmosTick(ItemStack tank, ServerLevel level, Entity holder) {
-        return tank.getItem() instanceof GasTankItem && GasTankItem.atmosTick(tank, level, holder);
+    private static boolean react(ItemStack tank) {
+        return tank.getItem() instanceof GasTankItem item && ContainerReactions.react(tank, item.volume());
     }
 
-    private static boolean explodes(ServerLevel level, Vec3 at, ItemStack tank) {
-        if (!(tank.getItem() instanceof GasTankItem)) {
-            return false;
+    /** The gas of the tank left when the other explodes: it has nothing left to hold it. */
+    private static void release(ServerLevel level, Vec3 at, ItemStack tank) {
+        if (tank.getItem() instanceof GasTankItem) {
+            GasParcel gas = GasTankItem.gas(tank);
+            if (!gas.isEmpty()) {
+                GasMutations.add(level, at, gas, TankFailure.RELEASE);
+            }
         }
-        double atm = GasTankItem.contents(tank).pressure() / 101.325;
-        if (atm <= EXPLODES_ATM) {
-            return false;
-        }
-        float power = (float) Math.min(MAX_POWER, (atm - EXPLODES_ATM) / ATM_PER_POWER);
-        level.explode(null, at.x, at.y, at.z, power, Level.ExplosionInteraction.NONE);
-        return true;
     }
 }
