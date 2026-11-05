@@ -3,6 +3,7 @@ package io.github.west3436.zas.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -29,10 +30,12 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.GeometryAudit;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
+import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.geometry.PositionGeometries;
+import io.github.west3436.zas.persistence.DimensionPause;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
@@ -65,7 +68,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
- * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-009, OPS-010, OPS-011, OPS-017,
+ * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-005, OPS-009, OPS-010, OPS-011, OPS-017,
  * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented in {@code
  * docs/commands.md}.
  *
@@ -102,6 +105,10 @@ public final class ZasCommands {
             new SimpleCommandExceptionType(Component.translatable("commands.zas.error.no_zone_here"));
     private static final DynamicCommandExceptionType REGION_TOO_BIG =
             new DynamicCommandExceptionType(max -> Component.translatable("commands.zas.error.region_too_big", max));
+    private static final DynamicCommandExceptionType NOT_SIMULATED =
+            new DynamicCommandExceptionType(dim -> Component.translatable("commands.zas.error.not_simulated", dim));
+    private static final SimpleCommandExceptionType NOT_PAUSED =
+            new SimpleCommandExceptionType(Component.translatable("commands.zas.resume.not_paused"));
 
     private static final SuggestionProvider<CommandSourceStack> GASES = (ctx, builder) -> {
         GasRegistry registry = ServerGasRegistry.current();
@@ -206,6 +213,13 @@ public final class ZasCommands {
                 .then(Commands.argument("owner", ResourceLocationArgument.id())
                         .executes(ctx ->
                                 unpin(ctx.getSource(), new SourceId(ResourceLocationArgument.getId(ctx, "owner"))))));
+
+        // OPS-005: the dimension pause.
+        root.then(Commands.literal("pause")
+                .executes(ctx -> pause(ctx.getSource(), "no reason given"))
+                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                        .executes(ctx -> pause(ctx.getSource(), StringArgumentType.getString(ctx, "reason")))));
+        root.then(Commands.literal("resume").executes(ctx -> resume(ctx.getSource())));
 
         // OPS-010, GEO-032: audit and the invariant checker.
         root.then(Commands.literal("audit")
@@ -441,6 +455,10 @@ public final class ZasCommands {
                         zones.size(),
                         cells,
                         snapshot == null ? -1 : snapshot.tick()));
+        DimensionPause paused = d == null ? null : d.simulationPause();
+        if (paused != null) {
+            reply(source, pausedLine(paused));
+        }
         for (int i = 0; i < Math.min(LISTED_ZONES, zones.size()); i++) {
             ZoneView z = zones.get(i);
             reply(
@@ -485,6 +503,43 @@ public final class ZasCommands {
                 done -> source.sendSuccess(
                         () -> Component.translatable("commands.zas.unpin.done", owner.toString()), true));
         return 1;
+    }
+
+    // ---- The dimension pause (OPS-005) -----------------------------------------------------
+
+    /** {@code /zas pause [<reason>]}: pauses the dimension's simulation until {@code /zas resume}. */
+    private static int pause(CommandSourceStack source, String reason) throws CommandSyntaxException {
+        AtmosService service = service();
+        ServerLevel level = source.getLevel();
+        String dimension = level.dimension().location().toString();
+        if (Ambients.isExcluded(level.dimension())) {
+            throw NOT_SIMULATED.create(dimension);
+        }
+        DimensionAtmos d = service.dimensionFor(level);
+        String by = sourceOf(source).toString();
+        if (!d.pauseSimulation(new DimensionPause(by, reason))) {
+            reply(source, pausedLine(d.simulationPause()));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("commands.zas.pause.done", dimension, by, reason), true);
+        return 1;
+    }
+
+    /** {@code /zas resume}: ends the dimension's pause. */
+    private static int resume(CommandSourceStack source) throws CommandSyntaxException {
+        ServerLevel level = source.getLevel();
+        if (!service().dimensionFor(level).resumeSimulation()) {
+            throw NOT_PAUSED.create();
+        }
+        source.sendSuccess(
+                () -> Component.translatable(
+                        "commands.zas.resume.done", level.dimension().location().toString()),
+                true);
+        return 1;
+    }
+
+    private static Component pausedLine(DimensionPause pause) {
+        return Component.translatable("commands.zas.pause.status", pause.by(), pause.reason());
     }
 
     // ---- Gas editing (OPS-009) ----------------------------------------------------------

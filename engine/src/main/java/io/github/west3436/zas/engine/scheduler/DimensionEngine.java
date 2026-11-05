@@ -84,6 +84,13 @@ import java.util.TreeSet;
  * state is in the chunks' saved shares, from which it is rebuilt when they load again (DATA-002,
  * DATA-008).
  *
+ * <p><b>A paused dimension</b> (OPS-005). While a batch's {@link EngineSettings#dimensionPaused} is
+ * set, every zone pauses, whatever else is true of it, so all the rules above apply to each. Nothing
+ * is classified: an operation that would form a zone at an unzoned cell is treated as at an
+ * unresolved region, and what the boundaries phase would have looked at waits until a batch resumes
+ * the dimension. Chunks still load and unload, and zones are still rebuilt from their shares and
+ * stored in them.
+ *
  * <p><b>Determinism</b> (CORE-044, CORE-072, architecture §3.5): operations run in sequence order,
  * sections in key order, cells in ascending id order, zones and edges in id order; hash
  * collections are used for lookups only; nothing reads a clock or a shared random source.
@@ -113,6 +120,10 @@ public final class DimensionEngine {
     private final TreeMap<Long, SectionSnapshot> heldTruth = new TreeMap<>(SectionKeys::compare);
     /** Zones the classifier holds at unresolved breaches (GEO-026), from the last boundaries phase. */
     private long[] heldZoneIds = new long[0];
+    /** Whether this tick's batch pauses the whole dimension (OPS-005). */
+    private boolean dimensionPaused;
+    /** Cells to classify once the dimension resumes, ascending: found while it was paused. */
+    private long[] classifyOnResume = new long[0];
 
     /**
      * Which zone each cell is in, by section palette (architecture §4.4): kept up to date by the
@@ -320,6 +331,9 @@ public final class DimensionEngine {
         for (GasOp op : buffered) {
             h.add(op.seq());
         }
+        for (long c : classifyOnResume) {
+            h.add(c);
+        }
         long[] keys = mirror.keys();
         for (long k : keys) {
             h.add(k);
@@ -344,6 +358,7 @@ public final class DimensionEngine {
         // 0. Restore rejected components.
         phases.enter(Phase.RESTORE);
         graph.setSettings(batch.settings().exchange());
+        dimensionPaused = batch.settings().dimensionPaused();
         if (!batch.ambient().equals(ambient)) {
             ambient = batch.ambient();
             graph.setAmbient(ambientMixture(ambient));
@@ -364,8 +379,18 @@ public final class DimensionEngine {
         long[] extra = surfaces.sorted();
         long[] toClassify = extra.length == 0 ? refreshed : union(refreshed, extra);
         geometryChanged = toClassify.length > 0;
-        classifier.afterGeometry(graph, toClassify, requested::add);
-        heldZoneIds = classifier.heldZones();
+        if (dimensionPaused) {
+            // Nothing is classified while the dimension is paused (OPS-005): a breach resolving now
+            // would change zones that are meant to keep still.
+            classifyOnResume = union(classifyOnResume, toClassify);
+        } else {
+            if (classifyOnResume.length > 0) {
+                toClassify = union(toClassify, classifyOnResume);
+                classifyOnResume = new long[0];
+            }
+            classifier.afterGeometry(graph, toClassify, requested::add);
+            heldZoneIds = classifier.heldZones();
+        }
         // A rebuilt zone stays paused until what its surface opens onto is classified.
         Set<Long> waiting = new HashSet<>();
         for (long id : resuming) {
@@ -843,9 +868,15 @@ public final class DimensionEngine {
         return found[0];
     }
 
-    /** The zones paused by an unloaded chunk, a missing share or a held breach. */
+    /** The zones paused by a paused dimension, an unloaded chunk, a missing share or a held breach. */
     private Set<Long> pausedZones() {
         Set<Long> out = new HashSet<>();
+        if (dimensionPaused) {
+            for (Zone z : graph.zones()) {
+                out.add(z.id());
+            }
+            return out;
+        }
         if (mirror.hasUnloadedChunks()) {
             for (Zone z : graph.zones()) {
                 for (long c : membership.chunks(z.id())) {
@@ -934,10 +965,11 @@ public final class DimensionEngine {
      * and those of its held blocks to {@code surfaces}, so the boundaries phase classifies whatever
      * they open onto (GEO-023, GEO-025, GEO-026): the blocks may have changed while it was saved
      * (DATA-010). Their ids go to {@code resuming}; they stay paused, and are classified again,
-     * while the classification waits for sections.
+     * while the classification waits for sections. In a paused dimension they wait until it resumes
+     * (OPS-005).
      */
     private void resumeRebuilt(CellSet surfaces, List<Long> resuming) {
-        if (rebuilt.isEmpty()) {
+        if (rebuilt.isEmpty() || dimensionPaused) {
             return;
         }
         for (java.util.Iterator<Map.Entry<Long, long[]>> it = rebuilt.entrySet().iterator(); it.hasNext(); ) {
@@ -1078,8 +1110,8 @@ public final class DimensionEngine {
                 route = Route.AMBIENT; // above or below the world: open (GEO-031)
             } else if (cell == CellSpace.NO_CELL && mirror.section(section) == null) {
                 // The target's section isn't mirrored: wait for it, or treat it as unresolved if
-                // its chunk isn't loaded (GEO-024).
-                if (mirror.isUnloaded(section)) {
+                // its chunk isn't loaded (GEO-024) or nothing may be classified (OPS-005).
+                if (mirror.isUnloaded(section) || (dimensionPaused && op.triggersZone())) {
                     route = Route.UNRESOLVED;
                 } else if (op.triggersZone()) {
                     requested.add(section);
@@ -1098,6 +1130,8 @@ public final class DimensionEngine {
                 route = Route.ZONE;
             } else if (!op.triggersZone()) {
                 route = Route.AMBIENT;
+            } else if (dimensionPaused) {
+                route = Route.UNRESOLVED; // no zone forms in a paused dimension (OPS-005)
             } else {
                 route = classify(op, cell, requested);
             }
