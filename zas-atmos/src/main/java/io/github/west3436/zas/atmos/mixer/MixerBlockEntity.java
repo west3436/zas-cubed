@@ -8,10 +8,13 @@ import io.github.west3436.zas.atmos.inline.SidePortEntity;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -69,6 +72,7 @@ public class MixerBlockEntity extends SidePortEntity {
             boolean dry = (backPercent > 0 && runsDry(back)) || (backPercent < 100 && runsDry(side));
             return dry ? InlineStatus.INPUT_EMPTY : InlineStatus.TARGET_REACHED;
         }
+        reportMoved(flow.total());
         MixerMath.move(flow, back, side, out);
         return InlineStatus.MOVING;
     }
@@ -76,6 +80,11 @@ public class MixerBlockEntity extends SidePortEntity {
     @Override
     protected int drawWhenOn() {
         return AtmosServerConfig.get(AtmosServerConfig.MIXER_DRAW);
+    }
+
+    @Override
+    protected Supplier<SoundEvent> switchSound(boolean on) {
+        return on ? AtmosSounds.MIXER_ON : AtmosSounds.MIXER_OFF;
     }
 
     @Override

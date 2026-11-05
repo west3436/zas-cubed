@@ -3,7 +3,10 @@ package io.github.west3436.zas.atmos.pump;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,6 +33,11 @@ public class PressurePumpBlockEntity extends PumpBlockEntity {
     @Override
     protected int drawWhenOn() {
         return AtmosServerConfig.get(AtmosServerConfig.PRESSURE_PUMP_DRAW);
+    }
+
+    @Override
+    protected Supplier<SoundEvent> switchSound(boolean on) {
+        return on ? AtmosSounds.PUMP_ON : AtmosSounds.PUMP_OFF;
     }
 
     @Override

@@ -3,9 +3,11 @@ package io.github.west3436.zas.atmos.port;
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -67,6 +69,20 @@ public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector
         return face == Direction.UP
                 ? state.setValue(CONNECTED, PipeConnector.connected(state, face, neighbour))
                 : state;
+    }
+
+    /**
+     * Plays its sound as a canister attaches or leaves (CONT-126). A port placed under a canister
+     * attaches it too. The server calls this for each change of state, and never for a chunk loading.
+     */
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
+        super.onPlace(state, level, pos, old, moved);
+        boolean was = old.is(this) && old.getValue(CONNECTED);
+        boolean is = state.getValue(CONNECTED);
+        if (was != is) {
+            AtmosSounds.play(level, pos, is ? AtmosSounds.PORT_CONNECT : AtmosSounds.PORT_DISCONNECT);
+        }
     }
 
     @Override

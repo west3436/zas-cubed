@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import net.minecraft.client.Minecraft;
@@ -49,6 +50,17 @@ public final class ZasAtmosClient {
         GasJetParticles.register(NeoForge.EVENT_BUS);
         DeviceLoops.register(NeoForge.EVENT_BUS);
         ClientSounds.fadeInThinAir(ZasAtmosMod.MOD_ID);
+
+        // Pipe devices' running sounds (CONT-125).
+        DeviceLoops.add(AtmosBlocks.PRESSURE_PUMP, AtmosSounds.PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.VOLUME_PUMP, AtmosSounds.VOLUME_PUMP_RUN);
+        DeviceLoops.add(AtmosBlocks.FILTER, AtmosSounds.FILTER_RUN);
+        DeviceLoops.add(AtmosBlocks.MIXER, AtmosSounds.MIXER_RUN);
+        DeviceLoops.add(AtmosBlocks.VENT, AtmosSounds.VENT_RUN);
+        DeviceLoops.add(AtmosBlocks.PASSIVE_VENT, AtmosSounds.PASSIVE_VENT_RUN);
+        DeviceLoops.add(AtmosBlocks.SCRUBBER, AtmosSounds.SCRUBBER_RUN);
+        DeviceLoops.add(AtmosBlocks.CANISTER, AtmosSounds.CANISTER_RUN);
+        DeviceLoops.add(AtmosBlocks.PIPE, AtmosSounds.PIPE_LEAK);
     }
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */

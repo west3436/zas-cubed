@@ -2263,6 +2263,14 @@ jar, so providers can be tested before real devices exist.
   `client.DeviceLoops.add(block, sound)` gives a kind of device its loop: each
   client tick it asks `ClientSounds.loop` for every listed device of that kind
   within 8 blocks, as loud as its level (0.35, 0.6 or 1).
+- **Switch sounds** (CONT-126; Draft until the owner's review). A device plays
+  its on or off sound where its switch or a controller's order changes
+  (`InlineDeviceEntity.setOn`, `VentBlockEntity.command`,
+  `ScrubberBlockEntity.command`), and not where it starts or stops running. A
+  power lease isn't saved, so a device following its power would click off and
+  on again each time its chunk loaded. `AtmosSounds.play` plays an event at a
+  block at volume 1 and pitch 1, for `sounds.json` to set, and each client fades
+  it in thin air (CLIENT-016).
 
 ### 11.3 The power contract (CONT-060, CONT-065, CONT-069)
 

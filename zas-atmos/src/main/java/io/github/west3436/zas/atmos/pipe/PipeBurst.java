@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.particle.GasJets;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
@@ -88,6 +89,7 @@ public final class PipeBurst {
         Vec3 at = Vec3.atCenterOf(pos);
         GasMutations.add(level, at, all, SOURCE);
         GasJets.burst(level, at, all.totalMoles());
+        AtmosSounds.play(level, pos, AtmosSounds.PIPE_BURST);
         return true;
     }
 

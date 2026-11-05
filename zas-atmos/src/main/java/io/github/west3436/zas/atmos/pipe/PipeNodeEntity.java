@@ -184,7 +184,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
     /**
      * Makes an {@linkplain PipeBlockEntity#openEndFlow open end's flow} through a port, as one change
      * if it goes both ways. What the zone doesn't take comes back, and what leaves it arrives with the
-     * result. A flow of nothing does nothing.
+     * result. A flow of nothing does nothing. It reports the net flow as what the node moved (DATA-017):
+     * gases only passing each other at one pressure push nothing through, so they make no sound.
      *
      * @param level the level
      * @param port the port, which isn't busy
@@ -196,6 +197,11 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
             return;
         }
         GasParcel out = network().gas().take(flow.out());
+        double in = 0;
+        for (double moles : flow.in().values()) {
+            in += moles;
+        }
+        reportMoved(Math.abs(out.totalMoles() - in));
         if (flow.in().isEmpty()) {
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
         } else if (out.isEmpty()) {

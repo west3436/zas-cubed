@@ -18,6 +18,7 @@ import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -132,8 +133,9 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
     }
 
     /**
-     * Sets the mode and the selection. Server side. A player's settings go through {@link
-     * #setByHand}, and a controller's through {@link #scrubberOrder}.
+     * Sets the mode and the selection. It plays its on or off sound as it goes from off to a mode or
+     * back (CONT-126). Server side. A player's settings go through {@link #setByHand}, and a
+     * controller's through {@link #scrubberOrder}.
      *
      * @param mode the mode; null is off
      * @param selection the gases to keep when scrubbing
@@ -141,9 +143,14 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
     public void command(ScrubberMode mode, GasSelection selection) {
         ScrubberMode next = mode == null ? ScrubberMode.OFF : mode;
         if (next != this.mode || !selection.equals(this.selection)) { // a controller repeats its order
+            boolean wasOff = this.mode == ScrubberMode.OFF;
+            boolean off = next == ScrubberMode.OFF;
             this.mode = next;
             this.selection = selection;
             setChanged();
+            if (wasOff != off && level != null) {
+                AtmosSounds.play(level, worldPosition, off ? AtmosSounds.SCRUBBER_OFF : AtmosSounds.SCRUBBER_ON);
+            }
         }
     }
 
