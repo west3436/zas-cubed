@@ -82,7 +82,7 @@ public final class PipeSaveTests {
         return AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, facing);
     }
 
-    private static void hold(Area a, ChunkPos chunk, boolean on) {
+    static void hold(Area a, ChunkPos chunk, boolean on) {
         if (on) {
             a.level.getChunkSource().addRegionTicket(HOLD, chunk, 0, chunk);
         } else {
@@ -101,7 +101,7 @@ public final class PipeSaveTests {
     }
 
     /** The moles of the row's gas a chunk's block entities last wrote: what a restart would load. */
-    private static double written(Area a, ChunkPos chunk) {
+    static double written(Area a, ChunkPos chunk) {
         CompoundTag saved = a.level
                 .getChunkSource()
                 .chunkMap

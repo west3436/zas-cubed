@@ -1,9 +1,9 @@
 name: Integrity fuzz
 
-# NFR-010: the engine's fuzz on 20 seeds, of 10,000 operations each. Every PR
-# runs one seed as part of the build. This runs from the Actions tab only while
-# seeds still fail on the bugs listed under NFR-010: on a schedule it would only
-# report them every night. It goes on a nightly schedule once all 20 pass.
+# NFR-010: 20 seeds, of 10,000 operations each, on the engine and in a real level
+# with pipes. Every PR runs one seed of each as part of the build. This runs
+# nightly on main, or from the Actions tab for any seeds. A failure names its
+# seed, its operation and the command that replays it.
 on:
   workflow_dispatch:
     inputs:
@@ -13,12 +13,19 @@ on:
       seeds:
         description: How many seeds to run from it
         default: "20"
+  schedule:
+    - cron: "47 4 * * *"
 
 permissions:
   contents: read
 
+# A scheduled run has no inputs.
+env:
+  SEED: ${{ inputs.seed || '1' }}
+  SEEDS: ${{ inputs.seeds || '20' }}
+
 jobs:
-  fuzz:
+  engine:
     name: Engine fuzz
     runs-on: ubuntu-latest
     steps:
@@ -28,15 +35,34 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v6
-      # A failure names its seed, its operation and the command that replays it.
       - name: Fuzz
         timeout-minutes: 30
         shell: bash
-        env:
-          SEED: ${{ inputs.seed }}
-          SEEDS: ${{ inputs.seeds }}
         run: |
           ./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed="$SEED" -Pfuzz.seeds="$SEEDS" --info | tee fuzz.log
+      - name: What each seed did
+        if: always()
+        shell: bash
+        run: grep -E "NFR-010: seed [0-9]+" fuzz.log || true
+
+  pipes:
+    name: Fuzz with pipes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      # The task can succeed without the server ever starting, so the log must
+      # also say that the tests passed.
+      - name: GameTests
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          ./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed="$SEED" -Pfuzz.seeds="$SEEDS" --stacktrace | tee fuzz.log
+          grep -E "All [0-9]+ required tests passed" fuzz.log
       - name: What each seed did
         if: always()
         shell: bash

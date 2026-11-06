@@ -112,7 +112,7 @@ per-zone and total limits are unchanged.*
 ## Reliability
 
 #### NFR-010 · Integrity under fuzzing
-`Must` · `R1` · `Accepted` · Verify: Unit (fuzz), GameTest · Trace: CORE-036, CORE-063, CORE-073, GEO-032
+`Must` · `R1` · `Implemented` · Verify: Unit (fuzz), GameTest · Trace: CORE-036, CORE-063, CORE-073, GEO-032
 
 A fuzz run of 10,000 random operations (block edits, gas operations, chunk
 unloads and reloads, save/load cycles) shall end with no unexplained change
@@ -143,6 +143,33 @@ with 26 to 43 left out. Whether the rule should change is the owner's call.
 
 Left to do: those three seeds, a nightly schedule once all 20 pass, and the
 GameTest half, which totals the gas in pipes.*
+
+*2026-11-06: Implemented. Seeds 1 to 40 of both halves pass, with no seed left
+out. `nfr_010_integrity_under_fuzzing` is the engine half, at 18 to 28 s a seed.
+`nfr_010_integrity_under_fuzzing_with_pipes` is the GameTest half, at 3 to 4 s a
+seed: it runs in a real level with pipes, vents and canisters, and its own total
+covers zones, networks and devices, checks what a real save writes, and is
+itself tested by `nfr_010_gas_made_in_a_pipe_fails_the_total`. Every PR runs seed
+3 of each, in `./gradlew build` and `runGameTestServer`. The "Integrity fuzz"
+workflow runs 20 seeds of each nightly, and any seeds from the Actions tab.
+
+Three things are outside what it shows:
+
+- **Resets.** They still leave out a zone with another zone beside it, as the
+  note above says. Whether that rule should change is the owner's call.
+- **The limit on DATA-008.** The engine half excuses the difference that limit
+  makes, as DATA-008's notes describe, and across seeds 1 to 40 that was 78
+  differences on 16 seeds. So it can't catch a real bug that makes or loses no
+  more than the excuse's bound, in a zone that has just divided after an unload.
+  Reverting each of #311's two fixes, #312, #314 and #315 still failed on the
+  gas total, on the seed and at the operation that first caught it. With #314
+  reverted, 2 of the 6 seeds run still passed, one of them with 3 more differences
+  excused, so a seed passing doesn't rule such a bug out.
+- **Pipes.** The GameTest half unloads a chunk with no block change queued or
+  held and ticks straight after a reload, so neither that limit nor a dropped
+  share comes up there. Its unloads leave block entities in place and its restarts
+  are of the atmosphere only: `PipeSaveTests` covers really unloading and saving
+  pipes. A save/load cycle in either half is a clean stop, not a crash (#304).*
 
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
