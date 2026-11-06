@@ -85,6 +85,57 @@ class PersistenceTest {
     }
 
     /**
+     * A zone across two chunks leaves memory, while another zone keeps the far chunk's section
+     * mirrored. When the near chunk loads, the zone comes back with only that chunk's cells and share:
+     * its cells in the far chunk are still unloaded, so nothing may classify them, even though the
+     * mirror holds them (GEO-024). When the far chunk loads, its share joins, and the zone holds what
+     * it held, with no ambient gas in it (DATA-008). This is the case behind seed 5 of the integrity fuzz
+     * (NFR-010): the far cells joined with the ambient's gas, and the far chunk's share was then ignored.
+     */
+    @Test
+    void data_008_a_stored_zone_doesnt_take_in_cells_of_a_chunk_still_unloaded() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3); // chunks (0, 0) and (1, 0)
+        sim.world.room(28, 68, 8, 35, 70, 10); // chunks (1, 0) and (2, 0), the same section there
+        sim.add(13, 69, 2, 0, 50);
+        sim.add(29, 69, 9, 0, 10);
+        sim.steps(2);
+        ZoneView before = sim.zoneAt(13, 69, 2);
+        long id = before.id();
+        long keeper = sim.zoneAt(29, 69, 9).id();
+        assertEquals(72, before.cellCount());
+
+        long near = SectionKeys.chunk(0, 0);
+        long far = SectionKeys.chunk(1, 0);
+        ChunkRecord nearRecord = sim.unload(near);
+        ChunkRecord farRecord = sim.unload(far);
+        sim.step();
+        assertNull(sim.snapshot().zone(id), "the zone stayed in memory");
+        assertTrue(sim.snapshot().zone(keeper).paused(), "the other zone isn't paused");
+        assertTrue(
+                sim.engine.mirror().contains(SectionKeys.sectionOfBlock(16, 69, 2)),
+                "the far chunk's section isn't mirrored");
+
+        sim.load(near, nearRecord);
+        sim.steps(2);
+        ZoneView part = sim.snapshot().zone(id);
+        assertNotNull(part, "the zone wasn't rebuilt");
+        assertTrue(part.paused(), "the zone resumed without its far chunk");
+        assertEquals(nearRecord.share(id).cellCount(), part.cellCount(), "only the near chunk's cells");
+        close(nearRecord.share(id).moles(N2), part.moles(N2), "only the near share's nitrogen");
+        close(nearRecord.share(id).moles(O2), part.moles(O2), "only the near share's oxygen");
+
+        sim.load(far, farRecord);
+        sim.steps(2);
+        ZoneView whole = sim.snapshot().zone(id);
+        assertNotNull(whole, "the zone isn't there");
+        assertFalse(whole.paused(), "the zone is still paused");
+        assertEquals(before.cellCount(), whole.cellCount(), "the zone's cells");
+        close(before.moles(N2), whole.moles(N2), "the zone's nitrogen");
+        close(before.moles(O2), whole.moles(O2), "the zone's oxygen");
+    }
+
+    /**
      * Random zones are saved chunk by chunk, leave memory, and are rebuilt one chunk at a time in
      * random order: each rebuilt zone holds the sum of its shares, which is what it held before, to
      * 1e-9 per gas, and stays paused until its last chunk loads (DATA-002, DATA-008, GEO-030).

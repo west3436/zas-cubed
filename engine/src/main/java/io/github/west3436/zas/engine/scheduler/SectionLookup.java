@@ -13,9 +13,10 @@ public interface SectionLookup {
     SectionSnapshot section(long key);
 
     /**
-     * Whether a section is known to be unloaded: its chunk unloaded, or it was asked for and
-     * couldn't be captured, and no snapshot of it arrived since. A fill reaching such a section
-     * is unresolved (GEO-024); one reaching a section that is merely missing asks for it.
+     * Whether a section is known to be unloaded: its chunk unloaded, even if the mirror keeps the
+     * section for the zoned cells in it, or it was asked for and couldn't be captured, and no
+     * snapshot of it arrived since. A fill reaching such a section is unresolved (GEO-024); one
+     * reaching a section that is merely missing asks for it.
      */
     boolean isUnloaded(long key);
 

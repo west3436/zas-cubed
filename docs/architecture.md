@@ -912,9 +912,11 @@ GameTest changes the palette with `Geometries.overrideForTest`.
 - **Unloaded chunks in the mirror.** Sections of an unloaded chunk are kept
   while they hold cells of zones in memory, and dropped once they don't, with
   the zoned cells across their faces refreshed, so faces into unloaded chunks
-  lead nowhere and fills reaching them are unresolved (GEO-024). A chunk that
-  loads again has its mirrored sections captured afresh, so changes made while
-  it was unloaded are found.
+  lead nowhere and fills reaching them are unresolved (GEO-024). A fill doesn't
+  see the sections kept for those zones either: a kept section says nothing about
+  its other cells, which may belong to a zone still in storage. A breach there is
+  held until the chunk loads. A chunk that loads again has its mirrored sections
+  captured afresh, so changes made while it was unloaded are found.
 - **Never force-load.** The engine never adds chunk tickets (GEO-034): the
   platform only ever reads chunks with `getChunkNow`.
 - **Pausing a whole dimension** (OPS-005). `DimensionAtmos.pauseSimulation`
