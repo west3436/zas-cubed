@@ -181,7 +181,7 @@ skipped for that tick.
   is skipped and logged at most once a minute.
 
 #### NFR-014 · Engine fault isolation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-55, OPS-005
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
 
 An exception inside the engine shall pause that dimension's simulation, as
 OPS-005 does, with a logged error. The server keeps running.
@@ -189,6 +189,21 @@ OPS-005 does, with a logged error. The server keeps running.
 - **Rationale:** Decision: D-55.
 - **Verify:** A GameTest injects an engine exception and checks the dimension
   pauses and the server keeps running.
+
+*2026-11-05: Implemented. The exception goes through
+`DimensionAtmos.pauseSimulation`, by `zas:engine`, with an error and stack trace in
+the log. Nothing of the failed tick is published, and a new, paused engine is built
+at once from the last published table, so the dimension then behaves exactly as an
+operator's pause leaves it and `/zas resume` ends it. The pause is saved as OPS-005's
+is, so it lasts through a restart. An engine that throws while the dimension is
+already paused stays stopped until `/zas resume`, which builds a new one. GameTests:
+`EngineFaultTests.nfr_014_an_engine_exception_pauses_the_dimension`,
+`nfr_014_the_pause_survives_a_restart` and
+`nfr_014_a_fault_while_paused_waits_for_a_resume`, which inject the exception
+through the engine's phase listener, so production code has no hook for it. Engine
+side: `SchedulerTest.nfr_014_a_failed_tick_leaves_the_last_result_and_its_operations`.
+The guards around the pipeline's work on the server thread, as opposed to the
+worker's tick, have no test: nothing reaches them without a hook.*
 
 #### NFR-015 · A server stop finishes
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: DATA-011
