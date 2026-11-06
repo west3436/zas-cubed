@@ -1289,7 +1289,16 @@ and spectators are never moved and are sent no openings to be pushed by
 low to stand in has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
 through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
-into the hole reaches it. Impact damage (FLOW-005) isn't done.
+into the hole reaches it.
+
+Impact damage (FLOW-005) runs first in each game tick's step, so it sees what
+the entity's own tick did. `Airflow` watches the living entities the flow carries,
+at most `max_entities_per_tick` of them unless they are players, until the flow has
+let go of them and they are too slow to be hurt. An axis counts as stopped when the entity
+moved less than its speed there and a block is right beside it on that side. The
+speed is a mob's velocity after the last push, or for a player the distance the
+server saw it cover over two game ticks, as the server doesn't move players and no
+number from a client is trusted (NFR-011). `FlowImpact` holds the formula.
 
 Block damage (FLOW-007, FLOW-015, FLOW-016) is decided on the worker and done on
 the server thread, as a world-write intent (§3.3). After a tick's exchange,
