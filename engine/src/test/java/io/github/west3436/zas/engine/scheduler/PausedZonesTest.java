@@ -244,6 +244,32 @@ class PausedZonesTest {
     }
 
     /**
+     * A breach is still being classified when the chunk it's in unloads, and it's mended meanwhile. The
+     * seed waits for the chunk without holding the zone back, so the mend applies as the chunk loads, and
+     * the room beyond doesn't join (GEO-013).
+     */
+    @Test
+    void geo_013_a_breach_mended_while_unloaded_doesnt_wait_for_its_classification() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 18, 70, 3); // across the west and east chunks
+        sim.world.room(20, 68, 1, 24, 70, 63); // unzoned; its far wall is beyond what the first operation fetches
+        sim.add(13, 69, 2, 30, 0);
+        sim.steps(2);
+        sim.world.set(19, 69, 2, TestWorld.AIR);
+        sim.step();
+        assertNull(sim.zoneAt(22, 69, 2), "the breach didn't wait for the section");
+        ChunkRecord saved = sim.unload(EAST);
+        sim.steps(2);
+        sim.world.set(19, 69, 2, TestWorld.SOLID);
+        sim.load(EAST, saved);
+        sim.steps(2);
+        ZoneView zone = sim.zoneAt(13, 69, 2);
+        assertFalse(zone.paused(), "the zone didn't resume");
+        assertNull(sim.zoneAt(22, 69, 2), "the room beyond the mended wall joined");
+        assertEquals(63, zone.cellCount(), "the zone's cells");
+    }
+
+    /**
      * A zone breaks into that room. It pauses, as it would with the section gone, and the room joins it
      * once the east chunk loads; there is no block change there to classify it then (GEO-026).
      */
