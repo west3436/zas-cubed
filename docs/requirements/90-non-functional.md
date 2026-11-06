@@ -255,6 +255,30 @@ its block. The limit is `ThirdPartyFaults` (API-062), whose `ThirdPartyFaultsTes
 the minute and that its record stays bounded. An item's or entity's `ILifeSupport` and
 `IInternalSupply` (API-022) aren't named either, and aren't guarded yet.*
 
+*2026-11-06: the owner's decision of 2026-11-06 changes what skipping an ambient
+provider means: "keep the provider's last good answer, using the next source only when
+there's no good answer yet". Before, a vacuum dimension could read as standard air for as
+long as its provider threw, and gas could flow in. The accepted cost is that a provider
+that keeps throwing freezes a stale ambient. This replaces "as if it had answered null"
+in the note above. `null` keeps its meaning of "not defined for now", which is a real
+answer and not a fault, so a provider that throws after one leaves the next source in
+place. An answer naming an unknown gas still counts as `null` (ENV-004).*
+
+*The answer is the provider's for that dimension: the same provider in two dimensions
+keeps one for each, and a provider that takes over and throws doesn't get the answer of
+the one before it. One answer is kept per dimension, replaced by each new one, so it can't
+grow with a provider that changes its answer every tick. It isn't saved: after a restart
+the next source applies until the provider next answers. The fault is logged as before.
+Tests:
+`nfr_013_an_ambient_provider_that_throws_keeps_its_last_good_answer_and_is_logged_once_a_minute`,
+which replaces `nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_once_a_minute`;
+`nfr_013_no_gas_flows_in_while_a_vacuum_dimensions_provider_throws`;
+`nfr_013_a_provider_that_throws_before_any_good_answer_gets_the_next_source`;
+`nfr_013_a_provider_that_throws_after_answering_null_keeps_the_next_source`;
+`nfr_013_a_providers_last_good_answer_is_kept_for_each_dimension`; and
+`nfr_013_a_provider_doesnt_keep_another_providers_answer`. Stays `Accepted`, because
+hazard handlers still aren't built.*
+
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
 

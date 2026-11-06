@@ -22,9 +22,11 @@ import net.minecraft.server.level.ServerLevel;
  * server's gases: one naming a gas the server doesn't have is skipped, with a warning, as if the
  * provider had answered {@code null}.
  *
- * <p><b>If it throws</b> (NFR-013). ZAS³ catches it and skips the provider for that atmos tick, as if
- * it had answered {@code null}. It asks again the next atmos tick, and logs the fault at most once a
- * minute.
+ * <p><b>If it throws</b> (NFR-013). ZAS³ catches it and skips the provider for that atmos tick, and
+ * its last good answer for that dimension stands, so one that keeps throwing freezes that answer. The
+ * next source applies only if it has given no good answer since the server started. {@code null} is a
+ * real answer and not a fault, so throwing after one leaves the next source in place. ZAS³ asks again
+ * the next atmos tick, and logs the fault at most once a minute.
  */
 @FunctionalInterface
 public interface AmbientProvider {

@@ -36,7 +36,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  *   <li>its datapack definition's variant for the active preset, or the variant the {@code
  *       ambient_variant} preset option overrides it with;
  *   <li>its registered provider's answer (ENV-004, ENV-019), which {@link #takeProviderAnswer} takes
- *       once per atmos tick (ENV-015);
+ *       once per atmos tick (ENV-015), or its last good answer while it throws (NFR-013);
  *   <li>a seeded ambient from another mod's data (SPACE-020), which comes in R2 with the Ad Astra
  *       adapter (D-66), so only a test fills this slot for now ({@link #seedForTest});
  *   <li>{@link Ambient#STANDARD_AIR} (ENV-011).
