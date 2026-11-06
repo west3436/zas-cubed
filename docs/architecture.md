@@ -415,10 +415,31 @@ context (GEO-041).
    asks nothing again. The worker gives each override's geometry an id in the
    engine's own extensible copy of the palette, so the table's palette never
    changes. A datapack override of a seal-provider block leaves it unflagged:
-   the pack has the last word.
+   the pack has the last word. *Implemented
+   ([#65](https://github.com/west3436/zas-cubed/issues/65)):* a state is flagged
+   if its block says `dynamicShape`, as one must whose shape depends on position
+   or data, or if its shape at the origin differs from its shape at four other
+   positions. Scaffolding and powder snow are left out, since only the entity
+   changes their shapes. So is a state holding a fluid, and any block with an
+   override. `PositionGeometries` reads the shape with an empty context in the
+   level, and derives each distinct set of voxels once; a shape equal to the
+   block state's needs no snapshot override. Of a shape with several cells it
+   keeps the voxel to cell map too, so `PointResolver` finds the cell a point is
+   in ([#123](https://github.com/west3436/zas-cubed/issues/123)). The fallback to
+   the largest cell is left for a position not read yet, or a broken shape. A
+   shape that throws leaves the block state's geometry, as at derivation.
 6. **`dynamicShape` blocks** (179 vanilla states, including moving pistons and
    shulker boxes) use the geometry of their settled state (GEO-042), from a
-   data table of state → settled state.
+   data table of state → settled state. *Implemented
+   ([#65](https://github.com/west3436/zas-cubed/issues/65)):* no data table was
+   needed. A moving piston takes the table geometry of
+   `PistonMovingBlockEntity#getMovedState`, from the moment the motion starts, so
+   its cells don't change again when it ends. A shulker box stays unflagged, so
+   it has the geometry derived at the origin, where it has no block entity and is
+   closed. A modded block that animates its shape is read once and kept until its
+   state is written or `markDirty` is called, so it isn't tracked. Such a block
+   should give a seal provider, or a pack an override, if the moment read isn't
+   the settled one.
 
 **The seal test** between two cells in adjacent positions: the shared face is
 gas-tight wherever `coverage(a, d) | coverage(b, d.opposite())` is full.
@@ -1194,8 +1215,30 @@ and spectators are never moved and are sent no openings to be pushed by
 low to stand in has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
 through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
-into the hole reaches it. Impact damage (FLOW-005) and block damage (FLOW-007)
-aren't done.
+into the hole reaches it. Impact damage (FLOW-005) isn't done.
+
+Block damage (FLOW-007, FLOW-015, FLOW-016) is decided on the worker and done on
+the server thread, as a world-write intent (§3.3). After a tick's exchange,
+`FragileBlocks` compares the pressures on a fragile block's sides: its own cells
+and the cells beside it that reach the shared face, a zoned cell reading its
+zone's pressure and any other the ambient's. Blocks come from an index in the
+section mirror of the states `Geometries` flags from `#zas:pressure_fragile`. A
+single pass over the zones spares looking at any block while no live zone differs
+by more than the threshold from the ambient or from another live zone, which 1 atm
+against a vacuum can't at the default. Off, or with no such difference, the mirror
+doesn't even scan a section for them. A block holds while a side is a paused zone
+or an unresolved region (GEO-035), or in an unloaded chunk (GEO-034): those numbers
+aren't live, and the break would be held (GEO-037) or would pull the chunk up. A
+section the mirror lacks, which holds no zoned cell, is asked for when reading it as
+the ambient would break the block, and only when the mirror will keep it. A tick asks
+for at most `pressure_fragile_breaks_per_tick` breaks, in key order, and keeps nothing
+between ticks: what's left is found again next tick from the world as it is then.
+`PressureBreak`s go back in the `Result`, those reading a rejected zone are dropped,
+and `PressureBreaks.apply` checks each against the block now, without touching a
+chunk that isn't at full status or whose saved zones are still to come, and breaks it
+with `ServerLevel.destroyBlock`. From there on it is a block change like any other,
+so the zones meet through the usual path, with nothing for the conservation checker
+to explain (CORE-073).
 
 Showing airflow is separate from pushing with it, and wider (CLIENT-003,
 DATA-015). At each atmos tick `VisibleFlows` picks a player's list: every exported

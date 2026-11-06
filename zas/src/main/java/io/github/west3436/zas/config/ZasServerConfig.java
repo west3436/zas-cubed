@@ -125,7 +125,8 @@ public final class ZasServerConfig {
                 .defineInRange("server_budget_ms", 10, 1, 1000);
         SINGLE_THREADED = builder.comment(
                         "Debug: run the simulation on the server thread instead of the atmos workers.",
-                        "Results are identical either way.")
+                        "Results are identical either way. Restart-only: read when the server starts.")
+                .worldRestart()
                 .define("single_threaded", false);
         CONSERVATION_CHECKER = builder.comment(
                         "Debug: check every atmos tick that gas changed only through known sources",
@@ -307,7 +308,7 @@ public final class ZasServerConfig {
         return (SPEC.isLoaded() ? SERVER_BUDGET_MS.get() : 10) * 1_000_000L;
     }
 
-    /** Whether ticks run on the server thread. */
+    /** Whether ticks run on the server thread. Restart-only: a reload leaves it as it was (OPS-016). */
     public static boolean singleThreaded() {
         return SPEC.isLoaded() && SINGLE_THREADED.get();
     }

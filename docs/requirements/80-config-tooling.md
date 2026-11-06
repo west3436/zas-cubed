@@ -26,7 +26,7 @@ There shall be three config tiers:
 - **Verify:** Inspect the config files.
 
 #### OPS-016 · Live config changes
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 Server config changes shall apply from the next atmos tick without a restart,
 except settings marked restart-only, such as the thread count.
@@ -35,8 +35,18 @@ except settings marked restart-only, such as the thread count.
 - **Verify:** A GameTest changes a server setting and checks it applies on the
   next atmos tick.
 
+*2026-11-05: Implemented. `ops_016_a_setting_applies_on_the_next_atmos_tick`
+changes the venting model with a room venting and checks what the room loses on
+the very next atmos tick, each way. The other `ops_016_*` GameTests cover `[heat]
+enabled`, the atmos period, a reload across each kind of setting, and a hand edit
+of a world's own copy. The two restart-only settings, `[atmos] single_threaded`
+and the common config's `worker_threads`, are marked in the config spec and in
+[config.md](../config.md#when-changes-apply-ops-016). A setting read by a periodic
+check, such as `[hazards]` by an entity's breath check, shows at that check, which
+can come after the next atmos tick.*
+
 #### OPS-002 · Datapack formats
-`Must` · `R0` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-04
 
 The following shall be data-driven, with documented JSON formats:
 - gases
@@ -56,6 +66,11 @@ The following shall be data-driven, with documented JSON formats:
 *2026-11-03: Still Accepted. [Datapack formats](../datapacks.md) has a section
 for every listed format except the `zas:pressure_fragile` tag, which comes with
 Hardcore block damage ([#45](https://github.com/west3436/zas-cubed/issues/45)).*
+
+*2026-11-05: [Datapack formats](../datapacks.md#pressure-fragile-blocks) now
+documents `zas:pressure_fragile` too. Inspected against the code: each `data/zas/zas/`
+folder and reload listener has its section, as do the entity tags and the block tags
+the code reads, so the whole list is documented.*
 
 #### OPS-008 · Datapack validation
 `Must` · `R0` · `Implemented` · Verify: GameTest · Depends: OPS-002
@@ -176,7 +191,7 @@ a GameTest can't restart the server, so it uses `AtmosService.stopForTest` and
 Engine rules: `DimensionPauseTest`.*
 
 #### OPS-013 · Region reset
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-036, CORE-073
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036, CORE-073
 
 An operator shall be able to reset a region to ambient: its zoned cells revert
 to unzoned. The gas removed is recorded as an operator-command sink
@@ -186,6 +201,15 @@ to unzoned. The gas removed is recorded as an operator-command sink
   atmospheres.
 - **Verify:** A GameTest resets a region and checks the cells are unzoned and
   the checker records the sink.
+
+*2026-11-05: Implemented as `/zas reset <from> <to>`.
+`ops_013_a_region_resets_and_the_checker_records_the_sink` checks the cells are
+unzoned and that the checker records the sink against the player, and
+`RegionResetTest` covers the engine's rules. Every zone with a cell in the
+region goes whole. A paused zone is left as it was, since it keeps its state
+(GEO-030). A pinned zone resets and loses its pins: API-017's "never dissolved"
+is read as about dissolving into the ambient (CORE-076), not an operator's
+order.*
 
 #### OPS-006 · Admin logging
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; API-012's source attribution makes it easy to add later), 2026-10-31. · Verify: Inspect
@@ -258,6 +282,12 @@ rates.*
 `cont_057_rates_at_light_15_and_7_under_each_preset` and
 `cont_057_each_rate_is_configured_on_its_own` check them under both presets and
 with overrides. Still waiting: block pressure damage.*
+
+*2026-11-05: block pressure damage is wired (FLOW-007, FLOW-016,
+[#45](https://github.com/west3436/zas-cubed/issues/45)): each atmos tick reads
+`block_pressure_damage`, and `flow_016_normal_holds_and_the_override_turns_damage_on`,
+`flow_016_hardcore_can_override_damage_off` and the `flow_007_` GameTests check it
+under both presets and with overrides either way. No listed option waits any more.*
 
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007
