@@ -809,7 +809,8 @@ the lever if the per-cell cost ever matters.
     format 3, so older records are converted, §4.3), this chunk's share of its mixture
     (moles per gas, temperature) by volume, and every chunk the zone spans
   - block positions whose changes are held for a paused zone (DATA-010)
-  - at shutdown only, queued additions that target the chunk (DATA-011)
+  - at shutdown only, queued additions that target the chunk (DATA-011), each
+    with its sub-cell (format 5, §6.5)
   - each zone's pins, by owner id (API-018; format 4, §6.6)
 - **Shares are written at chunk save.** They are computed on the server
   thread from the **published** snapshot (moles × this chunk's volume ÷ zone
@@ -2218,7 +2219,9 @@ mutation first resolves its point to one cell (`PointResolver` in
   geometry change.
 - **Mutations.** A `GasOp` carries the sub-cell index (−1 for the largest
   cell), and the engine acts on that cell, or on the largest if the block no
-  longer has that many cells. Saved operations don't keep the index.
+  longer has that many cells. A saved addition keeps the index (format 5,
+  [#122](https://github.com/west3436/zas-cubed/issues/122)); one from an older
+  record acts on the largest cell.
 
 ### 6.6 Zone pins (API-017, API-018, API-050)
 

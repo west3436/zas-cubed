@@ -165,6 +165,77 @@ class ChunkRecordCodecTest {
         assertEquals(0.5, back.zones().get(0).moles(0));
     }
 
+    /** A queued addition keeps the sub-cell it targets, or none for its block's largest cell (#122). */
+    @Test
+    void data_011_queued_addition_keeps_its_sub_cell() throws Exception {
+        long block = SectionKeys.block(-40, 64, 120);
+        GasOp aimed = new GasOp(
+                17, GasOp.Kind.ADD, block, new double[] {2, 0}, 300, LedgerCategory.API, true, "zas_atmos:vent", 1);
+        GasOp largest = new GasOp(
+                18, GasOp.Kind.ADD, block, new double[] {1, 0}, 300, LedgerCategory.API, true, "zas_atmos:vent");
+        ChunkRecord record = new ChunkRecord(CHUNK, List.of(), new long[0], List.of(aimed, largest));
+        ChunkRecord back = ChunkRecordCodec.decode(ChunkRecordCodec.encode(record, GASES), CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        assertEquals(1, back.queuedAdditions().get(0).sub());
+        assertEquals(-1, back.queuedAdditions().get(1).sub());
+    }
+
+    /** A queued addition saved by format 4, which had no sub-cell, acts on its largest cell (#122). */
+    @Test
+    void data_011_version_4_queued_addition_reads_as_the_largest_cell() throws Exception {
+        ChunkRecord back = ChunkRecordCodec.decode(queuedAddition(4, null), CHUNK, GASES, m -> {
+            throw new AssertionError(m);
+        });
+        GasOp op = back.queuedAdditions().get(0);
+        assertEquals(-1, op.sub());
+        assertEquals(2, op.moles(0));
+        assertEquals("zas_atmos:vent", op.source());
+        // Written again, it is a current record and reads back the same.
+        byte[] again = ChunkRecordCodec.encode(back, GASES);
+        assertEquals(ChunkRecord.FORMAT_VERSION, ChunkRecordCodec.version(again));
+        assertEquals(back, ChunkRecordCodec.decode(again, CHUNK, GASES, m -> {}));
+    }
+
+    /** A sub-cell that can't be one is refused, not misread (DATA-004). */
+    @Test
+    void data_004_bad_sub_cell_is_refused() {
+        assertThrows(
+                ChunkRecordCodec.CorruptRecordException.class,
+                () -> ChunkRecordCodec.decode(queuedAddition(5, -2), CHUNK, GASES, m -> {}));
+    }
+
+    /** A record by hand holding one queued addition, with a sub-cell written if one is given. */
+    private static byte[] queuedAddition(int version, Integer sub) throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(bytes);
+        out.writeInt(0x5A415333);
+        out.writeInt(version);
+        out.writeLong(CHUNK);
+        out.writeInt(2);
+        out.writeUTF("zas:nitrogen");
+        out.writeUTF("zas:oxygen");
+        out.writeInt(0); // no zones
+        out.writeInt(0); // no held blocks
+        out.writeInt(1); // one queued addition
+        out.writeLong(17);
+        out.writeLong(SectionKeys.block(-40, 64, 120));
+        out.writeDouble(2);
+        out.writeDouble(0);
+        out.writeDouble(300);
+        out.writeUTF(LedgerCategory.API.name());
+        out.writeBoolean(true);
+        out.writeUTF("zas_atmos:vent");
+        if (sub != null) {
+            out.writeInt(sub);
+        }
+        out.flush();
+        CRC32 crc = new CRC32();
+        crc.update(bytes.toByteArray());
+        out.writeInt((int) crc.getValue());
+        return bytes.toByteArray();
+    }
+
     /** A zone's pin is saved and read back (D-64, API-018). */
     @Test
     void d_064_pin_is_saved() throws Exception {

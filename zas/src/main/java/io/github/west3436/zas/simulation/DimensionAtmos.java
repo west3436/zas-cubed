@@ -1062,7 +1062,8 @@ public final class DimensionAtmos {
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
      * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
-     * breaks them (FLOW-007), and whether the dimension is paused (OPS-005).
+     * breaks them (FLOW-007), whether the dimension is paused (OPS-005), and whether a filled cell's
+     * gas is deleted (CORE-029).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -1075,7 +1076,8 @@ public final class DimensionAtmos {
                 .withBlockIgnition(FireConfig.blockIgnition()
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
                 .withFragile(AirflowConfig.fragile())
-                .withDimensionPaused(simulationPause() != null);
+                .withDimensionPaused(simulationPause() != null)
+                .withZones(ZasServerConfig.zones());
     }
 
     /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */

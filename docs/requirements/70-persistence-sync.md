@@ -148,6 +148,15 @@ futures complete with nothing moved.
 - **Verify:** A GameTest saves with queued additions and removals and checks
   additions apply after load and removals complete empty.
 
+*2026-11-06: A saved addition now keeps the sub-cell it targets (API-015,
+[#122](https://github.com/west3436/zas-cubed/issues/122)), so one aimed at a pane's
+smaller half no longer lands in the block's largest cell after a restart. That is
+chunk record format 5. Formats 1 to 4 still read, and an addition from one of them
+acts on the largest cell. `data_011_saved_addition_lands_in_its_sub_cell` (Unit) and
+`data_011_queued_addition_keeps_its_sub_cell_across_a_restart` (GameTest) check it.
+Operations carried over to a new engine after a geometry palette change had the same
+fault and keep their sub-cell now too.*
+
 #### DATA-016 · Content-mod persistence
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-09, D-50, CONT-095
 
