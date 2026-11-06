@@ -431,6 +431,15 @@ pocket, the pocket shall join the zone, bringing ambient gas (CORE-028).
   room and checks one zone results with the zone's moles plus the room's
   ambient share.
 
+*2026-11-05: A zone can also come to open onto a pocket with nothing changing
+beside it, when it vents through a corridor and the corridor's far end closes.
+A block change now puts the cells found open in its section in doubt, and those
+a zone opens onto are classified again, at most once every 8 atmos ticks. The
+zone goes on venting until that's known, and doesn't pause
+(`geo_023_closing_the_far_end_of_what_a_zone_vents_through_makes_it_a_pocket`,
+`geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next`,
+`geo_023_a_chunk_unloading_on_the_way_out_doesnt_stop_a_zone_venting`).*
+
 #### GEO-025 · Breach to the open
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-02
 

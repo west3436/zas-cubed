@@ -150,7 +150,10 @@ public final class BreachResolver {
             }
             long[] z = zones.sortedDistinct();
             if (open != null && result instanceof FillResult.Open) {
-                open.add(seed, fill.visitedSections(topology));
+                long[] sections = fill.visitedSections(topology);
+                for (long c : s) {
+                    open.add(c, sections);
+                }
             }
             out.add(
                     switch (result) {
@@ -173,6 +176,10 @@ public final class BreachResolver {
             ResolvableTopology.Column column = topology.column(seed, c -> graph.zoneOf(c) != null);
             if (column == ResolvableTopology.Column.OPEN) {
                 reason = FillResult.Open.Reason.OPEN_COLUMN;
+                long[] sections = topology.columnSections(seed);
+                if (sections.length > 0) {
+                    open.add(seed, sections);
+                }
             }
             gaps = column == ResolvableTopology.Column.UNKNOWN;
         }

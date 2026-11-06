@@ -1,5 +1,6 @@
 package io.github.west3436.zas.engine.classify;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -16,13 +17,17 @@ import java.util.Set;
  * (GEO-024). A zone can't close the way out by itself: no zone forms on cells that reach open air,
  * and one that was already there was a wall when the cell was classified.
  *
+ * <p><b>What it leads to.</b> A cell that goes because of a block is {@linkplain #drainDoubtful in
+ * doubt}: the way out may have closed somewhere far from any zone, so a zone it opens onto needs it
+ * classified again (GEO-023, GEO-025).
+ *
  * <p><b>Bound.</b> At most {@value #MAX_LINKS} links between a cell and a section are kept. Past that
  * everything is forgotten, which costs only the fills that find it all again.
  *
  * <p><b>Determinism.</b> The answers are what a new fill would give, so whether a cell is here changes
- * how long a classification takes and nothing else, and nothing here is in the state hash. The hash
- * collections are for lookups only, and removing a set's entries in any order leaves the same result
- * (CORE-072).
+ * how long a classification takes and which cells are checked again, and nothing here is in the state
+ * hash. The hash collections are for lookups only, removing a set's entries in any order leaves the
+ * same result, and the cells in doubt come out ascending (CORE-072).
  *
  * <p>Not thread-safe; one instance per worker, like the fill.
  */
@@ -32,6 +37,7 @@ public final class OpenCells {
 
     private final Map<Long, long[]> sectionsOf = new HashMap<>();
     private final Map<Long, Set<Long>> cellsIn = new HashMap<>();
+    private final Set<Long> doubtful = new HashSet<>();
     private int links;
 
     /** Whether {@code cell} is known to be open. */
@@ -46,11 +52,12 @@ public final class OpenCells {
      */
     public void add(long cell, long[] sections) {
         forget(cell);
+        doubtful.remove(cell);
         if (sections.length > MAX_LINKS) {
             return;
         }
         if (links + sections.length > MAX_LINKS) {
-            clear();
+            forgetAll();
         }
         sectionsOf.put(cell, sections);
         for (long section : sections) {
@@ -65,12 +72,31 @@ public final class OpenCells {
         if (cells != null) {
             for (long cell : Set.copyOf(cells)) {
                 forget(cell);
+                doubtful.add(cell);
             }
         }
     }
 
     /** Forgets everything: what's open has changed in some other way than a block (GEO-031). */
     public void clear() {
+        doubtful.addAll(sectionsOf.keySet());
+        forgetAll();
+    }
+
+    /** The cells that have gone since the last call because something changed, ascending. */
+    public long[] drainDoubtful() {
+        long[] out = new long[doubtful.size()];
+        int n = 0;
+        for (long cell : doubtful) {
+            out[n++] = cell;
+        }
+        doubtful.clear();
+        Arrays.sort(out);
+        return out;
+    }
+
+    /** Only makes room: nothing has changed, so nothing is in doubt. */
+    private void forgetAll() {
         sectionsOf.clear();
         cellsIn.clear();
         links = 0;

@@ -272,6 +272,7 @@ public final class SectionTopology implements ResolvableTopology {
     }
 
     /** The keys of a cell's section and the ones above it up to the top of the world, lowest first. */
+    @Override
     public long[] columnSections(long cell) {
         int sx = CellIds.x(cell) >> 4;
         int sz = CellIds.z(cell) >> 4;

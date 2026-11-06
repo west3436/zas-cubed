@@ -147,6 +147,80 @@ class GeometryAuditTest {
     }
 
     /** Findings past the limit are counted but not listed. */
+    /**
+     * A zone vents through an unzoned corridor, and the corridor's far end is closed: nothing changes at
+     * the zone's own opening, but what it opens onto is a pocket now (GEO-023, GEO-025).
+     */
+    @Test
+    void geo_023_closing_the_far_end_of_what_a_zone_vents_through_makes_it_a_pocket() {
+        Sim sim = ventingThroughACorridor(15, 15);
+
+        sim.world.set(15, 69, 2, TestWorld.SOLID);
+        sim.steps(3);
+        GeometryAudit.Report r = audit(sim, new GeometryAudit.Region(0, 66, -1, 20, 72, 5));
+        assertTrue(r.clean(), () -> "findings: " + r.findings());
+        assertFalse(sim.zoneAt(5, 69, 2).breached(), "the zone is still venting");
+        assertEquals(sim.zoneAt(5, 69, 2).id(), sim.zoneAt(13, 69, 2).id(), "the corridor didn't join");
+    }
+
+    /** The same way out through a chunk that unloads: nothing says it has closed, so the zone goes on venting. */
+    @Test
+    void geo_023_a_chunk_unloading_on_the_way_out_doesnt_stop_a_zone_venting() {
+        Sim sim = ventingThroughACorridor(22, 22);
+
+        sim.unload(SectionKeys.chunk(1, 0));
+        sim.steps(3);
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone stopped venting");
+        assertFalse(sim.zoneAt(5, 69, 2).paused(), "the zone paused");
+    }
+
+    /**
+     * Each check of cells in doubt can take a fill up to the bound, so they wait their turn: a way out
+     * that closes just after one takes no fill until the next, which finds the pocket.
+     */
+    @Test
+    void geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next() {
+        Sim sim = ventingThroughACorridor(15, 15);
+        sim.steps(EnclosureClassifier.DOUBT_CHECK_TICKS);
+        int[] fills = {0};
+        sim.engine.classifier().onFill(seed -> fills[0]++);
+
+        sim.world.set(13, 68, 1, TestWorld.SOLID); // in the corridor, and the way out stays open
+        sim.steps(3); // the check, and any round of fetching sections it takes
+        int checked = fills[0];
+        assertTrue(checked > 0, "the first change wasn't checked at once");
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone stopped venting");
+
+        sim.world.set(15, 69, 2, TestWorld.SOLID); // the way out closes
+        sim.steps(2);
+        assertEquals(checked, fills[0], "the next change didn't wait its turn");
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone stopped venting before its check");
+
+        sim.steps(EnclosureClassifier.DOUBT_CHECK_TICKS);
+        assertTrue(fills[0] > checked, "the next check didn't come");
+        assertFalse(sim.zoneAt(5, 69, 2).breached(), "the zone is still venting");
+        assertEquals(sim.zoneAt(5, 69, 2).id(), sim.zoneAt(13, 69, 2).id(), "the corridor didn't join");
+        GeometryAudit.Report r = audit(sim, new GeometryAudit.Region(0, 66, -1, 20, 72, 5));
+        assertTrue(r.clean(), () -> "findings: " + r.findings());
+    }
+
+    /** A zone, with a corridor from x 12 to {@code lastX}, opened at {@code openX} and then into the zone. */
+    private static Sim ventingThroughACorridor(int lastX, int openX) {
+        Sim sim = new Sim(Ambient.STANDARD_AIR).withoutHeat();
+        sim.world.room(4, 68, 1, 10, 70, 3); // the zone
+        sim.world.room(12, 68, 1, lastX == 15 ? 14 : lastX - 1, 70, 3); // the corridor
+        sim.add(5, 69, 2, 0, 50000);
+        sim.steps(2);
+        assertNotNull(sim.zoneAt(5, 69, 2), "the room didn't zone");
+        sim.world.set(openX, 69, 2, TestWorld.AIR); // the corridor's far end opens
+        sim.steps(2);
+        sim.world.set(11, 69, 2, TestWorld.AIR); // the zone opens into the corridor
+        sim.steps(3);
+        assertNotNull(sim.zoneAt(5, 69, 2), "the zone has gone");
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone isn't venting");
+        return sim;
+    }
+
     @Test
     void geo_032_findings_are_capped() {
         Sim sim = zonedRoom();

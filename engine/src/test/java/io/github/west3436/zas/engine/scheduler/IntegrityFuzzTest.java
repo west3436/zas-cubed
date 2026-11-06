@@ -53,6 +53,7 @@ class IntegrityFuzzTest {
     private static void exercised(IntegrityFuzz.Stats s) {
         assertTrue(s.blockEdits > 1000, "block edits: " + s);
         assertTrue(s.gasOps > 1000, "gas operations: " + s);
+        assertTrue(s.resets > 0, "resets: " + s);
         assertTrue(s.unloads > 100, "unloads: " + s);
         assertTrue(s.reloads > 100, "reloads: " + s);
         assertTrue(s.saveLoads > 10, "save/load cycles: " + s);

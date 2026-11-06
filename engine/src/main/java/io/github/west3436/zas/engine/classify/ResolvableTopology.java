@@ -42,6 +42,11 @@ public interface ResolvableTopology extends CellTopology {
         return Column.SEALED;
     }
 
+    /** The sections from a cell's own up to the top of the world, lowest first. The default names none. */
+    default long[] columnSections(long cell) {
+        return new long[0];
+    }
+
     /** The sections the view doesn't hold from a cell's own up to the top of the world, lowest first. */
     default long[] columnGaps(long cell) {
         return new long[0];

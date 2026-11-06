@@ -46,6 +46,12 @@ import java.util.function.LongPredicate;
  *       classifies, through any rounds of fetching after the chunks load. While loaded sections
  *       are still being fetched, the opening counts as an ambient connection, as before. A held
  *       region that no zone opens onto any more is dropped.
+ *   <li>A block change that puts a cell found open in doubt may have closed the way out far from any
+ *       zone, so such a cell is classified again if a zone opens onto it: if that's a pocket now, it
+ *       joins the zone (GEO-023). Until that's known the zone goes on as it was: a region that can't
+ *       be classified is tried again once a section it lacks is in a loaded chunk, with no fills
+ *       before that. It doesn't pause the zone, which had a way out, and is venting, and nothing says
+ *       that has changed.
  * </ul>
  *
  * <p>Single-threaded, like the engine that owns it.
@@ -65,12 +71,25 @@ public final class EnclosureClassifier implements Classifier {
      */
     private final SectionTopology loaded;
 
+    /**
+     * The fewest atmos ticks between checks of cells put in doubt. A check can take a fill up to the bound
+     * for each region, and building beside a vent would otherwise ask for one every tick.
+     */
+    public static final int DOUBT_CHECK_TICKS = 8;
+
     private final Space space;
     private final EnclosureFill fill;
     private final BreachResolver breaches;
     private final OpenCells open = new OpenCells();
     /** Seeds of breaches held at missing sections, classified again each tick. */
     private long[] held = new long[0];
+    /**
+     * Regions found open and then put in doubt, that a zone opens onto and that reach sections the mirror
+     * lacks. They're left alone until one of those is in a loaded chunk.
+     */
+    private List<Doubted> doubted = new ArrayList<>();
+    /** Atmos ticks since cells in doubt were last checked. The first change is checked at once. */
+    private int ticksSinceDoubtCheck = DOUBT_CHECK_TICKS;
     /** Whether a held breach asked for sections this tick. */
     private boolean fetching;
     /** Zones opening onto the breaches that asked for sections this tick, ascending. */
@@ -204,19 +223,30 @@ public final class EnclosureClassifier implements Classifier {
 
     @Override
     public void afterGeometry(ZoneGraph graph, long[] refreshedCells, LongConsumer requestSection) {
-        long[] seeds = BreachResolver.breachSeeds(graph, topology, refreshedCells);
-        if (held.length > 0) {
-            long[] all = Arrays.copyOf(seeds, seeds.length + held.length);
-            System.arraycopy(held, 0, all, seeds.length, held.length);
-            Arrays.sort(all);
-            seeds = all;
+        long[] seeds = union(BreachResolver.breachSeeds(graph, topology, refreshedCells), held);
+        List<Doubted> stillDoubted = new ArrayList<>();
+        long[] inDoubt = new long[0];
+        if (++ticksSinceDoubtCheck >= DOUBT_CHECK_TICKS) {
+            inDoubt = BreachResolver.breachSeeds(graph, topology, open.drainDoubtful());
+            if (inDoubt.length > 0) {
+                ticksSinceDoubtCheck = 0;
+            }
         }
+        for (Doubted d : doubted) {
+            if (loadedOnly(d.missing()).length > 0) {
+                inDoubt = union(inDoubt, d.seeds());
+            } else {
+                stillDoubted.add(d);
+            }
+        }
+        doubted = stillDoubted;
+        long[] all = union(seeds, inDoubt);
         fetching = false;
         fetchingZones = new long[0];
         long[] previouslyHeld = heldZones;
         heldZones = new long[0];
         pausingSeeds = new long[0];
-        if (seeds.length == 0) {
+        if (all.length == 0) {
             held = new long[0];
             return;
         }
@@ -224,10 +254,18 @@ public final class EnclosureClassifier implements Classifier {
         java.util.TreeSet<Long> pausedBy = new java.util.TreeSet<>();
         java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
         java.util.TreeSet<Long> waiting = new java.util.TreeSet<>();
-        for (Breach b : breaches.classify(graph, loaded, topology, seeds)) {
+        for (Breach b : breaches.classify(graph, loaded, topology, all)) {
             if (b instanceof Breach.Hold hold) {
                 if (hold.zones().length == 0) {
                     continue; // no zone opens onto it any more
+                }
+                if (noneIn(hold.seeds(), seeds)) {
+                    doubted.add(new Doubted(hold.seeds(), hold.missingSections()));
+                    for (long k : loadedOnly(hold.missingSections())) {
+                        requestSection.accept(k);
+                        fetching = true;
+                    }
+                    continue;
                 }
                 for (long s : hold.seeds()) {
                     stillHeld.add(s);
@@ -261,7 +299,7 @@ public final class EnclosureClassifier implements Classifier {
                         pausedBy.add(s);
                     }
                 }
-            } else {
+            } else if (!(b instanceof Breach.Pocket pocket) || pocket.zones().length > 0) {
                 BreachResolver.apply(graph, topology, b);
             }
         }
@@ -284,6 +322,27 @@ public final class EnclosureClassifier implements Classifier {
         for (long s : pausedBy) {
             pausingSeeds[i++] = s;
         }
+    }
+
+    /** A region put in doubt: its seeds, and the sections it reached that the mirror lacks. */
+    private record Doubted(long[] seeds, long[] missing) {}
+
+    private static long[] union(long[] a, long[] b) {
+        if (b.length == 0) {
+            return a;
+        }
+        long[] all = Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, all, a.length, b.length);
+        return Arrays.stream(all).sorted().distinct().toArray();
+    }
+
+    private static boolean noneIn(long[] cells, long[] ascending) {
+        for (long cell : cells) {
+            if (Arrays.binarySearch(ascending, cell) >= 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
