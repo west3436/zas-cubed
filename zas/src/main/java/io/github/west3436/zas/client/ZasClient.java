@@ -56,6 +56,9 @@ public final class ZasClient {
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientBreath.LOCAL.clear());
         modBus.addListener(AtmosHudRenderer::registerLayer);
 
+        // Display units for other mods' GUIs (CLIENT-006, API-063).
+        ClientDisplayUnits.register();
+
         // Looping sounds and thin air (CLIENT-015, CLIENT-016).
         ClientLoops.register();
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientListenerAir.clear());

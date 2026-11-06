@@ -28,6 +28,7 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
 
     private static final String SETTING = "Setting";
 
+    private final double initial;
     private final double max;
     private final double[] steps;
     private double setting;
@@ -47,6 +48,7 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
             double bigStep,
             double smallStep) {
         super(type, pos, state, 2);
+        this.initial = initial;
         this.setting = initial;
         this.max = max;
         this.steps = new double[] {-bigStep, -smallStep, smallStep, bigStep};
@@ -88,6 +90,11 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
     /** Applies one of the GUI's steps, from the largest down to the largest up. */
     void step(int index) {
         set(setting + steps[index]);
+    }
+
+    /** Sets its setting back to what it was when new. */
+    void reset() {
+        set(initial);
     }
 
     @Override

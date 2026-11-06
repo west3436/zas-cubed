@@ -266,7 +266,7 @@ shows values. Gas overlays, the HUD and their visual settings arrive in R1.
 | Key | Default | Meaning |
 |---|---|---|
 | `[units] pressure` | `KPA` | Pressure unit: `KPA`, `ATM`, `BAR` or `PSI` |
-| `[units] temperature` | `KELVIN` | Temperature unit: `KELVIN`, `CELSIUS` or `FAHRENHEIT` |
+| `[units] temperature` | `CELSIUS` | Temperature unit: `KELVIN`, `CELSIUS` or `FAHRENHEIT` |
 
 Operator commands ([commands.md](commands.md)) run on the server and always
 report kPa and K.

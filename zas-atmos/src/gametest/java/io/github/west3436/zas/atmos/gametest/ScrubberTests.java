@@ -343,7 +343,9 @@ public final class ScrubberTests {
             h.assertValueEqual(menu.selected(option), option == co2 || option == toxic, "option " + option);
         }
         for (ScrubberMode next : List.of(ScrubberMode.SCRUB, ScrubberMode.SIPHON, ScrubberMode.PANIC)) {
-            h.assertTrue(menu.clickMenuButton(player, ScrubberMenu.CYCLE_MODE), "the free scrubber refused its mode");
+            h.assertTrue(
+                    menu.clickMenuButton(player, ScrubberMenu.SET_MODE + next.ordinal()),
+                    "the free scrubber refused its mode");
             h.assertValueEqual(s.mode(), next, "the mode");
             h.assertValueEqual(menu.mode(), next, "the GUI's mode");
         }
@@ -361,7 +363,7 @@ public final class ScrubberTests {
         h.assertValueEqual(s.mode(), ScrubberMode.SCRUB, "the ordered mode");
         h.assertValueEqual(s.selection(), GasSelection.DEFAULT, "the ordered selection");
         h.assertValueEqual(s.controller(), Optional.of(controller), "the scrubber's controller");
-        for (int id = ScrubberMenu.CYCLE_MODE; id <= ScrubberMenu.LAST_BUTTON; id++) {
+        for (int id = ScrubberMenu.SET_MODE; id <= ScrubberMenu.LAST_BUTTON; id++) {
             h.assertFalse(menu.clickMenuButton(player, id), "the controlled scrubber took button " + id);
         }
         h.assertValueEqual(s.mode(), ScrubberMode.SCRUB, "the controlled mode");
@@ -384,7 +386,9 @@ public final class ScrubberTests {
             h.assertFalse(
                     s.saveWithoutMetadata(a.level.registryAccess()).contains("Controlled"),
                     "the freed scrubber's data shows it controlled");
-            h.assertTrue(menu.clickMenuButton(player, ScrubberMenu.CYCLE_MODE), "the freed scrubber refused its GUI");
+            h.assertTrue(
+                    menu.clickMenuButton(player, ScrubberMenu.SET_MODE + ScrubberMode.SCRUB.ordinal()),
+                    "the freed scrubber refused its GUI");
             h.assertValueEqual(s.mode(), ScrubberMode.SCRUB, "the freed scrubber's mode");
             a.forceLoad(false);
             h.succeed();

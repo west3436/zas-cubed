@@ -1,69 +1,70 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.atmos.battery.BatteryItem;
+import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
+import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.power.GeneratorMenu;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
- * The generator's screen: its fuel slot, how long the burning fuel lasts, and its stored FE. It has
- * no texture yet and is drawn with flat panels and slot frames.
+ * The generator's window (CONT-061): its fuel slot beside two bars, how long the burning fuel lasts
+ * and what it has stored. Energy is teal, as TGUI keeps red for trouble.
  */
-public class GeneratorScreen extends AbstractContainerScreen<GeneratorMenu> {
-    private static final int BACKGROUND = 0xF0202428;
-    private static final int SLOT = 0xFF14171A;
-    private static final int BAR = 0xFF30353B;
-    private static final int FLAME = 0xFFE89A3C;
-    private static final int ENERGY = 0xFFD8302F;
-    private static final int TEXT = 0xFFE0E0E0;
+public class GeneratorScreen extends TguiScreen<GeneratorMenu> {
+    private static final int WIDTH = 176;
+    private static final int HEIGHT = heightWithInventory(GeneratorMenu.INVENTORY_Y);
+    private static final int SECTION_HEIGHT = 24;
+    private static final int LABEL_WIDTH = 24;
+    private static final int TICKS_PER_SECOND = 20;
 
     public GeneratorScreen(GeneratorMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
+        super(menu, inventory, title, WIDTH, HEIGHT);
     }
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, BACKGROUND);
-        for (Slot slot : menu.slots) {
-            g.fill(leftPos + slot.x - 1, topPos + slot.y - 1, leftPos + slot.x + 17, topPos + slot.y + 17, SLOT);
+    protected void draw(Ui ui, int x, int y, int w, int h) {
+        ui.section(x, y, w, SECTION_HEIGHT, null);
+        slots(ui, GeneratorMenu.INVENTORY_Y);
+        int slotX = leftPos + GeneratorMenu.FUEL_X;
+        int slotY = topPos + GeneratorMenu.FUEL_Y;
+        if (!menu.getSlot(0).hasItem()) {
+            ui.ghost(slotX, slotY, new ItemStack(Items.COAL));
         }
-        int bx = leftPos + GeneratorMenu.FUEL_X + 24;
-        int by = topPos + GeneratorMenu.FUEL_Y;
-        g.fill(bx, by, bx + 60, by + 6, BAR);
-        if (menu.burnTotal() > 0) {
-            g.fill(bx, by, bx + 60 * menu.burnLeft() / menu.burnTotal(), by + 6, FLAME);
-        }
-        g.fill(bx, by + 10, bx + 60, by + 16, BAR);
-        if (menu.capacity() > 0) {
-            g.fill(bx, by + 10, bx + 60 * menu.energy() / menu.capacity(), by + 16, ENERGY);
-        }
-    }
+        int labelX = slotX + 20;
+        int barX = labelX + LABEL_WIDTH;
+        int barW = x + w - Ui.PAD - barX;
+        int barH = Ui.ROW - 1;
+        int row = y + 2;
 
-    @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, titleLabelX, titleLabelY, TEXT, false);
-        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT, false);
-        g.drawString(
-                font,
-                Component.translatable("gui.zas_atmos.generator.burn", (menu.burnLeft() + 19) / 20),
-                8,
-                58,
-                TEXT,
-                false);
-        g.drawString(
-                font,
-                Component.translatable("gui.zas_atmos.generator.energy", menu.energy(), menu.capacity()),
-                8,
-                68,
-                TEXT,
-                false);
-    }
+        DeviceParts.label(ui, "burn", labelX, row, barH);
+        int left = menu.burnLeft();
+        int total = menu.burnTotal();
+        ui.bar(
+                barX,
+                row,
+                barW,
+                barH,
+                total > 0 ? (double) left / total : 0,
+                Ui.ORANGE,
+                Ui.ORANGE_EDGE,
+                left > 0
+                        ? DeviceParts.text("seconds", (left + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND)
+                        : Component.literal("—"));
+        row += Ui.ROW;
 
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
+        DeviceParts.label(ui, "stored", labelX, row, barH);
+        int capacity = menu.capacity();
+        ui.bar(
+                barX,
+                row,
+                barW,
+                barH,
+                capacity > 0 ? (double) menu.energy() / capacity : 0,
+                Ui.TEAL,
+                Ui.TEAL_EDGE,
+                DeviceParts.text("fe", BatteryItem.fe(menu.energy()), BatteryItem.fe(capacity)));
     }
 }

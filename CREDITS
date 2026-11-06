@@ -53,6 +53,7 @@
 #                under CC BY-SA 4.0: CC0-1.0, CC-BY-3.0, CC-BY-4.0,
 #                CC-BY-SA-3.0, CC-BY-SA-4.0. NonCommercial (NC) and
 #                NoDerivatives (ND) licenses are never allowed (NFR-046).
+#                A file under font/ may instead keep Bitstream-Vera (D-76).
 #   attribution  the author to credit, as the license asks. Required except
 #                for CC0-1.0.
 #
@@ -1559,7 +1560,7 @@ notes: As filter.json, on.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter_mirrored.json
 origin: original
-notes: As filter.json with the side port to the west, as the wrench sets it (vg's mirrored filter).
+notes: As filter.json with the side port to the west, as the mirrored filter item places it (vg's mirrored filter).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/filter_mirrored_on.json
 origin: original
@@ -1568,6 +1569,10 @@ notes: As filter_mirrored.json, on.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/filter.json
 origin: original
 notes: The filter item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/filter_mirrored.json
+origin: original
+notes: The mirrored filter item: the mirrored block model.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer.json
 origin: original
@@ -1579,7 +1584,7 @@ notes: As mixer.json, on.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer_mirrored.json
 origin: original
-notes: As mixer.json with the side port to the west, as the wrench sets it (vg's mirrored mixer).
+notes: As mixer.json with the side port to the west, as the mirrored mixer item places it (vg's mirrored mixer).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/mixer_mirrored_on.json
 origin: original
@@ -1588,6 +1593,10 @@ notes: As mixer_mirrored.json, on.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/mixer.json
 origin: original
 notes: The mixer item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/mixer_mirrored.json
+origin: original
+notes: The mirrored mixer item: the mirrored block model.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/electrolyzer_front.png
 origin: original
@@ -2885,3 +2894,17 @@ origin: original
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/sounds.json
 origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/font/dejavu_sans.ttf
+origin: other
+source: https://dejavu-fonts.github.io/ (DejaVu Sans 2.37)
+license: Bitstream-Vera
+attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
+adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/font/dejavu_sans_bold.ttf
+origin: other
+source: https://dejavu-fonts.github.io/ (DejaVu Sans Bold 2.37)
+license: Bitstream-Vera
+attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
+adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.

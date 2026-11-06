@@ -2427,7 +2427,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
-| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity` and `SidePortMenu` |
+| `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
@@ -2985,8 +2985,7 @@ the cell in front of its grille).
     is drawn facing north, too, and turned the same way.
   - `portFaces` gives the faces it has a pipe port on, in port order. The
     default is two: port 0 at the back, where gas comes in, and port 1 at the
-    front. A device with a side port adds it, and calls
-    `InlineDeviceEntity.portsChanged` after moving it.
+    front. A device with a side port adds it.
   - Placed, its gas goes the way the player looks. Nothing can turn it
     afterwards until the wrench exists, so if that way joins no pipe and another
     does, it takes the nearest way that does: looking down at a run on the
@@ -3005,8 +3004,8 @@ the cell in front of its grille).
     or idle and why.
   - `InlineDeviceMenu` holds the switch, power, status and each port's pressure
     in its data slots, and a device's own slots and buttons follow.
-    `InlineDeviceScreen`, its GUI, shows them, with the device's own lines and
-    buttons.
+    `client.InlineScreen`, its GUI, shows them as a strip of its ports with an arrow
+    between, with the device's own rows below.
 - **Pressure pump** (CONT-011, CONT-076), in `.pump`. A `PumpBlockEntity` has
   an input at the back and an output at the front, the way its arrows point,
   and one setting. It moves gas between the two networks' `GasStore`s directly,
@@ -3034,18 +3033,21 @@ the cell in front of its grille).
   so the side port stays east, or west while `mirrored`. A structure's rotation
   or mirror takes the side port with it, except that a vertical device's side
   port can't point north or south, so it takes the other side instead.
-  - `SidePortEntity` holds the target and `flip`, which cycles `mirrored` and
-    calls `portsChanged`. The port keeps its share of the gas and joins any pipe
-    on the new side, and the pipe it left keeps its own share. The GUI's button
-    flips it until the wrench exists (CONT-035).
+  - `SidePortEntity` holds the target.
+  - The item that places it sets `mirrored`: the block's own item leaves it false,
+    and a `MirroredDeviceItem` places the same block with it true, choosing the
+    facing by the port faces that gives (D-77). `registerBlocks` is empty there, so
+    the block's own item stays the plain one. A mirrored block's loot table and
+    `getCloneItemStack` give the mirrored item, and a shapeless recipe turns each
+    item into the other. The wrench will rotate a device and not mirror it
+    (CONT-035).
   - Building one port's network can dissolve another that it reaches, so
     `networks` asks for all three and then again, and a step uses only the
     second answers. A device idles as `SAME_NETWORK` only when all three ports
     are one network. With two in one network it still runs, and `FilterMath` and
     `MixerMath` take gas out before adding any, so none is lost or made.
-  - `SidePortMenu` adds the target's slot and buttons and the flip to the base.
-    `SidePortScreen` draws them in a row under the switch, which sits lower than
-    a pump's to clear the extra port line.
+  - `SidePortMenu` adds the target's slot and buttons and which side the port is on
+    to the base. `InlineScreen` draws the side port's cell on that side of the strip.
 - **Filter** (CONT-013), in `.filter`. Gas comes in at the back, the gases its
   `GasSelection` holds leave by the side outlet, and the rest leaves by the
   front. `FilterMath.moles` takes an even slice of the input, the least of 100 L
@@ -3197,8 +3199,18 @@ linked, or both, and whether it is powered. The screen's buttons are vanilla
 menu button clicks. Vanilla checks that the player is still near the
 controller, and `clickMenuButton` refuses any unknown id. Edits go through
 `Thresholds.with`, which clamps each bound to 0–5,066 and between its
-enabled neighbours. Nudging a disabled bound is refused. The screen is drawn
-with flat panels until the GUI art exists.
+enabled neighbours. Nudging a disabled bound is refused. A threshold cell selects
+its bound with its own id, checked against the preset's readings.
+
+The screen is `client.ControllerScreen`, on the TGUI kit in `client.tgui` (D-76,
+CLIENT-022). `Ui` draws in code each frame from the last sync, as a TGUI window
+re-renders, and what can be clicked is whatever was drawn last frame. Its text uses one
+font definition per face and GUI scale, which `generateTguiFonts` writes at build time,
+since Minecraft draws a TrueType font sharply only at the scale it rasterised it for.
+Readings follow the player's units through `DisplayUnits` (API-063), while a threshold's
+steps stay in kPa and K. The other device screens use the same kit, with what they share in
+`DeviceParts` and `GasParts`. The kit also draws slot frames and locks in code, and a plain
+`TguiWindow` is there for a window with no menu, which the gas tank's is.
 
 **Saved:** buffer, mode, preset, danger state and links. The pin isn't saved;
 the controller pins again on its first step after loading.

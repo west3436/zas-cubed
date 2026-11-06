@@ -33,11 +33,6 @@ public enum ScrubberMode implements StringRepresentable {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    /** The next mode in the GUI's cycle: off, scrub, siphon, panic. */
-    public ScrubberMode next() {
-        return values()[(ordinal() + 1) % values().length];
-    }
-
     /** The mode with a saved name, or {@link #OFF} for an unknown one. */
     public static ScrubberMode byName(String name) {
         for (ScrubberMode m : values()) {

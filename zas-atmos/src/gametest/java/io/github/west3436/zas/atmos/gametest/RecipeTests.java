@@ -40,6 +40,8 @@ public final class RecipeTests {
      */
     private static List<Item> craftable() {
         List<Item> items = new ArrayList<>(List.of(
+                AtmosItems.FILTER_MIRRORED.get(),
+                AtmosItems.MIXER_MIRRORED.get(),
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get(),
                 AtmosItems.MANUAL_VALVE.get(),

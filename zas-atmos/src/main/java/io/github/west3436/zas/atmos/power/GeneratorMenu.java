@@ -21,9 +21,12 @@ import net.neoforged.neoforge.items.SlotItemHandler;
  */
 public class GeneratorMenu extends AbstractContainerMenu {
     /** Where the fuel slot is drawn. */
-    public static final int FUEL_X = 80;
+    public static final int FUEL_X = 8;
 
-    public static final int FUEL_Y = 35;
+    public static final int FUEL_Y = 23;
+
+    /** Where the player's inventory starts. */
+    public static final int INVENTORY_Y = 49;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -62,11 +65,11 @@ public class GeneratorMenu extends AbstractContainerMenu {
         addSlot(new SlotItemHandler(fuel, 0, FUEL_X, FUEL_Y));
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(inventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                addSlot(new Slot(inventory, col + row * 9 + 9, 8 + col * 18, INVENTORY_Y + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(inventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(inventory, col, 8 + col * 18, INVENTORY_Y + 58));
         }
         addDataSlots(data);
     }

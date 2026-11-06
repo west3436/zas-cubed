@@ -211,7 +211,9 @@ public final class StationTests {
             vent.network().gas().add(new GasParcel(Map.of(N2, 1000.0), T));
             // With no controller, the vent's GUI sets it (CONT-014): blowing to 101.325 kPa.
             menu = (VentMenu) vent.createMenu(1, hand.getInventory(), hand);
-            h.assertTrue(menu.clickMenuButton(hand, VentMenu.CYCLE_MODE), "the free vent refused its GUI");
+            h.assertTrue(
+                    menu.clickMenuButton(hand, VentMenu.SET_MODE + VentMode.BLOW.ordinal()),
+                    "the free vent refused its GUI");
             h.assertValueEqual(vent.settings(), VentSettings.blow(StandardAir.PRESSURE), "the hand-set vent");
             h.assertFalse(menu.controlled(), "the GUI shows a free vent controlled");
 
@@ -270,7 +272,7 @@ public final class StationTests {
             seconds(s, g, 1, c, vent, pump);
             h.assertValueEqual(menu.controller(), java.util.Optional.of(c.getBlockPos()), "the GUI's controller");
             h.assertValueEqual(menu.mode(), VentMode.BLOW, "the GUI's order");
-            for (int id = VentMenu.CYCLE_MODE; id <= VentMenu.LAST_BUTTON; id++) {
+            for (int id = VentMenu.SET_MODE; id <= VentMenu.LAST_BUTTON; id++) {
                 h.assertFalse(menu.clickMenuButton(hand, id), "the controlled vent took button " + id);
             }
             h.assertValueEqual(vent.settings(), VentSettings.blow(TARGET), "the controlled vent after its GUI");
@@ -335,7 +337,9 @@ public final class StationTests {
                         "the unpowered vent's block state");
                 // With no orders coming, the vent is the player's again.
                 h.assertFalse(v.controlled(), "the vent stayed controlled with its controller unpowered");
-                h.assertTrue(gui.clickMenuButton(hand, VentMenu.CYCLE_MODE), "the freed vent refused its GUI");
+                h.assertTrue(
+                        gui.clickMenuButton(hand, VentMenu.SET_MODE + VentMode.SIPHON.ordinal()),
+                        "the freed vent refused its GUI");
                 h.assertValueEqual(v.settings().mode(), VentMode.SIPHON, "the freed vent's mode");
             } finally {
                 cleanup.run();

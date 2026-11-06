@@ -249,7 +249,7 @@ public final class ControllerTests {
             player.setPos(s.point(2, 1, 2));
             h.assertTrue(menu.stillValid(player), "a player in the room can't use the menu");
 
-            for (int bad : new int[] {-1, 7, 9, 12, 19, 24, 29, 37, 1000}) {
+            for (int bad : new int[] {-1, 7, 9, 12, 19, 20, 29, 37, 99, 140, 1000}) {
                 h.assertFalse(menu.clickMenuButton(player, bad), "button " + bad + " was accepted");
             }
             h.assertValueEqual(c.preset(), ControllerPreset.HUMAN, "a refused button changed the preset");
@@ -257,11 +257,10 @@ public final class ControllerTests {
             h.assertTrue(menu.clickMenuButton(player, ControllerMode.PANIC.ordinal()), "the Panic button");
             h.assertValueEqual(c.mode(), ControllerMode.PANIC, "mode");
 
-            for (int i = 0; i < 4; i++) {
-                menu.clickMenuButton(player, ControllerMenu.NEXT_READING); // to CO2
-            }
-            h.assertValueEqual(c.preset().gas(menu.reading()), CO2, "the selected reading");
             h.assertValueEqual(menu.bound(), 2, "max1 is selected first");
+            h.assertTrue(menu.clickMenuButton(player, ControllerMenu.SELECT_BOUND + 4 * 4 + 2), "CO2's max1 cell");
+            h.assertValueEqual(c.preset().gas(menu.reading()), CO2, "the selected reading");
+            h.assertValueEqual(menu.bound(), 2, "the selected bound");
             for (int i = 0; i < 3; i++) {
                 h.assertTrue(menu.clickMenuButton(player, ControllerMenu.ADJUST + 1), "-1"); // 5 -> 2 kPa
             }
@@ -281,7 +280,7 @@ public final class ControllerTests {
             h.assertValueEqual(c.danger(), 1, "2.5 kPa of CO2 under the edited preset");
             h.assertValueEqual(ControllerPreset.HUMAN.danger(s.zone(2, 2, 2).mixture()), 0, "under Human");
 
-            menu.clickMenuButton(player, ControllerMenu.PREV_BOUND); // min1, off
+            h.assertTrue(menu.clickMenuButton(player, ControllerMenu.SELECT_BOUND + 4 * 4 + 1), "CO2's min1 cell, off");
             h.assertFalse(menu.clickMenuButton(player, ControllerMenu.ADJUST + 4), "an off bound was nudged");
             h.assertTrue(menu.clickMenuButton(player, ControllerMenu.TOGGLE_BOUND), "turning min1 on");
             h.assertValueEqual(c.preset().thresholds(4).min1(), 2.0, "min1 turned on starts at its neighbour");

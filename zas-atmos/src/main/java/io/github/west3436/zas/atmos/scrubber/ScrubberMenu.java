@@ -29,11 +29,11 @@ import net.minecraft.world.item.ItemStack;
  * own gas or tag.
  */
 public class ScrubberMenu extends AbstractContainerMenu {
-    /** Cycles the mode: off, scrub, siphon, panic. */
-    public static final int CYCLE_MODE = 0;
+    /** Sets the mode, by {@link ScrubberMode} ordinal (ids 0–3). */
+    public static final int SET_MODE = 0;
 
     /** Toggles the selection's option 0; the other options follow. */
-    public static final int FIRST_OPTION = 1;
+    public static final int FIRST_OPTION = 4;
 
     /** The gases the GUI toggles, the default's first. */
     public static final List<ResourceLocation> GASES = List.of(
@@ -157,11 +157,11 @@ public class ScrubberMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (scrubber == null || scrubber.isRemoved() || id < CYCLE_MODE || id > LAST_BUTTON) {
+        if (scrubber == null || scrubber.isRemoved() || id < SET_MODE || id > LAST_BUTTON) {
             return false;
         }
-        if (id == CYCLE_MODE) {
-            return scrubber.setByHand(scrubber.mode().next(), scrubber.selection());
+        if (id < FIRST_OPTION) {
+            return scrubber.setByHand(ScrubberMode.values()[id - SET_MODE], scrubber.selection());
         }
         int option = id - FIRST_OPTION;
         GasSelection s = scrubber.selection();

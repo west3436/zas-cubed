@@ -1,102 +1,126 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.atmos.client.tgui.Readout;
+import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
+import io.github.west3436.zas.atmos.client.tgui.Ui;
+import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMenu;
-import io.github.west3436.zas.atmos.scrubber.ScrubberStatus;
+import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * A scrubber's GUI (CONT-015, CONT-079): mode, what it did last atmos tick (moving gas, or idle and
- * why), its network's pressure, power, and a toggle for each gas and gas tag it can select. While an
- * area air controller controls the scrubber, it shows the controller and its order, and its buttons
- * are off.
+ * A scrubber's window (CONT-015): its mode, what it did last step, its network's pressure, and what
+ * it takes. Panic stands out in amber until it's chosen. While a controller runs it, the eye turns
+ * amber, a notice says which controller, and every control greys out, as the server refuses them.
  */
-final class ScrubberScreen extends DeviceScreen<ScrubberMenu> {
-    private static final int COLUMNS = 2;
-
-    private final List<Button> buttons = new ArrayList<>();
-    private final Button[] toggles = new Button[ScrubberMenu.OPTIONS];
+final class ScrubberScreen extends TguiScreen<ScrubberMenu> {
+    private static final int WIDTH = 216;
+    private static final int TOP_HEIGHT = 2 + Ui.BUTTON_ROW + 2 * Ui.ROW + 2;
+    private static final int GAS_COLUMNS = 2;
+    private static final int GAS_ROWS = (ScrubberMenu.GASES.size() + GAS_COLUMNS - 1) / GAS_COLUMNS;
+    private static final int GASES_HEIGHT = 14 + GAS_ROWS * Ui.ROW + 2;
+    private static final int TAGS_HEIGHT = 14 + Ui.ROW + 2;
+    private static final int HEIGHT =
+            Ui.TITLE_HEIGHT + 2 * Ui.PAD + TOP_HEIGHT + Ui.PAD + GASES_HEIGHT + Ui.PAD + TAGS_HEIGHT;
+    private static final List<Component> MODES = modes();
 
     ScrubberScreen(ScrubberMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        imageWidth = 240;
-        imageHeight = 236;
+        super(menu, inventory, title, WIDTH, HEIGHT);
     }
 
-    @Override
-    protected void init() {
-        super.init();
-        buttons.clear();
-        // Below the most lines there can be: three of control, a status of two, network, power.
-        int top = 100;
-        buttons.add(
-                button(8, top, 224, Component.translatable("gui.zas_atmos.scrubber.cycle"), ScrubberMenu.CYCLE_MODE));
-        for (int i = 0; i < ScrubberMenu.OPTIONS; i++) {
-            int x = 8 + 113 * (i % COLUMNS);
-            int y = top + 22 + 19 * (i / COLUMNS);
-            toggles[i] = button(x, y, 111, label(i), ScrubberMenu.FIRST_OPTION + i);
-            buttons.add(toggles[i]);
+    private static List<Component> modes() {
+        List<Component> modes = new ArrayList<>();
+        for (ScrubberMode mode : ScrubberMode.values()) {
+            modes.add(Component.translatable("gui.zas_atmos.scrubber.mode." + mode.getSerializedName()));
         }
-        refresh();
+        return List.copyOf(modes);
+    }
+
+    private boolean powered() {
+        return menu.value(ScrubberMenu.DATA_POWERED) != 0;
     }
 
     @Override
-    protected void containerTick() {
-        super.containerTick();
-        refresh();
+    protected int windowHeight() {
+        return HEIGHT + DeviceParts.noticesHeight(powered(), menu.controlled());
     }
 
-    /** The server refuses hand settings on a controlled scrubber; the buttons say so. */
-    private void refresh() {
+    @Override
+    protected int eyeColour() {
+        return powered() && !menu.controlled() ? Ui.GOOD : Ui.AVERAGE;
+    }
+
+    @Override
+    protected void draw(Ui ui, int x, int y, int w, int h) {
+        y = DeviceParts.notices(ui, x, y, w, powered(), menu.controlled(), menu.controller());
         boolean free = !menu.controlled();
-        for (Button b : buttons) {
-            b.active = free;
+        int labelX = x + Ui.PAD;
+        int valueX = labelX + DeviceParts.LABEL_WIDTH;
+
+        ui.section(x, y, w, TOP_HEIGHT, null);
+        int row = y + 2;
+        DeviceParts.label(ui, "mode", labelX, row, Ui.BUTTON_HEIGHT);
+        ui.choice(
+                valueX,
+                row,
+                MODES,
+                menu.mode().ordinal(),
+                ScrubberMode.PANIC.ordinal(),
+                free ? i -> press(ScrubberMenu.SET_MODE + i) : null);
+        row += Ui.BUTTON_ROW;
+        DeviceParts.label(ui, "state", labelX, row, Ui.ROW);
+        DeviceParts.status(ui, Component.translatable(menu.status().key()), statusColour(), valueX, row, Ui.ROW);
+        row += Ui.ROW;
+        DeviceParts.label(ui, "network", labelX, row, Ui.ROW);
+        ui.line(
+                Component.literal(Readout.pressure(menu.value(ScrubberMenu.DATA_NETWORK))),
+                valueX,
+                row,
+                Ui.ROW,
+                Ui.WHITE,
+                Face.BODY);
+
+        y += TOP_HEIGHT + Ui.PAD;
+        row = ui.section(x, y, w, GASES_HEIGHT, DeviceParts.text("gases"));
+        int columnWidth = (w - 2 * Ui.PAD) / GAS_COLUMNS;
+        for (int i = 0; i < ScrubberMenu.GASES.size(); i++) {
+            int option = i;
+            ui.checkbox(
+                    labelX + i % GAS_COLUMNS * columnWidth,
+                    row + i / GAS_COLUMNS * Ui.ROW,
+                    columnWidth - 2,
+                    Ui.ROW,
+                    GasParts.label(ScrubberMenu.GASES.get(i)),
+                    menu.selected(option),
+                    free ? () -> press(ScrubberMenu.FIRST_OPTION + option) : null);
         }
-        for (int i = 0; i < toggles.length; i++) {
-            toggles[i].setMessage(label(i));
+
+        y += GASES_HEIGHT + Ui.PAD;
+        row = ui.section(x, y, w, TAGS_HEIGHT, DeviceParts.text("tags"));
+        int tagWidth = (w - 2 * Ui.PAD) / ScrubberMenu.TAGS.size();
+        for (int i = 0; i < ScrubberMenu.TAGS.size(); i++) {
+            int option = ScrubberMenu.GASES.size() + i;
+            ui.checkbox(
+                    labelX + i * tagWidth,
+                    row,
+                    tagWidth - 2,
+                    Ui.ROW,
+                    Component.translatable("gui.zas_atmos.scrubber.tag."
+                            + ScrubberMenu.TAGS.get(i).id().getPath()),
+                    menu.selected(option),
+                    free ? () -> press(ScrubberMenu.FIRST_OPTION + option) : null);
         }
     }
 
-    /** A toggle's label: whether its option is selected, and its gas or tag's name. */
-    private Component label(int option) {
-        Component name;
-        if (option < ScrubberMenu.GASES.size()) {
-            ResourceLocation id = ScrubberMenu.GASES.get(option);
-            name = Component.translatable("gas." + id.getNamespace() + "." + id.getPath());
-        } else {
-            ResourceLocation id =
-                    ScrubberMenu.TAGS.get(option - ScrubberMenu.GASES.size()).id();
-            name = Component.translatable("gui.zas_atmos.scrubber.tag." + id.getPath());
-        }
-        return Component.literal(menu.selected(option) ? "[x] " : "[ ] ").append(name);
-    }
-
-    @Override
-    List<Component> lines() {
-        Component mode = Component.translatable(
-                "gui.zas_atmos.scrubber.mode." + menu.mode().getSerializedName());
-        List<Component> lines = new ArrayList<>();
-        if (menu.controlled()) {
-            lines.add(Component.translatable("gui.zas_atmos.vent.controlled"));
-            menu.controller()
-                    .ifPresent(p -> lines.add(
-                            Component.translatable("gui.zas_atmos.vent.controller_at", p.getX(), p.getY(), p.getZ())));
-            lines.add(Component.translatable("gui.zas_atmos.vent.order", mode));
-        } else {
-            lines.add(Component.translatable("gui.zas_atmos.vent.mode", mode));
-        }
-        if (menu.status() != ScrubberStatus.OFF) {
-            lines.add(Component.translatable(menu.status().key()));
-        }
-        lines.add(Component.translatable("gui.zas_atmos.vent.network", menu.value(ScrubberMenu.DATA_NETWORK)));
-        lines.add(Component.translatable(
-                menu.value(ScrubberMenu.DATA_POWERED) != 0
-                        ? "gui.zas_atmos.vent.powered"
-                        : "gui.zas_atmos.vent.unpowered"));
-        return lines;
+    private int statusColour() {
+        return switch (menu.status()) {
+            case OFF -> Ui.DIM;
+            case MOVING -> Ui.GOOD;
+            case WAITING, NOTHING -> Ui.LABEL;
+            case STALLED -> Ui.AVERAGE;
+        };
     }
 }

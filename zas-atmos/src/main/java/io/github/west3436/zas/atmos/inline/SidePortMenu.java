@@ -5,22 +5,25 @@ import net.minecraft.world.inventory.MenuType;
 
 /**
  * The GUI of a device with a side port (CONT-074): the base's, with its target and buttons to step
- * it and to flip the side port. The device clamps the target. A device's own data slots follow
- * {@link #DATA_COUNT}, and its own buttons follow {@link #LAST_BUTTON}.
+ * it. The device clamps the target. A device's own data slots follow {@link #DATA_COUNT}, and its own
+ * buttons follow {@link #LAST_BUTTON}.
  */
 public abstract class SidePortMenu extends InlineDeviceMenu {
-    /** Flips the side port. */
-    public static final int FLIP = TOGGLE + 1;
-
     /** The target's largest step down; the smaller step down, the smaller up and the largest up follow. */
-    public static final int STEP_DOWN_BIG = FLIP + 1;
+    public static final int STEP_DOWN_BIG = TOGGLE + 1;
 
-    public static final int LAST_BUTTON = STEP_DOWN_BIG + 3;
+    /** Sets the target back to a new device's. */
+    public static final int TARGET_DEFAULT = STEP_DOWN_BIG + 4;
+
+    public static final int LAST_BUTTON = TARGET_DEFAULT;
 
     /** The target, kPa, rounded. */
     public static final int DATA_TARGET = InlineDeviceMenu.DATA_COUNT;
 
-    public static final int DATA_COUNT = DATA_TARGET + 1;
+    /** 1 if the side port is on the left of the way its gas goes, 0 if on the right. */
+    public static final int DATA_MIRRORED = DATA_TARGET + 1;
+
+    public static final int DATA_COUNT = DATA_MIRRORED + 1;
 
     private final SidePortEntity device;
 
@@ -37,14 +40,19 @@ public abstract class SidePortMenu extends InlineDeviceMenu {
         this.device = device;
     }
 
+    /** Whether the side port is on the left of the way its gas goes, as synced. */
+    public boolean mirrored() {
+        return value(DATA_MIRRORED) != 0;
+    }
+
     @Override
     protected final boolean ownButton(int id) {
-        if (id == FLIP) {
-            device.flip();
+        if (id >= STEP_DOWN_BIG && id < TARGET_DEFAULT) {
+            device.step(id - STEP_DOWN_BIG);
             return true;
         }
-        if (id >= STEP_DOWN_BIG && id <= LAST_BUTTON) {
-            device.step(id - STEP_DOWN_BIG);
+        if (id == TARGET_DEFAULT) {
+            device.setTarget(SidePortEntity.DEFAULT_TARGET);
             return true;
         }
         return deviceButton(id);

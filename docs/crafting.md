@@ -18,6 +18,8 @@ which are themselves made from vanilla materials (CONT-051).
   each of the mod's items among its ingredients. Recipes for blocks still to
   come are skipped quietly until those blocks are added, with no errors in
   the log.
+- **A filter or mixer converts to and from its mirrored version** (D-77), one
+  for one.
 - **Filled canisters are creative-only** (CONT-086). You craft an empty
   canister, and the same goes for tanks: you fill an empty tank from a
   canister to get an O₂ tank or an air tank (CONT-039). Neither the O₂ tank
@@ -134,6 +136,10 @@ in any arrangement.
 | Volume pump | Workshop | `MKM` / `PIP` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `M` micro-manipulator, `K` capacitor |
 | Filter | Workshop | `MSM` / `PIP` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `M` micro-manipulator, `S` scanning module |
 | Mixer | Workshop | `MPM` / `PIP` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `M` micro-manipulator |
+| Mirrored filter | Workshop | Shapeless | filter |
+| Filter | Workshop | Shapeless | mirrored filter |
+| Mirrored mixer | Workshop | Shapeless | mixer |
+| Mixer | Workshop | Shapeless | mirrored mixer |
 | Vent | Workshop | `XXX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `M` micro-manipulator |
 | Scrubber | Workshop | `XSX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `S` scanning module, `M` micro-manipulator |
 | Passive vent | Workshop | `XXX` / `IPI` | `X` iron bars, `I` iron ingot, `P` pipe |

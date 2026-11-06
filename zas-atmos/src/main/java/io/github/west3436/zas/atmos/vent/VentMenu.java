@@ -18,14 +18,19 @@ import net.minecraft.world.item.ItemStack;
  * clamps the bounds to 0–5,066 kPa.
  */
 public class VentMenu extends AbstractContainerMenu {
-    /** Cycles the mode: off, blow, siphon. */
-    public static final int CYCLE_MODE = 0;
+    /** Sets the mode, by {@link VentMode} ordinal (ids 0–2). */
+    public static final int SET_MODE = 0;
 
-    /** Change the external bound by −100, −10, +10 and +100 kPa (ids 1–4), the internal bound likewise (5–8). */
-    public static final int EXTERNAL_DOWN_100 = 1;
+    /** Change the external bound by −100, −10, +10 and +100 kPa (ids 3–6), the internal bound likewise (7–10). */
+    public static final int EXTERNAL_DOWN_100 = 3;
 
-    public static final int INTERNAL_DOWN_100 = 5;
-    public static final int LAST_BUTTON = 8;
+    public static final int INTERNAL_DOWN_100 = 7;
+
+    /** Set a bound back to a new vent's. */
+    public static final int EXTERNAL_DEFAULT = 11;
+
+    public static final int INTERNAL_DEFAULT = 12;
+    public static final int LAST_BUTTON = 12;
 
     /**
      * The synced values: mode, bounds (kPa, rounded), power, and control: 0 if no controller
@@ -113,17 +118,21 @@ public class VentMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (vent == null || vent.isRemoved() || id < CYCLE_MODE || id > LAST_BUTTON) {
+        if (vent == null || vent.isRemoved() || id < SET_MODE || id > LAST_BUTTON) {
             return false;
         }
         VentSettings s = vent.settings();
         VentSettings next;
-        if (id == CYCLE_MODE) {
-            next = s.withMode(s.mode().next());
+        if (id < EXTERNAL_DOWN_100) {
+            next = s.withMode(VentMode.values()[id - SET_MODE]);
         } else if (id < INTERNAL_DOWN_100) {
             next = new VentSettings(s.mode(), s.external() + STEPS[id - EXTERNAL_DOWN_100], s.internal());
-        } else {
+        } else if (id < EXTERNAL_DEFAULT) {
             next = new VentSettings(s.mode(), s.external(), s.internal() + STEPS[id - INTERNAL_DOWN_100]);
+        } else if (id == EXTERNAL_DEFAULT) {
+            next = new VentSettings(s.mode(), VentSettings.DEFAULT_EXTERNAL, s.internal());
+        } else {
+            next = new VentSettings(s.mode(), s.external(), VentSettings.DEFAULT_INTERNAL);
         }
         return vent.setByHand(next);
     }
