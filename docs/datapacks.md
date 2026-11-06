@@ -903,6 +903,9 @@ same path; to take one out, they replace the tag with `"replace": true` and
 list what should stay. The tag applies from the next breath check after
 `/reload`.
 
+A mob in the tag doesn't spawn naturally where the atmosphere would kill it, such
+as a vacuum (LIFE-034). Spawners and spawn eggs still place it there.
+
 ## Atmosphere-immune entities
 
 Pressure and temperature (LIFE-010, LIFE-011, LIFE-014) harm every living

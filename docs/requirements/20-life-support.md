@@ -866,7 +866,7 @@ at once under a cap of 5 are checked 5 a tick, none lost. As with LIFE-033,
 the Bench is S-10's.*
 
 #### LIFE-034 · Spawning in lethal atmospheres
-`Could` · `R1` · `Accepted` · Verify: GameTest
+`Could` · `R1` · `Implemented` · Verify: GameTest
 
 Breathing mobs should not spawn naturally where the atmosphere is immediately
 lethal, such as vacuum.
@@ -875,3 +875,16 @@ lethal, such as vacuum.
   wasting work and littering drops.
 - **Verify:** A GameTest checks breathing mobs don't spawn naturally in a
   vacuum test dimension.
+
+*2026-11-06: Implemented, with an event rather than a mixin:
+`MobSpawnEvent.PositionCheck`, for natural spawns and for those of chunk
+generation. A mob in `zas:breathers` is refused where the atmosphere at its eyes
+has too little O₂ to breathe, or where a gas in it, its pressure or its temperature
+deals damage to a bare mob. Spawners, spawn eggs, commands and the like aren't
+stopped, nor is a check another listener has decided.
+`life_034_breathing_mobs_don_t_spawn_naturally_in_a_vacuum_dimension` checks the
+natural spawner's position check refuses pigs, cows and spiders in a dimension
+whose ambient is a vacuum, chunk generation's real spawner puts no spiders there,
+and it lets them in with air in the same place. The natural spawner itself needs
+a player in the level, so the test can't run it.
+`life_034_the_atmosphere_at_the_spot_decides` checks rooms of each atmosphere.*

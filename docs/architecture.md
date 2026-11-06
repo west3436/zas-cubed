@@ -1831,6 +1831,12 @@ client breathing sync (LIFE-023): the server sends each player its own state
   hit, so invulnerability ticks from another source mustn't swallow it, and
   protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
   `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
+- **Natural spawns** (LIFE-034). `LethalSpawns` fails NeoForge's
+  `MobSpawnEvent.PositionCheck` for a mob in `#zas:breathers` where the
+  atmosphere at its eyes has too little O₂, or a gas, pressure or temperature
+  that damages a bare mob. It acts on natural spawns and chunk generation's only,
+  and leaves a check another listener decided. Chunk generation's runs on a worker
+  thread, so it reads only the atmosphere and data, never a life-support capability.
 - **Internals** (LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046).
   `Internals` holds the switch, a saved entity attachment kept through death,
   which a player toggles with a keybind (`Internals.TogglePayload`, client to
