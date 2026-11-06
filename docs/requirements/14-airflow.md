@@ -171,7 +171,7 @@ of a mob and of a player, and the impulse, and r = 1 from protection data stops
 both. Magnetic boots don't exist yet; they give r = 1 when CONT-033 lands.*
 
 #### FLOW-005 · Impact damage
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-030
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-030
 
 An entity flung into a block shall take airflow-impact damage using vanilla's
 fly-into-wall formula (speed lost × 10 − 3). Entity-to-entity impacts are not
@@ -182,6 +182,22 @@ in R1.
   vanilla's fly-into-wall formula fits Minecraft.
 - **Verify:** A GameTest flings a mob into a wall and checks the damage
   against the formula.
+
+*2026-11-06: Implemented, for living entities the flow has carried, and for
+horizontal speed only, as vanilla's formula is. The damage goes through
+`LifeDamage.deal`, after the hazard's scale. A side counts only when it first meets
+the block, so an entity the flow holds against a block is hit once, and one already
+against it when the flow takes hold of it isn't hit. A mob's speed is its velocity.
+A player moves on its own client and no number from a client is trusted (NFR-011),
+so its speed is what the server saw it cover, over two game ticks, and a move too
+long for any flow is no speed. `flow_005_a_mob_flung_into_a_block_takes_the_formula_s_damage`
+checks a mob against the formula,
+`flow_005_the_flow_alone_throws_a_mob_into_a_block` with the flow alone moving it,
+`flow_005_a_mob_held_against_a_block_is_hit_once` the single hit,
+`flow_005_a_slow_knock_does_nothing_and_settings_apply` the 0.3 blocks per tick it
+takes to do any damage and the hazard's settings, and
+`flow_005_a_player_flung_into_a_block_is_judged_by_its_moves` a player, from moves
+the test sends the server, not a real client's. `FlowImpactTest` checks the formula.*
 
 ## Cost
 
