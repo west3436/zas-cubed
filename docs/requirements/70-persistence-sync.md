@@ -219,7 +219,7 @@ and attachments are lost.
 ## Client sync
 
 #### DATA-005 · Client sync scope
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: A-03, D-53
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: A-03, D-53
 
 Clients shall receive only:
 - their own player's atmosphere state (DATA-014)
@@ -245,6 +245,15 @@ geometry or per-cell data.*
 particle packets, which a client can't cap. Each is one event: what happened, a
 place, a direction and one number. Like vanilla's, they are sent to nearby
 players only. They carry nothing about a zone, so this keeps to D-53.*
+
+*2026-11-06: Implemented. `ClientSyncScopeTests.data_005_a_player_is_sent_only_its_own_state_and_what_is_near_it`
+(GameTest) keeps two recording clients on the server for real game ticks, one in a sealed
+room with thin air, a device and then a breach, and one in the open far away. Each is sent
+only the payloads this requirement and its notes list, and the one far away hears nothing of
+the room. Debug data goes only to an operator with the overlay on, and stops when it goes off.
+Reading the packet types found one this list doesn't name: `ControllerSync`, what a
+controller's GUI shows, sent to the player with it open. It holds no zone geometry or
+per-cell data, so it keeps to D-53.*
 
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
