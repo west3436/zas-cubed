@@ -566,8 +566,13 @@ section, S-10's station needs about 1–2 MiB.
    of them or its chunk unloading clears the entry (GEO-027). It doesn't matter
    whether the mirror holds the section: the batch lists the changes in sections
    it doesn't hold (`Batch.changedOutsideMirror`), which the worker couldn't
-   otherwise see. At most 65,536 links between a cell and a section are kept;
-   past that the cache starts again, which only costs fills.
+   otherwise see. An entry cleared this way is classified again if a zone opens
+   onto it, because the way out may have closed somewhere far from any zone: if
+   it's a pocket now, it joins the zone (GEO-023). Until that's known the zone
+   goes on venting and doesn't pause, and a region that can't be classified yet
+   is tried again each tick. At most 65,536 links between a cell and a section
+   are kept; past that the cache starts again, which costs fills, and a way out
+   that closes after that goes unseen until something changes beside the zone.
 
 *Implemented (#23):* the mirror is `SectionMirror`; `EnclosureClassifier`
 wires `engine.classify` (#26) into the scheduler through the `Classifier`
