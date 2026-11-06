@@ -20,6 +20,7 @@ import io.github.west3436.zas.engine.reaction.ReactionSet;
 import io.github.west3436.zas.engine.zone.Edge;
 import io.github.west3436.zas.engine.zone.MembershipListener;
 import io.github.west3436.zas.engine.zone.Zone;
+import io.github.west3436.zas.engine.zone.ZoneEvent;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -421,6 +422,7 @@ public final class DimensionEngine {
             }
         }
         updatePaused(waiting);
+        graph.reportPaused();
 
         // 3. Gas operations.
         phases.enter(Phase.GAS_OPERATIONS);
@@ -448,6 +450,9 @@ public final class DimensionEngine {
                 outcomes[i] = applyPin(ops.get(i), targets[i]);
             }
         }
+        // What has happened to zones so far stands, even if their component is rejected (API-030).
+        graph.reportBreaches(classifier::hasPendingFor);
+        List<ZoneEvent> zoneEvents = graph.drainZoneEvents();
         Membership undo = membership.publish();
         if (undo.size() != graph.zoneCount()) {
             throw new IllegalStateException(
@@ -520,6 +525,11 @@ public final class DimensionEngine {
         // 8. Garbage collection (CORE-052).
         phases.enter(Phase.GARBAGE_COLLECTION);
         graph.collectSealed(classifier::hasPendingFor);
+        // Merges and dissolutions, which a rejection takes back. An edge one of them gave a zone is
+        // reported next tick, by when it has either stood or been taken back.
+        for (ZoneEvent e : graph.drainZoneEvents()) {
+            zoneEvents.add(e.asUndoable());
+        }
 
         ConservationReport report = batch.settings().checkConservation() ? graph.checkConservation(tick) : null;
 
@@ -583,7 +593,8 @@ public final class DimensionEngine {
                 fireIntents,
                 fireEvents,
                 hotspots.table(),
-                breaks);
+                breaks,
+                zoneEvents);
         phases.finished();
         return result;
     }

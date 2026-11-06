@@ -1006,13 +1006,16 @@ while a batch's results are applied. Listeners assert the thread in
 API-033's events, when they're built, must post through `ApiEvents` and have
 listeners that assert the thread too.*
 
+*2026-11-06: API-030's eight events post through `ApiEvents` from `applyBatch`, and
+the listeners in `ZoneEventTests` assert the thread.*
+
 *2026-11-06: `HazardTickEvent` (API-033) posts through `ApiEvents` too, from `LifeDamage`,
 on the server thread just before the hazard it names is dealt: that's when its result is
 applied, and it isn't tied to an atmos tick. A listener asserts the thread in
 `api_033_a_cancelled_pressure_or_temperature_tick_deals_no_damage`.*
 
 #### API-030 · Zone lifecycle events
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-43
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-43
 
 The API shall raise events when a zone is created, merged, split, breached
 (gains an ambient edge), sealed, dissolved, paused or resumed.
@@ -1021,6 +1024,15 @@ The API shall raise events when a zone is created, merged, split, breached
   to zones changing; D-43 added pause and resume.
 - **Verify:** GameTests trigger each lifecycle change and check the event
   fires once.
+
+*2026-11-06: Implemented. `ZoneCreatedEvent`, `ZoneMergedEvent`, `ZoneSplitEvent`,
+`ZoneBreachedEvent`, `ZoneSealedEvent`, `ZoneDissolvedEvent`, `ZonePausedEvent` and
+`ZoneResumedEvent` subclass `ZoneLifecycleEvent`, which holds the level, the zone
+and a block in it. The `api_030_` GameTests in `ZoneEventTests` trigger each one and
+check it fires once, and `ZoneEventTest` covers the other ways to reach each. A split's
+remnant fires no created event, and a zone coming back from chunk storage fires
+resumed, not created, so after a restart resumed comes with no paused before it. A
+merge or dissolution in a rejected exchange component fires nothing until it is redone.*
 
 #### API-031 · Fire events
 `Should` · `R1` · `Implemented` · Verify: GameTest

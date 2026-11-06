@@ -38,6 +38,12 @@ public final class Zone {
      * (CORE-052). Not saved: a zone rebuilt from its chunks starts over.
      */
     double matchedSeconds;
+    /** Whether {@link #reportedBreached} has been read; a zone's first reading is no change (API-030). */
+    boolean breachKnown;
+    /** Whether it last reported having an ambient edge (API-030). */
+    boolean reportedBreached;
+    /** Whether it last reported being paused (API-030). */
+    boolean reportedPaused;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 

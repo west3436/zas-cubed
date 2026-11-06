@@ -6,6 +6,15 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.event.FireExtinguishedEvent;
 import io.github.west3436.zas.api.event.FireIgnitedEvent;
 import io.github.west3436.zas.api.event.OpenAirGasEvent;
+import io.github.west3436.zas.api.event.ZoneBreachedEvent;
+import io.github.west3436.zas.api.event.ZoneCreatedEvent;
+import io.github.west3436.zas.api.event.ZoneDissolvedEvent;
+import io.github.west3436.zas.api.event.ZoneLifecycleEvent;
+import io.github.west3436.zas.api.event.ZoneMergedEvent;
+import io.github.west3436.zas.api.event.ZonePausedEvent;
+import io.github.west3436.zas.api.event.ZoneResumedEvent;
+import io.github.west3436.zas.api.event.ZoneSealedEvent;
+import io.github.west3436.zas.api.event.ZoneSplitEvent;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
@@ -23,6 +32,7 @@ import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasConfig;
@@ -44,6 +54,7 @@ import io.github.west3436.zas.engine.scheduler.OpOutcome;
 import io.github.west3436.zas.engine.scheduler.OpenAirEvent;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
+import io.github.west3436.zas.engine.zone.ZoneEvent;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
@@ -1057,6 +1068,23 @@ public final class DimensionAtmos {
         failAll(new CancellationException(why));
     }
 
+    /** The API's event for a change to a zone (API-030). */
+    private ZoneLifecycleEvent zoneEvent(ZoneEvent e) {
+        ZoneId zone = new ZoneId(e.zoneId());
+        ZoneId other = new ZoneId(e.otherId());
+        BlockPos pos = new BlockPos(CellIds.x(e.cell()), CellIds.y(e.cell()), CellIds.z(e.cell()));
+        return switch (e.kind()) {
+            case CREATED -> new ZoneCreatedEvent(level, zone, pos);
+            case MERGED -> new ZoneMergedEvent(level, zone, other, pos);
+            case SPLIT -> new ZoneSplitEvent(level, zone, other, pos);
+            case BREACHED -> new ZoneBreachedEvent(level, zone, pos);
+            case SEALED -> new ZoneSealedEvent(level, zone, pos);
+            case DISSOLVED -> new ZoneDissolvedEvent(level, zone, pos);
+            case PAUSED -> new ZonePausedEvent(level, zone, pos);
+            case RESUMED -> new ZoneResumedEvent(level, zone, pos);
+        };
+    }
+
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
@@ -1340,6 +1368,10 @@ public final class DimensionAtmos {
                 },
                 this::gasCaught);
         PressureBreaks.apply(level, a.pressureBreaks(), chunk -> isChunkLoaded(chunk) && !isSettling(chunk));
+        // API-030, ahead of what happened inside the zones.
+        for (ZoneEvent e : a.zoneEvents()) {
+            ApiEvents.post(zoneEvent(e));
+        }
         // API-031, after the blocks: a listener finds the fire's blocks as the event says.
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());

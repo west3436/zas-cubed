@@ -69,6 +69,7 @@ public final class ZoneGraph {
     private final double[] pruneScratch;
     private final ArrayList<Edge> edgeBuffer = new ArrayList<>();
     private final ArrayList<Zone> dissolveBuffer = new ArrayList<>();
+    private List<ZoneEvent> zoneEvents = new ArrayList<>();
     /** Zones on edges that fell asleep this exchange, whose groups are equalized after it (CORE-067). */
     private final ArrayList<Zone> sleptBuffer = new ArrayList<>();
 
@@ -452,6 +453,7 @@ public final class ZoneGraph {
         for (long id : cellIds) {
             joinCell(zone, id, null, LedgerCategory.AMBIENT);
         }
+        event(ZoneEvent.Kind.CREATED, zone, 0);
         return zone;
     }
 
@@ -574,6 +576,7 @@ public final class ZoneGraph {
         }
         dropIfIdle(c);
         if (zone.cellCount() == 0) {
+            zoneEvents.add(new ZoneEvent(ZoneEvent.Kind.DISSOLVED, zone.id(), 0, cell, false));
             destroyZone(zone);
         } else {
             zone.changed = true;
@@ -696,6 +699,7 @@ public final class ZoneGraph {
                     z.changed = true;
                 }
             }
+            zoneEvents.add(new ZoneEvent(ZoneEvent.Kind.DISSOLVED, zone.id(), 0, c.id, false));
             destroyZone(zone);
             return;
         }
@@ -917,12 +921,17 @@ public final class ZoneGraph {
         GasMixture parcel = zone.mixture().removeFraction(volume / zone.volume());
         Zone created = newZone(parcel);
         created.pins = zone.pins;
+        // It carries on from what its zone last reported, so only a difference is news.
+        created.breachKnown = zone.breachKnown;
+        created.reportedBreached = zone.reportedBreached;
+        created.reportedPaused = zone.reportedPaused;
         for (Cell c : remnant) {
             relabel(c, created);
         }
         splitCount++;
         created.changed = true;
         zone.changed = true;
+        event(ZoneEvent.Kind.SPLIT, zone, created.id());
         return created;
     }
 
@@ -976,9 +985,11 @@ public final class ZoneGraph {
         big.mixture().merge(small.mixture());
         big.pins = Pins.union(big.pins, small.pins);
         drainPruned(small.mixture());
+        long absorbed = small.id();
         destroyZone(small);
         big.changed = true;
         mergeCount++;
+        event(ZoneEvent.Kind.MERGED, big, absorbed);
         return big;
     }
 
@@ -1402,6 +1413,7 @@ public final class ZoneGraph {
      * ambient connections, since the cells across it are now ambient.
      */
     private void dissolve(Zone z) {
+        event(ZoneEvent.Kind.DISSOLVED, z, 0);
         GasMixture gas = z.mixture().removeFraction(1);
         ledger.record(LedgerCategory.AMBIENT, gas, -1);
         drainPruned(gas);
@@ -1417,6 +1429,7 @@ public final class ZoneGraph {
      * @return the gas removed
      */
     public GasMixture reset(Zone z, String source) {
+        event(ZoneEvent.Kind.DISSOLVED, z, 0);
         GasMixture gas = z.mixture().removeFraction(1);
         ledger.recordOperator(source, gas);
         drainPruned(gas);
@@ -1455,6 +1468,62 @@ public final class ZoneGraph {
         zones.remove(z.id());
         z.destroy();
         dissolveCount++;
+    }
+
+    // ---- Lifecycle events (API-030) --------------------------------------------
+
+    /** Records a change to a zone that still has its cells. */
+    private void event(ZoneEvent.Kind kind, Zone zone, long other) {
+        zoneEvents.add(new ZoneEvent(kind, zone.id(), other, zone.cellAt(0).id, false));
+    }
+
+    /**
+     * What has happened to zones since the last call, in the order it happened, and forgets it. Zones
+     * created, merged, split and dissolved are recorded as they happen. Those breached, sealed, paused
+     * and resumed are recorded by {@link #reportBreaches} and {@link #reportPaused}.
+     *
+     * <p>A zone going to chunk storage or coming back ({@link #evict}, {@link #loadShare}) isn't
+     * created or dissolved, and a zone restored by {@link #restoreZone} never was.
+     *
+     * @return the events, oldest first
+     */
+    public List<ZoneEvent> drainZoneEvents() {
+        List<ZoneEvent> drained = zoneEvents;
+        zoneEvents = new ArrayList<>();
+        return drained;
+    }
+
+    /**
+     * Records the zones that gained their first ambient edge or lost their last since they last
+     * reported, in id order. A new zone's first reading is no change, and a split's remnant carries on
+     * from what its zone last reported. A paused zone reports once it resumes, as its edges are only
+     * as it last was.
+     *
+     * @param undecided whether a classification is still waiting to say what a zone opens onto; such
+     *     a zone reports once that's known, as an opening counts as ambient until then (GEO-026)
+     */
+    public void reportBreaches(LongPredicate undecided) {
+        for (Zone z : zones.values()) {
+            boolean breached = z.ambientEdge() != null;
+            if ((z.breachKnown && breached == z.reportedBreached) || z.paused || undecided.test(z.id())) {
+                continue;
+            }
+            if (z.breachKnown) {
+                event(breached ? ZoneEvent.Kind.BREACHED : ZoneEvent.Kind.SEALED, z, 0);
+            }
+            z.breachKnown = true;
+            z.reportedBreached = breached;
+        }
+    }
+
+    /** Records the zones paused or resumed since they last reported, in id order. */
+    public void reportPaused() {
+        for (Zone z : zones.values()) {
+            if (z.paused != z.reportedPaused) {
+                z.reportedPaused = z.paused;
+                event(z.paused ? ZoneEvent.Kind.PAUSED : ZoneEvent.Kind.RESUMED, z, 0);
+            }
+        }
     }
 
     // ---- Conservation (CORE-036, CORE-073) ----------------------------------
@@ -1701,6 +1770,7 @@ public final class ZoneGraph {
                 return null;
             }
             zone = new Zone(id, new GasMixture(registry, config, 1, gas.temperature()));
+            zone.reportedPaused = true; // it was stored, so being simulated again is news
             zones.put(id, zone);
             reserveZoneIds(id + 1);
         }
@@ -1738,6 +1808,11 @@ public final class ZoneGraph {
      */
     public GasMixture evict(Zone zone) {
         requireLive(zone);
+        if (!zone.reportedPaused) {
+            // Its last chunks unloaded together, before it could read as paused (API-030).
+            zone.reportedPaused = true;
+            event(ZoneEvent.Kind.PAUSED, zone, 0);
+        }
         GasMixture gas = zone.mixture().removeFraction(1);
         ledger.record(LedgerCategory.STORAGE, gas, -1);
         drainPruned(gas);
@@ -1821,6 +1896,9 @@ public final class ZoneGraph {
         zone.setVolume(mixture.volume());
         zone.mixture().copyFrom(mixture);
         zone.changed = true;
+        // Its edges are as they were at the undo point, when it had reported them (API-030).
+        zone.breachKnown = true;
+        zone.reportedBreached = zone.ambientEdge() != null;
         return zone;
     }
 

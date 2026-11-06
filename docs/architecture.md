@@ -2199,7 +2199,10 @@ fallback, and a provider without it, give 16 kPa.
 - Lifecycle events (created, merged, split, breached, sealed, dissolved,
   paused, resumed) are emitted by the worker as records in `Result`. The
   server thread turns them into events at apply, so they never fire for
-  rejected work.
+  rejected work. *Implemented (API-030):* the records are `ZoneEvent`s, posted
+  through `ApiEvents` ahead of the fire events. What happens before the undo
+  point has happened whatever becomes of the tick, so a rejection only takes back
+  merges and dissolutions after it.
 - Fire events (API-031), `FireIgnitedEvent` and `FireExtinguishedEvent`, are
   the result's `FireEvent`s, posted at apply after the gas fire blocks change
   (§6.7).

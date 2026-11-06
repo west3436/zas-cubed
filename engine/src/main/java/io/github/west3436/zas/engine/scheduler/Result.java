@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.scheduler;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.flow.FlowEdge;
+import io.github.west3436.zas.engine.zone.ZoneEvent;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -35,6 +36,7 @@ import java.util.Objects;
  * @param fireEvents zones that caught fire or stopped burning (API-031), in zone id order
  * @param hotspots the hotspots burning after the tick (FIRE-011, API-055)
  * @param pressureBreaks fragile blocks to break (FLOW-007), in the order they were found
+ * @param zoneEvents what happened to zones (API-030), oldest first
  */
 public record Result(
         long tick,
@@ -52,11 +54,13 @@ public record Result(
         List<FireIntent> fireIntents,
         List<FireEvent> fireEvents,
         HotspotTable hotspots,
-        List<PressureBreak> pressureBreaks) {
+        List<PressureBreak> pressureBreaks,
+        List<ZoneEvent> zoneEvents) {
 
     public Result {
         Objects.requireNonNull(snapshot, "snapshot");
         components = List.copyOf(components);
+        zoneEvents = List.copyOf(zoneEvents);
         outcomes = List.copyOf(outcomes);
         events = List.copyOf(events);
         mirroredSections = mirroredSections.clone();

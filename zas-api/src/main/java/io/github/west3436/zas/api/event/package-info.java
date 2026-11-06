@@ -6,5 +6,8 @@
  *
  * <p>A listener that throws is skipped for that event: the other listeners still hear it, and the
  * fault is logged at most once a minute (NFR-013).
+ *
+ * <p>A zone's life is told by the subclasses of {@link io.github.west3436.zas.api.event.ZoneLifecycleEvent}
+ * (API-030).
  */
 package io.github.west3436.zas.api.event;
