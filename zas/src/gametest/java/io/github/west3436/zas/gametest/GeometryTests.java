@@ -354,14 +354,11 @@ public final class GeometryTests {
         }
         check(h, glass.cellCount() == 0, "glass should hold no gas");
 
-        BlockState scaffolding = Blocks.SCAFFOLDING.defaultBlockState();
-        Geometry expected = GeometryDerivation.derive(GeometryDerivation.collisionShape(scaffolding));
-        // Scaffolding is flammable, which is data on top of its shape (FIRE-033).
-        check(
-                h,
-                geometry(scaffolding).withIgnition(0, Double.NaN).equals(expected),
-                "scaffolding should use its empty-context shape");
-        check(h, !expected.equals(Geometry.SOLID), "scaffolding's empty-context shape isn't a full block");
+        // Scaffolding's shape depends on the entity. The table has the shipped override instead
+        // (GEO-009), but what it would derive still comes from the empty context.
+        Geometry scaffolding =
+                GeometryDerivation.derive(GeometryDerivation.collisionShape(Blocks.SCAFFOLDING.defaultBlockState()));
+        check(h, !scaffolding.equals(Geometry.SOLID), "scaffolding's empty-context shape isn't a full block");
 
         Geometry powderSnow = geometry(Blocks.POWDER_SNOW.defaultBlockState());
         check(

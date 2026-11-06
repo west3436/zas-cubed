@@ -108,7 +108,7 @@ exposure temperature (LIFE-011).*
 ## Normal-preset survival
 
 #### ENV-009 · No hazards in Normal
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-13, D-19
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, D-19
 
 With the Normal preset and no atmos devices in use, ZAS³ shall cause no
 atmospheric hazards in the vanilla dimensions. (No zones form there either,
@@ -118,8 +118,13 @@ per CORE-055.)
 - **Verify:** A GameTest under Normal checks a player in each vanilla
   dimension takes no atmospheric harm.
 
+*2026-11-05: `env_009_no_atmospheric_harm_in_any_vanilla_dimension` puts a player
+that can be hurt in the open air of each dimension for 20 s of checks and game
+ticks (#66). The test's coverage is open air: it doesn't try every biome or a
+player in a cave.*
+
 #### ENV-013 · Vanilla fire and furnaces in Normal
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-13, S-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-13, S-04
 
 With the Normal preset, fire and furnaces outside zones shall behave as in
 vanilla.
@@ -127,6 +132,11 @@ vanilla.
 - **Rationale:** Decision: D-13 (S-04).
 - **Verify:** A GameTest under Normal checks fire spreads and a furnace smelts
   outside zones as in vanilla.
+
+*2026-11-05: `env_013_fire_spreads_outside_zones_in_every_vanilla_dimension` and
+`env_013_furnace_smelts_at_vanillas_rate_outside_zones` pass in each dimension
+(#66). The furnace is checked against vanilla's exact rate. Fire is random, so it's
+checked to spread and stay alight on netherrack, not against vanilla's odds.*
 
 ## Providers
 
@@ -291,7 +301,7 @@ purged and its chunks save without them. An unloaded dimension is different:
 its zones persist and pause.*
 
 #### ENV-018 · Excluded dimensions keep their ambient
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 An excluded dimension shall keep its ambient for queries (CORE-050) and
 hazards (LIFE). Gas operations there behave as in open air (CORE-053,
@@ -301,6 +311,12 @@ CORE-057).
   it only stops zones forming.
 - **Verify:** A GameTest checks an excluded vacuum dimension still harms an
   unsuited player and that added gas goes to open air.
+
+*2026-11-05: `env_018_an_excluded_vacuum_harms_an_unsuited_player` and
+`env_018_gas_operations_in_an_excluded_vacuum_act_on_the_open_air` pass (#66), in
+the End, borrowed with a test definition that excludes it. Also
+`env_018_an_excluded_ambient_with_gas_supplies_what_is_taken`, and
+`env_018_a_provider_still_sets_an_excluded_dimensions_ambient`.*
 
 #### ENV-008 · Not atmospheric
 `Won't` · `R1` · `Accepted`

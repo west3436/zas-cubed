@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.chunk.LevelChunk;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * One pipe port of a device with several: a network node of its own that isn't a block entity, so
@@ -18,15 +20,28 @@ import net.minecraft.server.level.ServerLevel;
 public final class PipePort implements PipeNode {
     private final GasStore stored;
     private final Supplier<List<PipeNode>> links;
+    private final Supplier<@Nullable LevelChunk> chunk;
     private PipeNetwork network;
 
     /**
+     * A port that isn't in a world, as in a unit test.
+     *
      * @param volume the port's buffer in L
      * @param links the nodes connected to the port now
      */
     public PipePort(double volume, Supplier<List<PipeNode>> links) {
+        this(volume, links, () -> null);
+    }
+
+    /**
+     * @param volume the port's buffer in L
+     * @param links the nodes connected to the port now
+     * @param chunk the chunk that saves its device
+     */
+    public PipePort(double volume, Supplier<List<PipeNode>> links, Supplier<@Nullable LevelChunk> chunk) {
         this.stored = new GasStore(volume);
         this.links = links;
+        this.chunk = chunk;
     }
 
     @Override
@@ -54,13 +69,18 @@ public final class PipePort implements PipeNode {
         return links.get();
     }
 
+    @Override
+    public @Nullable LevelChunk savedIn() {
+        return chunk.get();
+    }
+
     /**
      * The port's network, built now if it has none.
      *
      * @return the network, valid
      */
     public PipeNetwork network() {
-        if (network == null || !network.valid()) {
+        if (network == null || !network.usable()) {
             network = null;
             PipeNetwork.build(this, PipeNode::connectedNodes);
         }

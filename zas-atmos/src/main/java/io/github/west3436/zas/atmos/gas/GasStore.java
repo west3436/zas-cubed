@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A mutable gas mixture held by the content mod: a pipe network, a node's saved share, a device's
@@ -31,6 +32,7 @@ public final class GasStore {
     private final TreeMap<ResourceLocation, Double> moles = new TreeMap<>();
     private double temperature;
     private double volume;
+    private @Nullable Runnable watcher;
 
     /**
      * An empty store.
@@ -39,6 +41,22 @@ public final class GasStore {
      */
     public GasStore(double volume) {
         setVolume(volume);
+    }
+
+    /**
+     * Has a watcher told, after the change, each time the moles or the temperature change. A store has
+     * at most one. Reading the gas, or a call that changes nothing, doesn't tell it.
+     *
+     * @param watcher the watcher, or null for none
+     */
+    public void watch(@Nullable Runnable watcher) {
+        this.watcher = watcher;
+    }
+
+    private void changed() {
+        if (watcher != null) {
+            watcher.run();
+        }
     }
 
     /** The volume in L. */
@@ -68,7 +86,10 @@ public final class GasStore {
         if (!(temperature >= 0) || !Double.isFinite(temperature)) {
             throw new IllegalArgumentException("temperature must be finite and >= 0 K: " + temperature);
         }
-        this.temperature = temperature;
+        if (temperature != this.temperature) {
+            this.temperature = temperature;
+            changed();
+        }
     }
 
     /** The moles per gas, unmodifiable and sorted by id. */
@@ -147,6 +168,7 @@ public final class GasStore {
                 moles.merge(gas, n, Double::sum);
             }
         });
+        changed();
     }
 
     /** Adds all of another store's gas to this one and empties it. */
@@ -170,6 +192,9 @@ public final class GasStore {
                 set(gas, have - t);
             }
         });
+        if (!taken.isEmpty()) {
+            changed();
+        }
         return new GasParcel(taken, temperature);
     }
 
@@ -182,6 +207,9 @@ public final class GasStore {
     public GasParcel takeFraction(double fraction) {
         GasParcel part = fraction(fraction);
         part.moles().forEach((gas, n) -> set(gas, moles(gas) - n));
+        if (!part.isEmpty()) {
+            changed();
+        }
         return part;
     }
 
@@ -206,6 +234,9 @@ public final class GasStore {
     public GasParcel drain() {
         GasParcel all = new GasParcel(moles, temperature);
         moles.clear();
+        if (!all.isEmpty()) {
+            changed();
+        }
         return all;
     }
 
@@ -214,6 +245,7 @@ public final class GasStore {
         moles.clear();
         temperature = gas.temperature();
         gas.moles().forEach(moles::put);
+        changed();
     }
 
     private void set(ResourceLocation gas, double n) {

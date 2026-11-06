@@ -34,9 +34,15 @@ import org.slf4j.Logger;
  * {@code zas:gas_fire} with {@link Geometry#FLAG_GAS_FIRE} (FIRE-018), so the engine's hotspots see
  * them come and go through the change hook (architecture §5). So is every other state that isn't
  * air but whose geometry is air's, with {@link Geometry#FLAG_OCCUPIED}: a gas fire can't go there.
+ *
+ * <p>So is a state holding a fluid, a source, flowing or waterlogged, which is gas-tight and holds no
+ * gas whatever its shape (GEO-006).
  */
 public final class GeometryDerivation {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    /** A position holding a fluid (GEO-006): as a full block, with {@link Geometry#FLAG_FLUID}. */
+    private static final Geometry FLUID = Geometry.SOLID.withFlags(Geometry.FLAG_FLUID);
 
     private static volatile GeometryTable derived;
 
@@ -156,6 +162,11 @@ public final class GeometryDerivation {
                 id = palette.intern(palette.geometry(id).withFlags(fire));
             }
             id = occupied(palette, id, state);
+            if (!state.getFluidState().isEmpty()) {
+                // A fluid leaves no room for gas, whatever the block's shape (GEO-006). An override
+                // comes later, so it still has the last word.
+                id = palette.intern(FLUID);
+            }
             byStateId[Block.getId(state)] = id;
         }
         if (failures > 1) {

@@ -154,7 +154,7 @@ configurable interval.
 ## Admin controls
 
 #### OPS-005 · Dimension pause
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: GEO-030, GEO-035, GEO-036, GEO-037, GEO-038, CORE-036
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: GEO-030, GEO-035, GEO-036, GEO-037, GEO-038, CORE-036
 
 An operator shall be able to pause the simulation in a dimension without
 restarting the server. Every zone there then behaves as a paused zone
@@ -165,6 +165,15 @@ resumed.
   dimension without a restart; it reuses the paused-zone rules (D-43).
 - **Verify:** A GameTest pauses a dimension, checks its zones are paused,
   restarts, and checks the pause remains.
+
+*2026-11-05: Implemented as `/zas pause [<reason>]` and `/zas resume`, on
+`DimensionAtmos.pauseSimulation`, which records who asked and why in the
+dimension's saved data and assumes no operator. No zone forms while paused, and
+what would form one is voided as at an unresolved region. GameTest:
+`DimensionPauseTests.ops_005_a_paused_dimension_stays_paused_after_a_restart`;
+a GameTest can't restart the server, so it uses `AtmosService.stopForTest` and
+`startForTest`, which read the dimension's data back through its saved form.
+Engine rules: `DimensionPauseTest`.*
 
 #### OPS-013 · Region reset
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: CORE-036, CORE-073

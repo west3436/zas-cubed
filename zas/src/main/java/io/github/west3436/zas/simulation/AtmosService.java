@@ -364,6 +364,7 @@ public final class AtmosService {
      * bytes are what its loaded chunks saved. Server thread.
      */
     public DimensionAtmos startForTest(ServerLevel level, Map<Long, byte[]> saved) {
+        io.github.west3436.zas.persistence.DimensionData.reloadForTest(level);
         saved.forEach(
                 (chunk, bytes) -> io.github.west3436.zas.persistence.AtmosPersistence.restore(level, chunk, bytes));
         DimensionAtmos d = dimensionFor(level);

@@ -16,9 +16,12 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -58,6 +61,31 @@ public class PipeBlockEntity extends PipeNodeEntity {
     @Override
     public boolean readyToStep() {
         return !port.busy();
+    }
+
+    /**
+     * Its arms toward anything but a pipe part follow the gas handlers there, so a capability that
+     * comes or goes with no block changing is followed within an atmos tick (API-025). An arm into a
+     * chunk that's away stays as it is, as an arm to a pipe does. It changes only its own state, so it
+     * updates no neighbour, and a read at a chunk's edge can't bring back a chunk that's away.
+     */
+    @Override
+    protected void followHandlers(ServerLevel level, int faces) {
+        BlockState state = getBlockState();
+        BlockState arms = state;
+        for (Direction d : Direction.values()) {
+            BooleanProperty arm = PipeBlock.CONNECTIONS.get(d);
+            boolean handler = GasHandlers.has(faces, d);
+            if (state.getValue(arm) != handler) {
+                BlockPos next = worldPosition.relative(d);
+                if (level.isLoaded(next) && !(level.getBlockState(next).getBlock() instanceof PipeConnector)) {
+                    arms = arms.setValue(arm, handler);
+                }
+            }
+        }
+        if (arms != state) {
+            level.setBlock(worldPosition, arms, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
     }
 
     @Override

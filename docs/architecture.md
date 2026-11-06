@@ -400,6 +400,12 @@ context (GEO-041).
    `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
    default none) and `volume` (litres, 0 to 1,000). A block named directly
    beats a tag match; between equals, the file whose id sorts last wins.
+   *Implemented ([#65](https://github.com/west3436/zas-cubed/issues/65)):*
+   GEO-009's four files ship in `data/zas/zas/geometry_overrides/`. A state
+   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table,
+   so an override, applied after it, still wins, as GEO-006 asks. Boundary faces
+   come from a waterlogged state's dry state, since a fluid seals alike open or
+   closed.
 5. **Position-dependent states** (*spike (S2):* 32 in vanilla, found by
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
@@ -534,7 +540,8 @@ drives it.
   2-bit sub-cell index into a `long`: x and z cover Minecraft's whole world
   (−30,000,000 to 29,999,999, past the world border at ±29,999,984), y runs
   from −512 to 511, and a block has at most 4 cells, the most any vanilla
-  shape has (crossed panes, fences and walls; the `geo_004` GameTest checks
+  shape has (crossed panes and walls, and fences by shape, though the shipped
+  override makes those one cell; the `geo_004` GameTest checks
   every vanilla state). Faces leading outside the build height, or beyond the
   ids' range, count as open (GEO-031's default). Through
   `ResolvableTopology` it also reports the faces that reach sections not in the
@@ -791,7 +798,7 @@ the lever if the per-cell cost ever matters.
   - queued additions that couldn't be assigned to a loaded chunk
   - the owners whose pins were taken off and who haven't pinned since
     (API-017, §6.6)
-  - dimension pause flags (OPS-005) once they exist (R1)
+  - the dimension's pause, who asked and why (OPS-005, §4.6)
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
@@ -871,6 +878,17 @@ GameTest changes the palette with `Geometries.overrideForTest`.
   it was unloaded are found.
 - **Never force-load.** The engine never adds chunk tickets (GEO-034): the
   platform only ever reads chunks with `getChunkNow`.
+- **Pausing a whole dimension** (OPS-005). `DimensionAtmos.pauseSimulation`
+  takes a `DimensionPause` naming who asks and why, and assumes nothing else:
+  an operator's `/zas pause` and code that must stop the dimension (NFR-014)
+  both come through it. It is saved in `DimensionData`, and each batch's
+  `EngineSettings.dimensionPaused` tells the engine, so a restart or a palette
+  rebuild has nothing to carry over. In the engine every zone then pauses and
+  the rules above apply. Beyond them, nothing is classified, so nothing can
+  change a zone's cells: an operation that would form a zone is treated as at an
+  unresolved region, and breaches, rebuilt zones' surfaces and refreshed cells
+  wait for the first batch that resumes the dimension. Loading and unloading
+  carry on, since they move state and don't simulate it.
 
 ### 4.7 Zone-boundary blocks (GEO-007, GEO-044, CORE-034, CORE-067)
 
@@ -1049,10 +1067,9 @@ wall's outer surface. Conduction is steady-state: walls store no heat
 - **Shipped sources** (HEAT-016), in `data/zas/zas/thermal/sources/`: lava
   1,450 K, magma block 1,000 K, ice 273 K, packed ice 263 K, blue ice 253 K
   and snow block 268 K. Lava has no U of its own, so it conducts at the
-  fallback; the ice keeps its 2.2. Until fluids seal (GEO-006, #65), lava is
-  open space to the geometry, so it is a source only at the far end of a
-  wall: lava inside a zone, or beside a room with no wall between, isn't
-  seen.
+  fallback; the ice keeps its 2.2. Fluids seal (GEO-006), so lava is a wall to
+  the geometry: it warms a room it touches directly, through its own layer, as
+  well as through any wall between.
 - **Heat operations** (API-013, HEAT-010). Adding or removing heat at a
   point is a `GasOp` of kind `ADD_HEAT` or `REMOVE_HEAT` carrying joules and
   no moles. It is queued, classified and run in phase 3 like a gas mutation,
@@ -1760,8 +1777,8 @@ loaded world (NFR-003).
 **The pass.** Each period the known plants are walked once, spread over the
 period's game ticks a section at a time, as devices are (D-31). A plant counts if
 its zone is unpaused and holds CO₂ and light reaches it. A full block has no cell
-of its own, so leaves, until GEO-009 makes them permeable, count towards their
-first zoned neighbour. Light levels are summed as integers per zone, one sum per
+of its own, so it counts towards its first zoned neighbour; leaves have a cell
+(GEO-009), so they count towards the zone they are in. Light levels are summed as integers per zone, one sum per
 rate. At the period's end each zone gets one removal of CO₂, and when that is
 applied the moles actually removed come back as O₂ at the removed gas's
 temperature, sharing `Respiration.turn`. So a zone stops when its CO₂ runs out,
@@ -1931,7 +1948,7 @@ sound, and nothing here runs for it.*
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `BlockGeometry` (`markDirty(level, pos)`; GEO-014), `CompletableFuture`-based returns |
-| `.api.capability` | `IGasHandler` (block, sided, simulate/execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block; built, with its `BLOCK` capability and the `SealGeometry` it answers with: sealed faces, zone-boundary faces and volume; API-023, API-028), and their `BlockCapability`/`ItemCapability` constants |
+| `.api.capability` | `IGasHandler` (block, sided; built, with its `BLOCK` capability: `contents`, and `fill` and `drain` that simulate or execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block; built, with its `BLOCK` capability and the `SealGeometry` it answers with: sealed faces, zone-boundary faces and volume; API-023, API-028), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
@@ -2033,6 +2050,7 @@ fallback, and a provider without it, give 16 kPa.
 | Futures | Complete on the server thread at the apply tick |
 | Events | Fired on the server thread when results are applied (API-032), on `NeoForge.EVENT_BUS` |
 | Providers (seal, ambient), hazard handlers | Called on the server thread |
+| Gas handlers (`IGasHandler`) | Called on the server thread, in a pipe node's step (API-026) |
 | `ReactionType`, `Reactions.applyStandalone` | Any thread; pure |
 
 ### 6.4 Event model
@@ -2289,9 +2307,9 @@ jar, so providers can be tested before real devices exist.
   its block entities stay in memory, still scheduled. A device steps only
   while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
   step that read the device's own block, as a pipe rebuilding its network
-  does, would load the chunk again. A pipe network then rebuilt without that
-  chunk's nodes, and they rejoin when it returns and they step
-  (`PipeChunkTests`).
+  does, would load the chunk again. A pipe network ends the next time a member
+  uses it, and is rebuilt without that chunk's nodes, which keep their shares
+  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2400,6 +2418,23 @@ the cell in front of its grille).
   decides who shares a network.
   A pipe's block state has a boolean per face, updated from its neighbours;
   its blockstate is a multipart of the core and an arm per connected face.
+- **Gas handlers** (API-025, API-026). A node connects to a neighbour that isn't
+  a pipe part but provides `IGasHandler`, on any face where it offers a
+  connection, so a pipe grows an arm and counts it when it looks for an open end.
+  A handler isn't a network member: it adds no volume and has no share. In its
+  step, after its network's atmos tick, a node looks up the handler on each such
+  face and moves each gas toward an equal concentration, as `openEndFlow` does at
+  a ratio of 1, since a handler is the same sort of store as a canister on a port.
+  It takes what it offers out of the store first and delivers what the handler
+  leaves, so a handler that refuses, takes part, throws or removes the node loses
+  no gas; a removed node releases it (CONT-009). No zone is involved, so the
+  ledger has nothing to explain (CORE-073). A shut valve stays connected and moves
+  nothing. A pipe's arms follow the capability each step, so one that comes or
+  goes with no block changing is followed within an atmos tick, and an arm into a
+  chunk that's away stays as it is. `GasHandlers` holds every lookup and every
+  call into a handler, so a fault guard (NFR-013) has one place to go. The client
+  never looks: providers run on the server thread, and arms reach the client in
+  the block state.
 - **Blocks in several networks.** A block entity that pipes join is a
   `PipeHost`, which says which node each face leads to. A `PipeNodeEntity` is
   one node, so every face leads to itself. A device with several ports has a
@@ -2427,7 +2462,16 @@ the cell in front of its grille).
   remaining nodes. A node whose chunk unloads keeps its share, saved with it,
   and the network dissolves; a network never reaches into an unloaded chunk.
 - **Saving.** Each node saves its share (`Gas`: temperature and moles per
-  gas), so a network's gas is saved across the chunks it spans.
+  gas), so a network's gas is saved across the chunks it spans. A chunk saves
+  only when told it has something new, and the gas lives in the network, so the
+  network watches its `GasStore` and tells each chunk it spans at every change.
+  It holds those chunks, so this loads nothing, and it reaches a chunk the
+  level no longer hands out. The game saves a chunk that has left full status
+  once and then not until it unloads, so a member gets its network through
+  `PipeNetwork.usable`, which ends the network first if a chunk it spans has
+  left. A stopping server writes every chunk at one moment, so the shares add
+  up. A crash between two chunks' saves can bring back a share from before the
+  other's, as it can with anything that moves between chunks (`PipeSaveTests`).
 - **Open ends** (CONT-004). A pipe with fewer than two connections has an open
   end. Once per atmos tick it exchanges each gas with the zone at its cell by
   ZAS's one-connection rule (CORE-031): r·(n_p·V_z − n_z·V_p)/(V_p + V_z) moles
