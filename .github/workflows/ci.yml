@@ -52,10 +52,12 @@ jobs:
         with:
           name: engine-coverage
           path: engine/build/reports/jacoco/test/html
+      # Each mod's own GameTests on its own server. zas's tests with zas_atmos
+      # loaded as well run nightly: full-gametests.yml.
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 10
-        run: ./gradlew runGameTestServer -x :example-addon:runGameTestServer --stacktrace
+        run: ./gradlew runGameTestServer -x :example-addon:runGameTestServer -Pgametests.ownOnly=true --stacktrace
       # S-12 (API-048): the example addon, which nests the API, on a GameTest
       # server without zas. The fallback must answer with standard air.
       - name: S-12 API without ZAS³ (example addon alone)

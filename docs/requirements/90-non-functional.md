@@ -483,6 +483,12 @@ every PR.
 every PR. Its API diff runs too, but compares nothing until API-043's baseline
 is set ([#61](https://github.com/west3436/zas-cubed/issues/61)).*
 
+*2026-11-06: Still Accepted. The owner chose to keep CI's GameTest step inside its
+time limit by running each mod's GameTests once on a PR, on its own server
+(`-Pgametests.ownOnly=true`). So every GameTest still runs on every PR. `zas`'s
+tests with `zas_atmos` loaded as well run nightly, in the "Full GameTests"
+workflow, or from the Actions tab.*
+
 #### NFR-034 · Benchmark regression check
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-40, NFR-001
 
