@@ -62,6 +62,59 @@ tasks.register('bench', JavaExec) {
     outputs.upToDateWhen { false }
 }
 
+// NFR-034: CI's check against the recorded baseline, a commit whose engine it
+// builds and runs beside this one. Not part of build, as it takes a minute or two
+// of steady CPU. See docs/research/benchmarks.md.
+def s10Baseline = new Properties()
+file('s10-baseline.properties').withReader { s10Baseline.load(it) }
+def s10Commit = s10Baseline.getProperty('commit')
+def s10Zip = layout.buildDirectory.file("s10-baseline/${s10Commit}.zip")
+
+def fetchS10Baseline = tasks.register('fetchS10Baseline') {
+    description = 'Reads the engine at the commit NFR-034 compares against into a zip.'
+    inputs.property('commit', s10Commit)
+    outputs.file(s10Zip)
+    def root = rootDir
+    doLast {
+        def git = { String... args ->
+            new ProcessBuilder(['git', *args]).directory(root).inheritIO().start().waitFor()
+        }
+        // CI's shallow clone doesn't have it.
+        if (git('cat-file', '-e', "${s10Commit}^{commit}".toString()) != 0
+                && git('fetch', '--quiet', '--depth=1', 'origin', s10Commit) != 0) {
+            throw new GradleException("NFR-034: can't fetch the baseline commit ${s10Commit}.")
+        }
+        def zip = s10Zip.get().asFile
+        zip.parentFile.mkdirs()
+        if (git('archive', '--format=zip', '-o', zip.path, s10Commit, 'engine/src/main/java', 'engine/src/bench/java') != 0) {
+            throw new GradleException("NFR-034: can't read the engine at the baseline commit ${s10Commit}.")
+        }
+    }
+}
+
+def compileS10Baseline = tasks.register('compileS10Baseline', JavaCompile) {
+    dependsOn fetchS10Baseline
+    source = zipTree(s10Zip)
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('s10-baseline/classes')
+    javaCompiler = javaToolchains.compilerFor(java.toolchain)
+    sourceCompatibility = java.toolchain.languageVersion.get().toString()
+    targetCompatibility = sourceCompatibility
+}
+
+tasks.register('benchCheck', JavaExec) {
+    group = 'verification'
+    description = 'Fails if the S-10 script costs over 10 % more than its recorded baseline (NFR-034).'
+    dependsOn compileS10Baseline
+    classpath = sourceSets.bench.runtimeClasspath
+    mainClass = 'io.github.west3436.zas.engine.bench.RegressionCheck'
+    jvmArgs '-Xms4g', '-Xmx4g', '-Dstdout.encoding=UTF-8'
+    doFirst {
+        args s10Commit, compileS10Baseline.get().destinationDirectory.get().asFile.path, classpath.asPath
+    }
+    outputs.upToDateWhen { false }
+}
+
 tasks.named('check') {
     dependsOn tasks.named('benchClasses')
 }
