@@ -300,8 +300,8 @@ that throws gives its default, which is nothing, for that call, and its other pa
 count. A lookup that throws counts as no capability, so data naming the item applies. A
 supply whose `contents` or `distributionPressure` throws delivers nothing, so the entity
 breathes the atmosphere, and a `draw` that throws gives no gas and exhales none. The source
-is the item or entity type. The accepted cost is that a suit that throws leaves its wearer
-exposed for as long as it throws. Tests:
+is the item or entity type. So a suit that throws leaves its wearer exposed for as long as
+it throws, which the owner hasn't ruled on. Tests:
 `nfr_013_a_life_support_that_throws_is_skipped_and_logged_once_a_minute`,
 `nfr_013_a_life_supports_other_parts_count_when_one_throws`,
 `nfr_013_a_life_support_lookup_that_throws_counts_as_none` and
