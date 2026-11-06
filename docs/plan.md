@@ -485,6 +485,43 @@ including accepting API-062, are still with the owner.
 | How often a zone's way out is checked again (GEO-023) | At most every 2 atmos ticks, not 8, [#326](https://github.com/west3436/zas-cubed/pull/326). A PR's fuzz comes to 60 to 67 s, and the cost in game isn't measured |
 | The ledger's unused `DEVICE` category | Removed, [#322](https://github.com/west3436/zas-cubed/pull/322): devices record as `API` |
 
+*2026-11-06: a status audit.* Each of the 70 requirements still *Accepted* for R0 or R1
+was compared with main at 61c29d8: its notes and Verify plan against the code and tests,
+which were read, not rerun. Only API-032 moved to *Implemented*. Finding a requirement's ID
+in the code and tests says little: many of the others have both, and still lack a part or
+the check their Verify plan asks for.
+
+| Result | Requirements |
+|---|---|
+| *Implemented* now | API-032 |
+| Waiting for the owner to check them in game | CLIENT-008, CLIENT-014, DATA-007 |
+| Can only be true at release | API-002, API-008, API-041, API-043, NFR-025, NFR-033, NFR-040, NFR-042 |
+| Not built | CORE-029, FLOW-005, LIFE-032, LIFE-034, LIFE-047, API-030, API-033, NFR-034, CLIENT-009, CONT-033 to CONT-036, CONT-054 to CONT-056, CONT-088, CONT-089, CONT-091, CONT-115 to CONT-124 |
+
+| Partly built | What's missing |
+|---|---|
+| CORE-052 | The timed collection, its config key and its GameTest. Its Verify plan also needs rewording: CORE-076 already dissolves a zone with an ambient edge, so only sealed zones are left for it |
+| LIFE-022 | The GameTest with a submerged player drowning in a zone |
+| DATA-005 | The GameTest recording what a player is sent |
+| DATA-006, DATA-014, DATA-015 | The Bench figures |
+| DATA-012 | Saved fixtures and the old-world GameTest, which need a release to exist. `DimensionData` also drops its contents on a version it doesn't know, and `zas_atmos` block entity data has no version |
+| DATA-016 | The GameTest saving and reloading one whole station, which goes with S-09 |
+| API-005 | A build that fails on a missing javadoc comment |
+| API-007 | The GameTest with a consumer that bundles the API |
+| API-042 | Any check or written policy for deprecation. `apiCompat` doesn't look at it |
+| API-047 | The example addon's main code uses none of the extension points |
+| CONT-031, CONT-090 | The hardsuit's helmet and chestplate |
+| CONT-050 | The compressor and electrolyzer routes, and a test that obtains O₂ and N₂ by any route |
+| CONT-051, CONT-058 | 17 recipes wait for items that aren't built. The compressor has no recipe or row in `docs/crafting.md`, and the central controller's row has no recipe |
+| CONT-060, CONT-065 | The compressor, electrolyzer and central controller. CONT-060 also lacks a test that cuts the volume pump's power |
+| CLIENT-001 | The sealed-head and analyzer triggers |
+| CLIENT-006 | °C as the default, and units in device GUIs, tooltips and the analyzer |
+| CLIENT-007 | The build check, and hard-coded text left in some screens |
+| NFR-001, NFR-002, NFR-004, NFR-005 | The full S-10, on D-40 hardware |
+| NFR-013 | Hazard handlers, and guards on `ILifeSupport` and `IInternalSupply` |
+| NFR-031 | A player mechanics doc and a changelog |
+| NFR-032 | S-09 with pipes and canisters, and S-10 |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -564,7 +601,7 @@ including accepting API-062, are still with the owner.
 
 ## Immediate next steps
 
-_Updated 2026-11-05._
+_Updated 2026-11-06._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -591,6 +628,13 @@ _Updated 2026-11-05._
    - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
      and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
      electrolyzer).
+   - **A later track of its own (owner, 2026-11-06):** the items not built yet,
+     among them the analyzer, the central atmospherics controller
+     ([#200](https://github.com/west3436/zas-cubed/issues/200)), station walls
+     ([#179](https://github.com/west3436/zas-cubed/issues/179)) and reinforced glass
+     ([#320](https://github.com/west3436/zas-cubed/issues/320)).
+   - **What each open requirement still needs:** the 2026-11-06 status audit in
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done).
    - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation

@@ -113,6 +113,11 @@ guarantee. The first R1 release is 1.0.0.
   1.0 for the first release gives consumers a stable starting point (D-04).
 - **Verify:** Inspect the version numbers of R0 and R1 builds.
 
+*2026-11-06: The move to 1.0.0 has to change the nested API's range as well.
+`zas/build.gradle` and `example-addon/build.gradle` ask for `[${api_version},1.0)`,
+which is empty at 1.0.0. Found by reading the build files; a build at 1.0.0 hasn't
+been tried.*
+
 #### API-042 · Deprecation before removal
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
 
@@ -949,13 +954,23 @@ count only while it is lit.
 ## Events
 
 #### API-032 · Events on the server thread
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-30, CORE-069
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-30, CORE-069
 
 API events shall fire on the server thread, when the results that cause them
 are applied.
 
 - **Rationale:** Decision: D-30.
 - **Verify:** Inspect the code; GameTest listeners assert the thread.
+
+*2026-11-06: Implemented, for the three events that exist. Read the code:
+`ApiEvents` is the only place ZAS³ posts an event, and its only callers are
+`DimensionAtmos.applyBatch` and `completeInOpenAir`, which only `applyBatch` calls,
+while a batch's results are applied. Listeners assert the thread in
+`api_031_fire_events_fire_on_ignition_and_going_out` (`FireIgnitedEvent` and
+`FireExtinguishedEvent`) and in `core_053_open_air_add_goes_to_ambient` and
+`core_057_open_air_remove_yields_ambient_gas` (`OpenAirGasEvent`). API-030's and
+API-033's events, when they're built, must post through `ApiEvents` and have
+listeners that assert the thread too.*
 
 #### API-030 · Zone lifecycle events
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-43
