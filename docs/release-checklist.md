@@ -130,6 +130,7 @@ CI has no client, so only a person can do this part. It's the only run with all 
 
 | Date | Commit | Run by | GameTests | Saving and quitting | Notes |
 |---|---|---|---|---|---|
+| 2026-11-05 | `ce517988` with this checklist | Claude | All 426 and all 789 passed | 2023.420 mol, then 2023.417 and 2023.423. Conserved, no differences | Not a release commit |
 
 ### Compatibility matrix
 
