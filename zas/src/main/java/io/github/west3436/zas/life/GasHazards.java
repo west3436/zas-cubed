@@ -1,5 +1,6 @@
 package io.github.west3436.zas.life;
 
+import io.github.west3436.zas.api.event.HazardTickEvent;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasTags;
 import java.util.Collections;
@@ -27,6 +28,9 @@ import net.minecraft.world.entity.LivingEntity;
  *
  * <p>Effects last until a little after the next check, so they hold while the exposure does and
  * wear off soon after it ends.
+ *
+ * <p>All of that is one tick of the toxic gas hazard, which a listener can modify or cancel (API-033):
+ * cancelling it also stops the effects, and the exposures go on counting either way.
  */
 final class GasHazards {
     /** Game ticks an effect outlasts the next check. */
@@ -105,12 +109,17 @@ final class GasHazards {
             }
             damagePerSecond += gasDamage;
         }
+        double damage = damagePerSecond * seconds * scale;
+        if (effects.isEmpty() && !(damage > 0)) {
+            return;
+        }
+        HazardTickEvent tick = LifeDamage.tick(entity, HazardType.TOXIC_GAS, damage);
+        if (tick.isCanceled()) {
+            return;
+        }
         effects.forEach((effect, amplifier) ->
                 entity.addEffect(new MobEffectInstance(effect, effectTicks, amplifier, false, false, true)));
-        double damage = damagePerSecond * seconds * scale;
-        if (damage > 0) {
-            entity.hurt(LifeDamage.source(entity, LifeDamage.TOXIC_GAS), (float) damage);
-        }
+        LifeDamage.hurt(entity, HazardType.TOXIC_GAS, tick.damage());
     }
 
     private static void add(Map<Holder<MobEffect>, Integer> effects, EffectLevel.Effect fx) {

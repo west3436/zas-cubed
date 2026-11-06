@@ -51,6 +51,7 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -963,6 +964,47 @@ public final class BreathingTests {
             int air = pig.getAirSupply();
             pig.baseTick();
             h.assertValueEqual(pig.getAirSupply(), air - 1, "the meter drains after surfacing");
+        }
+        h.succeed();
+    }
+
+    // ---- LIFE-022: under water ---------------------------------------------------------
+
+    /**
+     * A player under water in a zone of breathable air drowns as in vanilla (LIFE-022): the zone's
+     * air doesn't reach it, it loses 1 air a tick, and 20 ticks after its air runs out it takes 2 HP
+     * of drowning damage and its meter restarts from 0.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_022_a_submerged_player_in_a_zone_drowns(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 221)) {
+            lab.room(0, AIR);
+            lab.r.set(2, 1, 2, Blocks.WATER.defaultBlockState());
+            lab.r.set(2, 2, 2, Blocks.WATER.defaultBlockState());
+            lab.r.ticks(2);
+            FakePlayer p = TestPlayers.hurtable(lab.r.level, "zas_life_022");
+            p.moveTo(Vec3.atBottomCenterOf(lab.r.abs(2, 1, 2)));
+            float full = p.getHealth();
+            int air = p.getMaxAirSupply();
+
+            ticks(p, 1);
+            h.assertValueEqual(Atmospheres.of(p).state(), AtmosphereState.ZONED, "the atmosphere at its eyes");
+            h.assertTrue(
+                    Atmospheres.of(p).partialPressures().get(StandardAir.OXYGEN) > BreathingConfig.oxygenMinimum(),
+                    "the zone's air isn't breathable");
+            BreathState state = p.getData(Breathers.STATE);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.DROWNING, "the verdict's reason");
+            h.assertValueEqual(state.verdict().source(), BreathSource.FLUID, "the verdict's source");
+            h.assertValueEqual(p.getAirSupply(), air - 1, "air after a tick");
+
+            ticks(p, air - 1 + 19);
+            h.assertValueEqual(p.getAirSupply(), -19, "air a tick before it drowns");
+            h.assertValueEqual(p.getHealth(), full, "health before it drowns");
+
+            ticks(p, 1);
+            h.assertValueEqual(p.getAirSupply(), 0, "air once it drowns");
+            close(h, p.getHealth(), full - 2, 1e-4, "health once it drowns");
+            h.assertTrue(p.getLastDamageSource().is(DamageTypes.DROWN), "the damage type");
         }
         h.succeed();
     }

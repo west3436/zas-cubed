@@ -972,6 +972,11 @@ while a batch's results are applied. Listeners assert the thread in
 API-033's events, when they're built, must post through `ApiEvents` and have
 listeners that assert the thread too.*
 
+*2026-11-06: `HazardTickEvent` (API-033) posts through `ApiEvents` too, from `LifeDamage`,
+on the server thread just before the hazard it names is dealt: that's when its result is
+applied, and it isn't tied to an atmos tick. A listener asserts the thread in
+`api_033_a_cancelled_pressure_or_temperature_tick_deals_no_damage`.*
+
 #### API-030 · Zone lifecycle events
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-43
 
@@ -1006,7 +1011,7 @@ hydrogen room, empties it, and checks each event fires once, on the server
 thread, with its block already changed.*
 
 #### API-033 · Hazard tick events
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 The API shall raise an event on each entity hazard tick, which can be
 cancelled or modified.
@@ -1018,3 +1023,20 @@ cancelled or modified.
 
 *2026-11-05: When this is built, post the event through `ApiEvents`, so a listener
 that throws is isolated (NFR-013).*
+
+*2026-11-06: Implemented ([#59](https://github.com/west3436/zas-cubed/issues/59)).
+`HazardTickEvent(entity, hazard, damage)` fires through `ApiEvents` just before each
+hazard harms an entity, one event per hazard each time: at each check for toxic gas,
+pressure and temperature, each second for hypoxia, and each blow for airflow impact,
+which FLOW-005 deals through the same call (`LifeDamage.deal`). `Hazard` gains `HYPOXIA`
+and `AIRFLOW_IMPACT` to name them; a verdict never lists either. The damage is after
+protection and scale, and `setDamage` changes it. Cancelling deals none and, for toxic
+gas, applies no status effects, but exposures go on counting, the verdict still lists the
+hazard and a hypoxic meter stays empty. Tests:
+`api_033_a_cancelled_pressure_or_temperature_tick_deals_no_damage`,
+`api_033_a_modified_pressure_or_temperature_tick_deals_the_changed_amount`,
+`api_033_toxic_gas_ticks_cancel_and_modify`, `api_033_hypoxia_ticks_cancel_and_modify`,
+`api_033_airflow_impact_ticks_cancel_and_modify`,
+`api_033_listeners_share_the_tick_in_priority_order` and
+`nfr_013_a_hazard_tick_listener_that_throws_is_skipped_and_logged_once_a_minute`. The
+airflow test calls `LifeDamage.deal` itself, so FLOW-005 checks its own use of it.*
