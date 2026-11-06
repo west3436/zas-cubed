@@ -65,11 +65,11 @@ public final class PipeSaveTests {
     private static final int WEST = 11;
 
     private static final int EAST = 20;
-    private static final int BORDER = 16;
-    private static final int Y = 2;
-    private static final int Z = 2;
-    private static final int ROOM = 22;
-    private static final double MOLES = 1_000;
+    static final int BORDER = 16;
+    static final int Y = 2;
+    static final int Z = 2;
+    static final int ROOM = 22;
+    static final double MOLES = 1_000;
 
     /** Game ticks for what was just built to settle: each node has stepped, so nothing else marks its chunk. */
     private static final int SETTLE = 30;

@@ -155,6 +155,19 @@ sources by design, per CORE-036.)
   Minecraft tech mods.
 - **Verify:** Manual checklist run before each release.
 
+*2026-11-05: Note: The checklist is in
+[release-checklist.md](../release-checklist.md#exploit-checklist-nfr-012). Four
+of its five items are GameTests (`ExploitChecklistTests`, `PipeSaveTests`), and
+saving and quitting mid-transfer has steps for a dedicated server's console, run
+once: the gas came to 2023.420 mol before and 2023.417 and 2023.423 after two
+stops, with the checker and the audit clean. Writing it found gas coming back
+from old saves, fixed in
+[#304](https://github.com/west3436/zas-cubed/pull/304). CORE-073 doesn't see gas
+in pipes, so these checks total the gas themselves. A crash isn't on the list,
+and can still bring back more gas than went in: the checklist has the numbers.
+Stays `Accepted`: the whole checklist is still to be run on one commit late in
+R1, and it repeats before each release.*
+
 #### NFR-013 · Third-party fault isolation
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-55, D-04
 
