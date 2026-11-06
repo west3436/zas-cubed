@@ -201,23 +201,6 @@ class PausedZonesTest {
         assertEquals(30, joined.moles(N2), EPS);
     }
 
-    /** A zone-triggering operation in a room that reaches an unloaded chunk is unresolved (GEO-024). */
-    @Test
-    void geo_024_fill_reaching_unloaded_chunk_is_unresolved() {
-        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
-        sim.world.room(12, 64, 1, 19, 66, 3);
-        sim.unload(EAST);
-        long seq = sim.add(13, 65, 2, 10, 0);
-        sim.steps(2);
-        assertEquals(OpOutcome.Outcome.UNRESOLVED, sim.outcomes.get(seq).outcome());
-        assertNull(sim.zoneAt(13, 65, 2));
-        sim.load(EAST, null);
-        long again = sim.add(13, 65, 2, 10, 0);
-        sim.steps(3);
-        assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
-        assertEquals(10, sim.zoneAt(18, 65, 2).moles(N2), EPS);
-    }
-
     /**
      * The same room, with another zone keeping the east chunk's section mirrored. The section being
      * there doesn't make the chunk known: the fill is still unresolved (GEO-024).
@@ -320,5 +303,22 @@ class PausedZonesTest {
         sim.steps(3);
         assertTrue(sim.engine.mirror().isChunkUnloaded(WEST), "the chunk counts as loaded");
         assertTrue(sim.zoneAt(1, 69, 9).paused(), "the zone with cells in the chunk isn't paused");
+    }
+
+    /** A zone-triggering operation in a room that reaches an unloaded chunk is unresolved (GEO-024). */
+    @Test
+    void geo_024_fill_reaching_unloaded_chunk_is_unresolved() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 64, 1, 19, 66, 3);
+        sim.unload(EAST);
+        long seq = sim.add(13, 65, 2, 10, 0);
+        sim.steps(2);
+        assertEquals(OpOutcome.Outcome.UNRESOLVED, sim.outcomes.get(seq).outcome());
+        assertNull(sim.zoneAt(13, 65, 2));
+        sim.load(EAST, null);
+        long again = sim.add(13, 65, 2, 10, 0);
+        sim.steps(3);
+        assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
+        assertEquals(10, sim.zoneAt(18, 65, 2).moles(N2), EPS);
     }
 }
