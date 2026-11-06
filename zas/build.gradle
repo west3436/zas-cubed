@@ -22,6 +22,11 @@ neoForge {
             type = 'gameTestServer'
             sourceSet = sourceSets.gametest
             systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+            // The same heap everywhere, so a local run can't hide what CI runs out of. Chunks wait
+            // in memory to be written, so a slow disk needs more of it. An OOM ends the run at once
+            // rather than at CI's time limit.
+            jvmArgument '-Xmx6G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
         }
     }
     mods {
