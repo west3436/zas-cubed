@@ -198,7 +198,7 @@ is CLIENT-016. Damping vanilla's sounds, and the suit's exemption, stay
 deferred here.*
 
 #### CLIENT-015 · Looping sounds
-`Should` · `R1` · `Accepted` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
+`Should` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: CLIENT-010, API-061
 
 A client shall play at most 8 looping sounds at once, chosen from those
 requested within their range: the ones that will play loudest at the player,
@@ -246,6 +246,11 @@ Nobody has heard this, so the Manual part stays open.*
 *2026-11-05: accepted by the owner. It stays Accepted until a client shows no loop
 remains after leaving a world: the world was never left and reopened in the owner's
 playthrough.*
+
+*2026-11-06: Implemented, on the owner's check in the R1 round's test world:
+every loop stopped at Save and Quit, the title screen was silent, and the loops
+came back when the world reopened. The log shows the world left and reopened
+this time.*
 
 #### CLIENT-016 · Thin air
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-004, CLIENT-010, API-060 · Depends: DATA-019
@@ -311,7 +316,7 @@ judge.*
 passed it in the sound and particle world.*
 
 #### CLIENT-018 · Spray, leak and burst particles
-`Should` · `R1` · `Accepted` · Verify: Unit, GameTest, Manual · Trace: CONT-037, CONT-038, CONT-085, CONT-108 · Depends: CLIENT-017
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CONT-037, CONT-038, CONT-085, CONT-108 · Depends: CLIENT-017
 
 A fire extinguisher (CONT-037) shall show a cone of particles along its reach
 while it sprays. A tank that leaks (CONT-038) shall show a jet, and a tank or
@@ -349,6 +354,9 @@ retest, so nobody has seen the result.*
 
 *2026-11-05: accepted by the owner. It stays Accepted until someone sees a leak keep
 one direction.*
+
+*2026-11-06: Implemented, on the owner's check in the R1 round's test world: a
+leak's jet kept one direction for the whole leak, with no twitching.*
 
 #### CLIENT-019 · Flow particles
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CONT-004, CONT-014, CONT-015, [#164](https://github.com/west3436/zas-cubed/issues/164) · Depends: CLIENT-017, DATA-017, DATA-018

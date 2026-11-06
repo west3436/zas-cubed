@@ -446,12 +446,19 @@ neighbour, because OPS-013's rule and GEO-032's audit disagree beside one.
 | Ambient providers | [#287](https://github.com/west3436/zas-cubed/pull/287), [#291](https://github.com/west3436/zas-cubed/pull/291), [#293](https://github.com/west3436/zas-cubed/pull/293) | ENV-004, ENV-006, ENV-009, ENV-013, ENV-014, ENV-015, ENV-017 to ENV-020 | ENV-014's seeded source is tested through a test-only ambient, as real seeding is R2 |
 | Gas handlers and worn filters | [#285](https://github.com/west3436/zas-cubed/pull/285), [#296](https://github.com/west3436/zas-cubed/pull/296) | API-021, API-022, API-025, API-026 | None |
 | What seals | [#290](https://github.com/west3436/zas-cubed/pull/290), [#298](https://github.com/west3436/zas-cubed/pull/298), [#301](https://github.com/west3436/zas-cubed/pull/301), [#303](https://github.com/west3436/zas-cubed/pull/303), [#307](https://github.com/west3436/zas-cubed/pull/307), [#308](https://github.com/west3436/zas-cubed/pull/308) | API-023, API-028, GEO-006, GEO-009, GEO-013, GEO-014, GEO-021, GEO-027, GEO-031, GEO-042, GEO-043 | None |
-| Block damage | [#299](https://github.com/west3436/zas-cubed/pull/299) | FLOW-007, FLOW-015, FLOW-016, OPS-002 | The owner's check of windows blowing out |
+| Block damage | [#299](https://github.com/west3436/zas-cubed/pull/299) | FLOW-007, FLOW-015, FLOW-016, OPS-002 | None |
 | Fault isolation | [#309](https://github.com/west3436/zas-cubed/pull/309), [#310](https://github.com/west3436/zas-cubed/pull/310) | NFR-014. API-062 added as *Draft*. NFR-013 stays *Accepted* | Hazard handlers ([#35](https://github.com/west3436/zas-cubed/issues/35)), which NFR-013 also guards |
 | Compatibility and checks | [#282](https://github.com/west3436/zas-cubed/pull/282), [#284](https://github.com/west3436/zas-cubed/pull/284), [#286](https://github.com/west3436/zas-cubed/pull/286), [#288](https://github.com/west3436/zas-cubed/pull/288), [#289](https://github.com/west3436/zas-cubed/pull/289), [#294](https://github.com/west3436/zas-cubed/pull/294), [#306](https://github.com/west3436/zas-cubed/pull/306) | NFR-011, NFR-012, NFR-020, NFR-022, NFR-024, NFR-030. NFR-025 stays *Accepted* | One client launch with Sodium for NFR-025. NFR-012 repeats before each release |
 | Integrity fuzz | [#313](https://github.com/west3436/zas-cubed/pull/313), [#317](https://github.com/west3436/zas-cubed/pull/317) | NFR-010 | The nightly schedule has not been seen firing yet |
 | Bugs the checks found | [#304](https://github.com/west3436/zas-cubed/pull/304), [#311](https://github.com/west3436/zas-cubed/pull/311), [#312](https://github.com/west3436/zas-cubed/pull/312), [#314](https://github.com/west3436/zas-cubed/pull/314), [#315](https://github.com/west3436/zas-cubed/pull/315), [#316](https://github.com/west3436/zas-cubed/pull/316) | None | DATA-008's limit, below |
 | CI and test upkeep | [#297](https://github.com/west3436/zas-cubed/pull/297), [#305](https://github.com/west3436/zas-cubed/pull/305) | None | None |
+
+*2026-11-06: the owner played that world.* All 13 steps passed, with no notes, on main
+at 9b2920b, whose code is the 54271bb the world was built on. It took about 3 minutes,
+not the plan's 9. That moves FIRE-036, CLIENT-015, CLIENT-018 and CONT-127 to
+*Implemented*, and the log shows the world left by Save and Quit and reopened. Windows
+blowing out and the controller's seven mode buttons passed too. The round's decisions,
+including accepting API-062, are still with the owner.
 
 | Track | Area | Notes |
 |---|---|---|
@@ -563,9 +570,9 @@ _Updated 2026-11-05._
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
      (#69), and block damage (#45)~~ *on main 2026-11-06 (#282 to #317; see
-     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Its
-     combined test world and decisions wait on the owner. #69 stays open for
-     NFR-013, NFR-025 and NFR-040.
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The
+     owner played its combined test world the same day. Its decisions wait on the
+     owner. #69 stays open for NFR-013, NFR-025 and NFR-040.
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world the same day, and accepted its *Draft* IDs.
