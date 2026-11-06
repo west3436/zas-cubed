@@ -1844,25 +1844,20 @@ power.
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, D-33
 
 R1 shall provide these ways to obtain gas, with no other mods installed:
-- the air compressor (CONT-054)
 - the water electrolyzer (CONT-055)
 - scrubbing and filtering gases into canisters for reuse (CONT-013, CONT-015,
   CONT-017)
 
 - **Rationale:** Decision: D-33.
-- **Verify:** A GameTest obtains O₂ and N₂ by each listed route with only ZAS³
-  installed.
+- **Verify:** With only ZAS³ installed, a GameTest obtains O₂ from the electrolyzer,
+  and O₂ and N₂ by scrubbing and filtering.
+
+*2026-11-06: The owner removed the air compressor (CONT-054), which leaves these two
+routes. The Verify plan now says which gases each one gives, because the electrolyzer
+makes no N₂.*
 
 #### CONT-054 · Air compressor
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
-
-An air compressor shall fill a canister with 2 mol/s of ambient gas, up to
-4,500 kPa, drawing 40 FE/t. It works only where the ambient has gas.
-
-- **Rationale:** Decision: D-33; 2 mol/s is a gameplay rate that fills a
-  canister to 4,500 kPa in about 15 minutes.
-- **Verify:** A GameTest checks the fill rate and the 4,500 kPa limit, and
-  that it does nothing in vacuum.
+`Must` · `R1` · `Rejected` — removed by the owner: R1 has no air compressor, and gets gas from the electrolyzer and from scrubbing and filtering (CONT-050), 2026-11-06.
 
 #### CONT-055 · Water electrolyzer
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
@@ -2088,7 +2083,6 @@ Devices shall draw these amounts by default:
 | Vent | 10 |
 | Scrubber (panic) | 15 (30) |
 | Pumps, filter, mixer | 20 |
-| Compressor | 40 |
 | Heater, freezer | 60 |
 | Igniter (while active) | 20 |
 | Recharger (while charging) | 40 |
@@ -2142,6 +2136,8 @@ config.*
 scrubber_panic`, drawn while it isn't off
 (`ScrubberTests.cont_065_a_scrubber_draws_only_while_on_and_twice_as_much_in_panic`).
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-06: the air compressor and its 40 FE/t are removed (CONT-054).*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -2799,7 +2795,7 @@ passed it in the sound and particle world.*
 
 | R1 | R2 |
 |---|---|
-| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (compressor, electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
+| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
 | *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's

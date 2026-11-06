@@ -85,9 +85,9 @@ Portables connect to and disconnect from connector ports with the wrench.
 | `zas_atmos:generator` | Generator | Must | CONT-061, CONT-067 | Block model | Lit and unlit. In the style of SS13's P.A.C.M.A.N. |
 | `zas_atmos:recharger` | Recharger | Should | CONT-113 | Block model | No battery, empty, and four charge steps, as vg's cell charger shows them (the owner's choice of 2026-11-02). Charges one battery (below) for the portables. |
 
-The air compressor is gone, and so are the power cable and the multipart block
-(D-68). Without the compressor, R1 gets gas from the electrolyzer and from
-scrubbing and filtering, so CONT-050 and CONT-054 need updating.
+The air compressor is gone (CONT-054), and so are the power cable and the
+multipart block (D-68). Without the compressor, R1 gets gas from the electrolyzer
+and from scrubbing and filtering (CONT-050).
 
 **Area air controllers, airlocks and firelocks**
 
