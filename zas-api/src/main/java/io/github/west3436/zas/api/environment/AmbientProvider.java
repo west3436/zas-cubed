@@ -21,6 +21,10 @@ import net.minecraft.server.level.ServerLevel;
  * provider, so pack authors get the final say (D-45). The answer is checked against the running
  * server's gases: one naming a gas the server doesn't have is skipped, with a warning, as if the
  * provider had answered {@code null}.
+ *
+ * <p><b>If it throws</b> (NFR-013). ZAS³ catches it and skips the provider for that atmos tick, as if
+ * it had answered {@code null}. It asks again the next atmos tick, and logs the fault at most once a
+ * minute.
  */
 @FunctionalInterface
 public interface AmbientProvider {

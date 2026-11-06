@@ -117,4 +117,37 @@ public final class ReactionTests {
         h.assertFalse(r.dimension().isFaulted(), "the broken type faulted the dimension");
         h.succeed();
     }
+
+    /**
+     * NFR-013: a type that throws changes nothing, the reaction beside it runs every atmos tick, and
+     * the log has one line a minute, however many atmos ticks it throws in.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void nfr_013_a_code_reaction_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+        Rooms r = new Rooms(h, 691);
+        r.clear(0, 6);
+        r.shell(0, 4);
+        r.settle(GasMutations.add(
+                r.level,
+                r.point(2, 2, 2),
+                new GasParcel(Map.of(TEST_GAS, 4.0, PLAIN_GAS, 1.0, O2, 2.0), 293.15),
+                source("nfr_013")));
+        String definition = "zas_gametest:code_broken";
+        try (FaultLog log = new FaultLog()) {
+            FaultLog.aMinutePasses();
+            double gas = r.zone(2, 2, 2).mixture().moles(TEST_GAS);
+            r.ticks(3);
+            r.close(
+                    r.zone(2, 2, 2).mixture().moles(TEST_GAS),
+                    gas * Math.pow(1 - FRACTION, 3),
+                    "test gas after 3 atmos ticks");
+            h.assertValueEqual(log.naming(definition), 1, "errors logged about it");
+
+            FaultLog.aMinutePasses();
+            r.tick();
+            h.assertValueEqual(log.naming(definition), 2, "errors logged about it a minute later");
+            h.assertFalse(r.dimension().isFaulted(), "the broken type faulted the dimension");
+        }
+        h.succeed();
+    }
 }

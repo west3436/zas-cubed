@@ -2,6 +2,7 @@ package io.github.west3436.zas.geometry;
 
 import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.capability.SealGeometry;
+import io.github.west3436.zas.change.ChangeTracker;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
@@ -62,6 +63,7 @@ public final class PositionGeometries {
     /**
      * What was worked out at a position, and from which table; a null geometry means its block state's.
      *
+     * @param table the table it was worked out from, or null if it only holds until the next copy
      * @param cellOf the geometry's voxel to cell map if it has several cells ({@link
      *     GeometryDeriver#cellOfVoxels}), or else null
      */
@@ -152,6 +154,13 @@ public final class PositionGeometries {
             return new Worked(table, geometry, SubCells.cellOf(settled, geometry));
         }
         Optional<SealGeometry> seal = SealProviders.ask(level, pos, state, blockEntity);
+        if (seal == null) {
+            // It threw, so it's skipped for this atmos tick only (NFR-013). The block has its own shape
+            // for now. With no table this isn't kept, and its section comes back to ask again.
+            ChangeTracker.markDirty(level, pos);
+            Worked own = shaped(level, pos, state, base, table);
+            return new Worked(null, own.geometry(), own.cellOf());
+        }
         if (seal.isPresent()) {
             return new Worked(table, SealProviders.geometry(seal.get(), base), null);
         }

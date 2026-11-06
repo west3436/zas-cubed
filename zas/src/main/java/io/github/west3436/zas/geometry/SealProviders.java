@@ -1,5 +1,7 @@
 package io.github.west3436.zas.geometry;
 
+import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.ISealProvider;
 import io.github.west3436.zas.api.capability.SealGeometry;
 import io.github.west3436.zas.engine.Face;
@@ -18,12 +20,16 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * The blocks with an {@link ISealProvider} (API-023), and the one place ZAS³ calls one: {@link
  * #ask}.
  */
 public final class SealProviders {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private static volatile Set<Block> blocks = Set.of();
 
     private SealProviders() {}
@@ -55,11 +61,21 @@ public final class SealProviders {
      *
      * @param blockEntity the block's block entity, or null if it has none
      * @return its answer; empty if it has no provider at this position or leaves the block's
-     *     geometry as it is
+     *     geometry as it is; null if it threw, which is no answer at all (NFR-013)
      */
-    static Optional<SealGeometry> ask(ServerLevel level, BlockPos pos, BlockState state, BlockEntity blockEntity) {
-        ISealProvider provider = level.getCapability(ISealProvider.BLOCK, pos, state, blockEntity, null);
-        return provider == null ? Optional.empty() : provider.geometry();
+    static @Nullable Optional<SealGeometry> ask(
+            ServerLevel level, BlockPos pos, BlockState state, BlockEntity blockEntity) {
+        try {
+            ISealProvider provider = level.getCapability(ISealProvider.BLOCK, pos, state, blockEntity, null);
+            return provider == null ? Optional.empty() : provider.geometry();
+        } catch (Exception | LinkageError e) {
+            String source = "Seal provider of " + BuiltInRegistries.BLOCK.getKey(state.getBlock());
+            if (ThirdPartyFaults.shouldLog(source)) {
+                LOGGER.error(
+                        "{} threw at {}; skipped for the atmos tick (logged at most once a minute)", source, pos, e);
+            }
+            return null;
+        }
     }
 
     /**

@@ -81,7 +81,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 /**
@@ -89,8 +88,19 @@ import org.slf4j.Logger;
  * and engine, the futures of its queued mutations, and the publishing of its zone table.
  *
  * <p>An excluded dimension (ENV-007) has no engine: its mutations act on the open air, with the
- * same latency. A dimension whose engine threw is faulted (D-55): its last table stays readable
- * and new mutations fail.
+ * same latency.
+ *
+ * <p><b>Engine faults</b> (D-55, NFR-014). An exception inside the engine pauses the dimension
+ * through {@link #pauseSimulation}, by {@link #ENGINE_FAULT}, with a logged error. The failed tick
+ * is thrown away whole: nothing it did was published, and its engine is never used again. A new
+ * engine is built at once from the last published table, as after a geometry change ({@link
+ * #rebuild}), and the outstanding operations move to it, so from there on the dimension is exactly
+ * as an operator's pause leaves it, and {@code /zas resume} ends it.
+ *
+ * <p>An engine that throws while the dimension is already paused isn't replaced, since a paused
+ * engine failing suggests the next would too. It stays faulted until the dimension resumes, which
+ * builds a new one: its last table stays readable, and waiting and new mutations fail. The gas of
+ * additions that were waiting has left its callers, so it is kept for the new engine, or saved.
  *
  * <p><b>Hardcore zone triggers</b> (CORE-056). At each batch close, the combustion and planting
  * the change hook saw start since the last ({@link ChangeTracker#drainTriggers}) become operations
@@ -128,6 +138,9 @@ import org.slf4j.Logger;
  * <p>Server thread only, except {@link #published()}.
  */
 public final class DimensionAtmos {
+    /** Who a pause caused by an exception inside the engine is by (NFR-014). */
+    public static final String ENGINE_FAULT = "zas:engine";
+
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final ServerLevel level;
@@ -252,7 +265,10 @@ public final class DimensionAtmos {
         return pipeline;
     }
 
-    /** Whether the engine threw and the dimension is paused (D-55). */
+    /**
+     * Whether the dimension has an engine that threw and hasn't been replaced (NFR-014): see the
+     * class comment. The dimension is paused meanwhile.
+     */
     public boolean isFaulted() {
         DimensionPipeline p = pipeline;
         return p != null && p.scheduler().isFaulted();
@@ -279,8 +295,8 @@ public final class DimensionAtmos {
 
     /**
      * Ends the {@linkplain #pauseSimulation pause}, from the next atmos tick: zones carry on from
-     * their last-known state, and block changes held meanwhile apply (GEO-033, GEO-037). Server
-     * thread.
+     * their last-known state, and block changes held meanwhile apply (GEO-033, GEO-037). An engine
+     * that threw while paused is replaced now (NFR-014). Server thread.
      *
      * @return false if it wasn't paused
      */
@@ -291,6 +307,9 @@ public final class DimensionAtmos {
         }
         data.setPause(null);
         LOGGER.info("The atmosphere of {} resumes", dimension().location());
+        if (isFaulted()) {
+            ensureEngine();
+        }
         return true;
     }
 
@@ -792,20 +811,23 @@ public final class DimensionAtmos {
                 rebuild(table);
             }
         }
+        if (pipeline != null && pipeline.scheduler().isFaulted() && simulationPause() == null) {
+            replaceFaulted(table); // it threw while paused, and the dimension has now resumed
+        }
         if (pipeline == null) {
             create(table);
         }
     }
 
     /**
-     * Replaces the engine after a geometry palette change, as a restart would (architecture §4.5,
-     * O-10): each loaded chunk's record is built from the published table, exactly what a save
-     * would write, and goes to a new engine with the new palette through the path of a chunk load;
-     * the zones rebuilt from those records classify their surfaces again with the new geometry.
-     * Unloaded chunks keep what they saved, and zones across them wait for them to load. The
-     * operations still outstanding are queued again on the new engine, their futures kept, so no
-     * gas is lost. Only between batches, so no result is in flight; the old worker is abandoned,
-     * never awaited.
+     * Replaces the engine after a geometry palette change or a fault, as a restart would
+     * (architecture §4.5, O-10): each loaded chunk's record is built from the published table,
+     * exactly what a save would write, and goes to a new engine with the new palette through the
+     * path of a chunk load; the zones rebuilt from those records classify their surfaces again with
+     * the new geometry. Unloaded chunks keep what they saved, and zones across them wait for them
+     * to load. The operations still outstanding are queued again on the new engine, their futures
+     * kept, so no gas is lost. Only between batches, so no result is in flight; the old worker is
+     * abandoned, never awaited.
      */
     private void rebuild(GeometryTable table) {
         DimensionPipeline old = pipeline;
@@ -822,8 +844,7 @@ public final class DimensionAtmos {
                 records.put(chunk, ChunkRecordCodec.encode(r, oldRegistry));
             }
         }
-        // Operations whose futures already failed with a fault aren't run again.
-        List<GasOp> carried = old.scheduler().isFaulted() ? List.of() : old.outstanding();
+        List<GasOp> carried = old.outstanding();
         DimensionData.of(level).raiseNextZoneId(old.nextZoneId());
         old.scheduler().abandon();
         pipeline = null;
@@ -842,6 +863,16 @@ public final class DimensionAtmos {
             CompletableFuture<Void> unpin = unpins.remove(op.seq());
             CompletableFuture<HeatResult> heat = heats.remove(op.seq());
             CompletableFuture<Ignited> ignition = ignitions.remove(op.seq());
+            // Its future failed with a fault, so it isn't run again. An addition is: its gas has
+            // left the caller whether or not anyone still waits for the result.
+            if (op.kind() != GasOp.Kind.ADD
+                    && p == null
+                    && pin == null
+                    && unpin == null
+                    && heat == null
+                    && ignition == null) {
+                continue;
+            }
             long seq = pipeline.resubmit(remap(op, oldRegistry));
             if (ignition != null) {
                 movedIgnitions.put(seq, ignition);
@@ -891,6 +922,45 @@ public final class DimensionAtmos {
         pending.putAll(moved);
         for (Pending p : orphans) {
             p.future().completeExceptionally(new CancellationException("the gas geometry changed"));
+        }
+    }
+
+    /**
+     * An exception inside the engine (D-55, NFR-014): see the class comment. Whatever it left in the
+     * engine stops here, since nothing reads that engine again.
+     */
+    private void engineFailed(DimensionPipeline failed, Throwable fault) {
+        failed.scheduler().fail(fault);
+        LOGGER.error(
+                "The atmosphere of {} failed and is paused, with the state of its last finished atmos tick;"
+                        + " /zas resume runs it again",
+                dimension().location(),
+                fault);
+        completeChecks(null);
+        boolean paused = pauseSimulation(new DimensionPause(ENGINE_FAULT, "the engine failed: " + fault));
+        GeometryTable table = Geometries.tableIfReady();
+        if (!paused || table == null || !replaceFaulted(table)) {
+            failAll(new IllegalStateException("the atmosphere of " + dimension().location() + " failed", fault));
+        }
+    }
+
+    /**
+     * {@link #rebuild}s a faulted engine. If even that throws the server carries on, with the
+     * dimension paused and resuming as the way to try again.
+     *
+     * @return whether the engine was replaced
+     */
+    private boolean replaceFaulted(GeometryTable table) {
+        try {
+            rebuild(table);
+            return true;
+        } catch (RuntimeException e) {
+            LOGGER.error(
+                    "The atmosphere of {} couldn't be rebuilt after its engine failed, and stays paused",
+                    dimension().location(),
+                    e);
+            pauseSimulation(new DimensionPause(ENGINE_FAULT, "the engine couldn't be rebuilt: " + e));
+            return false;
         }
     }
 
@@ -1166,7 +1236,11 @@ public final class DimensionAtmos {
                 checksInFlight.addAll(checkRequests);
                 checkRequests.clear();
             }
-            p.close(nextAtmosTick++, settings, overBudget);
+            try {
+                p.close(nextAtmosTick++, settings, overBudget);
+            } catch (RuntimeException e) {
+                engineFailed(p, e);
+            }
         }
         lastCloseNanos = System.nanoTime() - start;
         profiler.closed(lastCloseNanos);
@@ -1234,13 +1308,15 @@ public final class DimensionAtmos {
         if (!pl.scheduler().isDone()) {
             applyWaits++;
         }
-        DimensionPipeline.Applied a = pl.apply();
+        DimensionPipeline.Applied a;
+        try {
+            a = pl.apply();
+        } catch (RuntimeException e) {
+            engineFailed(pl, e);
+            return true;
+        }
         if (a.fault() != null) {
-            LOGGER.error(
-                    "The atmosphere of {} failed and is paused; its last state stays readable",
-                    dimension().location(),
-                    a.fault());
-            failAll(new IllegalStateException("the atmosphere of " + dimension().location() + " failed", a.fault()));
+            engineFailed(pl, a.fault());
             return true;
         }
         rejectedComponents += a.rejected();
@@ -1279,7 +1355,7 @@ public final class DimensionAtmos {
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());
             BlockPos at = BlockPos.of(e.block());
-            NeoForge.EVENT_BUS.post(
+            ApiEvents.post(
                     e.kind() == FireEvent.Kind.IGNITED
                             ? new FireIgnitedEvent(level, zone, at)
                             : new FireExtinguishedEvent(level, zone, at));
@@ -1287,7 +1363,7 @@ public final class DimensionAtmos {
         for (OpenAirEvent e : a.events()) {
             Pending p = pending.get(e.seq());
             SourceId source = p != null ? p.source() : SourceId.of("zas", "unknown");
-            NeoForge.EVENT_BUS.post(new OpenAirGasEvent(
+            ApiEvents.post(new OpenAirGasEvent(
                     level, BlockPos.of(e.block()), e.added(), parcel(e.moles(), e.temperature()), source));
         }
         for (OpOutcome o : a.outcomes()) {
@@ -1384,7 +1460,7 @@ public final class DimensionAtmos {
             moved = new GasParcel(supplied, ambient.temperature());
         }
         if (!moved.isEmpty()) {
-            NeoForge.EVENT_BUS.post(new OpenAirGasEvent(level, p.pos(), p.add(), moved, p.source()));
+            ApiEvents.post(new OpenAirGasEvent(level, p.pos(), p.add(), moved, p.source()));
         }
         p.future().complete(new MutationResult(MutationOutcome.AMBIENT, moved));
     }

@@ -24,6 +24,8 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -135,9 +137,10 @@ public final class AmbientProviderTests {
         }
     }
 
-    /** Collects what a class logs as warnings while it is open. */
+    /** Collects what a class logs as warnings and as errors while it is open. */
     private static final class Warnings extends AbstractAppender implements AutoCloseable {
         final List<String> messages = new CopyOnWriteArrayList<>();
+        final List<String> errors = new CopyOnWriteArrayList<>();
         private final org.apache.logging.log4j.core.Logger logger;
 
         Warnings(String loggerName) {
@@ -151,6 +154,8 @@ public final class AmbientProviderTests {
         public void append(LogEvent event) {
             if (event.getLevel() == org.apache.logging.log4j.Level.WARN) {
                 messages.add(event.getMessage().getFormattedMessage());
+            } else if (event.getLevel() == org.apache.logging.log4j.Level.ERROR) {
+                errors.add(event.getMessage().getFormattedMessage());
             }
         }
 
@@ -241,6 +246,53 @@ public final class AmbientProviderTests {
                         warnings.messages.get(0));
             }
             h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "the ambient");
+        });
+    }
+
+    // ---- NFR-013 ------------------------------------------------------------------------
+
+    /**
+     * A provider that throws is skipped for the atmos tick, as if it had answered null, so the next
+     * source applies. It's asked again each atmos tick, its answer counts as soon as it stops, and the
+     * log has one line a minute, however many atmos ticks it throws in.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation id = id("zas_gametest", "nfr_013");
+            AtomicBoolean failing = new AtomicBoolean();
+            AtomicInteger calls = new AtomicInteger();
+            AmbientProviders.register(id, Level.END, level -> {
+                calls.incrementAndGet();
+                if (failing.get()) {
+                    throw new IllegalStateException("the test provider failing");
+                }
+                return PROVIDED;
+            });
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "before it throws");
+            // Not a FaultLog: the other tests here attach to this logger, which cuts it off from the root.
+            try (Warnings log = providerWarnings()) {
+                FaultLog.aMinutePasses();
+                failing.set(true);
+                calls.set(0);
+                tick(end);
+                tick(end);
+                tick(end);
+                h.assertValueEqual(calls.get(), 3, "the times it was asked in 3 atmos ticks");
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "while it throws");
+                h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
+                h.assertTrue(log.errors.get(0).contains(id.toString()), log.errors.get(0));
+
+                FaultLog.aMinutePasses();
+                tick(end);
+                h.assertValueEqual(log.errors.size(), 2, "errors logged a minute later: " + log.errors);
+
+                failing.set(false);
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "once it stops throwing");
+                h.assertValueEqual(log.errors.size(), 2, "errors logged once it stops: " + log.errors);
+            }
         });
     }
 

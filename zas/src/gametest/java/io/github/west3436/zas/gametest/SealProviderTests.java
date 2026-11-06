@@ -34,7 +34,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * API-028, GEO-014).
  *
  * <p>Two rooms 3 × 3 × 3 inside, in a row along x, share a wall at x = 14, with a {@link
- * TestSealBlock} at (14, 2, 2) in it. Areas 640 to 643.
+ * TestSealBlock} at (14, 2, 2) in it. Areas 640 to 644.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -124,6 +124,47 @@ public final class SealProviderTests {
         BlockGeometry.markDirty(r.level, pos);
         r.tick();
         apart(r, "with no answer, as a full block");
+        h.succeed();
+    }
+
+    /**
+     * A provider that throws is skipped: for that atmos tick the block has its own shape, here a full
+     * block. It's asked again each atmos tick with no markDirty, its zones don't change while it goes
+     * on throwing, its answer counts as soon as it stops, and the log has one line a minute (NFR-013).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void nfr_013_a_seal_provider_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+        Rooms r = rooms(h, 644, SealGeometry.OPEN, 200, 200);
+        BlockPos pos = r.abs(WALL, 2, 2);
+        joined(r, "before it throws");
+        String source = TestSealBlock.ID.toString();
+        try (FaultLog log = new FaultLog()) {
+            FaultLog.aMinutePasses();
+            TestSealBlock.failing(pos, true);
+            BlockGeometry.markDirty(r.level, pos);
+            r.tick();
+            apart(r, "as a full block, while it throws");
+
+            ZoneInfo west = r.zone(WEST, 2, 2);
+            int asked = TestSealBlock.asked(pos);
+            r.ticks(3);
+            h.assertValueEqual(TestSealBlock.asked(pos), asked + 3, "the times it was asked in 3 atmos ticks");
+            h.assertValueEqual(r.zone(WEST, 2, 2).id(), west.id(), "the west room's zone while it throws");
+            apart(r, "as it goes on throwing");
+            h.assertValueEqual(log.naming(source), 1, "errors logged about it");
+
+            FaultLog.aMinutePasses();
+            r.tick();
+            h.assertValueEqual(log.naming(source), 2, "errors logged about it a minute later");
+            h.assertFalse(r.dimension().isFaulted(), "the provider faulted the dimension");
+
+            TestSealBlock.failing(pos, false);
+            r.tick();
+            joined(r, "once it stops throwing, with no markDirty");
+            h.assertValueEqual(log.naming(source), 2, "errors logged about it once it stops");
+        } finally {
+            TestSealBlock.failing(pos, false);
+        }
         h.succeed();
     }
 

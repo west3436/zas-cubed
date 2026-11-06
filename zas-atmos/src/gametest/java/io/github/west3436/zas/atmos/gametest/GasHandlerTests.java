@@ -575,15 +575,87 @@ public final class GasHandlerTests {
             throw new IllegalStateException("the test handler failing");
         };
         pipe.network().gas().add(new GasParcel(Map.of(N2, 12.0), T));
-        try {
-            pipe.step();
-        } catch (IllegalStateException expected) {
-            // Nothing catches it yet (NFR-013), and the gas mustn't depend on that.
-        }
+        pipe.step();
         h.assertValueEqual(tank.fills, 1, "the fill wasn't asked for");
         a.close(pipe.network().gas().moles(N2), 12, "the network's N2 after the handler threw");
         tank.duringFill = () -> {}; // the next test's steps reach this pipe too
         h.succeed();
+    }
+
+    /**
+     * NFR-013, which adds gas handlers to its list in a dated note: wherever a handler throws, in its
+     * contents, a fill, a drain or the capability's lookup, the step goes on, the handler is skipped for
+     * the atmos tick and asked again the next, no gas is lost, and the log has one line a minute.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_gas_handler_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+        Area a = new Area(h, 1115);
+        a.clear(0, 0, 5, 3);
+        PipeBlockEntity pipe = capped(a, 2, 1, 1);
+        TestGasHandler.Entity tank = handler(a, 3, 1, 1);
+        pipe.network().gas().add(new GasParcel(Map.of(N2, 12.0), T));
+        tank.tank.add(new GasParcel(Map.of(O2, 2.0), T));
+        Runnable fail = () -> {
+            throw new IllegalStateException("the test handler failing");
+        };
+        Runnable fine = () -> {};
+        String source = TestGasHandler.ID.toString();
+        try (FaultLog log = new FaultLog()) {
+            // Its contents: nothing moves.
+            FaultLog.aMinutePasses();
+            tank.duringContents = fail;
+            threeSteps(a);
+            tank.duringContents = fine;
+            h.assertValueEqual(log.naming(source), 1, "errors logged about its contents");
+            h.assertValueEqual(tank.fills, 0, "the fills asked for without its contents");
+            a.close(pipe.network().gas().moles(N2), 12, "the network's N2 after its contents threw");
+            a.close(tank.tank.moles(O2), 2, "the handler's O2 after its contents threw");
+
+            // A fill: all it was offered comes back, and it isn't asked to drain as well.
+            FaultLog.aMinutePasses();
+            tank.duringFill = fail;
+            threeSteps(a);
+            tank.duringFill = fine;
+            h.assertValueEqual(log.naming(source), 2, "errors logged about a fill");
+            h.assertValueEqual(tank.fills, 3, "the fills asked for");
+            h.assertValueEqual(tank.drains, 0, "the drains asked for after a fill threw");
+            a.close(pipe.network().gas().moles(N2), 12, "the network's N2 after a fill threw");
+            a.close(tank.tank.moles(O2), 2, "the handler's O2 after a fill threw");
+
+            // A drain: the fill before it stands, and nothing comes back from it.
+            FaultLog.aMinutePasses();
+            tank.duringDrain = fail;
+            threeSteps(a);
+            tank.duringDrain = fine;
+            h.assertValueEqual(log.naming(source), 3, "errors logged about a drain");
+            h.assertValueEqual(tank.drains, 3, "the drains asked for");
+            a.close(pipe.network().gas().moles(N2) + tank.tank.moles(N2), 12, "the N2 after a drain threw");
+            a.close(tank.tank.moles(O2), 2, "the handler's O2 after a drain threw");
+
+            // The lookup: the pipe's arm stays, or the pipe would have an open end and the gas would escape.
+            FaultLog.aMinutePasses();
+            int drains = tank.drains;
+            tank.failsLookup = true;
+            threeSteps(a);
+            tank.failsLookup = false;
+            h.assertTrue(arm(a, 2, 1, 1, Direction.EAST), "the arm while the lookup throws");
+            h.assertValueEqual(tank.drains, drains, "the drains asked for while the lookup throws");
+            h.assertValueEqual(log.naming(source), 4, "errors logged about the lookup");
+            a.close(pipe.network().gas().moles(N2) + tank.tank.moles(N2), 12, "the N2 after the lookup threw");
+
+            a.step();
+            h.assertTrue(pipe.network().gas().moles(O2) > 0, "no O2 came from the handler once it stopped throwing");
+            a.close(pipe.network().gas().moles(N2) + tank.tank.moles(N2), 12, "the N2 at the end");
+            a.close(pipe.network().gas().moles(O2) + tank.tank.moles(O2), 2, "the O2 at the end");
+            h.assertValueEqual(log.naming(source), 4, "errors logged about it once it stops");
+        }
+        h.succeed();
+    }
+
+    private static void threeSteps(Area a) {
+        a.step();
+        a.step();
+        a.step();
     }
 
     /**

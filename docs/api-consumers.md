@@ -348,6 +348,17 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
 - **Without ZAS³**, and on a dedicated server, `thinAir()` is 1 and a loop plays
   nothing.
 
+## If your code throws
+
+ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler
+or event listener throws, and the server carries on (NFR-013). That code is skipped
+for the atmos tick and called again the next, and an event listener misses only that
+event. The fault is logged at most once a minute for each source, so one line in the
+log can stand for many faults.
+
+To limit your own logging the same way, ask `ThirdPartyFaults.shouldLog(source)`
+before you log. It's true at most once a minute for each source, on any thread (API-062).
+
 ## Versioning and the compatibility check
 
 The API has its own semver, separate from the mod version (API-002). `check`,

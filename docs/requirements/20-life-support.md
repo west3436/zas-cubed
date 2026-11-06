@@ -822,6 +822,9 @@ intercepts existing hazard ticks; this adds new hazards.)
 - **Verify:** A GameTest registers a handler for a test gas and checks it
   applies.
 
+*2026-11-05: When this is built, guard each call into a handler as NFR-013 asks, with
+`ThirdPartyFaults` (API-062), and add the GameTest NFR-013's plan still lacks.*
+
 #### LIFE-033 · Staggered evaluation
 `Must` · `R1` · `Implemented` · Verify: Bench · Trace: NFR-001
 

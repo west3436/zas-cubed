@@ -47,7 +47,7 @@ public final class DimensionPauseTests {
 
     private DimensionPauseTests() {}
 
-    private static ServerLevel nether(GameTestHelper h) {
+    static ServerLevel nether(GameTestHelper h) {
         ServerLevel nether = h.getLevel().getServer().getLevel(Level.NETHER);
         if (nether == null) {
             throw new GameTestAssertException("no Nether");
@@ -56,7 +56,7 @@ public final class DimensionPauseTests {
     }
 
     /** Runs a test's body, then makes sure the Nether is left running. */
-    private static void inPausableNether(GameTestHelper h, Runnable body) {
+    static void inPausableNether(GameTestHelper h, Runnable body) {
         try {
             Rooms.withoutHeat(body);
         } finally {
@@ -68,7 +68,7 @@ public final class DimensionPauseTests {
      * A sealed room from x 10 to 21, across the chunk border at 16, with its zone formed, and enough
      * gas that a hole doesn't vent it down to the ambient within a few atmos ticks.
      */
-    private static ZoneInfo room(GameTestHelper h, Rooms r) {
+    static ZoneInfo room(GameTestHelper h, Rooms r) {
         r.clear(8, 23);
         r.shell(10, 21);
         MutationResult m = r.settle(GasMutations.add(r.level, r.point(12, 2, 2), oxygen(4000), source("ops_005")));

@@ -624,6 +624,18 @@ that `ClientSounds.LEASE_TICKS` is what the manager does.*
 no client-only class, and the loops the owner heard in the sound and particle world
 come through it (`DeviceLoops`, `FireAlarmSounds`, `GeneratorBlockEntity`).*
 
+#### API-062 · Limit on logging third-party faults
+`Should` · `R1` · `Draft` · Verify: Unit · Trace: NFR-013, CONT-095
+
+The API shall say whether to log a fault from a named source, answering yes at most
+once per source per minute, from any thread, with or without ZAS³.
+
+*2026-11-05: added for review, with the behaviour built: `ThirdPartyFaults.shouldLog`,
+tested by `ThirdPartyFaultsTest`. It's in the API because the content mod may use only
+the API (CONT-095) and NFR-013 needs one limit for both mods. It only answers yes or no,
+and the caller logs, because the API may not refer to a logging library (API-044). Its
+`advanceClockForTest` lets a GameTest see the next minute without waiting for it.*
+
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
 
@@ -808,6 +820,8 @@ cover a handler that refuses, takes part of a transfer, overstates what it took,
 throws, removes the pipe or a pump from inside a fill, or is in a chunk that's away.
 Nothing catches a handler's exception yet: that's for NFR-013, in `GasHandlers`.*
 
+*2026-11-05: `GasHandlers` now catches it (NFR-013).*
+
 #### API-022 · Life-support capability
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-07, S-06, S-08
 
@@ -983,3 +997,6 @@ cancelled or modified.
   hazards, for example for their own suits (D-12).
 - **Verify:** GameTests check a cancelled hazard tick deals no damage and a
   modified one deals the changed amount.
+
+*2026-11-05: When this is built, post the event through `ApiEvents`, so a listener
+that throws is isolated (NFR-013).*
