@@ -84,6 +84,16 @@ public record HazardProfile(List<Threshold> thresholds) {
         return false;
     }
 
+    /** Whether a threshold that deals damage applies at a partial pressure of the gas, at once or once sustained. */
+    public boolean damagingAt(double partialPressure) {
+        for (Threshold t : thresholds) {
+            if (t.damage() > 0 && t.reachedAt(partialPressure)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- Data format ------------------------------------------------------------------
 
     private static final Codec<EffectLevel.Effect> EFFECT = RecordCodecBuilder.create(i -> i.group(
