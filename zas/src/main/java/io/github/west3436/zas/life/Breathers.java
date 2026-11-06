@@ -43,9 +43,10 @@ import org.jetbrains.annotations.Nullable;
  * eyes enter or leave a fluid. A server tick runs at most {@code max_checks_per_tick} checks; one
  * due beyond that waits for the next tick (LIFE-038). A check takes the verdict ({@link
  * BreathingRules#assess}), applies the gases' hazard profiles for the seconds since the last check
- * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}) and deals
- * the pressure and temperature damage ({@link EnvironmentHazards}). Rates are per second, so the
- * interval changes smoothness, not speed.
+ * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}), deals
+ * the pressure and temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard
+ * handlers ({@link HandledHazards}). Rates are per second, so the interval changes smoothness, not
+ * speed.
  *
  * <p><b>Unresolved atmosphere.</b> Where the atmosphere at the eyes is {@code UNRESOLVED}, such
  * as for the moment a loading room's zone isn't back yet, its mixture is only a last-known guess,
@@ -86,14 +87,15 @@ public final class Breathers {
     private Breathers() {}
 
     /**
-     * Registers the attachment, the breathing listeners, respiration's flush, the hazard profiles
-     * and the protection data. Called once, from the mod constructor.
+     * Registers the attachment, the breathing listeners, respiration's flush, the hazard profiles,
+     * the protection data and the check on natural spawns. Called once, from the mod constructor.
      */
     public static void register(IEventBus modBus, IEventBus gameBus) {
         ATTACHMENTS.register(modBus);
         modBus.addListener(Breathers::registerPayloads);
         HazardProfiles.register(gameBus);
         Protections.register(gameBus);
+        LethalSpawns.register(gameBus);
         gameBus.addListener(EventPriority.NORMAL, LivingBreatheEvent.class, Breathers::onBreathe);
         gameBus.addListener(EventPriority.NORMAL, LivingDrownEvent.class, Breathers::onDrown);
         gameBus.addListener((ServerTickEvent.Post e) -> {
@@ -260,6 +262,7 @@ public final class Breathers {
         if (a.exposure() != null) {
             EnvironmentHazards.apply(entity, a.exposure(), seconds);
         }
+        HandledHazards.apply(entity, a, seconds);
     }
 
     /**

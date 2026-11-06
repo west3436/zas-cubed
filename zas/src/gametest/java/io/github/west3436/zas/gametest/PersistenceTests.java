@@ -343,7 +343,9 @@ public final class PersistenceTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void api_010_reloading_room_never_reads_ambient(GameTestHelper h) {
-        Rooms r = fourChunks(h, h.getLevel(), 241, 60);
+        // Enough gas not to match the ambient, or it goes after CORE-052's delay: this test spans game
+        // ticks, and the atmos ticks other tests drive in that time count towards the delay.
+        Rooms r = fourChunks(h, h.getLevel(), 241, 1000);
         // The test runs over several game ticks: without this, the room's chunks really unload two
         // ticks in, and if that comes before the server's next atmos tick the zone never returns.
         r.holdLoaded(chunks(r));

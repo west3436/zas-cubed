@@ -64,6 +64,17 @@ final class GasHazards {
         return false;
     }
 
+    /** Whether a breath holds a gas at a partial pressure where it deals damage, at once or once sustained. Any thread. */
+    static boolean damaging(GasMixture breath) {
+        for (Map.Entry<ResourceLocation, HazardProfile> e : HazardProfiles.all().entrySet()) {
+            double p = breath.partialPressure(e.getKey());
+            if (p > 0 && e.getValue().damagingAt(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Counts exposures and applies the thresholds that apply.
      *

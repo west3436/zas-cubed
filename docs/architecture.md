@@ -368,7 +368,7 @@ worker: API-020 implementations must be pure functions of their inputs, they
 are guarded the same way, and the API documents them as worker-thread
 callbacks.
 
-*Implemented for each kind but hazard handlers, which don't exist yet (LIFE-032):*
+*Implemented for each kind:*
 each kind has one call point, which catches `Exception` and `LinkageError` and asks
 `ThirdPartyFaults` (API-062) whether to log. That's the one limit for both mods, per
 source, with a bounded record. It reads a clock, so it stays out of the engine, and it
@@ -381,6 +381,7 @@ only decides what's logged.
 | Code reaction | `ApiReactionType.compute` | No change for that call |
 | Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |
 | Gas handler (`zas_atmos`) | `GasHandlers` | No more transfer on that face that atmos tick, and what a failed fill was offered goes back to the network. A lookup that throws keeps the pipe's arm, so a fault can't leave an open end |
+| Hazard handler | `HandledHazards.call` | That handler for the rest of that check, so what it did before throwing stands. The others still run, and it's called again at the next check |
 | Life support, internal supply | `GuardedLifeSupport` | That call gives what the interface's default gives, so a part that throws protects from nothing and its other parts still count. A lookup that throws counts as no capability. A supply that throws delivers nothing, and a draw that throws gives no gas. Nothing is kept |
 
 The bus's own `post` stops at a listener that throws, logs an error each time and
@@ -1293,7 +1294,16 @@ and spectators are never moved and are sent no openings to be pushed by
 low to stand in has its pose forced to swimming (`Airflow.crawl`, FLOW-019) while it gets
 through: the server looks 1.5 blocks ahead along the flow each game tick and
 the client 1, so the server's smaller box is in place before the client's move
-into the hole reaches it. Impact damage (FLOW-005) isn't done.
+into the hole reaches it.
+
+Impact damage (FLOW-005) runs first in each game tick's step, so it sees what
+the entity's own tick did. `Airflow` watches the living entities the flow carries,
+at most `max_entities_per_tick` of them unless they are players, until the flow has
+let go of them and they are too slow to be hurt. An axis counts as stopped when the entity
+moved less than its speed there and a block is right beside it on that side. The
+speed is a mob's velocity after the last push, or for a player the distance the
+server saw it cover over two game ticks, as the server doesn't move players and no
+number from a client is trusted (NFR-011). `FlowImpact` holds the formula.
 
 Block damage (FLOW-007, FLOW-015, FLOW-016) is decided on the worker and done on
 the server thread, as a world-write intent (§3.3). After a tick's exchange,
@@ -1837,6 +1847,12 @@ client breathing sync (LIFE-023): the server sends each player its own state
   hit, so invulnerability ticks from another source mustn't swallow it, and
   protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
   `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
+- **Natural spawns** (LIFE-034). `LethalSpawns` fails NeoForge's
+  `MobSpawnEvent.PositionCheck` for a mob in `#zas:breathers` where the
+  atmosphere at its eyes has too little O₂, or a gas, pressure or temperature
+  that damages a bare mob. It acts on natural spawns and chunk generation's only,
+  and leaves a check another listener decided. Chunk generation's runs on a worker
+  thread, so it reads only the atmosphere and data, never a life-support capability.
 - **Internals** (LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046).
   `Internals` holds the switch, a saved entity attachment kept through death,
   which a player toggles with a keybind (`Internals.TogglePayload`, client to
@@ -2075,7 +2091,7 @@ sound, and nothing here runs for it.*
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
-| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
+| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`), `HazardHandlers` (`register` for a gas or a gas tag, `unregister`, `registered`; the registry stays in the API jar, so a handler registers with or without `zas`; LIFE-032), `HazardHandler` and `HazardExposure` |
 | `.api.client` | `ClientSounds` (`thinAir()`, `fadeInThinAir(namespace)`, `fadesInThinAir(namespace)`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
@@ -2342,7 +2358,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check against the recorded baseline, with a 10 % tolerance, comes in R1 |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
-| Packaging | GameTest harness loading built jars | The S0 harness, kept: `zas` plus example addon, and example addon alone (API-048) |
+| Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048) |
 
 The test names include requirement IDs (README rule 5).
 

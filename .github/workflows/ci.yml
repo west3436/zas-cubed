@@ -80,6 +80,19 @@ jobs:
             echo "::error::Expected the example addon's GameTest server to report that its tests passed, but $passed did."
             exit 1
           fi
+      # API-007: the built zas jar and a built copy of the example addon, each
+      # nesting the API, on one server. They must share one copy.
+      - name: API-007 one copy of the API (built jars)
+        if: steps.gradle.outputs.present == 'true'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          ./gradlew :example-addon:runOneCopyGameTestServer --stacktrace | tee one-copy-gametests.log
+          passed=$(grep -cE "All [0-9]+ required tests passed" one-copy-gametests.log || true)
+          if [ "$passed" -ne 1 ]; then
+            echo "::error::Expected the built jars' GameTest server to report that its tests passed, but $passed did."
+            exit 1
+          fi
 
   # Snapshot of the API on the Central Portal (API-008, D-18), after a green
   # build on main. Never on PRs: they don't get the secrets.

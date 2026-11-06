@@ -1,17 +1,23 @@
 package io.github.west3436.zas.airflow;
 
 import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.flow.FlowField;
+import io.github.west3436.zas.engine.flow.FlowImpact;
 import io.github.west3436.zas.engine.flow.FlowSettings;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
+import io.github.west3436.zas.life.HazardType;
+import io.github.west3436.zas.life.LifeDamage;
 import io.github.west3436.zas.life.WornProtection;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +50,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
- * Airflow (FLOW-001 to FLOW-004, FLOW-006, FLOW-009, FLOW-011 to FLOW-014, FLOW-017 to
+ * Airflow (FLOW-001 to FLOW-006, FLOW-009, FLOW-011 to FLOW-014, FLOW-017 to
  * FLOW-019): pressure differences push entities towards the lower-pressure side of each opening
  * between zones, or between a zone and the open air. Creative players and spectators are never
  * moved ({@link #exempt}, FLOW-018).
@@ -76,6 +83,11 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
  *       ({@link AirflowEffectsPayload}, {@link VisibleFlows}, DATA-015) for its client's particles
  *       (CLIENT-003). That is separate from the openings that push the player: wider, and sent
  *       to creative players and spectators too.
+ *   <li><b>Impacts</b>: a living entity the flow has carried takes {@link FlowImpact}'s damage when
+ *       a block stops it (FLOW-005). A mob's speed is what it had going into the
+ *       tick. A player moves on its own client, and a client's numbers aren't trusted (NFR-011), so
+ *       its speed is the distance the server saw it cover. Only the tick a side first meets a block
+ *       counts, so an entity held against a wall isn't hit again and again.
  * </ul>
  */
 public final class Airflow {
@@ -103,6 +115,15 @@ public final class Airflow {
      */
     private static final double[] CRAWL_RISE = {0, 0.5, 1};
 
+    /** How far along an axis to look for the block that stopped an entity, blocks. */
+    private static final double IMPACT_REACH = 0.01;
+
+    /** How much less than its speed an entity must have moved along an axis to have been stopped. */
+    private static final double IMPACT_TOLERANCE = 1e-4;
+
+    /** How much each other side of a box shrinks when looking along an axis, to miss what it touches. */
+    private static final double IMPACT_MARGIN = 1e-3;
+
     private static final Map<ResourceKey<Level>, LevelState> STATES = new HashMap<>();
 
     /** The players the server has put in the swimming pose (FLOW-019). Server thread. */
@@ -121,6 +142,42 @@ public final class Airflow {
         final Set<UUID> synced = new HashSet<>();
         final Set<UUID> pushed = new HashSet<>();
         final Map<UUID, Shown> shown = new HashMap<>();
+        final Int2ObjectMap<Carried> carried = new Int2ObjectOpenHashMap<>();
+    }
+
+    /**
+     * A living entity the flow has carried, watched for hitting a block until it is too slow to be
+     * hurt by one (FLOW-005). Server thread.
+     */
+    private static final class Carried {
+        final LivingEntity entity;
+        /** Whether this is the game tick it was first carried. */
+        boolean fresh = true;
+        /** Whether the flow acts on it this game tick. */
+        boolean inFlow;
+        /** Where it was at the last game tick. */
+        double x;
+
+        double z;
+        /** The speed it went into this game tick with, in blocks per tick. */
+        double vx;
+
+        double vz;
+        /** Whether a block holds it along each axis, so that meeting that block again is no blow. */
+        boolean heldX;
+
+        boolean heldZ;
+        /** For a player, what it moved in the last game tick, if that was a move the flow could make. */
+        boolean hasLastMove;
+
+        double lastMoveX;
+        double lastMoveZ;
+
+        Carried(LivingEntity entity) {
+            this.entity = entity;
+            this.x = entity.getX();
+            this.z = entity.getZ();
+        }
     }
 
     /** What a player's client was last sent to show, and at which game tick (DATA-015). */
@@ -346,7 +403,7 @@ public final class Airflow {
             if (st != null) {
                 end(level, st);
             }
-            crawlPlayers(level, null, null, FlowField.EMPTY, null);
+            crawlPlayers(level, null, null, null, FlowField.EMPTY, null);
             return;
         }
         if (st == null) {
@@ -364,20 +421,125 @@ public final class Airflow {
         }
         st.processed = 0;
         st.inRange = 0;
+        impacts(level, st);
         if (!st.field.isEmpty()) {
             pushEntities(level, d, table, st, settings);
         }
-        crawlPlayers(level, d, table, st.field, settings);
+        crawlPlayers(level, d, table, st, st.field, settings);
+        rememberCarried(st, settings);
+    }
+
+    /**
+     * Hurts each entity the flow has carried that a block stopped since the last game tick
+     * (FLOW-005). A side counts only the tick it first meets the block: an entity the flow holds
+     * against it loses nothing more to it until it has moved away. Only blocks count, not other
+     * entities.
+     */
+    private static void impacts(ServerLevel level, LevelState st) {
+        for (var it = st.carried.values().iterator(); it.hasNext(); ) {
+            Carried c = it.next();
+            LivingEntity e = c.entity;
+            if (!e.isAlive() || e.level() != level || exempt(e) || anchored(e)) {
+                it.remove();
+                continue;
+            }
+            double movedX = e.getX() - c.x;
+            double movedZ = e.getZ() - c.z;
+            // A mob moved itself, so it knows whether anything stopped it; the server only sees a
+            // player's moves, and a client that hit a wall sends a move that stops short of it.
+            boolean mayHaveHit = e instanceof Player || e.horizontalCollision;
+            boolean stoppedX = mayHaveHit && stoppedBy(e, c.vx, movedX, Direction.Axis.X);
+            boolean stoppedZ = mayHaveHit && stoppedBy(e, c.vz, movedZ, Direction.Axis.Z);
+            double lost = FlowImpact.speedLost(
+                    c.heldX ? 0 : c.vx, c.heldZ ? 0 : c.vz, stoppedX && !c.heldX, stoppedZ && !c.heldZ);
+            c.heldX = stoppedX || (c.heldX && Math.abs(movedX) <= IMPACT_TOLERANCE);
+            c.heldZ = stoppedZ || (c.heldZ && Math.abs(movedZ) <= IMPACT_TOLERANCE);
+            double damage = FlowImpact.damage(lost) * HazardConfig.scale(level.dimension(), HazardType.AIRFLOW_IMPACT);
+            LifeDamage.deal(e, HazardType.AIRFLOW_IMPACT, damage);
+        }
+    }
+
+    /**
+     * Whether a block stopped an entity along an axis: it moved less than its speed there, and a
+     * block is right beside it on that side. A step it climbed doesn't count, as it kept moving.
+     */
+    private static boolean stoppedBy(LivingEntity e, double speed, double moved, Direction.Axis axis) {
+        return Math.abs(moved) < Math.abs(speed) - IMPACT_TOLERANCE && beside(e, speed, axis);
+    }
+
+    /** Whether a block is right beside an entity on the side a speed along an axis takes it towards. */
+    private static boolean beside(LivingEntity e, double speed, Direction.Axis axis) {
+        boolean alongX = axis == Direction.Axis.X;
+        double step = Math.copySign(IMPACT_REACH, speed);
+        AABB ahead = e.getBoundingBox()
+                .deflate(alongX ? 0 : IMPACT_MARGIN, IMPACT_MARGIN, alongX ? IMPACT_MARGIN : 0)
+                .move(alongX ? step : 0, 0, alongX ? 0 : step);
+        return !e.level().noBlockCollision(e, ahead);
+    }
+
+    /**
+     * Notes each carried entity's place and the speed it goes into the next game tick with, and
+     * stops watching one the flow has let go of once it is too slow for a block to hurt it. A
+     * player's speed is the distance it covered, averaged over two game ticks because its moves can
+     * reach the server unevenly. A move too long for any flow to have carried it, such as a
+     * teleport, counts as no speed at all. A mob already against a block when the flow takes hold
+     * of it is held there, not thrown at it.
+     */
+    private static void rememberCarried(LevelState st, FlowSettings s) {
+        for (var it = st.carried.values().iterator(); it.hasNext(); ) {
+            Carried c = it.next();
+            LivingEntity e = c.entity;
+            if (e instanceof Player) {
+                double moveX = e.getX() - c.x;
+                double moveZ = e.getZ() - c.z;
+                if (c.fresh || Math.hypot(moveX, moveZ) > 2 * s.maxSpeed()) {
+                    c.vx = 0;
+                    c.vz = 0;
+                    c.hasLastMove = false;
+                } else {
+                    c.vx = c.hasLastMove ? (moveX + c.lastMoveX) / 2 : moveX;
+                    c.vz = c.hasLastMove ? (moveZ + c.lastMoveZ) / 2 : moveZ;
+                    c.lastMoveX = moveX;
+                    c.lastMoveZ = moveZ;
+                    c.hasLastMove = true;
+                }
+            } else {
+                Vec3 v = e.getDeltaMovement();
+                c.vx = v.x;
+                c.vz = v.z;
+                if (c.fresh) {
+                    c.heldX = beside(e, c.vx, Direction.Axis.X);
+                    c.heldZ = beside(e, c.vz, Direction.Axis.Z);
+                }
+            }
+            c.fresh = false;
+            c.x = e.getX();
+            c.z = e.getZ();
+            if (!c.inFlow && Math.hypot(c.vx, c.vz) <= FlowImpact.LEAST_SPEED_LOST) {
+                it.remove();
+            }
+            c.inFlow = false;
+        }
+    }
+
+    /** Starts watching an entity the flow carries, or goes on watching it (FLOW-005). */
+    private static void carry(LevelState st, LivingEntity e) {
+        Carried c = st.carried.get(e.getId());
+        if (c == null || c.entity != e) {
+            c = new Carried(e);
+            st.carried.put(e.getId(), c);
+        }
+        c.inFlow = true;
     }
 
     /** Puts the level's players carried into low openings in the swimming pose (FLOW-019). */
     private static void crawlPlayers(
-            ServerLevel level, DimensionAtmos d, AtmosSnapshot table, FlowField field, FlowSettings s) {
+            ServerLevel level, DimensionAtmos d, AtmosSnapshot table, LevelState st, FlowField field, FlowSettings s) {
         if (field.isEmpty() && CRAWLING.isEmpty()) {
             return;
         }
         for (ServerPlayer player : level.players()) {
-            crawlPlayer(level, d, table, field, s, player);
+            crawlPlayer(level, d, table, st, field, s, player);
         }
     }
 
@@ -385,6 +547,7 @@ public final class Airflow {
             ServerLevel level,
             DimensionAtmos d,
             AtmosSnapshot table,
+            LevelState st,
             FlowField field,
             FlowSettings s,
             ServerPlayer player) {
@@ -396,6 +559,9 @@ public final class Airflow {
             if (zone != UNRESOLVED) {
                 flow = flowAt(player, field, zone, cls.threshold(), s, resistance(player));
             }
+        }
+        if (flow != null && st != null) {
+            carry(st, player);
         }
         boolean was = CRAWLING.contains(id);
         if (flow == null && !was) {
@@ -423,6 +589,7 @@ public final class Airflow {
             }
         }
         st.shown.clear();
+        st.carried.clear();
         st.field = FlowField.EMPTY;
         st.tick = NONE;
         st.processed = 0;
@@ -468,7 +635,12 @@ public final class Airflow {
             }
             long zone = zoneOf(level, d, table, e.getBoundingBox().getCenter());
             if (zone != UNRESOLVED) {
-                apply(e, st.field, zone, cls.threshold(), s, resistance(e));
+                Vec3 pushed = apply(e, st.field, zone, cls.threshold(), s, resistance(e));
+                if (pushed != null
+                        && e instanceof LivingEntity living
+                        && (st.carried.size() < cap || st.carried.containsKey(e.getId()))) {
+                    carry(st, living);
+                }
             }
         }
     }
@@ -638,7 +810,7 @@ public final class Airflow {
         if (d == null || d.pipeline() == null || st == null) {
             return false;
         }
-        crawlPlayer(level, d, d.pipeline().published(), st.field, AirflowConfig.settings(), player);
+        crawlPlayer(level, d, d.pipeline().published(), st, st.field, AirflowConfig.settings(), player);
         return CRAWLING.contains(player.getUUID());
     }
 

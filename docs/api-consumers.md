@@ -147,6 +147,38 @@ NeoForge.EVENT_BUS.addListener((HazardTickEvent e) -> {
   drop its damage, set the damage to 0.
 - **Without ZAS³** it never fires.
 
+## Adding a hazard of your own
+
+A `HazardHandler` runs your code when a gas reaches an entity (LIFE-032), for example
+radiation from a radioactive gas you define. Register one for a gas or a gas tag.
+
+```java
+HazardHandlers.register(
+        ResourceLocation.fromNamespaceAndPath("mymod", "radiation"),
+        MY_RADIOACTIVE_GAS,
+        exposure -> {
+            double dose = exposure.surroundingPressure() * exposure.seconds();
+            if (dose > 0.1) {
+                exposure.entity().hurt(radiationDamage(exposure.entity()), (float) dose);
+            }
+        });
+```
+
+- **When:** on the server thread, at each breath check of a living entity, every 2 s by
+  default. It's called once for each of its gases in the entity's breath or the atmosphere
+  at its eyes, and a handler for a tag is called for each of the tag's gases there.
+- **How much reaches it:** `surroundingPressure()` is what's around it and
+  `breathedPressure()` is what it breathes, in kPa. They differ behind a filter or on a
+  tank, so a handler is called for a gas a filter keeps out, and decides what that means.
+  An entity that doesn't breathe breathes 0. With its eyes in a fluid nothing is around it,
+  so a handler hears only of a tank's gas.
+- **Scale by `seconds()`,** so the check interval changes smoothness, not speed.
+- **What it does is yours.** ZAS³ deals nothing for it, so `[hazards]` settings and
+  `HazardTickEvent` don't reach it. Any setting to turn it off or scale it is yours to add.
+- **Not called for** creative and spectator players, a check that charges no time, as an
+  entity's first does, a check waiting for the atmosphere to load, or an entity that has died.
+- **Without ZAS³,** handlers register and are never called.
+
 ## Gas handlers
 
 A block that stores gas provides `IGasHandler` (API-021), so others can fill and
@@ -410,8 +442,8 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
 
 ## If your code throws
 
-ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler
-or event listener throws, and the server carries on (NFR-013). That code is skipped
+ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler,
+hazard handler or event listener throws, and the server carries on (NFR-013). That code is skipped
 for the atmos tick and called again the next, and an event listener misses only that
 event. The fault is logged at most once a minute for each source, so one line in the
 log can stand for many faults.
