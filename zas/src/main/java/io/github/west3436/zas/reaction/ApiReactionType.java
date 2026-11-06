@@ -1,6 +1,7 @@
 package io.github.west3436.zas.reaction;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.reaction.ReactionChange;
 import io.github.west3436.zas.api.reaction.ReactionContext;
@@ -9,7 +10,6 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.reaction.CodeReaction;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
@@ -17,27 +17,24 @@ import org.slf4j.Logger;
  * A mod's {@link ReactionType} (API-020), bound to one definition, as the engine's {@link
  * CodeReaction}. It converts the engine's gas arrays to the API's records and back.
  *
- * <p><b>Fault isolation</b> (architecture §3.6): if the type throws, the call counts as no change,
- * and the failure is logged at most once a minute per definition. The engine itself checks what
- * comes back and skips an invalid change.
+ * <p><b>Fault isolation</b> (architecture §3.6, NFR-013): if the type throws, the call counts as no
+ * change, and the failure is logged at most once a minute per definition. The engine itself checks
+ * what comes back and skips an invalid change.
  */
 final class ApiReactionType implements CodeReaction {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final long LOG_INTERVAL_NANOS = 60_000_000_000L;
 
-    private final String definition;
-    private final ResourceLocation typeId;
+    /** Names this reaction in the log, and to {@link ThirdPartyFaults}. */
+    private final String source;
+
     private final ReactionType type;
-    /** When a failure was last logged, System.nanoTime(); only for logging, never for results. */
-    private final AtomicLong lastLogged = new AtomicLong(Long.MIN_VALUE);
     /** The gas ids of the last registry seen, by index. */
     private volatile Ids ids = new Ids(GasRegistry.EMPTY, new ResourceLocation[0]);
 
     private record Ids(GasRegistry registry, ResourceLocation[] byIndex) {}
 
     ApiReactionType(String definition, ResourceLocation typeId, ReactionType type) {
-        this.definition = definition;
-        this.typeId = typeId;
+        this.source = "Reaction " + definition + " of type " + typeId;
         this.type = type;
     }
 
@@ -61,7 +58,7 @@ final class ApiReactionType implements CodeReaction {
                     available,
                     input.seconds(),
                     input.ignition()));
-        } catch (RuntimeException | LinkageError e) {
+        } catch (Exception | LinkageError e) {
             failed("threw", e);
             return null;
         }
@@ -110,18 +107,8 @@ final class ApiReactionType implements CodeReaction {
     }
 
     private void failed(String what, Throwable error) {
-        long now = System.nanoTime();
-        long last = lastLogged.get();
-        if (last != Long.MIN_VALUE && now - last < LOG_INTERVAL_NANOS) {
-            return;
-        }
-        if (lastLogged.compareAndSet(last, now)) {
-            LOGGER.error(
-                    "Reaction {} of type {} {}; skipped (logged at most once a minute)",
-                    definition,
-                    typeId,
-                    what,
-                    error);
+        if (ThirdPartyFaults.shouldLog(source)) {
+            LOGGER.error("{} {}; skipped (logged at most once a minute)", source, what, error);
         }
     }
 }

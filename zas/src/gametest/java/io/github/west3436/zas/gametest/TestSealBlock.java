@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.capability.ISealProvider;
 import io.github.west3436.zas.api.capability.SealGeometry;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -33,6 +34,7 @@ public final class TestSealBlock {
 
     private static final Map<BlockPos, Optional<SealGeometry>> ANSWERS = new ConcurrentHashMap<>();
     private static final Map<BlockPos, Asked> ASKED = new ConcurrentHashMap<>();
+    private static final Set<BlockPos> FAILING = ConcurrentHashMap.newKeySet();
 
     private TestSealBlock() {}
 
@@ -43,6 +45,15 @@ public final class TestSealBlock {
     /** What the provider answers at {@code pos} from now on; null for no answer, leaving the shape's geometry. */
     static void answer(BlockPos pos, SealGeometry geometry) {
         ANSWERS.put(pos.immutable(), Optional.ofNullable(geometry));
+    }
+
+    /** Whether the provider throws when asked at {@code pos} from now on (NFR-013). */
+    static void failing(BlockPos pos, boolean failing) {
+        if (failing) {
+            FAILING.add(pos.immutable());
+        } else {
+            FAILING.remove(pos);
+        }
     }
 
     /** How often the provider has been asked at {@code pos}. */
@@ -64,6 +75,9 @@ public final class TestSealBlock {
                     pos,
                     new Asked(1, Thread.currentThread()),
                     (old, now) -> new Asked(old.times() + now.times(), now.by()));
+            if (FAILING.contains(pos)) {
+                throw new IllegalStateException("the test seal provider failing");
+            }
             return ANSWERS.getOrDefault(pos, Optional.empty());
         };
     }

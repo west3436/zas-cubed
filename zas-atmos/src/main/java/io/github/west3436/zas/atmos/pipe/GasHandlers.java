@@ -1,26 +1,31 @@
 package io.github.west3436.zas.atmos.pipe;
 
+import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ServerThreads;
+import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * Where pipes and devices meet blocks that provide the gas-handler capability (API-025, API-026).
- * Every capability lookup and every call into a handler is here, so a guard against a handler's faults
- * (NFR-013) has one place to go.
+ * Every capability lookup and every call into a handler is here, each guarded: a handler that throws
+ * is skipped for the atmos tick and logged at most once a minute (NFR-013).
  *
  * <p>A handler is a neighbour, but not a network member: it adds no volume and has no share. A node
  * exchanges gas with it in its step, on the server thread, by moving gas between the handler and its
@@ -30,6 +35,8 @@ import org.jetbrains.annotations.Nullable;
  * here, and the server's block state brings a pipe's arms to the client.
  */
 public final class GasHandlers {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     /**
      * The sharing ratio per atmos tick: all the way to an equal concentration, as a canister on a
      * connector port would be, since a handler is the same sort of store.
@@ -67,7 +74,21 @@ public final class GasHandlers {
                 && self.getBlock() instanceof PipeConnector block
                 && block.pipeConnects(self, face, neighbour)
                 && server.isLoaded(next)
-                && handler(server, next, neighbour, face) != null;
+                && provides(server, next, neighbour, face);
+    }
+
+    /**
+     * Whether a neighbour provides the capability toward a face. A lookup that throws counts as yes,
+     * since only a block with a provider can run one, and a pipe's arm mustn't go with the fault, which
+     * would leave an open end for the gas to escape from (NFR-013).
+     */
+    private static boolean provides(Level level, BlockPos next, BlockState neighbour, Direction face) {
+        try {
+            return lookup(level, next, neighbour, face) != null;
+        } catch (Exception | LinkageError e) {
+            failed(neighbour, e);
+            return true;
+        }
     }
 
     /**
@@ -130,30 +151,65 @@ public final class GasHandlers {
                 || !level.isLoaded(next)) {
             return;
         }
-        IGasHandler handler = handler(level, next, level.getBlockState(next), face);
+        BlockState neighbour = level.getBlockState(next);
+        IGasHandler handler = handler(level, next, neighbour, face);
         if (handler == null) {
             return;
         }
         GasStore gas = buffer.gas().get();
-        PipeBlockEntity.Flow flow =
-                PipeBlockEntity.openEndFlow(gas.moles(), gas.volume(), handler.contents(), false, RATIO);
+        PipeBlockEntity.Flow flow;
+        try {
+            flow = PipeBlockEntity.openEndFlow(gas.moles(), gas.volume(), handler.contents(), false, RATIO);
+        } catch (Exception | LinkageError e) {
+            failed(neighbour, e);
+            return;
+        }
         if (!flow.out().isEmpty()) {
             GasParcel offered = gas.take(flow.out());
             GasParcel took = null;
             try {
                 took = handler.fill(offered, IGasHandler.Action.EXECUTE);
+            } catch (Exception | LinkageError e) {
+                failed(neighbour, e);
+                return;
             } finally {
                 buffer.deliver().accept(left(offered, took));
             }
         }
         if (!flow.in().isEmpty() && !buffer.removed().getAsBoolean()) {
-            buffer.deliver().accept(handler.drain(flow.in(), IGasHandler.Action.EXECUTE));
+            GasParcel drained;
+            try {
+                drained = Objects.requireNonNull(handler.drain(flow.in(), IGasHandler.Action.EXECUTE), "its drain");
+            } catch (Exception | LinkageError e) {
+                failed(neighbour, e);
+                return;
+            }
+            buffer.deliver().accept(drained);
+        }
+    }
+
+    /** The handler on a face, or null if it has none or the lookup throws (NFR-013). */
+    @Nullable
+    private static IGasHandler handler(Level level, BlockPos next, BlockState neighbour, Direction face) {
+        try {
+            return lookup(level, next, neighbour, face);
+        } catch (Exception | LinkageError e) {
+            failed(neighbour, e);
+            return null;
         }
     }
 
     @Nullable
-    private static IGasHandler handler(Level level, BlockPos next, BlockState neighbour, Direction face) {
+    private static IGasHandler lookup(Level level, BlockPos next, BlockState neighbour, Direction face) {
         return level.getCapability(IGasHandler.BLOCK, next, neighbour, null, face.getOpposite());
+    }
+
+    /** Logs a handler's fault, at most once a minute for each kind of block (NFR-013). */
+    private static void failed(BlockState neighbour, Throwable error) {
+        String source = "Gas handler of " + BuiltInRegistries.BLOCK.getKey(neighbour.getBlock());
+        if (ThirdPartyFaults.shouldLog(source)) {
+            LOGGER.error("{} threw; skipped for the atmos tick (logged at most once a minute)", source, error);
+        }
     }
 
     /**

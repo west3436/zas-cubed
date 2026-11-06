@@ -81,7 +81,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 /**
@@ -1279,7 +1278,7 @@ public final class DimensionAtmos {
         for (FireEvent e : a.fireEvents()) {
             ZoneId zone = new ZoneId(e.zoneId());
             BlockPos at = BlockPos.of(e.block());
-            NeoForge.EVENT_BUS.post(
+            ApiEvents.post(
                     e.kind() == FireEvent.Kind.IGNITED
                             ? new FireIgnitedEvent(level, zone, at)
                             : new FireExtinguishedEvent(level, zone, at));
@@ -1287,7 +1286,7 @@ public final class DimensionAtmos {
         for (OpenAirEvent e : a.events()) {
             Pending p = pending.get(e.seq());
             SourceId source = p != null ? p.source() : SourceId.of("zas", "unknown");
-            NeoForge.EVENT_BUS.post(new OpenAirGasEvent(
+            ApiEvents.post(new OpenAirGasEvent(
                     level, BlockPos.of(e.block()), e.added(), parcel(e.moles(), e.temperature()), source));
         }
         for (OpOutcome o : a.outcomes()) {
@@ -1384,7 +1383,7 @@ public final class DimensionAtmos {
             moved = new GasParcel(supplied, ambient.temperature());
         }
         if (!moved.isEmpty()) {
-            NeoForge.EVENT_BUS.post(new OpenAirGasEvent(level, p.pos(), p.add(), moved, p.source()));
+            ApiEvents.post(new OpenAirGasEvent(level, p.pos(), p.add(), moved, p.source()));
         }
         p.future().complete(new MutationResult(MutationOutcome.AMBIENT, moved));
     }

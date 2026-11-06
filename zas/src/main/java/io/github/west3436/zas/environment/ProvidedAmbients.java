@@ -1,6 +1,7 @@
 package io.github.west3436.zas.environment;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.environment.AmbientDefinition;
 import io.github.west3436.zas.api.environment.AmbientProviders;
 import io.github.west3436.zas.engine.Ambient;
@@ -21,8 +22,8 @@ import org.slf4j.Logger;
  * What each dimension's ambient provider last answered (ENV-004, ENV-015): called once per atmos
  * tick on the server thread, and read by every lookup from any thread until the next.
  *
- * <p>{@link #call} is the only place that runs a provider, so a guard against one that throws
- * (NFR-013) has one place to go.
+ * <p>{@link #call} is the only place that runs a provider, and it guards against one that throws
+ * (NFR-013).
  */
 final class ProvidedAmbients {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -56,9 +57,20 @@ final class ProvidedAmbients {
         }
     }
 
-    /** Runs a provider. The one place third-party ambient code is called; see the class comment. */
+    /**
+     * Runs a provider. The one place third-party ambient code is called; see the class comment. One
+     * that throws is skipped for this atmos tick, as if it had answered null (NFR-013).
+     */
     private static AmbientDefinition call(AmbientProviders.Registration provider, ServerLevel level) {
-        return provider.provider().ambient(level);
+        try {
+            return provider.provider().ambient(level);
+        } catch (Exception | LinkageError e) {
+            String source = "Ambient provider " + provider.id();
+            if (ThirdPartyFaults.shouldLog(source)) {
+                LOGGER.error("{} threw; skipped for the atmos tick (logged at most once a minute)", source, e);
+            }
+            return null;
+        }
     }
 
     /** An answer as the simulation's ambient, or null if it defines nothing the server can use. */
