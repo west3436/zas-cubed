@@ -15,10 +15,14 @@ import io.github.west3436.zas.airflow.VisibleOpening;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.flow.FlowEdge;
 import io.github.west3436.zas.engine.flow.FlowField;
+import io.github.west3436.zas.engine.flow.FlowImpact;
 import io.github.west3436.zas.engine.flow.FlowSettings;
+import io.github.west3436.zas.life.HazardType;
+import io.github.west3436.zas.life.LifeDamage;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
@@ -31,12 +35,15 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +57,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Airflow in a real level (FLOW-001 to FLOW-004, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017 to
+ * Airflow in a real level (FLOW-001 to FLOW-005, FLOW-009, FLOW-011, FLOW-012, FLOW-014, FLOW-017 to
  * FLOW-019), and what the server sends clients to show it (CLIENT-003, DATA-015).
  *
  * <p>Each test runs within one game tick, so nothing moves the entities between the push and the
@@ -64,6 +71,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class AirflowTests {
     /** The hole in the east wall of the breached room. */
     private static final int HOLE_X = 20;
+
+    /** The stone pillar outside the hole, of {@link Site#pillar}, whose east face is at x + 1. */
+    private static final int PILLAR_X = HOLE_X + 4;
 
     private static final int Y = 2;
     private static final int Z = 3;
@@ -256,6 +266,49 @@ public final class AirflowTests {
             double before = AirflowConfig.MAX_SPEED.get();
             restore.add(() -> AirflowConfig.MAX_SPEED.set(before));
             AirflowConfig.MAX_SPEED.set(speed);
+        }
+
+        /** A stone pillar outside the hole, in line with it: the flow carries what is further out into it. */
+        void pillar() {
+            pillar(PILLAR_X);
+        }
+
+        void pillar(int x) {
+            for (int y = Y - 1; y <= Y + 1; y++) {
+                r.set(x, y, Z, Rooms.STONE);
+            }
+        }
+
+        /**
+         * A game tick of a mob thrown along x at this speed: the airflow that ended the last game
+         * tick, the mob's own move, then the airflow that sees what the move did.
+         */
+        void fling(Mob mob, double vx) {
+            mob.setDeltaMovement(vx, 0, 0);
+            Airflow.step(r.level);
+            mob.move(MoverType.SELF, mob.getDeltaMovement());
+            Airflow.step(r.level);
+        }
+
+        /** A game tick after a player's move to absolute x reached the server, its feet at area y 1. */
+        void playerAt(FakePlayer player, double x) {
+            BlockPos at = r.abs(0, Y - 1, Z);
+            player.setPos(x, at.getY(), at.getZ() + 0.5);
+            Airflow.crawlForTest(r.level, player);
+            Airflow.step(r.level);
+        }
+
+        void impactScale(double scale) {
+            double before = HazardConfig.SCALE.get(HazardType.AIRFLOW_IMPACT).get();
+            restore.add(() -> HazardConfig.SCALE.get(HazardType.AIRFLOW_IMPACT).set(before));
+            HazardConfig.SCALE.get(HazardType.AIRFLOW_IMPACT).set(scale);
+        }
+
+        void impactEnabled(boolean on) {
+            boolean before = HazardConfig.ENABLED.get(HazardType.AIRFLOW_IMPACT).get();
+            restore.add(
+                    () -> HazardConfig.ENABLED.get(HazardType.AIRFLOW_IMPACT).set(before));
+            HazardConfig.ENABLED.get(HazardType.AIRFLOW_IMPACT).set(on);
         }
 
         @Override
@@ -946,6 +999,184 @@ public final class AirflowTests {
                 h.assertTrue(Airflow.processedLastTick(s.r.level) <= 10, "the cap was passed");
             }
             h.assertTrue(items.stream().allMatch(e -> vx(e) < 0), "some items never took their turn");
+        }
+        h.succeed();
+    }
+
+    private static void near(GameTestHelper h, double actual, double expected, String what) {
+        h.assertTrue(Math.abs(actual - expected) < 1e-3, what + ": " + actual + ", expected " + expected);
+    }
+
+    /**
+     * A mob flung into a block takes vanilla's fly-into-wall damage, speed lost × 10 − 3, of the
+     * airflow impact type (FLOW-005). The test throws it at set speeds faster than the flow, which
+     * so leaves them alone, and moves it as its own tick would.
+     */
+    @GameTest(template = "empty")
+    public static void flow_005_a_mob_flung_into_a_block_takes_the_formula_s_damage(GameTestHelper h) {
+        try (Site s = new Site(h, 128)) {
+            s.breach();
+            s.pillar();
+            Pig at09 = s.spawn(EntityType.PIG, PILLAR_X + 1.4);
+            Pig at12 = s.spawn(EntityType.PIG, PILLAR_X + 1.4);
+            Airflow.step(s.r.level);
+            h.assertTrue(vx(at09) < -0.01, "the flow doesn't carry the pig: " + vx(at09));
+
+            at09.setDeltaMovement(-0.9, 0, 0);
+            at12.setDeltaMovement(-1.2, 0, 0);
+            Airflow.step(s.r.level);
+            near(h, at09.getHealth(), 10, "the pig's health in the air");
+            at09.move(MoverType.SELF, at09.getDeltaMovement());
+            at12.move(MoverType.SELF, at12.getDeltaMovement());
+            h.assertTrue(at09.horizontalCollision, "the pig didn't reach the pillar");
+            Airflow.step(s.r.level);
+            near(h, at09.getHealth(), 10 - (0.9 * 10 - 3), "the health of the pig at 0.9 blocks per tick");
+            near(h, at12.getHealth(), 10 - (1.2 * 10 - 3), "the health of the pig at 1.2 blocks per tick");
+            h.assertTrue(at09.getLastDamageSource().is(LifeDamage.AIRFLOW_IMPACT), "the damage type");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A mob the flow holds against a block isn't hit again for it, however hard the flow presses,
+     * nor is one that was against the block when the flow took hold of it. One that comes away and
+     * is thrown back is (FLOW-005).
+     */
+    @GameTest(template = "empty")
+    public static void flow_005_a_mob_held_against_a_block_is_hit_once(GameTestHelper h) {
+        try (Site s = new Site(h, 129)) {
+            s.breach();
+            s.pillar();
+            Pig pig = s.spawn(EntityType.PIG, PILLAR_X + 1.4);
+            Pig touching = s.spawn(EntityType.PIG, PILLAR_X + 0.95);
+            Airflow.step(s.r.level);
+            s.fling(pig, -0.9);
+            s.fling(touching, -0.9);
+            near(h, pig.getHealth(), 4, "the pig's health after the first blow");
+            near(h, touching.getHealth(), 10, "the pig that was against the pillar from the start");
+
+            for (int i = 0; i < 5; i++) {
+                pig.invulnerableTime = 0;
+                s.fling(pig, -0.9);
+            }
+            near(h, pig.getHealth(), 4, "the pig's health held against the pillar");
+
+            pig.invulnerableTime = 0;
+            pig.setHealth(pig.getMaxHealth());
+            pig.setPos(pig.getX() + 0.45, pig.getY(), pig.getZ());
+            s.fling(pig, -0.9);
+            near(h, pig.getHealth(), 4, "the pig's health when thrown back");
+        }
+        h.succeed();
+    }
+
+    /** Losing up to 0.3 blocks per tick does no damage, and the hazard's settings apply (FLOW-005). */
+    @GameTest(template = "empty")
+    public static void flow_005_a_slow_knock_does_nothing_and_settings_apply(GameTestHelper h) {
+        try (Site s = new Site(h, 130)) {
+            s.breach();
+            s.pillar();
+            Pig slow = s.spawn(EntityType.PIG, PILLAR_X + 1.05);
+            Airflow.step(s.r.level);
+            h.assertTrue(
+                    vx(slow) < -0.1 && vx(slow) > -FlowImpact.LEAST_SPEED_LOST,
+                    "the flow's push isn't a slow knock: " + vx(slow));
+            slow.move(MoverType.SELF, slow.getDeltaMovement());
+            h.assertTrue(slow.horizontalCollision, "the pig didn't reach the pillar");
+            Airflow.step(s.r.level);
+            near(h, slow.getHealth(), 10, "the health of the pig that a slow knock hit");
+
+            s.impactScale(0.5);
+            Pig halved = s.spawn(EntityType.PIG, PILLAR_X + 1.4);
+            Airflow.step(s.r.level);
+            s.fling(halved, -0.9);
+            near(h, halved.getHealth(), 10 - 3, "the pig's health at a scale of 0.5");
+
+            s.impactEnabled(false);
+            Pig off = s.spawn(EntityType.PIG, PILLAR_X + 1.4);
+            Airflow.step(s.r.level);
+            s.fling(off, -0.9);
+            near(h, off.getHealth(), 10, "the pig's health with the hazard off");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A mob with its own tick, with nothing but the flow to move it, is carried into the pillar and
+     * takes the damage for the speed it had (FLOW-005).
+     */
+    @GameTest(template = "empty")
+    public static void flow_005_the_flow_alone_throws_a_mob_into_a_block(GameTestHelper h) {
+        try (Site s = new Site(h, 131)) {
+            s.breach();
+            s.pillar(HOLE_X + 2);
+            Pig pig = s.spawn(EntityType.PIG, HOLE_X + 6);
+            pig.setNoAi(false);
+            double expected = 0;
+            for (int i = 0; i < 80 && pig.getHealth() == pig.getMaxHealth(); i++) {
+                Airflow.step(s.r.level);
+                if (pig.getHealth() == pig.getMaxHealth()) {
+                    Vec3 v = pig.getDeltaMovement();
+                    expected = FlowImpact.damage(FlowImpact.speedLost(v.x, v.z, true, false));
+                    pig.tick();
+                }
+            }
+            h.assertTrue(
+                    pig.horizontalCollision,
+                    "the flow didn't carry the pig to the pillar: it's at x "
+                            + (pig.getX() - s.r.abs(0, 0, 0).getX())
+                            + " at "
+                            + pig.getDeltaMovement());
+            near(h, pig.getMaxHealth() - pig.getHealth(), expected, "the damage to the pig");
+            h.assertTrue(expected > 0, "the flow carried the pig too slowly to hurt it");
+            h.assertTrue(pig.getLastDamageSource().is(LifeDamage.AIRFLOW_IMPACT), "the damage type");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A player moves on its own client, so the server judges an impact from the moves it receives:
+     * the player covers ground, then stops beside a block, and is hit once (FLOW-005). A jump too
+     * long for any flow, such as a teleport, isn't speed, and a player that stops with no block
+     * beside it isn't hit.
+     */
+    @GameTest(template = "empty")
+    public static void flow_005_a_player_flung_into_a_block_is_judged_by_its_moves(GameTestHelper h) {
+        try (Site s = new Site(h, 132)) {
+            s.breach();
+            s.pillar();
+            ServerLevel level = s.r.level;
+            FakePlayer player = TestPlayers.hurtable(level, "zas_airflow");
+            double wall = s.r.abs(PILLAR_X + 1, 0, 0).getX() + player.getBbWidth() / 2;
+            for (int i = 3; i >= 0; i--) {
+                s.playerAt(player, wall + i * 0.8);
+                near(h, player.getHealth(), player.getMaxHealth(), "the player's health on its way");
+            }
+            s.playerAt(player, wall);
+            near(h, player.getMaxHealth() - player.getHealth(), 0.8 * 10 - 3, "the damage to the player");
+            h.assertTrue(player.getLastDamageSource().is(LifeDamage.AIRFLOW_IMPACT), "the damage type");
+
+            float after = player.getHealth();
+            for (int i = 0; i < 5; i++) {
+                player.invulnerableTime = 0;
+                s.playerAt(player, wall);
+            }
+            near(h, player.getHealth(), after, "the player's health held against the pillar");
+
+            FakePlayer teleported = TestPlayers.hurtable(level, "zas_airflow");
+            s.playerAt(teleported, wall + 3.5);
+            s.playerAt(teleported, wall + 3.5);
+            s.playerAt(teleported, wall);
+            s.playerAt(teleported, wall);
+            s.playerAt(teleported, wall);
+            near(h, teleported.getHealth(), teleported.getMaxHealth(), "the player that teleported to the pillar");
+
+            FakePlayer stopped = TestPlayers.hurtable(level, "zas_airflow");
+            for (int i = 0; i < 3; i++) {
+                s.playerAt(stopped, wall + 3 - i * 0.8);
+            }
+            s.playerAt(stopped, wall + 3 - 2 * 0.8);
+            near(h, stopped.getHealth(), stopped.getMaxHealth(), "the player that stopped in the open");
         }
         h.succeed();
     }
