@@ -739,7 +739,8 @@ public final class DimensionPipeline {
                         unconfirmed.entrySet().iterator();
                 it.hasNext(); ) {
             Map.Entry<Long, Sent> e = it.next();
-            if (e.getValue().tick() <= result.tick()) {
+            // A rejected zone is answered from the last table, which won't hold what it has just taken in.
+            if (e.getValue().tick() <= result.tick() && rejectedIndices.isEmpty()) {
                 changed.add(e.getKey());
                 it.remove();
             }

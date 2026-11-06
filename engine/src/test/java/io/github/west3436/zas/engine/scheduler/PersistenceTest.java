@@ -358,6 +358,41 @@ class PersistenceTest {
     }
 
     /**
+     * A rejected tick takes in a chunk's share and publishes nothing of it, as the zone wasn't in the last
+     * table. The chunk leaves before the next tick, and its record is all there is to save.
+     */
+    @Test
+    void data_008_a_chunk_leaving_after_a_rejected_tick_took_in_its_share_still_saves_it() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3);
+        sim.add(13, 69, 2, 720, 0);
+        sim.steps(2);
+        long id = sim.zoneAt(13, 69, 2).id();
+        long west = SectionKeys.chunk(0, 0);
+        long east = SectionKeys.chunk(1, 0);
+        ChunkRecord westRecord = sim.unload(west);
+        ChunkRecord eastRecord = sim.unload(east);
+        sim.step();
+        assertNull(sim.snapshot().zone(id), "the zone is still in memory");
+
+        sim.load(west, westRecord);
+        sim.load(east, eastRecord);
+        sim.add(17, 69, 2, 1, 0); // only a zone whose gas changes in a tick can be rejected
+        ChunkRecord[] eastAgain = new ChunkRecord[1];
+        sim.betweenCloseAndApply = s -> {
+            s.betweenCloseAndApply = n -> {};
+            eastAgain[0] = s.unload(east);
+        };
+        assertTrue(sim.step().rejected() > 0, "the tick wasn't rejected");
+        assertNull(sim.snapshot().zone(id), "the rejected zone was published");
+
+        ChunkRecord westAgain = sim.unload(west);
+        assertNotNull(westAgain, "the west chunk saved nothing");
+        close(360, westAgain.share(id).moles(N2), "the west share");
+        close(360, eastAgain[0].share(id).moles(N2), "the east share");
+    }
+
+    /**
      * A sealed shaft from the ceiling of a room whose interior tops out at y 66, rising past the
      * sections kept mirrored around a zone, so a fill up it asks for a section the mirror lacks.
      */
