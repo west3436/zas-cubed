@@ -137,8 +137,8 @@ final class IntegrityFuzz {
 
     private record Room(int x0, int y0, int z0, int x1, int y1, int z1) {}
 
-    /** A chunk that saved between a tick's close and apply, and the table it saved from. */
-    private record SavedInFlight(long chunk, ChunkRecord record, AtmosSnapshot before) {}
+    /** A chunk that saved since the last tick, and the table it saved from. */
+    private record SavedBehind(long chunk, ChunkRecord record, AtmosSnapshot before) {}
 
     /** A zone that divided in the tick one of its chunks saved during: see {@link #noteDivisions}. */
     private static final class Division {
@@ -175,7 +175,7 @@ final class IntegrityFuzz {
     /** The records handed to the pipeline since the last tick, to look a dropped share up in. */
     private final TreeMap<Long, ChunkRecord> delivered = new TreeMap<>();
 
-    private final List<SavedInFlight> savedInFlight = new ArrayList<>();
+    private final List<SavedBehind> savedBehind = new ArrayList<>();
     private final List<Division> divisions = new ArrayList<>();
 
     private double[] expected = new double[GASES];
@@ -493,18 +493,23 @@ final class IntegrityFuzz {
         log((late ? "unload during the next tick " : "unload ") + chunkStr(chunk));
         stats.unloads++;
         if (!late) {
-            unloadNow(sim, chunk);
+            unloadNoting(sim, chunk);
             return;
         }
         sim.betweenCloseAndApply = s -> {
             s.betweenCloseAndApply = x -> {};
-            AtmosSnapshot before = s.snapshot();
-            unloadNow(s, chunk);
-            if (saved.containsKey(chunk)) {
-                savedInFlight.add(new SavedInFlight(chunk, saved.get(chunk), before));
-            }
+            unloadNoting(s, chunk);
         };
         step();
+    }
+
+    /** Whenever it unloads, a chunk saves from a table that's behind the block changes of the next tick. */
+    private void unloadNoting(Sim s, long chunk) {
+        AtmosSnapshot before = s.snapshot();
+        unloadNow(s, chunk);
+        if (saved.containsKey(chunk)) {
+            savedBehind.add(new SavedBehind(chunk, saved.get(chunk), before));
+        }
     }
 
     private void unloadNow(Sim s, long chunk) {
@@ -693,8 +698,8 @@ final class IntegrityFuzz {
     }
 
     /**
-     * Finds the limit on DATA-008. A chunk that saves between a tick's close and apply writes the table from
-     * before that tick. If a block change in that tick divides the zone, the share written holds gas that's
+     * Finds the limit on DATA-008. A chunk that saves writes the table from before the tick in flight or the
+     * next one. If a block change in that tick divides the zone, the share written holds gas that's
      * in the other parts too, and the total goes out when those zones leave memory or the chunk loads. That
      * is all that's excused: a zone that once the table has caught up has gone, or has fewer cells in the
      * chunk than the share and less gas than it had, for the gas it no longer holds, in the ticks that shows
@@ -704,7 +709,7 @@ final class IntegrityFuzz {
         if (table.hasRejections()) {
             return; // a rejected zone is answered from the last table, so it hasn't caught up yet
         }
-        for (SavedInFlight s : savedInFlight) {
+        for (SavedBehind s : savedBehind) {
             if (saved.get(s.chunk) != s.record) {
                 continue; // it has loaded again, and a share whose zone is in memory isn't taken
             }
@@ -716,8 +721,7 @@ final class IntegrityFuzz {
                 // A share the table didn't have is one the zone hadn't taken in, so its gas was never in the zone.
                 boolean wasInZone = before != null && shareOf(s.before, s.chunk, id) != null;
                 boolean tookOver = table.shares(s.chunk).stream().anyMatch(h -> overlap(share.cells(), h.cells()));
-                if (wasInZone
-                        && (now == null ? tookOver : (part == null || part.cellCount() < share.cellCount()))) {
+                if (wasInZone && (now == null ? tookOver : (part == null || part.cellCount() < share.cellCount()))) {
                     double[] gone = new double[GASES];
                     boolean fell = false;
                     for (int i = 0; i < GASES; i++) {
@@ -745,7 +749,7 @@ final class IntegrityFuzz {
                 }
             }
         }
-        savedInFlight.clear();
+        savedBehind.clear();
     }
 
     /** What the divisions showing in this tick no longer hold of a gas: the most they can put the total out. */

@@ -107,6 +107,21 @@ could wait for the worker, which removes the window but changes a core design
 rule, or the pipeline could track divisions and correct the share when the
 chunk reloads, which is a larger change.*
 
+*2026-11-06: The window is wider than that note says, as fresh seeds of the fuzz
+showed. A chunk saves from the published table, so the tick that divides the
+zone can be the one in flight as it unloads, or the next one if the block change
+was queued before it unloaded. An unload waiting for the worker would close only
+the first. The share can also come back on top of what the zone's other parts
+hold: on seed 29 a share of 3.79e247 mol returns at a reload where the zone had
+lost 2.80e247, about 0.8% of that gas in the run. And gas can go: on seed 30 a
+part holding 3,229 mol leaves memory against a share of 2,191 mol, so 1,038 mol
+goes. The fuzz now excuses no more than the larger of the zone's loss and the
+share written, for that zone and those it divided into, and reports how many
+differences it excused for each seed.
+
+So there is something the fuzz can no longer catch: a real bug that makes or
+loses no more than that bound, in a zone that has just divided after an unload.*
+
 #### DATA-010 · Held changes persist
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43
 
