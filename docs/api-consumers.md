@@ -212,6 +212,38 @@ ZonePins.unpin(level, owner);
   server thread at the next atmos tick. Pins are saved with their zone.
 - **Without ZAS³** a pin completes at once with `ABSENT`.
 
+## Zone events
+
+ZAS³ tells you as a zone's life changes (API-030). Each event is fired on
+`NeoForge.EVENT_BUS`, on the server thread, when the atmos tick that caused it is
+applied, and fires once per change. Each has `level()`, `zone()` and `pos()`, a
+block in the zone, or where it was if it's gone.
+
+| Event | When |
+|---|---|
+| `ZoneCreatedEvent` | A zone formed, for gas added to a sealed room or a pin |
+| `ZoneMergedEvent` | Two zones became one. `zone()` is the survivor and `absorbed()` the id that's gone |
+| `ZoneSplitEvent` | A zone was cut in two. `zone()` keeps its id and `remnant()` is the new one, which gets no `ZoneCreatedEvent` |
+| `ZoneBreachedEvent` | A sealed zone gained an opening to the ambient |
+| `ZoneSealedEvent` | A breached zone lost its last opening to the ambient |
+| `ZoneDissolvedEvent` | A zone is gone along with its gas, not by merging |
+| `ZonePausedEvent` | A zone stopped being simulated: part of it is unloaded, say |
+| `ZoneResumedEvent` | A paused zone is simulated again |
+
+```java
+@SubscribeEvent
+public static void onBreach(ZoneBreachedEvent event) {
+    alarms.sound(event.level(), event.pos());
+}
+```
+
+Listen for the event you want: `ZoneLifecycleEvent` is only their shared base, and the
+bus won't take a listener for it.
+
+A zone coming back from chunk storage fires `ZoneResumedEvent`, not
+`ZoneCreatedEvent`. That means after a restart it fires with no `ZonePausedEvent`
+before it, so treat the two as a state to follow, not as a pair to count.
+
 ## A block that says what it seals: seal providers
 
 ZAS³ works out what a block seals from its collision shape. A block that decides

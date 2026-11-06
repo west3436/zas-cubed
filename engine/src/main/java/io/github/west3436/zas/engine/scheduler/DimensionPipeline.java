@@ -6,6 +6,7 @@ import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.flow.FlowEdge;
+import io.github.west3436.zas.engine.zone.ZoneEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -98,6 +99,8 @@ public final class DimensionPipeline {
      * @param fireEvents zones that caught fire or stopped burning (API-031), without rejected
      *     zones
      * @param pressureBreaks fragile blocks to break (FLOW-007), without those read from a rejected zone
+     * @param zoneEvents what happened to zones (API-030), oldest first, without what a rejection takes
+     *     back
      */
     public record Applied(
             long tick,
@@ -110,7 +113,8 @@ public final class DimensionPipeline {
             long[] changedChunks,
             List<FireIntent> fireIntents,
             List<FireEvent> fireEvents,
-            List<PressureBreak> pressureBreaks) {}
+            List<PressureBreak> pressureBreaks,
+            List<ZoneEvent> zoneEvents) {}
 
     private final DimensionScheduler scheduler;
     private final World world;
@@ -694,6 +698,7 @@ public final class DimensionPipeline {
                     new long[0],
                     List.of(),
                     List.of(),
+                    List.of(),
                     List.of());
         }
         List<Integer> rejectedIndices = new ArrayList<>();
@@ -738,6 +743,12 @@ public final class DimensionPipeline {
         for (FireEvent e : result.fireEvents()) {
             if (!rejectedSet.contains(e.zoneId())) {
                 fireEvents.add(e);
+            }
+        }
+        List<ZoneEvent> zoneEvents = new ArrayList<>();
+        for (ZoneEvent e : result.zoneEvents()) {
+            if (!e.undoable() || !(rejectedSet.contains(e.zoneId()) || rejectedSet.contains(e.otherId()))) {
+                zoneEvents.add(e);
             }
         }
         List<PressureBreak> breaks = new ArrayList<>();
@@ -793,7 +804,8 @@ public final class DimensionPipeline {
                 toArray(changed),
                 intents,
                 fireEvents,
-                breaks);
+                breaks,
+                zoneEvents);
     }
 
     /** The chunks of zones whose published state differs between two tables. */
