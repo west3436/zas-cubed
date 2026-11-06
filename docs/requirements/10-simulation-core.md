@@ -920,7 +920,8 @@ forms no zone. A fuel block of another mod still joins through the tag, as
 #### CORE-052 · Zone garbage collection
 `Should` · `R1` · `Accepted` · Verify: GameTest
 
-A zone shall be dissolved back to ambient when both hold:
+A sealed zone, one with no ambient edge, shall be dissolved back to ambient when
+both hold:
 - its mixture has been equivalent to its ambient for a configurable time
 - nothing pins it (attached devices, API pins)
 
@@ -928,8 +929,8 @@ A zone shall be dissolved back to ambient when both hold:
   (D-13), so one that has returned to ambient and holds nothing is removed to
   keep the zone count low ([zas-core
   §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
-- **Verify:** A GameTest vents a room, opens it to ambient and waits the
-  configured time, then checks the zone dissolves and a pinned zone doesn't.
+- **Verify:** A GameTest brings a sealed room's air to match its ambient and waits
+  the configured time, then checks the zone dissolves and a pinned zone doesn't.
 
 *2026-10-31: D-64: a pinned zone is also exempt from CORE-076's dissolution,
 so with an ambient edge it keeps exchanging however close to the ambient it
@@ -941,6 +942,12 @@ its pins' owners, and saves them. The collection itself, dissolving a zone
 that has matched its ambient for a configured time, isn't built yet, so this
 stays Accepted. Until it is, a zone without an ambient edge is never
 dissolved, pinned or not.*
+
+*2026-11-06: The owner narrowed this to sealed zones. CORE-076 already dissolves a
+zone with an ambient edge as soon as it matches the ambient, so the old Verify plan,
+which opened the room, could never reach a timed collection. It stays Accepted until
+the collection is built. CONT-110's "outlasts CORE-052's delay" is checked against an
+opened room for now, and should get a sealed room when this is built.*
 
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest

@@ -496,11 +496,11 @@ the check their Verify plan asks for.
 | *Implemented* now | API-032 |
 | Waiting for the owner to check them in game | CLIENT-008, CLIENT-014, DATA-007 |
 | Can only be true at release | API-002, API-008, API-041, API-043, NFR-025, NFR-033, NFR-040, NFR-042 |
-| Not built | CORE-029, FLOW-005, LIFE-032, LIFE-034, LIFE-047, API-030, API-033, NFR-034, CLIENT-009, CONT-033 to CONT-036, CONT-054 to CONT-056, CONT-088, CONT-089, CONT-091, CONT-115 to CONT-124 |
+| Not built | CORE-029, FLOW-005, LIFE-032, LIFE-034, LIFE-047, API-030, API-033, NFR-034, CLIENT-009, CONT-033 to CONT-036, CONT-055, CONT-056, CONT-088, CONT-089, CONT-091, CONT-115 to CONT-124 |
 
 | Partly built | What's missing |
 |---|---|
-| CORE-052 | The timed collection, its config key and its GameTest. Its Verify plan also needs rewording: CORE-076 already dissolves a zone with an ambient edge, so only sealed zones are left for it |
+| CORE-052 | The timed collection for sealed zones, its config key and its GameTest |
 | LIFE-022 | The GameTest with a submerged player drowning in a zone |
 | DATA-005 | The GameTest recording what a player is sent |
 | DATA-006, DATA-014, DATA-015 | The Bench figures |
@@ -511,9 +511,9 @@ the check their Verify plan asks for.
 | API-042 | Any check or written policy for deprecation. `apiCompat` doesn't look at it |
 | API-047 | The example addon's main code uses none of the extension points |
 | CONT-031, CONT-090 | The hardsuit's helmet and chestplate |
-| CONT-050 | The compressor and electrolyzer routes, and a test that obtains O₂ and N₂ by any route |
-| CONT-051, CONT-058 | 17 recipes wait for items that aren't built. The compressor has no recipe or row in `docs/crafting.md`, and the central controller's row has no recipe |
-| CONT-060, CONT-065 | The compressor, electrolyzer and central controller. CONT-060 also lacks a test that cuts the volume pump's power |
+| CONT-050 | The electrolyzer route, and a test that obtains gas by each route |
+| CONT-051, CONT-058 | 17 recipes wait for items that aren't built, and the central controller's row has no recipe |
+| CONT-060, CONT-065 | The electrolyzer and central controller. CONT-060 also lacks a test that cuts the volume pump's power |
 | CLIENT-001 | The sealed-head and analyzer triggers |
 | CLIENT-006 | °C as the default, and units in device GUIs, tooltips and the analyzer |
 | CLIENT-007 | The build check, and hard-coded text left in some screens |
@@ -521,6 +521,9 @@ the check their Verify plan asks for.
 | NFR-013 | Hazard handlers, and guards on `ILifeSupport` and `IInternalSupply` |
 | NFR-031 | A player mechanics doc and a changelog |
 | NFR-032 | S-09 with pipes and canisters, and S-10 |
+
+Later that day the owner narrowed CORE-052 to sealed zones and removed the air compressor
+(CONT-054, now *Rejected*). These tables already show both.
 
 | Track | Area | Notes |
 |---|---|---|
@@ -626,8 +629,7 @@ _Updated 2026-11-06._
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
    played its combined test world the next day.
    - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
-     and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
-     electrolyzer).
+     and #51 (gas mask, hardsuit, boots, analyzer, wrench, electrolyzer).
    - **A later track of its own (owner, 2026-11-06):** the items not built yet,
      among them the analyzer, the central atmospherics controller
      ([#200](https://github.com/west3436/zas-cubed/issues/200)), station walls
