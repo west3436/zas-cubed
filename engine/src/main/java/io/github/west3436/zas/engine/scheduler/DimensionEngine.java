@@ -23,8 +23,10 @@ import io.github.west3436.zas.engine.zone.Zone;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -704,6 +706,8 @@ public final class DimensionEngine {
         }
         dropUnloadedSections(toRefresh);
         Set<Long> pausedNow = pausedZones();
+        // Before any block change: one could take a zone's last cell out of a chunk that kept its gas.
+        Set<ZoneShare> sharesInMemory = sharesInMemory(batch);
         applyLimits(batch.limits(), pausedNow, changedCells);
         // This batch's captures, and the latest capture of every section with held changes.
         TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
@@ -782,7 +786,7 @@ public final class DimensionEngine {
                 graph.refresh(cell);
             }
         }
-        ingest(batch);
+        ingest(batch, sharesInMemory);
         resumeRebuilt(surfaces, resuming);
         return cells;
     }
@@ -1001,20 +1005,35 @@ public final class DimensionEngine {
     }
 
     /**
-     * Builds or extends zones from the saved shares of chunks that loaded (DATA-002). A share of a
-     * zone already in memory with cells in that chunk is ignored: the zone was paused there, so it
-     * hasn't changed (architecture §4.5). A zone stays paused while chunks its shares list are
-     * unloaded, and its surface is classified once it resumes.
+     * The shares in a batch's records of zones in memory with cells in that chunk: the zone was paused
+     * there, so it hasn't changed, and it still holds that gas (architecture §4.5).
      */
-    private void ingest(Batch batch) {
+    private Set<ZoneShare> sharesInMemory(Batch batch) {
+        Set<ZoneShare> out = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ChunkRecord r : batch.records()) {
+            for (ZoneShare share : r.zones()) {
+                Zone z = graph.zone(share.zoneId());
+                if (z != null && Arrays.binarySearch(membership.chunks(z.id()), r.chunk()) >= 0) {
+                    out.add(share);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Builds or extends zones from the saved shares of chunks that loaded (DATA-002), leaving out the
+     * {@linkplain #sharesInMemory shares the zones still hold}. A zone stays paused while chunks its
+     * shares list are unloaded, and its surface is classified once it resumes.
+     */
+    private void ingest(Batch batch, Set<ZoneShare> inMemory) {
         if (batch.records().isEmpty()) {
             return;
         }
         long[] unloadedListed = batch.unloadedListedChunks();
         for (ChunkRecord r : batch.records()) {
             for (ZoneShare share : r.zones()) {
-                Zone z = graph.zone(share.zoneId());
-                if (z != null && Arrays.binarySearch(membership.chunks(z.id()), r.chunk()) >= 0) {
+                if (inMemory.contains(share)) {
                     continue;
                 }
                 Zone loaded = graph.loadShare(share.zoneId(), share.cells(), shareMixture(share), share.pins());

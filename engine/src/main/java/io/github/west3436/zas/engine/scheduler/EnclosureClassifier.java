@@ -56,7 +56,15 @@ public final class EnclosureClassifier implements Classifier {
 
     private final SectionLookup sections;
     private final GeometryPalette palette;
+    /** The whole mirror, for the zone graph: a paused zone keeps its cells in unloaded chunks. */
     private final SectionTopology topology;
+    /**
+     * The mirror without the sections of unloaded chunks, for fills. Those are kept only for the zoned
+     * cells in them, so what's around those cells can't be classified (GEO-024), and a share still in
+     * storage may hold its other cells.
+     */
+    private final SectionTopology loaded;
+
     private final Space space;
     private final EnclosureFill fill;
     private final BreachResolver breaches;
@@ -86,12 +94,17 @@ public final class EnclosureClassifier implements Classifier {
         this.palette = Objects.requireNonNull(palette, "palette");
         this.topology = new SectionTopology(
                 palette, sections::section, sections.minSectionY() * 16, sections.maxSectionY() * 16 + 15);
+        this.loaded = new SectionTopology(
+                palette,
+                key -> sections.isUnloaded(key) ? null : sections.section(key),
+                sections.minSectionY() * 16,
+                sections.maxSectionY() * 16 + 15);
         this.space = new Space();
         this.fill = new EnclosureFill(maxCells);
         this.breaches = new BreachResolver(fill, open);
     }
 
-    /** The topology the graph and the fill share. */
+    /** The zone graph's topology. */
     public SectionTopology topology() {
         return topology;
     }
@@ -107,23 +120,23 @@ public final class EnclosureClassifier implements Classifier {
             return Classification.OPEN;
         }
         LongPredicate zoned = c -> graph.zoneOf(c) != null;
-        ResolvableTopology.Column column = topology.column(cell, zoned);
+        ResolvableTopology.Column column = loaded.column(cell, zoned);
         if (column == ResolvableTopology.Column.OPEN) {
-            open.add(cell, topology.columnSections(cell));
+            open.add(cell, loaded.columnSections(cell));
             return Classification.OPEN;
         }
         if (column == ResolvableTopology.Column.UNKNOWN) {
             // A fill could only say open or unresolved here, so see the rest of the column first.
-            long[] fetch = loadedOnly(topology.columnGaps(cell));
+            long[] fetch = loadedOnly(loaded.columnGaps(cell));
             if (fetch.length > 0) {
                 return new Classification.NeedsSections(fetch);
             }
         }
-        FillResult result = fill.fill(topology, cell, zoned);
+        FillResult result = fill.fill(loaded, cell, zoned);
         return switch (result) {
             case FillResult.Enclosed e -> new Classification.Enclosed(e.cells());
             case FillResult.Open o -> {
-                open.add(cell, fill.visitedSections(topology));
+                open.add(cell, fill.visitedSections(loaded));
                 yield Classification.OPEN;
             }
             case FillResult.Unresolved u -> missing(u.missingSections());
@@ -147,6 +160,7 @@ public final class EnclosureClassifier implements Classifier {
     @Override
     public void limits(WorldLimits limits) {
         topology.limits(limits);
+        loaded.limits(limits);
         open.clear();
         held = Arrays.stream(held)
                 .filter(s -> topology.inWorld(CellIds.x(s), CellIds.y(s), CellIds.z(s)))
@@ -210,13 +224,18 @@ public final class EnclosureClassifier implements Classifier {
         java.util.TreeSet<Long> pausedBy = new java.util.TreeSet<>();
         java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
         java.util.TreeSet<Long> waiting = new java.util.TreeSet<>();
-        for (Breach b : breaches.classify(graph, topology, seeds)) {
+        for (Breach b : breaches.classify(graph, loaded, topology, seeds)) {
             if (b instanceof Breach.Hold hold) {
                 if (hold.zones().length == 0) {
                     continue; // no zone opens onto it any more
                 }
                 for (long s : hold.seeds()) {
                     stillHeld.add(s);
+                }
+                if (sections.isUnloaded(sectionOf(hold.seeds()[0]))) {
+                    // The seed waits for its chunk. It doesn't pause the zone beside it, any more than
+                    // a face into an unloaded chunk does, so the zone can take in what changed there.
+                    continue;
                 }
                 long[] fetch = loadedOnly(hold.missingSections());
                 for (long k : fetch) {

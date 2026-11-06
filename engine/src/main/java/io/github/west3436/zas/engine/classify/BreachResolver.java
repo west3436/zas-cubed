@@ -90,6 +90,20 @@ public final class BreachResolver {
      * @return one breach per region, in order of each region's lowest seed
      */
     public List<Breach> classify(ZoneGraph graph, ResolvableTopology topology, long[] seeds) {
+        return classify(graph, topology, topology, seeds);
+    }
+
+    /**
+     * {@link #classify(ZoneGraph, ResolvableTopology, long[])} with a view that leaves out sections the
+     * zone graph still holds: a seed there is held for its section, and so is a region reaching one.
+     *
+     * @param graph the zone graph, to tell zoned cells from unzoned
+     * @param topology the view to classify with
+     * @param beside the zone graph's topology, which says what a held seed opens onto
+     * @param seeds unzoned cells, as {@link #breachSeeds} gives them
+     * @return one breach per region, in order of each region's lowest seed
+     */
+    public List<Breach> classify(ZoneGraph graph, ResolvableTopology topology, CellTopology beside, long[] seeds) {
         long[] sorted = seeds.clone();
         Arrays.sort(sorted);
         boolean[] done = new boolean[sorted.length];
@@ -106,7 +120,7 @@ public final class BreachResolver {
             }
             zones.clear();
             if (open != null) {
-                Breach settled = withoutFill(graph, topology, seed, zones);
+                Breach settled = withoutFill(graph, topology, beside, seed, zones);
                 if (settled != null) {
                     out.add(settled);
                     continue;
@@ -129,6 +143,11 @@ public final class BreachResolver {
                 }
             }
             long[] s = regionSeeds.sortedDistinct();
+            if (result instanceof FillResult.Unresolved) {
+                for (long c : s) {
+                    addZonesBeside(graph, beside, c, zones);
+                }
+            }
             long[] z = zones.sortedDistinct();
             if (open != null && result instanceof FillResult.Open) {
                 open.add(seed, fill.visitedSections(topology));
@@ -144,7 +163,8 @@ public final class BreachResolver {
     }
 
     /** What can be said of a seed with no fill, or null if it takes one. Sees only the zones beside it. */
-    private Breach withoutFill(ZoneGraph graph, ResolvableTopology topology, long seed, LongList zones) {
+    private Breach withoutFill(
+            ZoneGraph graph, ResolvableTopology topology, CellTopology beside, long seed, LongList zones) {
         FillResult.Open.Reason reason = null;
         boolean gaps = false;
         if (open.contains(seed)) {
@@ -159,16 +179,20 @@ public final class BreachResolver {
         if (reason == null && !gaps) {
             return null;
         }
+        addZonesBeside(graph, beside, seed, zones);
+        long[] seeds = {seed};
+        return reason != null
+                ? new Breach.Vent(seeds, zones.sortedDistinct(), reason)
+                : new Breach.Hold(seeds, zones.sortedDistinct(), topology.columnGaps(seed));
+    }
+
+    private static void addZonesBeside(ZoneGraph graph, CellTopology topology, long seed, LongList zones) {
         topology.forEachOpenNeighbour(seed, (n, direct) -> {
             Zone z = graph.zoneOf(n);
             if (z != null) {
                 zones.add(z.id());
             }
         });
-        long[] seeds = {seed};
-        return reason != null
-                ? new Breach.Vent(seeds, zones.sortedDistinct(), reason)
-                : new Breach.Hold(seeds, zones.sortedDistinct(), topology.columnGaps(seed));
     }
 
     /**
