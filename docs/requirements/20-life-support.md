@@ -812,7 +812,7 @@ while a survival player there has the hazards. Fake players can't be hurt at
 all, so it checks what a check would charge rather than their health.*
 
 #### LIFE-032 · Hazard extension API
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, D-12
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, D-12
 
 Consumer mods shall be able to register additional hazard handlers per gas or
 per tag, for example radiation from a radioactive gas they define. (API-033
@@ -824,6 +824,22 @@ intercepts existing hazard ticks; this adds new hazards.)
 
 *2026-11-05: When this is built, guard each call into a handler as NFR-013 asks, with
 `ThirdPartyFaults` (API-062), and add the GameTest NFR-013's plan still lacks.*
+
+*2026-11-06: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+`HazardHandlers.register(id, gas, handler)` and `register(id, tag, handler)`, in the API
+jar, so a mod registers with or without ZAS³. At each check that charges time, a handler
+is called once for each of its gases in the entity's breath or the atmosphere at its eyes,
+with a `HazardExposure` giving the entity, the gas, both partial pressures, the verdict and
+the seconds. What it does is its own, so `[hazards]` settings and API-033's event don't
+reach it. It isn't called for an exempt player (LIFE-037), a held check (LIFE-048) or an
+entity that has died. Tests: `life_032_a_handler_for_a_gas_applies`,
+`life_032_a_handler_for_a_tag_applies_to_each_gas_in_it`,
+`life_032_a_handler_sees_what_protection_leaves_in_the_breath`,
+`life_032_a_handler_isnt_called_for_the_exempt_or_the_dead` and the unit tests in
+`HazardHandlersTest`, with
+`nfr_013_a_hazard_handler_that_throws_is_skipped_and_logged_once_a_minute` for the guard.
+A held check isn't tested with a handler: it returns before them, as it does before every
+hazard, which `life_048_unresolved_atmosphere_holds_the_breath_state` checks.*
 
 #### LIFE-033 · Staggered evaluation
 `Must` · `R1` · `Implemented` · Verify: Bench · Trace: NFR-001

@@ -16,7 +16,8 @@ import net.neoforged.bus.api.ICancellableEvent;
  * breath check for {@link Hazard#TOXIC_GAS} and the pressure and temperature hazards, which is every
  * 2 s by default, once a second on an empty air meter for {@link Hazard#HYPOXIA}, and at each blow for
  * {@link Hazard#AIRFLOW_IMPACT}. It doesn't fire where a hazard would do nothing, as where it's turned
- * off or the entity's protection covers it, and it covers only ZAS³'s own hazards.
+ * off or the entity's protection covers it, and it covers only ZAS³'s own hazards, not what a {@link
+ * io.github.west3436.zas.api.life.HazardHandler} does.
  *
  * <p><b>The damage</b> is in HP, for all the time since the last check, after protection and the
  * hazard's scale. A {@link Hazard#TOXIC_GAS} tick may have 0 damage, when its gas only applies status
