@@ -295,7 +295,9 @@ class PausedZonesTest {
         assertFalse(joined.paused(), "the zone didn't resume");
         assertEquals(joined.id(), sim.zoneAt(18, 69, 2).id(), "the room didn't join");
         assertEquals(30, joined.moles(N2), EPS);
+    }
 
+    /**
      * A chunk unloads with a change held in it for a zone that's paused (GEO-037). That held change
      * isn't news of the chunk: it stays unloaded, and a zone with cells in it stays paused (GEO-030).
      * This is the case behind seed 3 of the integrity fuzz (NFR-010): zones ran on in the unloaded
