@@ -77,6 +77,8 @@ followed, with a dated note, once its Bench passed
   with devices, players, mobs and hotspots on reference hardware. The engine's
   share is recorded here as a baseline.
 - **NFR-034** (R1, CI regression check against this baseline) isn't wired up.
+  *2026-11-06: it is, against a recorded commit rather than these numbers
+  ([check](#regression-check-nfr-034-2026-11-06)).*
 
 ## Method
 
@@ -747,6 +749,67 @@ until this measurement.
   temperature swing that opened a real difference across a door would wake that
   edge, as any change to a zone does (CORE-066).
 
+## Regression check (NFR-034, 2026-11-06)
+
+`./gradlew :engine:benchCheck`, a step in CI's "Build and test" job, fails if
+this code costs more than 10 % over the recorded baseline. The step took 35 to
+67 s.
+
+**The baseline is a commit, not a time.** `engine/s10-baseline.properties` names
+it. The task reads the engine and its benchmarks at that commit with
+`git archive` and compiles them, which needs nothing else because the engine has
+no dependencies. Both engines then run in one JVM, each from its own class
+loader, so neither shares the other's classes or their JIT profiles. They take
+turns at the [S-10 script](#s-10-engine-load) with ops at the 1 s period: 10 pairs
+to warm up, then 20 to measure. For each of the worker thread and the server
+thread (close plus apply), the result is the median of the 20 ratios of mean time
+per atmos tick. Either one over 10 % fails the check.
+
+**Why not a time:** CI's machines differ by far more than the 10 % being looked
+for. This is the same code in 8 jobs of one run:
+
+| CPU | Jobs | Worker, mean ms per atmos tick | Server, mean ms per atmos tick |
+|---|---|---|---|
+| AMD EPYC 7763 | 3 | 0.549 to 0.561 | 0.069 to 0.070 |
+| AMD EPYC 9V45 | 2 | 0.268 to 0.282 | 0.033 to 0.035 |
+| Intel Xeon Platinum 8573C | 2 | 0.461 to 0.553 | 0.069 to 0.076 |
+| Intel Xeon Platinum 8370C | 1 | 0.566 | 0.079 |
+
+The highest job took 111 % longer than the lowest on the worker and 136 % longer
+on the server. Dividing by a fixed calibration loop timed straight after each
+script only narrowed that to 60 % and 33 %, because the loop and the engine don't
+gain alike from one CPU to the next. Two jobs on one CPU model could still differ
+by 20 %.
+
+**Side by side,** on 4 CPU models. "Added" is a spin in the bench harness, on this
+code's side only, for that fraction of each close, apply and worker tick:
+
+| Added | Jobs | Worker | Server | Check |
+|---|---|---|---|---|
+| Nothing | 18 | -2.1 to +3.1 % | -3.0 to +3.9 % | All pass |
+| 5 % | 2 | +6.4, +6.7 % | +4.3, +7.9 % | Pass |
+| 8 % | 1 | +4.8 % | +6.1 % | Pass |
+| 15 % | 2 | +13.5, +14.9 % | +17.2, +17.5 % | Fail |
+| 25 % | 1 | +24.9 % | +24.6 % | Fail |
+
+So a job with no change has stayed about 6 points under the limit. The readings
+carry a few points of noise, so a slowdown close to 10 % could go either way.
+
+**What it doesn't catch:** only means are compared, so a worse p99 or worst tick
+can pass. It covers the engine's side of S-10 and nothing of the platform's.
+
+**Moving the baseline** is a decision to record, and it means pointing `commit` at
+another commit:
+
+- **After a speed-up worth keeping,** or the 10 % is measured from the old, slower
+  code.
+- **For a slowdown that's accepted.** The check is required, so the PR can't merge
+  red. Its last commit points `commit` at the PR's own previous commit.
+- **When the script changes** (`Station`, `Harness` or `StationBench`), since the
+  two sides then no longer run the same thing. `RegressionCheck` reaches
+  `StationBench.script`, `Run.worker`, `Run.server` and `Stats.meanMs` by
+  reflection, so changing their shape stops the check with an exception until then.
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall
@@ -790,4 +853,5 @@ until this measurement.
   of the station pauses and resumes. Paused zones are
   [#27](https://github.com/west3436/zas-cubed/issues/27).
 - **Reference hardware (D-40):** these numbers are from a faster machine.
-- **A CI regression check** against this baseline (NFR-034, R1).
+- **A CI regression check** against this baseline (NFR-034, R1). *2026-11-06:
+  [built](#regression-check-nfr-034-2026-11-06).*
