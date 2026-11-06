@@ -9,6 +9,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import net.minecraft.server.level.FullChunkStatus;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * A pipe network: connected nodes sharing one perfectly mixed mixture whose volume is the sum of
@@ -22,17 +24,55 @@ import java.util.function.Function;
  * merge adds the parts together. Building over a node that is still in another network dissolves
  * that network first, so no gas is counted twice.
  *
+ * <p><b>What a world saves.</b> Each member saves its share, with its chunk, so a change to the gas
+ * tells every chunk the network spans that it has something new to save, once a chunk per change and
+ * without loading any. A chunk saves only then, and writes its members' shares as they are at that
+ * moment. A chunk that leaves full status gets one more save and then isn't saved again until it
+ * unloads, so a network {@linkplain #usable() ends} before it changes gas any of that chunk's share
+ * is in. A server that stops writes every chunk at one moment, so the shares add up. One that crashes
+ * between two chunks' saves can bring back a share from before the other's, as it can with anything
+ * else that moves between chunks.
+ *
  * <p>Networks are built lazily, when a node needs its mixture. Server thread only.
  */
 public final class PipeNetwork {
     private final List<PipeNode> members;
     private final GasStore gas;
     private final Set<PipeNode> steppedThisTick = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<LevelChunk> chunks = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final boolean builtAway;
     private boolean valid = true;
 
     private PipeNetwork(List<PipeNode> members, GasStore gas) {
         this.members = members;
         this.gas = gas;
+        for (PipeNode m : members) {
+            LevelChunk chunk = m.savedIn();
+            if (chunk != null) {
+                chunks.add(chunk);
+            }
+        }
+        builtAway = chunkAway();
+        gas.watch(this::tellChunks);
+        if (!gas.isEmpty()) {
+            tellChunks(); // gathering the shares may have changed what each member would save
+        }
+    }
+
+    /** Tells the chunks the network spans that the gas has changed: only those it holds, so none loads. */
+    private void tellChunks() {
+        for (LevelChunk chunk : chunks) {
+            chunk.setUnsaved(true);
+        }
+    }
+
+    private boolean chunkAway() {
+        for (LevelChunk chunk : chunks) {
+            if (!chunk.getFullStatus().isOrAfter(FullChunkStatus.FULL)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -101,6 +141,21 @@ public final class PipeNetwork {
     }
 
     /**
+     * Whether a member can use the network now, ending it first if a chunk it spans has left full
+     * status: that chunk's members keep their shares until it returns, as members of an unloaded chunk
+     * do. A network built by a node in such a chunk, of that node alone, is for this once, so the node
+     * looks for its neighbours again next time.
+     *
+     * @return true if the network is still in use
+     */
+    public boolean usable() {
+        if (valid && (builtAway || chunkAway())) {
+            dissolve();
+        }
+        return valid;
+    }
+
+    /**
      * Records that a member is stepping, and says whether that starts the network's atmos tick. Each
      * member steps once per atmos tick, at its own place in the period, and the network has no step
      * of its own, so the first member to step runs it for them all, and the network's next atmos
@@ -139,6 +194,7 @@ public final class PipeNetwork {
             return;
         }
         valid = false;
+        gas.watch(null); // each member's share stays as it was, so no chunk has anything new to save
         GasParcel all = gas.drain();
         GasStore whole = new GasStore(gas.volume());
         whole.set(all);

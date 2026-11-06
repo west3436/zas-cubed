@@ -2,6 +2,8 @@ package io.github.west3436.zas.atmos.pipe;
 
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.List;
+import net.minecraft.world.level.chunk.LevelChunk;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A member of a pipe network: a pipe, a cap, a device's port buffer, an attached canister
@@ -30,5 +32,13 @@ public interface PipeNode {
      */
     default List<PipeNode> connectedNodes() {
         return List.of();
+    }
+
+    /**
+     * The chunk that saves the node's share, which its network tells when the gas changes. A node that
+     * isn't in a world, as in a unit test, has none.
+     */
+    default @Nullable LevelChunk savedIn() {
+        return null;
     }
 }

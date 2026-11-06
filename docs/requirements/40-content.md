@@ -136,6 +136,13 @@ the network is rebuilt while the far chunk is away. Writing them found a bug,
 now fixed: devices in a chunk that had dropped out of full status still
 stepped, and a rebuild that read their blocks loaded the chunk again.*
 
+*2026-11-05: Note: NFR-012's checklist found gas coming back from an old save. A
+change to a network's gas didn't tell its chunks, so a chunk that had already
+saved wrote nothing new when it unloaded. Now fixed: a network tells every chunk
+it spans at each change, and ends before it changes gas that a chunk out of full
+status has a share of. `PipeSaveTests.nfr_012_*` (GameTest) reads back what the
+saves wrote.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 

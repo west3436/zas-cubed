@@ -34,7 +34,7 @@ import net.minecraft.world.phys.Vec3;
  *       the API (CONT-009); the rest stays with the remaining nodes, shared by volume (CONT-003).
  *       When its chunk unloads, the network dissolves and its share stays saved with it.
  *   <li><b>Saving.</b> It saves its share by volume: of its network's gas if it is in one, or its
- *       own.
+ *       own. The network tells its chunk when that changes ({@link PipeNetwork}).
  * </ul>
  *
  * <p>The network is built lazily, on the server, the first time {@link #network()} is called.
@@ -81,7 +81,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      * @return the network, valid
      */
     public PipeNetwork network() {
-        if (network == null || !network.valid()) {
+        if (network == null || !network.usable()) {
             network = null;
             PipeNetwork.build(this, PipeNode::connectedNodes);
         }
@@ -169,12 +169,13 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
 
     /**
      * The loaded nodes this one shares gas with, in direction order. A neighbour in an unloaded chunk
-     * isn't reached, and that chunk keeps its share saved.
+     * isn't reached, and that chunk keeps its share saved. A node whose own chunk has left full status
+     * reaches none, since reading its block would load the chunk again.
      */
     @Override
     public List<PipeNode> connectedNodes() {
         List<PipeNode> out = new ArrayList<>(6);
-        if (level == null) {
+        if (level == null || !level.isLoaded(worldPosition)) {
             return out;
         }
         BlockState self = level.getBlockState(worldPosition);
