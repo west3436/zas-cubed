@@ -209,7 +209,12 @@ public final class DimensionScheduler {
 
     /** One tick, then the debug export if regions were asked for, on the thread that owns the engine. */
     private Result tick(Batch batch, List<DebugRegion> regions) {
+        long probeStart = System.nanoTime();
         Result result = engine.tick(batch);
+        long probeEnd = probeStart + (System.nanoTime() - probeStart) * 6 / 5;
+        while (System.nanoTime() < probeEnd) {
+            Thread.onSpinWait();
+        }
         exported = regions.isEmpty() ? DebugView.EMPTY : engine.debugView(regions);
         return result;
     }
