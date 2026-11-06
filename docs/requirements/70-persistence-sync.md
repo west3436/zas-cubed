@@ -182,6 +182,30 @@ gas ids are handled by CORE-013 and CORE-016.
 - **Verify:** Unit tests migrate saved fixtures from each release; a GameTest
   loads an old world.
 
+*2026-11-06: This stays Accepted, because no release exists to make saved sample
+worlds from. What this round built:*
+
+- *`DimensionData`, the `zas_atmos` file, brings a save forward through a list of
+  steps, one for each version, before reading it. There are none yet, since it has
+  only ever had version 1. It no longer drops what it holds on a version it doesn't
+  know: a save from a newer mod, or with no version, is read by name with a warning,
+  so its zone counter (CORE-026), queued additions, released pins and pause survive.*
+- *`zas_atmos` block entity data now saves a `FormatVersion`, with steps of the same
+  kind (`DeviceData`). `AtmosDevice` and `GeneratorBlockEntity` handle it, so no device
+  has to. Data from before this has no version and reads as the first format.*
+- *`ChunkRecordCodec` already read every earlier chunk record format, and
+  `data_012_every_earlier_chunk_format_reads_and_saves_as_the_current_one` now checks
+  each one from records written by hand.*
+
+*Checked by the `data_012_` tests in `DimensionDataTest`, `DeviceDataTest` and
+`ChunkRecordMigrationTest` (Unit) and `DeviceDataTests` (GameTest). The steps are only
+tested with made-up formats, as no format has needed one yet.*
+
+*What's left: saved sample worlds from each release, the Unit tests that migrate them,
+and the GameTest that loads an old world. All of these wait for a first release. Three
+other kinds of saved data have no version: item data (tank contents and the like), the
+player's internals switch, and the primed transfer valve entity.*
+
 #### DATA-004 · Corruption tolerance
 `Must` · `R0` · `Implemented` · Verify: GameTest
 
