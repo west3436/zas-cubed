@@ -888,6 +888,10 @@ the lever if the per-cell cost ever matters.
   - the owners whose pins were taken off and who haven't pinned since
     (API-017, §6.6)
   - the dimension's pause, who asked and why (OPS-005, §4.6)
+- **Older saves are brought forward (DATA-012).** Chunk records branch on their
+  version as they are read. `DimensionData` and `zas_atmos` block entities
+  (`DeviceData`) keep a list of steps, and the version they write follows from
+  it. A version they don't know is read by name, with a warning.
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
