@@ -5,7 +5,6 @@ import java.util.Locale;
 import java.util.Optional;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageType;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * The hazards ZAS³ deals, one per atmospheric damage type (LIFE-030). Each can be turned off and
@@ -14,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum HazardType {
     /** An empty air meter in a breath with too little O2 (LIFE-003, LIFE-008). */
-    HYPOXIA(LifeDamage.HYPOXIA, null),
+    HYPOXIA(LifeDamage.HYPOXIA, Hazard.HYPOXIA),
     /** A gas's hazard profile (LIFE-004). */
     TOXIC_GAS(LifeDamage.TOXIC_GAS, Hazard.TOXIC_GAS),
     /** Low pressure (LIFE-010). */
@@ -26,12 +25,12 @@ public enum HazardType {
     /** Heat (LIFE-011). */
     BURNS(LifeDamage.BURNS, Hazard.HEAT),
     /** Airflow throwing an entity against a block (FLOW). */
-    AIRFLOW_IMPACT(LifeDamage.AIRFLOW_IMPACT, null);
+    AIRFLOW_IMPACT(LifeDamage.AIRFLOW_IMPACT, Hazard.AIRFLOW_IMPACT);
 
     private final ResourceKey<DamageType> damageType;
-    private final @Nullable Hazard hazard;
+    private final Hazard hazard;
 
-    HazardType(ResourceKey<DamageType> damageType, @Nullable Hazard hazard) {
+    HazardType(ResourceKey<DamageType> damageType, Hazard hazard) {
         this.damageType = damageType;
         this.hazard = hazard;
     }
@@ -47,11 +46,12 @@ public enum HazardType {
     }
 
     /**
-     * The API's name for it in a verdict's hazards (API-014), if a verdict lists it. Hypoxia is the
-     * verdict's {@code canBreathe}, and airflow is FLOW's, not a property of where the entity is.
+     * The API's name for it, in a {@link io.github.west3436.zas.api.event.HazardTickEvent} (API-033)
+     * and in a verdict's hazards (API-014). A verdict doesn't list hypoxia, which is its {@code
+     * canBreathe}, or airflow, which isn't a property of where the entity is.
      */
-    public Optional<Hazard> hazard() {
-        return Optional.ofNullable(hazard);
+    public Hazard hazard() {
+        return hazard;
     }
 
     /** The hazard with a config name, if there is one. */

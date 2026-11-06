@@ -25,7 +25,7 @@ import org.slf4j.Logger;
  * logs each time. {@code nfr_013_an_event_listener_that_throws_is_skipped_and_logged_once_a_minute}
  * fails if that happens.
  */
-final class ApiEvents {
+public final class ApiEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     /** The bus's list of an event's listeners, or null if it can't be read. */
@@ -34,7 +34,7 @@ final class ApiEvents {
     private ApiEvents() {}
 
     /** Fires an event on {@code NeoForge.EVENT_BUS}. Server thread. */
-    static void post(Event event) {
+    public static void post(Event event) {
         EventListener[] listeners = listeners(event);
         if (listeners == null) {
             try {
