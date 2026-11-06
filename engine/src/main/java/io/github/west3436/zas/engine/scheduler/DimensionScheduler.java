@@ -96,6 +96,17 @@ public final class DimensionScheduler {
     }
 
     /**
+     * Faults the dimension for an exception outside a tick, in the work around one on the caller's
+     * thread (NFR-014). A dimension already faulted keeps its first fault.
+     */
+    public void fail(Throwable cause) {
+        Objects.requireNonNull(cause, "cause");
+        if (fault == null) {
+            fault = cause;
+        }
+    }
+
+    /**
      * Sets the regions the operator debug overlay wants exported after each tick submitted from now
      * on (CLIENT-005, CLIENT-011); empty for none, which costs nothing.
      */

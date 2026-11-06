@@ -175,6 +175,17 @@ The pause is saved with the dimension, so it lasts through restarts until
 `/zas resume`; the server log says so when the dimension starts. `/zas zones`
 shows who paused the dimension and why.
 
+**An engine failure pauses the dimension the same way** (NFR-014). The server
+logs the error with its stack trace and keeps running, and the pause is by
+`zas:engine`, with the exception as its reason. The dimension goes back to the
+state of its last finished atmos tick; what the failed tick did is dropped. Look
+at the log before running `/zas resume`: if the cause is still there, the engine
+fails again and the dimension pauses again.
+
+If the engine fails while the dimension is already paused, the first pause stays,
+gas operations in that dimension fail until `/zas resume`, and `/zas profile` says
+the engine failed. `/zas resume` then builds a new engine.
+
 ```
 > /zas pause fixing a leak
 Paused the atmosphere of minecraft:overworld from the next atmos tick (by command:alex: fixing a leak)

@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import java.util.ArrayList;
 import java.util.List;
@@ -190,6 +191,48 @@ class SchedulerTest {
         assertEquals(before, sim.snapshot());
         assertThrows(IllegalStateException.class, () -> sim.pipeline.close(3, sim.settings, () -> false));
         assertEquals(ExchangeSettings.DEFAULT, EngineSettings.DEFAULT.exchange());
+    }
+
+    /**
+     * A tick that dies halfway publishes nothing (NFR-014): its gas operations have run inside the
+     * engine, but what a chunk saves is still the last result, and the operations are still
+     * outstanding, to move to the engine that replaces this one.
+     */
+    @Test
+    void nfr_014_a_failed_tick_leaves_the_last_result_and_its_operations() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        sim.add(1, 65, 1, 0, 10);
+        sim.step();
+        AtmosSnapshot before = sim.snapshot();
+        long chunk = SectionKeys.chunk(0, 0);
+        ChunkRecord saved = sim.pipeline.recordFor(chunk, false);
+        long added = sim.add(1, 65, 1, 0, 5);
+        sim.engine.setPhaseListener(p -> {
+            if (p == Phase.EXCHANGE) {
+                throw new IllegalStateException("boom");
+            }
+        });
+        sim.pipeline.close(2, sim.settings, () -> false);
+        DimensionPipeline.Applied a = sim.pipeline.apply();
+        assertNotNull(a.fault());
+        assertTrue(a.outcomes().isEmpty());
+        assertEquals(before, sim.snapshot());
+        assertEquals(saved.zones(), sim.pipeline.recordFor(chunk, false).zones());
+        assertEquals(1, sim.pipeline.outstanding().size());
+        assertEquals(added, sim.pipeline.outstanding().get(0).seq());
+    }
+
+    /** A fault from outside a tick stops the dimension as one from inside does; the first stays. */
+    @Test
+    void nfr_014_a_fault_outside_a_tick_faults_the_dimension() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        IllegalStateException first = new IllegalStateException("first");
+        sim.scheduler.fail(first);
+        sim.scheduler.fail(new IllegalStateException("second"));
+        assertTrue(sim.scheduler.isFaulted());
+        assertEquals(first, sim.scheduler.fault());
+        assertThrows(IllegalStateException.class, () -> sim.pipeline.close(1, sim.settings, () -> false));
     }
 
     /**

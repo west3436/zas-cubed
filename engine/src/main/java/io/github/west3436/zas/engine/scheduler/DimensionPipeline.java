@@ -710,7 +710,28 @@ public final class DimensionPipeline {
             }
             snapshot = snapshot.withRejected(published, zones);
         }
+        Set<Long> rejectedSet = new HashSet<>(rejectedZones);
+        List<FireIntent> intents = new ArrayList<>();
+        for (FireIntent i : result.fireIntents()) {
+            if (!rejectedSet.contains(i.zoneId())) {
+                intents.add(i);
+            }
+        }
+        List<FireEvent> fireEvents = new ArrayList<>();
+        for (FireEvent e : result.fireEvents()) {
+            if (!rejectedSet.contains(e.zoneId())) {
+                fireEvents.add(e);
+            }
+        }
+        List<PressureBreak> breaks = new ArrayList<>();
+        for (PressureBreak b : result.pressureBreaks()) {
+            if (!rejectedSet.contains(b.highZone()) && !rejectedSet.contains(b.lowZone())) {
+                breaks.add(b);
+            }
+        }
+        HotspotTable burning = result.hotspots().withRejected(hotspots, rejectedSet);
         TreeSet<Long> changed = changedChunks(published, snapshot);
+        // Nothing below can throw, so an exception above leaves the last result whole (NFR-014).
         for (OpOutcome o : outcomes) {
             outstanding.remove(o.seq());
         }
@@ -731,26 +752,7 @@ public final class DimensionPipeline {
             changed.add(SectionKeys.chunkOfBlockKey(b));
         }
         nextZoneId = result.nextZoneId();
-        Set<Long> rejectedSet = new HashSet<>(rejectedZones);
-        List<FireIntent> intents = new ArrayList<>();
-        for (FireIntent i : result.fireIntents()) {
-            if (!rejectedSet.contains(i.zoneId())) {
-                intents.add(i);
-            }
-        }
-        List<FireEvent> fireEvents = new ArrayList<>();
-        for (FireEvent e : result.fireEvents()) {
-            if (!rejectedSet.contains(e.zoneId())) {
-                fireEvents.add(e);
-            }
-        }
-        List<PressureBreak> breaks = new ArrayList<>();
-        for (PressureBreak b : result.pressureBreaks()) {
-            if (!rejectedSet.contains(b.highZone()) && !rejectedSet.contains(b.lowZone())) {
-                breaks.add(b);
-            }
-        }
-        hotspots = result.hotspots().withRejected(hotspots, rejectedSet);
+        hotspots = burning;
         published = snapshot;
         flows = result.flows();
         flowsTick = result.tick();

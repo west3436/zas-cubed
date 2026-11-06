@@ -350,7 +350,13 @@ Requirements: CORE-047, NFR-001, NFR-002, NFR-003.
   both modes, no parallel streams inside a tick. Java 17+ is strict IEEE by
   default.
 - **Fault isolation:** an exception inside a dimension's engine pauses that
-  dimension (D-55, NFR-014). The last published snapshot stays readable.
+  dimension through `DimensionAtmos.pauseSimulation` (D-55, NFR-014). The failed
+  tick reaches the server thread as nothing but an exception, so none of it is
+  published, and its engine is never read again. A new, paused engine is built at
+  once from the last published table, as after a palette change (§4.5), and the
+  outstanding operations move to it. An engine that throws while the dimension is
+  already paused isn't replaced until the dimension resumes: its last published
+  snapshot stays readable meanwhile.
 
 ### 3.6 Fault isolation for third-party code
 
@@ -883,9 +889,10 @@ fresh world each run, since saved zones would otherwise come back.
 *Implemented (#104):* the palette-change rebuild is `DimensionAtmos.rebuild`,
 using `DimensionPipeline.recordChunks` and `resubmit`. The records go through
 the byte format, so a gas registry changed by the same reload is remapped as
-after a restart. A faulted engine's outstanding operations aren't run again,
-since their futures already failed. The `data_009_palette_change_rebuilds_zones`
-GameTest changes the palette with `Geometries.overrideForTest`.
+after a restart. An operation whose future failed with a fault isn't run again,
+unless it is an addition, whose gas has left its caller (§3.5, NFR-014). The
+`data_009_palette_change_rebuilds_zones` GameTest changes the palette with
+`Geometries.overrideForTest`.
 
 ### 4.6 Paused zones (GEO-030 to GEO-038)
 
