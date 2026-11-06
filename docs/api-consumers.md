@@ -443,7 +443,7 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
 ## Display units on the client
 
 The API's values are always in kPa and K. `DisplayUnits` converts what you show to
-the units the player chose (API-063, Draft until the owner's review). It refers to no
+the units the player chose (API-063). It refers to no
 client-only class, so it is safe to call from code a server also loads.
 
 ```java
