@@ -123,6 +123,20 @@ reported by CORE-073, a clean GEO-032 audit, and no non-finite values
   bugs that hand-written tests miss.
 - **Verify:** The fuzz suite runs in CI as stated.
 
+*2026-11-05: Still `Accepted`. The engine half is in:
+`nfr_010_integrity_under_fuzzing` runs 10,000 operations with CORE-073 on, the
+audit every 1,000 operations, checks for non-finite values, and its own total of
+the gas, because CORE-073 explains whatever moves through storage and so can't
+see gas that a reload makes or loses. `./gradlew build` runs it on seed 3, and
+the "Integrity fuzz" workflow runs 20 seeds from the Actions tab. Of seeds 1 to
+20, four pass (3, 12, 13, 18). Eleven fail the audit (2, 4, 5, 6, 8, 9, 10, 14,
+17, 19, 20) and five fail the total of the gas (1, 7, 11, 15, 16). Seed 2's cause
+is known: a zone venting through an unzoned space keeps its ambient edge when the
+way out closes at a spot that doesn't touch it. Seed 1's is known too: a chunk
+that saves in a tick that then changes the zone, as in the limit on DATA-008. The
+others aren't read yet. Left to do: those failures, a nightly schedule once all
+20 pass, and the GameTest half, which totals the gas in pipes.*
+
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 

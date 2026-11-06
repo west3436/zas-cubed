@@ -310,6 +310,54 @@ class PersistenceTest {
     }
 
     /**
+     * The known limit on DATA-008, which these two tests pin until the owner has ruled on it. A chunk that
+     * saves during a tick writes the table from before the tick. If that tick is rejected, its gas goes
+     * back but its block change stands, so the zone's other chunks later write shares of a zone that has
+     * changed, and the shares don't add up to what it held. Here the room is 720 mol in 72 cells, half of
+     * them in each chunk, and the west chunk has saved 360 mol.
+     *
+     * @return what the zone held, and what its two shares hold
+     */
+    private static double[] sharesAfterASaveDuringARejectedTick(int x, int y, int z, int block) {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3);
+        sim.world.room(12, 68, 5, 15, 70, 7); // an empty pocket of 36 cells, in the west chunk
+        sim.add(13, 69, 2, 720, 0);
+        sim.steps(2);
+        long id = sim.zoneAt(13, 69, 2).id();
+        double held = sim.snapshot().zone(id).moles(N2);
+        sim.world.set(x, y, z, block);
+        sim.add(17, 69, 2, 1, 0); // only a zone whose gas changes in a tick can be rejected, and it's voided after
+        ChunkRecord[] west = new ChunkRecord[1];
+        sim.betweenCloseAndApply = s -> {
+            s.betweenCloseAndApply = n -> {};
+            west[0] = s.unload(SectionKeys.chunk(0, 0));
+        };
+        assertTrue(sim.step().rejected() > 0, "the tick wasn't rejected");
+        sim.step();
+        ChunkRecord east = sim.unload(SectionKeys.chunk(1, 0));
+        sim.step();
+        assertNull(sim.snapshot().zone(id), "the zone is still in memory");
+        return new double[] {held, west[0].share(id).moles(N2) + east.share(id).moles(N2)};
+    }
+
+    /** A cell of the zone filled in that tick: the east chunk's 36 cells now hold 1/71 of it each. */
+    @Test
+    void data_008_known_limit_a_save_during_a_rejected_tick_can_make_gas() {
+        double[] gas = sharesAfterASaveDuringARejectedTick(13, 69, 2, TestWorld.SOLID);
+        close(720, gas[0], "held");
+        close(360 + 720.0 * 36 / 71, gas[1], "the shares");
+    }
+
+    /** A hole into the pocket in that tick: the east chunk's 36 cells now hold 1/109 of it each. */
+    @Test
+    void data_008_known_limit_a_save_during_a_rejected_tick_can_lose_gas() {
+        double[] gas = sharesAfterASaveDuringARejectedTick(13, 69, 4, TestWorld.AIR);
+        close(720, gas[0], "held");
+        close(360 + 720.0 * 36 / 109, gas[1], "the shares");
+    }
+
+    /**
      * A sealed shaft from the ceiling of a room whose interior tops out at y 66, rising past the
      * sections kept mirrored around a zone, so a fill up it asks for a section the mirror lacks.
      */

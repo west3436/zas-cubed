@@ -80,6 +80,20 @@ relative error of 1e-9 per gas.
 - **Verify:** A Unit test splits and reassembles random zones; a GameTest
   checks a reloaded zone's moles.
 
+*2026-11-05: A known limit, found by the integrity fuzz (NFR-010). A rebuilt
+zone does hold the sum of its shares, but the shares can fail to add up to what
+the zone held. A chunk that saves during an atmos tick writes the table from
+before that tick. If the tick is rejected, its gas goes back but its block
+change stands, so the zone's other chunks later write shares of a zone that has
+changed. It can go both ways, as measured in a room of 720 mol and 72 cells,
+half of them in the saving chunk: a cell filled in that tick makes 5.07 mol
+(`data_008_known_limit_a_save_during_a_rejected_tick_can_make_gas`), and a hole
+into an empty 36-cell pocket loses 122.2 mol
+(`data_008_known_limit_a_save_during_a_rejected_tick_can_lose_gas`), so the size
+follows how many cells that tick changed. It needs a zone across chunks, a block
+change to it in the tick one of its chunks unloads in, and all of its chunks to
+unload before that one loads again.*
+
 #### DATA-010 · Held changes persist
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43
 
