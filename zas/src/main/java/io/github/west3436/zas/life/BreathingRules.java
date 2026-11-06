@@ -29,7 +29,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * <ol>
  *   <li>With its eyes in a fluid, vanilla's verdict ({@link Breathing#vanilla}), so water stays
- *       vanilla's domain (LIFE-022).
+ *       vanilla's domain (LIFE-022), unless it would drown there and its internals deliver: then it
+ *       breathes the tank, as in rule 4 (LIFE-047).
  *   <li>A player whose abilities make it invulnerable, in creative or spectator mode, is {@link
  *       BreathReason#EXEMPT} and never runs out of air or takes a hazard (LIFE-037).
  *   <li>Anything else that is neither a player nor in {@code zas:breathers} doesn't breathe
@@ -67,7 +68,8 @@ public final class BreathingRules {
      * A verdict and what it was made from.
      *
      * @param verdict the verdict
-     * @param sample the atmosphere at the eyes, when the verdict looked at it out of a fluid
+     * @param sample the atmosphere at the eyes, when the verdict looked at it out of a fluid; null
+     *     with the eyes in a fluid, even with a breath from a tank (LIFE-047)
      * @param drain the fraction of the vanilla underwater rate at which the air meter drains, 0 to
      *     1: 1 − pO2 / minimum while it can't breathe for lack of O2, else 0 (LIFE-003)
      * @param exposure its exposure to pressure and temperature, when they can harm it and the
@@ -105,13 +107,21 @@ public final class BreathingRules {
         Breathability vanilla = Breathing.vanilla(entity);
         boolean environment = EnvironmentHazards.affects(entity);
         if (vanilla.source() == BreathSource.FLUID) {
-            if (!environment) {
+            Internals.Active tank =
+                    vanilla.reason() == BreathReason.DROWNING && breathes(entity) ? Internals.active(entity) : null;
+            if (!environment && tank == null) {
                 return new Assessment(vanilla, null, 0, null);
             }
-            AtmosphereSample around = Atmospheres.of(entity);
-            EnvironmentHazards.Exposure exposure = around.state() == AtmosphereState.UNRESOLVED
-                    ? null
-                    : EnvironmentHazards.exposure(entity, around.mixture());
+            EnvironmentHazards.Exposure exposure = null;
+            if (environment) {
+                AtmosphereSample around = Atmospheres.of(entity);
+                exposure = around.state() == AtmosphereState.UNRESOLVED
+                        ? null
+                        : EnvironmentHazards.exposure(entity, around.mixture());
+            }
+            if (tank != null) {
+                return breathing(entity, null, tank.breath(), exposure, tank);
+            }
             Breathability.Builder b = Breathability.builder(vanilla.reason(), vanilla.source());
             hazards(b, exposure);
             return new Assessment(b.build(), null, 0, exposure);
@@ -139,10 +149,22 @@ public final class BreathingRules {
             hazards(b, exposure);
             return new Assessment(b.build(), sample, 0, exposure);
         }
-        ResourceKey<Level> dimension = entity.level().dimension();
         Internals.Active internals = Internals.active(entity);
+        return breathing(entity, sample, internals != null ? internals.breath() : around, exposure, internals);
+    }
+
+    /**
+     * The verdict for a breather breathing {@code source}, the atmosphere or its tank: the O2 and
+     * toxic gas rules (LIFE-003, LIFE-004), with its filter (API-022) and the exposure's hazards.
+     */
+    private static Assessment breathing(
+            LivingEntity entity,
+            @Nullable AtmosphereSample sample,
+            GasMixture source,
+            EnvironmentHazards.@Nullable Exposure exposure,
+            Internals.@Nullable Active internals) {
+        ResourceKey<Level> dimension = entity.level().dimension();
         boolean filtered = WornProtection.gasFiltering(entity);
-        GasMixture source = internals != null ? internals.breath() : around;
         GasMixture breath = filtered ? GasHazards.filtered(source) : source;
         double minimum = BreathingConfig.oxygenMinimum();
         double oxygen = breath.partialPressure(StandardAir.OXYGEN);
@@ -161,7 +183,7 @@ public final class BreathingRules {
         if (filtered) {
             b.protection(Protection.GAS_FILTERING);
         }
-        if (!environment) {
+        if (!EnvironmentHazards.affects(entity)) {
             b.protection(Protection.IMMUNE);
         }
         double drain = enough ? 0 : Math.min(1, Math.max(0, 1 - oxygen / minimum));

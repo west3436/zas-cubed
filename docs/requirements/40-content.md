@@ -143,6 +143,16 @@ it spans at each change, and ends before it changes gas that a chunk out of full
 status has a share of. `PipeSaveTests.nfr_012_*` (GameTest) reads back what the
 saves wrote.*
 
+*2026-11-06: Note ([#226](https://github.com/west3436/zas-cubed/issues/226)):
+`PipeGapChunkTests.cont_003_a_pipe_placed_beside_a_chunk_away_joins_it_when_it_returns`
+(GameTest) places a pipe in a gap at a chunk border while the far chunk is out of
+full status, at each game tick of the atmos period, and it joins that side when
+the chunk returns. Writing it found a bug with the same symptom, now fixed: sides
+away in turn each came back with a valid network of their own and never joined.
+A node on a chunk's edge, and any port, now rejoins a connected neighbour in
+another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
+`cont_003_ports_away_in_turn_join_when_both_return`).*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -2272,6 +2282,14 @@ checked with real parts across a firelock.*
 *2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
 (GameTest) checks a real vent linked across a firelock runs from the
 controller's buffer.*
+
+*2026-11-06: Note ([#162](https://github.com/west3436/zas-cubed/issues/162)):
+`PowerChargeTests` (GameTest) lets the game step controllers and stand-in parts
+in real time and reads their FE stores at every game tick, since a test that
+steps them itself sees only the first charge. Each atmos tick costs each part
+once, whether one controller covers it twice or two controllers cover it, with
+no charge repeated or missed; the buffer refills each time (CONT-062), and
+charges stop as it runs out (CONT-064).*
 
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68

@@ -43,9 +43,10 @@ import org.jetbrains.annotations.Nullable;
  * eyes enter or leave a fluid. A server tick runs at most {@code max_checks_per_tick} checks; one
  * due beyond that waits for the next tick (LIFE-038). A check takes the verdict ({@link
  * BreathingRules#assess}), applies the gases' hazard profiles for the seconds since the last check
- * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}) and deals
- * the pressure and temperature damage ({@link EnvironmentHazards}). Rates are per second, so the
- * interval changes smoothness, not speed.
+ * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}), deals
+ * the pressure and temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard
+ * handlers ({@link HandledHazards}). Rates are per second, so the interval changes smoothness, not
+ * speed.
  *
  * <p><b>Unresolved atmosphere.</b> Where the atmosphere at the eyes is {@code UNRESOLVED}, such
  * as for the moment a loading room's zone isn't back yet, its mixture is only a last-known guess,
@@ -59,7 +60,9 @@ import org.jetbrains.annotations.Nullable;
  * too little O2 it sets {@code canBreathe} to false and scales the air consumed to the vanilla
  * underwater rate × (1 − pO2 / minimum), carrying fractions between ticks (LIFE-003). Otherwise it
  * leaves the event alone, so vanilla refills the meter in breathable air (LIFE-009), drowning
- * stays vanilla's under water (LIFE-022), and another mod's "can't breathe" stands (SPACE-002).
+ * stays vanilla's under water (LIFE-022), and another mod's "can't breathe" stands (SPACE-002). The
+ * exception is an entity breathing from its tank with its eyes in a fluid: this sets {@code
+ * canBreathe} to true, so the meter refills as in air and it doesn't drown (LIFE-047).
  * Once the meter is empty it runs at the vanilla rate, so {@link LivingDrownEvent} reports
  * drowning once a second as in vanilla; for a hypoxic entity this cancels that and deals 2 HP of
  * {@link LifeDamage#HYPOXIA} instead of drowning damage (LIFE-008), times the hazard's scale.
@@ -84,14 +87,15 @@ public final class Breathers {
     private Breathers() {}
 
     /**
-     * Registers the attachment, the breathing listeners, respiration's flush, the hazard profiles
-     * and the protection data. Called once, from the mod constructor.
+     * Registers the attachment, the breathing listeners, respiration's flush, the hazard profiles,
+     * the protection data and the check on natural spawns. Called once, from the mod constructor.
      */
     public static void register(IEventBus modBus, IEventBus gameBus) {
         ATTACHMENTS.register(modBus);
         modBus.addListener(Breathers::registerPayloads);
         HazardProfiles.register(gameBus);
         Protections.register(gameBus);
+        LethalSpawns.register(gameBus);
         gameBus.addListener(EventPriority.NORMAL, LivingBreatheEvent.class, Breathers::onBreathe);
         gameBus.addListener(EventPriority.NORMAL, LivingDrownEvent.class, Breathers::onDrown);
         gameBus.addListener((ServerTickEvent.Post e) -> {
@@ -121,6 +125,8 @@ public final class Breathers {
             if (entity.getAirSupply() > 0) {
                 e.setConsumeAirAmount(state.drainThisTick(e.getConsumeAirAmount()));
             }
+        } else if (state.breathesTankInFluid()) {
+            e.setCanBreathe(true);
         }
     }
 
@@ -141,9 +147,7 @@ public final class Breathers {
             entity.setAirSupply(0);
             double damage =
                     e.getDamageAmount() * HazardConfig.scale(entity.level().dimension(), HazardType.HYPOXIA);
-            if (damage > 0) {
-                entity.hurt(LifeDamage.source(entity, LifeDamage.HYPOXIA), (float) damage);
-            }
+            LifeDamage.deal(entity, HazardType.HYPOXIA, damage);
         }
     }
 
@@ -225,7 +229,7 @@ public final class Breathers {
             }
             return;
         }
-        state.checked(verdict, a.drain(), verdict.source() == BreathSource.FLUID, now);
+        state.checked(verdict, a.drain(), Breathing.vanilla(entity).source() == BreathSource.FLUID, now);
         if (verdict.reason() == BreathReason.EXEMPT) {
             state.clearExposure();
             return;
@@ -258,6 +262,7 @@ public final class Breathers {
         if (a.exposure() != null) {
             EnvironmentHazards.apply(entity, a.exposure(), seconds);
         }
+        HandledHazards.apply(entity, a, seconds);
     }
 
     /**

@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.api.client.LoopRequest;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.DeviceActivity;
+import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -167,6 +168,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+        DeviceData.writeVersion(tag);
         tag.put("Fuel", fuel.serializeNBT(registries));
         tag.putInt("Energy", energy.getEnergyStored());
         tag.putInt("BurnLeft", burnLeft);
@@ -176,6 +178,7 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        DeviceData.migrate(tag);
         if (tag.contains("Fuel")) {
             fuel.deserializeNBT(registries, tag.getCompound("Fuel"));
         }

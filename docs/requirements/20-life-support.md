@@ -670,10 +670,10 @@ that the client's bar matches the server's tick for tick in a vacuum and at
 the bar in game is still to do.*
 
 #### LIFE-022 · Underwater
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 While the eyes are in water, vanilla drowning shall apply instead of
-atmospheric breathing.
+atmospheric breathing, except where internals give water breathing (LIFE-047).
 
 - **Rationale:** Inferred: water is vanilla's domain, and drowning already
   handles it.
@@ -685,14 +685,33 @@ atmospheric breathing.
 `api_014_keeps_vanilla_underwater`. The drowning GameTest this asks for is left
 to [#36](https://github.com/west3436/zas-cubed/issues/36), with LIFE-047.*
 
+*2026-11-06: Changed, as the owner allowed for this round: the exception for
+internals is new, because this and LIFE-047 contradicted each other. Implemented.
+`life_022_a_submerged_player_in_a_zone_drowns` checks a player under water in a
+zone of breathable air loses 1 air a tick, and takes 2 HP of drowning damage 20
+ticks after its air runs out.*
+
 #### LIFE-047 · Internals underwater
-`Should` · `R1` · `Accepted` · Verify: GameTest · Depends: LIFE-021
+`Should` · `R1` · `Implemented` · Verify: GameTest · Depends: LIFE-021
 
 Internals that are on and supplied shall give water breathing.
 
 - **Rationale:** Inferred: a sealed mask on a supplied tank would work
   underwater, and it rewards the gear.
 - **Verify:** A GameTest checks a player with internals on doesn't drown.
+
+*2026-11-06: Implemented. With its eyes in a fluid it would drown in, a breather
+whose internals deliver gets the same verdict as on land: its source is
+`INTERNALS` and its breath is the tank's. Its O₂, toxic gas and filter rules
+apply, it draws from the tank, and it exhales at its eyes. Its air meter refills
+at the vanilla rate, as it does from a tank on land, rather than holding as under
+Water Breathing. A tank short of O₂ gives hypoxia, not drowning. Water Breathing,
+and a fluid nothing drowns in, keep vanilla's verdict and leave the tank alone.
+`life_047_internals_keep_a_submerged_player_from_drowning` checks a player's air
+and health hold over 320 ticks, the tank drains and the meter refills, and that
+it drowns with internals off, without the seal and without the tank.
+`life_047_a_tank_short_of_o2_underwater_is_hypoxia` and
+`life_047_the_client_breathes_from_its_tank_underwater` check the rest.*
 
 ## Damage, configuration and cost
 
@@ -812,7 +831,7 @@ while a survival player there has the hazards. Fake players can't be hurt at
 all, so it checks what a check would charge rather than their health.*
 
 #### LIFE-032 · Hazard extension API
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-04, D-12
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-04, D-12
 
 Consumer mods shall be able to register additional hazard handlers per gas or
 per tag, for example radiation from a radioactive gas they define. (API-033
@@ -824,6 +843,23 @@ intercepts existing hazard ticks; this adds new hazards.)
 
 *2026-11-05: When this is built, guard each call into a handler as NFR-013 asks, with
 `ThirdPartyFaults` (API-062), and add the GameTest NFR-013's plan still lacks.*
+
+*2026-11-06: Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)).
+`HazardHandlers.register(id, gas, handler)` and `register(id, tag, handler)`, in the API
+jar, so a mod registers with or without ZAS³. At each check that charges time, a handler
+is called once for each of its gases in the entity's breath or the atmosphere at its eyes,
+with a `HazardExposure` giving the entity, the gas, both partial pressures, the verdict and
+the seconds. What it does is its own, so `[hazards]` settings and API-033's event don't
+reach it. It isn't called for an exempt player (LIFE-037), a held check (LIFE-048) or an
+entity that has died. Tests: `life_032_a_handler_for_a_gas_applies`,
+`life_032_a_handler_for_a_tag_applies_to_each_gas_in_it`,
+`life_032_a_handler_sees_what_protection_leaves_in_the_breath`,
+`life_032_a_handler_hears_of_a_tanks_gas_with_eyes_in_a_fluid`,
+`life_032_a_handler_isnt_called_for_the_exempt_or_the_dead` and the unit tests in
+`HazardHandlersTest`, with
+`nfr_013_a_hazard_handler_that_throws_is_skipped_and_logged_once_a_minute` for the guard.
+A held check isn't tested with a handler: it returns before them, as it does before every
+hazard, which `life_048_unresolved_atmosphere_holds_the_breath_state` checks.*
 
 #### LIFE-033 · Staggered evaluation
 `Must` · `R1` · `Implemented` · Verify: Bench · Trace: NFR-001
@@ -866,7 +902,7 @@ at once under a cap of 5 are checked 5 a tick, none lost. As with LIFE-033,
 the Bench is S-10's.*
 
 #### LIFE-034 · Spawning in lethal atmospheres
-`Could` · `R1` · `Accepted` · Verify: GameTest
+`Could` · `R1` · `Implemented` · Verify: GameTest
 
 Breathing mobs should not spawn naturally where the atmosphere is immediately
 lethal, such as vacuum.
@@ -875,3 +911,16 @@ lethal, such as vacuum.
   wasting work and littering drops.
 - **Verify:** A GameTest checks breathing mobs don't spawn naturally in a
   vacuum test dimension.
+
+*2026-11-06: Implemented, with an event rather than a mixin:
+`MobSpawnEvent.PositionCheck`, for natural spawns and for those of chunk
+generation. A mob in `zas:breathers` is refused where the atmosphere at its eyes
+has too little O₂ to breathe, or where a gas in it, its pressure or its temperature
+deals damage to a bare mob. Spawners, spawn eggs, commands and the like aren't
+stopped, nor is a check another listener has decided.
+`life_034_breathing_mobs_don_t_spawn_naturally_in_a_vacuum_dimension` checks the
+position check the natural spawner ends with refuses pigs, cows and spiders in a
+dimension whose ambient is a vacuum, chunk generation's real spawner puts no spiders there,
+and it lets them in with air in the same place. The natural spawner itself needs
+a player in the level, so the test can't run it.
+`life_034_the_atmosphere_at_the_spot_decides` checks rooms of each atmosphere.*

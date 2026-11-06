@@ -368,7 +368,7 @@ worker: API-020 implementations must be pure functions of their inputs, they
 are guarded the same way, and the API documents them as worker-thread
 callbacks.
 
-*Implemented for each kind but hazard handlers, which don't exist yet (LIFE-032):*
+*Implemented for each kind:*
 each kind has one call point, which catches `Exception` and `LinkageError` and asks
 `ThirdPartyFaults` (API-062) whether to log. That's the one limit for both mods, per
 source, with a bounded record. It reads a clock, so it stays out of the engine, and it
@@ -381,6 +381,8 @@ only decides what's logged.
 | Code reaction | `ApiReactionType.compute` | No change for that call |
 | Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |
 | Gas handler (`zas_atmos`) | `GasHandlers` | No more transfer on that face that atmos tick, and what a failed fill was offered goes back to the network. A lookup that throws keeps the pipe's arm, so a fault can't leave an open end |
+| Hazard handler | `HandledHazards.call` | That handler for the rest of that check, so what it did before throwing stands. The others still run, and it's called again at the next check |
+| Life support, internal supply | `GuardedLifeSupport` | That call gives what the interface's default gives, so a part that throws protects from nothing and its other parts still count. A lookup that throws counts as no capability. A supply that throws delivers nothing, and a draw that throws gives no gas. Nothing is kept |
 
 The bus's own `post` stops at a listener that throws, logs an error each time and
 rethrows. So `ApiEvents` calls the listeners itself, reading the bus's private
@@ -887,6 +889,10 @@ the lever if the per-cell cost ever matters.
   - the owners whose pins were taken off and who haven't pinned since
     (API-017, §6.6)
   - the dimension's pause, who asked and why (OPS-005, §4.6)
+- **Older saves are brought forward (DATA-012).** Chunk records branch on their
+  version as they are read. `DimensionData` and `zas_atmos` block entities
+  (`DeviceData`) keep a list of steps, and the version they write follows from
+  it. A version they don't know is read by name, with a warning.
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
@@ -1727,7 +1733,8 @@ client breathing sync (LIFE-023): the server sends each player its own state
   the Nether's and End's natives ([datapacks.md](datapacks.md#breathers)).
 - **The verdict** (API-014). `BreathingRules.assess` makes it, and
   `ZasApiProviderImpl.breathability` returns it. With the eyes in a fluid it is
-  vanilla's, so water stays vanilla's (LIFE-022). An invulnerable player is
+  vanilla's, so water stays vanilla's (LIFE-022), unless the entity would drown
+  and its internals deliver, when it is the tank's (LIFE-047). An invulnerable player is
   `EXEMPT` (LIFE-037). Anything else that doesn't breathe is `DOES_NOT_BREATHE`.
   A breather breathes `Atmospheres.of(entity)`, the cell at its eyes (LIFE-002,
   API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
@@ -1831,6 +1838,12 @@ client breathing sync (LIFE-023): the server sends each player its own state
   hit, so invulnerability ticks from another source mustn't swallow it, and
   protection comes from LIFE-020 and LIFE-025 rather than armor (LIFE-035).
   `zas:airflow_impact` is a blow, so armor and the cooldown apply to it.
+- **Natural spawns** (LIFE-034). `LethalSpawns` fails NeoForge's
+  `MobSpawnEvent.PositionCheck` for a mob in `#zas:breathers` where the
+  atmosphere at its eyes has too little O₂, or a gas, pressure or temperature
+  that damages a bare mob. It acts on natural spawns and chunk generation's only,
+  and leaves a check another listener decided. Chunk generation's runs on a worker
+  thread, so it reads only the atmosphere and data, never a life-support capability.
 - **Internals** (LIFE-021, LIFE-028, LIFE-029, LIFE-043 to LIFE-046).
   `Internals` holds the switch, a saved entity attachment kept through death,
   which a player toggles with a keybind (`Internals.TogglePayload`, client to
@@ -2069,7 +2082,7 @@ sound, and nothing here runs for it.*
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
 | `.api.reaction` | `ReactionType` (code-defined, worker-thread, pure), `Reactions.applyStandalone` (API-019) |
 | `.api.fire` | `Fires` (`hotspots`, `isBurning`, `isHotspot`, any thread; `ignite`, `extinguish`, server thread; API-055 to API-058), `Ignition` (outcome, `Optional` hotspot and zone), `IgnitionOutcome` |
-| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`); later `HazardHandler` (LIFE-032) |
+| `.api.life` | `Breathing` (API-014: `of(entity)`, `vanilla(entity)`, vanilla's verdict alone, and `oxygenMinimum()`, the O₂ partial pressure below which a breather can't breathe), `Breathability` (the verdict: `BreathReason`, which decides whether it can breathe, `BreathSource` and the breath gas, the `Hazard`s its protection doesn't cover, and what protects it, a `Protection`), `HazardHandlers` (`register` for a gas or a gas tag, `unregister`, `registered`; the registry stays in the API jar, so a handler registers with or without `zas`; LIFE-032), `HazardHandler` and `HazardExposure` |
 | `.api.client` | `ClientSounds` (`thinAir()`, `fadeInThinAir(namespace)`, `fadesInThinAir(namespace)`, any thread; `loop(request)`, client thread; API-060, API-061), `LoopRequest`, `ClientSoundProvider` (the service `zas`'s client entry point installs). It refers to no client-only class, so a dedicated server can load it |
 | `.api.event` | Zone lifecycle, fire and hazard-tick events (API-030, API-031, API-033) |
 
@@ -2141,7 +2154,7 @@ protection. The fallback answers with it.
 server, `zas` answers with LIFE's verdict
 ([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
 the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
-fluid (LIFE-022). On the client it answers for the local player with the
+fluid (LIFE-022), but for internals (LIFE-047). On the client it answers for the local player with the
 verdict the server last synced (LIFE-023), without the breath gas, while the
 eyes are where the server last checked them, in a fluid or out; for other
 entities, and before the first sync, with vanilla's. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
@@ -2182,7 +2195,9 @@ fallback, and a provider without it, give 16 kPa.
   the result's `FireEvent`s, posted at apply after the gas fire blocks change
   (§6.7).
 - Hazard-tick events (API-033) fire from the hazard service and may modify the
-  hazard before it applies.
+  hazard before it applies. *Implemented:* `LifeDamage.deal` and `LifeDamage.tick`
+  post `HazardTickEvent` through `ApiEvents`, once per hazard each time it would
+  harm an entity, so every hazard's damage goes through them.
 - Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
   objects.
 
@@ -2334,7 +2349,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check against the recorded baseline, with a 10 % tolerance, comes in R1 |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
-| Packaging | GameTest harness loading built jars | The S0 harness, kept: `zas` plus example addon, and example addon alone (API-048) |
+| Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048) |
 
 The test names include requirement IDs (README rule 5).
 
@@ -2428,7 +2443,11 @@ jar, so providers can be tested before real devices exist.
   step that read the device's own block, as a pipe rebuilding its network
   does, would load the chunk again. A pipe network ends the next time a member
   uses it, and is rebuilt without that chunk's nodes, which keep their shares
-  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`).
+  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`). The
+  game tells nobody when such a chunk returns, so two sides can both hold valid
+  networks: each built its own while the other's chunk was away. A node on a
+  chunk's edge, and any port, checks at each step that the nodes connected to it
+  share its network, and rebuilds if not (`PipeNode.apart`, `PipeGapChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2815,8 +2834,8 @@ the cell in front of its grille).
     every node's network dissolves at load anyway.
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
-    an open valve whose neighbour is in another network reconnects at its next
-    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
+    the two rejoin at the next step of either node at the border (§11.2,
+    `cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
     a valve updates no neighbour's shape, since its flanges and shape are the same
     open or shut. That update's read of the next block would bring such a chunk
     back for two game ticks, and a network built in them would reach into it.

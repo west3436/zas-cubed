@@ -29,16 +29,16 @@ import net.neoforged.neoforge.fluids.FluidType;
  *   <li>the O₂ minimum (LIFE-003) and the gases' hazard profiles (LIFE-004);
  *   <li>pressure and temperature, and the protection of its worn items and its own life support
  *       (LIFE-020, LIFE-025, LIFE-026, API-022);
- *   <li>vanilla drowning while its eyes are in water (LIFE-022), and the creative and spectator
- *       exemption (LIFE-037).
+ *   <li>vanilla drowning while its eyes are in water (LIFE-022), unless its internals give it a
+ *       breath there (LIFE-047), and the creative and spectator exemption (LIFE-037).
  * </ul>
  *
  * <p><b>With ZAS³</b> on the server, the answer applies who breathes, the atmosphere at the eyes or
  * internals ({@link BreathSource#INTERNALS}, {@link Protection#SEALED_BREATHING}: LIFE-021), the O₂
  * minimum, the gases' hazard profiles ({@link Hazard#TOXIC_GAS}), the pressure and temperature
  * hazards for every living entity but those in {@code zas:atmosphere_immune} ({@link
- * Protection#IMMUNE}), vanilla's rule in water, the creative and spectator exemption, and the
- * protection of worn items and of the entity itself, from the life-support capability ({@link
+ * Protection#IMMUNE}), vanilla's rule in water unless internals give a breath there (LIFE-047),
+ * the creative and spectator exemption, and the protection of worn items and of the entity itself, from the life-support capability ({@link
  * io.github.west3436.zas.api.capability.ILifeSupport}) or data (LIFE-020, LIFE-025, LIFE-026). A
  * filter keeps the {@code #zas:toxic} gases out of the breath the verdict gives ({@link
  * Protection#GAS_FILTERING}: API-022). On the client, ZAS³ answers for the local player with the

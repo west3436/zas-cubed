@@ -119,6 +119,66 @@ static void capabilities(RegisterCapabilitiesEvent event) {
   default), so keep it cheap. Without ZAS³ the capabilities still exist, but
   nothing reads them.
 
+## Adjusting or cancelling a hazard
+
+`HazardTickEvent` fires just before a hazard harms an entity (API-033), on the
+server thread, so a suit or perk of your own can reduce it or stop it.
+
+```java
+NeoForge.EVENT_BUS.addListener((HazardTickEvent e) -> {
+    if (e.hazard() == Hazard.COLD && hasMyThermalPerk(e.entity())) {
+        e.setDamage(e.damage() * 0.5);
+    }
+    if (e.hazard() == Hazard.HYPOXIA && hasMyLungs(e.entity())) {
+        e.setCanceled(true);
+    }
+});
+```
+
+- **One event per hazard, each time it would harm the entity:** at each breath
+  check for `TOXIC_GAS`, `LOW_PRESSURE`, `HIGH_PRESSURE`, `COLD` and `HEAT`, once a
+  second on an empty meter for `HYPOXIA`, and at each blow for `AIRFLOW_IMPACT`.
+- **The damage is in HP,** for all the time since the last check, after protection
+  and the hazard's scale. A `TOXIC_GAS` tick can have 0 damage if its gas only
+  applies status effects so far.
+- **Cancelling** deals no damage and, for `TOXIC_GAS`, applies no status effects.
+  Nothing else changes: exposures go on counting, `Breathing.of` still lists the
+  hazard, and a hypoxic entity's meter stays empty. To keep a gas's effects and
+  drop its damage, set the damage to 0.
+- **Without ZAS³** it never fires.
+
+## Adding a hazard of your own
+
+A `HazardHandler` runs your code when a gas reaches an entity (LIFE-032), for example
+radiation from a radioactive gas you define. Register one for a gas or a gas tag.
+
+```java
+HazardHandlers.register(
+        ResourceLocation.fromNamespaceAndPath("mymod", "radiation"),
+        MY_RADIOACTIVE_GAS,
+        exposure -> {
+            double dose = exposure.surroundingPressure() * exposure.seconds();
+            if (dose > 0.1) {
+                exposure.entity().hurt(radiationDamage(exposure.entity()), (float) dose);
+            }
+        });
+```
+
+- **When:** on the server thread, at each breath check of a living entity, every 2 s by
+  default. It's called once for each of its gases in the entity's breath or the atmosphere
+  at its eyes, and a handler for a tag is called for each of the tag's gases there.
+- **How much reaches it:** `surroundingPressure()` is what's around it and
+  `breathedPressure()` is what it breathes, in kPa. They differ behind a filter or on a
+  tank, so a handler is called for a gas a filter keeps out, and decides what that means.
+  An entity that doesn't breathe breathes 0. With its eyes in a fluid nothing is around it,
+  so a handler hears only of a tank's gas.
+- **Scale by `seconds()`,** so the check interval changes smoothness, not speed.
+- **What it does is yours.** ZAS³ deals nothing for it, so `[hazards]` settings and
+  `HazardTickEvent` don't reach it. Any setting to turn it off or scale it is yours to add.
+- **Not called for** creative and spectator players, a check that charges no time, as an
+  entity's first does, a check waiting for the atmosphere to load, or an entity that has died.
+- **Without ZAS³,** handlers register and are never called.
+
 ## Gas handlers
 
 A block that stores gas provides `IGasHandler` (API-021), so others can fill and
@@ -350,8 +410,8 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
 
 ## If your code throws
 
-ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler
-or event listener throws, and the server carries on (NFR-013). That code is skipped
+ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler,
+hazard handler or event listener throws, and the server carries on (NFR-013). That code is skipped
 for the atmos tick and called again the next, and an event listener misses only that
 event. The fault is logged at most once a minute for each source, so one line in the
 log can stand for many faults.
@@ -360,6 +420,10 @@ An ambient provider's last good answer for that dimension stands while it throws
 a vacuum stays a vacuum, and one that keeps throwing freezes that answer. The next
 source applies only if it has given no good answer since the server started. `null` is
 an answer and not a fault, so throwing after one leaves the next source in place.
+
+An `ILifeSupport` or `IInternalSupply` that throws is caught too. A part of a life support
+that throws gives nothing for that call, so a suit that throws leaves its wearer exposed,
+and a supply that throws delivers nothing, so its user breathes the atmosphere.
 
 To limit your own logging the same way, ask `ThirdPartyFaults.shouldLog(source)`
 before you log. It's true at most once a minute for each source, on any thread (API-062).
@@ -382,6 +446,13 @@ incompatible change unless `api_version` allows one:
 API-041 promises nothing for `0.x`. Requiring a minor bump for a break is
 stricter than that, and follows semver's convention that a `0.x` minor
 version may break. The HTML report is in `zas-api/build/reports/apiCompat/`.
+
+From 1.0, anything removed is deprecated first, for at least one minor version
+(API-042): mark it `@Deprecated` in a minor version, with a `@deprecated` tag
+saying what to use instead, and remove it in a later major. The check fails on
+a removal the baseline didn't mark, even in a new major. It sees only the
+baseline, so it can't tell which release added the mark: don't add one in a
+patch.
 
 With `api_baseline_version` empty, as now (nothing has been released), the
 check is skipped with a notice. After each release, set it to the released

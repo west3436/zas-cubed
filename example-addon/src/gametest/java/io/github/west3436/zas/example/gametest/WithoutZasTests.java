@@ -15,6 +15,7 @@ import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.HazardHandlers;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.HeatResult;
@@ -74,6 +75,22 @@ public final class WithoutZasTests {
                 h.getLevel().getCapability(IGasHandler.BLOCK, pos, Direction.UP) == null,
                 "a block with no provider gave a gas handler");
         h.succeed();
+    }
+
+    /** A hazard handler registers, and nothing calls it, however long an entity stands in its gas (LIFE-032). */
+    @GameTest(template = "empty")
+    public static void s_12_hazard_handlers_register_and_nothing_calls_them(GameTestHelper h) {
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(ExampleAddonMod.MOD_ID, "s_12");
+        int[] calls = {0};
+        HazardHandlers.register(id, StandardAir.OXYGEN, exposure -> calls[0]++);
+        h.assertTrue(
+                HazardHandlers.registered().stream().anyMatch(r -> r.id().equals(id)), "the handler didn't register");
+        h.spawn(EntityType.PIG, new BlockPos(1, 2, 1));
+        h.runAfterDelay(45, () -> {
+            HazardHandlers.unregister(id);
+            h.assertValueEqual(calls[0], 0, "the calls to a handler without zas");
+            h.succeed();
+        });
     }
 
     /** The addon loaded and zas didn't, so the API reports no implementation (API-040). */
