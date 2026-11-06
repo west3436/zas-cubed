@@ -2694,7 +2694,7 @@ on its port sounds the port's disconnection as well as the burst.*
 passed it in the sound and particle world.*
 
 #### CONT-127 · The other devices' sounds
-`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
 
 A heater, air conditioner, portable pump, portable scrubber, recharger or
 generator shall play its running loop only while it is working, heard out to 8
@@ -2762,6 +2762,10 @@ gas and jets go on at each atmos tick. A leak lasts 1 to 3 atmos ticks, by how f
 
 *2026-11-05: accepted by the owner. It stays Accepted until someone hears the
 recharger's `machines/charge_finish`, which replaced the sound the owner heard.*
+
+*2026-11-06: Implemented, on the owner's check in the R1 round's test world: the
+recharger's `machines/charge_finish` heard once as its battery filled, and its
+charging loop stopped.*
 
 #### CONT-128 · The fire alarm's sound
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044

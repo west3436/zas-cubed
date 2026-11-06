@@ -667,7 +667,7 @@ built on API-057. This requirement stays rejected.
 ## Sound
 
 #### FIRE-036 · A gas fire has its own sound
-`Should` · `R1` · `Accepted` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-016, CLIENT-020, FIRE-014, FIRE-018
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-016, CLIENT-020, FIRE-014, FIRE-018
 
 Gas fire blocks within 16 blocks of a player shall play `zas:fire.loop` in place
 of vanilla's crackle, as at most 3 loops however big the fire, each louder as its
@@ -737,6 +737,13 @@ heard the result, and the cause isn't proven. `fire_036_a_much_louder_whoomp_pla
 
 *2026-11-05: accepted by the owner. It stays Accepted until someone hears a whoomp at
 the distance that failed: the fix above hasn't been heard.*
+
+*2026-11-06: Implemented, on the owner's check in the R1 round's test world: one
+whoomp heard from the large room at 25.2 blocks, the distance that failed. That
+room was lit alone, so the two rooms lit in turn that failed weren't tried
+again, and what silenced them stays unproven.
+`fire_036_a_much_louder_whoomp_plays_through_the_quiet` (Unit) stands for that
+part.*
 
 #### FIRE-037 · A gas blast has its own sound, near or far
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-016, CLIENT-020, CONT-038, CONT-102
