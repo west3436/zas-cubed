@@ -53,6 +53,7 @@ public final class ZoneGraph {
     private final CellTopology topology;
     private final ConservationLedger ledger;
     private ExchangeSettings settings;
+    private ZoneSettings zoneSettings = ZoneSettings.DEFAULT;
     private GasMixture ambient;
 
     private final LongObjectMap<Cell> cells = new LongObjectMap<>(64);
@@ -136,6 +137,11 @@ public final class ZoneGraph {
 
     public void setSettings(ExchangeSettings exchangeSettings) {
         settings = Objects.requireNonNull(exchangeSettings, "settings");
+    }
+
+    /** What happens to a zone's gas when its cells fill (CORE-022, CORE-029). */
+    public void setZoneSettings(ZoneSettings settings) {
+        zoneSettings = Objects.requireNonNull(settings, "settings");
     }
 
     /** The ambient, as a mixture whose volume is arbitrary. Read only. */
@@ -585,6 +591,9 @@ public final class ZoneGraph {
      *       by volume, or else to the ambient (CORE-075).
      *   <li>A zoned cell whose volume changed changes its zone's volume; the gas
      *       is kept.
+     *   <li>With {@link ZoneSettings#deleteDisplacedGas()} on, the gas a filled or
+     *       shrunken cell displaced is deleted instead, its share of the zone's by
+     *       volume, so the zone's pressure stays as it was (CORE-029).
      *   <li>A zone left disconnected splits (CORE-024, CORE-064), found by a
      *       search local to the change (CORE-025).
      *   <li>Edge connection counts follow the faces (CORE-030, CORE-037).
@@ -624,6 +633,9 @@ public final class ZoneGraph {
         unlinkAll(c);
         if (volume != c.volume) {
             double old = c.volume;
+            if (volume < old) {
+                deleteDisplaced(zone, (old - volume) / zone.volume());
+            }
             c.volume = volume;
             zone.setVolume(zone.volume() - old + volume);
             zone.changed = true;
@@ -660,7 +672,10 @@ public final class ZoneGraph {
             removeCell(c);
             cells.remove(c.id);
             GasMixture gas = zone.mixture();
-            if (neighbours.isEmpty()) {
+            if (zoneSettings.deleteDisplacedGas()) {
+                ledger.record(LedgerCategory.DISPLACED_DELETED, gas, -1);
+                gas.clear();
+            } else if (neighbours.isEmpty()) {
                 ledger.record(LedgerCategory.AMBIENT, gas, -1);
                 gas.clear();
             } else {
@@ -681,12 +696,22 @@ public final class ZoneGraph {
             destroyZone(zone);
             return;
         }
+        deleteDisplaced(zone, c.volume / zone.volume());
         collectZoneNeighbours(c);
         unlinkAll(c);
         removeCell(c);
         cells.remove(c.id);
         zone.changed = true;
         splitCheck(zone);
+    }
+
+    /** Deletes a fraction of a zone's gas if the option is on (CORE-029), recording it in the ledger. */
+    private void deleteDisplaced(Zone zone, double fraction) {
+        if (zoneSettings.deleteDisplacedGas()) {
+            GasMixture parcel = zone.mixture().removeFraction(fraction);
+            ledger.record(LedgerCategory.DISPLACED_DELETED, parcel, -1);
+            drainPruned(parcel);
+        }
     }
 
     /** The other zones a cell is connected to, in id order. */
