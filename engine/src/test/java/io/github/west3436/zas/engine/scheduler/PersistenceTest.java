@@ -85,6 +85,38 @@ class PersistenceTest {
     }
 
     /**
+     * A zone stays in memory while one of its chunks is unloaded, and that chunk's cells are all filled
+     * in meanwhile. The chunk's saved share is gas the zone still holds, so it isn't taken in again
+     * when the chunk loads and those cells go (DATA-008). This is the case behind seed 1 of the
+     * integrity fuzz (NFR-010).
+     */
+    @Test
+    void data_008_a_share_isnt_taken_twice_when_its_cells_were_filled_while_unloaded() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 16, 70, 3); // only x = 16 is in the far chunk
+        sim.add(13, 69, 2, 50, 0);
+        sim.steps(2);
+        ZoneView before = sim.zoneAt(13, 69, 2);
+        assertEquals(45, before.cellCount());
+
+        long far = SectionKeys.chunk(1, 0);
+        ChunkRecord saved = sim.unload(far);
+        sim.step();
+        assertTrue(sim.zoneAt(13, 69, 2).paused(), "the zone isn't paused");
+        for (int y = 68; y <= 70; y++) {
+            for (int z = 1; z <= 3; z++) {
+                sim.world.set(16, y, z, TestWorld.SOLID);
+            }
+        }
+        sim.load(far, saved);
+        sim.steps(2);
+        ZoneView after = sim.zoneAt(13, 69, 2);
+        assertEquals(before.id(), after.id(), "the zone's id");
+        assertEquals(36, after.cellCount(), "the zone's cells");
+        close(before.moles(N2), after.moles(N2), "the zone's nitrogen");
+    }
+
+    /**
      * A zone across two chunks leaves memory, while another zone keeps the far chunk's section
      * mirrored. When the near chunk loads, the zone comes back with only that chunk's cells and share:
      * its cells in the far chunk are still unloaded, so nothing may classify them, even though the
