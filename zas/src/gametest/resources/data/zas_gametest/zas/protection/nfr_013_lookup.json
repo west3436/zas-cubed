@@ -1,0 +1,4 @@
+{
+  "items": ["zas:test_faulty_lookup"],
+  "airflow_resistance": 0.75
+}
