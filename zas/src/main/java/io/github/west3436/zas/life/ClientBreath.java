@@ -20,8 +20,9 @@ import org.jetbrains.annotations.Nullable;
  * vanilla rate, carrying fractions between ticks, as {@link Breathers} does on the server. Once
  * the meter is empty it stops vanilla's drowning, as the server does, so no bubbles show; the
  * server deals the hypoxia damage. Otherwise it leaves the hook to vanilla: in breathable air, and
- * with the eyes in a fluid, where the server applies vanilla's rule too (LIFE-022). The server's
- * air value still arrives with the entity's data and corrects any drift.
+ * with the eyes in a fluid, where the server applies vanilla's rule too (LIFE-022). The exception
+ * is a player the server finds breathing from its tank, for whom eyes in a fluid change nothing
+ * (LIFE-047). The server's air value still arrives with the entity's data and corrects any drift.
  *
  * <p>Holds no client-only classes, so the payload registration that names its handler loads on a
  * dedicated server too. Client thread only.
@@ -56,26 +57,33 @@ public final class ClientBreath {
 
     /**
      * The breathing verdict for the local player (API-014): the server's, without its breath gas,
-     * while the player's eyes are where the server last checked them, in a fluid or out of one;
-     * otherwise, and before any sync, vanilla's.
+     * while the player's eyes are where the server last checked them, in a fluid or out of one, or
+     * wherever they are while it breathes from its tank (LIFE-047); otherwise, and before any sync,
+     * vanilla's.
      */
     public Breathability verdict(LivingEntity player) {
         Breathability vanilla = Breathing.vanilla(player);
         Breathability synced = state.verdict();
-        if (synced == null || (synced.source() == BreathSource.FLUID) != (vanilla.source() == BreathSource.FLUID)) {
+        if (synced == null) {
             return vanilla;
         }
-        return synced;
+        boolean sameSide = (synced.source() == BreathSource.FLUID) == (vanilla.source() == BreathSource.FLUID);
+        return sameSide || fromTank() ? synced : vanilla;
     }
 
     /**
      * NeoForge's breathing hook for the local player: drains the air as the server does while it
-     * finds the player short of O₂ and the eyes aren't in a fluid.
+     * finds the player short of O₂ and the eyes aren't in a fluid, or that breath is from its tank,
+     * and lets it breathe with its eyes in a fluid while its tank gives it enough (LIFE-047).
      *
      * @param eyesInFluid whether the player's eyes are in a fluid now, where vanilla's rule applies
      * @return whether it changed the event
      */
     public boolean breathe(LivingBreatheEvent e, boolean eyesInFluid) {
+        if (eyesInFluid && fromTank() && state.verdict().canBreathe()) {
+            e.setCanBreathe(true);
+            return true;
+        }
         if (!predicts(eyesInFluid)) {
             return false;
         }
@@ -103,7 +111,12 @@ public final class ClientBreath {
     }
 
     private boolean predicts(boolean eyesInFluid) {
-        return state.hypoxic() && !eyesInFluid;
+        return state.hypoxic() && (!eyesInFluid || fromTank());
+    }
+
+    /** Whether the server last found the player breathing from its tank. */
+    private boolean fromTank() {
+        return state.verdict() != null && state.verdict().source() == BreathSource.INTERNALS;
     }
 
     /** As {@link BreathState#drainThisTick}: the vanilla amount times the synced drain, with carry. */

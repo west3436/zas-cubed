@@ -361,6 +361,10 @@ a vacuum stays a vacuum, and one that keeps throwing freezes that answer. The ne
 source applies only if it has given no good answer since the server started. `null` is
 an answer and not a fault, so throwing after one leaves the next source in place.
 
+An `ILifeSupport` or `IInternalSupply` that throws is caught too. A part of a life support
+that throws gives nothing for that call, so a suit that throws leaves its wearer exposed,
+and a supply that throws delivers nothing, so its user breathes the atmosphere.
+
 To limit your own logging the same way, ask `ThirdPartyFaults.shouldLog(source)`
 before you log. It's true at most once a minute for each source, on any thread (API-062).
 

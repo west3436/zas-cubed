@@ -670,10 +670,10 @@ that the client's bar matches the server's tick for tick in a vacuum and at
 the bar in game is still to do.*
 
 #### LIFE-022 · Underwater
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 While the eyes are in water, vanilla drowning shall apply instead of
-atmospheric breathing.
+atmospheric breathing, except where internals give water breathing (LIFE-047).
 
 - **Rationale:** Inferred: water is vanilla's domain, and drowning already
   handles it.
@@ -685,14 +685,33 @@ atmospheric breathing.
 `api_014_keeps_vanilla_underwater`. The drowning GameTest this asks for is left
 to [#36](https://github.com/west3436/zas-cubed/issues/36), with LIFE-047.*
 
+*2026-11-06: Changed, as the owner allowed for this round: the exception for
+internals is new, because this and LIFE-047 contradicted each other. Implemented.
+`life_022_a_submerged_player_in_a_zone_drowns` checks a player under water in a
+zone of breathable air loses 1 air a tick, and takes 2 HP of drowning damage 20
+ticks after its air runs out.*
+
 #### LIFE-047 · Internals underwater
-`Should` · `R1` · `Accepted` · Verify: GameTest · Depends: LIFE-021
+`Should` · `R1` · `Implemented` · Verify: GameTest · Depends: LIFE-021
 
 Internals that are on and supplied shall give water breathing.
 
 - **Rationale:** Inferred: a sealed mask on a supplied tank would work
   underwater, and it rewards the gear.
 - **Verify:** A GameTest checks a player with internals on doesn't drown.
+
+*2026-11-06: Implemented. With its eyes in a fluid it would drown in, a breather
+whose internals deliver gets the same verdict as on land: its source is
+`INTERNALS` and its breath is the tank's. Its O₂, toxic gas and filter rules
+apply, it draws from the tank, and it exhales at its eyes. Its air meter refills
+at the vanilla rate, as it does from a tank on land, rather than holding as under
+Water Breathing. A tank short of O₂ gives hypoxia, not drowning. Water Breathing,
+and a fluid nothing drowns in, keep vanilla's verdict and leave the tank alone.
+`life_047_internals_keep_a_submerged_player_from_drowning` checks a player's air
+and health hold over 320 ticks, the tank drains and the meter refills, and that
+it drowns with internals off, without the seal and without the tank.
+`life_047_a_tank_short_of_o2_underwater_is_hypoxia` and
+`life_047_the_client_breathes_from_its_tank_underwater` check the rest.*
 
 ## Damage, configuration and cost
 
