@@ -172,6 +172,15 @@ Three things are outside what it shows:
   are of the atmosphere only: `PipeSaveTests` covers really unloading and saving
   pipes. A save/load cycle in either half is a clean stop, not a crash (#304).*
 
+*2026-11-06: Still Implemented, with a change to its timing. Cells in doubt are now
+checked at most every 2 atmos ticks, not 8 (GEO-023), which changes each seed's
+whole run. Seeds 1 to 20 of both halves pass again at 2, with no seed left out. Seeds
+21 to 40 weren't rerun. The engine half takes 41 to 57 s a seed on CI, and seed 3,
+which every PR runs, takes 52 s. Locally it took 33 to 64 s a seed on a busy machine.
+The half with pipes adds 11 to 15 s, as the first seed on a server, so a PR's fuzz
+comes to 63 to 67 s, a little over the minute it aims for. The 20-seed engine run
+takes 17 min of its 30-minute limit.*
+
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 

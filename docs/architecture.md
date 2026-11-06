@@ -573,10 +573,11 @@ section, S-10's station needs about 1–2 MiB.
    onto it, because the way out may have closed somewhere far from any zone: if
    it's a pocket now, it joins the zone (GEO-023). Until that's known the zone
    goes on venting and doesn't pause. Each such check can take a fill up to the
-   bound, so they run at most once every 8 atmos ticks: the first change is
-   checked at once, and those after it wait their turn. A region that can't be
-   classified is tried again once a section it lacks is in a loaded chunk, with
-   no fills before that. At most 65,536 links between a cell and a section are
+   bound, so they run at most once every 2 atmos ticks: the first change is
+   checked at once, and those after it wait their turn. A check that has to fetch
+   sections fills again the next tick, so changes that keep coming can mean a fill
+   every tick. A region that can't be classified is tried again once a section it
+   lacks is in a loaded chunk, with no fills before that. At most 65,536 links between a cell and a section are
    kept; past that the cache starts again, which costs fills, and a way out that
    closes after that goes unseen until something changes beside the zone.
 
