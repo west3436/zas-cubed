@@ -145,9 +145,10 @@ Left to do: those three seeds, a nightly schedule once all 20 pass, and the
 GameTest half, which totals the gas in pipes.*
 
 *2026-11-06: Implemented. Seeds 1 to 40 of both halves pass, with no seed left
-out. `nfr_010_integrity_under_fuzzing` is the engine half, at 18 to 28 s a seed.
-`nfr_010_integrity_under_fuzzing_with_pipes` is the GameTest half, at 3 to 4 s a
-seed: it runs in a real level with pipes, vents and canisters, and its own total
+out. `nfr_010_integrity_under_fuzzing` is the engine half, at 18 to 28 s a seed
+locally and 31 to 44 s on CI. `nfr_010_integrity_under_fuzzing_with_pipes` is the
+GameTest half, at about 3 s a seed locally and 3 to 16 s on CI: it runs in a real
+level with pipes, vents and canisters, and its own total
 covers zones, networks and devices, checks what a real save writes, and is
 itself tested by `nfr_010_gas_made_in_a_pipe_fails_the_total`. Every PR runs seed
 3 of each, in `./gradlew build` and `runGameTestServer`. The "Integrity fuzz"
