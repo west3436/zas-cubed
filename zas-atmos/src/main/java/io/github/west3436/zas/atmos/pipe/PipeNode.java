@@ -35,6 +35,23 @@ public interface PipeNode {
     }
 
     /**
+     * Whether a node connected to this one is in another network. Across a chunk border, two sides can
+     * each hold a valid network: each built its own while the other's chunk was out of full status,
+     * and a chunk's return tells nobody, since its nodes never left memory. The caller rebuilds.
+     *
+     * @return true if a connected node isn't in this node's network
+     */
+    default boolean apart() {
+        PipeNetwork own = currentNetwork();
+        for (PipeNode n : connectedNodes()) {
+            if (n.currentNetwork() != own) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * The chunk that saves the node's share, which its network tells when the gas changes. A node that
      * isn't in a world, as in a unit test, has none.
      */

@@ -16,6 +16,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -93,14 +94,27 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      * tick left it overpressured (CONT-108); otherwise its mixture reacts through the API, with no
      * ignition source (CONT-100). A device's own step comes after this, so it sees the pressure the
      * reaction left, and a canister on the network, rated lower than a pipe, fails before the pipe
-     * can burst. Its gas handlers' turn comes next (API-025, API-026), for the same reason.
+     * can burst. Its gas handlers' turn comes next (API-025, API-026), for the same reason. A node on
+     * a chunk's edge first rejoins a neighbour past it, if the two came back {@linkplain #apart()
+     * apart}.
      */
     @Override
     protected void beforeAtmosTick(ServerLevel level) {
+        network();
+        if (onChunkEdge() && apart()) {
+            reconnect();
+        }
         atmosTurn(level, network(), this);
         if (!isRemoved()) {
             exchangeWithHandlers(level);
         }
+    }
+
+    /** Whether a neighbour can be in another chunk, which comes and goes apart from this node's. */
+    private boolean onChunkEdge() {
+        int x = SectionPos.sectionRelative(worldPosition.getX());
+        int z = SectionPos.sectionRelative(worldPosition.getZ());
+        return x == 0 || x == SectionPos.SECTION_MAX_INDEX || z == 0 || z == SectionPos.SECTION_MAX_INDEX;
     }
 
     /** A transfer with each gas handler beside it; any of them may remove it. */
