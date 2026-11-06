@@ -1728,7 +1728,8 @@ client breathing sync (LIFE-023): the server sends each player its own state
   the Nether's and End's natives ([datapacks.md](datapacks.md#breathers)).
 - **The verdict** (API-014). `BreathingRules.assess` makes it, and
   `ZasApiProviderImpl.breathability` returns it. With the eyes in a fluid it is
-  vanilla's, so water stays vanilla's (LIFE-022). An invulnerable player is
+  vanilla's, so water stays vanilla's (LIFE-022), unless the entity would drown
+  and its internals deliver, when it is the tank's (LIFE-047). An invulnerable player is
   `EXEMPT` (LIFE-037). Anything else that doesn't breathe is `DOES_NOT_BREATHE`.
   A breather breathes `Atmospheres.of(entity)`, the cell at its eyes (LIFE-002,
   API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
@@ -2142,7 +2143,7 @@ protection. The fallback answers with it.
 server, `zas` answers with LIFE's verdict
 ([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
 the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
-fluid (LIFE-022). On the client it answers for the local player with the
+fluid (LIFE-022), but for internals (LIFE-047). On the client it answers for the local player with the
 verdict the server last synced (LIFE-023), without the breath gas, while the
 eyes are where the server last checked them, in a fluid or out; for other
 entities, and before the first sync, with vanilla's. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
