@@ -789,7 +789,7 @@ final class IntegrityFuzz {
         for (Map.Entry<Long, ChunkRecord> e : saved.entrySet()) {
             List<ZoneShare> held = table.shares(e.getKey());
             for (ZoneShare share : e.getValue().zones()) {
-                if (held.stream().noneMatch(h -> holds(h, share))) {
+                if (held.stream().noneMatch(h -> holds(table, h, share))) {
                     for (int i = 0; i < GASES; i++) {
                         total[i] += share.moles(i);
                     }
@@ -800,11 +800,14 @@ final class IntegrityFuzz {
     }
 
     /**
-     * Whether a zone in memory has that saved share's gas: it's the same zone, or it has the share's cells,
-     * as a zone does that took in the first one in the tick the chunk saved during.
+     * Whether a zone in memory has that saved share's gas. It's the same zone, or the share's zone has gone
+     * and this one has its cells, as a zone does that took over from it in the tick the chunk saved during.
+     * If the share's zone is still here, another zone having those cells says nothing: the share goes back
+     * to its own zone when the chunk loads.
      */
-    private static boolean holds(ZoneShare held, ZoneShare share) {
-        return held.zoneId() == share.zoneId() || overlap(share.cells(), held.cells());
+    private static boolean holds(AtmosSnapshot table, ZoneShare held, ZoneShare share) {
+        return held.zoneId() == share.zoneId()
+                || (table.zone(share.zoneId()) == null && overlap(share.cells(), held.cells()));
     }
 
     private static void checkFinite(ZoneView z) {
