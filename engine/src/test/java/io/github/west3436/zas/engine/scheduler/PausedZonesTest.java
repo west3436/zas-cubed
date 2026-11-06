@@ -217,4 +217,29 @@ class PausedZonesTest {
         assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
         assertEquals(10, sim.zoneAt(18, 65, 2).moles(N2), EPS);
     }
+
+    /**
+     * A chunk unloads with a change held in it for a zone that's paused (GEO-037). That held change
+     * isn't news of the chunk: it stays unloaded, and a zone with cells in it stays paused (GEO-030).
+     * This is the case behind seed 3 of the integrity fuzz (NFR-010): zones ran on in the unloaded
+     * chunk, so their gas no longer matched its saved shares.
+     */
+    @Test
+    void geo_030_a_chunk_that_unloads_with_a_held_change_stays_unloaded() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3); // across the west and east chunks
+        sim.world.room(-4, 68, 8, 3, 70, 10); // across the west chunk and the one beyond it
+        sim.add(13, 69, 2, 30, 0);
+        sim.add(1, 69, 9, 10, 0);
+        sim.steps(2);
+        sim.unload(EAST);
+        sim.step();
+        sim.world.set(11, 69, 2, TestWorld.AIR); // beside the first room, which is paused: held
+        sim.step();
+        assertArrayEquals(new long[] {SectionKeys.block(11, 69, 2)}, sim.pipeline.heldBlocks());
+        sim.unload(WEST);
+        sim.steps(3);
+        assertTrue(sim.engine.mirror().isChunkUnloaded(WEST), "the chunk counts as loaded");
+        assertTrue(sim.zoneAt(1, 69, 9).paused(), "the zone with cells in the chunk isn't paused");
+    }
 }

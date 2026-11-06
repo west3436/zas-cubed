@@ -705,9 +705,18 @@ public final class DimensionEngine {
         dropUnloadedSections(toRefresh);
         Set<Long> pausedNow = pausedZones();
         applyLimits(batch.limits(), pausedNow, changedCells);
-        // This batch's captures, and the latest capture of every section with held changes.
-        TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
-        heldTruth.clear();
+        // This batch's captures, and the latest capture of every section with held changes, unless its
+        // chunk has unloaded since: that stays as it is, and a fresh capture replaces it on loading.
+        TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(SectionKeys::compare);
+        for (java.util.Iterator<Map.Entry<Long, SectionSnapshot>> it =
+                        heldTruth.entrySet().iterator();
+                it.hasNext(); ) {
+            Map.Entry<Long, SectionSnapshot> e = it.next();
+            if (!mirror.isChunkUnloaded(SectionKeys.chunkOf(e.getKey()))) {
+                truths.put(e.getKey(), e.getValue());
+                it.remove();
+            }
+        }
         for (SectionSource source : batch.sections()) {
             SectionSnapshot s = resolve(source.decode());
             if (s.key() != source.key()) {
