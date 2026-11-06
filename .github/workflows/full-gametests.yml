@@ -23,11 +23,12 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v6
       # The task can succeed without the server ever starting, so the log must
-      # also say that the tests passed, and that zas's were among them.
+      # also say that the tests passed, and that zas's were among them. The log
+      # lists the namespaces in either order.
       - name: GameTests
         timeout-minutes: 20
         shell: bash
         run: |
           ./gradlew :zas-atmos:runGameTestServer --stacktrace | tee gametests.log
-          grep -F "Enabled Gametest Namespaces: [zas, zas_atmos]" gametests.log
+          grep -E "Enabled Gametest Namespaces: \[(zas, zas_atmos|zas_atmos, zas)\]" gametests.log
           grep -E "All [0-9]+ required tests passed" gametests.log
