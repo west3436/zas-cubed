@@ -368,11 +368,14 @@ final class IntegrityFuzz {
      * A reset (OPS-013), except of a zone with another zone beside it. That zone gains an ambient
      * connection even if the room left behind is sealed, as beside a dissolved zone (CORE-076), which
      * {@code ops_013_a_neighbour_across_an_edge_now_opens_onto_the_ambient} pins and the audit reports
-     * (GEO-032), so the two rules can't both hold there.
+     * (GEO-032), so the two rules can't both hold there. A reset applies after the geometry of its tick, so
+     * this one has a tick to itself, or a change or a chunk's record in that tick could give the zone a
+     * neighbour after the check.
      */
     private void reset() {
         int[] p = target();
         int sub = sub();
+        step();
         if (besideAnotherZone(p, sub)) {
             log("no reset at " + str(p) + ": there's a zone beside it");
             stats.resetsLeftOut++;
@@ -382,9 +385,10 @@ final class IntegrityFuzz {
         sim.pipeline.reset(block(p), sub, "fuzz");
         stats.gasOps++;
         stats.resets++;
+        step();
     }
 
-    /** Whether a reset at the position would take a zone with an edge to another. Resets run first in a tick. */
+    /** Whether a reset at the position would take a zone with an edge to another. */
     private boolean besideAnotherZone(int[] p, int sub) {
         long cell = sim.engine.classifier().space().cellAt(block(p), sub);
         Zone zone = cell == CellSpace.NO_CELL ? null : sim.engine.graph().zoneOf(cell);
@@ -613,7 +617,6 @@ final class IntegrityFuzz {
                 }
             }
         }
-        reanchor = 0;
         divisions.forEach(d -> d.fresh = 1); // the new engine holds what the records say
         step();
     }
@@ -654,7 +657,10 @@ final class IntegrityFuzz {
         double[] total = total(table);
         noteDivisions(table);
         if (a.rejected() > 0) {
-            reanchor = 2; // the rejected tick's records are undone in the next, outside any period
+            // The rejected tick's records are undone in the next, outside any period, and its table leaves
+            // out a zone it has only just taken in, which is in no saved share either. A save and load
+            // doesn't change that: the total is out until a tick after it.
+            reanchor = 2;
         }
         if (reanchor > 0) {
             reanchor--;
