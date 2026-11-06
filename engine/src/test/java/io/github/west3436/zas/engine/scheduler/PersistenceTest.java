@@ -4,6 +4,7 @@ import static io.github.west3436.zas.engine.scheduler.Sim.N2;
 import static io.github.west3436.zas.engine.scheduler.Sim.O2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +45,44 @@ class PersistenceTest {
     }
 
     private static final int[][] SEEDS = {{11, 65, 3}, {4, 71, 13}, {14, 65, 14}};
+
+    /**
+     * A wall built across a zone while it was saved, which nothing saw, makes it two zones when it's
+     * rebuilt (GEO-013), and they share its gas by volume (CORE-064).
+     */
+    @Test
+    void geo_013_a_wall_built_while_saved_splits_the_rebuilt_zone() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        sim.world.room(11, 64, 0, 20, 66, 2);
+        sim.add(12, 65, 1, 0, 1000);
+        sim.steps(2);
+        ZoneView before = sim.zoneAt(12, 65, 1);
+        assertEquals(90, before.cellCount());
+
+        long west = SectionKeys.chunk(0, 0);
+        long east = SectionKeys.chunk(1, 0);
+        ChunkRecord westRecord = sim.unload(west);
+        ChunkRecord eastRecord = sim.unload(east);
+        sim.step();
+        assertNull(sim.zoneAt(12, 65, 1), "the zone stayed in memory");
+
+        sim.world.box(18, 64, 0, 18, 66, 2, TestWorld.SOLID);
+        sim.load(west, westRecord);
+        sim.load(east, eastRecord);
+        sim.steps(2);
+
+        ZoneView westPart = sim.zoneAt(12, 65, 1);
+        ZoneView eastPart = sim.zoneAt(19, 65, 1);
+        assertNotEquals(westPart.id(), eastPart.id());
+        assertEquals(63, westPart.cellCount());
+        assertEquals(18, eastPart.cellCount());
+        assertFalse(westPart.paused());
+        assertFalse(eastPart.paused());
+        assertEquals(0, westPart.ambientEdges());
+        assertEquals(0, eastPart.ambientEdges());
+        close(before.totalMoles() * 63 / 81, westPart.totalMoles(), "the west part's gas");
+        close(before.totalMoles() * 18 / 81, eastPart.totalMoles(), "the east part's gas");
+    }
 
     /**
      * Random zones are saved chunk by chunk, leave memory, and are rebuilt one chunk at a time in

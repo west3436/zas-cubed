@@ -1059,7 +1059,8 @@ public final class DimensionEngine {
      * For every zone rebuilt from saved shares that is no longer waiting for a chunk, adds its cells
      * and those of its held blocks to {@code surfaces}, so the boundaries phase classifies whatever
      * they open onto (GEO-023, GEO-025, GEO-026): the blocks may have changed while it was saved
-     * (DATA-010). Their ids go to {@code resuming}; they stay paused, and are classified again,
+     * (GEO-013, DATA-010). If that left it in parts, it splits first, and each part goes on from here
+     * as a rebuilt zone. Their ids go to {@code resuming}; they stay paused, and are classified again,
      * while the classification waits for sections. In a paused dimension they wait until it resumes
      * (OPS-005).
      */
@@ -1067,6 +1068,7 @@ public final class DimensionEngine {
         if (rebuilt.isEmpty() || dimensionPaused) {
             return;
         }
+        List<Long> splitOff = new ArrayList<>();
         for (java.util.Iterator<Map.Entry<Long, long[]>> it = rebuilt.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Long, long[]> e = it.next();
             Zone z = graph.zone(e.getKey());
@@ -1084,6 +1086,11 @@ public final class DimensionEngine {
             if (unloaded) {
                 continue;
             }
+            for (Zone part : graph.splitDisconnected(z)) {
+                part.forEachCell(surfaces::add);
+                resuming.add(part.id());
+                splitOff.add(part.id());
+            }
             z.forEachCell(surfaces::add);
             for (long block : e.getValue()) {
                 space.forEachCellAt(block, surfaces::add);
@@ -1092,6 +1099,9 @@ public final class DimensionEngine {
                 }
             }
             resuming.add(z.id());
+        }
+        for (long id : splitOff) {
+            rebuilt.put(id, new long[0]);
         }
     }
 
