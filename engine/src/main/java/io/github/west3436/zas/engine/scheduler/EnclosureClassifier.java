@@ -72,8 +72,10 @@ public final class EnclosureClassifier implements Classifier {
     private final SectionTopology loaded;
 
     /**
-     * The fewest atmos ticks between checks of cells put in doubt. A check can take a fill up to the bound
-     * for each region, and building beside a vent would otherwise ask for one every tick.
+     * The fewest atmos ticks between checks of cells put in doubt, and so how much longer a zone can go on
+     * venting once its way out has closed. A check can take a fill up to the bound for each region, and
+     * building beside a vent would otherwise ask for one every tick. A check that has to fetch sections
+     * fills again the next tick, whatever this says.
      */
     public static final int DOUBT_CHECK_TICKS = 2;
 

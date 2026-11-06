@@ -440,6 +440,13 @@ zone goes on venting until that's known, and doesn't pause
 `geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next`,
 `geo_023_a_chunk_unloading_on_the_way_out_doesnt_stop_a_zone_venting`).*
 
+*2026-11-06: The owner chose to check more often. Cells in doubt are now checked at
+most once every 2 atmos ticks, not 8, so a room whose way out closes vents at most
+about 2 s too long at the default atmos tick, not about 8 s. A check that has to
+fetch sections fills again the next tick whatever the gap, which can find a closing
+sooner. `geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next` now uses
+a way out that needs no fetching, so that it sees the gap itself.*
+
 #### GEO-025 · Breach to the open
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-02
 
