@@ -308,6 +308,12 @@ it throws, which the owner hasn't ruled on. Tests:
 `nfr_013_an_internal_supply_that_throws_is_skipped_and_logged_once_a_minute`. Stays
 `Accepted`, because hazard handlers still aren't built.*
 
+*2026-11-06: the owner's decisions. Gas handlers count as third-party code here,
+as the note above reads them. `ILifeSupport` and `IInternalSupply` (API-022)
+join this list, and get the same guard with the hazard handlers
+([#35](https://github.com/west3436/zas-cubed/issues/35)). It stays Accepted
+until then.*
+
 *2026-11-06: Implemented. Hazard handlers (LIFE-032) are guarded in one place,
 `HandledHazards`. One that throws is skipped for the rest of that check, so what it did
 before throwing stands, the other handlers still run and it's called again at the next
@@ -317,12 +323,6 @@ passes in full: each kind the statement names, plus gas handlers, `ILifeSupport`
 `IInternalSupply`, has a GameTest that makes it throw over several ticks or calls and
 counts the errors in the log, then moves the limit's clock on a minute and counts one
 more. A throwing suit leaving its wearer exposed is still for the owner to rule on.*
-
-*2026-11-06: the owner's decisions. Gas handlers count as third-party code here,
-as the note above reads them. `ILifeSupport` and `IInternalSupply` (API-022)
-join this list, and get the same guard with the hazard handlers
-([#35](https://github.com/west3436/zas-cubed/issues/35)). It stays Accepted
-until then.*
 
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
