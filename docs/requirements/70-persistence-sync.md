@@ -122,6 +122,9 @@ differences it excused for each seed.
 So there is something the fuzz can no longer catch: a real bug that makes or
 loses no more than that bound, in a zone that has just divided after an unload.*
 
+*2026-11-06: the owner accepted this as a known limit, with no follow-up, so the
+alternatives above aren't planned. The fuzz keeps excusing exactly that event.*
+
 #### DATA-010 · Held changes persist
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43
 
@@ -144,6 +147,15 @@ futures complete with nothing moved.
   caller, so dropping it would lose gas.
 - **Verify:** A GameTest saves with queued additions and removals and checks
   additions apply after load and removals complete empty.
+
+*2026-11-06: A saved addition now keeps the sub-cell it targets (API-015,
+[#122](https://github.com/west3436/zas-cubed/issues/122)), so one aimed at a pane's
+smaller half no longer lands in the block's largest cell after a restart. That is
+chunk record format 5. Formats 1 to 4 still read, and an addition from one of them
+acts on the largest cell. `data_011_saved_addition_lands_in_its_sub_cell` (Unit) and
+`data_011_queued_addition_keeps_its_sub_cell_across_a_restart` (GameTest) check it.
+Operations carried over to a new engine after a geometry palette change had the same
+fault and keep their sub-cell now too.*
 
 #### DATA-016 · Content-mod persistence
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-09, D-50, CONT-095
@@ -178,6 +190,30 @@ gas ids are handled by CORE-013 and CORE-016.
   an update is unacceptable.
 - **Verify:** Unit tests migrate saved fixtures from each release; a GameTest
   loads an old world.
+
+*2026-11-06: This stays Accepted, because no release exists to make saved sample
+worlds from. What this round built:*
+
+- *`DimensionData`, the `zas_atmos` file, brings a save forward through a list of
+  steps, one for each version, before reading it. There are none yet, since it has
+  only ever had version 1. It no longer drops what it holds on a version it doesn't
+  know: a save from a newer mod, or with no version, is read by name with a warning,
+  so its zone counter (CORE-026), queued additions, released pins and pause survive.*
+- *`zas_atmos` block entity data now saves a `FormatVersion`, with steps of the same
+  kind (`DeviceData`). `AtmosDevice` and `GeneratorBlockEntity` handle it, so no device
+  has to. Data from before this has no version and reads as the first format.*
+- *`ChunkRecordCodec` already read every earlier chunk record format, and
+  `data_012_every_earlier_chunk_format_reads_and_saves_as_the_current_one` now checks
+  each one from records written by hand.*
+
+*Checked by the `data_012_` tests in `DimensionDataTest`, `DeviceDataTest` and
+`ChunkRecordMigrationTest` (Unit) and `DeviceDataTests` (GameTest). The steps are only
+tested with made-up formats, as no format has needed one yet.*
+
+*What's left: saved sample worlds from each release, the Unit tests that migrate them,
+and the GameTest that loads an old world. All of these wait for a first release. Three
+other kinds of saved data have no version: item data (tank contents and the like), the
+player's internals switch, and the primed transfer valve entity.*
 
 #### DATA-004 · Corruption tolerance
 `Must` · `R0` · `Implemented` · Verify: GameTest
@@ -216,7 +252,7 @@ and attachments are lost.
 ## Client sync
 
 #### DATA-005 · Client sync scope
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: A-03, D-53
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: A-03, D-53
 
 Clients shall receive only:
 - their own player's atmosphere state (DATA-014)
@@ -242,6 +278,15 @@ geometry or per-cell data.*
 particle packets, which a client can't cap. Each is one event: what happened, a
 place, a direction and one number. Like vanilla's, they are sent to nearby
 players only. They carry nothing about a zone, so this keeps to D-53.*
+
+*2026-11-06: Implemented. `ClientSyncScopeTests.data_005_a_player_is_sent_only_its_own_state_and_what_is_near_it`
+(GameTest) keeps two recording clients on the server for real game ticks, one in a sealed
+room with thin air, a device and then a breach, and one in the open far away. Each is sent
+only the payloads this requirement and its notes list, and the one far away hears nothing of
+the room. Debug data goes only to an operator with the overlay on, and stops when it goes off.
+Reading the packet types found one this list doesn't name: `ControllerSync`, what a
+controller's GUI shows, sent to the player with it open. It holds no zone geometry or
+per-cell data, so it keeps to D-53.*
 
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005

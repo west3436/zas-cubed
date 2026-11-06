@@ -446,12 +446,84 @@ neighbour, because OPS-013's rule and GEO-032's audit disagree beside one.
 | Ambient providers | [#287](https://github.com/west3436/zas-cubed/pull/287), [#291](https://github.com/west3436/zas-cubed/pull/291), [#293](https://github.com/west3436/zas-cubed/pull/293) | ENV-004, ENV-006, ENV-009, ENV-013, ENV-014, ENV-015, ENV-017 to ENV-020 | ENV-014's seeded source is tested through a test-only ambient, as real seeding is R2 |
 | Gas handlers and worn filters | [#285](https://github.com/west3436/zas-cubed/pull/285), [#296](https://github.com/west3436/zas-cubed/pull/296) | API-021, API-022, API-025, API-026 | None |
 | What seals | [#290](https://github.com/west3436/zas-cubed/pull/290), [#298](https://github.com/west3436/zas-cubed/pull/298), [#301](https://github.com/west3436/zas-cubed/pull/301), [#303](https://github.com/west3436/zas-cubed/pull/303), [#307](https://github.com/west3436/zas-cubed/pull/307), [#308](https://github.com/west3436/zas-cubed/pull/308) | API-023, API-028, GEO-006, GEO-009, GEO-013, GEO-014, GEO-021, GEO-027, GEO-031, GEO-042, GEO-043 | None |
-| Block damage | [#299](https://github.com/west3436/zas-cubed/pull/299) | FLOW-007, FLOW-015, FLOW-016, OPS-002 | The owner's check of windows blowing out |
+| Block damage | [#299](https://github.com/west3436/zas-cubed/pull/299) | FLOW-007, FLOW-015, FLOW-016, OPS-002 | None |
 | Fault isolation | [#309](https://github.com/west3436/zas-cubed/pull/309), [#310](https://github.com/west3436/zas-cubed/pull/310) | NFR-014. API-062 added as *Draft*. NFR-013 stays *Accepted* | Hazard handlers ([#35](https://github.com/west3436/zas-cubed/issues/35)), which NFR-013 also guards |
 | Compatibility and checks | [#282](https://github.com/west3436/zas-cubed/pull/282), [#284](https://github.com/west3436/zas-cubed/pull/284), [#286](https://github.com/west3436/zas-cubed/pull/286), [#288](https://github.com/west3436/zas-cubed/pull/288), [#289](https://github.com/west3436/zas-cubed/pull/289), [#294](https://github.com/west3436/zas-cubed/pull/294), [#306](https://github.com/west3436/zas-cubed/pull/306) | NFR-011, NFR-012, NFR-020, NFR-022, NFR-024, NFR-030. NFR-025 stays *Accepted* | One client launch with Sodium for NFR-025. NFR-012 repeats before each release |
 | Integrity fuzz | [#313](https://github.com/west3436/zas-cubed/pull/313), [#317](https://github.com/west3436/zas-cubed/pull/317) | NFR-010 | The nightly schedule has not been seen firing yet |
 | Bugs the checks found | [#304](https://github.com/west3436/zas-cubed/pull/304), [#311](https://github.com/west3436/zas-cubed/pull/311), [#312](https://github.com/west3436/zas-cubed/pull/312), [#314](https://github.com/west3436/zas-cubed/pull/314), [#315](https://github.com/west3436/zas-cubed/pull/315), [#316](https://github.com/west3436/zas-cubed/pull/316) | None | DATA-008's limit, below |
 | CI and test upkeep | [#297](https://github.com/west3436/zas-cubed/pull/297), [#305](https://github.com/west3436/zas-cubed/pull/305) | None | None |
+
+*2026-11-06: the owner played that world.* All 13 steps passed, with no notes, on main
+at 9b2920b, whose code is the 54271bb the world was built on. It took about 3 minutes,
+not the plan's 9. That moves FIRE-036, CLIENT-015, CLIENT-018 and CONT-127 to
+*Implemented*, and the log shows the world left by Save and Quit and reopened. Windows
+blowing out and the controller's seven mode buttons passed too. The round's decisions,
+including accepting API-062, are still with the owner.
+
+*2026-11-06: the owner settled the round's decisions.*
+
+| Decision | Result |
+|---|---|
+| A crash restoring more gas than went in ([#304](https://github.com/west3436/zas-cubed/pull/304)) | A known limit |
+| A block change dividing a zone just before its chunk saves (DATA-008) | A known limit, with no follow-up. The fuzz keeps excusing exactly that event |
+| Gas in flight when an engine faults (NFR-014) | Voided and recorded |
+| An ambient provider that throws (NFR-013) | It keeps its last good answer, [#321](https://github.com/west3436/zas-cubed/pull/321). With none yet, as after a restart, the next source applies |
+| `/zas reset` on a pinned zone (OPS-013) | It resets and loses its pins |
+| `/zas reset` beside a neighbouring zone (OPS-013) | The rule stays, so the neighbour can drain into a sealed room until something changes beside it. The fuzz resets only zones with no neighbour |
+| A waterlogged block with a shipped override (GEO-006) | Water wins, [#323](https://github.com/west3436/zas-cubed/pull/323). A pack's own override keeps the last word. Checked by GameTests; not tried in game |
+| Two layers of glass holding at any pressure (FLOW-007) | They stay as they are. A reinforced glass block is [#320](https://github.com/west3436/zas-cubed/issues/320) |
+| A border moving in two or more blocks in one atmos tick (GEO-031) | As built: the far part of a zone and its gas leave |
+| `ILifeSupport` and `IInternalSupply` (NFR-013) | They join NFR-013's list, guarded with the hazard handlers, [#35](https://github.com/west3436/zas-cubed/issues/35) |
+| Gas handlers (NFR-013) | They count as third-party code |
+| API-062 | Accepted, and *Implemented* |
+| A sealed room beside a moving ambient (ENV-017) | Counted as walls conducting, so ENV-017 stays *Implemented* |
+| ENV-014's seeded source | Stays *Implemented*, tested through a test-only ambient until real seeding in R2 |
+| NFR-012 after a pass not on a release commit | Stays *Implemented*. The pass repeats before each release |
+| NFR-025's client launch with Sodium | Before release. NFR-025 stays *Accepted* until then |
+| OPS-007 ([#37](https://github.com/west3436/zas-cubed/issues/37)) | Finished, [#324](https://github.com/west3436/zas-cubed/pull/324), and *Implemented* |
+| `zas-atmos` re-running the `zas` GameTests | Nightly only, [#325](https://github.com/west3436/zas-cubed/pull/325). The per-PR step went from about 7 m 18 s to about 5 m 15 s |
+| How often a zone's way out is checked again (GEO-023) | At most every 2 atmos ticks, not 8, [#326](https://github.com/west3436/zas-cubed/pull/326). A PR's fuzz comes to 60 to 67 s, and the cost in game isn't measured |
+| The ledger's unused `DEVICE` category | Removed, [#322](https://github.com/west3436/zas-cubed/pull/322): devices record as `API` |
+
+*2026-11-06: a status audit.* Each of the 70 requirements still *Accepted* for R0 or R1
+was compared with main at 61c29d8: its notes and Verify plan against the code and tests,
+which were read, not rerun. Only API-032 moved to *Implemented*. Finding a requirement's ID
+in the code and tests says little: many of the others have both, and still lack a part or
+the check their Verify plan asks for.
+
+| Result | Requirements |
+|---|---|
+| *Implemented* now | API-032 |
+| Waiting for the owner to check them in game | CLIENT-008, CLIENT-014, DATA-007 |
+| Can only be true at release | API-002, API-008, API-041, API-043, NFR-025, NFR-033, NFR-040, NFR-042 |
+| Not built | CORE-029, FLOW-005, LIFE-032, LIFE-034, LIFE-047, API-030, API-033, NFR-034, CLIENT-009, CONT-033 to CONT-036, CONT-055, CONT-056, CONT-088, CONT-089, CONT-091, CONT-115 to CONT-124 |
+
+| Partly built | What's missing |
+|---|---|
+| CORE-052 | The timed collection for sealed zones, its config key and its GameTest |
+| LIFE-022 | The GameTest with a submerged player drowning in a zone |
+| DATA-005 | The GameTest recording what a player is sent |
+| DATA-006, DATA-014, DATA-015 | The Bench figures |
+| DATA-012 | Saved fixtures and the old-world GameTest, which need a release to exist. `DimensionData` also drops its contents on a version it doesn't know, and `zas_atmos` block entity data has no version |
+| DATA-016 | The GameTest saving and reloading one whole station, which goes with S-09 |
+| API-005 | A build that fails on a missing javadoc comment |
+| API-007 | The GameTest with a consumer that bundles the API |
+| API-042 | Any check or written policy for deprecation. `apiCompat` doesn't look at it |
+| API-047 | The example addon's main code uses none of the extension points |
+| CONT-031, CONT-090 | The hardsuit's helmet and chestplate |
+| CONT-050 | The electrolyzer route, and a test that obtains gas by each route |
+| CONT-051, CONT-058 | 17 recipes wait for items that aren't built, and the central controller's row has no recipe |
+| CONT-060, CONT-065 | The electrolyzer and central controller. CONT-060 also lacks a test that cuts the volume pump's power |
+| CLIENT-001 | The sealed-head and analyzer triggers |
+| CLIENT-006 | °C as the default, and units in device GUIs, tooltips and the analyzer |
+| CLIENT-007 | The build check, and hard-coded text left in some screens |
+| NFR-001, NFR-002, NFR-004, NFR-005 | The full S-10, on D-40 hardware |
+| NFR-013 | Hazard handlers, and guards on `ILifeSupport` and `IInternalSupply` |
+| NFR-031 | A player mechanics doc and a changelog |
+| NFR-032 | S-09 with pipes and canisters, and S-10 |
+
+Later that day the owner narrowed CORE-052 to sealed zones and removed the air compressor
+(CONT-054, now *Rejected*). These tables already show both.
 
 | Track | Area | Notes |
 |---|---|---|
@@ -532,7 +604,7 @@ neighbour, because OPS-013's rule and GEO-032's audit disagree beside one.
 
 ## Immediate next steps
 
-_Updated 2026-11-05._
+_Updated 2026-11-06._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -557,15 +629,21 @@ _Updated 2026-11-05._
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
    played its combined test world the next day.
    - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
-     and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
-     electrolyzer).
+     and #51 (gas mask, hardsuit, boots, analyzer, wrench, electrolyzer).
+   - **A later track of its own (owner, 2026-11-06):** the items not built yet,
+     among them the analyzer, the central atmospherics controller
+     ([#200](https://github.com/west3436/zas-cubed/issues/200)), station walls
+     ([#179](https://github.com/west3436/zas-cubed/issues/179)) and reinforced glass
+     ([#320](https://github.com/west3436/zas-cubed/issues/320)).
+   - **What each open requirement still needs:** the 2026-11-06 status audit in
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done).
    - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
      (#69), and block damage (#45)~~ *on main 2026-11-06 (#282 to #317; see
-     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Its
-     combined test world and decisions wait on the owner. #69 stays open for
-     NFR-013, NFR-025 and NFR-040.
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The
+     owner played its combined test world and settled its decisions the same day
+     (#319 to #326). #69 stays open for NFR-013, NFR-025 and NFR-040.
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world the same day, and accepted its *Draft* IDs.

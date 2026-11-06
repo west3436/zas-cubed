@@ -44,8 +44,8 @@ public final class FireConfig {
     static void define(ModConfigSpec.Builder builder) {
         builder.push("fire");
         OXYGEN_MINIMUM_FRACTION = builder.comment(
-                        "The least O2 fraction (by moles) any fire needs: gas fires, vanilla fire, furnaces,",
-                        "campfires and the fuel generator. Below it they go out or pause.")
+                        "The least O2 fraction (by moles) any fire needs: gas fires, vanilla fire, furnaces",
+                        "and campfires. Below it they go out or pause.")
                 .defineInRange("oxygen_minimum_fraction", FireSettings.DEFAULT.minOxygenFraction(), 0.0, 1.0);
         OXYGEN_MINIMUM_KPA = builder.comment(
                         "The least O2 partial pressure, in kPa, any fire needs, whatever the fraction, so",

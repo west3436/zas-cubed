@@ -52,16 +52,34 @@ jobs:
         with:
           name: engine-coverage
           path: engine/build/reports/jacoco/test/html
+      # Each mod's own GameTests on its own server. zas's tests with zas_atmos
+      # loaded as well run nightly: full-gametests.yml.
+      # The task can succeed without a server ever starting, so the log must also
+      # say that the tests passed, once for each of the two servers.
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 10
-        run: ./gradlew runGameTestServer -x :example-addon:runGameTestServer --stacktrace
+        shell: bash
+        run: |
+          ./gradlew runGameTestServer -x :example-addon:runGameTestServer -Pgametests.ownOnly=true --stacktrace | tee gametests.log
+          passed=$(grep -cE "All [0-9]+ required tests passed" gametests.log || true)
+          if [ "$passed" -ne 2 ]; then
+            echo "::error::Expected 2 GameTest servers to report that their tests passed, but $passed did."
+            exit 1
+          fi
       # S-12 (API-048): the example addon, which nests the API, on a GameTest
       # server without zas. The fallback must answer with standard air.
       - name: S-12 API without ZAS³ (example addon alone)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 5
-        run: ./gradlew :example-addon:runGameTestServer --stacktrace
+        shell: bash
+        run: |
+          ./gradlew :example-addon:runGameTestServer --stacktrace | tee addon-gametests.log
+          passed=$(grep -cE "All [0-9]+ required tests passed" addon-gametests.log || true)
+          if [ "$passed" -ne 1 ]; then
+            echo "::error::Expected the example addon's GameTest server to report that its tests passed, but $passed did."
+            exit 1
+          fi
 
   # Snapshot of the API on the Central Portal (API-008, D-18), after a green
   # build on main. Never on PRs: they don't get the secrets.

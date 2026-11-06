@@ -399,7 +399,7 @@ its share of the gas shall stay in the zone, so the zone's pressure rises.
   sealed room and checks the pressure rises.
 
 #### CORE-029 · ZAS displaced-gas option
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: D-41
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: D-41
 
 A config option shall instead delete a displaced cell's gas, as ZAS does.
 
@@ -407,6 +407,15 @@ A config option shall instead delete a displaced cell's gas, as ZAS does.
   option ([zas-core §2.4](../research/zas-core.md#24-zones-zonedm)).
 - **Verify:** A Unit test with the option on checks filling a cell removes its
   volume share of the moles.
+
+*2026-11-06: Implemented. The option is `[atmos] delete_displaced_gas`, off by default. What
+it deletes is recorded as `DISPLACED_DELETED`. `core_029_the_option_deletes_a_filled_cells_share`
+checks the volume share and the unchanged pressure, `core_029_the_option_deletes_a_last_cells_gas`
+a zone's last cell, which CORE-075 would otherwise pass on, and
+`core_029_the_option_deletes_what_a_shrunken_cell_displaced` a cell a slab or the like makes
+smaller. `core_029_delete_displaced_gas_reaches_the_engine` (GameTest) checks the config key in a
+real room. A chunk's saved share keeps its gas when cells it lists were filled while it was
+unloaded, with the option on or off, since nothing says what those cells held.*
 
 #### CORE-075 · Displaced gas from a zone's last cell
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065
@@ -777,6 +786,13 @@ the requirement tests beside them) run with the invariant checker on and check
 every atmos tick is conserved. S-01 and S-02 run as adapted for R0, without
 devices or hazards ([Scenario verification](00-overview.md#scenario-verification)).*
 
+*2026-11-06: devices stay on this list, but the ledger has no category of their
+own. They use the public API (CONT-095), so what they move, leaks from pipes, tanks
+and canisters included, is recorded as `API`. `LedgerCategory.DEVICE` was never
+recorded by any code outside the tests and the bench, and its doc said otherwise. The
+owner's choice of 2026-11-06 was "Correct the doc", so it's removed. Nothing about gas
+changes. `/zas checker report` shows these moves under `api`, as it already did.*
+
 #### CORE-073 · Invariant checker
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Depends: CORE-036
 
@@ -913,7 +929,8 @@ forms no zone. A fuel block of another mod still joins through the tag, as
 #### CORE-052 · Zone garbage collection
 `Should` · `R1` · `Accepted` · Verify: GameTest
 
-A zone shall be dissolved back to ambient when both hold:
+A sealed zone, one with no ambient edge, shall be dissolved back to ambient when
+both hold:
 - its mixture has been equivalent to its ambient for a configurable time
 - nothing pins it (attached devices, API pins)
 
@@ -921,8 +938,8 @@ A zone shall be dissolved back to ambient when both hold:
   (D-13), so one that has returned to ambient and holds nothing is removed to
   keep the zone count low ([zas-core
   §10](../research/zas-core.md#10-mapping-zas-concepts-to-minecraft-draft-for-requirements-discussion)).
-- **Verify:** A GameTest vents a room, opens it to ambient and waits the
-  configured time, then checks the zone dissolves and a pinned zone doesn't.
+- **Verify:** A GameTest brings a sealed room's air to match its ambient and waits
+  the configured time, then checks the zone dissolves and a pinned zone doesn't.
 
 *2026-10-31: D-64: a pinned zone is also exempt from CORE-076's dissolution,
 so with an ambient edge it keeps exchanging however close to the ambient it
@@ -934,6 +951,12 @@ its pins' owners, and saves them. The collection itself, dissolving a zone
 that has matched its ambient for a configured time, isn't built yet, so this
 stays Accepted. Until it is, a zone without an ambient edge is never
 dissolved, pinned or not.*
+
+*2026-11-06: The owner narrowed this to sealed zones. CORE-076 already dissolves a
+zone with an ambient edge as soon as it matches the ambient, so the old Verify plan,
+which opened the room, could never reach a timed collection. It stays Accepted until
+the collection is built. CONT-110's "outlasts CORE-052's delay" is checked against an
+opened room for now, and should get a sealed room when this is built.*
 
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest

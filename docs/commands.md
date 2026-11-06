@@ -249,7 +249,7 @@ after every atmos tick with what the ledger's sources and sinks explain.
 | `/zas checker` | Says whether the checker is on, and whether by command or config |
 | `/zas checker on` / `off` | Switches it on or off in every dimension until the server stops, whatever `[atmos] conservation_checker` says |
 | `/zas checker config` | Returns to the config's setting |
-| `/zas checker report` | Prints this dimension's last report: each gas's ledger by category, and any unexplained change |
+| `/zas checker report` | Prints this dimension's last report: each gas's ledger by category, and any unexplained change. What a device moves shows under `api`, since devices use the public API |
 | `/zas checker run` | Runs the checker on the next atmos tick of this dimension, on or off, and prints its report |
 
 ## Profiling (OPS-004, OPS-012)

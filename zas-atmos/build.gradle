@@ -52,7 +52,11 @@ neoForge {
         gameTestServer {
             type = 'gameTestServer'
             sourceSet = sourceSets.gametest
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas,zas_atmos'
+            // zas's GameTests are on this run's classpath, because these share their helpers, so
+            // this run also repeats them with the content mod loaded. -Pgametests.ownOnly=true
+            // leaves those out: each PR's CI does, and the Full GameTests workflow runs them nightly.
+            def ownOnly = providers.gradleProperty('gametests.ownOnly').getOrElse('false').toBoolean()
+            systemProperty 'neoforge.enabledGameTestNamespaces', ownOnly ? 'zas_atmos' : 'zas,zas_atmos'
             // The same heap everywhere, so a local run can't hide what CI runs out of. Chunks wait
             // in memory to be written, so a slow disk needs more of it. An OOM ends the run at once
             // rather than at CI's time limit.

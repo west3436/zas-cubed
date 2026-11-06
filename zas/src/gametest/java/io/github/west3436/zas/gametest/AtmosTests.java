@@ -449,6 +449,29 @@ public final class AtmosTests {
     }
 
     /**
+     * An addition to and a removal from the open air finish in the atmos tick that runs them, in an
+     * area the worker hasn't been told of: the column they rest on comes with the batch (GEO-021). Each
+     * took six atmos ticks before that, which a test stepping a device a few times took for never (#158).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void core_053_open_air_mutations_finish_in_the_tick_that_runs_them(GameTestHelper h) {
+        Rooms r = new Rooms(h, 1501);
+        r.clear(0, 8);
+        SourceId src = source("core_053_one_tick");
+        GasParcel gas = new GasParcel(Map.of(N2, 1.0), 300);
+        CompletableFuture<MutationResult> added = GasMutations.add(r.level, r.point(2, 1, 2), gas, src);
+        CompletableFuture<MutationResult> removed =
+                GasMutations.remove(r.level, r.point(5, 1, 2), Map.of(N2, 1.0), src);
+        r.tick();
+        h.assertTrue(added.isDone(), "the addition didn't finish in the atmos tick that ran it");
+        h.assertTrue(removed.isDone(), "the removal didn't finish in the atmos tick that ran it");
+        h.assertValueEqual(added.join().outcome(), MutationOutcome.AMBIENT, "the addition's outcome");
+        h.assertValueEqual(removed.join().outcome(), MutationOutcome.AMBIENT, "the removal's outcome");
+        h.assertTrue(!r.zoned(2, 1, 2), "a zone formed in the open air");
+        h.succeed();
+    }
+
+    /**
      * Removing gas from the open air yields the ambient's gases at its temperature, and none it
      * lacks (CORE-057), with an event (CORE-058).
      */

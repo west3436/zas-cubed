@@ -376,6 +376,7 @@ public final class DimensionEngine {
         // 0. Restore rejected components.
         phases.enter(Phase.RESTORE);
         graph.setSettings(batch.settings().exchange());
+        graph.setZoneSettings(batch.settings().zones());
         dimensionPaused = batch.settings().dimensionPaused();
         if (!batch.ambient().equals(ambient)) {
             ambient = batch.ambient();

@@ -172,6 +172,20 @@ Three things are outside what it shows:
   are of the atmosphere only: `PipeSaveTests` covers really unloading and saving
   pipes. A save/load cycle in either half is a clean stop, not a crash (#304).*
 
+*2026-11-06: Still Implemented, with a change to its timing. Cells in doubt are now
+checked at most every 2 atmos ticks, not 8 (GEO-023), which changes each seed's
+whole run. Seeds 1 to 20 of both halves pass again at 2, with no seed left out. Seeds
+21 to 40 weren't rerun. The engine half takes 41 to 57 s a seed on CI, and seed 3,
+which every PR runs, takes 52 s. Locally it took 33 to 64 s a seed on a busy machine.
+The half with pipes adds 11 to 15 s, as the first seed on a server, so a PR's fuzz
+comes to 63 to 67 s, a little over the minute it aims for. The 20-seed engine run
+takes 17 min of its 30-minute limit.*
+
+*2026-11-06: the owner kept OPS-013's rule, so the fuzz keeps resetting only
+zones with no neighbour, and accepted DATA-008's limit. On the figure above:
+#326's own run measured the half with pipes at 8.9 s, so a PR's fuzz comes to 60
+to 67 s.*
+
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 
@@ -254,6 +268,51 @@ calls throws, and no gas is lost
 its block. The limit is `ThirdPartyFaults` (API-062), whose `ThirdPartyFaultsTest` checks
 the minute and that its record stays bounded. An item's or entity's `ILifeSupport` and
 `IInternalSupply` (API-022) aren't named either, and aren't guarded yet.*
+
+*2026-11-06: the owner's decision of 2026-11-06 changes what skipping an ambient
+provider means: "keep the provider's last good answer, using the next source only when
+there's no good answer yet". Before, a vacuum dimension could read as standard air for as
+long as its provider threw, and gas could flow in. The accepted cost is that a provider
+that keeps throwing freezes a stale ambient. This replaces "as if it had answered null"
+in the note above. `null` keeps its meaning of "not defined for now", which is a real
+answer and not a fault, so a provider that throws after one leaves the next source in
+place. An answer naming an unknown gas still counts as `null` (ENV-004).*
+
+*The answer is the provider's for that dimension: the same provider in two dimensions
+keeps one for each, and a provider that takes over and throws doesn't get the answer of
+the one before it. One answer is kept per dimension, replaced by each new one, so it can't
+grow with a provider that changes its answer every tick. It isn't saved: after a restart
+the next source applies until the provider next answers. The fault is logged as before.
+Tests:
+`nfr_013_an_ambient_provider_that_throws_keeps_its_last_good_answer_and_is_logged_once_a_minute`,
+which replaces `nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_once_a_minute`;
+`nfr_013_no_gas_flows_in_while_a_vacuum_dimensions_provider_throws`;
+`nfr_013_a_provider_that_throws_before_any_good_answer_gets_the_next_source`;
+`nfr_013_a_provider_that_throws_after_answering_null_keeps_the_next_source`;
+`nfr_013_a_providers_last_good_answer_is_kept_for_each_dimension`; and
+`nfr_013_a_provider_doesnt_keep_another_providers_answer`. Stays `Accepted`, because
+hazard handlers still aren't built.*
+
+*2026-11-06: the owner's decision of 2026-11-06 adds `ILifeSupport` and `IInternalSupply`
+(API-022) to the list, guarded with the hazard handlers. They're guarded now, in one place,
+`GuardedLifeSupport`, so this replaces "aren't guarded yet" above. A part of a life support
+that throws gives its default, which is nothing, for that call, and its other parts still
+count. A lookup that throws counts as no capability, so data naming the item applies. A
+supply whose `contents` or `distributionPressure` throws delivers nothing, so the entity
+breathes the atmosphere, and a `draw` that throws gives no gas and exhales none. The source
+is the item or entity type. So a suit that throws leaves its wearer exposed for as long as
+it throws, which the owner hasn't ruled on. Tests:
+`nfr_013_a_life_support_that_throws_is_skipped_and_logged_once_a_minute`,
+`nfr_013_a_life_supports_other_parts_count_when_one_throws`,
+`nfr_013_a_life_support_lookup_that_throws_counts_as_none` and
+`nfr_013_an_internal_supply_that_throws_is_skipped_and_logged_once_a_minute`. Stays
+`Accepted`, because hazard handlers still aren't built.*
+
+*2026-11-06: the owner's decisions. Gas handlers count as third-party code here,
+as the note above reads them. `ILifeSupport` and `IInternalSupply` (API-022)
+join this list, and get the same guard with the hazard handlers
+([#35](https://github.com/west3436/zas-cubed/issues/35)). It stays Accepted
+until then.*
 
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
@@ -449,6 +508,12 @@ every PR.
 *2026-11-03: Still Accepted. CI runs the build, unit tests and GameTests on
 every PR. Its API diff runs too, but compares nothing until API-043's baseline
 is set ([#61](https://github.com/west3436/zas-cubed/issues/61)).*
+
+*2026-11-06: Still Accepted. The owner chose to keep CI's GameTest step inside its
+time limit by running each mod's GameTests once on a PR, on its own server
+(`-Pgametests.ownOnly=true`). So every GameTest still runs on every PR. `zas`'s
+tests with `zas_atmos` loaded as well run nightly, in the "Full GameTests"
+workflow, or from the Actions tab.*
 
 #### NFR-034 · Benchmark regression check
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-40, NFR-001

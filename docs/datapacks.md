@@ -299,6 +299,7 @@ data/<namespace>/zas/geometry_overrides/<path>.json
 | `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped, so a pack can name blocks of mods that aren't installed |
 | `sealed_faces` | list of strings | no | The gas-tight faces: `down`, `up`, `north`, `south`, `west`, `east`. The others are fully open. Default none |
 | `volume` | number | yes | Gas volume in L, 0 to 1,000 |
+| `fluid_seals` | boolean | no | Whether a state of these blocks holding a fluid stays gas-tight (GEO-006), so that only its dry states take this override. Default `false`: the override has the last word over every state |
 
 - An overridden block is a single cell.
 - When several overrides match a block, one naming the block directly beats
@@ -311,15 +312,17 @@ data/<namespace>/zas/geometry_overrides/<path>.json
 
   | File | Blocks | Geometry |
   |---|---|---|
-  | `leaves.json` | `#minecraft:leaves` | Permeable, 1,000 L |
-  | `scaffolding.json` | scaffolding | Permeable, 1,000 L |
-  | `fences.json` | `#minecraft:fences`, `#minecraft:fence_gates`, iron bars | Permeable, 1,000 L |
+  | `leaves.json` | `#minecraft:leaves` | Permeable, 1,000 L, unless waterlogged |
+  | `scaffolding.json` | scaffolding | Permeable, 1,000 L, unless waterlogged |
+  | `fences.json` | `#minecraft:fences`, `#minecraft:fence_gates`, iron bars | Permeable, 1,000 L, unless waterlogged |
   | `honey_block.json` | honey block | Gas-tight, 0 L |
 
 - **Fluids** (GEO-006): a position holding a fluid, whether a source, flowing or
-  a waterlogged block, holds no gas and is gas-tight on every face. An override
-  has the last word over that too, for a fluid block or a waterlogged state. So a
-  waterlogged fence, leaf or iron bar passes gas under the shipped overrides.
+  a waterlogged block, holds no gas and is gas-tight on every face. The shipped
+  overrides say `fluid_seals`, so a waterlogged fence, leaf or iron bar seals. An
+  override without it has the last word, for a fluid block or a waterlogged state:
+  a pack's file naming `minecraft:oak_fence`, or replacing `fences.json`, makes a
+  wet oak fence pass gas unless it says `fluid_seals` too.
 - **Invalid files** are skipped with an error naming the file and field
   ([Invalid files](#invalid-files)).
 - **When it applies:** overrides load when the server starts and reload with

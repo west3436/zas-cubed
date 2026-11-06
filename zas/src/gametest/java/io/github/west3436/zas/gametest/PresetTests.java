@@ -162,6 +162,35 @@ public final class PresetTests {
     }
 
     /**
+     * A breach is another Normal trigger that Hardcore keeps: breaking the wall between a zone and a
+     * sealed, unzoned room joins the room to the zone (OPS-007, CORE-055, GEO-023).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
+    public static void ops_007_a_breach_joins_a_sealed_room_under_hardcore(GameTestHelper h) {
+        requireNoOverrides(h);
+        Rooms r = new Rooms(h, h.getLevel(), new BlockPos(-7936, 100, 8192));
+        r.clear(0, 0, 10, 6);
+        r.box(0, 0, 4, 4);
+        r.box(4, 0, 8, 4);
+        withPreset(h, AtmospherePreset.HARDCORE, () -> {
+            r.settle(GasMutations.add(r.level, r.point(2, 2, 2), Rooms.oxygen(10), Rooms.source("ops_007")));
+            h.assertFalse(r.zoned(6, 2, 2), "the sealed room is zoned before the breach");
+            r.set(4, 2, 2, Rooms.AIR);
+            r.ticks(2);
+            h.assertValueEqual(r.zone(6, 2, 2).id(), r.zone(2, 2, 2).id(), "one zone after the breach");
+            h.assertValueEqual(r.zone(6, 2, 2).cellCount(), 27 + 1 + 27, "cells");
+        });
+        h.succeed();
+    }
+
+    /** A world that hasn't chosen a preset is Normal (OPS-007, D-14). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void ops_007_normal_is_the_default_preset(GameTestHelper h) {
+        h.assertValueEqual(ZasServerConfig.PRESET.getDefault(), AtmospherePreset.NORMAL, "the default preset");
+        h.succeed();
+    }
+
+    /**
      * A preset change reaches the simulation with the next atmos tick: a sealed Nether room zoned
      * under Hardcore holds Hardcore's CO2-rich Nether air, and one zoned under Normal holds none
      * (OPS-007, ENV-010).

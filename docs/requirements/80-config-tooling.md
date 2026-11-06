@@ -211,6 +211,11 @@ region goes whole. A paused zone is left as it was, since it keeps its state
 is read as about dissolving into the ambient (CORE-076), not an operator's
 order.*
 
+*2026-11-06: the owner kept this rule: a zone beside a reset zone opens onto the
+ambient and vents, even if what it opens onto is a sealed room, until something
+changes beside it. A reset of a pinned zone also stays as it is: the zone resets
+and loses its pins.*
+
 #### OPS-006 · Admin logging
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; API-012's source attribution makes it easy to add later), 2026-10-31. · Verify: Inspect
 
@@ -220,7 +225,7 @@ logged with the player's name and the location, for griefing investigations.
 ## Preset
 
 #### OPS-007 · Atmosphere difficulty preset
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-14, D-13, D-19, D-28, D-51
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-14, D-13, D-19, D-28, D-51
 
 A per-world server setting shall select the **Normal** (default) or
 **Hardcore** preset. The preset sets defaults for:
@@ -288,6 +293,23 @@ with overrides. Still waiting: block pressure damage.*
 `block_pressure_damage`, and `flow_016_normal_holds_and_the_override_turns_damage_on`,
 `flow_016_hardcore_can_override_damage_off` and the `flow_007_` GameTests check it
 under both presets and with overrides either way. No listed option waits any more.*
+
+*2026-11-06: Implemented ([#37](https://github.com/west3436/zas-cubed/issues/37)).
+`ops_007_option_defaults_follow_the_preset` checks every listed option's default
+under each preset, and `ops_007_normal_is_the_default_preset` checks the preset's
+own. Every option's feature reads it, and these GameTests check the behaviour
+under each preset. SPACE-004 doesn't count until R2 (D-66).*
+
+| Option | Under Normal | Under Hardcore |
+|---|---|---|
+| Zone triggers: API calls | `core_055_api_remove_triggers_zone` | `ops_007_hardcore_keeps_the_normal_zone_triggers` |
+| Zone triggers: breaches | `geo_023_breach_into_sealed_room_joins_zone` | `ops_007_a_breach_joins_a_sealed_room_under_hardcore` |
+| Zone triggers: combustion | `core_055_lit_furnace_forms_no_zone`, `core_056_normal_forms_no_zone_from_combustion_or_planting` | `core_056_combustion_forms_a_zone_under_hardcore`, `fire_024_sealed_fire_forms_a_zone_and_goes_out_under_hardcore` |
+| Ambients | `env_002_normal_vanilla_defaults`, `ops_007_preset_ambient_reaches_the_simulation` | `env_012_hardcore_vanilla_defaults`, `ops_007_preset_ambient_reaches_the_simulation` |
+| Block pressure damage | `flow_016_normal_holds_and_the_override_turns_damage_on` | `flow_007_glass_breaks_above_the_threshold_under_hardcore` |
+| Planting | `core_056_normal_forms_no_zone_from_combustion_or_planting` | `core_056_planting_forms_a_zone_under_hardcore` |
+| Photosynthesis rates | `cont_057_rates_at_light_15_and_7_under_each_preset` | `cont_057_rates_at_light_15_and_7_under_each_preset` |
+| Container explosions | `cont_107_a_tank_breaks_blocks_only_under_hardcore`, `cont_107_a_canister_breaks_blocks_only_under_hardcore` | the same two |
 
 #### OPS-014 · Overrides survive a preset change
 `Must` · `R1` · `Implemented` · Verify: GameTest · Depends: OPS-007

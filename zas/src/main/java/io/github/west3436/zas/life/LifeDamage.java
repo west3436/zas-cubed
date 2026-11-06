@@ -1,6 +1,8 @@
 package io.github.west3436.zas.life;
 
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.event.HazardTickEvent;
+import io.github.west3436.zas.simulation.ApiEvents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -13,6 +15,9 @@ import net.minecraft.world.entity.LivingEntity;
  * death message. All but airflow impact bypass armor (LIFE-035), skip the damage cooldown, so a
  * hazard isn't swallowed by another's invulnerability ticks, and don't knock back. Airflow impact
  * is a physical blow, so armor and the cooldown apply to it as to any hit.
+ *
+ * <p>Every hazard's damage goes through {@link #deal} or {@link #tick}, so a {@link HazardTickEvent}
+ * can modify or cancel it first (API-033). Server thread.
  */
 public final class LifeDamage {
     /** Hypoxia: an empty air meter in a breath with too little O2 (LIFE-008). */
@@ -41,6 +46,37 @@ public final class LifeDamage {
     /** A damage source of a type, from the entity's level's registry. */
     public static DamageSource source(LivingEntity entity, ResourceKey<DamageType> type) {
         return entity.damageSources().source(type);
+    }
+
+    /**
+     * Deals a hazard's damage now, unless a listener cancels its tick, as much as the listeners leave
+     * (API-033). Nothing fires if there's no damage to deal.
+     *
+     * @param damage the damage in HP, after protection and the hazard's scale
+     * @return the damage dealt, 0 if none
+     */
+    public static double deal(LivingEntity entity, HazardType hazard, double damage) {
+        if (!(damage > 0)) {
+            return 0;
+        }
+        HazardTickEvent tick = tick(entity, hazard, damage);
+        return tick.isCanceled() ? 0 : hurt(entity, hazard, tick.damage());
+    }
+
+    /** Fires a hazard's tick, for a hazard that has more to it than damage. It deals nothing itself. */
+    static HazardTickEvent tick(LivingEntity entity, HazardType hazard, double damage) {
+        HazardTickEvent tick = new HazardTickEvent(entity, hazard.hazard(), damage);
+        ApiEvents.post(tick);
+        return tick;
+    }
+
+    /** Hurts an entity with a hazard's damage type, after its tick. */
+    static double hurt(LivingEntity entity, HazardType hazard, double damage) {
+        if (!(damage > 0)) {
+            return 0;
+        }
+        entity.hurt(source(entity, hazard.damageType()), (float) damage);
+        return damage;
     }
 
     private static ResourceKey<DamageType> key(String path) {

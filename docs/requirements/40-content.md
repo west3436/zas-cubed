@@ -143,6 +143,16 @@ it spans at each change, and ends before it changes gas that a chunk out of full
 status has a share of. `PipeSaveTests.nfr_012_*` (GameTest) reads back what the
 saves wrote.*
 
+*2026-11-06: Note ([#226](https://github.com/west3436/zas-cubed/issues/226)):
+`PipeGapChunkTests.cont_003_a_pipe_placed_beside_a_chunk_away_joins_it_when_it_returns`
+(GameTest) places a pipe in a gap at a chunk border while the far chunk is out of
+full status, at each game tick of the atmos period, and it joins that side when
+the chunk returns. Writing it found a bug with the same symptom, now fixed: sides
+away in turn each came back with a valid network of their own and never joined.
+A node on a chunk's edge, and any port, now rejoins a connected neighbour in
+another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
+`cont_003_ports_away_in_turn_join_when_both_return`).*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -1868,25 +1878,20 @@ power.
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, D-33
 
 R1 shall provide these ways to obtain gas, with no other mods installed:
-- the air compressor (CONT-054)
 - the water electrolyzer (CONT-055)
 - scrubbing and filtering gases into canisters for reuse (CONT-013, CONT-015,
   CONT-017)
 
 - **Rationale:** Decision: D-33.
-- **Verify:** A GameTest obtains O₂ and N₂ by each listed route with only ZAS³
-  installed.
+- **Verify:** With only ZAS³ installed, a GameTest obtains O₂ from the electrolyzer,
+  and O₂ and N₂ by scrubbing and filtering.
+
+*2026-11-06: The owner removed the air compressor (CONT-054), which leaves these two
+routes. The Verify plan now says which gases each one gives, because the electrolyzer
+makes no N₂.*
 
 #### CONT-054 · Air compressor
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
-
-An air compressor shall fill a canister with 2 mol/s of ambient gas, up to
-4,500 kPa, drawing 40 FE/t. It works only where the ambient has gas.
-
-- **Rationale:** Decision: D-33; 2 mol/s is a gameplay rate that fills a
-  canister to 4,500 kPa in about 15 minutes.
-- **Verify:** A GameTest checks the fill rate and the 4,500 kPa limit, and
-  that it does nothing in vacuum.
+`Must` · `R1` · `Rejected` — removed by the owner: R1 has no air compressor, and gets gas from the electrolyzer and from scrubbing and filtering (CONT-050), 2026-11-06.
 
 #### CONT-055 · Water electrolyzer
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
@@ -2102,6 +2107,10 @@ Accepted until each device exists to check.*
 and `cont_060_a_real_mixer_runs_on_a_controller_and_stops_when_its_power_is_cut`
 (GameTest), as the pump's. This stays Accepted until each device exists to check.*
 
+*2026-11-06: The volume pump stops when its provider's power is cut:
+`VolumePumpPowerTests.cont_060_a_real_volume_pump_stops_when_its_power_is_cut`
+(GameTest), as the pressure pump's. This stays Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -2112,7 +2121,6 @@ Devices shall draw these amounts by default:
 | Vent | 10 |
 | Scrubber (panic) | 15 (30) |
 | Pumps, filter, mixer | 20 |
-| Compressor | 40 |
 | Heater, freezer | 60 |
 | Igniter (while active) | 20 |
 | Recharger (while charging) | 40 |
@@ -2166,6 +2174,8 @@ config.*
 scrubber_panic`, drawn while it isn't off
 (`ScrubberTests.cont_065_a_scrubber_draws_only_while_on_and_twice_as_much_in_panic`).
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-06: the air compressor and its 40 FE/t are removed (CONT-054).*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -2292,6 +2302,14 @@ checked with real parts across a firelock.*
 *2026-11-02: Implemented. `FirelockTests.cont_042_a_vent_linked_across_a_firelock_is_powered_and_commanded`
 (GameTest) checks a real vent linked across a firelock runs from the
 controller's buffer.*
+
+*2026-11-06: Note ([#162](https://github.com/west3436/zas-cubed/issues/162)):
+`PowerChargeTests` (GameTest) lets the game step controllers and stand-in parts
+in real time and reads their FE stores at every game tick, since a test that
+steps them itself sees only the first charge. Each atmos tick costs each part
+once, whether one controller covers it twice or two controllers cover it, with
+no charge repeated or missed; the buffer refills each time (CONT-062), and
+charges stop as it runs out (CONT-064).*
 
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68
@@ -2718,7 +2736,7 @@ on its port sounds the port's disconnection as well as the burst.*
 passed it in the sound and particle world.*
 
 #### CONT-127 · The other devices' sounds
-`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: CLIENT-015, CLIENT-020, DATA-017
 
 A heater, air conditioner, portable pump, portable scrubber, recharger or
 generator shall play its running loop only while it is working, heard out to 8
@@ -2787,6 +2805,10 @@ gas and jets go on at each atmos tick. A leak lasts 1 to 3 atmos ticks, by how f
 *2026-11-05: accepted by the owner. It stays Accepted until someone hears the
 recharger's `machines/charge_finish`, which replaced the sound the owner heard.*
 
+*2026-11-06: Implemented, on the owner's check in the R1 round's test world: the
+recharger's `machines/charge_finish` heard once as its battery filled, and its
+charging loop stopped.*
+
 #### CONT-128 · The fire alarm's sound
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest, Manual · Trace: CLIENT-015, CLIENT-020 · Depends: CONT-044
 
@@ -2819,7 +2841,7 @@ passed it in the sound and particle world.*
 
 | R1 | R2 |
 |---|---|
-| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (compressor, electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
+| Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
 | *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's

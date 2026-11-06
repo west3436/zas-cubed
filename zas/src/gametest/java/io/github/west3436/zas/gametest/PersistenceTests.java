@@ -697,6 +697,39 @@ public final class PersistenceTests {
     }
 
     /**
+     * A queued addition aimed at one half of a real glass pane lands in that half's zone after a
+     * restart (API-015, DATA-011, #122). The two halves are equal, so the block's largest cell is the
+     * first, the west half: an addition that lost its sub-cell would go into the west room.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = RESTART)
+    public static void data_011_queued_addition_keeps_its_sub_cell_across_a_restart(GameTestHelper h) {
+        ServerLevel end = restartLevel(h);
+        Rooms r = new Rooms(h, end, 3100);
+        r.clear(0, 14);
+        r.shell(2, 6);
+        r.shell(6, 10);
+        r.set(6, 2, 2, PANE);
+        r.settle(GasMutations.add(end, r.point(4, 2, 2), oxygen(50), source("data_011")));
+        r.settle(GasMutations.add(end, r.point(8, 2, 2), oxygen(30), source("data_011")));
+        ZoneInfo west = r.zone(4, 2, 2);
+        ZoneInfo east = r.zone(8, 2, 2);
+        h.assertFalse(west.id().equals(east.id()), "the pane doesn't divide the rooms");
+        GasMutations.add(end, PointResolutionTests.at(r, 6, 2, 2, 0.8, 0.5, 0.5), oxygen(4), source("data_011"));
+        Map<Long, byte[]> saved = service().stopForTest(end, r.chunkKey(0));
+        service().startForTest(end, saved);
+        r.ticks(2);
+        r.close(
+                Atmospheres.zone(end, east.id()).orElseThrow().mixture().moles(O2),
+                east.mixture().moles(O2) + 4,
+                "O2 of the east room, which has the half it was aimed at");
+        r.close(
+                Atmospheres.zone(end, west.id()).orElseThrow().mixture().moles(O2),
+                west.mixture().moles(O2),
+                "O2 of the west room, which has the block's largest cell");
+        h.succeed();
+    }
+
+    /**
      * A change held for a paused zone is saved in its chunk and applies when the zone resumes,
      * across a restart (DATA-010).
      */

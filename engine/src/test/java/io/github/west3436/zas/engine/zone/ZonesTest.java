@@ -144,6 +144,84 @@ class ZonesTest {
     }
 
     @Test
+    void core_029_the_option_deletes_a_filled_cells_share() {
+        Grid grid = new Grid().box(0, 0, 0, 4, 0, 1, CELL);
+        ZoneGraph graph = graph(grid, air(101.325, CELL, ROOM_T));
+        graph.setZoneSettings(new ZoneSettings(true));
+        Zone zone = graph.createZone(Grid.cells(0, 0, 0, 4, 0, 1));
+        graph.beginConservationPeriod();
+        double n2 = zone.mixture().moles(N2);
+        double o2 = zone.mixture().moles(O2);
+        double pressure = zone.mixture().pressure();
+        double volume = zone.volume();
+
+        grid.set(cell(2, 0, 0), 0); // a solid block fills one cell
+        graph.refreshAll(Grid.around(cell(2, 0, 0)));
+
+        double kept = (volume - CELL) / volume;
+        assertEquals(n2 * kept, zone.mixture().moles(N2), EPS * n2, "the cell's share of the N2 goes");
+        assertEquals(o2 * kept, zone.mixture().moles(O2), EPS * o2, "the cell's share of the O2 goes");
+        assertEquals(volume - CELL, zone.volume(), EPS);
+        assertEquals(pressure, zone.mixture().pressure(), EPS * pressure, "the pressure stays as it was");
+        assertEquals(-n2 * CELL / volume, graph.ledger().recorded(LedgerCategory.DISPLACED_DELETED, N2), EPS * n2);
+        assertTrue(graph.checkConservation(1).conserved(), "the ledger explains what went");
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_029_the_option_deletes_a_last_cells_gas() {
+        // Left | one cell | right, joined through doors: CORE-075 would pass the middle's gas on.
+        Grid grid = new Grid().box(0, 0, 0, 2, 0, 0, CELL);
+        grid.door(cell(0, 0, 0), cell(1, 0, 0));
+        grid.door(cell(1, 0, 0), cell(2, 0, 0));
+        ZoneGraph graph = graph(grid, vacuum());
+        graph.setZoneSettings(new ZoneSettings(true));
+        Zone left = graph.createZone(cell(0, 0, 0));
+        Zone middle = graph.createZone(cell(1, 0, 0));
+        Zone right = graph.createZone(cell(2, 0, 0));
+        fillWith(graph, middle, air(400, CELL, ROOM_T));
+        graph.beginConservationPeriod();
+        double n2 = middle.mixture().moles(N2);
+
+        grid.set(cell(1, 0, 0), 0);
+        graph.refreshAll(Grid.around(cell(1, 0, 0)));
+
+        assertFalse(middle.isAlive());
+        assertEquals(0, left.mixture().totalMoles(), EPS);
+        assertEquals(0, right.mixture().totalMoles(), EPS);
+        assertEquals(-n2, graph.ledger().recorded(LedgerCategory.DISPLACED_DELETED, N2), EPS * n2);
+        assertTrue(graph.checkConservation(1).conserved());
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_029_the_option_deletes_what_a_shrunken_cell_displaced() {
+        Grid grid = new Grid().box(0, 0, 0, 3, 0, 0, CELL);
+        ZoneGraph graph = graph(grid, air(101.325, CELL, ROOM_T));
+        graph.setZoneSettings(new ZoneSettings(true));
+        Zone zone = graph.createZone(Grid.cells(0, 0, 0, 3, 0, 0));
+        graph.beginConservationPeriod();
+        double moles = zone.mixture().totalMoles();
+        double pressure = zone.mixture().pressure();
+
+        grid.set(cell(3, 0, 0), CELL / 2); // half the cell's volume is gone
+        graph.refreshAll(Grid.around(cell(3, 0, 0)));
+
+        assertEquals(moles * 3.5 / 4, zone.mixture().totalMoles(), EPS * moles);
+        assertEquals(pressure, zone.mixture().pressure(), EPS * pressure, "the pressure stays as it was");
+        assertTrue(graph.checkConservation(1).conserved());
+
+        // A cell that grows again brings nothing, with the option on or off: the pressure falls.
+        graph.beginConservationPeriod();
+        double before = zone.mixture().totalMoles();
+        grid.set(cell(3, 0, 0), CELL);
+        graph.refreshAll(Grid.around(cell(3, 0, 0)));
+        assertEquals(before, zone.mixture().totalMoles(), EPS * moles);
+        assertTrue(graph.checkConservation(2).conserved());
+        assertConsistent(graph, grid);
+    }
+
+    @Test
     void core_075_displaced_gas_from_last_cell() {
         // Zones: left 3,000 L | middle one cell | right 1,000 L, joined through doors.
         Grid grid = new Grid().box(0, 0, 0, 4, 0, 0, CELL);

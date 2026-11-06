@@ -376,11 +376,12 @@ only decides what's logged.
 
 | Kind | Call point | What "skipped" means |
 |---|---|---|
-| Ambient provider | `ProvidedAmbients.call` | As if it answered null: the next source applies for that atmos tick (ENV-014) |
+| Ambient provider | `ProvidedAmbients.call` | Its last good answer for that dimension stands, so one that keeps throwing freezes it. The next source applies only if it has none yet (ENV-014), and a null it gave counts as its last answer. One answer is kept per dimension, in memory only |
 | Seal provider | `SealProviders.ask` | The block's own shape for that atmos tick. Nothing is kept, and the position is marked dirty, so its section is copied and the provider asked again the next atmos tick |
 | Code reaction | `ApiReactionType.compute` | No change for that call |
 | Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |
 | Gas handler (`zas_atmos`) | `GasHandlers` | No more transfer on that face that atmos tick, and what a failed fill was offered goes back to the network. A lookup that throws keeps the pipe's arm, so a fault can't leave an open end |
+| Life support, internal supply | `GuardedLifeSupport` | That call gives what the interface's default gives, so a part that throws protects from nothing and its other parts still count. A lookup that throws counts as no capability. A supply that throws delivers nothing, and a draw that throws gives no gas. Nothing is kept |
 
 The bus's own `post` stops at a listener that throws, logs an error each time and
 rethrows. So `ApiEvents` calls the listeners itself, reading the bus's private
@@ -424,14 +425,17 @@ context (GEO-041).
    JSON files at `data/<namespace>/zas/geometry_overrides/<path>.json`:
    `blocks` (block ids, or tags prefixed with `#`; unknown ones are skipped),
    `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
-   default none) and `volume` (litres, 0 to 1,000). A block named directly
+   default none), `volume` (litres, 0 to 1,000) and `fluid_seals` (default false).
+   A block named directly
    beats a tag match; between equals, the file whose id sorts last wins.
    *Implemented ([#65](https://github.com/west3436/zas-cubed/issues/65)):*
    GEO-009's four files ship in `data/zas/zas/geometry_overrides/`. A state
-   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table,
-   so an override, applied after it, still wins, as GEO-006 asks. Boundary faces
-   come from a waterlogged state's dry state, since a fluid seals alike open or
-   closed.
+   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table.
+   An override applied after it wins, unless it says `fluid_seals`, as the shipped
+   permeable ones do, which leaves such states as they are: water wins in a
+   waterlogged fence, and a pack's override keeps the last word (GEO-006). Boundary
+   faces come from a waterlogged state's dry state, since a fluid seals alike open
+   or closed.
 5. **Position-dependent states** (*spike (S2):* 32 in vanilla, found by
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
@@ -570,10 +574,11 @@ section, S-10's station needs about 1–2 MiB.
    onto it, because the way out may have closed somewhere far from any zone: if
    it's a pocket now, it joins the zone (GEO-023). Until that's known the zone
    goes on venting and doesn't pause. Each such check can take a fill up to the
-   bound, so they run at most once every 8 atmos ticks: the first change is
-   checked at once, and those after it wait their turn. A region that can't be
-   classified is tried again once a section it lacks is in a loaded chunk, with
-   no fills before that. At most 65,536 links between a cell and a section are
+   bound, so they run at most once every 2 atmos ticks: the first change is
+   checked at once, and those after it wait their turn. A check that has to fetch
+   sections fills again the next tick, so changes that keep coming can mean a fill
+   every tick. A region that can't be classified is tried again once a section it
+   lacks is in a loaded chunk, with no fills before that. At most 65,536 links between a cell and a section are
    kept; past that the cache starts again, which costs fills, and a way out that
    closes after that goes unseen until something changes beside the zone.
 
@@ -804,7 +809,8 @@ the lever if the per-cell cost ever matters.
     format 3, so older records are converted, §4.3), this chunk's share of its mixture
     (moles per gas, temperature) by volume, and every chunk the zone spans
   - block positions whose changes are held for a paused zone (DATA-010)
-  - at shutdown only, queued additions that target the chunk (DATA-011)
+  - at shutdown only, queued additions that target the chunk (DATA-011), each
+    with its sub-cell (format 5, §6.5)
   - each zone's pins, by owner id (API-018; format 4, §6.6)
 - **Shares are written at chunk save.** They are computed on the server
   thread from the **published** snapshot (moles × this chunk's volume ÷ zone
@@ -882,6 +888,10 @@ the lever if the per-cell cost ever matters.
   - the owners whose pins were taken off and who haven't pinned since
     (API-017, §6.6)
   - the dimension's pause, who asked and why (OPS-005, §4.6)
+- **Older saves are brought forward (DATA-012).** Chunk records branch on their
+  version as they are read. `DimensionData` and `zas_atmos` block entities
+  (`DeviceData`) keep a list of steps, and the version they write follows from
+  it. A version they don't know is read by name, with a warning.
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the
@@ -900,7 +910,7 @@ the lever if the per-cell cost ever matters.
   sub-cells and hotspots (DATA-009).
 - **A geometry palette change rebuilds from the loaded chunks' records**, as a
   restart would. When `/reload` (or a mod change) changes the palette's
-  contents, the dimension waits until no batch is in flight, builds each
+  contents, or which block states have which of its geometries, the dimension waits until no batch is in flight, builds each
   loaded chunk's record from the published snapshot (what a save would write),
   abandons the old engine without waiting for its worker, and hands the
   records to a new engine with the new palette through the path of a chunk
@@ -1363,7 +1373,8 @@ already, and spreads by FIRE-016's odds.
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
-(NFR-010) and optional in game.
+(NFR-010) and optional in game. Devices use the public API (CONT-095), so what
+they move is recorded under `API`: the ledger has no category for them.
 
 ### Fire chemistry and fuel blocks
 
@@ -1721,7 +1732,8 @@ client breathing sync (LIFE-023): the server sends each player its own state
   the Nether's and End's natives ([datapacks.md](datapacks.md#breathers)).
 - **The verdict** (API-014). `BreathingRules.assess` makes it, and
   `ZasApiProviderImpl.breathability` returns it. With the eyes in a fluid it is
-  vanilla's, so water stays vanilla's (LIFE-022). An invulnerable player is
+  vanilla's, so water stays vanilla's (LIFE-022), unless the entity would drown
+  and its internals deliver, when it is the tank's (LIFE-047). An invulnerable player is
   `EXEMPT` (LIFE-037). Anything else that doesn't breathe is `DOES_NOT_BREATHE`.
   A breather breathes `Atmospheres.of(entity)`, the cell at its eyes (LIFE-002,
   API-015): below `[breathing] oxygen_minimum_kpa` of O₂ it is `LOW_OXYGEN`
@@ -2135,7 +2147,7 @@ protection. The fallback answers with it.
 server, `zas` answers with LIFE's verdict
 ([Life support](#life-support-breathing)): who breathes, the breath at the eyes,
 the O₂ minimum and gas hazards, with vanilla's rule while the eyes are in a
-fluid (LIFE-022). On the client it answers for the local player with the
+fluid (LIFE-022), but for internals (LIFE-047). On the client it answers for the local player with the
 verdict the server last synced (LIFE-023), without the breath gas, while the
 eyes are where the server last checked them, in a fluid or out; for other
 entities, and before the first sync, with vanilla's. *Implemented ([#35](https://github.com/west3436/zas-cubed/issues/35)):*
@@ -2176,7 +2188,9 @@ fallback, and a provider without it, give 16 kPa.
   the result's `FireEvent`s, posted at apply after the gas fire blocks change
   (§6.7).
 - Hazard-tick events (API-033) fire from the hazard service and may modify the
-  hazard before it applies.
+  hazard before it applies. *Implemented:* `LifeDamage.deal` and `LifeDamage.tick`
+  post `HazardTickEvent` through `ApiEvents`, once per hazard each time it would
+  harm an entity, so every hazard's damage goes through them.
 - Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
   objects.
 
@@ -2210,7 +2224,9 @@ mutation first resolves its point to one cell (`PointResolver` in
   geometry change.
 - **Mutations.** A `GasOp` carries the sub-cell index (−1 for the largest
   cell), and the engine acts on that cell, or on the largest if the block no
-  longer has that many cells. Saved operations don't keep the index.
+  longer has that many cells. A saved addition keeps the index (format 5,
+  [#122](https://github.com/west3436/zas-cubed/issues/122)); one from an older
+  record acts on the largest cell.
 
 ### 6.6 Zone pins (API-017, API-018, API-050)
 
@@ -2325,7 +2341,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 |---|---|---|
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check against the recorded baseline, with a 10 % tolerance, comes in R1 |
-| Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023) |
+| Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
 | Packaging | GameTest harness loading built jars | The S0 harness, kept: `zas` plus example addon, and example addon alone (API-048) |
 
 The test names include requirement IDs (README rule 5).
@@ -2420,7 +2436,11 @@ jar, so providers can be tested before real devices exist.
   step that read the device's own block, as a pipe rebuilding its network
   does, would load the chunk again. A pipe network ends the next time a member
   uses it, and is rebuilt without that chunk's nodes, which keep their shares
-  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`).
+  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`). The
+  game tells nobody when such a chunk returns, so two sides can both hold valid
+  networks: each built its own while the other's chunk was away. A node on a
+  chunk's edge, and any port, checks at each step that the nodes connected to it
+  share its network, and rebuilds if not (`PipeNode.apart`, `PipeGapChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2807,8 +2827,8 @@ the cell in front of its grille).
     every node's network dissolves at load anyway.
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
-    an open valve whose neighbour is in another network reconnects at its next
-    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
+    the two rejoin at the next step of either node at the border (§11.2,
+    `cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
     a valve updates no neighbour's shape, since its flanges and shape are the same
     open or shut. That update's read of the next block would bring such a chunk
     back for two game ticks, and a network built in them would reach into it.

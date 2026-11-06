@@ -164,6 +164,10 @@ ZAS³ shall ship overrides for blocks whose collision shape misleads:
 checks every state of those blocks, and
 `geo_009_leaves_and_fences_pass_gas_and_honey_seals` passes in a real level.*
 
+*2026-11-06: the table's permeable defaults are for dry blocks. The owner chose
+that water wins in a waterlogged fence, leaf, iron bar or scaffolding (GEO-006),
+so those files now say `fluid_seals`.*
+
 #### GEO-006 · Fluids
 `Should` · `R1` · `Implemented` · Verify: GameTest
 
@@ -179,6 +183,20 @@ shall hold no gas and be gas-tight on all faces, unless overridden.
 `geo_006_waterlogged_block_seals_a_room` and
 `geo_006_overridden_fluid_does_not_seal` pass. An override also beats a waterlogged
 state, so a waterlogged fence passes gas under GEO-009's override.*
+
+*2026-11-06: the owner decided that water wins in a waterlogged block: it seals,
+matching what the player sees. So "unless overridden" no longer covers GEO-009's
+shipped overrides, which replaces the reading in the note above: a waterlogged
+fence, leaf, iron bar or scaffolding is gas-tight and holds no gas, and only the
+dry states take the override. A pack's own override still has the last word
+(D-45), for a fluid or a waterlogged state, unless it says `fluid_seals` as the
+shipped files do ([datapacks](../datapacks.md#geometry-overrides)).
+`geo_006_water_wins_over_the_shipped_overrides`,
+`geo_006_waterlogged_fence_leaf_and_bars_seal_a_room`,
+`geo_006_waterlogging_a_fence_seals_it_and_draining_opens_it` and
+`geo_006_pack_override_beats_water_and_zones_rebuild_without_it` pass. A zone
+saved through such a block comes back without its cell when an existing world
+loads, keeping its gas (DATA-009).*
 
 #### GEO-007 · Zone-boundary blocks
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §2.3](../research/zas-core.md#23-cells-turfdm-atomdm)
@@ -439,6 +457,13 @@ zone goes on venting until that's known, and doesn't pause
 (`geo_023_closing_the_far_end_of_what_a_zone_vents_through_makes_it_a_pocket`,
 `geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next`,
 `geo_023_a_chunk_unloading_on_the_way_out_doesnt_stop_a_zone_venting`).*
+
+*2026-11-06: The owner chose to check more often. Cells in doubt are now checked at
+most once every 2 atmos ticks, not 8, so a room whose way out closes vents at most
+about 2 s too long at the default atmos tick, not about 8 s. A check that has to
+fetch sections fills again the next tick whatever the gap, which can find a closing
+sooner. `geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next` now uses
+a way out that needs no fetching, so that it sees the gap itself.*
 
 #### GEO-025 · Breach to the open
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: S-02

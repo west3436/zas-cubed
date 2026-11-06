@@ -122,7 +122,7 @@ public final class Geometries {
 
     /**
      * Rebuilds the table now from the current overrides, tags and ignition sources, as a data load
-     * would: for a GameTest that changed one of them. A dimension whose palette changes gets a new
+     * would: for a GameTest that changed one of them. A dimension whose geometry changes gets a new
      * engine at its next batch. Server thread, since tags are read here.
      */
     public static void rebuildForTest() {
@@ -361,6 +361,9 @@ public final class Geometries {
         for (Map.Entry<Block, GeometryOverride> e : byBlock.entrySet()) {
             int id = ids.computeIfAbsent(e.getValue(), o -> palette.intern(o.geometry()));
             for (BlockState state : e.getKey().getStateDefinition().getPossibleStates()) {
+                if (e.getValue().fluidSeals() && !state.getFluidState().isEmpty()) {
+                    continue; // water wins in a waterlogged fence (GEO-006)
+                }
                 int stateId = Block.getId(state);
                 if (stateId >= 0 && stateId < byStateId.length) {
                     byStateId[stateId] = id;

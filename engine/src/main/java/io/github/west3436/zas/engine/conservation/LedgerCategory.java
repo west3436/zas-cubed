@@ -6,10 +6,11 @@ package io.github.west3436.zas.engine.conservation;
  * change none of them explains is a conservation bug (CORE-073).
  */
 public enum LedgerCategory {
-    /** API calls, including gas-editing commands (OPS-009). */
+    /**
+     * API calls, including gas-editing commands (OPS-009). Devices, including leaks from pipes, tanks
+     * and canisters, use the public API (CONT-095), so what they move is recorded here.
+     */
     API,
-    /** Devices, including leaks from pipes, tanks and canisters. */
-    DEVICE,
     /** Gas reactions. */
     REACTION,
     /** Respiration (LIFE-005) and photosynthesis (CONT-053). */

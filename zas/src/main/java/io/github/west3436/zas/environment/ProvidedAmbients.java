@@ -22,14 +22,16 @@ import org.slf4j.Logger;
  * What each dimension's ambient provider last answered (ENV-004, ENV-015): called once per atmos
  * tick on the server thread, and read by every lookup from any thread until the next.
  *
- * <p>{@link #call} is the only place that runs a provider, and it guards against one that throws
- * (NFR-013).
+ * <p>{@link #call} is the only place that runs a provider, and it guards against one that throws:
+ * what that provider last answered for the dimension stands (NFR-013). So a dimension's answer is
+ * also its provider's last good answer. There's one for each dimension, which every new answer
+ * replaces, so a provider that changes its answer each atmos tick adds nothing (ENV-006).
  */
 final class ProvidedAmbients {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     /** Each dimension's answer; a dimension with none has no entry. Any thread. */
-    private static final Map<ResourceLocation, Ambient> ANSWERS = new ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, Answer> ANSWERS = new ConcurrentHashMap<>();
 
     /** The providers last warned about for each dimension, so a conflict warns once (ENV-020). Server thread. */
     private static final Map<ResourceLocation, List<ResourceLocation>> WARNED_CONFLICTS = new HashMap<>();
@@ -39,9 +41,13 @@ final class ProvidedAmbients {
 
     private ProvidedAmbients() {}
 
+    /** An answer and the id of the provider that gave it, the only provider whose fault it outlasts. */
+    private record Answer(ResourceLocation provider, Ambient ambient) {}
+
     /** A dimension's answer, or null if it has none. Any thread. */
     static Ambient answer(ResourceLocation dimension) {
-        return ANSWERS.get(dimension);
+        Answer answer = ANSWERS.get(dimension);
+        return answer == null ? null : answer.ambient();
     }
 
     /** Takes a level's answer for this atmos tick. Server thread. */
@@ -49,7 +55,7 @@ final class ProvidedAmbients {
         ResourceLocation dimension = level.dimension().location();
         List<AmbientProviders.Registration> providers = AmbientProviders.registered(level.dimension());
         warnOfConflict(dimension, providers);
-        Ambient answer = providers.isEmpty() ? null : checked(providers.get(0), call(providers.get(0), level));
+        Answer answer = providers.isEmpty() ? null : call(providers.get(0), level, ANSWERS.get(dimension));
         if (answer == null) {
             ANSWERS.remove(dimension);
         } else {
@@ -59,18 +65,30 @@ final class ProvidedAmbients {
 
     /**
      * Runs a provider. The one place third-party ambient code is called; see the class comment. One
-     * that throws is skipped for this atmos tick, as if it had answered null (NFR-013).
+     * that throws is skipped for this atmos tick and keeps its last good answer, so that a vacuum
+     * doesn't read as the next source and let gas in (NFR-013). A null it gave is its last good answer
+     * too, which leaves no entry, so nothing from before the null comes back.
+     *
+     * @param last the dimension's answer so far, or null if it has none
+     * @return the dimension's answer for this atmos tick, or null if it has none
      */
-    private static AmbientDefinition call(AmbientProviders.Registration provider, ServerLevel level) {
+    private static Answer call(AmbientProviders.Registration provider, ServerLevel level, Answer last) {
+        AmbientDefinition answer;
         try {
-            return provider.provider().ambient(level);
+            answer = provider.provider().ambient(level);
         } catch (Exception | LinkageError e) {
             String source = "Ambient provider " + provider.id();
             if (ThirdPartyFaults.shouldLog(source)) {
-                LOGGER.error("{} threw; skipped for the atmos tick (logged at most once a minute)", source, e);
+                LOGGER.error(
+                        "{} threw; skipped for the atmos tick, and its last good answer stands if it has one"
+                                + " (logged at most once a minute)",
+                        source,
+                        e);
             }
-            return null;
+            return last != null && last.provider().equals(provider.id()) ? last : null;
         }
+        Ambient ambient = checked(provider, answer);
+        return ambient == null ? null : new Answer(provider.id(), ambient);
     }
 
     /** An answer as the simulation's ambient, or null if it defines nothing the server can use. */

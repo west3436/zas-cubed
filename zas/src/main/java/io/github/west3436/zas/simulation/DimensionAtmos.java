@@ -21,7 +21,6 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.config.ZoneTrigger;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.DirtySection;
-import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
@@ -148,7 +147,7 @@ public final class DimensionAtmos {
     private volatile DimensionPipeline pipeline;
     private GasRegistry registry = GasRegistry.EMPTY;
     private ResourceLocation[] gasIds = new ResourceLocation[0];
-    private GeometryPalette palette;
+    private GeometryTable geometry;
     private long nextAtmosTick = 1;
     private long closedAtGameTick = Long.MIN_VALUE;
     /** How many batches have closed: the number of the one in flight, if any. */
@@ -782,7 +781,7 @@ public final class DimensionAtmos {
 
     /**
      * Creates the engine if the dimension isn't excluded and has none; drops it if the dimension
-     * became excluded, and rebuilds it from the loaded chunks' records if the geometry palette
+     * became excluded, and rebuilds it from the loaded chunks' records if any block state's geometry
      * changed ({@link #rebuild}).
      */
     private void ensureEngine() {
@@ -800,9 +799,9 @@ public final class DimensionAtmos {
         if (table == null) {
             return; // keep the current engine until the rebuilt table is ready
         }
-        if (pipeline != null && table.palette() != palette) {
-            if (samePalette(palette, table.palette())) {
-                palette = table.palette();
+        if (pipeline != null && table != geometry) {
+            if (table.sameGeometry(geometry)) {
+                geometry = table;
             } else if (!pipeline.isInFlight()) {
                 LOGGER.warn(
                         "Gas geometry changed; the zones of {} are rebuilt from the loaded chunks' saved"
@@ -820,7 +819,7 @@ public final class DimensionAtmos {
     }
 
     /**
-     * Replaces the engine after a geometry palette change or a fault, as a restart would
+     * Replaces the engine after a geometry change or a fault, as a restart would
      * (architecture §4.5, O-10): each loaded chunk's record is built from the published table,
      * exactly what a save would write, and goes to a new engine with the new palette through the
      * path of a chunk load; the zones rebuilt from those records classify their surfaces again with
@@ -1000,7 +999,7 @@ public final class DimensionAtmos {
             ids[i] = ResourceLocation.parse(registry.definition(i).id());
         }
         gasIds = ids;
-        palette = table.palette();
+        geometry = table;
         int minSectionY = level.getMinSection();
         int maxSectionY = level.getMaxSection() - 1;
         Ambient ambient = Ambients.ambient(level.dimension());
@@ -1010,7 +1009,7 @@ public final class DimensionAtmos {
                 registry,
                 config,
                 EnclosureClassifier.FACTORY,
-                palette,
+                table.palette(),
                 minSectionY,
                 maxSectionY,
                 ambient,
@@ -1058,24 +1057,13 @@ public final class DimensionAtmos {
         failAll(new CancellationException(why));
     }
 
-    private static boolean samePalette(GeometryPalette a, GeometryPalette b) {
-        if (a == null || b == null || a.size() != b.size()) {
-            return false;
-        }
-        for (int i = 0; i < a.size(); i++) {
-            if (!a.geometry(i).equals(b.geometry(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     /**
      * The engine's settings for the next atmos tick, from the config (CORE-035, CORE-068, HEAT),
      * with the openings exported for airflow (FLOW-001, FLOW-014), the fire oxygen threshold
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
      * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
-     * breaks them (FLOW-007), and whether the dimension is paused (OPS-005).
+     * breaks them (FLOW-007), whether the dimension is paused (OPS-005), and whether a filled cell's
+     * gas is deleted (CORE-029).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -1088,7 +1076,8 @@ public final class DimensionAtmos {
                 .withBlockIgnition(FireConfig.blockIgnition()
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
                 .withFragile(AirflowConfig.fragile())
-                .withDimensionPaused(simulationPause() != null);
+                .withDimensionPaused(simulationPause() != null)
+                .withZones(ZasServerConfig.zones());
     }
 
     /** The server's reactions, if they were compiled for this engine's gases; none otherwise. */
@@ -1158,7 +1147,7 @@ public final class DimensionAtmos {
                     new IllegalStateException(dimension().location() + " isn't simulated"));
         }
         GeometryTable table = Geometries.tableIfReady();
-        if (table == null || table.palette() != palette) {
+        if (table == null || table != geometry) {
             return CompletableFuture.failedFuture(new IllegalStateException("the gas geometry is being rebuilt"));
         }
         int minY = level.getMinSection();

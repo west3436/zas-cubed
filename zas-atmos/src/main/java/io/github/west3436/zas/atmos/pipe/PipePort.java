@@ -92,11 +92,17 @@ public final class PipePort implements PipeNode {
      * as a {@link PipeNodeEntity} takes its own. A network may hold only ports, with no pipe to run
      * it, and among pipes a port may be the first member to step, so whichever does runs the burst
      * check and the reaction for them all (CONT-100, CONT-108). Its device calls this before each
-     * atmos tick of its own.
+     * atmos tick of its own. Two ports can meet across a chunk border with no pipe between them, so a
+     * port first rejoins the node on its face, if the two came back {@linkplain #apart() apart}.
      *
      * @param level the level
      */
     public void beforeAtmosTick(ServerLevel level) {
+        network();
+        if (apart()) {
+            dissolve();
+            dissolveLinks();
+        }
         PipeNodeEntity.atmosTurn(level, network(), this);
     }
 

@@ -32,6 +32,9 @@ import net.minecraft.resources.ResourceLocation;
  *   <li>{@code sealed_faces}: the gas-tight faces; the others are fully open. Optional, default
  *       none.
  *   <li>{@code volume}: gas volume in litres, 0 to 1,000.
+ *   <li>{@code fluid_seals}: whether a state of these blocks holding a fluid stays gas-tight, as any
+ *       fluid does (GEO-006), so that only the dry states take this override. Optional, default
+ *       false: the override has the last word over every state.
  * </ul>
  *
  * <p>When several overrides match a block, one naming the block directly beats one matching it
@@ -40,8 +43,9 @@ import net.minecraft.resources.ResourceLocation;
  * @param targets the blocks and tags it applies to
  * @param sealedFaces the gas-tight faces
  * @param volume gas volume in litres
+ * @param fluidSeals whether the states holding a fluid keep their fluid's geometry
  */
-public record GeometryOverride(List<Target> targets, Set<Face> sealedFaces, double volume) {
+public record GeometryOverride(List<Target> targets, Set<Face> sealedFaces, double volume, boolean fluidSeals) {
     /** The datapack directory, under {@code data/<namespace>/}. */
     public static final String DIRECTORY = "zas/geometry_overrides";
 
@@ -64,12 +68,19 @@ public record GeometryOverride(List<Target> targets, Set<Face> sealedFaces, doub
                                     l -> l.isEmpty() ? EnumSet.noneOf(Face.class) : EnumSet.copyOf(l), List::copyOf)
                             .forGetter(GeometryOverride::sealedFaces),
                     DatapackErrors.field(Codec.doubleRange(0, Geometry.FULL_VOLUME), "volume")
-                            .forGetter(GeometryOverride::volume))
+                            .forGetter(GeometryOverride::volume),
+                    DatapackErrors.optionalField(Codec.BOOL, "fluid_seals", false)
+                            .forGetter(GeometryOverride::fluidSeals))
             .apply(i, GeometryOverride::new));
 
     public GeometryOverride {
         targets = List.copyOf(targets);
         sealedFaces = Set.copyOf(sealedFaces);
+    }
+
+    /** An override with the last word over every state of its blocks. */
+    public GeometryOverride(List<Target> targets, Set<Face> sealedFaces, double volume) {
+        this(targets, sealedFaces, volume, false);
     }
 
     /** The geometry this override declares. */
