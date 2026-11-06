@@ -777,6 +777,13 @@ the requirement tests beside them) run with the invariant checker on and check
 every atmos tick is conserved. S-01 and S-02 run as adapted for R0, without
 devices or hazards ([Scenario verification](00-overview.md#scenario-verification)).*
 
+*2026-11-06: devices stay on this list, but the ledger has no category of their
+own. They use the public API (CONT-095), so what they move, leaks from pipes, tanks
+and canisters included, is recorded as `API`. `LedgerCategory.DEVICE` was never
+recorded by any code outside the tests and the bench, and its doc said otherwise. The
+owner's choice of 2026-11-06 was "Correct the doc", so it's removed. Nothing about gas
+changes. `/zas checker report` shows these moves under `api`, as it already did.*
+
 #### CORE-073 · Invariant checker
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Depends: CORE-036
 

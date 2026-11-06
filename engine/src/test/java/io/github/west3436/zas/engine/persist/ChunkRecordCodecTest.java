@@ -52,7 +52,7 @@ class ChunkRecordCodecTest {
                 SectionKeys.block(-40, 64, 120),
                 new double[] {2, 0},
                 300,
-                LedgerCategory.DEVICE,
+                LedgerCategory.API,
                 true,
                 "zas_atmos:vent");
         return new ChunkRecord(CHUNK, List.of(a, b), new long[] {SectionKeys.block(-41, 64, 120)}, List.of(op));
