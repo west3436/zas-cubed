@@ -84,9 +84,44 @@ class PipeNetworkTest {
             this.network = network;
         }
 
+        @Override
+        public List<PipeNode> connectedNodes() {
+            return List.copyOf(links);
+        }
+
         PipeNetwork net() {
             return network != null && network.valid() ? network : PipeNetwork.build(this, n -> ((Node) n).links);
         }
+    }
+
+    /**
+     * CONT-003: nodes that each built a network while the other's chunk was away are apart once they
+     * connect again, and rebuilding from either joins them with all their gas. A node with a neighbour
+     * that has no network yet counts as apart too, and joins the same way.
+     */
+    @Test
+    void cont_003_a_node_with_a_neighbour_in_another_network_is_apart() {
+        Node a = new Node(70);
+        Node b = new Node(70);
+        a.net().gas().add(new GasParcel(Map.of(N2, 7.0), T));
+        b.net().gas().add(new GasParcel(Map.of(O2, 3.0), T));
+        assertFalse(a.apart(), "with nothing connected");
+
+        link(a, b);
+        assertTrue(a.apart(), "beside a node in another network");
+        assertTrue(b.apart(), "beside a node in another network");
+
+        a.net().dissolve();
+        PipeNetwork one = PipeNetwork.build(a, n -> ((Node) n).links);
+        assertFalse(a.apart(), "after the rebuild");
+        assertFalse(b.apart(), "after the rebuild");
+        assertSame(one, b.currentNetwork());
+        assertEquals(7.0, one.gas().moles(N2), REL);
+        assertEquals(3.0, one.gas().moles(O2), REL);
+
+        Node c = new Node(70);
+        link(b, c);
+        assertTrue(b.apart(), "beside a node in no network");
     }
 
     private static void link(Node a, Node b) {

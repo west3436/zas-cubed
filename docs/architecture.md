@@ -2433,7 +2433,11 @@ jar, so providers can be tested before real devices exist.
   step that read the device's own block, as a pipe rebuilding its network
   does, would load the chunk again. A pipe network ends the next time a member
   uses it, and is rebuilt without that chunk's nodes, which keep their shares
-  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`).
+  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`). The
+  game tells nobody when such a chunk returns, so two sides can both hold valid
+  networks: each built its own while the other's chunk was away. A node on a
+  chunk's edge, and any port, checks at each step that the nodes connected to it
+  share its network, and rebuilds if not (`PipeNode.apart`, `PipeGapChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2820,8 +2824,8 @@ the cell in front of its grille).
     every node's network dissolves at load anyway.
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
-    an open valve whose neighbour is in another network reconnects at its next
-    step (`cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
+    the two rejoin at the next step of either node at the border (§11.2,
+    `cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
     a valve updates no neighbour's shape, since its flanges and shape are the same
     open or shut. That update's read of the next block would bring such a chunk
     back for two game ticks, and a network built in them would reach into it.
