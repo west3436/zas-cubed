@@ -787,12 +787,9 @@ final class IntegrityFuzz {
             }
         }
         for (Map.Entry<Long, ChunkRecord> e : saved.entrySet()) {
-            Set<Long> held = new HashSet<>();
-            for (ZoneShare share : table.shares(e.getKey())) {
-                held.add(share.zoneId());
-            }
+            List<ZoneShare> held = table.shares(e.getKey());
             for (ZoneShare share : e.getValue().zones()) {
-                if (!held.contains(share.zoneId())) {
+                if (held.stream().noneMatch(h -> holds(h, share))) {
                     for (int i = 0; i < GASES; i++) {
                         total[i] += share.moles(i);
                     }
@@ -800,6 +797,14 @@ final class IntegrityFuzz {
             }
         }
         return total;
+    }
+
+    /**
+     * Whether a zone in memory has that saved share's gas: it's the same zone, or it has the share's cells,
+     * as a zone does that took in the first one in the tick the chunk saved during.
+     */
+    private static boolean holds(ZoneShare held, ZoneShare share) {
+        return held.zoneId() == share.zoneId() || overlap(share.cells(), held.cells());
     }
 
     private static void checkFinite(ZoneView z) {
