@@ -1,4 +1,5 @@
 {
   "blocks": ["minecraft:scaffolding"],
-  "volume": 1000
+  "volume": 1000,
+  "fluid_seals": true
 }

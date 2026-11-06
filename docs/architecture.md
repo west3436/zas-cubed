@@ -424,14 +424,17 @@ context (GEO-041).
    JSON files at `data/<namespace>/zas/geometry_overrides/<path>.json`:
    `blocks` (block ids, or tags prefixed with `#`; unknown ones are skipped),
    `sealed_faces` (any of `down`, `up`, `north`, `south`, `west`, `east`;
-   default none) and `volume` (litres, 0 to 1,000). A block named directly
+   default none), `volume` (litres, 0 to 1,000) and `fluid_seals` (default false).
+   A block named directly
    beats a tag match; between equals, the file whose id sorts last wins.
    *Implemented ([#65](https://github.com/west3436/zas-cubed/issues/65)):*
    GEO-009's four files ship in `data/zas/zas/geometry_overrides/`. A state
-   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table,
-   so an override, applied after it, still wins, as GEO-006 asks. Boundary faces
-   come from a waterlogged state's dry state, since a fluid seals alike open or
-   closed.
+   holding a fluid gets `Geometry.SOLID` with `FLAG_FLUID` in the derived table.
+   An override applied after it wins, unless it says `fluid_seals`, as the shipped
+   permeable ones do, which leaves such states as they are: water wins in a
+   waterlogged fence, and a pack's override keeps the last word (GEO-006). Boundary
+   faces come from a waterlogged state's dry state, since a fluid seals alike open
+   or closed.
 5. **Position-dependent states** (*spike (S2):* 32 in vanilla, found by
    comparing shapes at two positions) and seal-provider blocks (API-023) are
    flagged. Their geometry is computed per position on the server thread when
@@ -900,7 +903,7 @@ the lever if the per-cell cost ever matters.
   sub-cells and hotspots (DATA-009).
 - **A geometry palette change rebuilds from the loaded chunks' records**, as a
   restart would. When `/reload` (or a mod change) changes the palette's
-  contents, the dimension waits until no batch is in flight, builds each
+  contents, or which block states have which of its geometries, the dimension waits until no batch is in flight, builds each
   loaded chunk's record from the published snapshot (what a save would write),
   abandons the old engine without waiting for its worker, and hands the
   records to a new engine with the new palette through the path of a chunk

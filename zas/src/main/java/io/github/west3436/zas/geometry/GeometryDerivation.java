@@ -214,7 +214,7 @@ public final class GeometryDerivation {
             }
             if (!state.getFluidState().isEmpty()) {
                 // A fluid leaves no room for gas, whatever the block's shape (GEO-006). An override
-                // comes later, so it still has the last word.
+                // comes later, so it has the last word unless it says fluid_seals.
                 id = palette.intern(FLUID);
             }
             byStateId[Block.getId(state)] = id;

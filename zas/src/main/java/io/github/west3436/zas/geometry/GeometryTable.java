@@ -2,6 +2,7 @@ package io.github.west3436.zas.geometry;
 
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
+import java.util.Arrays;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -90,6 +91,22 @@ public final class GeometryTable {
     /** The number of block states that are zone boundaries (GEO-007). */
     public int boundaryStates() {
         return boundaryStates;
+    }
+
+    /**
+     * Whether every block state has the same geometry in both tables, so that the same blocks make
+     * the same cells: comparing palettes alone misses a state moving to a geometry already in use.
+     */
+    public boolean sameGeometry(GeometryTable other) {
+        if (palette.size() != other.palette.size() || !Arrays.equals(byStateId, other.byStateId)) {
+            return false;
+        }
+        for (int i = 0; i < palette.size(); i++) {
+            if (!palette.geometry(i).equals(other.palette.geometry(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     int[] byStateIdCopy() {

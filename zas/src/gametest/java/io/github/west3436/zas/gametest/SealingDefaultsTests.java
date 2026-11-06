@@ -5,15 +5,21 @@ import static io.github.west3436.zas.gametest.Rooms.STONE;
 import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
+import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryOverride;
 import io.github.west3436.zas.geometry.GeometryTable;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.Holder;
@@ -23,6 +29,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FenceGateBlock;
@@ -35,12 +42,13 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * What seals out of the box: the shipped overrides of blocks whose collision shape misleads (GEO-009),
- * and fluids (GEO-006). Areas 650 to 660.
+ * and fluids (GEO-006). Areas 650 to 660 and 681 to 685.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class SealingDefaultsTests {
     private static final String FLUID_OVERRIDE = "geo_006_override";
+    private static final String PACK_OVERRIDE = "geo_006_pack_override";
     private static final int WEST = 12;
     private static final int EAST = 16;
     private static final int WALL = 14;
@@ -74,23 +82,28 @@ public final class SealingDefaultsTests {
         }
     }
 
-    /** Every state of the blocks in GEO-009's table has the table's geometry. */
+    /** The blocks GEO-009's table makes permeable. */
+    private static List<Block> permeableBlocks() {
+        List<Block> blocks = new ArrayList<>(List.of(Blocks.SCAFFOLDING, Blocks.IRON_BARS));
+        for (TagKey<Block> tag : List.of(BlockTags.LEAVES, BlockTags.FENCES, BlockTags.FENCE_GATES)) {
+            for (Holder<Block> block : BuiltInRegistries.BLOCK.getTagOrEmpty(tag)) {
+                blocks.add(block.value());
+            }
+        }
+        return blocks;
+    }
+
+    /** Every dry state of the blocks in GEO-009's table has the table's geometry. */
     @GameTest(template = "empty")
     public static void geo_009_shipped_overrides(GameTestHelper h) {
         GeometryTable t = Geometries.table();
-        int blocks = 0;
-        for (TagKey<Block> tag : List.of(BlockTags.LEAVES, BlockTags.FENCES, BlockTags.FENCE_GATES)) {
-            for (Holder<Block> block : BuiltInRegistries.BLOCK.getTagOrEmpty(tag)) {
-                for (BlockState s : block.value().getStateDefinition().getPossibleStates()) {
+        List<Block> blocks = permeableBlocks();
+        h.assertTrue(blocks.size() > 5, "the table holds " + blocks.size() + " blocks");
+        for (Block block : blocks) {
+            for (BlockState s : block.getStateDefinition().getPossibleStates()) {
+                if (s.getFluidState().isEmpty()) {
                     permeable(h, s, t.geometry(s));
                 }
-                blocks++;
-            }
-        }
-        h.assertTrue(blocks > 3, "the tags hold " + blocks + " blocks");
-        for (Block block : List.of(Blocks.SCAFFOLDING, Blocks.IRON_BARS)) {
-            for (BlockState s : block.getStateDefinition().getPossibleStates()) {
-                permeable(h, s, t.geometry(s));
             }
         }
         BlockState honey = Blocks.HONEY_BLOCK.defaultBlockState();
@@ -151,11 +164,129 @@ public final class SealingDefaultsTests {
         // Heat and fire data come on top, so lava is still what it was.
         h.assertValueEqual(t.geometry(lava).sourceTemperature(), 1450.0, "lava's temperature");
         h.assertTrue(t.geometry(lava).hasFlag(Geometry.FLAG_IGNITION_SOURCE), "lava doesn't ignite");
-
-        // An override has the last word, for a waterlogged state as for any other.
-        BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
-        permeable(h, wetFence, t.geometry(wetFence));
         h.succeed();
+    }
+
+    /** Water wins in every waterlogged state of the blocks with a shipped override (GEO-006). */
+    @GameTest(template = "empty")
+    public static void geo_006_water_wins_over_the_shipped_overrides(GameTestHelper h) {
+        GeometryTable t = Geometries.table();
+        Set<Block> wet = new HashSet<>();
+        for (Block block : permeableBlocks()) {
+            for (BlockState s : block.getStateDefinition().getPossibleStates()) {
+                if (!s.getFluidState().isEmpty()) {
+                    h.assertTrue(t.geometry(s).hasFlag(Geometry.FLAG_FLUID), s + " isn't a fluid");
+                    h.assertFalse(t.geometry(s).hasFlag(Geometry.FLAG_OVERRIDE), s + " is overridden");
+                    sealed(h, s, t.geometry(s));
+                    wet.add(block);
+                }
+            }
+        }
+        h.assertTrue(
+                wet.containsAll(List.of(Blocks.OAK_FENCE, Blocks.OAK_LEAVES, Blocks.IRON_BARS, Blocks.SCAFFOLDING)),
+                "the waterlogged blocks found: " + wet);
+        h.succeed();
+    }
+
+    /** A wet fence, leaf or iron bar in a wall keeps the rooms apart, and holds no gas (GEO-006). */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_006_waterlogged_fence_leaf_and_bars_seal_a_room(GameTestHelper h) {
+        int area = 681;
+        for (BlockState dry : List.of(
+                Blocks.OAK_FENCE.defaultBlockState(),
+                Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true),
+                Blocks.IRON_BARS.defaultBlockState())) {
+            BlockState wet = dry.setValue(BlockStateProperties.WATERLOGGED, true);
+            Rooms r = rooms(h, area++, wet);
+            h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 27, wet + ": the west room");
+            h.assertFalse(r.zoned(WALL, 2, 2), wet + " holds gas");
+            h.assertFalse(r.zoned(EAST, 2, 2), wet + " lets gas through");
+        }
+        h.succeed();
+    }
+
+    /** Water poured into a fence in a wall divides the zone, and draining it joins the rooms (GEO-006). */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void geo_006_waterlogging_a_fence_seals_it_and_draining_opens_it(GameTestHelper h) {
+        BlockState dry = Blocks.OAK_FENCE.defaultBlockState();
+        Rooms r = rooms(h, 684, dry);
+        h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 55, "the rooms through the dry fence");
+        double o2 = r.zone(WEST, 2, 2).mixture().moles(Rooms.O2);
+
+        r.set(WALL, 2, 2, dry.setValue(BlockStateProperties.WATERLOGGED, true));
+        apart(h, r, o2, "once the fence is waterlogged");
+
+        r.set(WALL, 2, 2, dry);
+        for (int i = 0; i < 8 && !sameZone(r, EAST, WEST); i++) {
+            r.tick();
+        }
+        h.assertTrue(sameZone(r, EAST, WEST), "the rooms didn't join once the fence drained");
+        h.assertValueEqual(r.zone(WALL, 2, 2).id(), r.zone(WEST, 2, 2).id(), "the drained fence's own cell");
+        // The cell it opens brings the ambient, as a wall taken out does (GEO-023).
+        double cell = Ambients.ambient(Level.OVERWORLD).moles(Rooms.O2.toString(), 1000);
+        r.close(r.zone(WEST, 2, 2).mixture().moles(Rooms.O2), o2 + cell, "the O2 once the fence drained");
+        h.succeed();
+    }
+
+    /**
+     * A pack's own override of a waterlogged block has the last word (GEO-006, D-45). Taking it away
+     * then does what upgrading a world does to a zone saved through a wet fence (DATA-009): the zone
+     * comes back from its records, the fence's cell is left out, and the rooms part with all their gas.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = PACK_OVERRIDE)
+    public static void geo_006_pack_override_beats_water_and_zones_rebuild_without_it(GameTestHelper h) {
+        BlockState wet = Blocks.OAK_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+        BlockState otherWet = Blocks.SPRUCE_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+        GeometryPalette shipped = Geometries.table().palette();
+        // As a pack's file is read, with no fluid_seals, and asking for the shipped overrides' own
+        // geometry: only which states have it changes, not what the palette holds.
+        GeometryOverride pack = GeometryOverride.CODEC
+                .parse(
+                        JsonOps.INSTANCE,
+                        JsonParser.parseString("{\"blocks\": [\"minecraft:oak_fence\"], \"volume\": 1000}"))
+                .getOrThrow();
+        Geometries.overrideForTest(List.of(pack));
+        try {
+            GeometryTable t = Geometries.table();
+            permeable(h, wet, t.geometry(wet));
+            sealed(h, otherWet, t.geometry(otherWet));
+            h.assertValueEqual(t.palette().size(), shipped.size(), "the palette's size under the pack");
+            for (int i = 0; i < shipped.size(); i++) {
+                h.assertValueEqual(t.palette().geometry(i), shipped.geometry(i), "palette entry " + i);
+            }
+            Rooms r = rooms(h, 685, wet);
+            h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 55, "the rooms through the pack's wet fence");
+            h.assertTrue(sameZone(r, EAST, WEST), "the pack's wet fence keeps the rooms apart");
+            double o2 = r.zone(WEST, 2, 2).mixture().moles(Rooms.O2);
+
+            Geometries.overrideForTest(List.of());
+            apart(h, r, o2, "without the pack's override");
+        } finally {
+            Geometries.overrideForTest(List.of());
+            Rooms.service().tickNow(h.getLevel()); // rebuilds the level before the next batch
+        }
+        h.succeed();
+    }
+
+    /** Whether a zone holds both rooms' points at these x, on the wall's line. */
+    private static boolean sameZone(Rooms r, int x0, int x1) {
+        return r.zoned(x0, 2, 2)
+                && r.zoned(x1, 2, 2)
+                && r.zone(x0, 2, 2).id().equals(r.zone(x1, 2, 2).id());
+    }
+
+    /** Runs atmos ticks until the wet fence has parted the rooms, then checks them and their gas. */
+    private static void apart(GameTestHelper h, Rooms r, double o2, String when) {
+        for (int i = 0; i < 8 && (r.zoned(WALL, 2, 2) || !r.zoned(EAST, 2, 2)); i++) {
+            r.tick();
+        }
+        h.assertFalse(r.zoned(WALL, 2, 2), "the wet fence holds gas " + when);
+        h.assertFalse(sameZone(r, EAST, WEST), "one zone goes through the wet fence " + when);
+        h.assertValueEqual(r.zone(WEST, 2, 2).cellCount(), 27, "the west room's cells " + when);
+        h.assertValueEqual(r.zone(EAST, 2, 2).cellCount(), 27, "the east room's cells " + when);
+        double both = r.zone(WEST, 2, 2).mixture().moles(Rooms.O2)
+                + r.zone(EAST, 2, 2).mixture().moles(Rooms.O2);
+        r.close(both, o2, "the O2 in both rooms " + when);
     }
 
     /** With a slot in its wall a room is open; water standing in the slot seals it (GEO-006). */
