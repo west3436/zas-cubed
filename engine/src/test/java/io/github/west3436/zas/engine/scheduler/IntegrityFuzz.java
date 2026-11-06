@@ -698,7 +698,7 @@ final class IntegrityFuzz {
      * in the other parts too, and the total goes out when those zones leave memory or the chunk loads. That
      * is all that's excused: a zone that once the table has caught up has gone, or has fewer cells in the
      * chunk than the share and less gas than it had, for the gas it no longer holds, in the ticks that shows
-     * in.
+     * in, by no more than that or the share written, whichever is more.
      */
     private void noteDivisions(AtmosSnapshot table) {
         if (table.hasRejections()) {
@@ -723,6 +723,8 @@ final class IntegrityFuzz {
                     for (int i = 0; i < GASES; i++) {
                         gone[i] = Math.max(0, before.moles(i) - (now == null ? 0 : now.moles(i)));
                         fell |= gone[i] > 1e-9 * before.moles(i);
+                        // The share itself can come back on top of what its other parts hold.
+                        gone[i] = Math.max(gone[i], share.moles(i));
                     }
                     if (fell) {
                         Division division = new Division(s.chunk, s.record, id, gone);
