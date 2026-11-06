@@ -34,7 +34,8 @@ public final class DeviceDataTests {
 
     /**
      * Every block entity of this mod saves the version, and one saved with no version, as all were
-     * before versions were added, loads and saves the same fields.
+     * before versions were added, loads and saves the same fields. Blocks that only the GameTests
+     * register are left out.
      */
     @GameTest(template = "empty")
     public static void data_012_every_block_entity_saves_its_version(GameTestHelper h) {
@@ -50,6 +51,9 @@ public final class DeviceDataTests {
                 continue;
             }
             seen.add(entity.getType());
+            if (entity.getClass().getPackageName().equals(DeviceDataTests.class.getPackageName())) {
+                continue; // a block these tests register, which isn't in the mod
+            }
             String name = BuiltInRegistries.BLOCK.getKey(block).toString();
             CompoundTag saved = entity.saveCustomOnly(registries);
             h.assertValueEqual(saved.getInt(DeviceData.VERSION_KEY), DeviceData.VERSION, name + "'s version");
