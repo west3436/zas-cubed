@@ -854,6 +854,7 @@ reach it. It isn't called for an exempt player (LIFE-037), a held check (LIFE-04
 entity that has died. Tests: `life_032_a_handler_for_a_gas_applies`,
 `life_032_a_handler_for_a_tag_applies_to_each_gas_in_it`,
 `life_032_a_handler_sees_what_protection_leaves_in_the_breath`,
+`life_032_a_handler_hears_of_a_tanks_gas_with_eyes_in_a_fluid`,
 `life_032_a_handler_isnt_called_for_the_exempt_or_the_dead` and the unit tests in
 `HazardHandlersTest`, with
 `nfr_013_a_hazard_handler_that_throws_is_skipped_and_logged_once_a_minute` for the guard.

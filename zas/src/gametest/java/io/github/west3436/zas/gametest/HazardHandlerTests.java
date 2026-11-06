@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.HazardExposure;
 import io.github.west3436.zas.api.life.HazardHandler;
 import io.github.west3436.zas.api.life.HazardHandlers;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -240,6 +242,51 @@ public final class HazardHandlerTests {
         h.assertValueEqual(seen.size(), 1, "the calls on a tank");
         close(h, seen.get(0).surroundingPressure(), 0, 0, "the tank's gas around it");
         h.assertTrue(seen.get(0).breathedPressure() > 0, "the tank's gas wasn't in its breath");
+        h.succeed();
+    }
+
+    /**
+     * With its eyes in a fluid an entity has no atmosphere around it, so a handler hears only of what's
+     * in its breath: a tank's gas for a player on internals, and nothing for a pig drowning beside it,
+     * or for the room's gas (LIFE-032, LIFE-047).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_032_a_handler_hears_of_a_tanks_gas_with_eyes_in_a_fluid(GameTestHelper h) {
+        Rooms r = new Rooms(h, 745);
+        room(r, 0, Map.of(CO, 0.01));
+        r.set(2, 1, 2, Blocks.WATER.defaultBlockState());
+        r.set(2, 2, 2, Blocks.WATER.defaultBlockState());
+        FakePlayer diver = player(r, 0);
+        diver.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+        diver.setItemInHand(
+                InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 0.9, TEST_GAS, 0.1), 21.3));
+        Internals.set(diver, true);
+        Pig pig = mob(h, r, EntityType.PIG, 0);
+        // A tick finds what their eyes are in.
+        diver.baseTick();
+        pig.baseTick();
+        List<HazardExposure> seen = new ArrayList<>();
+        long t = r.level.getGameTime();
+        HazardHandlers.register(HANDLER, TEST_GAS, seen::add);
+        HazardHandlers.register(OTHER, CO, seen::add);
+        try {
+            twoSeconds(diver, t);
+            twoSeconds(pig, t);
+            h.assertValueEqual(
+                    pig.getData(Breathers.STATE).verdict().source(), BreathSource.FLUID, "the pig's verdict");
+            h.assertValueEqual(seen.size(), 1, "the calls: the tank's gas alone");
+            HazardExposure exposure = seen.get(0);
+            h.assertTrue(exposure.entity() == diver, "the call's entity");
+            h.assertValueEqual(exposure.gas(), TEST_GAS, "the gas");
+            h.assertValueEqual(exposure.verdict().source(), BreathSource.INTERNALS, "the diver's verdict");
+            h.assertTrue(exposure.around().isEmpty(), "an atmosphere at its eyes");
+            close(h, exposure.surroundingPressure(), 0, 0, "the gas around it");
+            h.assertTrue(exposure.breathedPressure() > 0, "the tank's gas wasn't in its breath");
+        } finally {
+            HazardHandlers.unregister(HANDLER);
+            HazardHandlers.unregister(OTHER);
+            pig.discard();
+        }
         h.succeed();
     }
 

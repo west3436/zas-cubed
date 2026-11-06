@@ -170,7 +170,8 @@ HazardHandlers.register(
 - **How much reaches it:** `surroundingPressure()` is what's around it and
   `breathedPressure()` is what it breathes, in kPa. They differ behind a filter or on a
   tank, so a handler is called for a gas a filter keeps out, and decides what that means.
-  An entity that doesn't breathe breathes 0.
+  An entity that doesn't breathe breathes 0. With its eyes in a fluid nothing is around it,
+  so a handler hears only of a tank's gas.
 - **Scale by `seconds()`,** so the check interval changes smoothness, not speed.
 - **What it does is yours.** ZAS³ deals nothing for it, so `[hazards]` settings and
   `HazardTickEvent` don't reach it. Any setting to turn it off or scale it is yours to add.
