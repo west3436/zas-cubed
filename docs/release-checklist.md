@@ -14,7 +14,8 @@ harvesting and supply from paused zones are sources by design, so they don't cou
 failures.
 
 The checker compares zones and doesn't see gas in pipes, so a clean report says nothing
-about them. That's why each item below also totals the gas itself.
+about them. That's why each item below also totals the gas itself: with the steps below
+for saving and quitting, and with the test helper `GasCensus` for those with pipes.
 
 Four of the five items are GameTests, which CI also runs on every PR:
 
