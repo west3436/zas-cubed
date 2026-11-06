@@ -4,6 +4,8 @@ name: Full GameTests
 # PR leaves those repeats out to stay inside CI's time limit, so they run here:
 # nightly on main, or from the Actions tab.
 on:
+  push:
+    branches: [run-zas-gametests-nightly]
   workflow_dispatch:
   schedule:
     - cron: "17 5 * * *"
