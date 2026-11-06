@@ -525,6 +525,38 @@ the check their Verify plan asks for.
 Later that day the owner narrowed CORE-052 to sealed zones and removed the air compressor
 (CONT-054, now *Rejected*). These tables already show both.
 
+*2026-11-06: the audit round.* Seven tracks built what the audit listed that needs no new
+content, alongside the GUI work ([#349](https://github.com/west3436/zas-cubed/pull/349)).
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Sealed zones dissolving, and zone events | [#346](https://github.com/west3436/zas-cubed/pull/346), [#351](https://github.com/west3436/zas-cubed/pull/351) | CORE-052, API-030 | None |
+| Displaced gas | [#333](https://github.com/west3436/zas-cubed/pull/333) | CORE-029 | None |
+| Saved operations keep their sub-cell | [#332](https://github.com/west3436/zas-cubed/pull/332) | None | None |
+| Open-air gas under test-driven atmos ticks | [#338](https://github.com/west3436/zas-cubed/pull/338) | None | Two older tests, `cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and `cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`, still run in real time, with comments that are now wrong |
+| Hazard handlers, hazard events and guards | [#344](https://github.com/west3436/zas-cubed/pull/344), [#337](https://github.com/west3436/zas-cubed/pull/337), [#334](https://github.com/west3436/zas-cubed/pull/334) | LIFE-032, API-033, NFR-013 | The owner's ruling on a suit whose code throws |
+| Drowning, and internals under water | [#336](https://github.com/west3436/zas-cubed/pull/336) | LIFE-022, LIFE-047 | A look in game, in the world below |
+| Airflow impact damage | [#348](https://github.com/west3436/zas-cubed/pull/348) | FLOW-005 | A look in game, in the world below |
+| Spawning in lethal air | [#339](https://github.com/west3436/zas-cubed/pull/339) | LIFE-034 | The natural spawner hasn't run end to end, as a GameTest has no player in the level |
+| Forward migration | [#335](https://github.com/west3436/zas-cubed/pull/335) | DATA-012 stays *Accepted* | Saved fixtures and the old-world GameTest, which need a release. Item data, the player's internals switch and the primed transfer valve save no version |
+| What a player is sent | [#340](https://github.com/west3436/zas-cubed/pull/340) | DATA-005 | None |
+| Repeat power charges | [#345](https://github.com/west3436/zas-cubed/pull/345) | None | None |
+| Pipes across a chunk border | [#341](https://github.com/west3436/zas-cubed/pull/341) | None | None |
+| Javadoc, nested API jars and deprecation | [#342](https://github.com/west3436/zas-cubed/pull/342), [#347](https://github.com/west3436/zas-cubed/pull/347), [#343](https://github.com/west3436/zas-cubed/pull/343) | API-005, API-007. API-042 stays *Accepted* | API-042's check compares nothing until `api_baseline_version` names a release |
+| S-10 regression check | [#350](https://github.com/west3436/zas-cubed/pull/350) | NFR-034 | None |
+| A volume pump losing power | [#331](https://github.com/west3436/zas-cubed/pull/331) | CONT-060 stays *Accepted* | The electrolyzer and central controller |
+| Example addon | [#354](https://github.com/west3436/zas-cubed/pull/354) | API-047 | No test has ZAS³ call `OutpostAir`, fill the tank by pipe or give a player air from the oxygen tank, as a GameTest server has only vanilla's dimensions, no content mod and no player. `OutpostAir` was checked once on a dedicated server |
+
+Every requirement above moved to *Implemented* unless the table says otherwise, and
+none of them needed a new ID. Of the audit's tables, *Not built* now holds only
+CLIENT-009 and the CONT items. From *Partly built*, this round finished CORE-052,
+LIFE-022, DATA-005, API-005, API-007, API-047 and NFR-013.
+
+The combined test world, **ZAS R1 Audit Round Test**, was built on main at b90f959e, whose
+mod code #354 doesn't change. It covers the HUD alerts, a dive on internals, the airflow
+fling and removing the mods. CLIENT-008, CLIENT-014 and DATA-007 stay *Accepted* until it
+passes. The round's decisions are with the owner.
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -636,14 +668,19 @@ _Updated 2026-11-06._
      ([#179](https://github.com/west3436/zas-cubed/issues/179)) and reinforced glass
      ([#320](https://github.com/west3436/zas-cubed/issues/320)).
    - **What each open requirement still needs:** the 2026-11-06 status audit in
-     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done).
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the
+     audit round after it built.
+   - ~~**The audit's items that need no new content**~~ *on main 2026-11-06 (#331 to
+     #348, #350, #351, #354; see
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Its combined
+     test world and its decisions are with the owner.
    - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
      (#69), and block damage (#45)~~ *on main 2026-11-06 (#282 to #317; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The
      owner played its combined test world and settled its decisions the same day
-     (#319 to #326). #69 stays open for NFR-013, NFR-025 and NFR-040.
+     (#319 to #326). #69 stays open for NFR-025 and NFR-040.
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world the same day, and accepted its *Draft* IDs.
@@ -652,8 +689,9 @@ _Updated 2026-11-06._
    - Carried over: art for open pipe ends (#164), GUI textures (#185),
      display units and language (#57), magnetic boots (#49) and insulating
      station walls (#179).
-   - Follow-ups from R0: saved operations keeping their sub-cell
-     ([#122](https://github.com/west3436/zas-cubed/issues/122)). Zone-creation
+   - Follow-ups from R0: ~~saved operations keeping their sub-cell
+     ([#122](https://github.com/west3436/zas-cubed/issues/122))~~ *fixed 2026-11-06
+     (#332)*. Zone-creation
      speed and idle-zone cost, both inside their budgets, are now part of S-10's
      work ([#68](https://github.com/west3436/zas-cubed/issues/68)), and sub-cells
      of position-dependent shapes go with GEO-043
