@@ -2073,6 +2073,10 @@ Accepted until each device exists to check.*
 and `cont_060_a_real_mixer_runs_on_a_controller_and_stops_when_its_power_is_cut`
 (GameTest), as the pump's. This stays Accepted until each device exists to check.*
 
+*2026-11-06: The volume pump stops when its provider's power is cut:
+`VolumePumpPowerTests.cont_060_a_real_volume_pump_stops_when_its_power_is_cut`
+(GameTest), as the pressure pump's. This stays Accepted until each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
