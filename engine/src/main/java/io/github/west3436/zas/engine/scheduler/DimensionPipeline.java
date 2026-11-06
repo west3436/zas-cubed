@@ -138,6 +138,12 @@ public final class DimensionPipeline {
     private final TreeMap<Long, Sent> unconfirmed = new TreeMap<>();
     /** Every queued operation whose outcome hasn't been applied, by sequence number. */
     private final TreeMap<Long, GasOp> outstanding = new TreeMap<>();
+    /**
+     * What chunks saved at their unload, by chunk and then by zone, until they load again or the zone leaves
+     * memory: their shares are written and can't change, so later ones make up the rest (DATA-008). Kept only
+     * here: a restart starts from what's on disk, which holds no more than this did.
+     */
+    private final TreeMap<Long, Map<Long, double[]>> savedAway = new TreeMap<>();
 
     private long[] heldBlocks = new long[0];
     private long nextZoneId = 1;
@@ -399,6 +405,7 @@ public final class DimensionPipeline {
      * to the worker in the next batch; its queued additions are queued again now (DATA-011).
      */
     public void chunkLoaded(long chunk, ChunkRecord record) {
+        savedAway.remove(chunk);
         unloads.remove(chunk);
         loads.add(chunk);
         loadedRecords.remove(chunk);
@@ -423,6 +430,14 @@ public final class DimensionPipeline {
      * that hasn't gone to the worker yet is dropped here.
      */
     public void chunkUnloaded(long chunk) {
+        Map<Long, double[]> saved = new HashMap<>();
+        ChunkRecord record = recordFor(chunk, false);
+        if (record != null) {
+            for (ZoneShare share : record.zones()) {
+                saved.put(share.zoneId(), share.moles());
+            }
+        }
+        savedAway.put(chunk, saved);
         loads.remove(chunk);
         unloads.add(chunk);
         loadedRecords.remove(chunk);
@@ -739,7 +754,8 @@ public final class DimensionPipeline {
                         unconfirmed.entrySet().iterator();
                 it.hasNext(); ) {
             Map.Entry<Long, Sent> e = it.next();
-            if (e.getValue().tick() <= result.tick()) {
+            // A rejected zone is answered from the last table, which won't hold what it has just taken in.
+            if (e.getValue().tick() <= result.tick() && rejectedIndices.isEmpty()) {
                 changed.add(e.getKey());
                 it.remove();
             }
@@ -754,6 +770,10 @@ public final class DimensionPipeline {
         nextZoneId = result.nextZoneId();
         hotspots = burning;
         published = snapshot;
+        if (rejectedIndices.isEmpty()) {
+            // A rejected zone is answered from the last table, so this one may not show its chunks.
+            forgetSavedAway();
+        }
         flows = result.flows();
         flowsTick = result.tick();
         // After publishing, so a reader that sees a chunk settled sees its zones.
@@ -812,9 +832,10 @@ public final class DimensionPipeline {
      * @return the record, or null if the chunk has nothing to save
      */
     public ChunkRecord recordFor(long chunk, boolean withQueued) {
-        List<ZoneShare> zones = new ArrayList<>(published.shares(chunk));
+        List<ZoneShare> zones = new ArrayList<>();
         Set<Long> ids = new HashSet<>();
-        for (ZoneShare z : zones) {
+        for (ZoneShare z : published.shares(chunk)) {
+            zones.add(shareLeft(chunk, z));
             ids.add(z.zoneId());
         }
         ChunkRecord pending = loadedRecords.get(chunk);
@@ -848,6 +869,64 @@ public final class DimensionPipeline {
         }
         ChunkRecord r = new ChunkRecord(chunk, zones, toArray(held), queued);
         return r.isEmpty() ? null : r;
+    }
+
+    /**
+     * A chunk's share of a zone once others of its chunks have saved and unloaded: what they left of its
+     * gas, by volume among the chunks that haven't. While the zone hasn't changed since they saved that's
+     * its plain share. If it has (its cells or its gas can change after a share is written, since the
+     * table it came from may be a tick behind, and a paused zone still takes in shares), the shares still
+     * add up to what it holds (DATA-008).
+     */
+    private ZoneShare shareLeft(long chunk, ZoneShare share) {
+        long id = share.zoneId();
+        double volumeLeft = published.zoneVolume(id);
+        double[] left = null;
+        for (long other : share.zoneChunks()) {
+            Map<Long, double[]> saved = other == chunk ? null : savedAway.get(other);
+            // With no cells there, it's a share the zone hasn't taken in, so its gas isn't in the zone.
+            double volumeThere = saved == null ? 0 : published.zoneVolumeIn(id, other);
+            if (volumeThere > 0) {
+                if (left == null) {
+                    left = published.zone(id).moles();
+                }
+                volumeLeft -= volumeThere;
+                double[] taken = saved.get(id);
+                for (int g = 0; taken != null && g < left.length && g < taken.length; g++) {
+                    left[g] -= taken[g];
+                }
+            }
+        }
+        if (left == null) {
+            return share;
+        }
+        double volume = published.zoneVolumeIn(id, chunk);
+        double f = volume >= volumeLeft ? 1 : volume / volumeLeft;
+        for (int g = 0; g < left.length; g++) {
+            left[g] = Math.max(0, left[g]) * f;
+        }
+        return new ZoneShare(id, share.cells(), left, share.temperature(), share.zoneChunks(), share.pins());
+    }
+
+    /**
+     * Forgets what unloaded chunks saved of zones that have left memory, whose gas is only in those shares
+     * now, and the chunks that saved nothing that matters any more.
+     */
+    private void forgetSavedAway() {
+        if (savedAway.isEmpty()) {
+            return;
+        }
+        Set<Long> spanned = new HashSet<>();
+        addAll(spanned, published.chunks());
+        for (Iterator<Map.Entry<Long, Map<Long, double[]>>> it =
+                        savedAway.entrySet().iterator();
+                it.hasNext(); ) {
+            Map.Entry<Long, Map<Long, double[]>> e = it.next();
+            e.getValue().keySet().removeIf(id -> published.zone(id) == null);
+            if (e.getValue().isEmpty() && !spanned.contains(e.getKey())) {
+                it.remove();
+            }
+        }
     }
 
     /**

@@ -809,6 +809,16 @@ the lever if the per-cell cost ever matters.
   for saving at each apply, so autosaves pick them up. Only the published
   snapshot is ever saved, which is why an in-flight tick must be rejectable
   (§3.3).
+- **A share written at unload stays as written.** The zone can still change
+  after it: the published table may be a tick behind the block changes, and a
+  paused zone still takes in shares and pockets. So `DimensionPipeline` keeps
+  what each unloaded chunk saved, until the chunk loads or the zone leaves
+  memory, and a later share of that zone is what those left of its gas, by
+  volume among the chunks that haven't saved. While the zone hasn't changed
+  that is its plain share, and if it has, the shares still add up to what it
+  holds. The exception is a zone that divides in the tick a chunk saves during
+  (the limit on DATA-008). This is in memory only, and the saved format is
+  unchanged.
 - **Saved shares are authoritative only while their zone is not in memory.**
   When a chunk loads, the server thread copies its record into the next batch,
   with the sections its cells are in and their neighbours. If the zone is in

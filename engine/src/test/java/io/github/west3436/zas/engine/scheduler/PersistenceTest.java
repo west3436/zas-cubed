@@ -310,22 +310,34 @@ class PersistenceTest {
     }
 
     /**
-     * The known limit on DATA-008, which these two tests pin until the owner has ruled on it. A chunk that
-     * saves during a tick writes the table from before the tick. If that tick is rejected, its gas goes
-     * back but its block change stands, so the zone's other chunks later write shares of a zone that has
-     * changed, and the shares don't add up to what it held. Here the room is 720 mol in 72 cells, half of
-     * them in each chunk, and the west chunk has saved 360 mol.
+     * A chunk that saves during a tick writes the table from before the tick. If that tick is rejected,
+     * its gas goes back but its block change stands, so the zone has changed since the share was written.
+     * The zone's other chunks make up the rest, so the shares still add up to what it held. The room is
+     * 720 mol in 72 cells, half of them in each chunk, and the west chunk has saved 360 mol.
      *
-     * @return what the zone held, and what its two shares hold
+     * @return what its two shares hold
      */
-    private static double[] sharesAfterASaveDuringARejectedTick(int x, int y, int z, int block) {
+    private static double sharesAfterASaveDuringARejectedTick(int x, int y, int z, int block) {
+        Sim sim = roomAcrossTwoChunks();
+        long id = sim.zoneAt(13, 69, 2).id();
+        ChunkRecord west = saveWestDuringARejectedTick(sim, x, y, z, block);
+        ChunkRecord east = sim.unload(SectionKeys.chunk(1, 0));
+        sim.step();
+        assertNull(sim.snapshot().zone(id), "the zone is still in memory");
+        return west.share(id).moles(N2) + east.share(id).moles(N2);
+    }
+
+    private static Sim roomAcrossTwoChunks() {
         Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
         sim.world.room(12, 68, 1, 19, 70, 3);
         sim.world.room(12, 68, 5, 15, 70, 7); // an empty pocket of 36 cells, in the west chunk
         sim.add(13, 69, 2, 720, 0);
         sim.steps(2);
-        long id = sim.zoneAt(13, 69, 2).id();
-        double held = sim.snapshot().zone(id).moles(N2);
+        close(720, sim.zoneAt(13, 69, 2).moles(N2), "the room");
+        return sim;
+    }
+
+    private static ChunkRecord saveWestDuringARejectedTick(Sim sim, int x, int y, int z, int block) {
         sim.world.set(x, y, z, block);
         sim.add(17, 69, 2, 1, 0); // only a zone whose gas changes in a tick can be rejected, and it's voided after
         ChunkRecord[] west = new ChunkRecord[1];
@@ -335,26 +347,162 @@ class PersistenceTest {
         };
         assertTrue(sim.step().rejected() > 0, "the tick wasn't rejected");
         sim.step();
+        return west[0];
+    }
+
+    /** A cell of the zone filled in that tick. Split by volume, the shares would make 5.07 mol. */
+    @Test
+    void data_008_shares_add_up_when_a_cell_fills_in_the_tick_a_chunk_saves() {
+        close(720, sharesAfterASaveDuringARejectedTick(13, 69, 2, TestWorld.SOLID), "the shares");
+    }
+
+    /** A hole into the pocket in that tick. Split by volume, the shares would lose 122 mol. */
+    @Test
+    void data_008_shares_add_up_when_a_hole_opens_in_the_tick_a_chunk_saves() {
+        close(720, sharesAfterASaveDuringARejectedTick(13, 69, 4, TestWorld.AIR), "the shares");
+    }
+
+    /**
+     * The limit left on DATA-008: a wall across the west part in that tick divides the zone. The west share
+     * holds gas of both parts, and only 45 of the 63 cells left keep the zone's id, with the gas they hold.
+     * The east chunk writes what the west share left of that, so the shares lose what the part west of the
+     * wall took, which is in memory until that part leaves it with no chunk to save it.
+     */
+    @Test
+    void data_008_known_limit_a_zone_dividing_in_the_tick_a_chunk_saves_can_lose_gas() {
+        Sim sim = roomAcrossTwoChunks();
+        long id = sim.zoneAt(17, 69, 2).id();
+        for (int y = 68; y <= 70; y++) {
+            for (int z = 1; z <= 3; z++) {
+                sim.world.set(14, y, z, TestWorld.SOLID);
+            }
+        }
+        ChunkRecord west = saveWestDuringARejectedTick(sim, 14, 69, 2, TestWorld.SOLID);
+        close(720.0 * 45 / 63, sim.snapshot().zone(id).moles(N2), "the zone east of the wall");
         ChunkRecord east = sim.unload(SectionKeys.chunk(1, 0));
         sim.step();
+        close(360, west.share(id).moles(N2), "the west share");
+        close(720.0 * 45 / 63 - 360, east.share(id).moles(N2), "the east share");
+    }
+
+    /**
+     * The zone still holds what a chunk saved, so if the chunk loads first its share isn't taken and its
+     * save stops counting: the shares written after that are by volume again, and add up.
+     */
+    @Test
+    void data_008_a_chunk_that_loads_again_while_its_zone_is_in_memory_stops_counting() {
+        Sim sim = roomAcrossTwoChunks();
+        long id = sim.zoneAt(13, 69, 2).id();
+        ChunkRecord west = saveWestDuringARejectedTick(sim, 13, 69, 2, TestWorld.SOLID);
+        sim.load(SectionKeys.chunk(0, 0), west);
+        sim.steps(3);
+        ZoneView zone = sim.snapshot().zone(id);
+        assertFalse(zone.paused());
+        close(720, zone.moles(N2), "the zone took the share it still held");
+        ChunkRecord east = sim.unload(SectionKeys.chunk(1, 0));
+        close(720.0 * 36 / 71, east.share(id).moles(N2), "the east chunk's share");
+        sim.step();
+        ChunkRecord westAgain = sim.unload(SectionKeys.chunk(0, 0));
+        close(720.0 * 35 / 71, westAgain.share(id).moles(N2), "the west chunk's share");
+    }
+
+    /**
+     * What decides what a crash brings back is unchanged when the zone hasn't changed since a chunk saved,
+     * which is nearly always: a share written after it is the plain share by volume, not a remainder that
+     * would count on the first chunk's save having reached the disk.
+     */
+    @Test
+    void data_008_a_share_saved_after_another_chunk_left_is_by_volume_if_the_zone_hasnt_changed() {
+        Sim sim = roomAcrossTwoChunks();
+        long id = sim.zoneAt(13, 69, 2).id();
+        sim.unload(SectionKeys.chunk(0, 0));
+        sim.steps(2);
+        close(
+                360,
+                sim.pipeline.recordFor(SectionKeys.chunk(1, 0), false).share(id).moles(N2),
+                "the east share");
+    }
+
+    /**
+     * A paused zone takes in a share that holds more gas per cell than the zone does, in the tick after one
+     * of its chunks saved (as a rebuilt zone can). The chunks still to save make up the rest.
+     */
+    @Test
+    void data_008_shares_add_up_when_a_paused_zone_takes_in_a_share() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(8, 68, 1, 39, 70, 3); // 72, 144 and 72 cells in three chunks
+        sim.add(9, 69, 2, 2880, 0);
+        sim.steps(2);
+        long id = sim.zoneAt(9, 69, 2).id();
+        long[] chunks = {SectionKeys.chunk(0, 0), SectionKeys.chunk(1, 0), SectionKeys.chunk(2, 0)};
+        ChunkRecord[] saved = new ChunkRecord[3];
+        for (int i = 0; i < 3; i++) {
+            saved[i] = sim.unload(chunks[i]);
+        }
+        sim.step();
+        assertNull(sim.snapshot().zone(id));
+        sim.load(chunks[0], saved[0]);
+        sim.load(chunks[1], saved[1]);
+        sim.steps(2);
+
+        ZoneShare east = saved[2].share(id);
+        double[] more = east.moles();
+        more[N2] = 1500;
+        sim.load(
+                chunks[2],
+                new ChunkRecord(
+                        chunks[2],
+                        List.of(new ZoneShare(
+                                id, east.cells(), more, east.temperature(), east.zoneChunks(), east.pins())),
+                        new long[0],
+                        List.of()));
+        ChunkRecord west = sim.unload(chunks[0]);
+        sim.step();
+        double held = sim.snapshot().zone(id).moles(N2);
+        close(720 + 1440 + 1500, held, "the zone");
+        ChunkRecord middle = sim.unload(chunks[1]);
+        ChunkRecord last = sim.unload(chunks[2]);
+        close(
+                held,
+                west.share(id).moles(N2)
+                        + middle.share(id).moles(N2)
+                        + last.share(id).moles(N2),
+                "the shares");
+    }
+
+    /**
+     * A rejected tick takes in a chunk's share and publishes nothing of it, as the zone wasn't in the last
+     * table. The chunk leaves before the next tick, and its record is all there is to save.
+     */
+    @Test
+    void data_008_a_chunk_leaving_after_a_rejected_tick_took_in_its_share_still_saves_it() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3);
+        sim.add(13, 69, 2, 720, 0);
+        sim.steps(2);
+        long id = sim.zoneAt(13, 69, 2).id();
+        long west = SectionKeys.chunk(0, 0);
+        long east = SectionKeys.chunk(1, 0);
+        ChunkRecord westRecord = sim.unload(west);
+        ChunkRecord eastRecord = sim.unload(east);
+        sim.step();
         assertNull(sim.snapshot().zone(id), "the zone is still in memory");
-        return new double[] {held, west[0].share(id).moles(N2) + east.share(id).moles(N2)};
-    }
 
-    /** A cell of the zone filled in that tick: the east chunk's 36 cells now hold 1/71 of it each. */
-    @Test
-    void data_008_known_limit_a_save_during_a_rejected_tick_can_make_gas() {
-        double[] gas = sharesAfterASaveDuringARejectedTick(13, 69, 2, TestWorld.SOLID);
-        close(720, gas[0], "held");
-        close(360 + 720.0 * 36 / 71, gas[1], "the shares");
-    }
+        sim.load(west, westRecord);
+        sim.load(east, eastRecord);
+        sim.add(17, 69, 2, 1, 0); // only a zone whose gas changes in a tick can be rejected
+        ChunkRecord[] eastAgain = new ChunkRecord[1];
+        sim.betweenCloseAndApply = s -> {
+            s.betweenCloseAndApply = n -> {};
+            eastAgain[0] = s.unload(east);
+        };
+        assertTrue(sim.step().rejected() > 0, "the tick wasn't rejected");
+        assertNull(sim.snapshot().zone(id), "the rejected zone was published");
 
-    /** A hole into the pocket in that tick: the east chunk's 36 cells now hold 1/109 of it each. */
-    @Test
-    void data_008_known_limit_a_save_during_a_rejected_tick_can_lose_gas() {
-        double[] gas = sharesAfterASaveDuringARejectedTick(13, 69, 4, TestWorld.AIR);
-        close(720, gas[0], "held");
-        close(360 + 720.0 * 36 / 109, gas[1], "the shares");
+        ChunkRecord westAgain = sim.unload(west);
+        assertNotNull(westAgain, "the west chunk saved nothing");
+        close(360, westAgain.share(id).moles(N2), "the west share");
+        close(360, eastAgain[0].share(id).moles(N2), "the east share");
     }
 
     /**
