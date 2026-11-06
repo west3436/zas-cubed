@@ -217,4 +217,57 @@ class PausedZonesTest {
         assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
         assertEquals(10, sim.zoneAt(18, 65, 2).moles(N2), EPS);
     }
+
+    /**
+     * The same room, with another zone keeping the east chunk's section mirrored. The section being
+     * there doesn't make the chunk known: the fill is still unresolved (GEO-024).
+     */
+    @Test
+    void geo_024_a_section_kept_for_another_zone_leaves_a_fill_unresolved() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(12, 68, 1, 19, 70, 3);
+        sim.world.room(28, 68, 8, 35, 70, 10);
+        sim.add(29, 69, 9, 10, 0);
+        sim.steps(2);
+        ChunkRecord saved = sim.unload(EAST);
+        sim.step();
+        assertTrue(sim.engine.mirror().contains(SectionKeys.sectionOfBlock(16, 69, 2)), "the section wasn't kept");
+        long seq = sim.add(13, 69, 2, 10, 0);
+        sim.steps(3);
+        assertEquals(OpOutcome.Outcome.UNRESOLVED, sim.outcomes.get(seq).outcome());
+        assertNull(sim.zoneAt(13, 69, 2));
+        sim.load(EAST, saved);
+        long again = sim.add(13, 69, 2, 10, 0);
+        sim.steps(3);
+        assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
+        assertEquals(10, sim.zoneAt(18, 69, 2).moles(N2), EPS);
+    }
+
+    /**
+     * A zone breaks into that room. It pauses, as it would with the section gone, and the room joins it
+     * once the east chunk loads; there is no block change there to classify it then (GEO-026).
+     */
+    @Test
+    void geo_026_a_section_kept_for_another_zone_leaves_a_breach_held() {
+        Sim sim = new Sim(Ambient.VACUUM).withoutHeat();
+        sim.world.room(4, 68, 1, 10, 70, 3); // A, in the west chunk
+        sim.world.room(12, 68, 1, 19, 70, 3); // B, unzoned, across both chunks
+        sim.world.room(28, 68, 8, 35, 70, 10);
+        sim.add(5, 69, 2, 30, 0);
+        sim.add(29, 69, 9, 10, 0);
+        sim.steps(2);
+        ChunkRecord saved = sim.unload(EAST);
+        sim.step();
+        assertTrue(sim.engine.mirror().contains(SectionKeys.sectionOfBlock(16, 69, 2)), "the section wasn't kept");
+        sim.world.set(11, 69, 2, TestWorld.AIR);
+        sim.steps(2);
+        assertTrue(sim.zoneAt(5, 69, 2).paused(), "the zone didn't pause at the unresolved breach");
+        assertNull(sim.zoneAt(18, 69, 2), "the zone took in cells of an unloaded chunk");
+        sim.load(EAST, saved);
+        sim.steps(3);
+        ZoneView joined = sim.zoneAt(5, 69, 2);
+        assertFalse(joined.paused(), "the zone didn't resume");
+        assertEquals(joined.id(), sim.zoneAt(18, 69, 2).id(), "the room didn't join");
+        assertEquals(30, joined.moles(N2), EPS);
+    }
 }

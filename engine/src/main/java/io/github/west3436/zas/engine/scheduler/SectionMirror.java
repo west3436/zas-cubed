@@ -59,8 +59,8 @@ public final class SectionMirror implements SectionLookup {
 
     @Override
     public boolean isUnloaded(long key) {
-        return !sections.containsKey(key)
-                && (unavailable.contains(key) || unloadedChunks.contains(SectionKeys.chunkOf(key)));
+        return unloadedChunks.contains(SectionKeys.chunkOf(key))
+                || (unavailable.contains(key) && !sections.containsKey(key));
     }
 
     @Override
