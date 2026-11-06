@@ -17,20 +17,21 @@ import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
 import io.github.west3436.zas.environment.DimensionAmbient;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -251,36 +252,52 @@ public final class AmbientProviderTests {
 
     // ---- NFR-013 ------------------------------------------------------------------------
 
+    /** A provider that gives the answer it holds, or throws once told to, and counts its calls. */
+    private static final class Faulty implements AmbientProvider {
+        AmbientDefinition answer;
+        boolean failing;
+        int calls;
+
+        Faulty(AmbientDefinition answer) {
+            this.answer = answer;
+        }
+
+        @Override
+        public AmbientDefinition ambient(ServerLevel level) {
+            calls++;
+            if (failing) {
+                throw new IllegalStateException("the test provider failing");
+            }
+            return answer;
+        }
+    }
+
     /**
-     * A provider that throws is skipped for the atmos tick, as if it had answered null, so the next
-     * source applies. It's asked again each atmos tick, its answer counts as soon as it stops, and the
-     * log has one line a minute, however many atmos ticks it throws in.
+     * A provider that throws is skipped for the atmos tick and keeps its last good answer, the owner's
+     * decision of 2026-11-06. It's asked again each atmos tick, its answer counts as soon as it stops,
+     * and the log has one line a minute, however many atmos ticks it throws in.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+    public static void nfr_013_an_ambient_provider_that_throws_keeps_its_last_good_answer_and_is_logged_once_a_minute(
+            GameTestHelper h) {
         onBareEnd(h, end -> {
             ResourceLocation id = id("zas_gametest", "nfr_013");
-            AtomicBoolean failing = new AtomicBoolean();
-            AtomicInteger calls = new AtomicInteger();
-            AmbientProviders.register(id, Level.END, level -> {
-                calls.incrementAndGet();
-                if (failing.get()) {
-                    throw new IllegalStateException("the test provider failing");
-                }
-                return PROVIDED;
-            });
+            Ambient vacuum = Ambient.vacuum(737);
+            Faulty provider = new Faulty(AmbientDefinition.vacuum(737));
+            AmbientProviders.register(id, Level.END, provider);
             tick(end);
-            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "before it throws");
+            h.assertValueEqual(Ambients.ambient(Level.END), vacuum, "before it throws");
             // Not a FaultLog: the other tests here attach to this logger, which cuts it off from the root.
             try (Warnings log = providerWarnings()) {
                 FaultLog.aMinutePasses();
-                failing.set(true);
-                calls.set(0);
+                provider.failing = true;
+                provider.calls = 0;
                 tick(end);
                 tick(end);
                 tick(end);
-                h.assertValueEqual(calls.get(), 3, "the times it was asked in 3 atmos ticks");
-                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "while it throws");
+                h.assertValueEqual(provider.calls, 3, "the times it was asked in 3 atmos ticks");
+                h.assertValueEqual(Ambients.ambient(Level.END), vacuum, "while it throws");
+                h.assertValueEqual(Atmospheres.at(end, OPEN).pressure(), 0.0, "the pressure while it throws");
                 h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
                 h.assertTrue(log.errors.get(0).contains(id.toString()), log.errors.get(0));
 
@@ -288,11 +305,173 @@ public final class AmbientProviderTests {
                 tick(end);
                 h.assertValueEqual(log.errors.size(), 2, "errors logged a minute later: " + log.errors);
 
-                failing.set(false);
+                provider.answer = PROVIDED;
+                provider.failing = false;
                 tick(end);
                 h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "once it stops throwing");
                 h.assertValueEqual(log.errors.size(), 2, "errors logged once it stops: " + log.errors);
             }
+        });
+    }
+
+    /**
+     * What the decision is for: in a room with a hole, in a vacuum whose provider throws, no gas comes
+     * in, since the simulation's batch has the last good answer too and not standard air (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_no_gas_flows_in_while_a_vacuum_dimensions_provider_throws(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            Faulty provider = new Faulty(AmbientDefinition.vacuum());
+            AmbientProviders.register(id("zas_gametest", "nfr_013_vacuum"), Level.END, provider);
+            tick(end);
+            Rooms r = new Rooms(h, end, OPEN.offset(96, 0, 0));
+            r.clear(0, 5);
+            r.shell(0, 4);
+            PinResult pin = r.settle(ZonePins.pin(end, r.point(2, 2, 2), Rooms.source("nfr_013_vacuum")));
+            h.assertValueEqual(pin.outcome(), PinOutcome.ZONE, "the pin");
+            r.set(2, 4, 2, Rooms.AIR);
+            r.ticks(2);
+            h.assertTrue(r.zone(2, 2, 2).breached(), "the room isn't breached");
+
+            provider.failing = true;
+            r.ticks(5);
+            close(h, r.zone(2, 2, 2).mixture().pressure(), 0, "the room's pressure while it throws");
+            r.settle(ZonePins.unpin(end, Rooms.source("nfr_013_vacuum")));
+        });
+    }
+
+    /**
+     * With no good answer yet, a provider that throws gets the next source, whichever that is, and its
+     * first good answer applies from then on (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_provider_that_throws_before_any_good_answer_gets_the_next_source(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            Faulty provider = new Faulty(PROVIDED);
+            provider.failing = true;
+            AmbientProviders.register(id("zas_gametest", "nfr_013_first"), Level.END, provider);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "with the fallback next");
+            Ambients.seedForTest(Level.END, SEEDED);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "with a seeded ambient next");
+
+            provider.failing = false;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "its first good answer");
+            provider.failing = true;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "that answer, once it throws again");
+        });
+    }
+
+    /**
+     * A null means "not defined for now", a real answer and no fault: nothing is logged for it, and a
+     * throw after it leaves the next source in place, so what came before it doesn't come back (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_provider_that_throws_after_answering_null_keeps_the_next_source(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            Faulty provider = new Faulty(PROVIDED);
+            AmbientProviders.register(id("zas_gametest", "nfr_013_null"), Level.END, provider);
+            Ambients.seedForTest(Level.END, SEEDED);
+            try (Warnings log = providerWarnings()) {
+                FaultLog.aMinutePasses();
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "while it answers");
+
+                provider.answer = null;
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "once it answers null");
+                h.assertValueEqual(log.errors, List.of(), "errors logged for a null");
+
+                provider.failing = true;
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "once it throws after the null");
+                h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
+            }
+        });
+    }
+
+    /**
+     * A provider's answer is for a dimension. One provider in two keeps each its own last good answer,
+     * and throwing in one of them changes nothing in the other (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_providers_last_good_answer_is_kept_for_each_dimension(GameTestHelper h) {
+        ServerLevel nether = h.getLevel().getServer().getLevel(Level.NETHER);
+        if (nether == null) {
+            throw new GameTestAssertException("no Nether");
+        }
+        ResourceLocation id = id("zas_gametest", "nfr_013_dimensions");
+        Set<ResourceKey<Level>> failing = new HashSet<>();
+        double[] temperature = {100};
+        AmbientProvider provider = level -> {
+            if (failing.contains(level.dimension())) {
+                throw new IllegalStateException("the test provider failing");
+            }
+            return AmbientDefinition.vacuum(temperature[0]);
+        };
+        Ambients.overrideDefinitionForTest(Level.NETHER, DimensionAmbient.NONE);
+        AmbientProviders.register(id, Level.NETHER, provider);
+        try {
+            onBareEnd(h, end -> {
+                AmbientProviders.register(id, Level.END, provider);
+                tick(end);
+                temperature[0] = 200;
+                tick(nether);
+
+                failing.add(Level.END);
+                temperature[0] = 300;
+                tick(end);
+                tick(nether);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100), "the End, which throws");
+                h.assertValueEqual(Ambients.ambient(Level.NETHER), Ambient.vacuum(300), "the Nether, which answers");
+
+                failing.add(Level.NETHER);
+                temperature[0] = 400;
+                tick(end);
+                tick(nether);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100), "the End, with both throwing");
+                h.assertValueEqual(
+                        Ambients.ambient(Level.NETHER), Ambient.vacuum(300), "the Nether, with both throwing");
+            });
+        } finally {
+            AmbientProviders.unregister(id, Level.NETHER);
+            Ambients.overrideDefinitionForTest(Level.NETHER, null);
+            tick(nether);
+        }
+    }
+
+    /**
+     * Only its own answer outlasts a provider's fault. One that takes over and throws gets the next
+     * source, not the answer of the one before it. And a dimension remembers one answer, so a provider
+     * whose answer another has replaced has no good answer left when it throws (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_provider_doesnt_keep_another_providers_answer(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation highId = id("zas_gametest", "nfr_013_high");
+            Faulty low = new Faulty(PROVIDED);
+            Faulty high = new Faulty(AmbientDefinition.vacuum(100));
+            high.failing = true;
+            AmbientProviders.register(id("zas_gametest", "nfr_013_low"), Level.END, low);
+            Ambients.seedForTest(Level.END, SEEDED);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "the one provider");
+
+            AmbientProviders.register(highId, Level.END, 1, high);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "a new provider that throws");
+
+            high.failing = false;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100), "the new provider's answer");
+
+            AmbientProviders.unregister(highId, Level.END);
+            low.failing = true;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "the first provider, now throwing");
         });
     }
 

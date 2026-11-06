@@ -356,6 +356,11 @@ for the atmos tick and called again the next, and an event listener misses only 
 event. The fault is logged at most once a minute for each source, so one line in the
 log can stand for many faults.
 
+An ambient provider's last good answer for that dimension stands while it throws, so
+a vacuum stays a vacuum, and one that keeps throwing freezes that answer. The next
+source applies only if it has given no good answer since the server started. `null` is
+an answer and not a fault, so throwing after one leaves the next source in place.
+
 To limit your own logging the same way, ask `ThirdPartyFaults.shouldLog(source)`
 before you log. It's true at most once a minute for each source, on any thread (API-062).
 

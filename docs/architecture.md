@@ -376,7 +376,7 @@ only decides what's logged.
 
 | Kind | Call point | What "skipped" means |
 |---|---|---|
-| Ambient provider | `ProvidedAmbients.call` | As if it answered null: the next source applies for that atmos tick (ENV-014) |
+| Ambient provider | `ProvidedAmbients.call` | Its last good answer for that dimension stands, so one that keeps throwing freezes it. The next source applies only if it has none yet (ENV-014), and a null it gave counts as its last answer. One answer is kept per dimension, in memory only |
 | Seal provider | `SealProviders.ask` | The block's own shape for that atmos tick. Nothing is kept, and the position is marked dirty, so its section is copied and the provider asked again the next atmos tick |
 | Code reaction | `ApiReactionType.compute` | No change for that call |
 | Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |

@@ -175,6 +175,11 @@ comes with the Ad Astra adapter in R2 (SPACE-020, D-66), so until then the
 tests fill its slot in the chain with a test-only ambient
 (`Ambients.seedForTest`).*
 
+*2026-11-06: a provider that throws still defines the dimension, with its last good
+answer. The owner's decision of 2026-11-06, recorded in full at NFR-013: "keep the
+provider's last good answer, using the next source only when there's no good answer
+yet". A provider that answers `null` still defines nothing.*
+
 #### ENV-019 · Provider conflicts
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-45 · Depends: ENV-004
 
