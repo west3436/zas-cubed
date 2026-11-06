@@ -28,7 +28,7 @@ class ConservationTest {
     private static final int SY = 3;
     private static final int SZ = 8;
     private static final LedgerCategory[] OP_CATEGORIES = {
-        LedgerCategory.API, LedgerCategory.DEVICE, LedgerCategory.REACTION, LedgerCategory.LIFE, LedgerCategory.OPERATOR
+        LedgerCategory.API, LedgerCategory.REACTION, LedgerCategory.LIFE, LedgerCategory.OPERATOR
     };
 
     /**
@@ -162,7 +162,7 @@ class ConservationTest {
                     if (random.nextBoolean()) {
                         graph.remove(z, random.nextDouble(), OP_CATEGORIES[random.nextInt(OP_CATEGORIES.length)]);
                     } else {
-                        graph.removeMoles(z, random.nextDouble() * 50, LedgerCategory.DEVICE);
+                        graph.removeMoles(z, random.nextDouble() * 50, LedgerCategory.API);
                     }
                 }
             }
@@ -185,7 +185,7 @@ class ConservationTest {
                 // Tiny removals exercise pruning.
                 Zone z = randomZone(random, graph);
                 if (z != null) {
-                    graph.remove(z, 1 - 1e-12, LedgerCategory.DEVICE);
+                    graph.remove(z, 1 - 1e-12, LedgerCategory.API);
                 }
             }
         }
@@ -217,12 +217,12 @@ class ConservationTest {
 
         graph.beginConservationPeriod();
         Zone zone = graph.createZone(Grid.cells(0, 0, 0, 2, 0, 2));
-        graph.add(zone, air(50, CELL, ROOM_T), LedgerCategory.DEVICE);
+        graph.add(zone, air(50, CELL, ROOM_T), LedgerCategory.API);
         graph.remove(zone, 0.25, LedgerCategory.LIFE);
         ConservationReport ok = graph.checkConservation(1);
         assertTrue(ok.conserved(), ok.violations()::toString);
         assertTrue(ok.recorded(LedgerCategory.AMBIENT, N2) > 0, "the new zone's ambient gas");
-        assertTrue(ok.recorded(LedgerCategory.DEVICE, N2) > 0);
+        assertTrue(ok.recorded(LedgerCategory.API, N2) > 0);
         assertTrue(ok.recorded(LedgerCategory.LIFE, N2) < 0);
         assertTrue(warnings.isEmpty());
 
@@ -247,8 +247,8 @@ class ConservationTest {
         assertEquals(1, warnings.size());
 
         // A change attributed to the wrong amount is still caught.
-        GasMixture parcel = graph.remove(zone, 0.1, LedgerCategory.DEVICE);
-        ledger.record(LedgerCategory.DEVICE, N2, parcel.moles(N2)); // undoes the record of the N₂ removed
+        GasMixture parcel = graph.remove(zone, 0.1, LedgerCategory.API);
+        ledger.record(LedgerCategory.API, N2, parcel.moles(N2)); // undoes the record of the N₂ removed
         ConservationReport wrong = graph.checkConservation(4);
         assertEquals(1, wrong.violations().size());
         assertEquals(N2, wrong.violations().get(0).gas());

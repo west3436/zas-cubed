@@ -61,8 +61,8 @@ import org.slf4j.LoggerFactory;
  *   <li><b>CORE-073.</b> Every atmos tick has the checker on, and any unexplained change fails.
  *   <li><b>An independent total.</b> Every {@value #CHECKPOINT} operations every chunk loads and the
  *       world settles. Then {@link GasCensus} across zones, networks and devices must equal what the run
- *       put in and took out itself, and what the ledger's categories record other than API and devices,
- *       which is gas devices move and stays in the total, and storage. Gas voided or supplied at paused
+ *       put in and took out itself, and what the ledger's categories record other than API, which is
+ *       gas devices move and stays in the total, and storage. Gas voided or supplied at paused
  *       zones (GEO-036, GEO-038) is by design and counts as recorded, as does gas sent to the open air
  *       at a position with no cell, and only there.
  *   <li><b>What's written.</b> Now and then a real save runs, and what the chunks wrote of the gas must
@@ -647,7 +647,7 @@ public final class IntegrityFuzzTests {
                         "CORE-073 found changes that no source or sink explains: " + report.violations());
             }
             for (LedgerCategory c : LedgerCategory.values()) {
-                if (c != LedgerCategory.API && c != LedgerCategory.DEVICE && c != LedgerCategory.STORAGE) {
+                if (c != LedgerCategory.API && c != LedgerCategory.STORAGE) {
                     double change = report.recorded(c, gas);
                     expected += change;
                     moved += Math.abs(change);

@@ -1363,7 +1363,8 @@ already, and spreads by FIRE-016's odds.
 **The conservation checker** (CORE-073) runs inside the worker. Every mole
 change is recorded under a ledger category, and the checker compares the
 dimension's totals before and after each tick. It is on in tests and fuzzing
-(NFR-010) and optional in game.
+(NFR-010) and optional in game. Devices use the public API (CONT-095), so what
+they move is recorded under `API`: the ledger has no category for them.
 
 ### Fire chemistry and fuel blocks
 

@@ -165,9 +165,9 @@ final class Station {
             gas[Harness.N2] = 0.79;
             gas[Harness.O2] = 0.21;
             if ((k & 1) == 0) {
-                h.add(p[0], p[1], p[2], gas, LedgerCategory.DEVICE);
+                h.add(p[0], p[1], p[2], gas, LedgerCategory.API);
             } else {
-                h.remove(p[0], p[1], p[2], gas, LedgerCategory.DEVICE);
+                h.remove(p[0], p[1], p[2], gas, LedgerCategory.API);
             }
         }
         for (int k = 0; k < breathers; k++) {
