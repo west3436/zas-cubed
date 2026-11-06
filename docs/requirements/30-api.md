@@ -625,7 +625,7 @@ no client-only class, and the loops the owner heard in the sound and particle wo
 come through it (`DeviceLoops`, `FireAlarmSounds`, `GeneratorBlockEntity`).*
 
 #### API-062 · Limit on logging third-party faults
-`Should` · `R1` · `Draft` · Verify: Unit · Trace: NFR-013, CONT-095
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: NFR-013, CONT-095
 
 The API shall say whether to log a fault from a named source, answering yes at most
 once per source per minute, from any thread, with or without ZAS³.
@@ -635,6 +635,9 @@ tested by `ThirdPartyFaultsTest`. It's in the API because the content mod may us
 the API (CONT-095) and NFR-013 needs one limit for both mods. It only answers yes or no,
 and the caller logs, because the API may not refer to a logging library (API-044). Its
 `advanceClockForTest` lets a GameTest see the next minute without waiting for it.*
+
+*2026-11-06: accepted by the owner, and Implemented: `ThirdPartyFaultsTest`
+(Unit) passes.*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009

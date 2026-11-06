@@ -211,6 +211,11 @@ region goes whole. A paused zone is left as it was, since it keeps its state
 is read as about dissolving into the ambient (CORE-076), not an operator's
 order.*
 
+*2026-11-06: the owner kept this rule: a zone beside a reset zone opens onto the
+ambient and vents, even if what it opens onto is a sealed room, until something
+changes beside it. A reset of a pinned zone also stays as it is: the zone resets
+and loses its pins.*
+
 #### OPS-006 · Admin logging
 `Could` · `R2` · `Deferred` — moved to R2 (lean scope; API-012's source attribution makes it easy to add later), 2026-10-31. · Verify: Inspect
 

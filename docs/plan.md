@@ -460,6 +460,31 @@ not the plan's 9. That moves FIRE-036, CLIENT-015, CLIENT-018 and CONT-127 to
 blowing out and the controller's seven mode buttons passed too. The round's decisions,
 including accepting API-062, are still with the owner.
 
+*2026-11-06: the owner settled the round's decisions.*
+
+| Decision | Result |
+|---|---|
+| A crash restoring more gas than went in ([#304](https://github.com/west3436/zas-cubed/pull/304)) | A known limit |
+| A block change dividing a zone just before its chunk saves (DATA-008) | A known limit, with no follow-up. The fuzz keeps excusing exactly that event |
+| Gas in flight when an engine faults (NFR-014) | Voided and recorded |
+| An ambient provider that throws (NFR-013) | It keeps its last good answer, [#321](https://github.com/west3436/zas-cubed/pull/321). With none yet, as after a restart, the next source applies |
+| `/zas reset` on a pinned zone (OPS-013) | It resets and loses its pins |
+| `/zas reset` beside a neighbouring zone (OPS-013) | The rule stays, so the neighbour can drain into a sealed room until something changes beside it. The fuzz resets only zones with no neighbour |
+| A waterlogged block with a shipped override (GEO-006) | Water wins, [#323](https://github.com/west3436/zas-cubed/pull/323). A pack's own override keeps the last word. Checked by GameTests; not tried in game |
+| Two layers of glass holding at any pressure (FLOW-007) | They stay as they are. A reinforced glass block is [#320](https://github.com/west3436/zas-cubed/issues/320) |
+| A border moving in two or more blocks in one atmos tick (GEO-031) | As built: the far part of a zone and its gas leave |
+| `ILifeSupport` and `IInternalSupply` (NFR-013) | They join NFR-013's list, guarded with the hazard handlers, [#35](https://github.com/west3436/zas-cubed/issues/35) |
+| Gas handlers (NFR-013) | They count as third-party code |
+| API-062 | Accepted, and *Implemented* |
+| A sealed room beside a moving ambient (ENV-017) | Counted as walls conducting, so ENV-017 stays *Implemented* |
+| ENV-014's seeded source | Stays *Implemented*, tested through a test-only ambient until real seeding in R2 |
+| NFR-012 after a pass not on a release commit | Stays *Implemented*. The pass repeats before each release |
+| NFR-025's client launch with Sodium | Before release. NFR-025 stays *Accepted* until then |
+| OPS-007 ([#37](https://github.com/west3436/zas-cubed/issues/37)) | Finished, [#324](https://github.com/west3436/zas-cubed/pull/324), and *Implemented* |
+| `zas-atmos` re-running the `zas` GameTests | Nightly only, [#325](https://github.com/west3436/zas-cubed/pull/325). The per-PR step went from about 7 m 18 s to about 5 m 15 s |
+| How often a zone's way out is checked again (GEO-023) | At most every 2 atmos ticks, not 8, [#326](https://github.com/west3436/zas-cubed/pull/326). A PR's fuzz comes to 60 to 67 s, and the cost in game isn't measured |
+| The ledger's unused `DEVICE` category | Removed, [#322](https://github.com/west3436/zas-cubed/pull/322): devices record as `API` |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -571,8 +596,8 @@ _Updated 2026-11-05._
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
      (#69), and block damage (#45)~~ *on main 2026-11-06 (#282 to #317; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The
-     owner played its combined test world the same day. Its decisions wait on the
-     owner. #69 stays open for NFR-013, NFR-025 and NFR-040.
+     owner played its combined test world and settled its decisions the same day
+     (#319 to #326). #69 stays open for NFR-013, NFR-025 and NFR-040.
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world the same day, and accepted its *Draft* IDs.
