@@ -232,7 +232,7 @@ the list, and can still bring back more gas than went in: the checklist has the
 numbers.*
 
 #### NFR-013 · Third-party fault isolation
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-55, D-04
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, D-04
 
 An exception thrown by third-party code (ambient providers, seal providers,
 code-defined reactions, hazard handlers, event listeners) shall be caught,
@@ -313,6 +313,16 @@ as the note above reads them. `ILifeSupport` and `IInternalSupply` (API-022)
 join this list, and get the same guard with the hazard handlers
 ([#35](https://github.com/west3436/zas-cubed/issues/35)). It stays Accepted
 until then.*
+
+*2026-11-06: Implemented. Hazard handlers (LIFE-032) are guarded in one place,
+`HandledHazards`. One that throws is skipped for the rest of that check, so what it did
+before throwing stands, the other handlers still run and it's called again at the next
+check. Its source is its id
+(`nfr_013_a_hazard_handler_that_throws_is_skipped_and_logged_once_a_minute`). The plan now
+passes in full: each kind the statement names, plus gas handlers, `ILifeSupport` and
+`IInternalSupply`, has a GameTest that makes it throw over several ticks or calls and
+counts the errors in the log, then moves the limit's clock on a minute and counts one
+more. A throwing suit leaving its wearer exposed is still for the owner to rule on.*
 
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
