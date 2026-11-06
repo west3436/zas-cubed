@@ -300,6 +300,23 @@ class DissolutionTest {
         assertFalse(room.isAlive());
     }
 
+    /** The time isn't saved: a zone back from chunk storage waits the whole delay again. */
+    @Test
+    void core_052_a_zone_back_from_storage_starts_over() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+        long id = room.id();
+        collect(graph, 2);
+
+        GasMixture gas = graph.evict(room);
+        Zone back = graph.loadShare(id, ROOM, gas, false);
+        collect(graph, 2);
+        assertTrue(back.isAlive(), "2 s since it came back isn't 3 s");
+        collect(graph, 1);
+        assertFalse(back.isAlive());
+    }
+
     @Test
     void core_052_a_zone_with_an_ambient_edge_is_left_to_core_076() {
         ZoneGraph graph = collecting(roomWithOpening());

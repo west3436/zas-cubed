@@ -32,6 +32,10 @@ import net.minecraft.world.phys.Vec3;
  * them; a test that runs over several ticks holds them with {@link #holdLoaded}, as a player nearby
  * would.
  *
+ * <p>The atmos ticks one test drives run every zone in the level, and count towards {@code
+ * sealed_zone_dissolve_seconds} (CORE-052). So in a batch with other tests, a test that runs over
+ * several ticks needs a room that doesn't match the ambient, or a pin, or its zone can go at any time.
+ *
  * <p>Numbered areas are at z = 8192, apart from the {@code AtmosTests} areas and from each other,
  * which keeps the tests independent of where their structures land. A test can also name its own
  * area anywhere in the world, out to the world border.
