@@ -346,9 +346,11 @@ public final class PumpTests {
         h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG), "the step down was refused");
         s.close(pump.setting(), 0, 1e-9, "the target stepped below 0");
         pump.set(4_450);
-        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.LAST_BUTTON), "the step up was refused");
+        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG + 3), "the step up was refused");
         s.close(pump.setting(), PumpFlow.MAX_TARGET, 1e-9, "the target stepped above 4,500 kPa");
         h.assertValueEqual(menu.value(PumpMenu.DATA_SETTING), 4_500, "the GUI's target at the top");
+        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.DEFAULT), "the default was refused");
+        s.close(pump.setting(), PressurePumpBlockEntity.DEFAULT_TARGET, 1e-9, "the target after its default");
 
         // The GUI shows the pressure at each end.
         in(pump).add(new GasParcel(Map.of(N2, 300 * RUN / (R * T)), T));
@@ -458,7 +460,7 @@ public final class PumpTests {
         h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG), "the step down was refused");
         s.close(pump.setting(), 0, 1e-9, "the rate stepped below 0");
         pump.set(95);
-        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.LAST_BUTTON), "the step up was refused");
+        h.assertTrue(menu.clickMenuButton(hand, PumpMenu.STEP_DOWN_BIG + 3), "the step up was refused");
         s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "the rate stepped above 100 L/s");
         pump.set(500);
         s.close(pump.setting(), PumpFlow.MAX_RATE, 1e-9, "the rate set above 100 L/s");

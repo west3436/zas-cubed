@@ -119,12 +119,17 @@ public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeC
      */
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockState looking = defaultBlockState().setValue(FACING, context.getNearestLookingDirection());
+        return facingFor(defaultBlockState(), context);
+    }
+
+    /** A state with the facing {@link #getStateForPlacement} gives it, from what its ports would join. */
+    protected final BlockState facingFor(BlockState base, BlockPlaceContext context) {
+        BlockState looking = base.setValue(FACING, context.getNearestLookingDirection());
         if (joinsPipe(looking, context)) {
             return looking;
         }
         for (Direction d : context.getNearestLookingDirections()) {
-            BlockState state = defaultBlockState().setValue(FACING, d);
+            BlockState state = base.setValue(FACING, d);
             if (joinsPipe(state, context)) {
                 return state;
             }

@@ -1,0 +1,23 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:filter"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:filter_mirrored"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:filter"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:filter_mirrored"
+  }
+}

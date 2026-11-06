@@ -22,7 +22,6 @@ import io.github.west3436.zas.atmos.mixer.MixerBlockEntity;
 import io.github.west3436.zas.atmos.mixer.MixerMenu;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
-import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
@@ -42,15 +41,21 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -417,53 +422,87 @@ public final class FilterMixerTests {
     }
 
     /**
-     * Flipping a device moves its side port to the other side: the port keeps its share of the gas and
-     * joins the pipe there, and the pipe it left keeps its own share and lets go of it.
+     * A mirrored item places the same block with its side port on the left, and lines it up by that
+     * port, which the window's slot reports. The two items craft into each other, a device drops and
+     * picks the item that places it, and the block's own item stays the plain one.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_013_flipping_moves_the_side_port_and_keeps_its_gas(GameTestHelper h) {
+    public static void cont_013_cont_077_a_mirrored_item_places_its_side_port_on_the_left(GameTestHelper h) {
         Site s = new Site(h, 624);
         s.clear();
-        FilterBlockEntity f = filter(s, 4);
-        // A run ready on the other side, which it doesn't join yet.
-        cap(s, 4, 1, 1, Direction.UP);
-        pipe(s, 4, 2, 1);
-        h.assertFalse(
-                s.level.getBlockState(s.abs(4, 2, 1)).getValue(PipeBlock.CONNECTIONS.get(Direction.SOUTH)),
-                "joined early");
-        side(f).add(new GasParcel(Map.of(N2, 34.0), T));
-        double perLitre = 34.0 / RUN;
-
-        f.flip();
-        BlockState state = s.level.getBlockState(f.getBlockPos());
-        h.assertTrue(state.getValue(SidePortBlock.MIRRORED), "the flip didn't change the block's state");
-        h.assertValueEqual(SidePortBlock.sideFace(state), Direction.NORTH, "the side port's face after a flip");
-        h.assertTrue(
-                s.level.getBlockState(s.abs(4, 2, 1)).getValue(PipeBlock.CONNECTIONS.get(Direction.SOUTH)),
-                "the new pipe didn't join");
-        h.assertFalse(
-                s.level.getBlockState(s.abs(4, 2, 3)).getValue(PipeBlock.CONNECTIONS.get(Direction.NORTH)),
-                "the old pipe didn't let go");
-        PipeNodeEntity left = s.entity(4, 2, 3, PipeNodeEntity.class);
-        s.close(side(f).volume(), RUN, 1e-9, "the side port's new network's volume");
-        s.close(side(f).totalMoles(), perLitre * PipeVolumes.PORT, 1e-9, "the side port's share");
-        s.close(left.network().gas().totalMoles(), perLitre * 2 * PipeVolumes.PIPE, 1e-9, "the old run's share");
-
-        // Back again, the two shares are one network.
-        f.flip();
-        h.assertFalse(s.level.getBlockState(f.getBlockPos()).getValue(SidePortBlock.MIRRORED), "the second flip");
-        s.close(side(f).volume(), RUN, 1e-9, "the side port's old network's volume");
-        s.close(
-                side(f).moles(N2)
-                        + s.entity(4, 2, 1, PipeNodeEntity.class)
-                                .network()
-                                .gas()
-                                .moles(N2),
-                34,
-                1e-9,
-                "the moles");
+        assertMirroredItem(h, s, AtmosBlocks.FILTER.get(), AtmosItems.FILTER.get(), AtmosItems.FILTER_MIRRORED.get());
+        assertMirroredItem(h, s, AtmosBlocks.MIXER.get(), AtmosItems.MIXER.get(), AtmosItems.MIXER_MIRRORED.get());
         s.clear();
         h.succeed();
+    }
+
+    private static void assertMirroredItem(GameTestHelper h, Site s, Block block, Item plain, Item mirrored) {
+        h.assertTrue(block.asItem() == plain, block + "'s own item isn't its plain one");
+        h.assertFalse(
+                plain.getDescription()
+                        .getString()
+                        .equals(mirrored.getDescription().getString()),
+                "the items share a name");
+        assertCrafts(h, plain, mirrored);
+        assertCrafts(h, mirrored, plain);
+
+        // A player looking south, with a pipe to the east: on the left of the way the gas would go, so
+        // only a mirrored side port joins it without turning the device.
+        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        player.setYRot(0);
+        player.setXRot(0);
+        BlockPos at = s.abs(4, 2, 2);
+        BlockPos pipe = at.east();
+        s.level.setBlockAndUpdate(at.below(), Site.STONE);
+        pipe(s, 5, 2, 2);
+
+        BlockState placed = placed(h, s, player, mirrored, at);
+        h.assertTrue(placed.is(block), mirrored + " placed " + placed);
+        h.assertTrue(placed.getValue(SidePortBlock.MIRRORED), mirrored + " placed it unmirrored");
+        h.assertValueEqual(placed.getValue(InlineDeviceBlock.FACING), Direction.SOUTH, mirrored + "'s facing");
+        h.assertValueEqual(SidePortBlock.sideFace(placed), Direction.EAST, mirrored + "'s side port");
+        h.assertTrue(
+                s.level.getBlockState(pipe).getValue(PipeBlock.CONNECTIONS.get(Direction.WEST)),
+                "the pipe didn't join " + mirrored + "'s side port");
+        SidePortMenu menu = (SidePortMenu)
+                ((SidePortEntity) s.level.getBlockEntity(at)).createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(menu.value(SidePortMenu.DATA_MIRRORED), 1, mirrored + "'s slot");
+        h.assertTrue(
+                block.getCloneItemStack(s.level, at, placed).is(mirrored), "picking the block didn't give " + mirrored);
+        s.level.setBlockAndUpdate(at, Site.AIR);
+
+        // The plain item, with no pipe to line up with, puts its side port on the right.
+        s.level.setBlockAndUpdate(pipe, Site.AIR);
+        placed = placed(h, s, player, plain, at);
+        h.assertFalse(placed.getValue(SidePortBlock.MIRRORED), plain + " placed it mirrored");
+        h.assertValueEqual(SidePortBlock.sideFace(placed), Direction.WEST, plain + "'s side port");
+        menu = (SidePortMenu)
+                ((SidePortEntity) s.level.getBlockEntity(at)).createMenu(1, player.getInventory(), player);
+        h.assertValueEqual(menu.value(SidePortMenu.DATA_MIRRORED), 0, plain + "'s slot");
+        h.assertTrue(block.getCloneItemStack(s.level, at, placed).is(plain), "picking the block didn't give " + plain);
+        s.level.setBlockAndUpdate(at, Site.AIR);
+    }
+
+    private static BlockState placed(GameTestHelper h, Site s, Player player, Item item, BlockPos at) {
+        ItemStack stack = new ItemStack(item);
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        BlockPos below = at.below();
+        stack.useOn(new UseOnContext(
+                player,
+                InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(below), Direction.UP, below, false)));
+        h.assertValueEqual(stack.getCount(), 0, item + " left after placing");
+        return s.level.getBlockState(at);
+    }
+
+    private static void assertCrafts(GameTestHelper h, Item from, Item to) {
+        CraftingInput input = CraftingInput.of(1, 1, List.of(new ItemStack(from)));
+        ItemStack made = h.getLevel()
+                .getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, input, h.getLevel())
+                .map(r -> r.value().assemble(input, h.getLevel().registryAccess()))
+                .orElse(ItemStack.EMPTY);
+        h.assertTrue(made.is(to) && made.getCount() == 1, from + " alone crafted " + made + ", not " + to);
     }
 
     /**
@@ -554,7 +593,7 @@ public final class FilterMixerTests {
     }
 
     /**
-     * A filter's GUI: its switch, target and flip act on the server, a target stays in 0–4,500 kPa, and
+     * A filter's GUI: its switch and target act on the server, a target stays in 0–4,500 kPa, and
      * it offers what it should. A button toggles only what the server's own list holds. The client's
      * menu shows that list, and its slots say what's on, but it can't act.
      */
@@ -575,8 +614,10 @@ public final class FilterMixerTests {
         s.close(f.target(), SidePortEntity.DEFAULT_TARGET, 1e-9, "a new filter's target");
         h.assertValueEqual(menu.value(SidePortMenu.DATA_TARGET), 101, "the target's slot");
         f.setTarget(4_480);
-        h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.LAST_BUTTON), "the step up was refused");
+        h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.STEP_DOWN_BIG + 3), "the step up was refused");
         s.close(f.target(), 4_500, 1e-9, "a step up past the limit");
+        h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.TARGET_DEFAULT), "the default was refused");
+        s.close(f.target(), SidePortEntity.DEFAULT_TARGET, 1e-9, "the target after its default");
         f.setTarget(30);
         h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.STEP_DOWN_BIG), "the step down was refused");
         s.close(f.target(), 0, 1e-9, "a step down past the limit");
@@ -591,10 +632,6 @@ public final class FilterMixerTests {
             s.close(f.target(), 1_000 + steps[i], 1e-9, "step " + i);
             f.setTarget(1_000);
         }
-
-        // Its button flips the side port.
-        h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.FLIP), "the flip was refused");
-        h.assertTrue(s.level.getBlockState(f.getBlockPos()).getValue(SidePortBlock.MIRRORED), "the flip didn't flip");
 
         // It offers the shipped tags, their gases, standard air and what's in the line.
         List<FilterOption> options = menu.options();
@@ -674,17 +711,17 @@ public final class FilterMixerTests {
                     menu.value(MixerMenu.DATA_BACK_PERCENT), 50 + steps[i], "fraction step " + i + "'s slot");
         }
         m.setBackPercent(95);
-        h.assertTrue(menu.clickMenuButton(hand, MixerMenu.LAST_MIX_BUTTON), "the big step up was refused");
+        h.assertTrue(menu.clickMenuButton(hand, MixerMenu.MIX_DOWN_BIG + 3), "the big step up was refused");
         h.assertValueEqual(m.backPercent(), 100, "a step up past 100 %");
+        h.assertTrue(menu.clickMenuButton(hand, MixerMenu.MIX_DEFAULT), "the default was refused");
+        h.assertValueEqual(m.backPercent(), MixerBlockEntity.DEFAULT_BACK_PERCENT, "the fraction after its default");
         m.setBackPercent(5);
         h.assertTrue(menu.clickMenuButton(hand, MixerMenu.MIX_DOWN_BIG), "the big step down was refused");
         h.assertValueEqual(m.backPercent(), 0, "a step down past 0 %");
         m.setBackPercent(500);
         h.assertValueEqual(m.backPercent(), 100, "a fraction set too high");
 
-        // The side port's buttons still work.
-        h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.FLIP), "the flip was refused");
-        h.assertTrue(s.level.getBlockState(m.getBlockPos()).getValue(SidePortBlock.MIRRORED), "the flip didn't flip");
+        // The target's buttons still work.
         h.assertTrue(menu.clickMenuButton(hand, SidePortMenu.STEP_DOWN_BIG), "the target's step was refused");
 
         for (int id : new int[] {-1, MixerMenu.LAST_MIX_BUTTON + 1, Integer.MAX_VALUE, Integer.MIN_VALUE}) {
@@ -748,6 +785,16 @@ public final class FilterMixerTests {
 
         assertDropsItself(h, s, filterState(Direction.EAST), AtmosItems.FILTER.get());
         assertDropsItself(h, s, mixerState(Direction.EAST), AtmosItems.MIXER.get());
+        assertDropsItself(
+                h,
+                s,
+                filterState(Direction.EAST).setValue(SidePortBlock.MIRRORED, true),
+                AtmosItems.FILTER_MIRRORED.get());
+        assertDropsItself(
+                h,
+                s,
+                mixerState(Direction.EAST).setValue(SidePortBlock.MIRRORED, true),
+                AtmosItems.MIXER_MIRRORED.get());
         h.succeed();
     }
 

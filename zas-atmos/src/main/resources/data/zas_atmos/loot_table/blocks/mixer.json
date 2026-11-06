@@ -5,8 +5,26 @@
       "rolls": 1,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "zas_atmos:mixer"
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "zas_atmos:mixer_mirrored",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "zas_atmos:mixer",
+                  "properties": {
+                    "mirrored": "true"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "zas_atmos:mixer"
+            }
+          ]
         }
       ],
       "conditions": [

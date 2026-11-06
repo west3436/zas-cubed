@@ -1,0 +1,23 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:mixer"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:mixer_mirrored"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "zas_atmos:mixer"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:mixer_mirrored"
+  }
+}

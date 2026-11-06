@@ -415,6 +415,12 @@ sends (`cont_014_a_controlled_vent_refuses_hand_settings`).*
 *2026-11-04: The scrubber's GUI follows the same pattern
 (`ScrubberTests.cont_074_a_scrubbers_gui_is_checked_and_a_controller_wins`).*
 
+*2026-11-06: The TGUI windows (CLIENT-022) add ids and still send only ids: a vent's and
+a scrubber's modes each have their own in place of one cycle button, and Default buttons
+reset a setting to a new device's value. The canister's window also shows each gas's moles,
+which the server sends it in a `CanisterSync`; that payload only goes to the client.
+`docs/research/server-authority.md` lists the ids.*
+
 #### CONT-010 · Valves
 `Must` · `R1` · `Implemented` · Verify: GameTest
 
@@ -547,6 +553,13 @@ energy are conserved. `FilterMixerTests.cont_013_a_real_filter_sends_what_it_sel
 and `cont_013_a_real_filter_selects_by_gas_and_by_gas_tag` (GameTest) check a real
 filter among three pipe networks.*
 
+*2026-11-06: The owner's change on the device windows: the window's Flip button
+is gone, and a filter's side outlet stays on the side it was placed with. A
+Filter places it on the right and a Mirrored Filter on the left, and each is
+shapelessly crafted from the other (D-77).
+`FilterMixerTests.cont_013_cont_077_a_mirrored_item_places_its_side_port_on_the_left`
+(GameTest) checks the placing, the recipes and what a mirrored block drops.*
+
 #### CONT-077 · Mixer
 `Should` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 
@@ -564,6 +577,11 @@ together when one is limited or runs short, the target, at most 100 L/s from eac
 input at its conditions, and that moles and thermal energy are conserved.
 `FilterMixerTests.cont_077_a_real_mixer_adds_both_inputs_in_their_fractions`
 (GameTest) checks a real mixer among three pipe networks.*
+
+*2026-11-06: The owner's change on the device windows, as for CONT-013: a Mixer
+places its side input on the right and a Mirrored Mixer on the left, and each is
+shapelessly crafted from the other (D-77). The same GameTest checks it. The
+window calls the two inputs Input 1, at the back, and Input 2, at the side.*
 
 #### CONT-014 · Vent
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01 · [vg §2.2](../research/vg-atmos-content.md#22-vents-and-scrubbers)
@@ -1429,6 +1447,9 @@ A wrench shall rotate and remove atmos parts.
 - **Verify:** A GameTest checks a wrench rotates and removes a pipe and a
   device.
 
+*2026-11-06: The owner's call: the wrench rotates parts and doesn't mirror them.
+A filter's or mixer's mirrored version is crafted instead (D-77).*
+
 #### CONT-091 · Wrench pressure lock
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
@@ -1688,6 +1709,9 @@ came from the zone or from a link.
 
 *2026-11-05: Implemented, on the owner's check in the S-11/S-13 world: the list showed the
 vent as in its zone and the scrubber outside it as linked.*
+
+*2026-11-06: the list is now the window's Parts tab (CLIENT-022), and it scrolls, so it
+shows every part where it used to stop at six and count the rest.*
 
 *2026-11-02: Built ([#50](https://github.com/west3436/zas-cubed/issues/50)). The GUI lists each part with its position, whether
 it is in the zone, linked or both, and whether it has power. This stays

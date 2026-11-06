@@ -42,6 +42,7 @@ public class PortableScrubberMenu extends PortableGasMenu {
                 DATA_COUNT,
                 access,
                 AtmosBlocks.PORTABLE_SCRUBBER.get(),
-                scrubber);
+                scrubber,
+                0);
     }
 }

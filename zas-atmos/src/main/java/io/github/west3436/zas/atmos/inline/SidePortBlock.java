@@ -5,7 +5,11 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
@@ -20,7 +24,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * An inline device with a third pipe port on one side: a filter or a mixer (architecture §11.5). Its
  * port 2 is to the right of the way its gas goes, or to the left while {@link #MIRRORED}, as its
  * {@code _mirrored} models show. Facing up or down, its models turn about the x axis, so the side
- * port stays east, or west while mirrored.
+ * port stays east, or west while mirrored. Which side it's on comes from the item that places it, a
+ * {@link MirroredDeviceItem} for the left, and nothing in the game changes it afterwards.
  */
 public abstract class SidePortBlock extends InlineDeviceBlock {
     /** Whether the side port is on the left of the way its gas goes. */
@@ -46,6 +51,19 @@ public abstract class SidePortBlock extends InlineDeviceBlock {
             mirroredShapes.put(d, turned(NORTH_MIRRORED, d));
         }
         registerDefaultState(defaultBlockState().setValue(MIRRORED, false));
+    }
+
+    /** The item that places it with its side port on the left. */
+    protected abstract ItemLike mirroredItem();
+
+    /** A state for its mirrored item to place. */
+    BlockState mirroredStateForPlacement(BlockPlaceContext context) {
+        return facingFor(defaultBlockState().setValue(MIRRORED, true), context);
+    }
+
+    @Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        return state.getValue(MIRRORED) ? new ItemStack(mirroredItem()) : super.getCloneItemStack(level, pos, state);
     }
 
     /** The face its side port is on. */

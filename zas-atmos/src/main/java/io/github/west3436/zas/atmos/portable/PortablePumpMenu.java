@@ -24,6 +24,9 @@ public class PortablePumpMenu extends PortableGasMenu {
 
     public static final int LAST_BUTTON = 5;
 
+    /** How far its two rows of settings push down its slots and the player's inventory. */
+    public static final int SHIFT = 22;
+
     /** 1 if it siphons, 0 if it releases. */
     public static final int DATA_SIPHON = PortableGasMenu.DATA_COUNT;
 
@@ -67,7 +70,8 @@ public class PortablePumpMenu extends PortableGasMenu {
                 DATA_COUNT,
                 access,
                 AtmosBlocks.PORTABLE_PUMP.get(),
-                pump);
+                pump,
+                SHIFT);
         this.pump = pump;
     }
 

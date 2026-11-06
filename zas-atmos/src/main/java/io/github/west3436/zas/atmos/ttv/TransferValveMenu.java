@@ -54,21 +54,21 @@ public class TransferValveMenu extends AbstractContainerMenu {
     public static final int START = 6;
 
     /** How wide its panel is. */
-    public static final int WIDTH = 240;
+    public static final int WIDTH = 212;
 
     /** Where the tank slots are drawn. */
     public static final int TANK_X = 8;
 
-    public static final int FIRST_Y = 18;
-    public static final int SECOND_Y = 42;
+    public static final int FIRST_Y = 22;
+    public static final int SECOND_Y = 45;
 
     /** Where the player's inventory starts. */
-    public static final int INVENTORY_X = 39;
+    public static final int INVENTORY_X = 25;
 
-    public static final int INVENTORY_Y = 133;
+    public static final int INVENTORY_Y = 110;
 
     /** Where a TTV in the off hand is drawn, left of the hotbar as the game's own HUD has it. */
-    public static final int OFF_HAND_X = 13;
+    public static final int OFF_HAND_X = 5;
 
     /** The inventory's slots in this menu follow the tanks, whose indices are their places. */
     private static final int TANKS = 2;

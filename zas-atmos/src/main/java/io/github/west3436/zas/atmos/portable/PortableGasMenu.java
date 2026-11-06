@@ -16,13 +16,13 @@ import net.neoforged.neoforge.items.SlotItemHandler;
  */
 public abstract class PortableGasMenu extends PortableMenu {
     /** Where the slots are drawn. */
-    public static final int SLOT_X = 176;
+    public static final int SLOT_X = 8;
 
-    public static final int BATTERY_Y = 88;
-    public static final int TANK_Y = 108;
+    public static final int BATTERY_Y = 43;
+    public static final int TANK_Y = 62;
 
     /** Where the player's inventory starts. */
-    public static final int INVENTORY_Y = 160;
+    public static final int INVENTORY_Y = 87;
 
     /** The {@link PortableStatus}'s ordinal. */
     public static final int DATA_STATUS = PortableMenu.DATA_COUNT;
@@ -44,6 +44,7 @@ public abstract class PortableGasMenu extends PortableMenu {
     /**
      * @param dataCount how many values there must be: {@link #DATA_COUNT} or more
      * @param device the portable; null on the client
+     * @param shift how far down its window's own rows push its slots and the player's inventory
      */
     protected PortableGasMenu(
             MenuType<?> type,
@@ -55,15 +56,16 @@ public abstract class PortableGasMenu extends PortableMenu {
             int dataCount,
             ContainerLevelAccess access,
             Block block,
-            PortableGasDevice device) {
+            PortableGasDevice device,
+            int shift) {
         super(
                 type,
                 id,
                 inventory,
                 List.of(
-                        new SlotItemHandler(battery, 0, SLOT_X, BATTERY_Y),
-                        new SlotItemHandler(tank, 0, SLOT_X, TANK_Y)),
-                INVENTORY_Y,
+                        new SlotItemHandler(battery, 0, SLOT_X, BATTERY_Y + shift),
+                        new SlotItemHandler(tank, 0, SLOT_X, TANK_Y + shift)),
+                INVENTORY_Y + shift,
                 data,
                 dataCount,
                 access,

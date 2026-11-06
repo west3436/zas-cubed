@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.SuitItem;
+import io.github.west3436.zas.atmos.inline.MirroredDeviceItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
@@ -70,6 +71,13 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> FILTER = ITEMS.registerSimpleBlockItem(AtmosBlocks.FILTER);
     public static final DeferredItem<BlockItem> MIXER = ITEMS.registerSimpleBlockItem(AtmosBlocks.MIXER);
+
+    // The same blocks, with their side ports on the other side (CONT-013, CONT-077).
+
+    public static final DeferredItem<MirroredDeviceItem> FILTER_MIRRORED =
+            ITEMS.registerItem("filter_mirrored", p -> new MirroredDeviceItem(AtmosBlocks.FILTER.get(), p));
+    public static final DeferredItem<MirroredDeviceItem> MIXER_MIRRORED =
+            ITEMS.registerItem("mixer_mirrored", p -> new MirroredDeviceItem(AtmosBlocks.MIXER.get(), p));
 
     public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =

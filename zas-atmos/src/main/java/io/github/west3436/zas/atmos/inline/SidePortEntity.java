@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The block entity of a {@link SidePortBlock}: an inline device with three ports and a target of
- * 0–4,500 kPa, one atmosphere when new. Its side port can flip to the other side.
+ * 0–4,500 kPa, one atmosphere when new.
  */
 public abstract class SidePortEntity extends InlineDeviceEntity {
     /** The port at the back. */
@@ -57,17 +57,6 @@ public abstract class SidePortEntity extends InlineDeviceEntity {
     }
 
     /**
-     * Moves its side port to the other side, keeping the port's gas. The wrench will do this when it
-     * exists (CONT-035); for now the GUI's button does. Server side.
-     */
-    public void flip() {
-        if (level != null) {
-            level.setBlockAndUpdate(worldPosition, getBlockState().cycle(SidePortBlock.MIRRORED));
-            portsChanged();
-        }
-    }
-
-    /**
      * The back, front and side ports' networks, valid. Building one can dissolve another that it
      * reaches, so it asks twice: the second answers are the networks all three settled in.
      *
@@ -100,7 +89,11 @@ public abstract class SidePortEntity extends InlineDeviceEntity {
 
     @Override
     protected int dataValue(int index) {
-        return index == SidePortMenu.DATA_TARGET ? (int) Math.round(target) : super.dataValue(index);
+        return switch (index) {
+            case SidePortMenu.DATA_TARGET -> (int) Math.round(target);
+            case SidePortMenu.DATA_MIRRORED -> getBlockState().getValue(SidePortBlock.MIRRORED) ? 1 : 0;
+            default -> super.dataValue(index);
+        };
     }
 
     @Override

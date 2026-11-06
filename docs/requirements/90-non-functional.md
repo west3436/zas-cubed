@@ -631,6 +631,10 @@ vg's `sound/`.*
 *2026-11-05: Implemented. CI's build job runs `scripts/check_credits.py`. All 555
 asset files have an entry, and an uncredited probe file made the script exit 1.*
 
+*2026-11-06: a font may keep its own license instead of being adapted under CC BY-SA 4.0
+(D-76). The script allows `Bitstream-Vera`, for files under `font/` only. DejaVu Sans's
+license text ships at `META-INF/licenses/DejaVu-Fonts.txt` in the `zas_atmos` jar.*
+
 #### NFR-046 · No NonCommercial assets
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26
 
