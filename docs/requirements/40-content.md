@@ -143,6 +143,16 @@ it spans at each change, and ends before it changes gas that a chunk out of full
 status has a share of. `PipeSaveTests.nfr_012_*` (GameTest) reads back what the
 saves wrote.*
 
+*2026-11-06: Note ([#226](https://github.com/west3436/zas-cubed/issues/226)):
+`PipeGapChunkTests.cont_003_a_pipe_placed_beside_a_chunk_away_joins_it_when_it_returns`
+(GameTest) places a pipe in a gap at a chunk border while the far chunk is out of
+full status, at each game tick of the atmos period, and it joins that side when
+the chunk returns. Writing it found a bug with the same symptom, now fixed: sides
+away in turn each came back with a valid network of their own and never joined.
+A node on a chunk's edge, and any port, now rejoins a connected neighbour in
+another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
+`cont_003_ports_away_in_turn_join_when_both_return`).*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 

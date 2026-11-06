@@ -1,7 +1,5 @@
 package io.github.west3436.zas.atmos.valve;
 
-import io.github.west3436.zas.atmos.pipe.PipeNetwork;
-import io.github.west3436.zas.atmos.pipe.PipeNode;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
@@ -36,24 +34,6 @@ public class ValveBlockEntity extends PipeNodeEntity {
             builtOpen = open;
             reconnect();
         }
-        PipeNetwork network = network();
-        if (open && sideApart(network)) {
-            reconnect();
-            network();
-        }
-    }
-
-    /**
-     * Whether a connected neighbour is in another network. It can be: a side whose chunk was away when
-     * the valve opened, its nodes in memory, comes back with the network it had, and nothing else tells
-     * either side.
-     */
-    private boolean sideApart(PipeNetwork network) {
-        for (PipeNode side : connectedNodes()) {
-            if (side.currentNetwork() != network) {
-                return true;
-            }
-        }
-        return false;
+        network();
     }
 }
