@@ -143,7 +143,7 @@ they now refuse them too (`nfr_011_only_a_living_player_toggles_their_own_intern
 `nfr_011_only_a_living_player_sets_the_tank_they_hold`).*
 
 #### NFR-012 · Exploit checklist
-`Must` · `R1` · `Accepted` · Verify: Manual · Trace: CORE-036, CORE-073
+`Must` · `R1` · `Implemented` · Verify: Manual · Trace: CORE-036, CORE-073
 
 Before each release, a manual exploit checklist shall pass with CORE-073
 reporting no unexplained change: pipes across chunk borders, chunk unloads and
@@ -154,6 +154,19 @@ sources by design, per CORE-036.)
 - **Rationale:** Inferred: these are the classic duplication paths in
   Minecraft tech mods.
 - **Verify:** Manual checklist run before each release.
+
+*2026-11-05: Implemented. The checklist is in
+[release-checklist.md](../release-checklist.md#exploit-checklist-nfr-012), and it
+repeats on each release's commit. Four of its five items are GameTests
+(`ExploitChecklistTests`, `PipeSaveTests`), and saving and quitting mid-transfer
+has steps for a dedicated server's console. All of it passed on one commit, as the
+checklist's results record: the gas came to 2023.420 mol before and 2023.417 and
+2023.423 after two stops, with the checker and the audit clean. Writing it found
+gas coming back from old saves, fixed in
+[#304](https://github.com/west3436/zas-cubed/pull/304). CORE-073 doesn't see gas in
+pipes, so these checks total the gas themselves, with `GasCensus`. A crash isn't on
+the list, and can still bring back more gas than went in: the checklist has the
+numbers.*
 
 #### NFR-013 · Third-party fault isolation
 `Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-55, D-04

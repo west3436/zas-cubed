@@ -21,7 +21,6 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentSettings;
 import io.github.west3436.zas.config.ZasServerConfig;
-import io.github.west3436.zas.engine.conservation.ConservationReport;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -65,17 +64,17 @@ public final class PipeSaveTests {
     private static final int WEST = 11;
 
     private static final int EAST = 20;
-    private static final int BORDER = 16;
-    private static final int Y = 2;
-    private static final int Z = 2;
-    private static final int ROOM = 22;
-    private static final double MOLES = 1_000;
+    static final int BORDER = 16;
+    static final int Y = 2;
+    static final int Z = 2;
+    static final int ROOM = 22;
+    static final double MOLES = 1_000;
 
     /** Game ticks for what was just built to settle: each node has stepped, so nothing else marks its chunk. */
     private static final int SETTLE = 30;
 
     /** What the row holds. A room starts with the ambient's air, so only this gas is the row's. */
-    private static final ResourceLocation GAS = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+    static final ResourceLocation GAS = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
 
     private PipeSaveTests() {}
 
@@ -474,10 +473,9 @@ public final class PipeSaveTests {
             return full(a, chunkA) && full(a, chunkB);
         }
 
-        /** The row's gas in the row and the room, once nothing is in flight. */
+        /** The row's gas, wherever it is in the two chunks, once nothing is in flight. */
         double stored() {
-            return vent.network().gas().moles(GAS)
-                    + a.zone(ROOM, Y, Z).mixture().moles(GAS);
+            return GasCensus.total(a, GAS, chunkA, chunkB);
         }
 
         void done() {
@@ -502,26 +500,11 @@ public final class PipeSaveTests {
         VentRig r = new VentRig(h, 2001);
         Area a = r.a;
         double[] start = new double[1];
-        double[] voided = new double[1];
-        double[] supplied = new double[1];
-        long[] counted = {Long.MIN_VALUE};
-        String[] broken = new String[1];
         VentBlockEntity[] old = new VentBlockEntity[1];
         CompletableFuture<?> formed =
                 GasMutations.add(a.level, a.point(ROOM, Y, Z), new GasParcel(Map.of(N2, 10.0), T), Area.SOURCE);
-        h.onEachTick(() -> {
-            ConservationReport report = a.service().dimension(a.level).lastConservation();
-            if (report == null || report.tick() == counted[0]) {
-                return;
-            }
-            counted[0] = report.tick();
-            if (broken[0] == null && !report.conserved()) {
-                broken[0] = "unexplained: " + report.violations();
-            }
-            int gas = a.service().dimension(a.level).registry().indexOf(GAS.toString());
-            voided[0] += report.voided(gas);
-            supplied[0] += report.supplied(gas);
-        });
+        GasCensus.Ledger ledger = new GasCensus.Ledger(a, GAS);
+        h.onEachTick(ledger::read);
         var sequence = h.startSequence()
                 .thenWaitUntil(() -> h.assertTrue(formed.isDone(), "the room's zone hasn't formed"))
                 .thenWaitUntil(() -> h.assertTrue(
@@ -557,8 +540,8 @@ public final class PipeSaveTests {
                 .thenWaitUntil(() -> h.assertTrue(r.vent.readyToStep(), "gas is still in flight"))
                 .thenIdle(40)
                 .thenExecute(() -> {
-                    a.close(r.stored() + voided[0] - supplied[0], start[0], "the row, the room and the ledger");
-                    h.assertTrue(broken[0] == null, String.valueOf(broken[0]));
+                    a.close(r.stored() + ledger.net(), start[0], "the row, the room and the ledger");
+                    ledger.assertExplained();
                     r.done();
                     ZasServerConfig.CONSERVATION_CHECKER.set(was);
                 })
