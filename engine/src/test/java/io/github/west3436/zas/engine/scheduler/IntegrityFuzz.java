@@ -14,10 +14,10 @@ import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,8 +43,8 @@ import java.util.regex.Pattern;
  *       category {@link LedgerCategory#STORAGE}, whatever the amount, so it can't see gas that a reload
  *       makes or loses. Here the gas of the zones and of the shares no zone holds yet must change only
  *       by what the other categories record. A share with no cells left, whose gas is dropped by design,
- *       is taken off. So is the exact difference a known limit on DATA-008 makes, for the zone it happens
- *       to and only when it happens: {@link #noteOutdatedShares}.
+ *       is taken off. So is the difference the limit on DATA-008 makes, for the zones it happens to and
+ *       only when it happens: {@link #noteDivisions}.
  * </ul>
  *
  * <p>Save/load cycles are clean stops: what a crash restores (#304) isn't tested. Gas added at a paused
@@ -113,11 +113,10 @@ final class IntegrityFuzz {
         int mostPaused;
         int rejectedMixtures;
         int droppedShares;
-        int outdatedShares;
+        int dividedZones;
+        int excusedDifferences;
         final double[] voided = new double[GASES];
         final double[] supplied = new double[GASES];
-        final double[] madeByOutdatedShares = new double[GASES];
-        final double[] lostByOutdatedShares = new double[GASES];
 
         @Override
         public String toString() {
@@ -125,20 +124,33 @@ final class IntegrityFuzz {
                     + " reloads, " + saveLoads + " save/load cycles, " + ticks + " atmos ticks, " + checkpoints
                     + " audits, " + rejectedComponents + " rejected components, at most " + mostZones + " zones and "
                     + mostPaused + " paused, " + rejectedMixtures + " rejected mixture changes, " + droppedShares
-                    + " dropped shares, " + voided[N2] + " mol of nitrogen voided, " + supplied[N2] + " supplied, "
-                    + outdatedShares + " outdated shares taken, which made " + madeByOutdatedShares[N2] + " and lost "
-                    + lostByOutdatedShares[N2] + " mol of nitrogen";
+                    + " dropped shares, " + dividedZones + " zones divided in a tick their chunk saved during, "
+                    + excusedDifferences + " differences excused for them, " + voided[N2] + " mol of nitrogen voided, "
+                    + supplied[N2] + " supplied";
         }
     }
 
     private record Room(int x0, int y0, int z0, int x1, int y1, int z1) {}
 
-    /**
-     * A share saved during a tick that was then rejected.
-     *
-     * @param excess per gas, how much more the share holds than the zone's share after that tick
-     */
-    private record OutdatedShare(long chunk, ChunkRecord record, long zone, double[] excess) {}
+    /** A chunk that saved between a tick's close and apply, and the table it saved from. */
+    private record SavedInFlight(long chunk, ChunkRecord record, AtmosSnapshot before) {}
+
+    /** A zone that divided in the tick one of its chunks saved during: see {@link #noteDivisions}. */
+    private static final class Division {
+        final long chunk;
+        final ChunkRecord record;
+        final double[] gone;
+        /** The zone and those it divided into, while they're in memory. */
+        final Set<Long> zones = new HashSet<>();
+        /** How many more ticks it may still show in, whatever leaves memory. */
+        int fresh = 2;
+
+        Division(long chunk, ChunkRecord record, double[] gone) {
+            this.chunk = chunk;
+            this.record = record;
+            this.gone = gone;
+        }
+    }
 
     private final long seed;
     private final int ops;
@@ -155,12 +167,9 @@ final class IntegrityFuzz {
     final TreeMap<Long, ChunkRecord> saved = new TreeMap<>();
     /** The records handed to the pipeline since the last tick, to look a dropped share up in. */
     private final TreeMap<Long, ChunkRecord> delivered = new TreeMap<>();
-    /** What chunks saved during the tick in flight, by chunk. */
-    private final TreeMap<Long, ChunkRecord> savedInFlight = new TreeMap<>();
-    /** What chunks saved during a rejected tick, until the table has caught up. */
-    private final TreeMap<Long, ChunkRecord> rejectedInFlight = new TreeMap<>();
-    /** Shares known to be out of date, until their zone leaves memory or their chunk loads. */
-    private final List<OutdatedShare> outdated = new ArrayList<>();
+
+    private final List<SavedInFlight> savedInFlight = new ArrayList<>();
+    private final List<Division> divisions = new ArrayList<>();
 
     private double[] expected = new double[GASES];
     private double[] moved = new double[GASES];
@@ -458,8 +467,11 @@ final class IntegrityFuzz {
         }
         sim.betweenCloseAndApply = s -> {
             s.betweenCloseAndApply = x -> {};
+            AtmosSnapshot before = s.snapshot();
             unloadNow(s, chunk);
-            savedInFlight.put(chunk, saved.get(chunk));
+            if (saved.containsKey(chunk)) {
+                savedInFlight.add(new SavedInFlight(chunk, saved.get(chunk), before));
+            }
         };
         step();
     }
@@ -577,6 +589,7 @@ final class IntegrityFuzz {
             }
         }
         reanchor = 0;
+        divisions.forEach(d -> d.fresh = 1); // the new engine holds what the records say
         step();
     }
 
@@ -614,17 +627,16 @@ final class IntegrityFuzz {
             stats.supplied[i] += report.supplied(i);
         }
         double[] total = total(table);
-        noteOutdatedShares(a, table);
+        noteDivisions(table);
         if (a.rejected() > 0) {
             reanchor = 2; // the rejected tick's records are undone in the next, outside any period
         }
         if (reanchor > 0) {
             reanchor--;
             expected = total;
-            countOutdatedShares(table, false);
+            settleDivisions(table);
             return;
         }
-        countOutdatedShares(table, true);
         for (int i = 0; i < GASES; i++) {
             for (LedgerCategory c : LedgerCategory.values()) {
                 if (c != LedgerCategory.STORAGE) {
@@ -634,73 +646,87 @@ final class IntegrityFuzz {
                 }
             }
             double allowance = 1e-6 + 1e-9 * (Math.max(total[i], expected[i]) + moved[i]);
-            if (!(Math.abs(total[i] - expected[i]) <= allowance)) {
-                throw new AssertionError("gas " + i + ": the zones and the saved shares hold " + total[i]
-                        + " mol, and the ledger's categories other than storage say " + expected[i]);
+            double difference = Math.abs(total[i] - expected[i]);
+            if (!(difference <= allowance)) {
+                if (!(difference <= allowance + gasOfDivisionsShowing(i, table))) {
+                    throw new AssertionError("gas " + i + ": the zones and the saved shares hold " + total[i]
+                            + " mol, and the ledger's categories other than storage say " + expected[i]);
+                }
+                stats.excusedDifferences++;
+                expected[i] = total[i];
             }
         }
+        settleDivisions(table);
     }
 
     /**
-     * Finds the shares of the known limit on DATA-008. A chunk that saves between a tick's close and apply
-     * writes the table from before that tick. If the tick is rejected, its gas goes back but its geometry
-     * stands, so the zone's share of the chunk is now something else. Once the table has caught up, the
-     * difference between the two is that one tick's change, for that zone, and it's all that is excused.
+     * Finds the limit on DATA-008. A chunk that saves between a tick's close and apply writes the table from
+     * before that tick. If a block change in that tick divides the zone, the share written holds gas that's
+     * in the other parts too, and the total goes out when those zones leave memory or the chunk loads. That
+     * is all that's excused: a zone that once the table has caught up has fewer cells in the chunk than the
+     * share and less gas than it had, for the gas it no longer holds, in the ticks that shows in.
      */
-    private void noteOutdatedShares(DimensionPipeline.Applied a, AtmosSnapshot table) {
-        if (a.rejected() > 0) {
-            rejectedInFlight.putAll(savedInFlight);
+    private void noteDivisions(AtmosSnapshot table) {
+        if (table.hasRejections()) {
+            return; // a rejected zone is answered from the last table, so it hasn't caught up yet
+        }
+        for (SavedInFlight s : savedInFlight) {
+            if (saved.get(s.chunk) != s.record) {
+                continue; // it has loaded again, and a share whose zone is in memory isn't taken
+            }
+            for (ZoneShare share : s.record.zones()) {
+                long id = share.zoneId();
+                ZoneView before = s.before.zone(id);
+                ZoneView now = table.zone(id);
+                ZoneShare part = shareOf(table, s.chunk, id);
+                if (before != null && now != null && (part == null || part.cellCount() < share.cellCount())) {
+                    double[] gone = new double[GASES];
+                    boolean fell = false;
+                    for (int i = 0; i < GASES; i++) {
+                        gone[i] = Math.max(0, before.moles(i) - now.moles(i));
+                        fell |= gone[i] > 1e-9 * before.moles(i);
+                    }
+                    if (fell) {
+                        Division division = new Division(s.chunk, s.record, gone);
+                        division.zones.add(id);
+                        for (long chunk : s.before.zoneChunks(id)) {
+                            ZoneShare old = shareOf(s.before, chunk, id); // a chunk it's waiting on has none
+                            for (ZoneShare other : old == null ? List.<ZoneShare>of() : table.shares(chunk)) {
+                                if (overlap(old.cells(), other.cells())) {
+                                    division.zones.add(other.zoneId());
+                                }
+                            }
+                        }
+                        divisions.add(division);
+                        stats.dividedZones++;
+                    }
+                }
+            }
         }
         savedInFlight.clear();
-        if (table.hasRejections()) {
-            return;
-        }
-        rejectedInFlight.forEach((chunk, record) -> {
-            if (saved.get(chunk) != record) {
-                return; // it has loaded again, and a share whose zone is in memory isn't taken
-            }
-            for (ZoneShare share : record.zones()) {
-                ZoneShare now = shareOf(table, chunk, share.zoneId());
-                if (now != null) {
-                    double[] excess = new double[GASES];
-                    boolean differs = false;
-                    for (int i = 0; i < GASES; i++) {
-                        excess[i] = share.moles(i) - now.moles(i);
-                        differs |= Math.abs(excess[i]) > 1e-9 * Math.max(share.moles(i), now.moles(i));
-                    }
-                    if (differs) {
-                        outdated.add(new OutdatedShare(chunk, record, share.zoneId(), excess));
-                    }
-                }
-            }
-        });
-        rejectedInFlight.clear();
     }
 
-    /**
-     * Moves the expected total by an outdated share's excess at the tick the share starts to count, which
-     * is when its zone leaves memory. If the chunk loads first, the share is never taken and nothing moves.
-     */
-    private void countOutdatedShares(AtmosSnapshot table, boolean move) {
-        for (Iterator<OutdatedShare> it = outdated.iterator(); it.hasNext(); ) {
-            OutdatedShare share = it.next();
-            if (saved.get(share.chunk) != share.record) {
-                it.remove();
-            } else if (shareOf(table, share.chunk, share.zone) == null) {
-                it.remove();
-                if (move) {
-                    stats.outdatedShares++;
-                    for (int i = 0; i < GASES; i++) {
-                        expected[i] += share.excess[i];
-                        if (share.excess[i] > 0) {
-                            stats.madeByOutdatedShares[i] += share.excess[i];
-                        } else {
-                            stats.lostByOutdatedShares[i] -= share.excess[i];
-                        }
-                    }
-                }
+    /** What the divisions showing in this tick no longer hold of a gas: the most they can put the total out. */
+    private double gasOfDivisionsShowing(int gas, AtmosSnapshot table) {
+        double gone = 0;
+        for (Division d : divisions) {
+            boolean showing = d.fresh > 0 || saved.get(d.chunk) != d.record;
+            for (long id : d.zones) {
+                showing |= table.zone(id) == null;
+            }
+            if (showing) {
+                gone += d.gone[gas];
             }
         }
+        return gone;
+    }
+
+    private void settleDivisions(AtmosSnapshot table) {
+        divisions.removeIf(d -> {
+            d.fresh--;
+            d.zones.removeIf(id -> table.zone(id) == null);
+            return d.zones.isEmpty() || saved.get(d.chunk) != d.record;
+        });
     }
 
     private static ZoneShare shareOf(AtmosSnapshot table, long chunk, long zone) {
@@ -710,6 +736,15 @@ final class IntegrityFuzz {
             }
         }
         return null;
+    }
+
+    private static boolean overlap(long[] cells, long[] ascending) {
+        for (long cell : cells) {
+            if (Arrays.binarySearch(ascending, cell) >= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** What the published zones hold, and the saved shares no zone has cells for yet. */

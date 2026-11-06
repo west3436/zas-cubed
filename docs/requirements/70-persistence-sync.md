@@ -82,17 +82,30 @@ relative error of 1e-9 per gas.
 
 *2026-11-05: A known limit, found by the integrity fuzz (NFR-010). A rebuilt
 zone does hold the sum of its shares, but the shares can fail to add up to what
-the zone held. A chunk that saves during an atmos tick writes the table from
-before that tick. If the tick is rejected, its gas goes back but its block
-change stands, so the zone's other chunks later write shares of a zone that has
-changed. It can go both ways, as measured in a room of 720 mol and 72 cells,
-half of them in the saving chunk: a cell filled in that tick makes 5.07 mol
-(`data_008_known_limit_a_save_during_a_rejected_tick_can_make_gas`), and a hole
-into an empty 36-cell pocket loses 122.2 mol
-(`data_008_known_limit_a_save_during_a_rejected_tick_can_lose_gas`), so the size
-follows how many cells that tick changed. It needs a zone across chunks, a block
-change to it in the tick one of its chunks unloads in, and all of its chunks to
-unload before that one loads again.*
+the zone held. A chunk writes its share once, when it unloads, and the zone can
+change after that. Later shares now make up the difference: each is what the
+earlier ones left of the zone's gas, by volume among the chunks that haven't
+saved. So a cell filled in the tick a chunk saves during, a hole opened in that
+tick, and a paused zone taking in a share all still add up
+(`data_008_shares_add_up_when_a_cell_fills_in_the_tick_a_chunk_saves`,
+`data_008_shares_add_up_when_a_hole_opens_in_the_tick_a_chunk_saves`,
+`data_008_shares_add_up_when_a_paused_zone_takes_in_a_share`). While the zone
+hasn't changed, that is its plain share by volume, so what a crash can restore
+(#304) is no worse for it. The limit left is a zone that divides in that same
+tick, because the share already written holds gas that's now in the other parts
+too. The difference can go either way. In a room of 720 mol, half of it in the
+saving chunk, a wall across that half leaves 514.3 mol in the shares
+(`data_008_known_limit_a_zone_dividing_in_the_tick_a_chunk_saves_can_lose_gas`),
+where plain shares by volume would come to 771.4 mol, so in this one case the
+remainder is further off than plain shares were. Seed 4 of the fuzz has 2.49e247
+mol too much in one zone's shares at operation 3582, about 0.7% of the gas in
+that run. It needs a zone across chunks, and a block change that divides it in
+the tick one of its chunks unloads in. The fuzz excuses exactly that event, only
+for those zones, and by no more than the gas the zone no longer holds. The
+alternatives are for the owner to decide at review: an unload during a tick
+could wait for the worker, which removes the window but changes a core design
+rule, or the pipeline could track divisions and correct the share when the
+chunk reloads, which is a larger change.*
 
 #### DATA-010 · Held changes persist
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43

@@ -347,6 +347,30 @@ public final class AtmosSnapshot {
         return out;
     }
 
+    /** A zone's volume, as {@link #shares} scales by it; 0 if it isn't in this table. */
+    double zoneVolume(long zone) {
+        if (isRejected(zone)) {
+            return previous.zoneVolume(zone);
+        }
+        int i = ownIndex(zone);
+        return i < 0 || membership == null ? 0 : membership.zoneVolume(i);
+    }
+
+    /** A zone's volume in a chunk, as {@link #shares} scales by it; 0 if it has no cells there. */
+    double zoneVolumeIn(long zone, long chunk) {
+        if (isRejected(zone)) {
+            return previous.zoneVolumeIn(zone, chunk);
+        }
+        if (membership != null) {
+            for (Membership.Part part : membership.parts(chunk)) {
+                if (zones[part.zone()].id() == zone) {
+                    return part.volume();
+                }
+            }
+        }
+        return 0;
+    }
+
     /** Every chunk some zone of this table spans, ascending. */
     public long[] chunks() {
         java.util.TreeSet<Long> all = new java.util.TreeSet<>();
