@@ -417,6 +417,42 @@ Each went as recommended or as built:
 | Fire and blast sounds | [#259](https://github.com/west3436/zas-cubed/pull/259), [#261](https://github.com/west3436/zas-cubed/pull/261) | FIRE-036, FIRE-037 added as *Draft* | The owner's check. `fire.loop` is a quiet crackle, as vg's gas fire is silent |
 | Four fire test flakes | [#266](https://github.com/west3436/zas-cubed/pull/266) | None | None |
 
+*2026-11-06: the R1 parallel round on main.* Six tracks ran in parallel, followed by
+fault isolation and the integrity fuzz. The scope was ambient providers (#66), the
+gas-handler capability and seal providers (#60), dimension pause and region reset
+(#67), default block overrides and moving-block geometry (#65), block damage (#45)
+and most of #69, plus GEO-035 and DATA-001. S-09, S-10, the rest of #49 and #51,
+#200 and #179 stayed out. Every PR merged once CI passed. CI has no client, so
+nothing here has been seen in play, and the round's decisions and its combined test
+world are with the owner. That world also carries FIRE-036, CLIENT-015, CLIENT-018
+and CONT-127, which stay *Accepted* until it passes.
+
+NFR-010's fuzz found five gas bugs and a room that kept venting after its way out
+closed, and the exploit checklist for NFR-012 found one more gas bug. All are fixed.
+Seeds 1 to 40 pass locally in both halves, and 20 seeds of each passed on CI by hand.
+With each of the five gas fixes reverted in turn, the fuzz fails on the gas total at
+the operation that first caught it. One limit stays, in DATA-008's note: a block
+change that divides a zone between a chunk's last published tick and the next can
+make or lose gas. The fuzz excuses exactly that event, up to the larger of the zone's
+loss and the share written, so a real bug smaller than that, in a zone that has just
+divided after an unload, would go unseen. The fuzz resets only zones with no
+neighbour, because OPS-013's rule and GEO-032's audit disagree beside one.
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Dimension pause and region reset | [#292](https://github.com/west3436/zas-cubed/pull/292), [#300](https://github.com/west3436/zas-cubed/pull/300) | OPS-005, OPS-013 | The owner's decision on what a reset leaves beside a neighbouring zone |
+| Devices beside a paused zone | [#283](https://github.com/west3436/zas-cubed/pull/283) | GEO-035 | None |
+| Saved worlds and live config | [#295](https://github.com/west3436/zas-cubed/pull/295), [#302](https://github.com/west3436/zas-cubed/pull/302) | DATA-001, OPS-016 | None |
+| Ambient providers | [#287](https://github.com/west3436/zas-cubed/pull/287), [#291](https://github.com/west3436/zas-cubed/pull/291), [#293](https://github.com/west3436/zas-cubed/pull/293) | ENV-004, ENV-006, ENV-009, ENV-013, ENV-014, ENV-015, ENV-017 to ENV-020 | ENV-014's seeded source is tested through a test-only ambient, as real seeding is R2 |
+| Gas handlers and worn filters | [#285](https://github.com/west3436/zas-cubed/pull/285), [#296](https://github.com/west3436/zas-cubed/pull/296) | API-021, API-022, API-025, API-026 | None |
+| What seals | [#290](https://github.com/west3436/zas-cubed/pull/290), [#298](https://github.com/west3436/zas-cubed/pull/298), [#301](https://github.com/west3436/zas-cubed/pull/301), [#303](https://github.com/west3436/zas-cubed/pull/303), [#307](https://github.com/west3436/zas-cubed/pull/307), [#308](https://github.com/west3436/zas-cubed/pull/308) | API-023, API-028, GEO-006, GEO-009, GEO-013, GEO-014, GEO-021, GEO-027, GEO-031, GEO-042, GEO-043 | None |
+| Block damage | [#299](https://github.com/west3436/zas-cubed/pull/299) | FLOW-007, FLOW-015, FLOW-016, OPS-002 | The owner's check of windows blowing out |
+| Fault isolation | [#309](https://github.com/west3436/zas-cubed/pull/309), [#310](https://github.com/west3436/zas-cubed/pull/310) | NFR-014. API-062 added as *Draft*. NFR-013 stays *Accepted* | Hazard handlers ([#35](https://github.com/west3436/zas-cubed/issues/35)), which NFR-013 also guards |
+| Compatibility and checks | [#282](https://github.com/west3436/zas-cubed/pull/282), [#284](https://github.com/west3436/zas-cubed/pull/284), [#286](https://github.com/west3436/zas-cubed/pull/286), [#288](https://github.com/west3436/zas-cubed/pull/288), [#289](https://github.com/west3436/zas-cubed/pull/289), [#294](https://github.com/west3436/zas-cubed/pull/294), [#306](https://github.com/west3436/zas-cubed/pull/306) | NFR-011, NFR-012, NFR-020, NFR-022, NFR-024, NFR-030. NFR-025 stays *Accepted* | One client launch with Sodium for NFR-025. NFR-012 repeats before each release |
+| Integrity fuzz | [#313](https://github.com/west3436/zas-cubed/pull/313), [#317](https://github.com/west3436/zas-cubed/pull/317) | NFR-010 | The nightly schedule has not been seen firing yet |
+| Bugs the checks found | [#304](https://github.com/west3436/zas-cubed/pull/304), [#311](https://github.com/west3436/zas-cubed/pull/311), [#312](https://github.com/west3436/zas-cubed/pull/312), [#314](https://github.com/west3436/zas-cubed/pull/314), [#315](https://github.com/west3436/zas-cubed/pull/315), [#316](https://github.com/west3436/zas-cubed/pull/316) | None | DATA-008's limit, below |
+| CI and test upkeep | [#297](https://github.com/west3436/zas-cubed/pull/297), [#305](https://github.com/west3436/zas-cubed/pull/305) | None | None |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -523,11 +559,13 @@ _Updated 2026-11-05._
    - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
      and #51 (gas mask, hardsuit, boots, analyzer, wrench, compressor,
      electrolyzer).
-   - **Before them,** the R1 work with little or no code so far, not yet
-     scheduled as a round: the gas-handler capability and seal providers (#60),
+   - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
-     (#69), and block damage (#45).
+     (#69), and block damage (#45)~~ *on main 2026-11-06 (#282 to #317; see
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Its
+     combined test world and decisions wait on the owner. #69 stays open for
+     NFR-013, NFR-025 and NFR-040.
    - ~~Sound and particles~~ *on main 2026-11-05 (#247 to #266; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world the same day, and accepted its *Draft* IDs.
