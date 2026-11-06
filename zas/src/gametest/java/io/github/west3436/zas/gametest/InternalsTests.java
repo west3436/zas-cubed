@@ -14,9 +14,12 @@ import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.life.BreathState;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.life.Internals;
+import io.github.west3436.zas.life.LifeDamage;
 import io.github.west3436.zas.life.Respiration;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,16 +31,22 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -373,6 +382,169 @@ public final class InternalsTests {
             Breathability dry = BreathingRules.assess(in).verdict();
             h.assertValueEqual(dry.source(), BreathSource.ATMOSPHERE, "in the CO room with an empty tank");
             h.assertTrue(dry.hazards().contains(Hazard.TOXIC_GAS), "the CO room isn't toxic");
+        }
+        h.succeed();
+    }
+
+    // ---- LIFE-047 -----------------------------------------------------------------------------
+
+    /** A hurtable player under water in a room of air, its head at area (2, 2, 2). */
+    private static FakePlayer submerged(Lab lab, String name) {
+        double air = StandardAir.PRESSURE * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+        lab.room(0, Map.of(N2, air * 0.79, O2, air * 0.21));
+        lab.r.set(2, 1, 2, Blocks.WATER.defaultBlockState());
+        lab.r.set(2, 2, 2, Blocks.WATER.defaultBlockState());
+        FakePlayer p = TestPlayers.hurtable(lab.r.level, name);
+        p.moveTo(Vec3.atBottomCenterOf(lab.r.abs(2, 1, 2)));
+        return p;
+    }
+
+    private static void ticks(LivingEntity e, int n) {
+        for (int i = 0; i < n; i++) {
+            e.baseTick();
+        }
+    }
+
+    /**
+     * Internals that are on and supplied keep a player under water from drowning (LIFE-047). Its air
+     * and health hold for as long as it would take to drown, its meter refills, and it breathes and
+     * draws from its tank. With internals off, without the seal or without a tank, it drowns again.
+     * With Water Breathing it keeps vanilla's verdict and its tank isn't used.
+     */
+    @GameTest(template = "empty")
+    public static void life_047_internals_keep_a_submerged_player_from_drowning(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 276)) {
+            FakePlayer p = submerged(lab, "zas_life_047");
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            Internals.set(p, true);
+            float full = p.getHealth();
+            int air = p.getMaxAirSupply();
+
+            ticks(p, air + 20);
+            BreathState state = p.getData(Breathers.STATE);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.BREATHABLE, "with internals on");
+            h.assertValueEqual(state.verdict().source(), BreathSource.INTERNALS, "the breath with internals on");
+            h.assertTrue(state.verdict().protection().contains(Protection.SEALED_BREATHING), "no SEALED_BREATHING");
+            h.assertValueEqual(p.getAirSupply(), air, "air after it would have drowned");
+            h.assertValueEqual(p.getHealth(), full, "health after it would have drowned");
+
+            p.setAirSupply(100);
+            ticks(p, 10);
+            h.assertValueEqual(p.getAirSupply(), 140, "the meter refills at the vanilla rate");
+
+            // Checks run on the interval, not every tick, though its eyes are in a fluid.
+            int interval = BreathingConfig.checkIntervalTicks();
+            long t0 = lab.r.level.getGameTime() + interval;
+            t0 += Math.floorMod(-(t0 + p.getId()), interval);
+            Breathers.checkAt(p, t0);
+            Breathers.tickAt(p, t0 + 1);
+            h.assertValueEqual(state.lastCheck(), t0, "the last check");
+
+            // It draws from the tank.
+            double rate = Internals.drawRate(21.3, StandardAir.TEMPERATURE);
+            double before = TestLifeSupport.contents(p.getItemInHand(InteractionHand.OFF_HAND))
+                    .totalMoles();
+            Breathers.checkAt(p, t0 + interval);
+            double after = TestLifeSupport.contents(p.getItemInHand(InteractionHand.OFF_HAND))
+                    .totalMoles();
+            close(h, before - after, rate * interval / 20.0, 1e-12, "a check's draw");
+
+            // With Water Breathing, vanilla's verdict, and the tank isn't used.
+            p.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 200));
+            Breathers.checkAt(p, t0 + 2L * interval);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.FLUID_BREATHING, "with Water Breathing");
+            close(
+                    h,
+                    TestLifeSupport.contents(p.getItemInHand(InteractionHand.OFF_HAND))
+                            .totalMoles(),
+                    after,
+                    0,
+                    "the tank with Water Breathing");
+            p.removeAllEffects();
+
+            // Internals off, no seal or no tank: it drowns.
+            Runnable[] without = {
+                () -> Internals.set(p, false),
+                () -> {
+                    Internals.set(p, true);
+                    p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+                },
+                () -> {
+                    seal(p);
+                    p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                }
+            };
+            String[] cases = {"internals off", "no seal", "no tank"};
+            for (int i = 0; i < without.length; i++) {
+                without[i].run();
+                Breathers.checkAt(p, t0 + (3L + i) * interval);
+                h.assertValueEqual(state.verdict().reason(), BreathReason.DROWNING, cases[i]);
+                h.assertValueEqual(state.verdict().source(), BreathSource.FLUID, cases[i] + ": the source");
+                int was = p.getAirSupply();
+                ticks(p, 1);
+                h.assertValueEqual(p.getAirSupply(), was - 1, cases[i] + ": air");
+            }
+        }
+        h.succeed();
+    }
+
+    /** A tank short of O2 under water is hypoxia, not drowning, as a tank short of O2 is on land (LIFE-047). */
+    @GameTest(template = "empty")
+    public static void life_047_a_tank_short_of_o2_underwater_is_hypoxia(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 277)) {
+            FakePlayer p = submerged(lab, "zas_life_047_n2");
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(N2, 1.0), 21.3));
+            Internals.set(p, true);
+            float full = p.getHealth();
+            int air = p.getMaxAirSupply();
+            ticks(p, 1);
+            BreathState state = p.getData(Breathers.STATE);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.LOW_OXYGEN, "breathing N2");
+            h.assertValueEqual(state.verdict().source(), BreathSource.INTERNALS, "the breath");
+            h.assertValueEqual(p.getAirSupply(), air - 1, "the meter drains");
+            ticks(p, air - 1 + 20);
+            close(h, p.getHealth(), full - 2, 1e-4, "health once the meter has run out");
+            h.assertTrue(p.getLastDamageSource().is(LifeDamage.HYPOXIA), "the damage type");
+        }
+        h.succeed();
+    }
+
+    /**
+     * The client follows the server under water (LIFE-047): while the state synced says the player
+     * breathes its tank, its eyes in water don't start vanilla's drowning, and the verdict stays the
+     * tank's; while that tank is short of O2, the air drains as on land and drowning stays cancelled.
+     */
+    @GameTest(template = "empty")
+    public static void life_047_the_client_breathes_from_its_tank_underwater(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 278)) {
+            FakePlayer p = submerged(lab, "zas_life_047_client");
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            Internals.set(p, true);
+            ticks(p, 1);
+            BreathState state = p.getData(Breathers.STATE);
+            ClientBreath client = new ClientBreath();
+            client.accept(state.syncState());
+            LivingBreatheEvent breathing = new LivingBreatheEvent(p, false, 1, 4);
+            h.assertTrue(client.breathe(breathing, true), "the client left the breath to vanilla");
+            h.assertTrue(breathing.canBreathe(), "the client's player can't breathe from its tank");
+            Breathability verdict = client.verdict(p);
+            h.assertValueEqual(verdict.source(), BreathSource.INTERNALS, "the client's verdict under water");
+            h.assertValueEqual(verdict.reason(), BreathReason.BREATHABLE, "the client's reason under water");
+
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(N2, 1.0), 21.3));
+            Breathers.checkAt(p, lab.r.level.getGameTime() + 40);
+            client.accept(state.syncState());
+            LivingBreatheEvent choking = new LivingBreatheEvent(p, false, 1, 4);
+            h.assertTrue(client.breathe(choking, true), "the client left a bad tank to vanilla");
+            h.assertFalse(choking.canBreathe(), "the client's player breathes a tank of N2");
+            h.assertValueEqual(choking.getConsumeAirAmount(), 1, "the client's drain");
+            p.setAirSupply(-20);
+            LivingDrownEvent drowning = new LivingDrownEvent(p);
+            client.drown(drowning, true);
+            h.assertTrue(drowning.isCanceled(), "the client's player drowns while short of O2 from its tank");
         }
         h.succeed();
     }

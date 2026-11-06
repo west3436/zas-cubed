@@ -60,7 +60,9 @@ import org.jetbrains.annotations.Nullable;
  * too little O2 it sets {@code canBreathe} to false and scales the air consumed to the vanilla
  * underwater rate × (1 − pO2 / minimum), carrying fractions between ticks (LIFE-003). Otherwise it
  * leaves the event alone, so vanilla refills the meter in breathable air (LIFE-009), drowning
- * stays vanilla's under water (LIFE-022), and another mod's "can't breathe" stands (SPACE-002).
+ * stays vanilla's under water (LIFE-022), and another mod's "can't breathe" stands (SPACE-002). The
+ * exception is an entity breathing from its tank with its eyes in a fluid: this sets {@code
+ * canBreathe} to true, so the meter refills as in air and it doesn't drown (LIFE-047).
  * Once the meter is empty it runs at the vanilla rate, so {@link LivingDrownEvent} reports
  * drowning once a second as in vanilla; for a hypoxic entity this cancels that and deals 2 HP of
  * {@link LifeDamage#HYPOXIA} instead of drowning damage (LIFE-008), times the hazard's scale.
@@ -122,6 +124,8 @@ public final class Breathers {
             if (entity.getAirSupply() > 0) {
                 e.setConsumeAirAmount(state.drainThisTick(e.getConsumeAirAmount()));
             }
+        } else if (state.breathesTankInFluid()) {
+            e.setCanBreathe(true);
         }
     }
 
@@ -224,7 +228,7 @@ public final class Breathers {
             }
             return;
         }
-        state.checked(verdict, a.drain(), verdict.source() == BreathSource.FLUID, now);
+        state.checked(verdict, a.drain(), Breathing.vanilla(entity).source() == BreathSource.FLUID, now);
         if (verdict.reason() == BreathReason.EXEMPT) {
             state.clearExposure();
             return;
