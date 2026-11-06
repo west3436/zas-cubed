@@ -8,10 +8,15 @@ import static io.github.west3436.zas.gametest.Rooms.source;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.HazardConfig;
@@ -143,6 +148,70 @@ public final class LiveConfigTests {
                 ZasServerConfig.DELETE_DISPLACED_GAS.set(configured);
             }
         });
+        h.succeed();
+    }
+
+    /**
+     * A sealed room brought back to the ambient dissolves after {@code [atmos]
+     * sealed_zone_dissolve_seconds}: at the default period, 3 s is 3 atmos ticks. Its cells then read
+     * as the ambient, and a later addition forms a zone there again (CORE-052).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_052_a_sealed_zone_at_the_ambient_dissolves_after_the_delay(GameTestHelper h) {
+        Rooms r = new Rooms(h, 988);
+        r.clear(0, 8);
+        r.shell(0, 4);
+        double configured = ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.get();
+        try {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(3.0);
+            SourceId src = source("core_052");
+            r.settle(GasMutations.add(r.level, r.point(2, 2, 2), Rooms.oxygen(500), src));
+            ZoneId zone = r.zone(2, 2, 2).id();
+            r.ticks(5);
+            h.assertTrue(r.zoned(2, 2, 2), "a zone that doesn't match the ambient stays");
+
+            r.settle(GasMutations.remove(r.level, r.point(2, 2, 2), Map.of(O2, 500.0), src));
+            h.assertTrue(r.zoned(2, 2, 2), "1 s at the ambient");
+            r.tick();
+            h.assertTrue(r.zoned(2, 2, 2), "2 s at the ambient");
+            r.tick();
+            h.assertFalse(r.zoned(2, 2, 2), "3 s at the ambient");
+            h.assertTrue(Atmospheres.zone(r.level, zone).isEmpty(), "the zone is gone");
+            h.assertValueEqual(
+                    Atmospheres.at(r.level, r.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "the room's cells");
+
+            MutationOutcome again = r.settle(GasMutations.add(r.level, r.point(2, 2, 2), Rooms.oxygen(500), src))
+                    .outcome();
+            h.assertValueEqual(again, MutationOutcome.ZONE, "a later addition");
+        } finally {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
+        }
+        h.succeed();
+    }
+
+    /** A pinned sealed room at the ambient stays past the delay, and goes the delay after its pin does (CORE-052). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_052_a_pinned_zone_stays_past_the_delay(GameTestHelper h) {
+        Rooms r = new Rooms(h, 987);
+        r.clear(0, 8);
+        r.shell(0, 4);
+        double configured = ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.get();
+        try {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(3.0);
+            SourceId owner = source("core_052_pin");
+            h.assertValueEqual(
+                    r.settle(ZonePins.pin(r.level, r.point(2, 2, 2), owner)).outcome(), PinOutcome.ZONE, "the pin");
+            ZoneId zone = r.zone(2, 2, 2).id();
+            r.ticks(12);
+            h.assertTrue(Atmospheres.zone(r.level, zone).isPresent(), "the pinned zone was dissolved");
+
+            r.settle(ZonePins.unpin(r.level, owner));
+            h.assertTrue(Atmospheres.zone(r.level, zone).isPresent(), "the wait starts when the pin goes");
+            r.ticks(3);
+            h.assertTrue(Atmospheres.zone(r.level, zone).isEmpty(), "the zone outlived its pin by the delay");
+        } finally {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
+        }
         h.succeed();
     }
 

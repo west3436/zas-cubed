@@ -927,7 +927,7 @@ forms no zone. A fuel block of another mod still joins through the tag, as
 `…_like_the_generator`) checks.*
 
 #### CORE-052 · Zone garbage collection
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 A sealed zone, one with no ambient edge, shall be dissolved back to ambient when
 both hold:
@@ -957,6 +957,16 @@ zone with an ambient edge as soon as it matches the ambient, so the old Verify p
 which opened the room, could never reach a timed collection. It stays Accepted until
 the collection is built. CONT-110's "outlasts CORE-052's delay" is checked against an
 opened room for now, and should get a sealed room when this is built.*
+
+*2026-11-06: Implemented in phase 8. The delay is `[atmos] sealed_zone_dissolve_seconds`,
+60 s by default. `core_052_a_sealed_zone_at_the_ambient_dissolves_after_the_delay` and
+`core_052_a_pinned_zone_stays_past_the_delay` (GameTests) run the Verify plan. A zone stays
+in three cases the wording above doesn't name, each unit-tested in `DissolutionTest`:
+something has changed its gas or cells since the last exchange, so a room someone is
+breathing in keeps its zone, however little that changes its air; a zone joined to it through
+zone boundaries can't go yet, since that zone would then vent through the room as if it were
+the open air; or it is paused. The time isn't saved, so a zone rebuilt from its chunks starts
+over.*
 
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest

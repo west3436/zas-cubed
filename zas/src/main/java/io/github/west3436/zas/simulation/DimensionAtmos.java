@@ -1063,7 +1063,7 @@ public final class DimensionAtmos {
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
      * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
      * breaks them (FLOW-007), whether the dimension is paused (OPS-005), and whether a filled cell's
-     * gas is deleted (CORE-029).
+     * gas is deleted (CORE-029), and how long a sealed zone waits to dissolve (CORE-052).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =

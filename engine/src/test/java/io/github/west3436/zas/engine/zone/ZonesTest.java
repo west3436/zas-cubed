@@ -147,7 +147,7 @@ class ZonesTest {
     void core_029_the_option_deletes_a_filled_cells_share() {
         Grid grid = new Grid().box(0, 0, 0, 4, 0, 1, CELL);
         ZoneGraph graph = graph(grid, air(101.325, CELL, ROOM_T));
-        graph.setZoneSettings(new ZoneSettings(true));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withDeleteDisplacedGas(true));
         Zone zone = graph.createZone(Grid.cells(0, 0, 0, 4, 0, 1));
         graph.beginConservationPeriod();
         double n2 = zone.mixture().moles(N2);
@@ -175,7 +175,7 @@ class ZonesTest {
         grid.door(cell(0, 0, 0), cell(1, 0, 0));
         grid.door(cell(1, 0, 0), cell(2, 0, 0));
         ZoneGraph graph = graph(grid, vacuum());
-        graph.setZoneSettings(new ZoneSettings(true));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withDeleteDisplacedGas(true));
         Zone left = graph.createZone(cell(0, 0, 0));
         Zone middle = graph.createZone(cell(1, 0, 0));
         Zone right = graph.createZone(cell(2, 0, 0));
@@ -198,7 +198,7 @@ class ZonesTest {
     void core_029_the_option_deletes_what_a_shrunken_cell_displaced() {
         Grid grid = new Grid().box(0, 0, 0, 3, 0, 0, CELL);
         ZoneGraph graph = graph(grid, air(101.325, CELL, ROOM_T));
-        graph.setZoneSettings(new ZoneSettings(true));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withDeleteDisplacedGas(true));
         Zone zone = graph.createZone(Grid.cells(0, 0, 0, 3, 0, 0));
         graph.beginConservationPeriod();
         double moles = zone.mixture().totalMoles();

@@ -138,6 +138,254 @@ class DissolutionTest {
         assertEquals(0, graph.dissolveCount());
     }
 
+    // ---- Sealed zones (CORE-052) -------------------------------------------------------------
+
+    /** A graph whose sealed zones wait 3 s, at the 1 s period. */
+    private static ZoneGraph collecting(Grid grid) {
+        ZoneGraph graph = graph(grid, air(101.325, CELL, ROOM_T));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3));
+        return graph;
+    }
+
+    private static void collect(ZoneGraph graph, int times) {
+        for (int i = 0; i < times; i++) {
+            graph.collectSealed(id -> false);
+        }
+    }
+
+    /** Two sealed one-cell rooms joined through a door. */
+    private static Grid roomsThroughADoor() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 0, CELL);
+        grid.door(cell(0, 0, 0), cell(1, 0, 0));
+        return grid;
+    }
+
+    @Test
+    void core_052_a_sealed_zone_at_the_ambient_dissolves_after_the_delay() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+        assertNull(room.ambientEdge());
+        double heldN2 = room.mixture().moles(N2);
+        graph.beginConservationPeriod();
+
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "2 s isn't 3 s");
+        assertEquals(0, graph.dissolveCount());
+
+        collect(graph, 1);
+        assertFalse(room.isAlive(), "3 s is");
+        assertEquals(1, graph.dissolveCount());
+        for (long c : ROOM) {
+            assertNull(graph.zoneOf(c), "the cells hold the ambient again (CORE-050)");
+        }
+        ConservationReport report = graph.checkConservation(1);
+        assertTrue(report.conserved(), report::toString);
+        assertEquals(
+                -heldN2, report.recorded(LedgerCategory.AMBIENT, N2), 1e-9 * heldN2, "the gas went to the ambient");
+
+        Zone again = graph.createZone(ROOM);
+        assertEquals(heldN2, again.mixture().moles(N2), 1e-9 * heldN2, "a later trigger zones the cells anew");
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_052_the_delay_is_in_seconds() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        graph.setSettings(ExchangeSettings.DEFAULT.withPeriod(0.5));
+        Zone room = graph.createZone(ROOM);
+
+        collect(graph, 5);
+        assertTrue(room.isAlive(), "2.5 s isn't 3 s");
+        collect(graph, 1);
+        assertFalse(room.isAlive(), "3 s is");
+    }
+
+    @Test
+    void core_052_with_no_delay_a_sealed_zone_goes_at_the_first_match() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL).box(0, 0, 3, 1, 0, 3, CELL);
+        ZoneGraph graph = collecting(grid);
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(0));
+        Zone matching = graph.createZone(ROOM);
+        Zone thick = graph.createZone(Grid.cells(0, 0, 3, 1, 0, 3));
+        fillWith(graph, thick, air(150, CELL, ROOM_T));
+
+        collect(graph, 1);
+
+        assertFalse(matching.isAlive());
+        assertTrue(thick.isAlive(), "no delay doesn't take a zone that doesn't match");
+    }
+
+    @Test
+    void core_052_a_zone_that_stops_matching_starts_over() {
+        GasMixture ambient = air(101.325, CELL, ROOM_T);
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+
+        collect(graph, 2);
+        fillWith(graph, room, air(150, CELL, ROOM_T));
+        collect(graph, 20);
+        assertTrue(room.isAlive(), "it doesn't match");
+
+        fillWith(graph, room, ambient);
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "its time started over");
+        collect(graph, 1);
+        assertFalse(room.isAlive());
+    }
+
+    /**
+     * Respiration changes a room's air by far less than the tolerances, and needs a zone to do it
+     * (CORE-038), so a zone that keeps changing stays, however close to the ambient it is.
+     */
+    @Test
+    void core_052_a_zone_that_keeps_changing_stays() {
+        GasMixture ambient = air(101.325, CELL, ROOM_T);
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+        GasMixture breath = new GasMixture(REGISTRY, CONFIG, CELL, ROOM_T);
+        breath.setMoles(O2, 0.001);
+
+        for (int t = 0; t < 20; t++) {
+            graph.add(room, breath.copy(), LedgerCategory.LIFE);
+            graph.exchange();
+            graph.collectSealed(id -> false);
+        }
+        assertTrue(room.isAlive(), "something is still changing it");
+        assertTrue(room.mixture().isEquivalent(ambient), "by less than the tolerances");
+
+        // It has been left alone for 1 s of the 3 s.
+        for (int t = 0; t < 2; t++) {
+            assertTrue(room.isAlive());
+            graph.exchange();
+            graph.collectSealed(id -> false);
+        }
+        assertFalse(room.isAlive());
+    }
+
+    @Test
+    void core_052_a_pinned_zone_stays_and_waits_the_delay_once_unpinned() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+        graph.pin(room, "test:controller");
+
+        collect(graph, 20);
+        assertTrue(room.isAlive(), "nothing pinned dissolves");
+
+        graph.unpinEverywhere("test:controller");
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "the wait starts when the pin goes");
+        collect(graph, 1);
+        assertFalse(room.isAlive());
+    }
+
+    @Test
+    void core_052_a_paused_zone_stays() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = collecting(grid);
+        Zone room = graph.createZone(ROOM);
+        graph.setPaused(room, true);
+
+        collect(graph, 20);
+        assertTrue(room.isAlive(), "a paused zone's reading is only its last-known state");
+
+        graph.setPaused(room, false);
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "the wait starts when it resumes");
+        collect(graph, 1);
+        assertFalse(room.isAlive());
+    }
+
+    @Test
+    void core_052_a_zone_with_an_ambient_edge_is_left_to_core_076() {
+        ZoneGraph graph = collecting(roomWithOpening());
+        Zone room = graph.createZone(ROOM);
+        assertNotNull(room.ambientEdge());
+
+        collect(graph, 20);
+
+        assertTrue(room.isAlive());
+    }
+
+    @Test
+    void core_052_a_sealed_zone_in_a_vacuum_dissolves() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = graph(grid, deepSpace());
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3));
+        Zone room = graph.createZone(ROOM);
+
+        collect(graph, 3);
+
+        assertFalse(room.isAlive());
+    }
+
+    @Test
+    void core_052_zones_joined_by_a_door_dissolve_together() {
+        Grid grid = roomsThroughADoor();
+        ZoneGraph graph = collecting(grid);
+        Zone a = graph.createZone(cell(0, 0, 0));
+        Zone b = graph.createZone(cell(1, 0, 0));
+        graph.beginConservationPeriod();
+
+        collect(graph, 3);
+
+        assertFalse(a.isAlive());
+        assertFalse(b.isAlive());
+        assertEquals(0, graph.zoneCount());
+        assertTrue(graph.edges().isEmpty());
+        ConservationReport report = graph.checkConservation(1);
+        assertTrue(report.conserved(), report::toString);
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_052_a_zone_stays_while_a_zone_joined_to_it_cant_go() {
+        // Its neighbour would otherwise vent through the room as if the room were the open air.
+        for (String reason : List.of("pinned", "paused", "thick", "undecided")) {
+            Grid grid = roomsThroughADoor();
+            ZoneGraph graph = collecting(grid);
+            Zone a = graph.createZone(cell(0, 0, 0));
+            Zone b = graph.createZone(cell(1, 0, 0));
+            switch (reason) {
+                case "pinned" -> graph.pin(b, "test:controller");
+                case "paused" -> graph.setPaused(b, true);
+                case "thick" -> fillWith(graph, b, air(150, CELL, ROOM_T));
+                default -> {}
+            }
+            for (int i = 0; i < 3; i++) {
+                graph.collectSealed(id -> reason.equals("undecided") && id == b.id());
+            }
+            assertTrue(a.isAlive(), reason);
+            assertTrue(b.isAlive(), reason);
+            assertNull(a.ambientEdge(), reason);
+            assertNull(b.ambientEdge(), reason);
+            assertConsistent(graph, grid);
+        }
+    }
+
+    @Test
+    void core_052_zones_joined_by_a_door_wait_for_the_later_one() {
+        Grid grid = roomsThroughADoor();
+        ZoneGraph graph = collecting(grid);
+        Zone a = graph.createZone(cell(0, 0, 0));
+        Zone b = graph.createZone(cell(1, 0, 0));
+        fillWith(graph, b, air(150, CELL, ROOM_T));
+        collect(graph, 3);
+        assertTrue(a.isAlive(), "its time is up, but its neighbour doesn't match");
+
+        fillWith(graph, b, air(101.325, CELL, ROOM_T));
+        collect(graph, 2);
+        assertTrue(a.isAlive(), "its neighbour has matched for 2 s");
+        assertTrue(b.isAlive());
+        collect(graph, 1);
+        assertFalse(a.isAlive());
+        assertFalse(b.isAlive());
+    }
+
     @Test
     void core_076_zone_differing_in_temperature_at_normal_pressure_is_kept() {
         GasMixture ambient = air(101.325, CELL, ROOM_T);

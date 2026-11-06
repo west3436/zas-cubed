@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.engine.zone.ZoneSettings;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DynamicTest;
@@ -61,6 +62,14 @@ class IntegrityFuzzTest {
         assertTrue(s.mostZones > 3, "zones: " + s);
         assertTrue(s.mostPaused > 0, "paused zones: " + s);
         assertTrue(s.checkpoints >= 10, "audits: " + s);
+    }
+
+    /** Sealed zones dissolving at once, in every state the run reaches, keep every check passing. */
+    @Test
+    void core_052_integrity_with_sealed_zones_dissolving_at_once() {
+        new IntegrityFuzz(PR_SEED, 3000)
+                .zones(ZoneSettings.DEFAULT.withSealedDissolveSeconds(0))
+                .run();
     }
 
     @Test

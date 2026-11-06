@@ -21,7 +21,7 @@ public enum Phase {
     HOTSPOTS,
     /** 7: zone updates: reactions and events (R1). */
     ZONE_UPDATES,
-    /** 8: zone garbage collection (CORE-052, R1). */
+    /** 8: zone garbage collection (CORE-052). */
     GARBAGE_COLLECTION;
 
     /**
