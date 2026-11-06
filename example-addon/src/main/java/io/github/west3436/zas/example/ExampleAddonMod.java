@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.reaction.Reactions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
@@ -17,9 +18,10 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 /**
- * An example addon built on the ZAS³ API alone (API-048). It runs the same
- * way whether or not ZAS³ is installed: without it, the API's fallback answers
- * with standard air and vanilla's breathing rules (D-17).
+ * An example addon built on the ZAS³ API alone, using each of its extension points (API-047). {@code
+ * docs/api-consumers.md} lists them and which class here shows each. It runs the same way whether or
+ * not ZAS³ is installed (API-048): without it, the API's fallback answers with standard air and
+ * vanilla's breathing rules, and nothing calls what's registered here (D-17).
  */
 @Mod(ExampleAddonMod.MOD_ID)
 public final class ExampleAddonMod {
@@ -28,14 +30,22 @@ public final class ExampleAddonMod {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public ExampleAddonMod(IEventBus modBus) {
+        ExampleContent.register(modBus);
+        modBus.addListener(ExampleCapabilities::register);
         modBus.addListener(ExampleAddonMod::onCommonSetup);
         NeoForge.EVENT_BUS.addListener(ExampleAddonMod::onServerStarted);
         NeoForge.EVENT_BUS.addListener(ExampleAddonMod::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(ExampleHazards::onHazardTick);
+        NeoForge.EVENT_BUS.register(AtmosphereAlarm.class);
     }
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         // Safe whether or not zas is installed (API-040).
         LOGGER.info("ZAS³ API present: {}", ZasApi.isPresent());
+        // These take effect from any thread, and before datapacks load, as a reaction type must.
+        Reactions.registerType(CatalyticConverter.ID, CatalyticConverter.TYPE);
+        OutpostAir.register();
+        ExampleHazards.register();
     }
 
     private static void onServerStarted(ServerStartedEvent event) {

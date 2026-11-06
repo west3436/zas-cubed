@@ -11,8 +11,8 @@ sourceSets {
         compileClasspath += main.output + main.compileClasspath
         runtimeClasspath += main.output + main.runtimeClasspath
     }
-    // API-007: tests that run inside a built copy of this addon, beside zas's
-    // built jar.
+    // API-007 and API-047: tests that run inside a built copy of this addon,
+    // beside zas's built jar.
     oneCopy {
         compileClasspath += main.output + main.compileClasspath
         resources.srcDir 'src/gametest/resources'

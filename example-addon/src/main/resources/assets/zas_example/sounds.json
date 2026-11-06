@@ -1,0 +1,5 @@
+{
+  "tank_hiss": {
+    "sounds": ["minecraft:random/fizz"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "block.zas_example.airlock": "Airlock",
+  "block.zas_example.gas_tank": "Gas Tank",
+  "block.zas_example.shutter": "Shutter",
+  "gas.zas_example.radon": "Radon",
+  "item.zas_example.oxygen_tank": "Oxygen Tank",
+  "item.zas_example.pressure_helmet": "Pressure Helmet"
+}
