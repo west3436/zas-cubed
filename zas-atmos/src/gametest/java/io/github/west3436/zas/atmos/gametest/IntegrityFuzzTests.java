@@ -139,10 +139,10 @@ public final class IntegrityFuzzTests {
         var sequence = h.startSequence();
         for (long i = 0; i < seeds; i++) {
             long seed = first + i;
-            int area = FIRST_AREA + (int) i;
             // Every seed has its run: one failing doesn't stop the sequence, so each logs its own failure.
             sequence = sequence.thenExecute(() -> {
-                Run run = new Run(h, area, seed, ops);
+                // The same area each time, so a seed does the same on its own as among others.
+                Run run = new Run(h, FIRST_AREA, seed, ops);
                 long start = System.nanoTime();
                 try {
                     run.run();
@@ -243,6 +243,8 @@ public final class IntegrityFuzzTests {
         void run() {
             boolean was = ZasServerConfig.CONSERVATION_CHECKER.get();
             ZasServerConfig.CONSERVATION_CHECKER.set(true);
+            // A burst chooses its segment with the level's random (CONT-108), and a seed must replay.
+            a.level.getRandom().setSeed(seed);
             for (ChunkPos chunk : chunks) {
                 PipeSaveTests.hold(a, chunk, true);
             }
