@@ -1,4 +1,5 @@
 {
   "blocks": ["#minecraft:fences", "#minecraft:fence_gates", "minecraft:iron_bars"],
-  "volume": 1000
+  "volume": 1000,
+  "fluid_seals": true
 }

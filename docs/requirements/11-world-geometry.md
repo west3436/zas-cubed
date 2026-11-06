@@ -164,6 +164,10 @@ ZAS³ shall ship overrides for blocks whose collision shape misleads:
 checks every state of those blocks, and
 `geo_009_leaves_and_fences_pass_gas_and_honey_seals` passes in a real level.*
 
+*2026-11-06: the table's permeable defaults are for dry blocks. The owner chose
+that water wins in a waterlogged fence, leaf, iron bar or scaffolding (GEO-006),
+so those files now say `fluid_seals`.*
+
 #### GEO-006 · Fluids
 `Should` · `R1` · `Implemented` · Verify: GameTest
 
@@ -179,6 +183,20 @@ shall hold no gas and be gas-tight on all faces, unless overridden.
 `geo_006_waterlogged_block_seals_a_room` and
 `geo_006_overridden_fluid_does_not_seal` pass. An override also beats a waterlogged
 state, so a waterlogged fence passes gas under GEO-009's override.*
+
+*2026-11-06: the owner decided that water wins in a waterlogged block: it seals,
+matching what the player sees. So "unless overridden" no longer covers GEO-009's
+shipped overrides, which replaces the reading in the note above: a waterlogged
+fence, leaf, iron bar or scaffolding is gas-tight and holds no gas, and only the
+dry states take the override. A pack's own override still has the last word
+(D-45), for a fluid or a waterlogged state, unless it says `fluid_seals` as the
+shipped files do ([datapacks](../datapacks.md#geometry-overrides)).
+`geo_006_water_wins_over_the_shipped_overrides`,
+`geo_006_waterlogged_fence_leaf_and_bars_seal_a_room`,
+`geo_006_waterlogging_a_fence_seals_it_and_draining_opens_it` and
+`geo_006_pack_override_beats_water_and_zones_rebuild_without_it` pass. A zone
+saved through such a block comes back without its cell when an existing world
+loads, keeping its gas (DATA-009).*
 
 #### GEO-007 · Zone-boundary blocks
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [zas-core §2.3](../research/zas-core.md#23-cells-turfdm-atomdm)
