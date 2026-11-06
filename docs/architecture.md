@@ -2307,9 +2307,9 @@ jar, so providers can be tested before real devices exist.
   its block entities stay in memory, still scheduled. A device steps only
   while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
   step that read the device's own block, as a pipe rebuilding its network
-  does, would load the chunk again. A pipe network then rebuilt without that
-  chunk's nodes, and they rejoin when it returns and they step
-  (`PipeChunkTests`).
+  does, would load the chunk again. A pipe network ends the next time a member
+  uses it, and is rebuilt without that chunk's nodes, which keep their shares
+  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`).
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2462,7 +2462,16 @@ the cell in front of its grille).
   remaining nodes. A node whose chunk unloads keeps its share, saved with it,
   and the network dissolves; a network never reaches into an unloaded chunk.
 - **Saving.** Each node saves its share (`Gas`: temperature and moles per
-  gas), so a network's gas is saved across the chunks it spans.
+  gas), so a network's gas is saved across the chunks it spans. A chunk saves
+  only when told it has something new, and the gas lives in the network, so the
+  network watches its `GasStore` and tells each chunk it spans at every change.
+  It holds those chunks, so this loads nothing, and it reaches a chunk the
+  level no longer hands out. The game saves a chunk that has left full status
+  once and then not until it unloads, so a member gets its network through
+  `PipeNetwork.usable`, which ends the network first if a chunk it spans has
+  left. A stopping server writes every chunk at one moment, so the shares add
+  up. A crash between two chunks' saves can bring back a share from before the
+  other's, as it can with anything that moves between chunks (`PipeSaveTests`).
 - **Open ends** (CONT-004). A pipe with fewer than two connections has an open
   end. Once per atmos tick it exchanges each gas with the zone at its cell by
   ZAS's one-connection rule (CORE-031): r·(n_p·V_z − n_z·V_p)/(V_p + V_z) moles

@@ -80,7 +80,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         ports = new PipePort[portCount];
         for (int i = 0; i < portCount; i++) {
             int index = i;
-            ports[i] = new PipePort(PipeVolumes.PORT, () -> links(index));
+            ports[i] = new PipePort(PipeVolumes.PORT, () -> links(index), this::savedIn);
         }
     }
 
@@ -100,7 +100,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
 
     /** The node across a port's face, if a neighbour is connected there. */
     private List<PipeNode> links(int index) {
-        if (level == null) {
+        if (level == null || !level.isLoaded(worldPosition)) { // reading its block would load its chunk
             return List.of();
         }
         BlockState self = level.getBlockState(worldPosition);

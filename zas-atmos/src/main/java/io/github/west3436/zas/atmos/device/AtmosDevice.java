@@ -1,10 +1,12 @@
 package io.github.west3436.zas.atmos.device;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,8 +28,27 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     /** How hard it reads as working (DATA-017): made by its first report, so most pay nothing. */
     private @Nullable DeviceActivity activity;
 
+    private @Nullable LevelChunk chunk;
+
     protected AtmosDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    /**
+     * The chunk that saves this block entity, on a server. It is kept from the first time it is asked
+     * for, because the level stops handing out a chunk that has left full status, though it still
+     * saves the block entity when it unloads. Asking loads nothing.
+     *
+     * @return the chunk, or null if it isn't in a server level or hasn't been in a chunk in full status
+     */
+    public @Nullable LevelChunk savedIn() {
+        if (chunk == null && level instanceof ServerLevel server) {
+            chunk = server.getChunkSource()
+                    .getChunkNow(
+                            SectionPos.blockToSectionCoord(worldPosition.getX()),
+                            SectionPos.blockToSectionCoord(worldPosition.getZ()));
+        }
+        return chunk;
     }
 
     /**
