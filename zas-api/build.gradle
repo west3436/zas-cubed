@@ -86,7 +86,13 @@ def checkApiDependencies = tasks.register('checkApiDependencies') {
 }
 
 // javadoc runs with check so a broken comment fails the build, not the
-// publish (API-004, API-008).
+// publish (API-004, API-008). So does a missing one (API-005): javadoc leaves
+// doclint's "missing" group out by default and only warns about it, so ask for
+// every group and make a warning an error.
+tasks.named('javadoc', Javadoc) {
+    options.addBooleanOption('Xdoclint:all', true)
+    options.addBooleanOption('Werror', true)
+}
 tasks.named('check') { dependsOn checkApiPackages, checkApiDependencies, tasks.named('javadoc') }
 
 // Maven Central through the Sonatype Central Portal (API-008, D-18). A
@@ -192,7 +198,33 @@ if (baselineVersion.isEmpty()) {
     def (newMajor, newMinor) = parse(api_version.toString())
     def breakingAllowed = newMajor > oldMajor || (newMajor == 0 && oldMajor == 0 && newMinor > oldMinor)
 
+    // API-042: from 1.0, even a version that may break can't remove what the
+    // baseline didn't mark @Deprecated. 0.x promises nothing (API-041).
+    def deprecationRequired = oldMajor >= 1
+    def undeprecatedRemovals = { File xml ->
+        // A mark this version adds is no warning to anyone who used the baseline.
+        def marked = { node ->
+            node.annotations.annotation.any {
+                it.@fullyQualifiedName.text() == 'java.lang.Deprecated' && it.@changeStatus.text() != 'NEW'
+            }
+        }
+        def removed = { node -> node.@changeStatus.text() == 'REMOVED' && !marked(node) }
+        def found = []
+        new groovy.xml.XmlSlurper().parse(xml).classes.'class'.each { c ->
+            def name = c.@fullyQualifiedName.text()
+            if (removed(c)) {
+                found << name
+            } else if (!marked(c)) {
+                c.fields.field.findAll(removed).each { found << "${name}.${it.@name.text()}" }
+                c.methods.method.findAll(removed).each { found << "${name}.${it.@name.text()}()" }
+                c.constructors.constructor.findAll(removed).each { found << "${name}, a constructor" }
+            }
+        }
+        found
+    }
+
     def report = layout.buildDirectory.file('reports/apiCompat/apiCompat.html')
+    def xmlReport = layout.buildDirectory.file('reports/apiCompat/apiCompat.xml')
     def apiCompat = tasks.register('apiCompat', JavaExec) {
         group = 'verification'
         description = "Checks binary compatibility with the released API ${baselineVersion}."
@@ -205,6 +237,7 @@ if (baselineVersion.isEmpty()) {
         inputs.files(oldJar).withPropertyName('baseline')
         inputs.file(newJar).withPropertyName('current')
         outputs.file(report)
+        outputs.file(xmlReport)
 
         doFirst {
             report.get().asFile.parentFile.mkdirs()
@@ -216,6 +249,7 @@ if (baselineVersion.isEmpty()) {
                 '--new-classpath', cp,
                 '--only-modified',
                 '--html-file', report.get().asFile.absolutePath,
+                '--xml-file', xmlReport.get().asFile.absolutePath,
             ]
             if (breakingAllowed) {
                 logger.lifecycle("apiCompat: ${api_version} may break ${baselineVersion} " +
@@ -232,6 +266,12 @@ if (baselineVersion.isEmpty()) {
                 throw new GradleException("apiCompat: ${api_version} has binary-incompatible changes " +
                         "against ${baselineVersion}. Revert them, or bump the minor version under 0.x " +
                         "(the major from 1.0) in api_version. Report: ${file}")
+            }
+            def undeprecated = deprecationRequired ? undeprecatedRemovals(xmlReport.get().asFile) : []
+            if (undeprecated) {
+                throw new GradleException("apiCompat: ${api_version} removes what ${baselineVersion} didn't " +
+                        "mark @Deprecated (API-042):\n  " + undeprecated.join('\n  ') +
+                        "\nDeprecate it in a minor version first, then remove it in a later major. Report: ${file}")
             }
             def how = breakingAllowed ? 'breaking changes allowed by the version bump' : 'binary compatible'
             logger.lifecycle("apiCompat: passed against ${baselineVersion} (${how}). Report: ${file}")

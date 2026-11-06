@@ -100,7 +100,7 @@ public final class EnvironmentHazards {
             Set<Hazard> set = EnumSet.noneOf(Hazard.class);
             for (HazardType t : HazardType.values()) {
                 if (rate(t) > 0) {
-                    t.hazard().ifPresent(set::add);
+                    set.add(t.hazard());
                 }
             }
             return set;
@@ -216,7 +216,7 @@ public final class EnvironmentHazards {
                 Collections.unmodifiableSet(protection));
     }
 
-    /** Deals an exposure's damage for {@code seconds}, each hazard as its own damage type. */
+    /** Deals an exposure's damage for {@code seconds}, each hazard as its own tick and damage type (API-033). */
     static void apply(LivingEntity entity, Exposure exposure, double seconds) {
         if (seconds <= 0) {
             return;
@@ -224,7 +224,7 @@ public final class EnvironmentHazards {
         for (HazardType t : HazardType.values()) {
             double damage = exposure.rate(t) * seconds;
             if (damage > 0 && entity.isAlive()) {
-                entity.hurt(LifeDamage.source(entity, t.damageType()), (float) damage);
+                LifeDamage.deal(entity, t, damage);
             }
         }
     }

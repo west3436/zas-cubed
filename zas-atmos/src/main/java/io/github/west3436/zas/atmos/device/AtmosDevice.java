@@ -1,7 +1,9 @@
 package io.github.west3436.zas.atmos.device;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -32,6 +34,20 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
 
     protected AtmosDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    /** Writes the format version of what this block entity saves (DATA-003). */
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        DeviceData.writeVersion(tag);
+    }
+
+    /** Brings an older save forward (DATA-012), before any subclass reads it. */
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        DeviceData.migrate(tag);
     }
 
     /**

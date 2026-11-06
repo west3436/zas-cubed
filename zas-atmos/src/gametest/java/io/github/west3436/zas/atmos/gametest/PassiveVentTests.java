@@ -9,6 +9,7 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.particle.GasJet;
@@ -226,24 +227,21 @@ public final class PassiveVentTests {
     }
 
     /**
-     * CONT-016: in an open cell a passive vent equalizes with the ambient and forms no zone. It runs
-     * in real time, as the scrubber's open cell test does.
+     * CONT-016: in an open cell a passive vent equalizes with the ambient and forms no zone.
      */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH)
     public static void cont_016_a_passive_vent_in_an_open_cell_vents_to_the_ambient(GameTestHelper h) {
         Area a = new Area(h, 734);
-        a.forceLoad(true); // it waits in real time
         a.clear(0, 0, 4, 4);
         a.place(2, 1, 2, passiveVent(Direction.NORTH));
         PassiveVentBlockEntity v = a.entity(2, 1, 2);
         network(v, N2, 1_000);
         double start = v.network().gas().moles(N2);
-        h.startSequence()
-                .thenWaitUntil(() -> {
-                    h.assertTrue(v.network().gas().moles(N2) < start * 0.9, "the network still holds its gas");
-                    h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
-                })
-                .thenExecute(() -> a.forceLoad(false))
-                .thenSucceed();
+        for (int i = 0; i <= CellWatch.SETTLE_STEPS; i++) {
+            a.step();
+        }
+        h.assertTrue(v.network().gas().moles(N2) < start * 0.9, "the network still holds its gas");
+        h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
+        h.succeed();
     }
 }

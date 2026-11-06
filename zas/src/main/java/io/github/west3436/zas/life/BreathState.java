@@ -1,6 +1,7 @@
 package io.github.west3436.zas.life;
 
 import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,6 +68,14 @@ public final class BreathState {
     /** Whether the last check found too little O2 (LIFE-003). */
     boolean hypoxic() {
         return verdict != null && verdict.reason() == BreathReason.LOW_OXYGEN;
+    }
+
+    /**
+     * Whether the last check found its eyes in a fluid and it breathing from its tank all the same,
+     * so it doesn't drown there (LIFE-047).
+     */
+    boolean breathesTankInFluid() {
+        return inFluid && verdict != null && verdict.source() == BreathSource.INTERNALS && verdict.canBreathe();
     }
 
     /** The fraction of the vanilla underwater rate at which the air meter drains, 0 to 1 (LIFE-003). */
