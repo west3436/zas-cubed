@@ -36,9 +36,9 @@ public final class PresetOptions {
             null);
 
     /**
-     * Whether combustion in an enclosed, unzoned area forms a zone: fire, lit furnaces and
-     * campfires, and the fuel generator (CORE-056, FIRE-024, D-13), the burning states of the
-     * blocks in {@code #zas:combustion}. Read it through {@link ZoneTrigger#COMBUSTION}; the change
+     * Whether combustion in an enclosed, unzoned area forms a zone: fire, and lit furnaces and
+     * campfires (CORE-056, FIRE-024, D-13), the burning states of the blocks in {@code
+     * #zas:combustion}. Read it through {@link ZoneTrigger#COMBUSTION}; the change
      * hook does, when a block catches fire or is lit ({@link
      * io.github.west3436.zas.change.TriggerStates}).
      */
@@ -48,7 +48,7 @@ public final class PresetOptions {
             false,
             true,
             "Whether combustion forms a zone in an enclosed, unzoned area: a fire starting, or a"
-                    + " furnace, campfire or the fuel generator being lit (blocks in #zas:combustion)",
+                    + " furnace or campfire being lit (blocks in #zas:combustion)",
             "CORE-056, FIRE-024",
             null);
 

@@ -28,7 +28,7 @@ public enum ZoneTrigger {
      */
     BREACHES(null),
 
-    /** Combustion: fire, lit furnaces and campfires, and the fuel generator (CORE-056, FIRE-024). */
+    /** Combustion: fire, and lit furnaces and campfires (CORE-056, FIRE-024). */
     COMBUSTION(PresetOptions.COMBUSTION_FORMS_ZONES),
 
     /** Planting in an enclosed area (CORE-056, CONT-053). */
