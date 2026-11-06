@@ -564,7 +564,7 @@ the HUD and debug overlay change with it. Other mods' GUIs read the units throug
 API-063. The area air controller's window is the first device GUI to use them.*
 
 #### CLIENT-022 · TGUI look for device GUIs
-`Should` · `R1` · `Draft` · Verify: Manual · Trace: D-76, CONT-074
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074
 
 A device's window shall look like SS13's TGUI: a title bar with a status eye and a
 close button, titled sections, labelled lists, tabs, and TGUI's colours and proportions,
@@ -581,7 +581,8 @@ is kept short, with graphics where they say as much. The central controller, ele
 and analyzer have no window yet because they don't exist yet.*
 
 *2026-11-06: every one of those windows passed the owner's check in the game, with the
-filter and a TTV checked at GUI scales 2, 3, 4 and Auto.*
+filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, and
+Implemented.*
 
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Accepted` · Verify: Inspect

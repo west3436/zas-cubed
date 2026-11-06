@@ -11,7 +11,8 @@ API-055 to API-058, the fire API, were added as Draft on 2026-11-03
 five the same day. API-059, whether container explosions break blocks, was added
 as Draft on 2026-11-04 for CONT-107. API-060 and API-061, the client's sound API,
 were added as Draft on 2026-11-05 for CLIENT-015 and CLIENT-016. The owner
-accepted all three on 2026-11-05. API-063 is Draft until the owner's review.
+accepted all three on 2026-11-05. API-063, display units, was added as Draft on
+2026-11-06, and the owner accepted it the same day.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -676,7 +677,7 @@ and the caller logs, because the API may not refer to a logging library (API-044
 (Unit) passes.*
 
 #### API-063 · Display units through the API
-`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: CLIENT-006, CONT-095
+`Should` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: CLIENT-006, CONT-095
 
 The API shall convert a pressure in kPa and a temperature in K to the units the player
 chose, and name those units. Without ZAS³, and on a dedicated server, the answers are in
@@ -685,6 +686,9 @@ kPa and °C.
 *2026-11-06: added for review, with the behaviour built: `DisplayUnits`, tested by
 `DisplayUnitsTest`. It's in the API because the content mod may use only the API
 (CONT-095), and CLIENT-006 has its device GUIs follow the player's units.*
+
+*2026-11-06: accepted by the owner, and Implemented: `DisplayUnitsTest` (Unit) passes,
+and the owner saw a vent and a heater change units in the game.*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
