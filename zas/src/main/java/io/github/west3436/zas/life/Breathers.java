@@ -43,9 +43,10 @@ import org.jetbrains.annotations.Nullable;
  * eyes enter or leave a fluid. A server tick runs at most {@code max_checks_per_tick} checks; one
  * due beyond that waits for the next tick (LIFE-038). A check takes the verdict ({@link
  * BreathingRules#assess}), applies the gases' hazard profiles for the seconds since the last check
- * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}) and deals
- * the pressure and temperature damage ({@link EnvironmentHazards}). Rates are per second, so the
- * interval changes smoothness, not speed.
+ * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}), deals
+ * the pressure and temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard
+ * handlers ({@link HandledHazards}). Rates are per second, so the interval changes smoothness, not
+ * speed.
  *
  * <p><b>Unresolved atmosphere.</b> Where the atmosphere at the eyes is {@code UNRESOLVED}, such
  * as for the moment a loading room's zone isn't back yet, its mixture is only a last-known guess,
@@ -261,6 +262,7 @@ public final class Breathers {
         if (a.exposure() != null) {
             EnvironmentHazards.apply(entity, a.exposure(), seconds);
         }
+        HandledHazards.apply(entity, a, seconds);
     }
 
     /**

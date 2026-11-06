@@ -32,7 +32,7 @@ interfaces, records, events and capability definitions.
   outside `io.github.west3436.zas.api`.
 
 #### API-007 · Jar-in-jar bundling
-`Must` · `R1` · `Accepted` · Verify: Inspect, GameTest · Trace: D-17
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-17
 
 ZAS³ shall bundle the API module as a jar-in-jar, so that ZAS³ and consumer
 mods that bundle it share one copy.
@@ -40,6 +40,14 @@ mods that bundle it share one copy.
 - **Rationale:** Decision: D-17.
 - **Verify:** Inspect the jar; a GameTest loads ZAS³ with a consumer that
   bundles the API and checks only one copy is loaded.
+
+*2026-11-06: Implemented. The `zas` jar holds the API only as
+`META-INF/jarjar/io.github.west3436.zas-api-0.1.0.jar`, listed in its `metadata.json`.
+`:example-addon:runOneCopyGameTestServer`, its own step in CI, loads the built `zas` jar and
+a built copy of the example addon with no other API on the classpath.
+`api_007_zas_and_a_consumer_both_nest_the_api` checks that both jars nest it, and
+`api_007_only_one_copy_of_the_api_is_loaded` that the game's class loader finds one
+`ZasApi`, in one module, and that the addon's copy sees `zas` as the real provider.*
 
 #### API-008 · Maven Central publishing
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-18
