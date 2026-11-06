@@ -11,10 +11,27 @@ sourceSets {
         compileClasspath += main.output + main.compileClasspath
         runtimeClasspath += main.output + main.runtimeClasspath
     }
+    // API-007: tests that run inside a built copy of this addon, beside zas's
+    // built jar.
+    oneCopy {
+        compileClasspath += main.output + main.compileClasspath
+        resources.srcDir 'src/gametest/resources'
+    }
+    // That run's classpath, empty on purpose: the only API on it is what the two
+    // jars nest, so FML's jar-in-jar locator chooses, as in production.
+    oneCopyRun
 }
 
 neoForge {
+    addModdingDependenciesTo(sourceSets.oneCopyRun)
     runs {
+        oneCopyGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.oneCopyRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('oneCopyRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas_example'
+        }
         // S-12 (API-048): a GameTest server with the addon and the API only.
         // zas is never on this classpath, so the API's fallback answers.
         gameTestServer {
@@ -47,4 +64,17 @@ configurations.named('jarJar') {
     resolutionStrategy.dependencySubstitution {
         substitute module('io.github.west3436:zas-api') using project(':zas-api')
     }
+}
+
+// The addon as it ships, nested API included, plus the API-007 tests.
+def oneCopyJar = tasks.register('oneCopyJar', Jar) {
+    archiveClassifier = 'one-copy'
+    from sourceSets.main.output
+    from sourceSets.oneCopy.output
+    from tasks.named('jarJar')
+}
+
+dependencies {
+    oneCopyRunRuntimeOnly(project(':zas')) { transitive = false }
+    oneCopyRunRuntimeOnly files(oneCopyJar)
 }
