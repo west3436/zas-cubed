@@ -2181,7 +2181,9 @@ fallback, and a provider without it, give 16 kPa.
   the result's `FireEvent`s, posted at apply after the gas fire blocks change
   (§6.7).
 - Hazard-tick events (API-033) fire from the hazard service and may modify the
-  hazard before it applies.
+  hazard before it applies. *Implemented:* `LifeDamage.deal` and `LifeDamage.tick`
+  post `HazardTickEvent` through `ApiEvents`, once per hazard each time it would
+  harm an entity, so every hazard's damage goes through them.
 - Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
   objects.
 

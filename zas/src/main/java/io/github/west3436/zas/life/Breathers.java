@@ -141,9 +141,7 @@ public final class Breathers {
             entity.setAirSupply(0);
             double damage =
                     e.getDamageAmount() * HazardConfig.scale(entity.level().dimension(), HazardType.HYPOXIA);
-            if (damage > 0) {
-                entity.hurt(LifeDamage.source(entity, LifeDamage.HYPOXIA), (float) damage);
-            }
+            LifeDamage.deal(entity, HazardType.HYPOXIA, damage);
         }
     }
 

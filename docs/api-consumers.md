@@ -119,6 +119,34 @@ static void capabilities(RegisterCapabilitiesEvent event) {
   default), so keep it cheap. Without ZAS³ the capabilities still exist, but
   nothing reads them.
 
+## Adjusting or cancelling a hazard
+
+`HazardTickEvent` fires just before a hazard harms an entity (API-033), on the
+server thread, so a suit or perk of your own can reduce it or stop it.
+
+```java
+NeoForge.EVENT_BUS.addListener((HazardTickEvent e) -> {
+    if (e.hazard() == Hazard.COLD && hasMyThermalPerk(e.entity())) {
+        e.setDamage(e.damage() * 0.5);
+    }
+    if (e.hazard() == Hazard.HYPOXIA && hasMyLungs(e.entity())) {
+        e.setCanceled(true);
+    }
+});
+```
+
+- **One event per hazard, each time it would harm the entity:** at each breath
+  check for `TOXIC_GAS`, `LOW_PRESSURE`, `HIGH_PRESSURE`, `COLD` and `HEAT`, once a
+  second on an empty meter for `HYPOXIA`, and at each blow for `AIRFLOW_IMPACT`.
+- **The damage is in HP,** for all the time since the last check, after protection
+  and the hazard's scale. A `TOXIC_GAS` tick can have 0 damage if its gas only
+  applies status effects so far.
+- **Cancelling** deals no damage and, for `TOXIC_GAS`, applies no status effects.
+  Nothing else changes: exposures go on counting, `Breathing.of` still lists the
+  hazard, and a hypoxic entity's meter stays empty. To keep a gas's effects and
+  drop its damage, set the damage to 0.
+- **Without ZAS³** it never fires.
+
 ## Gas handlers
 
 A block that stores gas provides `IGasHandler` (API-021), so others can fill and
