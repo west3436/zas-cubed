@@ -1694,6 +1694,10 @@ with the test vacuum ambient), a room sealed after the controller went in, and
 removal. CORE-052's timed collection isn't built yet, so "outlasts" is checked
 against an opened room, which dissolves an unpinned zone at once.*
 
+*2026-11-06: CORE-052's collection is built, so "outlasts" now has a sealed room.
+`cont_110_a_controllers_zone_outlasts_the_delay` and its `_in_a_vacuum` twin check a controller's
+zone lasts past the delay, and goes once the controller is removed.*
+
 #### CONT-049 · Controller device list
 `Must` · `R1` · `Implemented` · Verify: Manual
 

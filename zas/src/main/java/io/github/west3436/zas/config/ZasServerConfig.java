@@ -72,6 +72,9 @@ public final class ZasServerConfig {
     /** Whether a filled cell's gas is deleted, as ZAS does, instead of staying in its zone (CORE-029, D-41). */
     public static final ModConfigSpec.BooleanValue DELETE_DISPLACED_GAS;
 
+    /** How long a sealed zone must match the ambient before it dissolves, in s (CORE-052). */
+    public static final ModConfigSpec.DoubleValue SEALED_ZONE_DISSOLVE_SECONDS;
+
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
 
@@ -146,6 +149,10 @@ public final class ZasServerConfig {
                         "What happens to the gas in a cell a block fills. false: it stays in the zone, so the",
                         "zone's pressure rises. true: it is deleted, as ZAS does, so the pressure stays as it was.")
                 .define("delete_displaced_gas", ZoneSettings.DEFAULT.deleteDisplacedGas());
+        SEALED_ZONE_DISSOLVE_SECONDS = builder.comment(
+                        "How long a sealed room's air must match the ambient before its zone is dissolved, in",
+                        "seconds. A pinned zone, such as an air controller's, is never dissolved.")
+                .defineInRange("sealed_zone_dissolve_seconds", ZoneSettings.DEFAULT.sealedDissolveSeconds(), 0.0, 1e9);
         builder.pop();
         builder.push("heat");
         HEAT_ENABLED = builder.comment(
@@ -311,9 +318,14 @@ public final class ZasServerConfig {
         return SPEC.isLoaded() ? VENTING.get() : ExchangeSettings.Venting.VOLUME_AWARE;
     }
 
-    /** What happens to a filled cell's gas (CORE-029); the defaults while no world's config is loaded. */
+    /**
+     * What happens to a filled cell's gas (CORE-029), and how long a sealed zone waits to dissolve
+     * (CORE-052); the defaults while no world's config is loaded.
+     */
     public static ZoneSettings zones() {
-        return SPEC.isLoaded() ? new ZoneSettings(DELETE_DISPLACED_GAS.get()) : ZoneSettings.DEFAULT;
+        return SPEC.isLoaded()
+                ? new ZoneSettings(DELETE_DISPLACED_GAS.get(), SEALED_ZONE_DISSOLVE_SECONDS.get())
+                : ZoneSettings.DEFAULT;
     }
 
     /** The server-thread budget in nanoseconds. */

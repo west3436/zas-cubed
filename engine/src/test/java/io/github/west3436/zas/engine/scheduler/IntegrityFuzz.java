@@ -13,6 +13,7 @@ import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
 import io.github.west3436.zas.engine.zone.Zone;
+import io.github.west3436.zas.engine.zone.ZoneSettings;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -186,11 +187,18 @@ final class IntegrityFuzz {
     private Consumer<IntegrityFuzz> sabotage = f -> {};
     private int sabotageAt = -1;
     private boolean doubleShares;
+    private ZoneSettings zones = ZoneSettings.DEFAULT;
 
     IntegrityFuzz(long seed, int ops) {
         this.seed = seed;
         this.ops = ops;
         this.random = new Random(seed);
+    }
+
+    /** Sets what the run's engines do with zones, such as how soon sealed ones dissolve (CORE-052). */
+    IntegrityFuzz zones(ZoneSettings settings) {
+        zones = settings;
+        return this;
     }
 
     /** Runs a change no operation makes, just before an operation: for tests that the checks catch it. */
@@ -630,6 +638,7 @@ final class IntegrityFuzz {
 
     private void newEngine() {
         sim = new Sim(world, null, EnclosureClassifier.FACTORY, PALETTE, REGISTRY, config);
+        sim.settings = sim.settings.withZones(zones);
         sim.engine.setSeed(seed);
     }
 

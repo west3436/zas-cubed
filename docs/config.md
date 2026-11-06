@@ -29,6 +29,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] conservation_checker` | `false` | Debug: run the invariant checker every atmos tick (CORE-073). `/zas checker` overrides it until the server stops |
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
 | `[atmos] delete_displaced_gas` | `false` | What happens to the gas in a cell a block fills: `false` keeps it in the zone, so the pressure rises (CORE-022), and `true` deletes it, as ZAS does, so the pressure stays as it was (CORE-029) |
+| `[atmos] sealed_zone_dissolve_seconds` | `60` | How long a sealed room's air must match the ambient before its zone is dissolved, in seconds (CORE-052). A pinned zone, such as an air controller's, is never dissolved |
 | `[heat] enabled` | `true` | Whether zones conduct heat through their walls, to and from heat sources, and radiate it to a vacuum (HEAT-001, HEAT-004) |
 | `[heat] fallback_transmittance` | `1.7` | U in W/(m²·K) per block-thick layer of a block with none in a datapack, 0.001 to 1,000,000 (HEAT-015). 1.7 is stone's |
 | `[heat] wall_thickness` | `3` | How many blocks deep a wall is searched for the space on its far side, 1 to 16 (HEAT-011). Past that, heat goes to the ground at the ambient temperature |

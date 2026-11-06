@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.LongPredicate;
 
 /**
  * The zones of one dimension, the edges between them and to the ambient, and
@@ -37,6 +38,8 @@ import java.util.TreeMap;
  *       joined by a direct opening merge, other equivalent edges sleep and
  *       equalize the zones they join through zone boundaries (CORE-067), and
  *       zones that match their ambient dissolve into it unless pinned (D-64);
+ *   <li>{@link #collectSealed}: sealed zones that have matched their ambient for long enough
+ *       dissolve into it unless pinned (CORE-052);
  *   <li>{@link #checkConservation(long)} when the checker is on.
  * </ol>
  *
@@ -347,7 +350,7 @@ public final class ZoneGraph {
         return splitCount;
     }
 
-    /** How many zones have dissolved into the ambient since the graph was created (CORE-076). */
+    /** How many zones have dissolved into the ambient since the graph was created (CORE-052, CORE-076). */
     public long dissolveCount() {
         return dissolveCount;
     }
@@ -1105,6 +1108,7 @@ public final class ZoneGraph {
                 continue;
             }
             z.changed = false;
+            z.matchedSeconds = 0;
             for (Edge e : z.edges) {
                 if (e.sleeping && !sidesEquivalent(e)) {
                     e.sleeping = false;
@@ -1159,6 +1163,73 @@ public final class ZoneGraph {
             dissolve(dissolveBuffer.get(i));
         }
         dissolveBuffer.clear();
+    }
+
+    /**
+     * Zone garbage collection (CORE-052): dissolves the sealed zones that have matched the ambient for
+     * {@link ZoneSettings#sealedDissolveSeconds()}, as {@link #exchange()} does at once for zones with
+     * an ambient edge. Call it once per atmos tick; each call counts one period.
+     *
+     * <p>A zone's time counts while it has no ambient edge, isn't paused or pinned, and is nearly
+     * equivalent to the ambient (CORE-076). Its time starts over whenever one of those stops holding,
+     * and whenever something has changed its gas or cells since the last {@link #exchange()}. So a
+     * room someone is breathing in keeps its zone, however little that changes its air, for without
+     * one its air would stop being used up (CORE-038).
+     *
+     * <p>Zones joined by zone edges dissolve together or not at all. A zone left behind would gain an
+     * ambient edge across cells that are still sealed, and vent into them as if they were the open air.
+     *
+     * @param undecided whether a classification is still waiting to say what a zone opens onto; such
+     *     a zone stays for now
+     */
+    public void collectSealed(LongPredicate undecided) {
+        double delay = zoneSettings.sealedDissolveSeconds();
+        double period = settings.periodSeconds();
+        boolean anyDue = false;
+        for (Zone z : zones.values()) {
+            if (!z.paused && !z.isPinned() && z.ambientEdge() == null && nearlyAmbient(z.mixture())) {
+                z.matchedSeconds += period;
+                anyDue |= z.matchedSeconds >= delay;
+            } else {
+                z.matchedSeconds = 0;
+            }
+        }
+        if (!anyDue) {
+            return;
+        }
+        int epoch = ++groupEpoch;
+        for (Zone z : zones.values()) {
+            if (z.groupEpoch != epoch) {
+                bufferIfGroupDue(z, epoch, delay, undecided);
+            }
+        }
+        for (int i = 0; i < dissolveBuffer.size(); i++) {
+            dissolve(dissolveBuffer.get(i));
+        }
+        dissolveBuffer.clear();
+    }
+
+    /** Adds a zone and those it is joined to through zone edges to the dissolve buffer, if all are due. */
+    private void bufferIfGroupDue(Zone start, int epoch, double delay, LongPredicate undecided) {
+        int first = dissolveBuffer.size();
+        boolean due = true;
+        start.groupEpoch = epoch;
+        dissolveBuffer.add(start);
+        for (int i = first; i < dissolveBuffer.size(); i++) {
+            Zone z = dissolveBuffer.get(i);
+            // Zero time means it doesn't qualify, even with no delay.
+            due &= z.matchedSeconds > 0 && z.matchedSeconds >= delay && !undecided.test(z.id());
+            for (Edge e : z.edges) {
+                Zone other = e.other(z);
+                if (other != null && other.groupEpoch != epoch) {
+                    other.groupEpoch = epoch;
+                    dissolveBuffer.add(other);
+                }
+            }
+        }
+        if (!due) {
+            dissolveBuffer.subList(first, dissolveBuffer.size()).clear();
+        }
     }
 
     /**
@@ -1326,7 +1397,7 @@ public final class ZoneGraph {
     }
 
     /**
-     * Dissolves a zone into the ambient (CORE-076): its gas goes to the ambient,
+     * Dissolves a zone into the ambient (CORE-052, CORE-076): its gas goes to the ambient,
      * its cells become unzoned, and each zone edge becomes the other zone's
      * ambient connections, since the cells across it are now ambient.
      */

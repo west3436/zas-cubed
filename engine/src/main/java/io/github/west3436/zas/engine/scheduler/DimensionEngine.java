@@ -69,7 +69,8 @@ import java.util.TreeSet;
  *       fire from gas fires and hot gas ({@link BlockIgniter}, FIRE-033, FIRE-034).
  *   <li>Zone updates: each zone's reactions that don't need ignition ({@link ReactionSet#react},
  *       FIRE-001).
- *   <li>Garbage collection: R1, empty for now.
+ *   <li>Garbage collection: sealed zones that have matched the ambient for the configured time
+ *       dissolve into it ({@link ZoneGraph#collectSealed}, CORE-052).
  * </ol>
  *
  * <p>Then the invariant checker runs if enabled (CORE-073), and the engine builds the {@link
@@ -516,8 +517,9 @@ public final class DimensionEngine {
         phases.enter(Phase.ZONE_UPDATES);
         reactions(batch.settings());
 
-        // 8. Garbage collection (R1).
+        // 8. Garbage collection (CORE-052).
         phases.enter(Phase.GARBAGE_COLLECTION);
+        graph.collectSealed(classifier::hasPendingFor);
 
         ConservationReport report = batch.settings().checkConservation() ? graph.checkConservation(tick) : null;
 

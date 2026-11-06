@@ -33,6 +33,11 @@ public final class Zone {
     int version;
     /** Scratch for {@link ZoneGraph}'s search of a group joined through zone boundaries (CORE-067). */
     int groupEpoch;
+    /**
+     * How long it has been sealed, unpinned, active, unchanged and equivalent to the ambient, in s
+     * (CORE-052). Not saved: a zone rebuilt from its chunks starts over.
+     */
+    double matchedSeconds;
     /** Sorted: the ambient edge first, then zone edges by the other zone's id. */
     final List<Edge> edges = new ArrayList<>(4);
 

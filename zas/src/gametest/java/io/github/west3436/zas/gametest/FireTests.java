@@ -512,8 +512,11 @@ public final class FireTests {
         chunks.addRegionTicket(FULL, east, 0, east);
         // A fire in the west chunk, and one in the east chunk's first column with air below it, so what
         // it burns on is looked for on all sides. Its west wall is in the middle chunk.
-        room(r, 2, NETHERRACK, FIRE, AIR);
-        room(r, 31, Rooms.STONE, Rooms.AIR, AIR);
+        // Not the ambient's air: a fire only burns in a zone, and with the fires waiting nothing changes
+        // the rooms, so other tests' atmos ticks could run out their zones' time (CORE-052).
+        Map<ResourceLocation, Double> rich = Map.of(N2, 80.04675, O2, 30.0);
+        room(r, 2, NETHERRACK, FIRE, rich);
+        room(r, 31, Rooms.STONE, Rooms.AIR, rich);
         r.set(33, 2, 2, Blocks.OAK_PLANKS.defaultBlockState());
         r.set(32, 2, 2, FIRE);
         r.tick();

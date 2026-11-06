@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
+import io.github.west3436.zas.engine.zone.ZoneSettings;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,35 @@ import org.junit.jupiter.api.Test;
 class SchedulerTest {
 
     /** Every atmos tick runs its phases once each, in CORE-040's order (CORE-040). */
+    /**
+     * The engine's phase 8 dissolves a sealed room at the ambient once its time is up, on the batch's
+     * settings, and a later addition forms a zone there again (CORE-052).
+     */
+    @Test
+    void core_052_the_engine_collects_sealed_zones() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        sim.settings = sim.settings.withZones(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3));
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        long added = sim.add(1, 65, 1, 0, 500);
+        for (int i = 0; i < 16 && !sim.outcomes.containsKey(added); i++) {
+            sim.step();
+        }
+        assertNotNull(sim.zoneAt(1, 65, 1), "the addition forms a zone");
+        sim.remove(1, 65, 1, 0, 500);
+        sim.steps(2);
+        assertNotNull(sim.zoneAt(1, 65, 1), "2 s at the ambient isn't 3 s");
+        sim.step();
+        assertNull(sim.zoneAt(1, 65, 1), "3 s is");
+        assertEquals(0, sim.snapshot().zoneCount());
+
+        long again = sim.add(1, 65, 1, 0, 500);
+        for (int i = 0; i < 16 && !sim.outcomes.containsKey(again); i++) {
+            sim.step();
+        }
+        assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
+        assertNotNull(sim.zoneAt(1, 65, 1));
+    }
+
     @Test
     void core_040_phases_run_in_order() {
         Sim sim = new Sim(Ambient.STANDARD_AIR);
