@@ -516,7 +516,7 @@ tests with `zas_atmos` loaded as well run nightly, in the "Full GameTests"
 workflow, or from the Actions tab.*
 
 #### NFR-034 · Benchmark regression check
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-40, NFR-001
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-40, NFR-001
 
 CI shall run a headless S-10 engine benchmark and fail on a regression of more
 than 10 % against the recorded baseline.
@@ -525,6 +525,14 @@ than 10 % against the recorded baseline.
   absolute numbers; the 10 % threshold is inferred.
 - **Verify:** Inspect the CI configuration; a deliberate slowdown fails the
   check.
+
+*2026-11-06: Implemented. CI's "S-10 regression check" step runs `:engine:benchCheck`. The
+recorded baseline is a commit, named in `engine/s10-baseline.properties`, because the same
+code's times differ by up to 136 % between CI's machines. Both engines run side by side on
+the runner, and either thread's median ratio over 10 % fails the check. With no change, 18
+CI jobs read -3.0 to +3.9 %; added slowdowns of 15 % and 25 % failed it, and so did a
+deliberate slowdown in the engine's tick
+([numbers](../research/benchmarks.md#regression-check-nfr-034-2026-11-06)).*
 
 #### NFR-031 · Documentation
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04, D-10
