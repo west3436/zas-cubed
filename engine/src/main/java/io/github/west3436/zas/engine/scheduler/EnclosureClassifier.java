@@ -232,6 +232,11 @@ public final class EnclosureClassifier implements Classifier {
                 for (long s : hold.seeds()) {
                     stillHeld.add(s);
                 }
+                if (sections.isUnloaded(sectionOf(hold.seeds()[0]))) {
+                    // The seed waits for its chunk. It doesn't pause the zone beside it, any more than
+                    // a face into an unloaded chunk does, so the zone can take in what changed there.
+                    continue;
+                }
                 long[] fetch = loadedOnly(hold.missingSections());
                 for (long k : fetch) {
                     requestSection.accept(k);

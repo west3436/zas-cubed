@@ -942,8 +942,10 @@ unless it is an addition, whose gas has left its caller (§3.5, NFR-014). The
   lead nowhere and fills reaching them are unresolved (GEO-024). A fill doesn't
   see the sections kept for those zones either: a kept section says nothing about
   its other cells, which may belong to a zone still in storage. A breach there is
-  held until the chunk loads. A chunk that loads again has its mirrored sections
-  captured afresh, so changes made while it was unloaded are found.
+  held until the chunk loads, and pauses its zones only if it starts in a loaded
+  chunk: an unzoned cell in the kept section just waits, as a face into an
+  unloaded chunk does. A chunk that loads again has its mirrored sections captured
+  afresh, so changes made while it was unloaded are found.
 - **Never force-load.** The engine never adds chunk tickets (GEO-034): the
   platform only ever reads chunks with `getChunkNow`.
 - **Pausing a whole dimension** (OPS-005). `DimensionAtmos.pauseSimulation`
