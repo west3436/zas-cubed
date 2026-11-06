@@ -12,7 +12,10 @@ public final class PumpMenu extends InlineDeviceMenu {
     /** The largest step down; the smaller step down, the smaller up and the largest up follow. */
     public static final int STEP_DOWN_BIG = TOGGLE + 1;
 
-    public static final int LAST_BUTTON = STEP_DOWN_BIG + 3;
+    /** Sets the setting back to a new pump's. */
+    public static final int DEFAULT = STEP_DOWN_BIG + 4;
+
+    public static final int LAST_BUTTON = DEFAULT;
 
     /** The setting, rounded. */
     public static final int DATA_SETTING = InlineDeviceMenu.DATA_COUNT;
@@ -38,7 +41,11 @@ public final class PumpMenu extends InlineDeviceMenu {
         if (id < STEP_DOWN_BIG || id > LAST_BUTTON) {
             return false;
         }
-        pump.step(id - STEP_DOWN_BIG);
+        if (id == DEFAULT) {
+            pump.reset();
+        } else {
+            pump.step(id - STEP_DOWN_BIG);
+        }
         return true;
     }
 }

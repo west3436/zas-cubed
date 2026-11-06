@@ -2,7 +2,9 @@ package io.github.west3436.zas.atmos.mixer;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.inline.SidePortBlock;
+import io.github.west3436.zas.atmos.registry.AtmosItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -18,6 +20,11 @@ public class MixerBlock extends SidePortBlock {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    protected ItemLike mirroredItem() {
+        return AtmosItems.MIXER_MIRRORED;
     }
 
     @Override

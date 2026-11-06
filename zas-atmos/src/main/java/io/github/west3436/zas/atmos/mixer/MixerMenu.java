@@ -12,7 +12,10 @@ public final class MixerMenu extends SidePortMenu {
     /** The back input's largest step down; the smaller step down, the smaller up and the largest up follow. */
     public static final int MIX_DOWN_BIG = LAST_BUTTON + 1;
 
-    public static final int LAST_MIX_BUTTON = MIX_DOWN_BIG + 3;
+    /** Sets the back input's share back to a new mixer's. */
+    public static final int MIX_DEFAULT = MIX_DOWN_BIG + 4;
+
+    public static final int LAST_MIX_BUTTON = MIX_DEFAULT;
 
     /** The back input's share, in percent. */
     public static final int DATA_BACK_PERCENT = SidePortMenu.DATA_COUNT;
@@ -38,7 +41,11 @@ public final class MixerMenu extends SidePortMenu {
         if (id < MIX_DOWN_BIG || id > LAST_MIX_BUTTON) {
             return false;
         }
-        mixer.stepBackPercent(id - MIX_DOWN_BIG);
+        if (id == MIX_DEFAULT) {
+            mixer.setBackPercent(MixerBlockEntity.DEFAULT_BACK_PERCENT);
+        } else {
+            mixer.stepBackPercent(id - MIX_DOWN_BIG);
+        }
         return true;
     }
 }

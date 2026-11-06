@@ -51,8 +51,8 @@ texture), or none (the block has no item).
 |---|---|---|---|---|---|
 | `zas_atmos:pressure_pump` | Pressure pump | Must | CONT-011 | Block model | On and off. The way it pumps must be easy to tell. Inline on the pipe, it shows it with arrows along its body (the owner's choice of 2026-11-02). |
 | `zas_atmos:volume_pump` | Volume pump | Should | CONT-012 | Block model | On and off. As the pressure pump, but distinct from it: inline the same way, with a dark slot along its body where a lamp sweeps toward the output (the owner's choice of 2026-11-02). |
-| `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. Inline on the pipe, the side outlet left or right of the flow, which the wrench swaps (the owner's choice of 2026-11-02); no requirement covers the swap yet. |
-| `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. Inline on the pipe like the filter, the side input left or right, which the wrench swaps (the owner's choice of 2026-11-02); no requirement covers the swap yet. |
+| `zas_atmos:filter` | Filter | Should | CONT-013 | Block model | On and off. Three ports: input, output and side outlet. Inline on the pipe, the side outlet right of the flow, or left when `zas_atmos:filter_mirrored` places it (D-77). |
+| `zas_atmos:mixer` | Mixer | Should | CONT-077 | Block model | On and off. Three ports: two inputs and an output. Inline on the pipe like the filter, the side input right of the flow, or left when `zas_atmos:mixer_mirrored` places it (D-77). |
 | `zas_atmos:vent` | Vent | Must | CONT-014 | Block model | Off, blowing and siphoning. Animated (CONT-070). Faces any of six ways; a pipe joins only its back. |
 | `zas_atmos:scrubber` | Scrubber | Must | CONT-015, CONT-079 | Block model | Off, scrubbing, siphon and panic. Animated (CONT-070). Faces any of six ways, like the vent; a pipe joins only its back. |
 | `zas_atmos:passive_vent` | Passive vent | Could | CONT-016 | Block model | Unpowered; one state. Faces any of six ways, like the vent; a pipe joins only its back. |
@@ -223,8 +223,8 @@ still come down to vanilla materials (CONT-051).*
 ## Art that isn't a block or item
 
 These need textures too, but aren't in the tables above:
-- device GUIs (CONT-074), the area air controller's GUI and device list
-  (CONT-049), and the TTV's timer
+- any icon a device GUI can't draw in code or with a DejaVu Sans glyph (D-76). The
+  windows built so far need none: slot frames, gauges, arrows and locks are drawn in code.
 - the HUD: readings and the internals indicator (CLIENT-001, CLIENT-008,
   CLIENT-009). Each warning needs a shape or flashing cue as well as a colour
   (CLIENT-014). The alerts are done: they're vg's screen-alert icons from

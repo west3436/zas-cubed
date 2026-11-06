@@ -551,6 +551,30 @@ and K.
 - **Verify:** Manual check of each unit in the HUD, analyzer and a GUI, and
   that commands print kPa and K.
 
+*2026-11-06: the config's temperature default was K, and is now °C as this says, so
+the HUD and debug overlay change with it. Other mods' GUIs read the units through
+API-063. The area air controller's window is the first device GUI to use them.*
+
+#### CLIENT-022 · TGUI look for device GUIs
+`Should` · `R1` · `Draft` · Verify: Manual · Trace: D-76, CONT-074
+
+A device's window shall look like SS13's TGUI: a title bar with a status eye and a
+close button, titled sections, labelled lists, tabs, and TGUI's colours and proportions,
+with text in DejaVu Sans that stays sharp at every GUI scale. A window shall fit a
+320 × 240 GUI-pixel screen, the least any screen has at Auto GUI scale.
+
+- **Rationale:** Decision: D-76.
+- **Verify:** Manual check of each window at GUI scales 2, 3 and 4 and at Auto.
+
+*2026-11-06: added for review. Every device window built so far uses the kit in
+`client.tgui`: the area air controller, vent, scrubber, heater, air conditioner, both
+pumps, filter, mixer, canister, both portables, generator, gas tank and TTV. Their text
+is kept short, with graphics where they say as much. The central controller, electrolyzer
+and analyzer have no window yet because they don't exist yet.*
+
+*2026-11-06: every one of those windows passed the owner's check in the game, with the
+filter and a TTV checked at GUI scales 2, 3, 4 and Auto.*
+
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Accepted` · Verify: Inspect
 

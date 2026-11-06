@@ -17,9 +17,4 @@ public enum VentMode implements StringRepresentable {
     public String getSerializedName() {
         return name().toLowerCase(Locale.ROOT);
     }
-
-    /** The next mode in the GUI's cycle: off, blow, siphon. */
-    public VentMode next() {
-        return values()[(ordinal() + 1) % values().length];
-    }
 }

@@ -24,8 +24,11 @@ public record VentSettings(VentMode mode, double external, double internal) {
     /** The external bound a new vent has, kPa: one atmosphere. */
     public static final double DEFAULT_EXTERNAL = 101.325;
 
+    /** A new vent's internal bound, kPa. */
+    public static final double DEFAULT_INTERNAL = 0;
+
     /** Off, with the default bounds. */
-    public static final VentSettings OFF = new VentSettings(VentMode.OFF, DEFAULT_EXTERNAL, 0);
+    public static final VentSettings OFF = new VentSettings(VentMode.OFF, DEFAULT_EXTERNAL, DEFAULT_INTERNAL);
 
     /** Clamps the bounds. */
     public VentSettings {

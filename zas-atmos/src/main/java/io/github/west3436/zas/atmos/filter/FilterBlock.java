@@ -2,10 +2,12 @@ package io.github.west3436.zas.atmos.filter;
 
 import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.inline.SidePortBlock;
+import io.github.west3436.zas.atmos.registry.AtmosItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,6 +30,11 @@ public class FilterBlock extends SidePortBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new FilterBlockEntity(pos, state);
+    }
+
+    @Override
+    protected ItemLike mirroredItem() {
+        return AtmosItems.FILTER_MIRRORED;
     }
 
     /** Opens its GUI, sending the client what it offers. */

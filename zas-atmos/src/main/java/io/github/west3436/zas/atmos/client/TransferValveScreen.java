@@ -1,164 +1,122 @@
 package io.github.west3436.zas.atmos.client;
 
+import io.github.west3436.zas.atmos.client.tgui.Readout;
+import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
+import io.github.west3436.zas.atmos.client.tgui.Ui;
+import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
+import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveMenu;
 import java.util.List;
-import java.util.Locale;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A held TTV's GUI (CONT-103, CONT-104): a slot for each tank beside what it holds, its valve and
- * timer with their buttons, and the player's inventory. The server applies and checks everything, and
- * closes it when the hand no longer holds the TTV, as it doesn't once its timer starts.
+ * A held TTV's window (CONT-103, CONT-104): its two tanks with an arrow from the first to the second,
+ * green while the valve is open, its valve and timer, and the player's inventory. The TTV's own slot
+ * is locked. Starting the timer can't be undone, so it asks for a second click. The server applies and
+ * checks everything, and closes the window when the hand no longer holds the TTV, as it doesn't once
+ * its timer starts.
  */
-final class TransferValveScreen extends DeviceScreen<TransferValveMenu> {
-    private static final int HINT = 0xFFA0A0A0;
-
-    /** The TTV's own slot is lighter than the others, as the one thing here that can't be moved. */
-    private static final int VALVE_SLOT = 0xFF3C4248;
-
-    private static final int LINE_HEIGHT = 11;
-    private static final int TEXT_X = TransferValveMenu.TANK_X + 22;
-    private static final int STATE_Y = TransferValveMenu.SECOND_Y + 22;
-    private static final int TIMER_BUTTONS_Y = STATE_Y + 12;
-    private static final int VALVE_BUTTONS_Y = TIMER_BUTTONS_Y + 22;
-    private static final int TOOLTIP_WIDTH = 180;
-
-    private Button valveButton;
-    private Button startButton;
+final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
+    private static final int HEIGHT = heightWithInventory(TransferValveMenu.INVENTORY_Y);
+    private static final int TANKS_HEIGHT = TransferValveMenu.SECOND_Y + 17 + 2 - (Ui.TITLE_HEIGHT + Ui.PAD);
+    private static final int CONTROLS_HEIGHT = 2 + 3 * Ui.BUTTON_ROW + 1;
+    private static final List<Component> VALVE = List.of(DeviceParts.text("open"), DeviceParts.text("closed"));
 
     TransferValveScreen(TransferValveMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        imageWidth = TransferValveMenu.WIDTH;
-        imageHeight = TransferValveMenu.INVENTORY_Y + 82;
-        inventoryLabelX = TransferValveMenu.INVENTORY_X;
-        inventoryLabelY = TransferValveMenu.INVENTORY_Y - 11;
+        super(menu, inventory, title, TransferValveMenu.WIDTH, HEIGHT);
     }
 
     @Override
-    protected void init() {
-        super.init();
-        button(8, TIMER_BUTTONS_Y, 40, Component.literal("-10"), TransferValveMenu.DOWN_10);
-        button(52, TIMER_BUTTONS_Y, 36, Component.literal("-1"), TransferValveMenu.DOWN_1);
-        button(92, TIMER_BUTTONS_Y, 36, Component.literal("+1"), TransferValveMenu.UP_1);
-        button(132, TIMER_BUTTONS_Y, 40, Component.literal("+10"), TransferValveMenu.UP_10);
-        button(
-                176,
-                TIMER_BUTTONS_Y,
-                56,
-                Component.translatable("gui.zas_atmos.ttv.default"),
-                TransferValveMenu.DEFAULT);
-        valveButton = button(
-                8, VALVE_BUTTONS_Y, 110, Component.translatable("gui.zas_atmos.ttv.open"), TransferValveMenu.VALVE);
-        startButton = button(
-                122, VALVE_BUTTONS_Y, 110, Component.translatable("gui.zas_atmos.ttv.start"), TransferValveMenu.START);
-        refresh();
-    }
-
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        refresh();
-    }
-
-    /** Buttons that would do nothing are greyed out, and the valve's says what it would do. */
-    private void refresh() {
+    protected void draw(Ui ui, int x, int y, int w, int h) {
         TransferValve valve = menu.valve();
-        valveButton.active = valve.joined();
-        valveButton.setMessage(
-                Component.translatable(valve.isOpen() ? "gui.zas_atmos.ttv.close" : "gui.zas_atmos.ttv.open"));
-        startButton.active = !valve.isOpen() && menu.getCarried().isEmpty();
-    }
+        ui.section(x, y, w, TANKS_HEIGHT, null);
+        slots(ui, TransferValveMenu.INVENTORY_Y);
+        tank(ui, valve.first(), TransferValveMenu.FIRST_Y, x + w - Ui.PAD);
+        tank(ui, valve.second(), TransferValveMenu.SECOND_Y, x + w - Ui.PAD);
+        float arrowX = leftPos + TransferValveMenu.TANK_X + 8;
+        ui.arrow(
+                arrowX,
+                topPos + TransferValveMenu.FIRST_Y + 17,
+                arrowX,
+                topPos + TransferValveMenu.SECOND_Y - 1,
+                valve.isOpen() ? Ui.GOOD : Ui.DIM);
 
-    @Override
-    List<Component> lines() {
-        return List.of();
-    }
+        Slot own = menu.getSlot(menu.valveSlot());
+        ui.lockedSlot(leftPos + own.x, topPos + own.y);
 
-    @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        super.renderBg(graphics, partialTick, mouseX, mouseY);
-        Slot slot = menu.getSlot(menu.valveSlot());
-        graphics.fill(
-                leftPos + slot.x - 1, topPos + slot.y - 1, leftPos + slot.x + 17, topPos + slot.y + 17, VALVE_SLOT);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        super.renderLabels(graphics, mouseX, mouseY);
-        TransferValve valve = menu.valve();
-        tank(graphics, "gui.zas_atmos.ttv.first", valve.first(), TransferValveMenu.FIRST_Y);
-        tank(graphics, "gui.zas_atmos.ttv.second", valve.second(), TransferValveMenu.SECOND_Y);
-        graphics.drawString(
-                font,
-                Component.translatable(
-                        valve.isOpen() ? "gui.zas_atmos.ttv.valve_open" : "gui.zas_atmos.ttv.valve_closed"),
-                8,
-                STATE_Y,
-                TEXT,
-                false);
-        Component timer = Component.translatable(
-                "gui.zas_atmos.ttv.timer", menu.timer(), TransferValve.MIN_TIMER, TransferValve.MAX_TIMER);
-        graphics.drawString(font, timer, imageWidth - 8 - font.width(timer), STATE_Y, TEXT, false);
-    }
-
-    /** What a tank's slot holds, beside it: its name, cut short if it was renamed, and its gas. */
-    private void tank(GuiGraphics graphics, String key, ItemStack tank, int y) {
-        Component name = tank.isEmpty() ? Component.translatable("gui.zas_atmos.ttv.no_tank") : tank.getHoverName();
-        graphics.drawString(
-                font,
-                font.split(Component.translatable(key, name), imageWidth - TEXT_X - 8)
-                        .get(0),
-                TEXT_X,
-                y - 1,
-                TEXT,
-                false);
-        if (!tank.isEmpty()) {
-            graphics.drawString(
-                    font,
-                    Component.translatable(
-                            "gui.zas_atmos.ttv.tank",
-                            String.format(
-                                    Locale.ROOT,
-                                    "%.0f",
-                                    GasTankItem.contents(tank).pressure()),
-                            String.format(
-                                    Locale.ROOT, "%.0f", GasTankItem.gas(tank).temperature())),
-                    TEXT_X,
-                    y - 1 + LINE_HEIGHT,
-                    HINT,
-                    false);
+        y += TANKS_HEIGHT + Ui.PAD;
+        ui.section(x, y, w, CONTROLS_HEIGHT, null);
+        int labelX = x + Ui.PAD;
+        int valueX = labelX + DeviceParts.LABEL_WIDTH;
+        int row = y + 2;
+        DeviceParts.label(ui, "valve", labelX, row, Ui.BUTTON_HEIGHT);
+        ui.choice(
+                valueX,
+                row,
+                VALVE,
+                valve.isOpen() ? 0 : 1,
+                -1,
+                valve.joined() ? i -> press(TransferValveMenu.VALVE) : null);
+        row += Ui.BUTTON_ROW;
+        DeviceParts.label(ui, "timer", labelX, row, Ui.BUTTON_HEIGHT);
+        ui.stepper(
+                valueX,
+                row,
+                w - 2 * Ui.PAD - DeviceParts.LABEL_WIDTH,
+                DeviceParts.text("seconds", menu.timer()),
+                Ui.WHITE,
+                DeviceParts.SMALL_STEPS,
+                "s",
+                i -> press(TransferValveMenu.DOWN_10 + i),
+                DeviceParts.text("default"),
+                () -> press(TransferValveMenu.DEFAULT));
+        row += Ui.BUTTON_ROW;
+        Component start = DeviceParts.text("start");
+        ui.confirm(
+                valueX,
+                row,
+                ui.buttonWidth(start),
+                Ui.BUTTON_HEIGHT,
+                start,
+                DeviceParts.text("confirm"),
+                Tone.CAUTION,
+                !valve.isOpen() && menu.getCarried().isEmpty() ? () -> press(TransferValveMenu.START) : null);
+        if (valve.isOpen() && !menu.getCarried().isEmpty()) {
+            for (int y0 : new int[] {TransferValveMenu.FIRST_Y, TransferValveMenu.SECOND_Y}) {
+                ui.tooltip(leftPos + TransferValveMenu.TANK_X, topPos + y0, 16, 16, DeviceParts.text("valve_is_open"));
+            }
         }
     }
 
-    /**
-     * An empty tank's slot says what it is for, since the plain panels have no icons for it, and a
-     * tank carried over an open valve's slots says why it won't go on.
-     */
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        if (hoveredSlot == null || hoveredSlot.index > TransferValve.SECOND) {
+    /** A tank's slot, with what it holds beside it, its name cut short if it was renamed. */
+    private void tank(Ui ui, ItemStack tank, int slotY, int right) {
+        int slotX = leftPos + TransferValveMenu.TANK_X;
+        int y = topPos + slotY;
+        if (tank.isEmpty()) {
+            ui.ghost(slotX, y, new ItemStack(AtmosItems.EMPTY_TANK.get()));
             return;
         }
-        String hint = null;
-        if (!menu.getCarried().isEmpty()) {
-            if (menu.valve().isOpen()) {
-                hint = "gui.zas_atmos.ttv.close_first";
-            }
-        } else if (!hoveredSlot.hasItem()) {
-            hint = hoveredSlot.index == TransferValve.FIRST
-                    ? "gui.zas_atmos.ttv.first_slot"
-                    : "gui.zas_atmos.ttv.second_slot";
-        }
-        if (hint != null) {
-            graphics.renderTooltip(font, font.split(Component.translatable(hint), TOOLTIP_WIDTH), mouseX, mouseY);
-        }
+        int textX = slotX + 20;
+        ui.clip(textX, y - 1, right - textX, 18);
+        ui.line(tank.getHoverName(), textX, y - 1, 9, Ui.WHITE, Face.BODY);
+        double pressure = GasTankItem.contents(tank).pressure();
+        String reading = pressure > 0
+                ? Readout.pressure(pressure) + ", "
+                        + Readout.temperature(GasTankItem.gas(tank).temperature())
+                : Readout.pressure(0);
+        ui.line(Component.literal(reading), textX, y + 8, 9, Ui.LABEL, Face.BODY);
+        ui.endClip();
+    }
+
+    @Override
+    protected void drawOver(Ui ui) {
+        Slot own = menu.getSlot(menu.valveSlot());
+        ui.lock(leftPos + own.x + 11, topPos + own.y, Ui.AVERAGE);
     }
 }

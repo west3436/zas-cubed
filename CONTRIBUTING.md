@@ -64,7 +64,9 @@ and its `origin`; blank lines separate entries:
 - **`origin: other`:** `source` (a URL, or a description), `license` (an
   SPDX id: `CC0-1.0`, `CC-BY-3.0`, `CC-BY-4.0`, `CC-BY-SA-3.0` or
   `CC-BY-SA-4.0`, the licenses that can be adapted under CC BY-SA 4.0) and
-  `attribution` (the author to credit; not needed for `CC0-1.0`).
+  `attribution` (the author to credit; not needed for `CC0-1.0`). A font may
+  instead keep its own license, for now only `Bitstream-Vera`, with the license
+  text under `META-INF/licenses/` (D-76).
 
 ```
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister.png

@@ -140,8 +140,8 @@ it isn't used.
   middle, in an undyed pipe's greys. The pressure pump shows its direction
   with arrows along its body, not on a port (the owner's pick in batch 3),
   and the volume pump with a lamp sweeping toward the output. The filter and
-  mixer are boxes with a short third pipe to one side, which the wrench
-  swaps, and vg's arrow diagram on top (batch 4). The radiator adaptor is
+  mixer are boxes with a short third pipe to one side, which a mirrored item
+  puts on the left, and vg's arrow diagram on top (batch 4). The radiator adaptor is
   inline too, with the radiator pipe out of its other end (batch 5).
 - **Hand valves turn a straight lever,** like the canister's: the manual
   valve's lies across the pipe when shut and in line when open, and the tank
@@ -185,7 +185,7 @@ face.
 |---|---|---|---|
 | `zas_atmos:pressure_pump` | `icons/obj/atmospherics/pump.dmi` | `intact_off`, `intact_on` (5 frames) | vg's pump is a small part on a pipe, 7×16 px. The block is mostly new, with its colours and markings. Done in batch 3: inline on the pipe, an 8 px round body whose lamp bars are two chevrons pointing the way the gas goes, lit in vg's lamp colours when on. vg's red band at the output is left out. |
 | `zas_atmos:volume_pump` | `icons/obj/atmospherics/volume_pump.dmi` | `intact_off`, `intact_on` (11 frames) | Done in batch 4: the pressure pump's shape, with vg's dark slot along the body. On, one lamp sweeps toward the output in vg's colours for each place, and an arrowhead at the slot's output end shows the way when off. |
-| `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: inline, a box 10.5 by 11 px with a short third pipe to one side, the side the wrench sets (vg's mirrored filter). Its top is vg's box cut out as it is, at 32×32 (D-71), with vg's 5 frames: the input glows, then the path, then the outputs. vg leaves the filtered outlet's arrow dark; here it lights with the output's (the owner's ask). |
+| `zas_atmos:filter` | `icons/obj/atmospherics/filter.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: inline, a box 10.5 by 11 px with a short third pipe to one side, the side its item sets (vg's mirrored filter). Its top is vg's box cut out as it is, at 32×32 (D-71), with vg's 5 frames: the input glows, then the path, then the outputs. vg leaves the filtered outlet's arrow dark; here it lights with the output's (the owner's ask). |
 | `zas_atmos:mixer` | `icons/obj/atmospherics/mixer.dmi` | `intact_off`, `intact_on` (5 frames) | Done in batch 4: the filter's shape, with vg's box and its 5 frames as they are. |
 | `zas_atmos:vent` | `icons/obj/atmospherics/vent_pump.dmi` | `base`, `out`, `in` (8 frames each) | Done in batch 1: a cube that faces any of six ways, like a dispenser, with vg's grille on the front. A light runs round the grille, blue when blowing and red the other way round when siphoning (CONT-070). A pipe joins only the back (CONT-014). |
 | `zas_atmos:scrubber` | `icons/obj/atmospherics/vent_scrubber.dmi` | `off`, `on`, `in` (5 frames) | Done in batch 2: the vent's cube, facing any of six ways with a pipe only on its back, with vg's round grille. vg's rings show the mode: a steady blue ring when scrubbing, a shrinking green one when siphoning. vg has no panic state. Panic is new: the siphon's ring in red, twice as fast. vg's own red rings are its stalled states, which ZAS has no texture for. |
@@ -482,8 +482,8 @@ The owner settled these on 2026-11-01:
     - A primed tank transfer valve is an entity (CONT-104), with tanks lying
       on the floor either side of the valve.
 13. **Batch 4 settled** ([§5](#5-style), [§6](#6-sources-for-each-row)):
-    - The filter and mixer sit inline, with the side port on the side the
-      wrench sets. Their tops are vg's own boxes at 32×32 (D-71).
+    - The filter and mixer sit inline, with the side port on the side its
+      item sets. Their tops are vg's own boxes at 32×32 (D-71).
     - The volume pump is the pressure pump's shape, with vg's slot and a
       sweeping lamp.
     - The electrolyzer is drawn from scratch as glass columns on a water

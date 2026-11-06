@@ -6,7 +6,7 @@ entries in CREDITS. Fails when an asset has no entry, when an entry names a
 file that doesn't exist, when an entry is malformed, when a vg source is
 under goon/ (NFR-041), when a vg icon has no state or a vg sound has one, or
 when a third-party license isn't one that can be adapted under CC BY-SA 4.0
-(D-62). The format is documented at the top of CREDITS.
+(D-62) or, for a font, one it may keep (D-76). The format is documented at the top of CREDITS.
 
 Usage: python scripts/check_credits.py [repo root]
 Needs only Python 3 and its standard library.
@@ -31,6 +31,9 @@ REQUIRED = {
 # 4.0 (D-62). NonCommercial and NoDerivatives licenses are never allowed
 # (NFR-046). Add to this list only after checking compatibility.
 LICENSES = {"CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", "CC-BY-SA-3.0", "CC-BY-SA-4.0"}
+# Licenses a font keeps instead of being adapted under CC BY-SA 4.0 (D-76). Only
+# files under font/ may use them, and each needs its license text in the jar.
+FONT_LICENSES = {"Bitstream-Vera"}
 NO_ATTRIBUTION = {"CC0-1.0"}
 COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 
@@ -104,12 +107,13 @@ def check_entry(line, entry):
             errors.append(f"{where}: commit {commit!r} is not a vgstation13 commit hash (7 to 40 hex digits)")
     elif origin == "other":
         license = entry.get("license")
-        if license is not None and license not in LICENSES:
+        font_license = license in FONT_LICENSES and "/font/" in entry.get("path", "")
+        if license is not None and license not in LICENSES and not font_license:
             errors.append(
                 f"{where}: license {license!r} is not one of {', '.join(sorted(LICENSES))} "
                 "(NonCommercial and NoDerivatives licenses are never allowed)"
             )
-        if license in LICENSES and license not in NO_ATTRIBUTION and "attribution" not in entry:
+        if (license in LICENSES or font_license) and license not in NO_ATTRIBUTION and "attribution" not in entry:
             errors.append(f"{where}: license {license} needs 'attribution' (the author to credit)")
     return errors
 

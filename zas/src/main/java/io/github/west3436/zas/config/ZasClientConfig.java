@@ -78,7 +78,7 @@ public final class ZasClientConfig {
         PRESSURE_UNIT = builder.comment("The unit pressures are shown in: KPA, ATM, BAR or PSI.")
                 .defineEnum("pressure", PressureUnit.KPA);
         TEMPERATURE_UNIT = builder.comment("The unit temperatures are shown in: KELVIN, CELSIUS or FAHRENHEIT.")
-                .defineEnum("temperature", TemperatureUnit.KELVIN);
+                .defineEnum("temperature", TemperatureUnit.CELSIUS);
         builder.pop();
         SPEC = builder.build();
     }
@@ -95,8 +95,8 @@ public final class ZasClientConfig {
         return SPEC.isLoaded() ? PRESSURE_UNIT.get() : PressureUnit.KPA;
     }
 
-    /** The configured temperature unit; K before the config loads, and on a dedicated server. */
+    /** The configured temperature unit; °C before the config loads, and on a dedicated server. */
     public static TemperatureUnit temperatureUnit() {
-        return SPEC.isLoaded() ? TEMPERATURE_UNIT.get() : TemperatureUnit.KELVIN;
+        return SPEC.isLoaded() ? TEMPERATURE_UNIT.get() : TemperatureUnit.CELSIUS;
     }
 }

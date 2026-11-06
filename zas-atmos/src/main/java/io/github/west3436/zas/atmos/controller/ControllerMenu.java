@@ -27,20 +27,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <ul>
  *   <li>{@code 0}–{@code 6}: set the mode, by {@link ControllerMode} ordinal;
  *   <li>{@code 10}, {@code 11}: load the shipped Human or Vacuum preset, discarding edits;
- *   <li>{@code 20}/{@code 21}: select the previous or next reading; {@code 22}/{@code 23}: the
- *       previous or next bound;
  *   <li>{@code 30}–{@code 35}: change the selected bound by −10, −1, −0.1, +0.1, +1 or +10;
- *   <li>{@code 36}: turn the selected bound off, or back on.
+ *   <li>{@code 36}: turn the selected bound off, or back on;
+ *   <li>{@code 100} and up: select a bound for editing, {@code 100 + reading * 4 + bound}.
  * </ul>
  */
 public class ControllerMenu extends AbstractContainerMenu {
     public static final int LOAD_PRESET = 10;
-    public static final int PREV_READING = 20;
-    public static final int NEXT_READING = 21;
-    public static final int PREV_BOUND = 22;
-    public static final int NEXT_BOUND = 23;
     public static final int ADJUST = 30;
     public static final int TOGGLE_BOUND = 36;
+    public static final int SELECT_BOUND = 100;
 
     /** The steps of buttons {@code 30} to {@code 35}. */
     public static final double[] STEPS = {-10, -1, -0.1, 0.1, 1, 10};
@@ -108,11 +104,9 @@ public class ControllerMenu extends AbstractContainerMenu {
         } else if (id >= LOAD_PRESET && id < LOAD_PRESET + ControllerPreset.SHIPPED.size()) {
             controller.setPreset(ControllerPreset.SHIPPED.get(id - LOAD_PRESET));
             reading = Math.min(reading, controller.preset().readings() - 1);
-        } else if (id == PREV_READING || id == NEXT_READING) {
-            int n = preset.readings();
-            reading = Math.floorMod(reading + (id == NEXT_READING ? 1 : -1), n);
-        } else if (id == PREV_BOUND || id == NEXT_BOUND) {
-            bound = Math.floorMod(bound + (id == NEXT_BOUND ? 1 : -1), 4);
+        } else if (id >= SELECT_BOUND && id < SELECT_BOUND + preset.readings() * 4) {
+            reading = (id - SELECT_BOUND) / 4;
+            bound = (id - SELECT_BOUND) % 4;
         } else if (id >= ADJUST && id < ADJUST + STEPS.length) {
             Thresholds t = preset.thresholds(reading);
             double now = t.bound(bound);
@@ -184,7 +178,9 @@ public class ControllerMenu extends AbstractContainerMenu {
                 controller.ratings(),
                 bounds,
                 controller.parts(),
-                controller.lastPin() == null ? "" : controller.lastPin().name());
+                controller.lastPin() == null ? "" : controller.lastPin().name(),
+                controller.breach(),
+                controller.fire());
     }
 
     @Override

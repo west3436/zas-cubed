@@ -1,47 +1,42 @@
 package io.github.west3436.zas.atmos.client;
 
-import io.github.west3436.zas.atmos.portable.PortableGasMenu;
+import io.github.west3436.zas.atmos.client.tgui.Readout;
+import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.portable.PortablePumpMenu;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-/**
- * A portable pump's GUI (CONT-018): a portable's ({@link PortableGasScreen}), with which way it pumps
- * and its target, a button to change the direction and four to change the target.
- */
+/** A portable pump's window (CONT-018): a portable's, with which way it pumps and its target. */
 final class PortablePumpScreen extends PortableGasScreen<PortablePumpMenu> {
-    private static final String[] STEPS = {"-100", "-10", "+10", "+100"};
+    private static final List<Component> DIRECTIONS = List.of(DeviceParts.text("release"), DeviceParts.text("siphon"));
 
     PortablePumpScreen(PortablePumpMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
+        super(menu, inventory, title, PortablePumpMenu.SHIFT);
     }
 
     @Override
-    protected void init() {
-        super.init();
-        int top = PortableGasMenu.BATTERY_Y - 1 + 20;
-        button(
-                8,
-                top,
-                160,
-                Component.translatable("gui.zas_atmos.portable_pump.direction"),
-                PortablePumpMenu.TOGGLE_DIRECTION);
-        for (int i = 0; i < STEPS.length; i++) {
-            button(8 + 41 * i, top + 20, 37, Component.literal(STEPS[i]), PortablePumpMenu.TARGET_DOWN_100 + i);
-        }
-    }
-
-    @Override
-    List<Component> lines() {
-        List<Component> lines = super.lines();
-        lines.add(
-                1,
-                Component.translatable(
-                        menu.value(PortablePumpMenu.DATA_SIPHON) != 0
-                                ? "gui.zas_atmos.portable_pump.siphoning"
-                                : "gui.zas_atmos.portable_pump.releasing",
-                        menu.value(PortablePumpMenu.DATA_TARGET)));
-        return lines;
+    protected void ownRows(Ui ui, int labelX, int valueX, int valueW, int y) {
+        DeviceParts.label(ui, "mode", labelX, y, Ui.BUTTON_HEIGHT);
+        ui.choice(
+                valueX,
+                y,
+                DIRECTIONS,
+                menu.value(PortablePumpMenu.DATA_SIPHON),
+                -1,
+                i -> press(PortablePumpMenu.TOGGLE_DIRECTION));
+        y += Ui.BUTTON_ROW;
+        DeviceParts.label(ui, "target", labelX, y, Ui.BUTTON_HEIGHT);
+        ui.stepper(
+                valueX,
+                y,
+                valueW,
+                Component.literal(Readout.pressure(menu.value(PortablePumpMenu.DATA_TARGET))),
+                Ui.WHITE,
+                DeviceParts.BIG_STEPS,
+                DeviceParts.KPA,
+                i -> press(PortablePumpMenu.TARGET_DOWN_100 + i),
+                null,
+                null);
     }
 }

@@ -348,6 +348,18 @@ level.playLocalSound(pos, MY_CLANK.value(), SoundSource.BLOCKS, 0.8f * (float) C
 - **Without ZAS³**, and on a dedicated server, `thinAir()` is 1 and a loop plays
   nothing.
 
+## Display units on the client
+
+The API's values are always in kPa and K. `DisplayUnits` converts what you show to
+the units the player chose (API-063, Draft until the owner's review). It refers to no
+client-only class, so it is safe to call from code a server also loads.
+
+```java
+String shown = String.format("%.1f %s", DisplayUnits.pressure(kpa), DisplayUnits.pressureSymbol());
+```
+
+Without ZAS³, and on a dedicated server, the answers are in kPa and °C.
+
 ## If your code throws
 
 ZAS³ catches what your ambient provider, seal provider, code reaction, gas handler

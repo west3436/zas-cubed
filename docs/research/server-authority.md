@@ -39,15 +39,15 @@ that has been removed.
 
 | Handler | What it changes | How it's validated |
 |---|---|---|
-| `CanisterMenu` | Valve; release pressure | Ids 0–4. Clamped to 10–1,013 kPa |
-| `VentMenu` | Mode; external and internal bounds | Ids 0–8. Clamped to 0–5,066 kPa. Refused while a controller controls the vent (CONT-014) |
-| `ScrubberMenu` | Mode; which gases and tags it takes | Ids 0–11, each a fixed entry on the server's list. Refused while a controller controls the scrubber (CONT-015) |
-| `ControllerMenu` | Mode; preset; one reading's bounds | Ids are checked against the modes, the shipped presets and the fixed steps. Bounds are clamped to 0–5,066 and kept in order (`Thresholds.with`) |
+| `CanisterMenu` | Valve; release pressure | Ids 0–5. Clamped to 10–1,013 kPa |
+| `VentMenu` | Mode; external and internal bounds | Ids 0–12. Clamped to 0–5,066 kPa. Refused while a controller controls the vent (CONT-014) |
+| `ScrubberMenu` | Mode; which gases and tags it takes | Ids 0–14, each a fixed entry on the server's list. Refused while a controller controls the scrubber (CONT-015) |
+| `ControllerMenu` | Mode; preset; one reading's bounds | Ids are checked against the modes, the shipped presets, the fixed steps and the preset's cells. Bounds are clamped to 0–5,066 and kept in order (`Thresholds.with`) |
 | `InlineDeviceMenu` | Switch | Id 0; anything else goes to the device's own check |
-| `PumpMenu` | Target or rate (pressure and volume pumps) | Ids 1–4. Clamped to 0–4,500 kPa or 0–100 L/s |
-| `SidePortMenu` | Which side the side port is on; target | Ids 1–5. Clamped to 0–4,500 kPa |
+| `PumpMenu` | Target or rate (pressure and volume pumps) | Ids 1–5. Clamped to 0–4,500 kPa or 0–100 L/s |
+| `SidePortMenu` | Target | Ids 1–5. Clamped to 0–4,500 kPa |
 | `FilterMenu` | What it filters | The id is a place in a list the server made when the GUI opened, so nothing else can be selected |
-| `MixerMenu` | The two inputs' shares | Ids 6–9. Clamped to 0–100 % |
+| `MixerMenu` | The two inputs' shares | Ids 6–10. Clamped to 0–100 % |
 | `PortableMenu` | Switch (portable scrubber: this only) | Id 0 |
 | `PortablePumpMenu` | Direction; target | Ids 1–5. Clamped to 0–4,500 kPa |
 | `ThermoMachineMenu` (heater, air conditioner) | Setpoint | Ids 1–4. Clamped to 293–573 K (heater) or 73–293 K (air conditioner) |
@@ -88,8 +88,6 @@ changes atmos state.
 ## What this doesn't cover
 
 - **Rate.** Nothing limits how fast a client presses, and the game has no limit on its
-  own menu packets either. The costliest press looks like `SidePortMenu`'s flip, which
-  changes a block state and rebuilds the device's pipe networks, as placing a pipe does.
-  That cost wasn't measured.
+  own menu packets either. What repeated presses cost wasn't measured.
 - **Reach for a held item.** `TankSettings` doesn't need the screen open. It can only
   reach the sender's own hand, so a client skipping the screen gains nothing.

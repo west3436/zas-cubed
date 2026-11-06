@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.canister.CanisterRelease;
+import io.github.west3436.zas.atmos.canister.CanisterSync;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
@@ -26,6 +27,8 @@ import io.github.west3436.zas.atmos.vent.VentMenu;
 import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
 import io.github.west3436.zas.atmos.vent.VentStatus;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -485,6 +488,8 @@ public final class GasDeviceTests {
             cm.clickMenuButton(player, CanisterMenu.RELEASE_DOWN_100);
         }
         a.close(can.releasePressure(), CanisterRelease.MIN_KPA, "release pressure, lowered past the bottom");
+        h.assertTrue(cm.clickMenuButton(player, CanisterMenu.RELEASE_DEFAULT), "the release's default was refused");
+        a.close(can.releasePressure(), CanisterRelease.DEFAULT_KPA, "release pressure after its default");
         cm.clickMenuButton(player, CanisterMenu.TOGGLE_VALVE);
         h.assertTrue(can.valveOpen(), "the valve didn't open");
 
@@ -496,8 +501,39 @@ public final class GasDeviceTests {
         }
         a.close(vent.settings().external(), VentSettings.MAX_KPA, "external bound, raised past the top");
         a.close(vent.settings().internal(), 0, "internal bound, lowered past the bottom");
-        vm.clickMenuButton(player, VentMenu.CYCLE_MODE);
-        h.assertTrue(vent.settings().mode() == VentMode.BLOW, "the mode didn't cycle to blow");
+        h.assertTrue(vm.clickMenuButton(player, VentMenu.EXTERNAL_DEFAULT), "the external default was refused");
+        a.close(vent.settings().external(), VentSettings.DEFAULT_EXTERNAL, "external bound after its default");
+        vm.clickMenuButton(player, VentMenu.INTERNAL_DOWN_100 + 3);
+        a.close(vent.settings().internal(), 100, "internal bound, raised");
+        h.assertTrue(vm.clickMenuButton(player, VentMenu.INTERNAL_DEFAULT), "the internal default was refused");
+        a.close(vent.settings().internal(), VentSettings.DEFAULT_INTERNAL, "internal bound after its default");
+        for (VentMode mode : List.of(VentMode.BLOW, VentMode.SIPHON, VentMode.OFF, VentMode.BLOW)) {
+            h.assertTrue(vm.clickMenuButton(player, VentMenu.SET_MODE + mode.ordinal()), "the mode was refused");
+            h.assertValueEqual(vent.settings().mode(), mode, "the mode");
+        }
+        h.succeed();
+    }
+
+    /** CONT-084, CONT-074: a canister's GUI knows if it's on a port, and what each gas holds reaches the client. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_084_a_canisters_gui_shows_its_port_and_contents(GameTestHelper h) {
+        Area a = new Area(h, 2012);
+        a.clear(0, 0, 6, 4);
+        a.place(2, 1, 2, port());
+        a.place(2, 2, 2, canister());
+        a.place(4, 1, 2, canister());
+        CanisterBlockEntity onPort = a.entity(2, 2, 2);
+        CanisterBlockEntity alone = a.entity(4, 1, 2);
+        Player player = h.makeMockPlayer(GameType.SURVIVAL);
+        CanisterMenu onPortMenu = (CanisterMenu) onPort.createMenu(1, player.getInventory(), player);
+        CanisterMenu aloneMenu = (CanisterMenu) alone.createMenu(2, player.getInventory(), player);
+        h.assertValueEqual(onPortMenu.value(CanisterMenu.DATA_PORT), 1, "a canister on a port");
+        h.assertValueEqual(aloneMenu.value(CanisterMenu.DATA_PORT), 0, "a canister on no port");
+
+        CanisterSync sync = new CanisterSync(7, Map.of(N2, 12.5, O2, 3.0));
+        ByteBuf buf = Unpooled.buffer();
+        CanisterSync.CODEC.encode(buf, sync);
+        h.assertValueEqual(CanisterSync.CODEC.decode(buf), sync, "the contents after their codec");
         h.succeed();
     }
 
@@ -520,7 +556,9 @@ public final class GasDeviceTests {
         // Uncontrolled: the GUI sets it.
         h.assertFalse(vent.controlled(), "a new vent is controlled");
         h.assertValueEqual(menu.value(VentMenu.DATA_CONTROLLED), 0, "the GUI's control flag");
-        h.assertTrue(menu.clickMenuButton(player, VentMenu.CYCLE_MODE), "the free vent refused a setting");
+        h.assertTrue(
+                menu.clickMenuButton(player, VentMenu.SET_MODE + VentMode.BLOW.ordinal()),
+                "the free vent refused a setting");
         h.assertValueEqual(vent.settings().mode(), VentMode.BLOW, "the free vent's mode");
 
         // Controlled: the order wins, and the GUI says whose it is.
@@ -528,7 +566,7 @@ public final class GasDeviceTests {
         vent.control(controller, VentSettings.siphon(50));
         h.assertTrue(vent.controlled(), "the ordered vent isn't controlled");
         h.assertValueEqual(vent.controller(), java.util.Optional.of(controller), "the vent's controller");
-        for (int id = VentMenu.CYCLE_MODE; id <= VentMenu.LAST_BUTTON; id++) {
+        for (int id = VentMenu.SET_MODE; id <= VentMenu.LAST_BUTTON; id++) {
             h.assertFalse(menu.clickMenuButton(player, id), "the controlled vent took button " + id);
         }
         h.assertValueEqual(vent.settings(), VentSettings.siphon(50), "the controlled vent's settings");

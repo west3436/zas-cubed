@@ -121,11 +121,8 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         return index < 0 ? null : ports[index];
     }
 
-    /**
-     * Rebuilds its ports' networks, for a device that has just changed which faces its ports are on,
-     * as a filter whose side port flips. Call it after setting the new block state.
-     */
-    protected void portsChanged() {
+    /** Rebuilds its ports' networks. */
+    private void portsChanged() {
         for (PipePort p : ports) {
             p.dissolve();
             p.dissolveLinks();

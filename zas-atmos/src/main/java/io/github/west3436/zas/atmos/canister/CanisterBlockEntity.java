@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
+import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
@@ -71,6 +72,10 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
                 case CanisterMenu.DATA_PRESSURE ->
                     clampShort(GasMixture.GAS_CONSTANT * gasNow().temperature() * gasNow().totalMoles() / nodeVolume());
                 case CanisterMenu.DATA_MOLES -> clampShort(gasNow().totalMoles());
+                case CanisterMenu.DATA_PORT ->
+                    level != null && level.getBlockState(worldPosition.below()).getBlock() instanceof ConnectorPortBlock
+                            ? 1
+                            : 0;
                 default -> 0;
             };
         }
@@ -265,6 +270,6 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new CanisterMenu(id, data, ContainerLevelAccess.create(level, worldPosition), this);
+        return new CanisterMenu(id, data, ContainerLevelAccess.create(level, worldPosition), this, player);
     }
 }
