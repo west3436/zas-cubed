@@ -14,6 +14,11 @@ import io.github.west3436.zas.api.gas.GasParcel;
  * into the atmosphere around the player once breathed (LIFE-045).
  *
  * <p><b>Threads.</b> ZAS³ calls it on the server thread, on the item as it is then.
+ *
+ * <p><b>If it throws</b> (NFR-013). ZAS³ catches it. A supply whose {@link #contents()} or {@link
+ * #distributionPressure()} throws delivers nothing for that call, so the player breathes the
+ * atmosphere. A {@link #draw} that throws gives no gas, so nothing is exhaled. ZAS³ asks again the
+ * next time, and logs the fault at most once a minute for each item or entity type.
  */
 public interface IInternalSupply {
     /**

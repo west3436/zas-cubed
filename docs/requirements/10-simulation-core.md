@@ -399,7 +399,7 @@ its share of the gas shall stay in the zone, so the zone's pressure rises.
   sealed room and checks the pressure rises.
 
 #### CORE-029 · ZAS displaced-gas option
-`Should` · `R1` · `Accepted` · Verify: Unit · Trace: D-41
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: D-41
 
 A config option shall instead delete a displaced cell's gas, as ZAS does.
 
@@ -407,6 +407,15 @@ A config option shall instead delete a displaced cell's gas, as ZAS does.
   option ([zas-core §2.4](../research/zas-core.md#24-zones-zonedm)).
 - **Verify:** A Unit test with the option on checks filling a cell removes its
   volume share of the moles.
+
+*2026-11-06: Implemented. The option is `[atmos] delete_displaced_gas`, off by default. What
+it deletes is recorded as `DISPLACED_DELETED`. `core_029_the_option_deletes_a_filled_cells_share`
+checks the volume share and the unchanged pressure, `core_029_the_option_deletes_a_last_cells_gas`
+a zone's last cell, which CORE-075 would otherwise pass on, and
+`core_029_the_option_deletes_what_a_shrunken_cell_displaced` a cell a slab or the like makes
+smaller. `core_029_delete_displaced_gas_reaches_the_engine` (GameTest) checks the config key in a
+real room. A chunk's saved share keeps its gas when cells it lists were filled while it was
+unloaded, with the option on or off, since nothing says what those cells held.*
 
 #### CORE-075 · Displaced gas from a zone's last cell
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest · Trace: D-41 · Depends: CORE-022, CORE-065

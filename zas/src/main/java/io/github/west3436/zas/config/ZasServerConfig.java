@@ -4,6 +4,7 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
+import io.github.west3436.zas.engine.zone.ZoneSettings;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +68,9 @@ public final class ZasServerConfig {
 
     /** The venting model: volume-aware (CORE-035) or ZAS's (CORE-068), D-21. */
     public static final ModConfigSpec.EnumValue<ExchangeSettings.Venting> VENTING;
+
+    /** Whether a filled cell's gas is deleted, as ZAS does, instead of staying in its zone (CORE-029, D-41). */
+    public static final ModConfigSpec.BooleanValue DELETE_DISPLACED_GAS;
 
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
@@ -138,6 +142,10 @@ public final class ZasServerConfig {
                         "one, into the open or into a much larger room. FAITHFUL: ZAS's model, where a room loses",
                         "about the same fraction of its air per second whatever its size.")
                 .defineEnum("venting", ExchangeSettings.Venting.VOLUME_AWARE);
+        DELETE_DISPLACED_GAS = builder.comment(
+                        "What happens to the gas in a cell a block fills. false: it stays in the zone, so the",
+                        "zone's pressure rises. true: it is deleted, as ZAS does, so the pressure stays as it was.")
+                .define("delete_displaced_gas", ZoneSettings.DEFAULT.deleteDisplacedGas());
         builder.pop();
         builder.push("heat");
         HEAT_ENABLED = builder.comment(
@@ -301,6 +309,11 @@ public final class ZasServerConfig {
     /** The venting model (D-21); volume-aware while no world's config is loaded. */
     public static ExchangeSettings.Venting venting() {
         return SPEC.isLoaded() ? VENTING.get() : ExchangeSettings.Venting.VOLUME_AWARE;
+    }
+
+    /** What happens to a filled cell's gas (CORE-029); the defaults while no world's config is loaded. */
+    public static ZoneSettings zones() {
+        return SPEC.isLoaded() ? new ZoneSettings(DELETE_DISPLACED_GAS.get()) : ZoneSettings.DEFAULT;
     }
 
     /** The server-thread budget in nanoseconds. */

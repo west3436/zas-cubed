@@ -26,11 +26,13 @@ public record ChunkRecord(long chunk, List<ZoneShare> zones, long[] heldBlocks, 
     /**
      * The current format version (DATA-003), written by {@code ChunkRecordCodec}. Version 2 adds
      * each zone's pin (D-64); version 3 stores cells in the wider cell-id layout that reaches the
-     * world border (#105); version 4 stores the owners of each zone's pins (API-017, API-018).
-     * Versions 1 to 3 are still read: version 1's zones unpinned, a pin of versions 2 and 3 under
-     * the anonymous owner, and the cells of versions 1 and 2 converted.
+     * world border (#105); version 4 stores the owners of each zone's pins (API-017, API-018);
+     * version 5 stores each queued addition's sub-cell (API-015, #122). Versions 1 to 4 are still
+     * read: version 1's zones unpinned, a pin of versions 2 and 3 under the anonymous owner, the
+     * cells of versions 1 and 2 converted, and the queued additions of versions 1 to 4 on their
+     * block's largest cell.
      */
-    public static final int FORMAT_VERSION = 4;
+    public static final int FORMAT_VERSION = 5;
 
     /**
      * Checks and copies the arguments.

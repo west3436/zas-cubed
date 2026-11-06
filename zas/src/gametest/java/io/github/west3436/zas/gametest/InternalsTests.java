@@ -244,7 +244,7 @@ public final class InternalsTests {
             Zombie z = lab.zombie(4);
             z.addTag(TestLifeSupport.ENTITY_TAG);
             z.addTag(TestLifeSupport.OWN_TANK_TAG);
-            h.assertTrue(Internals.find(z).orElse(null) == TestLifeSupport.OWN_TANK, "the zombie's own tank");
+            close(h, Internals.find(z).orElseThrow().distributionPressure(), 21.3, 0, "the zombie's own tank");
             z.setItemInHand(InteractionHand.MAIN_HAND, TestLifeSupport.tank(FULL, 45));
             close(h, Internals.find(z).orElseThrow().distributionPressure(), 45, 0, "the zombie's main hand");
         }

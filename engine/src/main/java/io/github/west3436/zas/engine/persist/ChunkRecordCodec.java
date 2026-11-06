@@ -39,17 +39,19 @@ import java.util.zip.CRC32;
  *       it is pinned, and from version 4 a count, then each pin's owner id (API-017, API-018);
  *   <li>the held block positions (DATA-010);
  *   <li>the queued additions (DATA-011): per operation its original sequence number, block,
- *       moles per gas, temperature, ledger category, whether it triggers a zone, and its source;
+ *       moles per gas, temperature, ledger category, whether it triggers a zone, its source and,
+ *       from version 5, its sub-cell ({@link GasOp#sub()});
  *   <li>a CRC-32 of everything before it.
  * </ol>
  *
  * <p>Only what can't be rebuilt is written: no edges, seal masks, sub-cell shapes or hotspots
- * (DATA-009). Versions 1 to 3 are still read: version 1 has no pins, so its zones are unpinned,
+ * (DATA-009). Versions 1 to 4 are still read: version 1 has no pins, so its zones are unpinned,
  * and a pinned zone of versions 2 and 3 is pinned under the anonymous owner ({@link
  * io.github.west3436.zas.engine.zone.Pins#ANONYMOUS}). Versions 1 and 2 store cells in the narrower layout {@link CellIds} used before version 3 (24 bits of x
  * and z, 12 of y, 4 of sub-cell index), which are converted with {@link CellIds#fromFormat2}; a
  * saved cell the current layout can't name is left out, and its gas stays in the share, as for any
- * saved cell that is no longer a cell (architecture §4.5). Reading checks the
+ * saved cell that is no longer a cell (architecture §4.5). A queued addition of versions 1 to 4
+ * has no sub-cell, so it acts on its block's largest cell. Reading checks the
  * magic, the version, the checksum and every value; anything wrong
  * throws {@link CorruptRecordException}, and the caller resets the chunk to unzoned (DATA-004).
  * Gases the registry no longer has are dropped (CORE-013), with one warning per gas a record held
@@ -66,6 +68,9 @@ public final class ChunkRecordCodec {
 
     /** The third format version: the wider cell ids, and pins without their owners. */
     private static final int VERSION_3 = 3;
+
+    /** The fourth format version: pins with their owners, and queued additions without a sub-cell. */
+    private static final int VERSION_4 = 4;
 
     /**
      * The chunk key of the level-wide record, which holds queued additions whose target chunk
@@ -118,6 +123,7 @@ public final class ChunkRecordCodec {
                 out.writeUTF(op.category().name());
                 out.writeBoolean(op.triggersZone());
                 out.writeUTF(op.source());
+                out.writeInt(op.sub());
             }
             out.flush();
             CRC32 crc = new CRC32();
@@ -174,6 +180,7 @@ public final class ChunkRecordCodec {
             }
             int version = in.readInt();
             if (version != ChunkRecord.FORMAT_VERSION
+                    && version != VERSION_4
                     && version != VERSION_3
                     && version != VERSION_2
                     && version != VERSION_1) {
@@ -220,6 +227,7 @@ public final class ChunkRecordCodec {
                 LedgerCategory category = LedgerCategory.valueOf(in.readUTF());
                 boolean triggers = in.readBoolean();
                 String source = in.readUTF();
+                int sub = version <= VERSION_4 ? -1 : in.readInt();
                 ops.add(new GasOp(
                         seq,
                         GasOp.Kind.ADD,
@@ -228,7 +236,8 @@ public final class ChunkRecordCodec {
                         temperature,
                         category,
                         triggers,
-                        source));
+                        source,
+                        sub));
                 dropped.add(
                         saved,
                         "in a queued addition at " + SectionKeys.blockX(block) + " " + SectionKeys.blockY(block) + " "

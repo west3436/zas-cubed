@@ -108,6 +108,44 @@ public final class LiveConfigTests {
         h.succeed();
     }
 
+    /**
+     * {@code [atmos] delete_displaced_gas} (CORE-029): a block placed in a sealed room raises its
+     * pressure with the option off (CORE-022) and leaves it as it was with the option on, the gas in
+     * the filled cell gone.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_029_delete_displaced_gas_reaches_the_engine(GameTestHelper h) {
+        Rooms.withoutHeat(() -> {
+            Rooms r = new Rooms(h, 989);
+            r.clear(0, 8);
+            r.shell(0, 4);
+            boolean configured = ZasServerConfig.DELETE_DISPLACED_GAS.get();
+            try {
+                ZasServerConfig.DELETE_DISPLACED_GAS.set(true);
+                MutationOutcome formed = r.settle(GasMutations.add(
+                                r.level, r.point(2, 2, 2), new GasParcel(Map.of(O2, 10.0), 293.15), source("core_029")))
+                        .outcome();
+                h.assertValueEqual(formed, MutationOutcome.ZONE, "the room's zone");
+                double moles = r.zone(2, 2, 2).mixture().totalMoles();
+                double pressure = r.zone(2, 2, 2).mixture().pressure();
+
+                r.set(1, 1, 1, STONE);
+                r.tick();
+                r.close(r.zone(2, 2, 2).mixture().totalMoles(), moles * 26 / 27, "the moles with the option on");
+                r.close(r.zone(2, 2, 2).mixture().pressure(), pressure, "the pressure with the option on");
+
+                ZasServerConfig.DELETE_DISPLACED_GAS.set(false);
+                r.set(3, 3, 3, STONE);
+                r.tick();
+                r.close(r.zone(2, 2, 2).mixture().totalMoles(), moles * 26 / 27, "the moles with the option off");
+                r.close(r.zone(2, 2, 2).mixture().pressure(), pressure * 26 / 25, "the pressure with the option off");
+            } finally {
+                ZasServerConfig.DELETE_DISPLACED_GAS.set(configured);
+            }
+        });
+        h.succeed();
+    }
+
     /** The moles the room at (2, 2, 2) loses in one atmos tick. */
     private static double loss(Rooms r) {
         double before = r.zone(2, 2, 2).mixture().totalMoles();

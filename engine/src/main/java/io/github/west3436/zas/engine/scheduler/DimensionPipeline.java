@@ -346,8 +346,8 @@ public final class DimensionPipeline {
     }
 
     /**
-     * Queues a saved addition again, under a new sequence number (DATA-011). Its outcome has no
-     * caller to go to.
+     * Queues a saved addition again, on the same sub-cell, under a new sequence number (DATA-011).
+     * Its outcome has no caller to go to.
      *
      * @return its new sequence number
      */
@@ -357,6 +357,7 @@ public final class DimensionPipeline {
         }
         return add(
                 saved.block(),
+                saved.sub(),
                 saved.moles(),
                 saved.temperature(),
                 saved.category(),
@@ -366,15 +367,16 @@ public final class DimensionPipeline {
 
     /**
      * Queues an operation taken from another pipeline under a new sequence number, its kind,
-     * amounts and source kept: for carrying the outstanding operations of a retired engine over to
-     * the one that replaces it, so none is lost (architecture §4.5).
+     * sub-cell, amounts and source kept: for carrying the outstanding operations of a retired engine
+     * over to the one that replaces it, so none is lost (architecture §4.5).
      *
      * @return its new sequence number
      */
     public long resubmit(GasOp op) {
         return switch (op.kind()) {
-            case ADD -> add(op.block(), op.moles(), op.temperature(), op.category(), op.triggersZone(), op.source());
-            case REMOVE -> remove(op.block(), op.moles(), op.category(), op.triggersZone(), op.source());
+            case ADD ->
+                add(op.block(), op.sub(), op.moles(), op.temperature(), op.category(), op.triggersZone(), op.source());
+            case REMOVE -> remove(op.block(), op.sub(), op.moles(), op.category(), op.triggersZone(), op.source());
             case PIN -> pin(op.block(), op.sub(), op.source());
             case UNPIN -> unpin(op.source());
             case IGNITE -> ignite(op.block(), op.source());

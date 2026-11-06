@@ -347,8 +347,9 @@ public final class ProtectionTests {
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void life_026_capability_and_data_items_protect(GameTestHelper h) {
-        h.assertValueEqual(
-                Protections.of(new ItemStack(TestLifeSupport.item())), TestLifeSupport.SUIT_PIECE, "the capability");
+        ILifeSupport capability = Protections.of(new ItemStack(TestLifeSupport.item()));
+        h.assertTrue(capability != null, "the capability");
+        close(h, capability.maxPressure(), TestLifeSupport.SUIT_PIECE.maxPressure(), 0, "the capability's rating");
         ILifeSupport pumpkin = Protections.of(new ItemStack(Items.CARVED_PUMPKIN));
         h.assertTrue(pumpkin != null, "the carved pumpkin's data");
         close(h, pumpkin.minPressure(), 0, 0, "the pumpkin's lowest pressure");

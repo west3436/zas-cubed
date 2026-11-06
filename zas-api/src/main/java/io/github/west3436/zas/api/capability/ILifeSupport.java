@@ -38,6 +38,11 @@ import net.neoforged.neoforge.capabilities.ItemCapability;
  *
  * <p><b>Threads.</b> ZAS³ calls it on the server thread, on the item or entity as it is then. It
  * should be cheap: ZAS³ asks every check, every 2 s by default.
+ *
+ * <p><b>If it throws</b> (NFR-013). ZAS³ catches it, and a part that throws gives nothing for that
+ * call, as its default does, so a suit that throws leaves its wearer exposed. Its other parts still
+ * count, and a capability provider that throws counts as no capability. ZAS³ asks again the next
+ * time, and logs the fault at most once a minute for each item or entity type.
  */
 public interface ILifeSupport {
     /** The capability on worn items. */

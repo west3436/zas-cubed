@@ -38,6 +38,9 @@ import org.slf4j.Logger;
  * file's claim on that item is logged. A file may name items that aren't registered, such as
  * another mod's, and they are kept in case they are.
  *
+ * <p>A capability comes back behind NFR-013's guard ({@link GuardedLifeSupport}). One whose lookup
+ * throws counts as absent, so data naming the item applies for that call.
+ *
  * <p>Data loads when the server starts and reloads with {@code /reload}; an invalid file is
  * logged, naming the file and field, and skipped (OPS-008). Lookups are for the server thread.
  */
@@ -68,7 +71,7 @@ public final class Protections {
         if (stack.isEmpty()) {
             return null;
         }
-        ILifeSupport own = stack.getCapability(ILifeSupport.ITEM);
+        ILifeSupport own = GuardedLifeSupport.of(stack);
         if (own != null) {
             return own;
         }
@@ -87,7 +90,7 @@ public final class Protections {
 
     /** An entity's own life support, or null if it gives itself none. */
     public static @Nullable ILifeSupport of(Entity entity) {
-        return entity.getCapability(ILifeSupport.ENTITY);
+        return GuardedLifeSupport.of(entity);
     }
 
     private static final class Loader extends SimpleJsonResourceReloadListener {
