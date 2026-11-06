@@ -902,8 +902,8 @@ has too little O₂ to breathe, or where a gas in it, its pressure or its temper
 deals damage to a bare mob. Spawners, spawn eggs, commands and the like aren't
 stopped, nor is a check another listener has decided.
 `life_034_breathing_mobs_don_t_spawn_naturally_in_a_vacuum_dimension` checks the
-natural spawner's position check refuses pigs, cows and spiders in a dimension
-whose ambient is a vacuum, chunk generation's real spawner puts no spiders there,
+position check the natural spawner ends with refuses pigs, cows and spiders in a
+dimension whose ambient is a vacuum, chunk generation's real spawner puts no spiders there,
 and it lets them in with air in the same place. The natural spawner itself needs
 a player in the level, so the test can't run it.
 `life_034_the_atmosphere_at_the_spot_decides` checks rooms of each atmosphere.*

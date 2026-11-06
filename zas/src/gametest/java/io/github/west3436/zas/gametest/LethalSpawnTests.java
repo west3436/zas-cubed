@@ -49,10 +49,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * Natural spawns where the atmosphere would kill a breathing mob (LIFE-034).
  *
  * <p>The natural spawner needs a player in the level to spawn near, which GameTests don't have. So
- * these call the position check it ends with, {@link EventHooks#checkSpawnPosition}, for {@link
- * MobSpawnType#NATURAL}, and run the spawner chunk generation uses for real, which needs no player.
- * Each test runs within one game tick, and restores the End's ambient before it returns. They have
- * a batch of their own because they call {@code tickNow}.
+ * these post the position check it ends with, for {@link MobSpawnType#NATURAL}, and run the spawner
+ * chunk generation uses for real, which needs no player. Each test runs within one game tick, and
+ * restores the End's ambient before it returns. They have a batch of their own because they call
+ * {@code tickNow}.
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -91,8 +91,20 @@ public final class LethalSpawnTests {
         return mob;
     }
 
-    private static boolean natural(Mob mob, ServerLevel level) {
-        return EventHooks.checkSpawnPosition(mob, level, MobSpawnType.NATURAL);
+    /**
+     * What the position check's listeners decide. {@link EventHooks#checkSpawnPosition} goes on to
+     * the mob's own spawn rules when none does, and a pig on stone in the dark fails those, so its
+     * answer wouldn't show what {@code LethalSpawns} did.
+     */
+    private static MobSpawnEvent.PositionCheck.Result decision(Mob mob, ServerLevel level, MobSpawnType type) {
+        MobSpawnEvent.PositionCheck check = new MobSpawnEvent.PositionCheck(mob, level, type, null);
+        NeoForge.EVENT_BUS.post(check);
+        return check.getResult();
+    }
+
+    /** Whether a natural spawn is refused here. */
+    private static boolean refused(Mob mob, ServerLevel level) {
+        return decision(mob, level, MobSpawnType.NATURAL) == MobSpawnEvent.PositionCheck.Result.FAIL;
     }
 
     /** A biome whose only creature is the spider, which spawns on stone in the End's dark, at nearly every try. */
@@ -118,9 +130,9 @@ public final class LethalSpawnTests {
     }
 
     /**
-     * How many monsters chunk generation's spawner puts in the area's chunk, which it then discards.
-     * They join the level in a chunk that isn't ticking, where a search of the level can't see them,
-     * so this counts them as they join.
+     * How many monsters chunk generation's spawner puts in the area's chunk in eight runs, which it
+     * then discards. They join the level in a chunk that isn't ticking, where a search of the level
+     * can't see them, so this counts them as they join.
      */
     private static int chunkGenerationSpawns(ServerLevel end, Rooms r) {
         if (!listening) {
@@ -134,7 +146,9 @@ public final class LethalSpawnTests {
         SPAWNED.clear();
         recording = true;
         try {
-            NaturalSpawner.spawnMobsForChunkGeneration(end, spiders(), r.chunk(0), RandomSource.create(34));
+            for (int seed = 0; seed < 8; seed++) {
+                NaturalSpawner.spawnMobsForChunkGeneration(end, spiders(), r.chunk(0), RandomSource.create(seed));
+            }
         } finally {
             recording = false;
         }
@@ -163,29 +177,34 @@ public final class LethalSpawnTests {
 
             for (EntityType<? extends Mob> type : List.of(EntityType.PIG, EntityType.COW, EntityType.SPIDER)) {
                 Mob m = mob(h, type, end, at);
-                h.assertFalse(natural(m, end), type + " spawns naturally in a vacuum");
-                h.assertFalse(
-                        EventHooks.checkSpawnPosition(m, end, MobSpawnType.CHUNK_GENERATION),
-                        type + " spawns at chunk generation in a vacuum");
-                h.assertTrue(
-                        EventHooks.checkSpawnPosition(m, end, MobSpawnType.SPAWN_EGG),
-                        type + " from a spawn egg was stopped");
+                h.assertTrue(refused(m, end), type + " spawns naturally in a vacuum");
+                h.assertValueEqual(
+                        decision(m, end, MobSpawnType.CHUNK_GENERATION),
+                        MobSpawnEvent.PositionCheck.Result.FAIL,
+                        type + " at chunk generation in a vacuum");
+                for (MobSpawnType other : List.of(MobSpawnType.SPAWN_EGG, MobSpawnType.SPAWNER, MobSpawnType.COMMAND)) {
+                    h.assertValueEqual(
+                            decision(m, end, other),
+                            MobSpawnEvent.PositionCheck.Result.DEFAULT,
+                            type + " spawned by " + other + " in a vacuum");
+                }
             }
-            h.assertTrue(natural(mob(h, EntityType.ZOMBIE, end, at), end), "a zombie doesn't breathe, but was stopped");
+            h.assertFalse(
+                    refused(mob(h, EntityType.ZOMBIE, end, at), end), "a zombie doesn't breathe, but was stopped");
 
             Mob offThread = mob(h, EntityType.PIG, end, at);
-            boolean allowed = CompletableFuture.supplyAsync(
-                            () -> EventHooks.checkSpawnPosition(offThread, end, MobSpawnType.CHUNK_GENERATION),
-                            Util.backgroundExecutor())
+            MobSpawnEvent.PositionCheck.Result onWorker = CompletableFuture.supplyAsync(
+                            () -> decision(offThread, end, MobSpawnType.CHUNK_GENERATION), Util.backgroundExecutor())
                     .join();
-            h.assertFalse(allowed, "a pig spawns on chunk generation's worker thread");
+            h.assertValueEqual(
+                    onWorker, MobSpawnEvent.PositionCheck.Result.FAIL, "a pig on chunk generation's worker thread");
 
             h.assertValueEqual(chunkGenerationSpawns(end, r), 0, "spiders chunk generation spawned in a vacuum");
         });
         inEnd(h, Ambient.STANDARD_AIR, end -> {
             Rooms r = new Rooms(h, end, END_AREA);
             Vec3 at = Vec3.atBottomCenterOf(r.abs(8, 1, 8));
-            h.assertTrue(natural(mob(h, EntityType.PIG, end, at), end), "a pig was stopped in air");
+            h.assertFalse(refused(mob(h, EntityType.PIG, end, at), end), "a pig was stopped in air");
             h.assertTrue(chunkGenerationSpawns(end, r) > 0, "chunk generation spawned no spiders in air");
         });
         h.succeed();
@@ -208,34 +227,34 @@ public final class LethalSpawnTests {
         r.clear(0, 40);
 
         room(r, 0, Map.of(Rooms.O2, o2, Rooms.N2, n2));
-        h.assertTrue(natural(mob(h, EntityType.PIG, r.level, foot(r, 0)), r.level), "a pig was stopped in air");
+        h.assertFalse(refused(mob(h, EntityType.PIG, r.level, foot(r, 0)), r.level), "a pig was stopped in air");
 
         room(r, 6, Map.of());
-        h.assertFalse(natural(mob(h, EntityType.PIG, r.level, foot(r, 6)), r.level), "a pig spawns in a vacuum room");
+        h.assertTrue(refused(mob(h, EntityType.PIG, r.level, foot(r, 6)), r.level), "a pig spawns in a vacuum room");
 
         room(r, 12, Map.of(Rooms.O2, 10.0, Rooms.N2, n2));
-        h.assertFalse(natural(mob(h, EntityType.PIG, r.level, foot(r, 12)), r.level), "a pig spawns in thin O2");
+        h.assertTrue(refused(mob(h, EntityType.PIG, r.level, foot(r, 12)), r.level), "a pig spawns in thin O2");
 
         room(r, 18, Map.of(Rooms.N2, StandardAir.PRESSURE));
         Mob inNitrogen = mob(h, EntityType.PIG, r.level, foot(r, 18));
-        h.assertFalse(natural(inNitrogen, r.level), "a pig spawns in nitrogen");
+        h.assertTrue(refused(inNitrogen, r.level), "a pig spawns in nitrogen");
         boolean hypoxia = HazardConfig.ENABLED.get(HazardType.HYPOXIA).get();
         HazardConfig.ENABLED.get(HazardType.HYPOXIA).set(false);
         try {
-            h.assertTrue(natural(inNitrogen, r.level), "with hypoxia off, nitrogen stopped a pig");
+            h.assertFalse(refused(inNitrogen, r.level), "with hypoxia off, nitrogen stopped a pig");
         } finally {
             HazardConfig.ENABLED.get(HazardType.HYPOXIA).set(hypoxia);
         }
 
         room(r, 24, Map.of(Rooms.O2, o2, Rooms.N2, n2, co, 2.0));
-        h.assertFalse(natural(mob(h, EntityType.PIG, r.level, foot(r, 24)), r.level), "a pig spawns in CO");
+        h.assertTrue(refused(mob(h, EntityType.PIG, r.level, foot(r, 24)), r.level), "a pig spawns in CO");
 
         room(r, 30, Map.of(Rooms.O2, o2, Rooms.N2, n2, n2o, 6.0));
-        h.assertTrue(natural(mob(h, EntityType.PIG, r.level, foot(r, 30)), r.level), "sleeping gas stopped a pig");
+        h.assertFalse(refused(mob(h, EntityType.PIG, r.level, foot(r, 30)), r.level), "sleeping gas stopped a pig");
 
         room(r, 36, Map.of(Rooms.O2, o2 * 6, Rooms.N2, n2 * 6));
         Mob squeezed = mob(h, EntityType.PIG, r.level, foot(r, 36));
-        h.assertFalse(natural(squeezed, r.level), "a pig spawns at 6 atm");
+        h.assertTrue(refused(squeezed, r.level), "a pig spawns at 6 atm");
 
         MobSpawnEvent.PositionCheck decided =
                 new MobSpawnEvent.PositionCheck(squeezed, r.level, MobSpawnType.NATURAL, null);
