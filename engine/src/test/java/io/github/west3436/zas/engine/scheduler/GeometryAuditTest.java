@@ -174,6 +174,36 @@ class GeometryAuditTest {
         assertFalse(sim.zoneAt(5, 69, 2).paused(), "the zone paused");
     }
 
+    /**
+     * Each check of cells in doubt can take a fill up to the bound, so they wait their turn: a way out
+     * that closes just after one takes no fill until the next, which finds the pocket.
+     */
+    @Test
+    void geo_023_a_way_out_closing_just_after_a_check_is_found_at_the_next() {
+        Sim sim = ventingThroughACorridor(15, 15);
+        sim.steps(EnclosureClassifier.DOUBT_CHECK_TICKS);
+        int[] fills = {0};
+        sim.engine.classifier().onFill(seed -> fills[0]++);
+
+        sim.world.set(13, 68, 1, TestWorld.SOLID); // in the corridor, and the way out stays open
+        sim.steps(3); // the check, and any round of fetching sections it takes
+        int checked = fills[0];
+        assertTrue(checked > 0, "the first change wasn't checked at once");
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone stopped venting");
+
+        sim.world.set(15, 69, 2, TestWorld.SOLID); // the way out closes
+        sim.steps(2);
+        assertEquals(checked, fills[0], "the next change didn't wait its turn");
+        assertTrue(sim.zoneAt(5, 69, 2).breached(), "the zone stopped venting before its check");
+
+        sim.steps(EnclosureClassifier.DOUBT_CHECK_TICKS);
+        assertTrue(fills[0] > checked, "the next check didn't come");
+        assertFalse(sim.zoneAt(5, 69, 2).breached(), "the zone is still venting");
+        assertEquals(sim.zoneAt(5, 69, 2).id(), sim.zoneAt(13, 69, 2).id(), "the corridor didn't join");
+        GeometryAudit.Report r = audit(sim, new GeometryAudit.Region(0, 66, -1, 20, 72, 5));
+        assertTrue(r.clean(), () -> "findings: " + r.findings());
+    }
+
     /** A zone, with a corridor from x 12 to {@code lastX}, opened at {@code openX} and then into the zone. */
     private static Sim ventingThroughACorridor(int lastX, int openX) {
         Sim sim = new Sim(Ambient.STANDARD_AIR).withoutHeat();

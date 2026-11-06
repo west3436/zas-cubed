@@ -12,6 +12,7 @@ import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
+import io.github.west3436.zas.engine.zone.Zone;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +50,7 @@ import java.util.regex.Pattern;
  *
  * <p>Save/load cycles are clean stops: what a crash restores (#304) isn't tested. Gas added at a paused
  * zone is voided (GEO-036) and never enters a zone, so it needs no allowance; {@link Stats} totals it.
+ * Resets leave out zones with another zone beside them: {@link #reset}.
  *
  * <p>Everything comes from the seed and runs inline, so a seed replays exactly (CORE-044, CORE-071). A
  * failure names the seed, the operation and the command that replays it.
@@ -113,6 +115,8 @@ final class IntegrityFuzz {
         int mostPaused;
         int rejectedMixtures;
         int droppedShares;
+        int resets;
+        int resetsLeftOut;
         int dividedZones;
         int excusedDifferences;
         final double[] voided = new double[GASES];
@@ -124,7 +128,8 @@ final class IntegrityFuzz {
                     + " reloads, " + saveLoads + " save/load cycles, " + ticks + " atmos ticks, " + checkpoints
                     + " audits, " + rejectedComponents + " rejected components, at most " + mostZones + " zones and "
                     + mostPaused + " paused, " + rejectedMixtures + " rejected mixture changes, " + droppedShares
-                    + " dropped shares, " + dividedZones + " zones divided in a tick their chunk saved during, "
+                    + " dropped shares, " + resets + " resets, " + resetsLeftOut + " left out, " + dividedZones
+                    + " zones divided in a tick their chunk saved during, "
                     + excusedDifferences + " differences excused for them, " + voided[N2] + " mol of nitrogen voided, "
                     + supplied[N2] + " supplied";
         }
@@ -359,11 +364,31 @@ final class IntegrityFuzz {
         stats.gasOps++;
     }
 
+    /**
+     * A reset (OPS-013), except of a zone with another zone beside it. That zone gains an ambient
+     * connection even if the room left behind is sealed, as beside a dissolved zone (CORE-076), which
+     * {@code ops_013_a_neighbour_across_an_edge_now_opens_onto_the_ambient} pins and the audit reports
+     * (GEO-032), so the two rules can't both hold there.
+     */
     private void reset() {
         int[] p = target();
+        int sub = sub();
+        if (besideAnotherZone(p, sub)) {
+            log("no reset at " + str(p) + ": there's a zone beside it");
+            stats.resetsLeftOut++;
+            return;
+        }
         log("reset at " + str(p));
-        sim.pipeline.reset(block(p), sub(), "fuzz");
+        sim.pipeline.reset(block(p), sub, "fuzz");
         stats.gasOps++;
+        stats.resets++;
+    }
+
+    /** Whether a reset at the position would take a zone with an edge to another. Resets run first in a tick. */
+    private boolean besideAnotherZone(int[] p, int sub) {
+        long cell = sim.engine.classifier().space().cellAt(block(p), sub);
+        Zone zone = cell == CellSpace.NO_CELL ? null : sim.engine.graph().zoneOf(cell);
+        return zone != null && zone.edges().stream().anyMatch(e -> !e.isAmbient());
     }
 
     private int block() {
@@ -800,6 +825,11 @@ final class IntegrityFuzz {
         log("checkpoint");
         for (long chunk : away()) {
             reload(chunk);
+        }
+        settle();
+        // Cells a block change put in doubt are checked at most this often, and the audit doesn't wait.
+        for (int i = 0; i < EnclosureClassifier.DOUBT_CHECK_TICKS; i++) {
+            step();
         }
         settle();
         stats.checkpoints++;

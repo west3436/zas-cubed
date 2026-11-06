@@ -569,10 +569,13 @@ section, S-10's station needs about 1–2 MiB.
    otherwise see. An entry cleared this way is classified again if a zone opens
    onto it, because the way out may have closed somewhere far from any zone: if
    it's a pocket now, it joins the zone (GEO-023). Until that's known the zone
-   goes on venting and doesn't pause, and a region that can't be classified yet
-   is tried again each tick. At most 65,536 links between a cell and a section
-   are kept; past that the cache starts again, which costs fills, and a way out
-   that closes after that goes unseen until something changes beside the zone.
+   goes on venting and doesn't pause. Each such check can take a fill up to the
+   bound, so they run at most once every 8 atmos ticks: the first change is
+   checked at once, and those after it wait their turn. A region that can't be
+   classified is tried again once a section it lacks is in a loaded chunk, with
+   no fills before that. At most 65,536 links between a cell and a section are
+   kept; past that the cache starts again, which costs fills, and a way out that
+   closes after that goes unseen until something changes beside the zone.
 
 *Implemented (#23):* the mirror is `SectionMirror`; `EnclosureClassifier`
 wires `engine.classify` (#26) into the scheduler through the `Classifier`

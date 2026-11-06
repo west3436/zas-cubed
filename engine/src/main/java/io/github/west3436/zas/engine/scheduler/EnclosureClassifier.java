@@ -48,9 +48,10 @@ import java.util.function.LongPredicate;
  *       region that no zone opens onto any more is dropped.
  *   <li>A block change that puts a cell found open in doubt may have closed the way out far from any
  *       zone, so such a cell is classified again if a zone opens onto it: if that's a pocket now, it
- *       joins the zone (GEO-023). Until that's known the zone goes on as it was, and if the region
- *       can't be classified, it's tried again each tick. It doesn't pause the zone, which had a way
- *       out, and is venting, and nothing says that has changed.
+ *       joins the zone (GEO-023). Until that's known the zone goes on as it was: a region that can't
+ *       be classified is tried again once a section it lacks is in a loaded chunk, with no fills
+ *       before that. It doesn't pause the zone, which had a way out, and is venting, and nothing says
+ *       that has changed.
  * </ul>
  *
  * <p>Single-threaded, like the engine that owns it.
@@ -70,14 +71,25 @@ public final class EnclosureClassifier implements Classifier {
      */
     private final SectionTopology loaded;
 
+    /**
+     * The fewest atmos ticks between checks of cells put in doubt. A check can take a fill up to the bound
+     * for each region, and building beside a vent would otherwise ask for one every tick.
+     */
+    public static final int DOUBT_CHECK_TICKS = 8;
+
     private final Space space;
     private final EnclosureFill fill;
     private final BreachResolver breaches;
     private final OpenCells open = new OpenCells();
     /** Seeds of breaches held at missing sections, classified again each tick. */
     private long[] held = new long[0];
-    /** Cells found open and then put in doubt, that a zone opens onto and that couldn't be classified yet. */
-    private long[] doubted = new long[0];
+    /**
+     * Regions found open and then put in doubt, that a zone opens onto and that reach sections the mirror
+     * lacks. They're left alone until one of those is in a loaded chunk.
+     */
+    private List<Doubted> doubted = new ArrayList<>();
+    /** Atmos ticks since cells in doubt were last checked. The first change is checked at once. */
+    private int ticksSinceDoubtCheck = DOUBT_CHECK_TICKS;
     /** Whether a held breach asked for sections this tick. */
     private boolean fetching;
     /** Zones opening onto the breaches that asked for sections this tick, ascending. */
@@ -212,9 +224,23 @@ public final class EnclosureClassifier implements Classifier {
     @Override
     public void afterGeometry(ZoneGraph graph, long[] refreshedCells, LongConsumer requestSection) {
         long[] seeds = union(BreachResolver.breachSeeds(graph, topology, refreshedCells), held);
-        long[] inDoubt = union(doubted, BreachResolver.breachSeeds(graph, topology, open.drainDoubtful()));
+        List<Doubted> stillDoubted = new ArrayList<>();
+        long[] inDoubt = new long[0];
+        if (++ticksSinceDoubtCheck >= DOUBT_CHECK_TICKS) {
+            inDoubt = BreachResolver.breachSeeds(graph, topology, open.drainDoubtful());
+            if (inDoubt.length > 0) {
+                ticksSinceDoubtCheck = 0;
+            }
+        }
+        for (Doubted d : doubted) {
+            if (loadedOnly(d.missing()).length > 0) {
+                inDoubt = union(inDoubt, d.seeds());
+            } else {
+                stillDoubted.add(d);
+            }
+        }
+        doubted = stillDoubted;
         long[] all = union(seeds, inDoubt);
-        doubted = new long[0];
         fetching = false;
         fetchingZones = new long[0];
         long[] previouslyHeld = heldZones;
@@ -225,7 +251,6 @@ public final class EnclosureClassifier implements Classifier {
             return;
         }
         List<Long> stillHeld = new ArrayList<>();
-        List<Long> stillDoubted = new ArrayList<>();
         java.util.TreeSet<Long> pausedBy = new java.util.TreeSet<>();
         java.util.TreeSet<Long> pausing = new java.util.TreeSet<>();
         java.util.TreeSet<Long> waiting = new java.util.TreeSet<>();
@@ -235,9 +260,7 @@ public final class EnclosureClassifier implements Classifier {
                     continue; // no zone opens onto it any more
                 }
                 if (noneIn(hold.seeds(), seeds)) {
-                    for (long s : hold.seeds()) {
-                        stillDoubted.add(s);
-                    }
+                    doubted.add(new Doubted(hold.seeds(), hold.missingSections()));
                     for (long k : loadedOnly(hold.missingSections())) {
                         requestSection.accept(k);
                         fetching = true;
@@ -280,7 +303,6 @@ public final class EnclosureClassifier implements Classifier {
                 BreachResolver.apply(graph, topology, b);
             }
         }
-        doubted = stillDoubted.stream().mapToLong(Long::longValue).toArray();
         held = new long[stillHeld.size()];
         for (int i = 0; i < held.length; i++) {
             held[i] = stillHeld.get(i);
@@ -301,6 +323,9 @@ public final class EnclosureClassifier implements Classifier {
             pausingSeeds[i++] = s;
         }
     }
+
+    /** A region put in doubt: its seeds, and the sections it reached that the mirror lacks. */
+    private record Doubted(long[] seeds, long[] missing) {}
 
     private static long[] union(long[] a, long[] b) {
         if (b.length == 0) {

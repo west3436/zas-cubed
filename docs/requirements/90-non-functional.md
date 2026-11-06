@@ -128,16 +128,21 @@ reported by CORE-073, a clean GEO-032 audit, and no non-finite values
 audit every 1,000 operations, checks for non-finite values, and its own total of
 the gas, because CORE-073 explains whatever moves through storage and so can't
 see gas that a reload makes or loses. `./gradlew build` runs it on seed 3, and
-the "Integrity fuzz" workflow runs 20 seeds from the Actions tab. Of seeds 1 to
-20, six pass (1, 3, 12, 13, 16, 18). Thirteen fail the audit (2, 4, 5, 6, 8, 9,
-10, 11, 14, 15, 17, 19, 20) and one fails the total of the gas (7). Seed 2's cause
-is known: a zone venting through an unzoned space keeps its ambient edge when the
-way out closes at a spot that doesn't touch it. The other audit failures aren't
-read yet. Seed 4 hits the limit on DATA-008, which the fuzz excuses for exactly
-that event, before it fails the audit. Seed 7 is a rejected tick that takes in
-a chunk's share and publishes nothing of it, so the chunk saves nothing if it
-unloads before the next tick. Left to do: those failures, a nightly schedule once all
-20 pass, and the GameTest half, which totals the gas in pipes.*
+the "Integrity fuzz" workflow runs 20 seeds from the Actions tab. A seed takes
+18 to 24 s. Of seeds 1 to 20, seventeen pass. Seed 2 fails the total of the gas
+at operation 6238, and seeds 4 and 8 fail the audit at operations 6999 and 9999.
+None of those three is read yet. Some seeds hit the limit on DATA-008, which the
+fuzz excuses for exactly that event.
+
+The fuzz's resets leave out a zone with another zone beside it, because OPS-013
+and GEO-032 disagree there. The neighbour of a reset zone gains an ambient
+connection even when the room left behind is sealed, as beside a dissolved zone
+(CORE-076). `ops_013_a_neighbour_across_an_edge_now_opens_onto_the_ambient` pins
+that and the audit reports it. Resets of other zones still run, 49 to 75 a seed,
+with 26 to 43 left out. Whether the rule should change is the owner's call.
+
+Left to do: those three seeds, a nightly schedule once all 20 pass, and the
+GameTest half, which totals the gas in pipes.*
 
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
