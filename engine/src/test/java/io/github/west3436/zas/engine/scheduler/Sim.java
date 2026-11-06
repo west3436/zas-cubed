@@ -75,10 +75,21 @@ final class Sim {
             Classifier.Factory classifier,
             GeometryPalette palette,
             GasRegistry registry) {
+        this(world, executor, classifier, palette, registry, CONFIG);
+    }
+
+    /** A world whose engine warnings go where {@code config} says, rather than failing the test. */
+    Sim(
+            TestWorld world,
+            Executor executor,
+            Classifier.Factory classifier,
+            GeometryPalette palette,
+            GasRegistry registry,
+            GasConfig config) {
         this.world = world;
         this.engine = new DimensionEngine(
                 registry,
-                CONFIG,
+                config,
                 classifier,
                 palette,
                 TestWorld.MIN_SECTION_Y,

@@ -18,6 +18,13 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // NFR-010: -Pfuzz.seed=S replays a seed, -Pfuzz.seeds=N runs N seeds from it, as the nightly run does.
+    ['fuzz.seed', 'fuzz.seeds', 'fuzz.ops'].each { name ->
+        def value = providers.gradleProperty(name).orNull
+        if (value != null) {
+            systemProperty "zas.$name", value
+        }
+    }
 }
 
 tasks.named('jacocoTestReport') {

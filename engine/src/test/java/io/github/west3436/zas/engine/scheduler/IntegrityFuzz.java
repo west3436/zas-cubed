@@ -1,0 +1,906 @@
+package io.github.west3436.zas.engine.scheduler;
+
+import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.Face;
+import io.github.west3436.zas.engine.Geometry;
+import io.github.west3436.zas.engine.GeometryDeriver;
+import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.SectionSnapshot;
+import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.gas.GasConfig;
+import io.github.west3436.zas.engine.gas.GasRegistry;
+import io.github.west3436.zas.engine.persist.ChunkRecordCodec;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * The engine half of the integrity fuzz (NFR-010): one seed's run of random block edits, gas
+ * operations, chunk unloads and reloads and save/load cycles, on the whole pipeline with a {@link
+ * TestWorld} for the world, checked as it goes.
+ *
+ * <ul>
+ *   <li><b>CORE-073.</b> Every atmos tick has the checker on, and any unexplained change fails.
+ *   <li><b>GEO-032.</b> Every {@link #CHECKPOINT} operations and at the end, every chunk loads, the
+ *       world settles, and the audit must find nothing in the whole region.
+ *   <li><b>CORE-063.</b> Every tick, every zone and saved share must hold finite amounts, none
+ *       negative.
+ *   <li><b>An independent total.</b> The checker explains gas moved between memory and chunks by the
+ *       category {@link LedgerCategory#STORAGE}, whatever the amount, so it can't see gas that a reload
+ *       makes or loses. Here the gas of the zones and of the shares no zone holds yet must change only
+ *       by what the other categories record. A share with no cells left, whose gas is dropped by design,
+ *       is taken off. So is the exact difference a known limit on DATA-008 makes, for the zone it happens
+ *       to and only when it happens: {@link #noteOutdatedShares}.
+ * </ul>
+ *
+ * <p>Save/load cycles are clean stops: what a crash restores (#304) isn't tested. Gas added at a paused
+ * zone is voided (GEO-036) and never enters a zone, so it needs no allowance; {@link Stats} totals it.
+ *
+ * <p>Everything comes from the seed and runs inline, so a seed replays exactly (CORE-044, CORE-071). A
+ * failure names the seed, the operation and the command that replays it.
+ */
+final class IntegrityFuzz {
+    /** The operations of a run the requirement asks for. */
+    static final int DEFAULT_OPS = 10_000;
+
+    /** How many operations apart the world settles and is audited. */
+    static final int CHECKPOINT = 1_000;
+
+    private static final int GRID = 3;
+    private static final int SIZE = GRID * 16;
+    private static final int MIN_Y = 72;
+    private static final int MAX_Y = 88; // across a section border, at y = 80
+    private static final int MAX_SETTLE_TICKS = 64;
+
+    /** How many of the last operations a failure lists. */
+    private static final int TRACE = 30;
+
+    static final GasRegistry REGISTRY = GasRegistry.of(List.of(
+            Sim.gas("zas:nitrogen", 0.028, 20.8), Sim.gas("zas:oxygen", 0.032, 21.0), Sim.gas("zas:huge", 0.044, 37)));
+    private static final int GASES = REGISTRY.size();
+    private static final int N2 = REGISTRY.indexOf("zas:nitrogen");
+    private static final int O2 = REGISTRY.indexOf("zas:oxygen");
+
+    /** The gas that takes the huge additions: its allowance is relative, so the others' stays tight. */
+    private static final int HUGE = REGISTRY.indexOf("zas:huge");
+
+    private static final GeometryPalette PALETTE;
+    /** A thin wall down the middle of x: two cells at one position. */
+    private static final int DIVIDER;
+    /** An open door that is a zone boundary on every face (GEO-007). */
+    private static final int DOOR;
+    /** An open door whose east face is a zone boundary (GEO-007). */
+    private static final int DOOR_EAST;
+
+    static {
+        GeometryPalette.Builder b = GeometryPalette.builder();
+        BitSet wall = new BitSet(GeometryDeriver.VOXELS);
+        GeometryDeriver.fill(wall, 7, 0, 0, 9, 16, 16);
+        DIVIDER = b.intern(GeometryDeriver.derive(wall));
+        DOOR = b.intern(Geometry.declared(Set.of(), Geometry.FULL_VOLUME, Geometry.FLAG_ZONE_BOUNDARY));
+        DOOR_EAST = b.intern(Geometry.AIR.withFlags(Geometry.boundaryFlag(Face.EAST)));
+        PALETTE = b.build();
+    }
+
+    private static final Pattern DROPPED =
+            Pattern.compile("The saved share of zone (\\d+) in chunk (-?\\d+), (-?\\d+) has no cells left.*");
+
+    /** What a run did, to show it exercised what it claims to. */
+    static final class Stats {
+        int blockEdits;
+        int gasOps;
+        int unloads;
+        int reloads;
+        int saveLoads;
+        int ticks;
+        int checkpoints;
+        int rejectedComponents;
+        int mostZones;
+        int mostPaused;
+        int rejectedMixtures;
+        int droppedShares;
+        int outdatedShares;
+        final double[] voided = new double[GASES];
+        final double[] supplied = new double[GASES];
+        final double[] madeByOutdatedShares = new double[GASES];
+        final double[] lostByOutdatedShares = new double[GASES];
+
+        @Override
+        public String toString() {
+            return blockEdits + " block edits, " + gasOps + " gas operations, " + unloads + " unloads, " + reloads
+                    + " reloads, " + saveLoads + " save/load cycles, " + ticks + " atmos ticks, " + checkpoints
+                    + " audits, " + rejectedComponents + " rejected components, at most " + mostZones + " zones and "
+                    + mostPaused + " paused, " + rejectedMixtures + " rejected mixture changes, " + droppedShares
+                    + " dropped shares, " + voided[N2] + " mol of nitrogen voided, " + supplied[N2] + " supplied, "
+                    + outdatedShares + " outdated shares taken, which made " + madeByOutdatedShares[N2] + " and lost "
+                    + lostByOutdatedShares[N2] + " mol of nitrogen";
+        }
+    }
+
+    private record Room(int x0, int y0, int z0, int x1, int y1, int z1) {}
+
+    /**
+     * A share saved during a tick that was then rejected.
+     *
+     * @param excess per gas, how much more the share holds than the zone's share after that tick
+     */
+    private record OutdatedShare(long chunk, ChunkRecord record, long zone, double[] excess) {}
+
+    private final long seed;
+    private final int ops;
+    private final Random random;
+    private final TestWorld world = new TestWorld(Ambient.STANDARD_AIR);
+    private final GasConfig config = GasConfig.DEFAULT.withLog(this::warned);
+    private final List<Room> rooms = new ArrayList<>();
+    private final ArrayDeque<String> trace = new ArrayDeque<>();
+    final Stats stats = new Stats();
+
+    private Sim sim;
+
+    /** What unloaded chunks saved, by chunk, read back from their bytes. */
+    final TreeMap<Long, ChunkRecord> saved = new TreeMap<>();
+    /** The records handed to the pipeline since the last tick, to look a dropped share up in. */
+    private final TreeMap<Long, ChunkRecord> delivered = new TreeMap<>();
+    /** What chunks saved during the tick in flight, by chunk. */
+    private final TreeMap<Long, ChunkRecord> savedInFlight = new TreeMap<>();
+    /** What chunks saved during a rejected tick, until the table has caught up. */
+    private final TreeMap<Long, ChunkRecord> rejectedInFlight = new TreeMap<>();
+    /** Shares known to be out of date, until their zone leaves memory or their chunk loads. */
+    private final List<OutdatedShare> outdated = new ArrayList<>();
+
+    private double[] expected = new double[GASES];
+    private double[] moved = new double[GASES];
+    private int reanchor;
+    private long digest = 17;
+    private int op;
+    private Consumer<IntegrityFuzz> sabotage = f -> {};
+    private int sabotageAt = -1;
+    private boolean doubleShares;
+
+    IntegrityFuzz(long seed, int ops) {
+        this.seed = seed;
+        this.ops = ops;
+        this.random = new Random(seed);
+    }
+
+    /** Runs a change no operation makes, just before an operation: for tests that the checks catch it. */
+    IntegrityFuzz sabotage(int at, Consumer<IntegrityFuzz> change) {
+        sabotageAt = at;
+        sabotage = change;
+        return this;
+    }
+
+    /** The command that replays a seed. */
+    static String replay(long seed) {
+        return "./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed=" + seed;
+    }
+
+    /**
+     * Runs every operation, then settles and audits.
+     *
+     * @return a digest of the engine's states, the same for the same seed
+     * @throws AssertionError naming the seed and the operation, if a check fails
+     */
+    long run() {
+        try {
+            newEngine();
+            int count = 6 + random.nextInt(5);
+            for (int i = 0; i < count; i++) {
+                buildRoom();
+            }
+            for (op = 0; op < ops; op++) {
+                if (op == sabotageAt) {
+                    sabotage.accept(this);
+                }
+                operate();
+                if (random.nextInt(4) == 0) {
+                    step();
+                }
+                if ((op + 1) % CHECKPOINT == 0) {
+                    checkpoint();
+                }
+            }
+            op = ops - 1;
+            checkpoint();
+            return digest;
+        } catch (Throwable t) {
+            throw new AssertionError(
+                    "NFR-010: seed " + seed + " failed at operation " + op + " of " + ops + ": " + t + "\nReplay: "
+                            + replay(seed) + "\nThe last operations:\n" + String.join("\n", trace),
+                    t);
+        }
+    }
+
+    // ---- Operations -----------------------------------------------------------------------
+
+    private void operate() {
+        int r = random.nextInt(1000);
+        if (r < 300) {
+            add();
+        } else if (r < 400) {
+            remove();
+        } else if (r < 430) {
+            heat();
+        } else if (r < 650) {
+            editShell();
+        } else if (r < 700) {
+            editAnywhere();
+        } else if (r < 725) {
+            reseal();
+        } else if (r < 740) {
+            buildRoom();
+        } else if (r < 750) {
+            override();
+        } else if (r < 770) {
+            pin();
+        } else if (r < 780) {
+            log("unpin");
+            sim.pipeline.unpin(owner());
+            stats.gasOps++;
+        } else if (r < 790) {
+            reset();
+        } else if (r < 860) {
+            unload(false);
+        } else if (r < 980) {
+            reload();
+        } else if (r < 995) {
+            unload(true);
+        } else {
+            saveAndLoad();
+        }
+    }
+
+    private void log(String what) {
+        if (trace.size() == TRACE) {
+            trace.removeFirst();
+        }
+        trace.addLast(op + ": " + what);
+    }
+
+    private String owner() {
+        return "owner" + random.nextInt(3);
+    }
+
+    private Room room() {
+        return rooms.get(random.nextInt(rooms.size()));
+    }
+
+    /** A position in a room, mostly, as most operations go where the gas is. */
+    private int[] target() {
+        if (random.nextInt(8) == 0) {
+            return new int[] {random.nextInt(SIZE), MIN_Y + random.nextInt(MAX_Y - MIN_Y + 1), random.nextInt(SIZE)};
+        }
+        Room room = room();
+        return new int[] {
+            room.x0 + random.nextInt(room.x1 - room.x0 + 1),
+            room.y0 + random.nextInt(room.y1 - room.y0 + 1),
+            room.z0 + random.nextInt(room.z1 - room.z0 + 1)
+        };
+    }
+
+    private double amount() {
+        return switch (random.nextInt(20)) {
+            case 0 -> random.nextDouble() * 1e-9; // below the pruning epsilon
+            case 1 -> random.nextDouble() * 1e5;
+            default -> random.nextDouble() * 100;
+        };
+    }
+
+    private double[] amounts() {
+        double[] moles = new double[GASES];
+        moles[N2] = amount();
+        moles[O2] = random.nextBoolean() ? amount() : 0;
+        if (random.nextInt(100) == 0) {
+            moles[HUGE] = 1e250 * random.nextDouble();
+        }
+        return moles;
+    }
+
+    private int sub() {
+        return random.nextInt(4) == 0 ? random.nextInt(2) : -1;
+    }
+
+    private void add() {
+        int[] p = target();
+        double[] moles = amounts();
+        double temperature = random.nextInt(10) == 0 ? random.nextDouble() * 10_000 : 150 + random.nextDouble() * 300;
+        int sub = sub();
+        log("add " + moles[N2] + " N2, " + moles[O2] + " O2, " + moles[HUGE] + " huge at " + str(p) + " cell " + sub
+                + ", " + temperature + " K");
+        sim.pipeline.add(block(p), sub, moles, temperature, LedgerCategory.API, random.nextInt(8) != 0, "fuzz");
+        stats.gasOps++;
+    }
+
+    private void remove() {
+        int[] p = target();
+        double[] moles = amounts();
+        int sub = sub();
+        log("remove " + moles[N2] + " N2, " + moles[O2] + " O2 at " + str(p) + " cell " + sub);
+        sim.pipeline.remove(block(p), sub, moles, LedgerCategory.API, random.nextInt(8) != 0, "fuzz");
+        stats.gasOps++;
+    }
+
+    private void heat() {
+        int[] p = target();
+        boolean add = random.nextBoolean();
+        double joules = random.nextInt(50) == 0 ? 1e300 : random.nextDouble() * 1e7;
+        log((add ? "add " : "remove ") + joules + " J at " + str(p));
+        sim.pipeline.heat(block(p), sub(), add, joules, random.nextBoolean(), "fuzz");
+        stats.gasOps++;
+    }
+
+    private void pin() {
+        int[] p = target();
+        log("pin at " + str(p));
+        sim.pipeline.pin(block(p), sub(), owner());
+        stats.gasOps++;
+    }
+
+    private void reset() {
+        int[] p = target();
+        log("reset at " + str(p));
+        sim.pipeline.reset(block(p), sub(), "fuzz");
+        stats.gasOps++;
+    }
+
+    private int block() {
+        return switch (random.nextInt(10)) {
+            case 0, 1, 2, 3 -> TestWorld.AIR;
+            case 4, 5, 6 -> TestWorld.SOLID;
+            case 7 -> DIVIDER;
+            case 8 -> DOOR;
+            default -> DOOR_EAST;
+        };
+    }
+
+    private void set(int x, int y, int z, int id) {
+        log("set " + x + ", " + y + ", " + z + " to " + id);
+        world.set(x, y, z, id);
+        stats.blockEdits++;
+    }
+
+    private void editShell() {
+        Room room = room();
+        int x = room.x0 - 1 + random.nextInt(room.x1 - room.x0 + 3);
+        int y = room.y0 - 1 + random.nextInt(room.y1 - room.y0 + 3);
+        int z = room.z0 - 1 + random.nextInt(room.z1 - room.z0 + 3);
+        switch (random.nextInt(3)) {
+            case 0 -> x = random.nextBoolean() ? room.x0 - 1 : room.x1 + 1;
+            case 1 -> y = random.nextBoolean() ? room.y0 - 1 : room.y1 + 1;
+            default -> z = random.nextBoolean() ? room.z0 - 1 : room.z1 + 1;
+        }
+        set(x, y, z, block());
+    }
+
+    private void editAnywhere() {
+        int[] p = target();
+        set(p[0], p[1], p[2], block());
+    }
+
+    /** Makes a room whole again, as breached rooms would otherwise pile up. */
+    private void reseal() {
+        Room r = room();
+        log("reseal " + r);
+        for (int x = r.x0 - 1; x <= r.x1 + 1; x++) {
+            for (int y = r.y0 - 1; y <= r.y1 + 1; y++) {
+                for (int z = r.z0 - 1; z <= r.z1 + 1; z++) {
+                    boolean shell = x < r.x0 || x > r.x1 || y < r.y0 || y > r.y1 || z < r.z0 || z > r.z1;
+                    world.set(x, y, z, shell ? TestWorld.SOLID : TestWorld.AIR);
+                }
+            }
+        }
+        stats.blockEdits++;
+    }
+
+    private void buildRoom() {
+        int width = 2 + random.nextInt(11);
+        int height = 2 + random.nextInt(5);
+        int depth = 2 + random.nextInt(11);
+        int x = 1 + random.nextInt(SIZE - width - 2);
+        int y = MIN_Y + 1 + random.nextInt(MAX_Y - MIN_Y - height - 1);
+        int z = 1 + random.nextInt(SIZE - depth - 2);
+        Room room = new Room(x, y, z, x + width - 1, y + height - 1, z + depth - 1);
+        log("build " + room);
+        world.room(room.x0, room.y0, room.z0, room.x1, room.y1, room.z1);
+        rooms.add(room);
+        if (rooms.size() > 24) {
+            rooms.remove(random.nextInt(rooms.size()));
+        }
+        stats.blockEdits++;
+    }
+
+    /** Gives a position a geometry of its own, or takes it away (API-023). */
+    private void override() {
+        int[] p = target();
+        Geometry geometry = switch (random.nextInt(3)) {
+            case 0 -> Geometry.declared(EnumSet.noneOf(Face.class), Geometry.FULL_VOLUME, Geometry.FLAG_POSITIONAL);
+            case 1 -> Geometry.SOLID.withFlags(Geometry.FLAG_POSITIONAL);
+            default -> null;
+        };
+        log("override " + str(p) + " with " + geometry);
+        world.override(p[0], p[1], p[2], geometry);
+        stats.blockEdits++;
+    }
+
+    private long chunk() {
+        return SectionKeys.chunk(random.nextInt(GRID), random.nextInt(GRID));
+    }
+
+    /**
+     * Unloads a chunk as the server does: it saves, through its bytes, then unloads. With {@code late},
+     * it does so between the next batch's close and apply, so the tick's result may be stale (CORE-070).
+     */
+    private void unload(boolean late) {
+        long chunk = chunk();
+        if (!world.isLoaded(chunk)) {
+            reload();
+            return;
+        }
+        log((late ? "unload during the next tick " : "unload ") + chunkStr(chunk));
+        stats.unloads++;
+        if (!late) {
+            unloadNow(sim, chunk);
+            return;
+        }
+        sim.betweenCloseAndApply = s -> {
+            s.betweenCloseAndApply = x -> {};
+            unloadNow(s, chunk);
+            savedInFlight.put(chunk, saved.get(chunk));
+        };
+        step();
+    }
+
+    private void unloadNow(Sim s, long chunk) {
+        ChunkRecord r = s.pipeline.recordFor(chunk, false);
+        world.unload(chunk);
+        s.pipeline.chunkUnloaded(chunk);
+        keep(chunk, r);
+    }
+
+    private void keep(long chunk, ChunkRecord r) {
+        ChunkRecord read = throughBytes(chunk, r);
+        if (read != null) {
+            saved.put(chunk, doubleShares ? doubled(chunk, read) : read);
+        } else {
+            saved.remove(chunk);
+        }
+    }
+
+    private ChunkRecord throughBytes(long chunk, ChunkRecord r) {
+        if (r == null) {
+            return null;
+        }
+        checkFinite(r);
+        byte[] bytes = ChunkRecordCodec.encode(r, REGISTRY);
+        try {
+            ChunkRecord read = ChunkRecordCodec.decode(bytes, chunk, REGISTRY, this::warned);
+            // A queued addition's sub-cell isn't saved: it acts on the position's largest cell (GasOp).
+            if (!r.withoutQueued().equals(read.withoutQueued())
+                    || r.queuedAdditions().size() != read.queuedAdditions().size()) {
+                throw new AssertionError("the record changed in its bytes: " + r + " became " + read);
+            }
+            return read;
+        } catch (ChunkRecordCodec.CorruptRecordException e) {
+            throw new AssertionError("a record didn't read back", e);
+        }
+    }
+
+    private void reload() {
+        List<Long> away = away();
+        if (away.isEmpty()) {
+            add();
+            return;
+        }
+        reload(away.get(random.nextInt(away.size())));
+    }
+
+    private List<Long> away() {
+        List<Long> away = new ArrayList<>();
+        for (int x = 0; x < GRID; x++) {
+            for (int z = 0; z < GRID; z++) {
+                long chunk = SectionKeys.chunk(x, z);
+                if (!world.isLoaded(chunk)) {
+                    away.add(chunk);
+                }
+            }
+        }
+        return away;
+    }
+
+    private void reload(long chunk) {
+        log("reload " + chunkStr(chunk));
+        ChunkRecord r = saved.remove(chunk);
+        world.load(chunk);
+        sim.pipeline.chunkLoaded(chunk, r);
+        if (r != null) {
+            delivered.put(chunk, r);
+        }
+        stats.reloads++;
+    }
+
+    /**
+     * A clean stop and start: every loaded chunk writes its final save, a new engine takes over, and
+     * the chunks come back as a server loads them, some of them later.
+     */
+    private void saveAndLoad() {
+        log("save and load");
+        stats.saveLoads++;
+        Sim old = sim;
+        TreeMap<Long, ChunkRecord> written = new TreeMap<>();
+        for (int x = 0; x < GRID; x++) {
+            for (int z = 0; z < GRID; z++) {
+                long chunk = SectionKeys.chunk(x, z);
+                if (world.isLoaded(chunk)) {
+                    ChunkRecord r = throughBytes(chunk, old.pipeline.recordFor(chunk, true));
+                    if (r != null) {
+                        written.put(chunk, r);
+                    }
+                }
+            }
+        }
+        long nextZoneId = old.pipeline.nextZoneId();
+        newEngine();
+        sim.engine.reserveZoneIds(nextZoneId);
+        for (int x = 0; x < GRID; x++) {
+            for (int z = 0; z < GRID; z++) {
+                long chunk = SectionKeys.chunk(x, z);
+                if (!world.isLoaded(chunk)) {
+                    continue;
+                }
+                ChunkRecord r = written.get(chunk);
+                if (random.nextInt(4) == 0) {
+                    // Not back yet. Its queued additions stay on the record until it is.
+                    world.unload(chunk);
+                    if (r != null) {
+                        saved.put(chunk, r);
+                    }
+                } else {
+                    sim.pipeline.chunkLoaded(chunk, r);
+                    if (r != null) {
+                        delivered.put(chunk, r);
+                    }
+                }
+            }
+        }
+        reanchor = 0;
+        step();
+    }
+
+    private void newEngine() {
+        sim = new Sim(world, null, EnclosureClassifier.FACTORY, PALETTE, REGISTRY, config);
+        sim.engine.setSeed(seed);
+    }
+
+    // ---- Checks --------------------------------------------------------------------------
+
+    private void step() {
+        DimensionPipeline.Applied a = sim.step();
+        stats.ticks++;
+        delivered.clear();
+        book(a);
+        digest = digest * 31 + sim.engine.stateHash();
+    }
+
+    private void book(DimensionPipeline.Applied a) {
+        AtmosSnapshot table = sim.snapshot();
+        int paused = 0;
+        for (ZoneView z : table.zones()) {
+            checkFinite(z);
+            paused += z.paused() ? 1 : 0;
+        }
+        stats.mostZones = Math.max(stats.mostZones, table.zoneCount());
+        stats.mostPaused = Math.max(stats.mostPaused, paused);
+        stats.rejectedComponents += a.rejected();
+        ConservationReport report = a.conservation();
+        if (report == null) {
+            throw new AssertionError("the checker didn't run");
+        }
+        for (int i = 0; i < GASES; i++) {
+            stats.voided[i] += report.voided(i);
+            stats.supplied[i] += report.supplied(i);
+        }
+        double[] total = total(table);
+        noteOutdatedShares(a, table);
+        if (a.rejected() > 0) {
+            reanchor = 2; // the rejected tick's records are undone in the next, outside any period
+        }
+        if (reanchor > 0) {
+            reanchor--;
+            expected = total;
+            countOutdatedShares(table, false);
+            return;
+        }
+        countOutdatedShares(table, true);
+        for (int i = 0; i < GASES; i++) {
+            for (LedgerCategory c : LedgerCategory.values()) {
+                if (c != LedgerCategory.STORAGE) {
+                    double change = report.recorded(c, i);
+                    expected[i] += change;
+                    moved[i] += Math.abs(change);
+                }
+            }
+            double allowance = 1e-6 + 1e-9 * (Math.max(total[i], expected[i]) + moved[i]);
+            if (!(Math.abs(total[i] - expected[i]) <= allowance)) {
+                throw new AssertionError("gas " + i + ": the zones and the saved shares hold " + total[i]
+                        + " mol, and the ledger's categories other than storage say " + expected[i]);
+            }
+        }
+    }
+
+    /**
+     * Finds the shares of the known limit on DATA-008. A chunk that saves between a tick's close and apply
+     * writes the table from before that tick. If the tick is rejected, its gas goes back but its geometry
+     * stands, so the zone's share of the chunk is now something else. Once the table has caught up, the
+     * difference between the two is that one tick's change, for that zone, and it's all that is excused.
+     */
+    private void noteOutdatedShares(DimensionPipeline.Applied a, AtmosSnapshot table) {
+        if (a.rejected() > 0) {
+            rejectedInFlight.putAll(savedInFlight);
+        }
+        savedInFlight.clear();
+        if (table.hasRejections()) {
+            return;
+        }
+        rejectedInFlight.forEach((chunk, record) -> {
+            if (saved.get(chunk) != record) {
+                return; // it has loaded again, and a share whose zone is in memory isn't taken
+            }
+            for (ZoneShare share : record.zones()) {
+                ZoneShare now = shareOf(table, chunk, share.zoneId());
+                if (now != null) {
+                    double[] excess = new double[GASES];
+                    boolean differs = false;
+                    for (int i = 0; i < GASES; i++) {
+                        excess[i] = share.moles(i) - now.moles(i);
+                        differs |= Math.abs(excess[i]) > 1e-9 * Math.max(share.moles(i), now.moles(i));
+                    }
+                    if (differs) {
+                        outdated.add(new OutdatedShare(chunk, record, share.zoneId(), excess));
+                    }
+                }
+            }
+        });
+        rejectedInFlight.clear();
+    }
+
+    /**
+     * Moves the expected total by an outdated share's excess at the tick the share starts to count, which
+     * is when its zone leaves memory. If the chunk loads first, the share is never taken and nothing moves.
+     */
+    private void countOutdatedShares(AtmosSnapshot table, boolean move) {
+        for (Iterator<OutdatedShare> it = outdated.iterator(); it.hasNext(); ) {
+            OutdatedShare share = it.next();
+            if (saved.get(share.chunk) != share.record) {
+                it.remove();
+            } else if (shareOf(table, share.chunk, share.zone) == null) {
+                it.remove();
+                if (move) {
+                    stats.outdatedShares++;
+                    for (int i = 0; i < GASES; i++) {
+                        expected[i] += share.excess[i];
+                        if (share.excess[i] > 0) {
+                            stats.madeByOutdatedShares[i] += share.excess[i];
+                        } else {
+                            stats.lostByOutdatedShares[i] -= share.excess[i];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static ZoneShare shareOf(AtmosSnapshot table, long chunk, long zone) {
+        for (ZoneShare share : table.shares(chunk)) {
+            if (share.zoneId() == zone) {
+                return share;
+            }
+        }
+        return null;
+    }
+
+    /** What the published zones hold, and the saved shares no zone has cells for yet. */
+    private double[] total(AtmosSnapshot table) {
+        double[] total = new double[GASES];
+        for (ZoneView z : table.zones()) {
+            for (int i = 0; i < GASES; i++) {
+                total[i] += z.moles(i);
+            }
+        }
+        for (Map.Entry<Long, ChunkRecord> e : saved.entrySet()) {
+            Set<Long> held = new HashSet<>();
+            for (ZoneShare share : table.shares(e.getKey())) {
+                held.add(share.zoneId());
+            }
+            for (ZoneShare share : e.getValue().zones()) {
+                if (!held.contains(share.zoneId())) {
+                    for (int i = 0; i < GASES; i++) {
+                        total[i] += share.moles(i);
+                    }
+                }
+            }
+        }
+        return total;
+    }
+
+    private static void checkFinite(ZoneView z) {
+        boolean ok = Double.isFinite(z.volume()) && z.volume() > 0 && Double.isFinite(z.temperature());
+        ok &= z.temperature() >= 0 && Double.isFinite(z.pressure());
+        for (int i = 0; i < z.gasCount(); i++) {
+            ok &= Double.isFinite(z.moles(i)) && z.moles(i) >= 0;
+        }
+        if (!ok) {
+            throw new AssertionError("a non-finite or negative value in " + z);
+        }
+    }
+
+    private static void checkFinite(ChunkRecord r) {
+        // ZoneShare and GasOp refuse these when built; here so that stays true of what is saved.
+        for (ZoneShare share : r.zones()) {
+            boolean ok = Double.isFinite(share.temperature());
+            for (double n : share.moles()) {
+                ok &= Double.isFinite(n) && n >= 0;
+            }
+            if (!ok) {
+                throw new AssertionError("a non-finite or negative value in " + share);
+            }
+        }
+    }
+
+    /** Every chunk loads, the world settles, and the audit must find nothing. */
+    private void checkpoint() {
+        log("checkpoint");
+        for (long chunk : away()) {
+            reload(chunk);
+        }
+        settle();
+        stats.checkpoints++;
+        GeometryAudit.Region region = new GeometryAudit.Region(-1, MIN_Y - 2, -1, SIZE, MAX_Y + 2, SIZE);
+        List<SectionSnapshot> fresh = new ArrayList<>();
+        for (long key : region.sections()) {
+            SectionSource s = world.capture(key);
+            if (s != null) {
+                fresh.add(s.decode());
+            }
+        }
+        GeometryAudit.Report report = sim.scheduler
+                .inspect(engine -> GeometryAudit.run(engine, region, fresh, 40))
+                .join();
+        if (!report.clean()) {
+            StringBuilder found = new StringBuilder();
+            for (GeometryAudit.Finding f : report.findings()) {
+                found.append("\n  ")
+                        .append(f.kind())
+                        .append(" at ")
+                        .append(SectionKeys.blockX(f.block()))
+                        .append(", ")
+                        .append(SectionKeys.blockY(f.block()))
+                        .append(", ")
+                        .append(SectionKeys.blockZ(f.block()))
+                        .append(", zone ")
+                        .append(f.zoneId());
+            }
+            throw new AssertionError("the audit found " + report.total() + " differences:" + found);
+        }
+    }
+
+    /** Ticks until no operation or classification waits and no zone is paused. */
+    private void settle() {
+        for (int i = 0; i < MAX_SETTLE_TICKS; i++) {
+            step();
+            if (settled()) {
+                return;
+            }
+        }
+        throw new AssertionError("the world didn't settle in " + MAX_SETTLE_TICKS + " atmos ticks: "
+                + sim.pipeline.outstanding().size() + " operations outstanding, pending classification "
+                + sim.engine.classifier().hasPending() + ", zones "
+                + sim.snapshot().zones());
+    }
+
+    private boolean settled() {
+        if (!sim.pipeline.outstanding().isEmpty() || sim.engine.classifier().hasPending()) {
+            return false;
+        }
+        for (ZoneView z : sim.snapshot().zones()) {
+            if (z.paused()) {
+                return false;
+            }
+        }
+        return sim.pipeline.heldBlocks().length == 0;
+    }
+
+    /** Engine warnings: rejections and dropped shares are by design, and any other is a failure. */
+    private void warned(String message) {
+        if (message.startsWith("Rejected GasMixture.")) {
+            stats.rejectedMixtures++;
+            return;
+        }
+        Matcher dropped = DROPPED.matcher(message);
+        if (!dropped.matches()) {
+            throw new AssertionError("engine warning: " + message);
+        }
+        stats.droppedShares++;
+        long chunk = SectionKeys.chunk(Integer.parseInt(dropped.group(2)), Integer.parseInt(dropped.group(3)));
+        ZoneShare share = Optional.ofNullable(delivered.get(chunk))
+                .map(r -> r.share(Long.parseLong(dropped.group(1))))
+                .orElseThrow(() -> new AssertionError("a dropped share nobody delivered: " + message));
+        for (int i = 0; i < GASES; i++) {
+            expected[i] -= share.moles(i);
+        }
+    }
+
+    // ---- For tests of the checks ----------------------------------------------------------
+
+    /** Adds gas to the first zone behind the ledger's back, in the first tick that has a zone. */
+    void conjure(double moles) {
+        boolean[] done = {false};
+        sim.engine.setPhaseListener(phase -> {
+            if (phase == Phase.EXCHANGE && !done[0]) {
+                for (var zone : sim.engine.graph().zones()) {
+                    zone.mixture().setMoles(N2, zone.mixture().moles(N2) + moles);
+                    done[0] = true;
+                    return;
+                }
+            }
+        });
+    }
+
+    /** Doubles every share a chunk saves from now on. */
+    void doubleSavedShares() {
+        doubleShares = true;
+    }
+
+    private static ChunkRecord doubled(long chunk, ChunkRecord r) {
+        List<ZoneShare> doubled = new ArrayList<>();
+        for (ZoneShare share : r.zones()) {
+            double[] moles = share.moles();
+            for (int i = 0; i < moles.length; i++) {
+                moles[i] *= 2;
+            }
+            doubled.add(new ZoneShare(
+                    share.zoneId(), share.cells(), moles, share.temperature(), share.zoneChunks(), share.pins()));
+        }
+        return new ChunkRecord(chunk, doubled, r.heldBlocks(), r.queuedAdditions());
+    }
+
+    /** Fills the first zone's first cell without the engine hearing of it. */
+    void loseBlockChange() {
+        for (var zone : sim.engine.graph().zones()) {
+            long cell = zone.cells()[0];
+            int x = io.github.west3436.zas.engine.classify.CellIds.x(cell);
+            int y = io.github.west3436.zas.engine.classify.CellIds.y(cell);
+            int z = io.github.west3436.zas.engine.classify.CellIds.z(cell);
+            world.set(x, y, z, TestWorld.SOLID);
+            world.drainDirty(k -> true);
+            return;
+        }
+    }
+
+    // ---- Text -----------------------------------------------------------------------------
+
+    private static long block(int[] p) {
+        return SectionKeys.block(p[0], p[1], p[2]);
+    }
+
+    private static String str(int[] p) {
+        return p[0] + ", " + p[1] + ", " + p[2];
+    }
+
+    private static String chunkStr(long chunk) {
+        return "chunk " + SectionKeys.chunkX(chunk) + ", " + SectionKeys.chunkZ(chunk);
+    }
+}
