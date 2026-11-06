@@ -2,6 +2,7 @@ package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +29,7 @@ import java.util.Objects;
  *     close, ascending: a zone rebuilt from the records stays paused until they load (GEO-030)
  * @param changedOutsideMirror sections the worker doesn't mirror where a block's geometry changed
  *     since the last batch, ascending: not captured, but a classification may rest on them (GEO-027)
+ * @param limits the world border and whether the world's edges are sealed, now (GEO-031)
  */
 public record Batch(
         long tick,
@@ -41,7 +43,8 @@ public record Batch(
         EngineSettings settings,
         List<ChunkRecord> records,
         long[] unloadedListedChunks,
-        long[] changedOutsideMirror) {
+        long[] changedOutsideMirror,
+        WorldLimits limits) {
 
     /**
      * Checks and copies the arguments.
@@ -69,6 +72,7 @@ public record Batch(
         }
         unloadedListedChunks = sorted(unloadedListedChunks);
         changedOutsideMirror = sorted(changedOutsideMirror);
+        Objects.requireNonNull(limits, "limits");
     }
 
     /** A batch without saved records. */
@@ -94,7 +98,8 @@ public record Batch(
                 settings,
                 List.of(),
                 new long[0],
-                new long[0]);
+                new long[0],
+                WorldLimits.OPEN);
     }
 
     /** A batch with only operations and an ambient, as tests and the headless harness use. */
@@ -117,7 +122,8 @@ public record Batch(
                 newSettings,
                 records,
                 unloadedListedChunks,
-                changedOutsideMirror);
+                changedOutsideMirror,
+                limits);
     }
 
     /** This batch carrying a rejection. */
@@ -134,7 +140,8 @@ public record Batch(
                 settings,
                 records,
                 unloadedListedChunks,
-                changedOutsideMirror);
+                changedOutsideMirror,
+                limits);
     }
 
     private static long[] sorted(long[] keys) {

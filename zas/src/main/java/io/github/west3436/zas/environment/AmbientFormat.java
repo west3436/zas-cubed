@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * The datapack format of ambient definitions (ENV-001, ENV-010, ENV-003, ENV-007), documented
+ * The datapack format of ambient definitions (ENV-001, ENV-010, ENV-003, ENV-007, GEO-031), documented
  * in {@code docs/datapacks.md}. Errors name the field at fault (OPS-008).
  */
 public final class AmbientFormat {
@@ -23,7 +23,7 @@ public final class AmbientFormat {
     public static final String DIRECTORY = "zas/ambient";
 
     private static final Set<String> ATMOSPHERE_FIELDS = Set.of("partial_pressures", "moles", "vacuum", "temperature");
-    private static final Set<String> TOP_LEVEL_FIELDS = Set.of("presets", "excluded");
+    private static final Set<String> TOP_LEVEL_FIELDS = Set.of("presets", "excluded", "sealed_world_limits");
 
     /** A definition that can't be read; the message names the field. */
     public static final class InvalidAmbientException extends Exception {
@@ -80,11 +80,19 @@ public final class AmbientFormat {
             }
             excluded = flag.getAsBoolean();
         }
-        if (normal.isEmpty() && hardcore.isEmpty() && !excluded) {
+        boolean sealedLimits = false;
+        if (root.has("sealed_world_limits")) {
+            JsonPrimitive flag = primitive(root.get("sealed_world_limits"), "sealed_world_limits");
+            if (!flag.isBoolean()) {
+                throw new InvalidAmbientException("sealed_world_limits must be true or false");
+            }
+            sealedLimits = flag.getAsBoolean();
+        }
+        if (normal.isEmpty() && hardcore.isEmpty() && !excluded && !sealedLimits) {
             throw new InvalidAmbientException(
                     "defines no atmosphere: give partial_pressures, moles or vacuum, or presets");
         }
-        return new DimensionAmbient(normal, hardcore, excluded);
+        return new DimensionAmbient(normal, hardcore, excluded, sealedLimits);
     }
 
     /** One atmosphere: exactly one of partial_pressures, moles or vacuum, and a temperature. */

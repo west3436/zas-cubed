@@ -66,7 +66,7 @@ public interface ResolvableTopology extends CellTopology {
         /** A reached face leads to a position in section {@code section}, which the view doesn't hold. */
         void unknown(long section);
 
-        /** A reached face leads outside the world, which counts as open to ambient (GEO-031). */
+        /** A reached face leads outside the world, which counts as open to ambient unless sealed (GEO-031). */
         void outsideWorld();
     }
 }

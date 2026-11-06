@@ -5,6 +5,7 @@ import io.github.west3436.zas.change.SectionCapture;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.DirtySection;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.SectionSource;
 import io.github.west3436.zas.environment.Ambients;
@@ -13,6 +14,7 @@ import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.border.WorldBorder;
 
 /**
  * A server level as the atmos pipeline sees it (architecture §3.4). Every method runs on the
@@ -68,6 +70,19 @@ final class LevelWorld implements DimensionPipeline.World {
         }
         return ChangeTracker.lifecycleGeneration(
                 level, new ChunkPos(SectionKeys.chunkX(chunk), SectionKeys.chunkZ(chunk)));
+    }
+
+    @Override
+    public WorldLimits limits() {
+        requireServerThread();
+        WorldBorder border = level.getWorldBorder();
+        // WorldBorder#isWithinBounds: a block is inside if x + 1 > minX and x < maxX.
+        return new WorldLimits(
+                (int) Math.floor(border.getMinX()),
+                (int) Math.floor(border.getMinZ()),
+                (int) Math.ceil(border.getMaxX()) - 1,
+                (int) Math.ceil(border.getMaxZ()) - 1,
+                Ambients.sealsWorldLimits(level.dimension()));
     }
 
     @Override

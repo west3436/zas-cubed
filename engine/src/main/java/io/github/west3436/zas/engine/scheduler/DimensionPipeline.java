@@ -2,6 +2,7 @@ package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.flow.FlowEdge;
@@ -72,6 +73,11 @@ public final class DimensionPipeline {
 
         /** The dimension's ambient now. */
         Ambient ambient();
+
+        /** The world border now, and whether the dimension seals its edges (GEO-031). */
+        default WorldLimits limits() {
+            return WorldLimits.OPEN;
+        }
     }
 
     /**
@@ -544,7 +550,8 @@ public final class DimensionPipeline {
                 settings,
                 records,
                 toArray(unloadedListed),
-                toArray(changedOutsideMirror));
+                toArray(changedOutsideMirror),
+                world.limits());
         loads.clear();
         unloads.clear();
         pendingRejection = null;

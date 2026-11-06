@@ -5,6 +5,7 @@ import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,6 +35,7 @@ final class TestWorld implements DimensionPipeline.World {
     private long stamp;
     private final int background;
     Ambient ambient;
+    WorldLimits limits = WorldLimits.OPEN;
     int captures;
 
     TestWorld(Ambient ambient) {
@@ -124,6 +126,11 @@ final class TestWorld implements DimensionPipeline.World {
             keys[i++] = k;
         }
         return keys;
+    }
+
+    @Override
+    public WorldLimits limits() {
+        return limits;
     }
 
     @Override

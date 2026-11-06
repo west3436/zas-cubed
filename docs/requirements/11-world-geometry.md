@@ -542,7 +542,7 @@ resumes.
   checks the change applies when the zone resumes.
 
 #### GEO-031 · World limits
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 Faces that lead outside the world's build height or world border shall count
 as open to ambient. Each dimension may override this.
@@ -552,6 +552,13 @@ as open to ambient. Each dimension may override this.
   sealed.
 - **Verify:** A GameTest checks a room touching the build limit vents, and
   that a dimension override seals it.
+
+*2026-11-05: Implemented. A dimension overrides it with `sealed_world_limits`
+in its ambient file (docs/datapacks.md). `geo_031_a_room_touching_the_build_limit_vents`
+and `geo_031_a_dimension_override_seals_the_build_limit` are the plan's tests;
+`geo_031_the_default_world_border_is_open` and
+`geo_031_a_world_border_moved_in_counts_at_once` check the border, and
+`WorldLimitsTest` checks limits that change.*
 
 #### GEO-032 · Geometry audit
 `Should` · `R0` · `Implemented` · Verify: GameTest

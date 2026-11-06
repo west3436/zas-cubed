@@ -573,8 +573,11 @@ drives it.
   from −512 to 511, and a block has at most 4 cells, the most any vanilla
   shape has (crossed panes and walls, and fences by shape, though the shipped
   override makes those one cell; the `geo_004` GameTest checks
-  every vanilla state). Faces leading outside the build height, or beyond the
-  ids' range, count as open (GEO-031's default). Through
+  every vanilla state). Faces leading outside the build height, past the world
+  border or beyond the ids' range count as open, unless the dimension seals
+  them (GEO-031): `WorldLimits` comes with each batch. No cell lies past such a
+  face, so a zone open there has its ambient edge to an entry in the graph for
+  the position beyond it, which holds no gas. Through
   `ResolvableTopology` it also reports the faces that reach sections not in the
   mirror.
 - `EnclosureFill` is the bounded fill: `Enclosed` (sorted cells and volume),

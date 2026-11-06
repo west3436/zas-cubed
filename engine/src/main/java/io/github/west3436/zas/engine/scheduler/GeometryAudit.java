@@ -243,6 +243,7 @@ public final class GeometryAudit {
                 },
                 mirror.minSectionY() * 16,
                 mirror.maxSectionY() * 16 + 15);
+        topology.limits(engine.limits());
 
         Collector out = new Collector(maxFindings);
 
@@ -328,6 +329,11 @@ public final class GeometryAudit {
                         }
                     } else if (other != zone && zone.edgeTo(other) == null) {
                         out.add(Kind.MISSING_EDGE, blockOf(neighbour), zone.id());
+                    }
+                });
+                topology.forEachOutsideFace(cell, (outside, direct) -> {
+                    if (zone.ambientEdge() == null) {
+                        out.add(Kind.UNRECORDED_OPENING, blockOf(outside), zone.id());
                     }
                 });
             }

@@ -8,22 +8,30 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * A dimension's datapack ambient definition (ENV-001): the ambient for each preset (ENV-010)
- * and whether the dimension is excluded from simulation (ENV-007).
+ * A dimension's datapack ambient definition (ENV-001): the ambient for each preset (ENV-010),
+ * whether the dimension is excluded from simulation (ENV-007), and whether its edges are sealed
+ * (GEO-031).
  *
  * <p>A preset with no ambient here falls through to the next source (ENV-014).
  *
  * @param normal the ambient under the Normal preset, if defined
  * @param hardcore the ambient under the Hardcore preset, if defined
  * @param excluded whether the dimension is excluded from simulation
+ * @param sealedWorldLimits whether faces leading past its build height or world border are gas-tight
  */
-public record DimensionAmbient(Optional<Ambient> normal, Optional<Ambient> hardcore, boolean excluded) {
+public record DimensionAmbient(
+        Optional<Ambient> normal, Optional<Ambient> hardcore, boolean excluded, boolean sealedWorldLimits) {
     /** A definition that defines nothing, as if there were none. */
     public static final DimensionAmbient NONE = new DimensionAmbient(Optional.empty(), Optional.empty(), false);
 
     public DimensionAmbient {
         Objects.requireNonNull(normal, "normal");
         Objects.requireNonNull(hardcore, "hardcore");
+    }
+
+    /** A definition whose world limits are open to the ambient, the default (GEO-031). */
+    public DimensionAmbient(Optional<Ambient> normal, Optional<Ambient> hardcore, boolean excluded) {
+        this(normal, hardcore, excluded, false);
     }
 
     /** The ambient defined for a preset, if any. */

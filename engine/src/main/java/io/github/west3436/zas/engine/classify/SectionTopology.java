@@ -26,9 +26,9 @@ import java.util.function.LongPredicate;
  *
  * <p><b>Limits.</b> Sections the lookup returns null for are unknown: {@link
  * #forEachNeighbour} reports the faces that reach them, so a fill can leave the region unresolved
- * (GEO-024). Positions below {@code minY}, above {@code maxY} or beyond {@link CellIds}'s range
- * are outside the world, and faces that reach them count as open (GEO-031's default; per-dimension
- * overrides are not supported yet).
+ * (GEO-024). Positions below {@code minY}, above {@code maxY}, past the {@linkplain WorldLimits world
+ * border} or beyond {@link CellIds}'s range are outside the world and aren't cells. Faces that reach
+ * them count as open, unless the {@linkplain WorldLimits#sealed limits are sealed} (GEO-031).
  *
  * <p>The lookup is called on every query and nothing is cached, so the view may change between
  * calls; within one call it must not. Single-threaded: the palette connection cache is not safe
@@ -41,6 +41,7 @@ public final class SectionTopology implements ResolvableTopology {
     private final LongFunction<SectionSnapshot> sections;
     private final int minY;
     private final int maxY;
+    private WorldLimits limits = WorldLimits.OPEN;
 
     /**
      * A topology over the whole range {@link CellIds} can name.
@@ -74,9 +75,28 @@ public final class SectionTopology implements ResolvableTopology {
         return table.palette();
     }
 
+    /** Sets the world border and whether the world's edges are sealed (GEO-031). */
+    public void limits(WorldLimits limits) {
+        this.limits = Objects.requireNonNull(limits, "limits");
+    }
+
     /** Whether block {@code (x, y, z)} is inside the world. */
     public boolean inWorld(int x, int y, int z) {
-        return y >= minY && y <= maxY && CellIds.inRange(x, y, z);
+        return y >= minY && y <= maxY && limits.contains(x, z) && CellIds.inRange(x, y, z);
+    }
+
+    /** Whether a cell lies outside the world or has a face leading out of it. */
+    public boolean touchesLimit(long cell) {
+        int x = CellIds.x(cell);
+        int y = CellIds.y(cell);
+        int z = CellIds.z(cell);
+        return !inWorld(x, y, z)
+                || !inWorld(x, y + 1, z)
+                || !inWorld(x, y - 1, z)
+                || !inWorld(x + 1, y, z)
+                || !inWorld(x - 1, y, z)
+                || !inWorld(x, y, z + 1)
+                || !inWorld(x, y, z - 1);
     }
 
     @Override
@@ -136,7 +156,7 @@ public final class SectionTopology implements ResolvableTopology {
             int ny = y + face.dy();
             int nz = z + face.dz();
             if (!inWorld(nx, ny, nz)) {
-                if (beyond != null && reachesFace(id, sub, face)) {
+                if (beyond != null && !limits.sealed() && reachesFace(id, sub, face)) {
                     beyond.outsideWorld();
                 }
                 continue;
@@ -172,6 +192,37 @@ public final class SectionTopology implements ResolvableTopology {
     }
 
     @Override
+    public void forEachOutsideFace(long cell, NeighbourVisitor visitor) {
+        if (limits.sealed() || !touchesLimit(cell)) {
+            return;
+        }
+        int x = CellIds.x(cell);
+        int y = CellIds.y(cell);
+        int z = CellIds.z(cell);
+        int sub = CellIds.sub(cell);
+        if (!inWorld(x, y, z)) {
+            return;
+        }
+        SectionSnapshot s = sections.apply(SectionKeys.sectionOfBlock(x, y, z));
+        if (s == null) {
+            return;
+        }
+        int id = s.geometryId(SectionKeys.index(x & 15, y & 15, z & 15));
+        if (sub >= table.cellCount(id)) {
+            return;
+        }
+        for (Face face : FACES) {
+            int nx = x + face.dx();
+            int ny = y + face.dy();
+            int nz = z + face.dz();
+            // A y past what an id can hold would wrap round to a real cell's id.
+            if (!inWorld(nx, ny, nz) && ny >= CellIds.MIN_Y && ny <= CellIds.MAX_Y && reachesFace(id, sub, face)) {
+                visitor.accept(CellIds.pack(nx, ny, nz, 0), !table.boundary(id, face, GeometryPalette.AIR_ID));
+            }
+        }
+    }
+
+    @Override
     public Column column(long cell, LongPredicate stopAt) {
         int x = CellIds.x(cell);
         int y = CellIds.y(cell);
@@ -191,7 +242,7 @@ public final class SectionTopology implements ResolvableTopology {
         while (true) {
             int above = y + 1;
             if (!inWorld(x, above, z)) {
-                return reachesFace(id, sub, Face.UP) ? Column.OPEN : Column.SEALED;
+                return !limits.sealed() && reachesFace(id, sub, Face.UP) ? Column.OPEN : Column.SEALED;
             }
             if ((above >> 4) != (y >> 4)) {
                 s = sections.apply(SectionKeys.sectionOfBlock(x, above, z));

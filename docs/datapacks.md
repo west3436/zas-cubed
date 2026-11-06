@@ -226,13 +226,14 @@ An **atmosphere** is an object with exactly one of `partial_pressures`,
 | `temperature` | number | Kelvin, ≥ 0 (above 0 when there is gas). Required, except for a vacuum, which defaults to the cosmic background, 2.7 K |
 
 A **file** has these fields, all optional, but it must define an
-atmosphere for at least one preset or exclude the dimension:
+atmosphere for at least one preset, exclude the dimension or seal its limits:
 
 | Field | Type | Meaning |
 |---|---|---|
 | the atmosphere fields | | The ambient under every preset, unless `presets` overrides it |
 | `presets` | object | `"normal"` and/or `"hardcore"` → an atmosphere for that preset only (ENV-010) |
 | `excluded` | boolean | `true` excludes the dimension from simulation: no zones form there, but it keeps its ambient for queries and hazards (ENV-007, ENV-018). Default `false` |
+| `sealed_world_limits` | boolean | `true` makes the dimension's build height and world border gas-tight, as for a station with a ceiling. Otherwise a face leading past them counts as open to the ambient (GEO-031). Default `false` |
 
 - **Which ambient applies:** the variant for the active preset, or the one
   `ambient_variant` overrides it with (see [Server config](#server-config)),
