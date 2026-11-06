@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas_example.radon",
+  "formula": "Rn",
+  "molar_mass": 0.222,
+  "molar_heat_capacity": 12.47,
+  "sources": {
+    "molar_mass": "The mass number of radon-222",
+    "molar_heat_capacity": "C_v = 3/2 R for a monatomic ideal gas"
+  }
+}

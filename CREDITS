@@ -2895,6 +2895,45 @@ origin: original
 path: zas-atmos/src/main/resources/assets/zas_atmos/sounds.json
 origin: original
 
+path: example-addon/src/main/resources/assets/zas_example/lang/en_us.json
+origin: original
+
+path: example-addon/src/main/resources/assets/zas_example/sounds.json
+origin: original
+notes: Points at a sound of vanilla's; adds no sound of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/blockstates/gas_tank.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/blockstates/shutter.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/blockstates/airlock.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/models/item/gas_tank.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/models/item/shutter.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/models/item/airlock.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/models/item/pressure_helmet.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
+path: example-addon/src/main/resources/assets/zas_example/models/item/oxygen_tank.json
+origin: original
+notes: Points at a model of vanilla's; adds no art of its own.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/font/dejavu_sans.ttf
 origin: other
 source: https://dejavu-fonts.github.io/ (DejaVu Sans 2.37)

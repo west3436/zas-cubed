@@ -55,7 +55,7 @@ Requirements: D-30, CORE-045, CORE-049, CORE-069.
 | `zas` | ModDevGradle mod `zas` | `io.github.west3436.zas` (excluding `.api`, `.engine`, `.atmos`) | `zas-<ver>.jar` | engine, zas-api |
 | `compat-adastra` | ModDevGradle source set or project | `io.github.west3436.zas.compat.adastra` | classes inside the `zas` jar, loaded only when Ad Astra is present | zas-api, Ad Astra (compile-only) |
 | `zas-atmos` | ModDevGradle mod `zas_atmos` | `io.github.west3436.zas.atmos` | `zas_atmos-<ver>.jar` | zas-api, `zas` (required at runtime) |
-| `example-addon` | ModDevGradle mod | `io.github.west3436.zas.example` | not published; CI only (API-048) | zas-api only |
+| `example-addon` | ModDevGradle mod | `io.github.west3436.zas.example` | not published; CI only (API-047, API-048) | zas-api only |
 
 **Rules from S0** (*spike*):
 

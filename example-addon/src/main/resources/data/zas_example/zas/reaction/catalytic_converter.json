@@ -1,0 +1,6 @@
+{
+  "type": "zas_example:catalytic_converter",
+  "parameters": { "efficiency": 0.8 },
+  "min_temperature": 500,
+  "catalysts": [{ "gas": "zas:oxygen" }]
+}

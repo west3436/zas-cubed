@@ -46,6 +46,47 @@ dependencies {
   later versions have defaults, so an older ZAS³ still answers them
   (architecture §6.2).
 
+## The example addon
+
+[`example-addon`](../example-addon) is a small mod built on the API alone, with a working
+example of each extension point: a place where your code or data plugs in, and ZAS³ then
+calls or honours it (API-047). Copy what you need. A new extension point gets a row here and
+an example there.
+
+| Extension point | Requirement | Example |
+|---|---|---|
+| A worn item's life support: `ILifeSupport.ITEM` | API-022 | `ExampleLifeSupport.PRESSURE_HELMET` |
+| An entity's own life support: `ILifeSupport.ENTITY` | API-022 | `ExampleLifeSupport.COLD_PROOF` |
+| A tank for internals: `IInternalSupply` | API-022, LIFE-028 | `ExampleLifeSupport.OxygenTank` |
+| A block that stores gas: `IGasHandler.BLOCK` | API-021, API-025, API-026 | `GasTankBlockEntity` |
+| A block that says what it seals: `ISealProvider.BLOCK`, `SealGeometry`, `BlockGeometry.markDirty` | API-023, API-028 | `ExampleCapabilities`, `ShutterBlockEntity`; the `airlock` block |
+| A block whose shape follows its data: `dynamicShape()`, `BlockGeometry.markDirty` | GEO-043, GEO-014 | `ShutterBlock`, `ShutterBlockEntity`; the `shutter` block |
+| A dimension's ambient from code: `AmbientProviders.register` | ENV-004 | `OutpostAir` |
+| A hazard of your own, for a gas and for a gas tag: `HazardHandlers.register` | LIFE-032 | `ExampleHazards` |
+| Adjusting or cancelling a hazard: `HazardTickEvent` | API-033 | `ExampleHazards` |
+| A reaction type in code: `Reactions.registerType` | API-020 | `CatalyticConverter`, named by `zas/reaction/catalytic_converter.json` |
+| A block that ignites gas: `#zas:ignition_sources` | API-053 | `tags/block/ignition_sources.json` |
+| A zone's life: the eight zone events | API-030 | `AtmosphereAlarm` |
+| Fires starting and stopping: `FireIgnitedEvent`, `FireExtinguishedEvent` | API-031 | `AtmosphereAlarm` |
+| Gas to and from the open air: `OpenAirGasEvent` | CORE-058 | `AtmosphereAlarm` |
+| Your sounds fading in thin air: `ClientSounds.fadeInThinAir` | API-060 | `ExampleClient` |
+
+`ExampleCapabilities` registers every capability, and `ExampleAddonMod` everything else.
+
+- **Calls aren't on the list,** since nothing of yours plugs in: `Atmospheres`, `Breathing`,
+  `GasMutations`, `HeatMutations`, `ZonePins`, `Fires`, `Reactions.applyStandalone`,
+  `GasProperties`, `GasTags`, `ClientSounds.loop` and `thinAir`, `DisplayUnits` and
+  `ThirdPartyFaults`. Nor are `ZasApiProvider`, `ClientSoundProvider` and `DisplayUnitProvider`,
+  which only ZAS³ implements.
+- **Data formats aren't on the list,** apart from the tag above. They're for packs as well as
+  mods, and [datapacks.md](datapacks.md) has an example of each. The addon ships what its code
+  needs: a gas, `zas/gas/radon.json`; a gas tag, `tags/zas/gas/radioactive.json`; that gas in
+  a shipped tag, `tags/zas/gas/toxic.json`; and a reaction.
+- **Its tests.** `ExampleAddonTests` runs the examples without ZAS³, and `ExampleWithZasTests`
+  with it. A GameTest server has only the vanilla dimensions, and neither has the content
+  mod's pipes or a player, so no test sees ZAS³ call `OutpostAir`, a pipe fill the tank, or
+  internals breathe from the oxygen tank.
+
 ## Can this entity breathe here?
 
 `Breathing.of(entity)` is the breathability helper (API-014). Route breathing

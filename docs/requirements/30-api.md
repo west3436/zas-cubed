@@ -221,13 +221,21 @@ default constructor, and on a method's missing `@param` and `@return`. The API a
 passes with no warning.*
 
 #### API-047 · Example addon
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
 
 The repository shall include an example addon that uses each extension point.
 
 - **Rationale:** Decision: D-04. Working examples are documentation consumers
   can copy.
 - **Verify:** Inspect the example addon against the list of extension points.
+
+*2026-11-06: Implemented. The list is in [api-consumers.md](../api-consumers.md#the-example-addon),
+built by reading all of `zas-api`, with the class that uses each one. It counts each place a
+mod gives ZAS³ code or data that ZAS³ then calls or honours. So it leaves out calls a mod makes,
+such as `DisplayUnits`, and what only ZAS³ implements, such as `DisplayUnitProvider`. It also
+leaves out the datapack formats, which are for packs too and have their examples in
+datapacks.md, apart from `#zas:ignition_sources`. `ExampleAddonTests` runs the examples without
+ZAS³ (S-12), and `ExampleWithZasTests` with it, on the built jars.*
 
 #### API-048 · Example addon without ZAS³ in CI
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-12, D-17
