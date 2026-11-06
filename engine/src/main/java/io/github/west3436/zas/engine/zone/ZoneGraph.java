@@ -1362,11 +1362,27 @@ public final class ZoneGraph {
     private void linkFromTopology(Cell c) {
         linker.current = c;
         topology.forEachOpenNeighbour(c.id, linker);
+        if (c.zone != null) {
+            topology.forEachOutsideFace(c.id, linker.outside);
+        }
         linker.current = null;
     }
 
     private final class Linker implements CellTopology.NeighbourVisitor {
         Cell current;
+
+        /**
+         * Links a zoned cell to the position beyond a face that leads out of the world (GEO-031). That
+         * position stands in for an unzoned cell, so the pair counts on the zone's ambient edge, and the
+         * entry goes when nothing links to it. It holds no gas, and nothing asks the topology about it.
+         * Only a zoned cell comes here: a pair of unzoned cells isn't stored.
+         */
+        final CellTopology.NeighbourVisitor outside = (position, direct) -> {
+            if (cells.get(position) == null) {
+                cells.put(position, new Cell(position));
+            }
+            accept(position, direct);
+        };
 
         @Override
         public void accept(long neighbour, boolean direct) {

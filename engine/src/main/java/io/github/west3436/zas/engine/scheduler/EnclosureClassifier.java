@@ -12,6 +12,7 @@ import io.github.west3436.zas.engine.classify.FillResult;
 import io.github.west3436.zas.engine.classify.OpenCells;
 import io.github.west3436.zas.engine.classify.ResolvableTopology;
 import io.github.west3436.zas.engine.classify.SectionTopology;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,6 +142,20 @@ public final class EnclosureClassifier implements Classifier {
         for (int y = sections.minSectionY(); y <= sections.maxSectionY(); y++) {
             open.sectionChanged(SectionKeys.section(x, y, z));
         }
+    }
+
+    @Override
+    public void limits(WorldLimits limits) {
+        topology.limits(limits);
+        open.clear();
+        held = Arrays.stream(held)
+                .filter(s -> topology.inWorld(CellIds.x(s), CellIds.y(s), CellIds.z(s)))
+                .toArray();
+    }
+
+    @Override
+    public boolean touchesLimit(long cell) {
+        return topology.touchesLimit(cell);
     }
 
     @Override
@@ -292,6 +307,11 @@ public final class EnclosureClassifier implements Classifier {
         @Override
         public void forEachOpenNeighbour(long cell, NeighbourVisitor visitor) {
             topology.forEachOpenNeighbour(cell, visitor);
+        }
+
+        @Override
+        public void forEachOutsideFace(long cell, NeighbourVisitor visitor) {
+            topology.forEachOutsideFace(cell, visitor);
         }
 
         @Override

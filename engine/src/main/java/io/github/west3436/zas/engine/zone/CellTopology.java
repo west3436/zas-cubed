@@ -43,6 +43,15 @@ public interface CellTopology {
      */
     void forEachOpenNeighbour(long cell, NeighbourVisitor visitor);
 
+    /**
+     * Visits each face of {@code cell} that leads out of the world and counts as open to the ambient
+     * (GEO-031). No cell lies there, so {@link #forEachOpenNeighbour} doesn't visit these.
+     *
+     * @param visitor told an id for the position beyond the face, which is never a cell, and whether
+     *     the opening is direct; two cells open onto the same position get the same id
+     */
+    default void forEachOutsideFace(long cell, NeighbourVisitor visitor) {}
+
     /** Receives the open neighbours of a cell. */
     @FunctionalInterface
     interface NeighbourVisitor {

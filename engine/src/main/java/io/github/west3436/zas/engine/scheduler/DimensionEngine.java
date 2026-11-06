@@ -7,6 +7,7 @@ import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.conservation.ConservationLedger;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
@@ -119,6 +120,10 @@ public final class DimensionEngine {
     private final TreeMap<Long, long[]> rebuilt = new TreeMap<>();
     /** The latest capture of each section with changes held for paused zones (GEO-037). */
     private final TreeMap<Long, SectionSnapshot> heldTruth = new TreeMap<>(SectionKeys::compare);
+    /** The world's limits as of the last batch (GEO-031). */
+    private WorldLimits limits = WorldLimits.OPEN;
+    /** Zones that were paused when the limits changed, and take in the change when they resume. */
+    private final TreeSet<Long> behindLimits = new TreeSet<>();
     /** Zones the classifier holds at unresolved breaches (GEO-026), from the last boundaries phase. */
     private long[] heldZoneIds = new long[0];
     /** Whether this tick's batch pauses the whole dimension (OPS-005). */
@@ -699,6 +704,7 @@ public final class DimensionEngine {
         }
         dropUnloadedSections(toRefresh);
         Set<Long> pausedNow = pausedZones();
+        applyLimits(batch.limits(), pausedNow, changedCells);
         // This batch's captures, and the latest capture of every section with held changes.
         TreeMap<Long, SectionSnapshot> truths = new TreeMap<>(heldTruth);
         heldTruth.clear();
@@ -779,6 +785,69 @@ public final class DimensionEngine {
         ingest(batch);
         resumeRebuilt(surfaces, resuming);
         return cells;
+    }
+
+    /**
+     * Takes in a change of the world's limits (GEO-031). The zoned cells that touch them, before or
+     * after, are refreshed as if their blocks had changed: one now outside the world leaves its zone, as
+     * a filled cell does, and one with a face onto a new edge gets its ambient connection. So is every
+     * cell of a zone open to the ambient, since what it opens onto may be closed now. A paused zone keeps
+     * still, as it does for its blocks (GEO-037), and takes in the change when it resumes.
+     */
+    private void applyLimits(WorldLimits now, Set<Long> paused, CellSet changedCells) {
+        CellSet affected = new CellSet();
+        if (!now.equals(limits)) {
+            for (Zone zone : graph.zones()) {
+                if (paused.contains(zone.id())) {
+                    behindLimits.add(zone.id());
+                } else {
+                    addAffectedByLimits(zone, affected);
+                }
+            }
+            limits = now;
+            classifier.limits(now);
+            for (Zone zone : graph.zones()) {
+                if (!paused.contains(zone.id())) {
+                    addAffectedByLimits(zone, affected);
+                }
+            }
+        }
+        for (java.util.Iterator<Long> it = behindLimits.iterator(); it.hasNext(); ) {
+            long id = it.next();
+            Zone zone = graph.zone(id);
+            if (zone == null) {
+                it.remove();
+            } else if (!paused.contains(id)) {
+                zone.forEachCell(affected::add);
+                it.remove();
+            }
+        }
+        for (long cell : affected.sorted()) {
+            long block = space.position(cell);
+            conduction.blockChanged(block);
+            hotspots.igniter().blockChanged(block);
+            if (space.volume(cell) > 0) {
+                changedCells.add(cell);
+            } else {
+                // Before any cell beside it is refreshed, or that cell would find this one in the way
+                // of the position beyond its new edge.
+                graph.refresh(cell);
+            }
+        }
+    }
+
+    private void addAffectedByLimits(Zone zone, CellSet out) {
+        boolean open = zone.ambientEdge() != null;
+        zone.forEachCell(cell -> {
+            if (open || classifier.touchesLimit(cell)) {
+                out.add(cell);
+            }
+        });
+    }
+
+    /** The world's limits as of the last batch (GEO-031). */
+    WorldLimits limits() {
+        return limits;
     }
 
     // ---- 1. Paused zones and storage (architecture §4.5, §4.6) ----------------------------
@@ -1132,8 +1201,10 @@ public final class DimensionEngine {
             Route route;
             long section = SectionKeys.sectionOfBlockKey(op.block());
             int sy = SectionKeys.y(section);
-            if (sy < mirror.minSectionY() || sy > mirror.maxSectionY()) {
-                route = Route.AMBIENT; // above or below the world: open (GEO-031)
+            if (sy < mirror.minSectionY()
+                    || sy > mirror.maxSectionY()
+                    || !limits.contains(SectionKeys.blockX(op.block()), SectionKeys.blockZ(op.block()))) {
+                route = Route.AMBIENT; // outside the world, which holds no gas (GEO-031)
             } else if (cell == CellSpace.NO_CELL && mirror.section(section) == null) {
                 // The target's section isn't mirrored: wait for it, or treat it as unresolved if
                 // its chunk isn't loaded (GEO-024) or nothing may be classified (OPS-005).

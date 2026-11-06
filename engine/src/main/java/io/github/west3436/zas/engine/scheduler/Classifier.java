@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.scheduler;
 
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.function.LongConsumer;
 
@@ -53,6 +54,17 @@ public interface Classifier {
 
     /** A chunk unloaded: {@link #sectionChanged} for the sections in it. */
     default void chunkUnloaded(long chunk) {}
+
+    /**
+     * Where the world now ends and what its edges do (GEO-031), at the start of the tick that sees a
+     * change. Anything the classifier remembers that rests on the old limits no longer holds.
+     */
+    default void limits(WorldLimits limits) {}
+
+    /** Whether a cell lies outside the world or has a face leading out of it. */
+    default boolean touchesLimit(long cell) {
+        return false;
+    }
 
     /**
      * Tells {@code listener} the seed of each fill from now on, on the worker; null for no one. For

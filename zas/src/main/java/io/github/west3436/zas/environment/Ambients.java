@@ -145,6 +145,12 @@ public final class Ambients {
         return (definition != null && definition.excluded()) || ZasServerConfig.excludes(dimension.location());
     }
 
+    /** Whether a dimension's definition seals its build height and world border (GEO-031). */
+    public static boolean sealsWorldLimits(ResourceKey<Level> dimension) {
+        DimensionAmbient definition = definitionOf(dimension.location());
+        return definition != null && definition.sealedWorldLimits();
+    }
+
     /**
      * Gives a dimension another ambient, under every preset, until cleared: for GameTests. The
      * GameTest server has only the vanilla dimensions, so a test that needs one with another

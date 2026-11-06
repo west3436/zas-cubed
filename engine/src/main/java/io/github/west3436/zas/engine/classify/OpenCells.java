@@ -50,9 +50,7 @@ public final class OpenCells {
             return;
         }
         if (links + sections.length > MAX_LINKS) {
-            sectionsOf.clear();
-            cellsIn.clear();
-            links = 0;
+            clear();
         }
         sectionsOf.put(cell, sections);
         for (long section : sections) {
@@ -69,6 +67,13 @@ public final class OpenCells {
                 forget(cell);
             }
         }
+    }
+
+    /** Forgets everything: what's open has changed in some other way than a block (GEO-031). */
+    public void clear() {
+        sectionsOf.clear();
+        cellsIn.clear();
+        links = 0;
     }
 
     /** How many cells are known to be open. */
