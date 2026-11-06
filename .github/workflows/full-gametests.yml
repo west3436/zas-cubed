@@ -1,0 +1,33 @@
+name: Full GameTests
+
+# zas's GameTests again, with zas_atmos loaded, alongside zas_atmos's own. Each
+# PR leaves those repeats out to stay inside CI's time limit, so they run here:
+# nightly on main, or from the Actions tab.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  gametests:
+    name: GameTests of both mods with both loaded
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+      # The task can succeed without the server ever starting, so the log must
+      # also say that the tests passed, and that zas's were among them.
+      - name: GameTests
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          ./gradlew :zas-atmos:runGameTestServer --stacktrace | tee gametests.log
+          grep -F "Enabled Gametest Namespaces: [zas, zas_atmos]" gametests.log
+          grep -E "All [0-9]+ required tests passed" gametests.log

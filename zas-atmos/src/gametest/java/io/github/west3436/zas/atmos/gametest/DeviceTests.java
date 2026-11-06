@@ -31,8 +31,11 @@ public final class DeviceTests {
         return h.getBlockEntity(pos);
     }
 
-    /** CONT-006: each device steps every 20 game ticks, on the server thread, in its own phase. */
-    @GameTest(template = "empty", timeoutTicks = 200)
+    /**
+     * CONT-006: each device steps every 20 game ticks, on the server thread, in its own phase. In a batch
+     * of its own, because a test that steps a level's devices itself ({@link Area#step}) steps these too.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "zas_atmos_device_schedule")
     public static void cont_006_devices_step_once_per_atmos_tick(GameTestHelper h) {
         List<BlockPos> at = List.of(new BlockPos(0, 1, 0), new BlockPos(0, 2, 0), new BlockPos(0, 3, 0));
         List<TestDevice.Entity> devices = at.stream().map(p -> place(h, p)).toList();
