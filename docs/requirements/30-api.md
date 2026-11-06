@@ -129,6 +129,15 @@ version.
 - **Verify:** Inspect: the CI API diff (API-043) flags any removal that wasn't
   deprecated in an earlier minor version.
 
+*2026-11-06: Still Accepted. `:zas-api:apiCompat` now fails on a removal its baseline
+didn't mark `@Deprecated`, even in a new major, where it used to report only. Against a
+scratch baseline of 1.0.0, a 2.0.0 failed on a field, a method and a class with no mark,
+and on members of a class marked only in 2.0.0, and passed with only marked ones removed.
+The policy is in [docs/api-consumers.md](../api-consumers.md#versioning-and-the-compatibility-check).
+CI compares nothing until `api_baseline_version` names a release (API-043). The check sees
+only that baseline, so it can't tell which release added a mark, and it exempts a `0.x`
+baseline, for which API-041 promises nothing.*
+
 #### API-043 · API-diff check in CI
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
 
@@ -190,12 +199,18 @@ Read queries shall return immutable snapshots of the last applied atmos tick.
   doesn't change after the next tick.
 
 #### API-005 · Javadoc
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
 
 Every public API type and member shall have javadoc.
 
 - **Rationale:** Decision: D-04.
 - **Verify:** Inspect: CI's javadoc lint treats a missing comment as an error.
+
+*2026-11-06: Implemented. `:zas-api:javadoc`, which `check` runs and so CI's build, runs
+with `-Xdoclint:all -Werror`. A probe class failed the build on a type, a nested type, an
+enum constant, a constant, a public method and a protected method with no comment, on a
+default constructor, and on a method's missing `@param` and `@return`. The API as it stands
+passes with no warning.*
 
 #### API-047 · Example addon
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
