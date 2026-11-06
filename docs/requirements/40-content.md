@@ -1508,6 +1508,9 @@ temperature, each listed gas, and all other gases combined.
 - **Changed 2026-11-02 (the owner, reviewing the round's combined test):** a
   breach also sends the controller to danger 2 at once, before any reading
   reaches its bounds (CONT-043).
+- **Changed 2026-11-06 (the owner, [#352](https://github.com/west3436/zas-cubed/issues/352)):**
+  a reading of 0 doesn't trip a bound of 0, so a minimum of 0 never trips and a
+  maximum of 0 trips on any of the reading.
 
 *2026-11-01: the air alarm is renamed the area air controller (D-68).*
 
@@ -1518,6 +1521,10 @@ the air's filler gas isn't counted among the other gases. An open cell's
 ambient air is rated too. `cont_040_danger_follows_the_readings` steps a
 zone's CO₂ through each band; `ControllerLogicTest` checks every reading and
 both bounds of each band.*
+
+*2026-11-06: The owner's change is implemented. `cont_040_a_reading_of_0_does_not_trip_a_bound_at_0`
+steps CO₂'s maxima and O₂'s minima down to 0 in the GUI and rates each, and
+`ControllerLogicTest` checks each bound at 0.*
 
 #### CONT-046 · Danger hysteresis
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors), D-20
@@ -1792,6 +1799,9 @@ and `cont_043_a_link_covers_the_part_s_room`.*
   firelock closes in that step, and the next room keeps over 95 kPa.
   `cont_043_a_door_to_outside_air_does_not_alarm` checks the Overworld case,
   and `BreachAlarmTest` (Unit) both rules.
+
+*2026-11-06: following the owner's change to CONT-040, a pressure min2 of 0 counts
+as no min2, so neither breach rule applies to it. `BreachAlarmTest` checks this.*
 
 #### CONT-092 · Firelock reopening
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)

@@ -3,7 +3,8 @@ package io.github.west3436.zas.atmos.controller;
 /**
  * One reading's danger bounds (CONT-040): {@code min2 ≤ min1 ≤ max1 ≤ max2}. A reading at or below
  * min2, or at or above max2, is danger 2; at or below min1, or at or above max1, danger 1; otherwise
- * 0. A bound of {@link #OFF} is disabled and never trips.
+ * 0. A bound of {@link #OFF} is disabled and never trips. A reading of 0 doesn't trip a bound of 0,
+ * so a minimum of 0 never trips and a maximum of 0 trips on any of the reading.
  *
  * <p>Bounds are in the reading's unit: kPa for pressure and partial pressures, K for temperature.
  * The enabled bounds are always in order: {@link #with} keeps them so.
@@ -42,13 +43,21 @@ public record Thresholds(double min2, double min1, double max1, double max2) {
 
     /** The danger level of a reading: 0, 1 or 2. */
     public int rate(double value) {
-        if ((min2 != OFF && value <= min2) || (max2 != OFF && value >= max2)) {
+        if (tripsMin(min2, value) || tripsMax(max2, value)) {
             return 2;
         }
-        if ((min1 != OFF && value <= min1) || (max1 != OFF && value >= max1)) {
+        if (tripsMin(min1, value) || tripsMax(max1, value)) {
             return 1;
         }
         return 0;
+    }
+
+    private static boolean tripsMin(double min, double value) {
+        return min > 0 && value <= min;
+    }
+
+    private static boolean tripsMax(double max, double value) {
+        return max != OFF && value > 0 && value >= max;
     }
 
     /** Bound {@code i}: 0 is min2, 1 min1, 2 max1, 3 max2. */

@@ -15,7 +15,7 @@ package io.github.west3436.zas.atmos.controller;
  * </ul>
  *
  * Neither applies to a preset with no pressure min2, such as Vacuum, for which low pressure is no
- * danger.
+ * danger. A min2 of 0 counts as none, as it does in {@link Thresholds#rate}.
  */
 public final class BreachAlarm {
     private double last = Double.NaN;
@@ -33,7 +33,7 @@ public final class BreachAlarm {
     public boolean check(Thresholds pressure, double kpa, boolean breached, double ambientKpa, double dropKpa) {
         double before = last;
         last = kpa;
-        if (pressure.min2() == Thresholds.OFF) {
+        if (pressure.min2() <= 0) {
             return false;
         }
         boolean open = breached && !Double.isNaN(ambientKpa) && ambientKpa <= pressure.min2();
