@@ -129,12 +129,14 @@ audit every 1,000 operations, checks for non-finite values, and its own total of
 the gas, because CORE-073 explains whatever moves through storage and so can't
 see gas that a reload makes or loses. `./gradlew build` runs it on seed 3, and
 the "Integrity fuzz" workflow runs 20 seeds from the Actions tab. Of seeds 1 to
-20, four pass (3, 12, 13, 18). Eleven fail the audit (2, 4, 5, 6, 8, 9, 10, 14,
-17, 19, 20) and five fail the total of the gas (1, 7, 11, 15, 16). Seed 2's cause
+20, six pass (1, 3, 12, 13, 16, 18). Thirteen fail the audit (2, 4, 5, 6, 8, 9,
+10, 11, 14, 15, 17, 19, 20) and one fails the total of the gas (7). Seed 2's cause
 is known: a zone venting through an unzoned space keeps its ambient edge when the
-way out closes at a spot that doesn't touch it. Seed 1's is known too: a chunk
-that saves in a tick that then changes the zone, as in the limit on DATA-008. The
-others aren't read yet. Left to do: those failures, a nightly schedule once all
+way out closes at a spot that doesn't touch it. The other audit failures aren't
+read yet. Seed 4 hits the limit on DATA-008, which the fuzz excuses for exactly
+that event, before it fails the audit. Seed 7 is a rejected tick that takes in
+a chunk's share and publishes nothing of it, so the chunk saves nothing if it
+unloads before the next tick. Left to do: those failures, a nightly schedule once all
 20 pass, and the GameTest half, which totals the gas in pipes.*
 
 #### NFR-011 · Server authority
