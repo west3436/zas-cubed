@@ -11,7 +11,8 @@ import net.minecraft.server.level.ServerLevel;
  *
  * <p>While the region beyond a new opening is still being classified the zone is treated as open, but
  * this waits until that is known, so a hole into a pocket that turns out to be enclosed fires nothing.
- * A paused zone fires it once it resumes.
+ * A zone that matches the ambient can go first, and then fires only {@link ZoneDissolvedEvent}. A paused
+ * zone fires it once it resumes.
  *
  * <p>How it fires is in {@link ZoneLifecycleEvent}.
  */

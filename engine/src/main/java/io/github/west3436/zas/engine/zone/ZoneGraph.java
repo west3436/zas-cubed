@@ -1516,16 +1516,6 @@ public final class ZoneGraph {
         }
     }
 
-    /**
-     * Takes a zone's ambient edge as already reported, for a zone a rejected component restored: what
-     * it had at the undo point had been reported, and what it did since never happened.
-     */
-    public void syncBreachReport(Zone zone) {
-        requireLive(zone);
-        zone.breachKnown = true;
-        zone.reportedBreached = zone.ambientEdge() != null;
-    }
-
     /** Records the zones paused or resumed since they last reported, in id order. */
     public void reportPaused() {
         for (Zone z : zones.values()) {
@@ -1906,6 +1896,9 @@ public final class ZoneGraph {
         zone.setVolume(mixture.volume());
         zone.mixture().copyFrom(mixture);
         zone.changed = true;
+        // Its edges are as they were at the undo point, when it had reported them (API-030).
+        zone.breachKnown = true;
+        zone.reportedBreached = zone.ambientEdge() != null;
         return zone;
     }
 

@@ -525,7 +525,8 @@ public final class DimensionEngine {
         // 8. Garbage collection (CORE-052).
         phases.enter(Phase.GARBAGE_COLLECTION);
         graph.collectSealed(classifier::hasPendingFor);
-        graph.reportBreaches(classifier::hasPendingFor);
+        // Merges and dissolutions, which a rejection takes back. An edge one of them gave a zone is
+        // reported next tick, by when it has either stood or been taken back.
         for (ZoneEvent e : graph.drainZoneEvents()) {
             zoneEvents.add(e.asUndoable());
         }
@@ -684,7 +685,6 @@ public final class DimensionEngine {
                 int i = undoMembership.indexOf(id);
                 graph.restoreMixture(graph.zone(id), undoMixtures[i]);
                 graph.setPins(graph.zone(id), undoPinned.get(i));
-                graph.syncBreachReport(graph.zone(id));
             }
             for (long seq : c.opSeqs()) {
                 requeued.add(lastZoneOps.get(seq));
