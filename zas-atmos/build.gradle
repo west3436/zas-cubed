@@ -75,6 +75,14 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// NFR-010: -Pfuzz.seed=S replays a seed, -Pfuzz.seeds=N runs N seeds from it, as the nightly run does.
+['fuzz.seed', 'fuzz.seeds', 'fuzz.ops'].each { name ->
+    def value = providers.gradleProperty(name).orNull
+    if (value != null) {
+        neoForge.runs.gameTestServer.systemProperty "zas.$name", value
+    }
+}
+
 tasks.named('test', Test) {
     useJUnitPlatform()
     // The shipped sounds, which tests read as files.

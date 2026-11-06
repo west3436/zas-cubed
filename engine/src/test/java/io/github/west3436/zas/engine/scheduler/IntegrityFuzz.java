@@ -137,22 +137,24 @@ final class IntegrityFuzz {
 
     private record Room(int x0, int y0, int z0, int x1, int y1, int z1) {}
 
-    /** A chunk that saved between a tick's close and apply, and the table it saved from. */
-    private record SavedInFlight(long chunk, ChunkRecord record, AtmosSnapshot before) {}
+    /** A chunk that saved since the last tick, and the table it saved from. */
+    private record SavedBehind(long chunk, ChunkRecord record, AtmosSnapshot before) {}
 
     /** A zone that divided in the tick one of its chunks saved during: see {@link #noteDivisions}. */
     private static final class Division {
         final long chunk;
         final ChunkRecord record;
+        final long zone;
         final double[] gone;
         /** The zone and those it divided into, while they're in memory. */
         final Set<Long> zones = new HashSet<>();
         /** How many more ticks it may still show in, whatever leaves memory. */
         int fresh = 2;
 
-        Division(long chunk, ChunkRecord record, double[] gone) {
+        Division(long chunk, ChunkRecord record, long zone, double[] gone) {
             this.chunk = chunk;
             this.record = record;
+            this.zone = zone;
             this.gone = gone;
         }
     }
@@ -173,7 +175,7 @@ final class IntegrityFuzz {
     /** The records handed to the pipeline since the last tick, to look a dropped share up in. */
     private final TreeMap<Long, ChunkRecord> delivered = new TreeMap<>();
 
-    private final List<SavedInFlight> savedInFlight = new ArrayList<>();
+    private final List<SavedBehind> savedBehind = new ArrayList<>();
     private final List<Division> divisions = new ArrayList<>();
 
     private double[] expected = new double[GASES];
@@ -368,11 +370,14 @@ final class IntegrityFuzz {
      * A reset (OPS-013), except of a zone with another zone beside it. That zone gains an ambient
      * connection even if the room left behind is sealed, as beside a dissolved zone (CORE-076), which
      * {@code ops_013_a_neighbour_across_an_edge_now_opens_onto_the_ambient} pins and the audit reports
-     * (GEO-032), so the two rules can't both hold there.
+     * (GEO-032), so the two rules can't both hold there. A reset applies after the geometry of its tick, so
+     * this one has a tick to itself, or a change or a chunk's record in that tick could give the zone a
+     * neighbour after the check.
      */
     private void reset() {
         int[] p = target();
         int sub = sub();
+        step();
         if (besideAnotherZone(p, sub)) {
             log("no reset at " + str(p) + ": there's a zone beside it");
             stats.resetsLeftOut++;
@@ -382,9 +387,10 @@ final class IntegrityFuzz {
         sim.pipeline.reset(block(p), sub, "fuzz");
         stats.gasOps++;
         stats.resets++;
+        step();
     }
 
-    /** Whether a reset at the position would take a zone with an edge to another. Resets run first in a tick. */
+    /** Whether a reset at the position would take a zone with an edge to another. */
     private boolean besideAnotherZone(int[] p, int sub) {
         long cell = sim.engine.classifier().space().cellAt(block(p), sub);
         Zone zone = cell == CellSpace.NO_CELL ? null : sim.engine.graph().zoneOf(cell);
@@ -487,18 +493,23 @@ final class IntegrityFuzz {
         log((late ? "unload during the next tick " : "unload ") + chunkStr(chunk));
         stats.unloads++;
         if (!late) {
-            unloadNow(sim, chunk);
+            unloadNoting(sim, chunk);
             return;
         }
         sim.betweenCloseAndApply = s -> {
             s.betweenCloseAndApply = x -> {};
-            AtmosSnapshot before = s.snapshot();
-            unloadNow(s, chunk);
-            if (saved.containsKey(chunk)) {
-                savedInFlight.add(new SavedInFlight(chunk, saved.get(chunk), before));
-            }
+            unloadNoting(s, chunk);
         };
         step();
+    }
+
+    /** Whenever it unloads, a chunk saves from a table that's behind the block changes of the next tick. */
+    private void unloadNoting(Sim s, long chunk) {
+        AtmosSnapshot before = s.snapshot();
+        unloadNow(s, chunk);
+        if (saved.containsKey(chunk)) {
+            savedBehind.add(new SavedBehind(chunk, saved.get(chunk), before));
+        }
     }
 
     private void unloadNow(Sim s, long chunk) {
@@ -613,7 +624,6 @@ final class IntegrityFuzz {
                 }
             }
         }
-        reanchor = 0;
         divisions.forEach(d -> d.fresh = 1); // the new engine holds what the records say
         step();
     }
@@ -651,10 +661,13 @@ final class IntegrityFuzz {
             stats.voided[i] += report.voided(i);
             stats.supplied[i] += report.supplied(i);
         }
-        double[] total = total(table);
         noteDivisions(table);
+        double[] total = total(table);
         if (a.rejected() > 0) {
-            reanchor = 2; // the rejected tick's records are undone in the next, outside any period
+            // The rejected tick's records are undone in the next, outside any period, and its table leaves
+            // out a zone it has only just taken in, which is in no saved share either. A save and load
+            // doesn't change that: the total is out until a tick after it.
+            reanchor = 2;
         }
         if (reanchor > 0) {
             reanchor--;
@@ -685,17 +698,18 @@ final class IntegrityFuzz {
     }
 
     /**
-     * Finds the limit on DATA-008. A chunk that saves between a tick's close and apply writes the table from
-     * before that tick. If a block change in that tick divides the zone, the share written holds gas that's
+     * Finds the limit on DATA-008. A chunk that saves writes the table from before the tick in flight or the
+     * next one. If a block change in that tick divides the zone, the share written holds gas that's
      * in the other parts too, and the total goes out when those zones leave memory or the chunk loads. That
-     * is all that's excused: a zone that once the table has caught up has fewer cells in the chunk than the
-     * share and less gas than it had, for the gas it no longer holds, in the ticks that shows in.
+     * is all that's excused: a zone that once the table has caught up has gone, or has fewer cells in the
+     * chunk than the share and less gas than it had, for the gas it no longer holds, in the ticks that shows
+     * in, by no more than that or the share written, whichever is more.
      */
     private void noteDivisions(AtmosSnapshot table) {
         if (table.hasRejections()) {
             return; // a rejected zone is answered from the last table, so it hasn't caught up yet
         }
-        for (SavedInFlight s : savedInFlight) {
+        for (SavedBehind s : savedBehind) {
             if (saved.get(s.chunk) != s.record) {
                 continue; // it has loaded again, and a share whose zone is in memory isn't taken
             }
@@ -704,16 +718,23 @@ final class IntegrityFuzz {
                 ZoneView before = s.before.zone(id);
                 ZoneView now = table.zone(id);
                 ZoneShare part = shareOf(table, s.chunk, id);
-                if (before != null && now != null && (part == null || part.cellCount() < share.cellCount())) {
+                // A share the table didn't have is one the zone hadn't taken in, so its gas was never in the zone.
+                boolean wasInZone = before != null && shareOf(s.before, s.chunk, id) != null;
+                boolean tookOver = table.shares(s.chunk).stream().anyMatch(h -> overlap(share.cells(), h.cells()));
+                if (wasInZone && (now == null ? tookOver : (part == null || part.cellCount() < share.cellCount()))) {
                     double[] gone = new double[GASES];
                     boolean fell = false;
                     for (int i = 0; i < GASES; i++) {
-                        gone[i] = Math.max(0, before.moles(i) - now.moles(i));
+                        gone[i] = Math.max(0, before.moles(i) - (now == null ? 0 : now.moles(i)));
                         fell |= gone[i] > 1e-9 * before.moles(i);
+                        // The share itself can come back on top of what its other parts hold.
+                        gone[i] = Math.max(gone[i], share.moles(i));
                     }
                     if (fell) {
-                        Division division = new Division(s.chunk, s.record, gone);
-                        division.zones.add(id);
+                        Division division = new Division(s.chunk, s.record, id, gone);
+                        if (now != null) {
+                            division.zones.add(id);
+                        }
                         for (long chunk : s.before.zoneChunks(id)) {
                             ZoneShare old = shareOf(s.before, chunk, id); // a chunk it's waiting on has none
                             for (ZoneShare other : old == null ? List.<ZoneShare>of() : table.shares(chunk)) {
@@ -728,7 +749,7 @@ final class IntegrityFuzz {
                 }
             }
         }
-        savedInFlight.clear();
+        savedBehind.clear();
     }
 
     /** What the divisions showing in this tick no longer hold of a gas: the most they can put the total out. */
@@ -781,12 +802,10 @@ final class IntegrityFuzz {
             }
         }
         for (Map.Entry<Long, ChunkRecord> e : saved.entrySet()) {
-            Set<Long> held = new HashSet<>();
-            for (ZoneShare share : table.shares(e.getKey())) {
-                held.add(share.zoneId());
-            }
+            List<ZoneShare> held = table.shares(e.getKey());
             for (ZoneShare share : e.getValue().zones()) {
-                if (!held.contains(share.zoneId())) {
+                boolean inMemory = held.stream().anyMatch(h -> h.zoneId() == share.zoneId());
+                if (!inMemory && !dividedIntoZonesHoldingIt(e.getValue(), share, held)) {
                     for (int i = 0; i < GASES; i++) {
                         total[i] += share.moles(i);
                     }
@@ -794,6 +813,16 @@ final class IntegrityFuzz {
             }
         }
         return total;
+    }
+
+    /**
+     * Whether a saved share's cells have gone to other zones by the division that {@link #noteDivisions}
+     * found, so its gas is in them. Any other zone having those cells says nothing: the share goes back to
+     * its own zone when the chunk loads.
+     */
+    private boolean dividedIntoZonesHoldingIt(ChunkRecord record, ZoneShare share, List<ZoneShare> held) {
+        return divisions.stream().anyMatch(d -> d.record == record && d.zone == share.zoneId())
+                && held.stream().anyMatch(h -> overlap(share.cells(), h.cells()));
     }
 
     private static void checkFinite(ZoneView z) {

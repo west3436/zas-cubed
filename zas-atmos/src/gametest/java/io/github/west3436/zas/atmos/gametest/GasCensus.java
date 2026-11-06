@@ -59,6 +59,15 @@ final class GasCensus {
         return held == null ? 0 : held.moles(gas);
     }
 
+    /** The moles of a gas in the devices and pipe networks of the named chunks: what they save. */
+    static double inDevices(Area a, ResourceLocation gas, ChunkPos... chunks) {
+        Set<Long> named = new HashSet<>();
+        for (ChunkPos chunk : chunks) {
+            named.add(SectionKeys.chunk(chunk.x, chunk.z));
+        }
+        return inDevices(a, gas, named);
+    }
+
     private static double inZones(Area a, ResourceLocation gas, Set<Long> named) {
         AtmosSnapshot table = a.service().dimension(a.level).published();
         int index = table.registry().indexOf(gas.toString());

@@ -103,6 +103,7 @@ mods itself.
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests, including S-12 (the example addon without `zas`) |
 | `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](docs/research/benchmarks.md)); not part of `build` |
 | `./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed=S` | Replays one seed of the integrity fuzz (NFR-010), which `build` runs on one seed; add `-Pfuzz.seeds=N` to run N seeds from it |
+| `./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed=S` | Replays one seed of the fuzz's half with pipes, among the rest of those GameTests; takes `-Pfuzz.seeds=N` as well |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
