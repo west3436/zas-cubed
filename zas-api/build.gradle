@@ -86,7 +86,13 @@ def checkApiDependencies = tasks.register('checkApiDependencies') {
 }
 
 // javadoc runs with check so a broken comment fails the build, not the
-// publish (API-004, API-008).
+// publish (API-004, API-008). So does a missing one (API-005): javadoc leaves
+// doclint's "missing" group out by default and only warns about it, so ask for
+// every group and make a warning an error.
+tasks.named('javadoc', Javadoc) {
+    options.addBooleanOption('Xdoclint:all', true)
+    options.addBooleanOption('Werror', true)
+}
 tasks.named('check') { dependsOn checkApiPackages, checkApiDependencies, tasks.named('javadoc') }
 
 // Maven Central through the Sonatype Central Portal (API-008, D-18). A

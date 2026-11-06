@@ -199,12 +199,18 @@ Read queries shall return immutable snapshots of the last applied atmos tick.
   doesn't change after the next tick.
 
 #### API-005 · Javadoc
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-04
 
 Every public API type and member shall have javadoc.
 
 - **Rationale:** Decision: D-04.
 - **Verify:** Inspect: CI's javadoc lint treats a missing comment as an error.
+
+*2026-11-06: Implemented. `:zas-api:javadoc`, which `check` runs and so CI's build, runs
+with `-Xdoclint:all -Werror`. A probe class failed the build on a type, a nested type, an
+enum constant, a constant, a public method and a protected method with no comment, on a
+default constructor, and on a method's missing `@param` and `@return`. The API as it stands
+passes with no warning.*
 
 #### API-047 · Example addon
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
