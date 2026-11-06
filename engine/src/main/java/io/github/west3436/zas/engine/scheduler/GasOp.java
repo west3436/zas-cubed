@@ -26,8 +26,8 @@ import java.util.Objects;
  * @param source who queued it, for logs; for a pin or unpin, the pin's owner
  * @param sub the sub-cell of the position the operation acts on, as resolved from an exact point
  *     (API-015, GEO-004), or -1 for the position's largest cell. If the position no longer has
- *     that many cells when the operation applies, it acts on the largest. Not saved: an operation
- *     restored from a chunk acts on the largest cell.
+ *     that many cells when the operation applies, it acts on the largest. A saved addition keeps
+ *     it, unless its record predates format 5, so it acts on the largest cell.
  * @param energy for an addition or removal of heat, the joules offered or wanted; otherwise 0
  */
 public record GasOp(

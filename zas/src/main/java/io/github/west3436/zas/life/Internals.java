@@ -212,7 +212,7 @@ public final class Internals {
         if (stack.isEmpty()) {
             return Optional.empty();
         }
-        ILifeSupport s = stack.getCapability(ILifeSupport.ITEM);
+        ILifeSupport s = GuardedLifeSupport.of(stack);
         return s == null ? Optional.empty() : s.internalSupply();
     }
 

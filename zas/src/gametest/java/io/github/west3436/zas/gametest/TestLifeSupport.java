@@ -37,7 +37,12 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *       low-pressure protection to vacuum, sealed breathing and airflow resistance 0.25, and, with
  *       the tag {@link #OWN_TANK_TAG} too, a tank of its own: {@link #OWN_TANK};
  *   <li>on a pig, which breathes as a zombie doesn't, with the entity tag {@link #EVERY_PART_TAG},
- *       {@link ILifeSupport#ENTITY} giving every part: {@link #EVERY_PART}.
+ *       {@link ILifeSupport#ENTITY} giving every part: {@link #EVERY_PART};
+ *   <li>for NFR-013, items and entity tags whose life support throws: {@code zas:test_faulty_piece}
+ *       and the tag {@link #FAULTY_TAG} give {@link #FAULTY}, {@code zas:test_faulty_part} gives
+ *       {@link #FAULTY_PART}, {@code zas:test_faulty_lookup} and the tag {@link #FAULTY_LOOKUP_TAG}
+ *       throw from the capability's lookup, and {@code zas:test_faulty_tank} holds {@link
+ *       #FAULTY_TANK}.
  * </ul>
  */
 @EventBusSubscriber(modid = ZasMod.MOD_ID)
@@ -187,8 +192,94 @@ public final class TestLifeSupport {
         }
     };
 
+    /** The faulty test items' ids. */
+    public static final ResourceLocation FAULTY_PIECE_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_faulty_piece");
+
+    public static final ResourceLocation FAULTY_PART_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_faulty_part");
+
+    public static final ResourceLocation FAULTY_LOOKUP_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_faulty_lookup");
+
+    public static final ResourceLocation FAULTY_TANK_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_faulty_tank");
+
+    /** The entity tag that gives a zombie {@link #FAULTY}. */
+    public static final String FAULTY_TAG = "zas_test_faulty";
+
+    /** The entity tag that makes the lookup of a zombie's life support throw. */
+    public static final String FAULTY_LOOKUP_TAG = "zas_test_faulty_lookup";
+
+    /** A life support each of whose parts throws. */
+    public static final ILifeSupport FAULTY = new ILifeSupport() {
+        @Override
+        public double minPressure() {
+            throw failing();
+        }
+
+        @Override
+        public double maxPressure() {
+            throw failing();
+        }
+
+        @Override
+        public double minTemperature() {
+            throw failing();
+        }
+
+        @Override
+        public double maxTemperature() {
+            throw failing();
+        }
+
+        @Override
+        public boolean sealedBreathing() {
+            throw failing();
+        }
+
+        @Override
+        public boolean gasFiltering() {
+            throw failing();
+        }
+
+        @Override
+        public double airflowResistance() {
+            throw failing();
+        }
+
+        @Override
+        public Optional<IInternalSupply> internalSupply() {
+            throw failing();
+        }
+    };
+
+    /** A life support whose pressure rating throws, and which seals the breathing. */
+    public static final ILifeSupport FAULTY_PART = new ILifeSupport() {
+        @Override
+        public double minPressure() {
+            throw failing();
+        }
+
+        @Override
+        public boolean sealedBreathing() {
+            return true;
+        }
+    };
+
+    /** The tank {@code zas:test_faulty_tank} holds: 1 mol of O2 until told to throw; {@link FaultySupply}. */
+    public static final FaultySupply FAULTY_TANK = new FaultySupply();
+
+    private static IllegalStateException failing() {
+        return new IllegalStateException("the test life support failing");
+    }
+
     private static Item item;
     private static Item tank;
+    private static Item faultyPiece;
+    private static Item faultyPart;
+    private static Item faultyLookup;
+    private static Item faultyTank;
 
     private TestLifeSupport() {}
 
@@ -200,6 +291,26 @@ public final class TestLifeSupport {
     /** The test tank item. */
     public static Item tankItem() {
         return tank;
+    }
+
+    /** The item that gives {@link #FAULTY}. */
+    public static Item faultyPiece() {
+        return faultyPiece;
+    }
+
+    /** The item that gives {@link #FAULTY_PART}. */
+    public static Item faultyPart() {
+        return faultyPart;
+    }
+
+    /** The item whose capability's lookup throws. */
+    public static Item faultyLookup() {
+        return faultyLookup;
+    }
+
+    /** The item that holds {@link #FAULTY_TANK}. */
+    public static Item faultyTank() {
+        return faultyTank;
     }
 
     // ---- The test tank -------------------------------------------------------------------------
@@ -280,7 +391,7 @@ public final class TestLifeSupport {
     }
 
     /** An internal supply held in memory, for an entity's own. */
-    public static final class TestSupply implements IInternalSupply {
+    public static class TestSupply implements IInternalSupply {
         private final Map<ResourceLocation, Double> moles = new HashMap<>();
 
         TestSupply() {
@@ -309,6 +420,44 @@ public final class TestLifeSupport {
         }
     }
 
+    /** A supply that holds 1 mol of O2, and throws from what a test says. Each test puts it back. */
+    public static final class FaultySupply extends TestSupply {
+        private boolean contents;
+        private boolean distribution;
+        private boolean draw;
+
+        /** Which of its calls throw from now on. */
+        public void throwing(boolean contents, boolean distribution, boolean draw) {
+            this.contents = contents;
+            this.distribution = distribution;
+            this.draw = draw;
+        }
+
+        @Override
+        public GasMixture contents() {
+            if (contents) {
+                throw failing();
+            }
+            return super.contents();
+        }
+
+        @Override
+        public double distributionPressure() {
+            if (distribution) {
+                throw failing();
+            }
+            return super.distributionPressure();
+        }
+
+        @Override
+        public GasParcel draw(double want) {
+            if (draw) {
+                throw failing();
+            }
+            return super.draw(want);
+        }
+    }
+
     @SubscribeEvent
     static void register(RegisterEvent event) {
         event.register(Registries.ITEM, ITEM_ID, () -> {
@@ -318,6 +467,22 @@ public final class TestLifeSupport {
         event.register(Registries.ITEM, TANK_ID, () -> {
             tank = new Item(new Item.Properties().stacksTo(1));
             return tank;
+        });
+        event.register(Registries.ITEM, FAULTY_PIECE_ID, () -> {
+            faultyPiece = new Item(new Item.Properties());
+            return faultyPiece;
+        });
+        event.register(Registries.ITEM, FAULTY_PART_ID, () -> {
+            faultyPart = new Item(new Item.Properties());
+            return faultyPart;
+        });
+        event.register(Registries.ITEM, FAULTY_LOOKUP_ID, () -> {
+            faultyLookup = new Item(new Item.Properties());
+            return faultyLookup;
+        });
+        event.register(Registries.ITEM, FAULTY_TANK_ID, () -> {
+            faultyTank = new Item(new Item.Properties());
+            return faultyTank;
         });
     }
 
@@ -333,7 +498,30 @@ public final class TestLifeSupport {
                     }
                 },
                 tank);
+        event.registerItem(ILifeSupport.ITEM, (stack, context) -> FAULTY, faultyPiece);
+        event.registerItem(ILifeSupport.ITEM, (stack, context) -> FAULTY_PART, faultyPart);
+        event.registerItem(
+                ILifeSupport.ITEM,
+                (stack, context) -> {
+                    throw failing();
+                },
+                faultyLookup);
+        event.registerItem(
+                ILifeSupport.ITEM,
+                (stack, context) -> new ILifeSupport() {
+                    @Override
+                    public Optional<IInternalSupply> internalSupply() {
+                        return Optional.of(FAULTY_TANK);
+                    }
+                },
+                faultyTank);
         event.registerEntity(ILifeSupport.ENTITY, EntityType.ZOMBIE, (zombie, context) -> {
+            if (zombie.getTags().contains(FAULTY_LOOKUP_TAG)) {
+                throw failing();
+            }
+            if (zombie.getTags().contains(FAULTY_TAG)) {
+                return FAULTY;
+            }
             if (!zombie.getTags().contains(ENTITY_TAG)) {
                 return null;
             }

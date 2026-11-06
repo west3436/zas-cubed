@@ -381,6 +381,7 @@ only decides what's logged.
 | Code reaction | `ApiReactionType.compute` | No change for that call |
 | Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |
 | Gas handler (`zas_atmos`) | `GasHandlers` | No more transfer on that face that atmos tick, and what a failed fill was offered goes back to the network. A lookup that throws keeps the pipe's arm, so a fault can't leave an open end |
+| Life support, internal supply | `GuardedLifeSupport` | That call gives what the interface's default gives, so a part that throws protects from nothing and its other parts still count. A lookup that throws counts as no capability. A supply that throws delivers nothing, and a draw that throws gives no gas. Nothing is kept |
 
 The bus's own `post` stops at a listener that throws, logs an error each time and
 rethrows. So `ApiEvents` calls the listeners itself, reading the bus's private
@@ -808,7 +809,8 @@ the lever if the per-cell cost ever matters.
     format 3, so older records are converted, §4.3), this chunk's share of its mixture
     (moles per gas, temperature) by volume, and every chunk the zone spans
   - block positions whose changes are held for a paused zone (DATA-010)
-  - at shutdown only, queued additions that target the chunk (DATA-011)
+  - at shutdown only, queued additions that target the chunk (DATA-011), each
+    with its sub-cell (format 5, §6.5)
   - each zone's pins, by owner id (API-018; format 4, §6.6)
 - **Shares are written at chunk save.** They are computed on the server
   thread from the **published** snapshot (moles × this chunk's volume ÷ zone
@@ -2215,7 +2217,9 @@ mutation first resolves its point to one cell (`PointResolver` in
   geometry change.
 - **Mutations.** A `GasOp` carries the sub-cell index (−1 for the largest
   cell), and the engine acts on that cell, or on the largest if the block no
-  longer has that many cells. Saved operations don't keep the index.
+  longer has that many cells. A saved addition keeps the index (format 5,
+  [#122](https://github.com/west3436/zas-cubed/issues/122)); one from an older
+  record acts on the largest cell.
 
 ### 6.6 Zone pins (API-017, API-018, API-050)
 
