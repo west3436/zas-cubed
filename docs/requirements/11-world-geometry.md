@@ -341,7 +341,7 @@ classified.
   unresolved, and forms a zone once the chunk loads.
 
 #### GEO-021 · Open-column classification
-`Should` · `R1` · `Accepted` · Verify: Bench, GameTest · Trace: S-11
+`Should` · `R1` · `Implemented` · Verify: Bench, GameTest · Trace: S-11
 
 A cell with no gas-tight face above it in its column, up to the build height,
 shall be classified as open without a fill. Sky light is never used, because
@@ -353,8 +353,18 @@ it passes through glass.
 - **Verify:** A GameTest checks an open-sky cell classifies without a fill and
   a glass-roofed greenhouse is enclosed; Bench measures the saving.
 
+*2026-11-05: Implemented. `geo_021_open_sky_classifies_without_a_fill` checks a
+cell under open sky takes no fill while one under a lid takes one, and
+`geo_021_glass_roofed_greenhouse_is_enclosed` checks a room under glass, which
+sky light passes, is zoned. The column check takes 0.8 µs where a fill takes
+5.6 ms ([bench](../research/benchmarks.md#open-classification-geo-021-and-geo-027)).
+Where the mirror doesn't reach the top of the column, the classification waits
+a tick for those sections rather than start a fill, since a fill couldn't find
+the region enclosed (`geo_021_beside_a_zone_the_add_waits_for_the_column`,
+`geo_021_a_breach_onto_open_sky_takes_no_fill`).*
+
 #### GEO-027 · Cached classification
-`Should` · `R1` · `Accepted` · Verify: Bench, GameTest
+`Should` · `R1` · `Implemented` · Verify: Bench, GameTest
 
 A cell already classified as open shall be classified from the cache, without
 a fill, until a block change invalidates that classification.
@@ -363,6 +373,15 @@ a fill, until a block change invalidates that classification.
   every tick, and refilling each time wastes work.
 - **Verify:** A GameTest checks a second classification of an open cell does
   no fill and a block change invalidates it; Bench measures the saving.
+
+*2026-11-05: Implemented.
+`geo_027_open_cell_takes_no_second_fill_until_a_block_changes` checks both. The
+cache takes 20 ns where a fill takes 5.4 ms
+([bench](../research/benchmarks.md#open-classification-geo-021-and-geo-027)). A
+classification rests on the sections it looked at, so a block change in any of
+them invalidates it, even one that leaves the way out open; a chunk unloading
+does too. Sections the worker doesn't mirror count:
+`geo_027_block_change_in_a_section_not_mirrored_invalidates_it`.*
 
 #### GEO-022 · Off-thread classification
 `Must` · `R0` · `Implemented` · Verify: Bench, GameTest · Trace: D-30, CORE-045

@@ -9,6 +9,8 @@ import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.engine.classify.EnclosureFill;
 import io.github.west3436.zas.engine.classify.EnclosureZones;
 import io.github.west3436.zas.engine.classify.FillResult;
+import io.github.west3436.zas.engine.classify.OpenCells;
+import io.github.west3436.zas.engine.classify.ResolvableTopology;
 import io.github.west3436.zas.engine.classify.SectionTopology;
 import io.github.west3436.zas.engine.zone.ZoneGraph;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.LongConsumer;
+import java.util.function.LongPredicate;
 
 /**
  * The classifier used in game: bounded enclosure detection ({@code engine.classify}) over the
@@ -30,6 +33,10 @@ import java.util.function.LongConsumer;
  *       If the fill reached sections the mirror lacks, those whose chunks are loaded are fetched
  *       for the next tick, and the operation waits (GEO-028); if all of them are unloaded the
  *       region is unresolved (GEO-024).
+ *   <li>A cell already found open is open with no fill ({@link OpenCells}, GEO-027), and so is one
+ *       with nothing sealing it from the top of the world in its own column ({@link
+ *       SectionTopology#column}, GEO-021). Sky light has no part in that, since it passes through
+ *       glass. If the column runs into sections the mirror lacks, the operation waits for those.
  *   <li>After geometry changes, {@link BreachResolver} classifies the unzoned cells newly open to a
  *       zone: an enclosed pocket joins it (GEO-023), the open air leaves an ambient edge (GEO-025),
  *       and a region reaching missing sections is held and classified again each tick until it
@@ -52,6 +59,7 @@ public final class EnclosureClassifier implements Classifier {
     private final Space space;
     private final EnclosureFill fill;
     private final BreachResolver breaches;
+    private final OpenCells open = new OpenCells();
     /** Seeds of breaches held at missing sections, classified again each tick. */
     private long[] held = new long[0];
     /** Whether a held breach asked for sections this tick. */
@@ -79,7 +87,7 @@ public final class EnclosureClassifier implements Classifier {
                 palette, sections::section, sections.minSectionY() * 16, sections.maxSectionY() * 16 + 15);
         this.space = new Space();
         this.fill = new EnclosureFill(maxCells);
-        this.breaches = new BreachResolver(fill);
+        this.breaches = new BreachResolver(fill, open);
     }
 
     /** The topology the graph and the fill share. */
@@ -94,12 +102,50 @@ public final class EnclosureClassifier implements Classifier {
 
     @Override
     public Classification classify(ZoneGraph graph, long cell) {
-        FillResult result = fill.fill(topology, cell, c -> graph.zoneOf(c) != null);
+        if (open.contains(cell)) {
+            return Classification.OPEN;
+        }
+        LongPredicate zoned = c -> graph.zoneOf(c) != null;
+        ResolvableTopology.Column column = topology.column(cell, zoned);
+        if (column == ResolvableTopology.Column.OPEN) {
+            open.add(cell, topology.columnSections(cell));
+            return Classification.OPEN;
+        }
+        if (column == ResolvableTopology.Column.UNKNOWN) {
+            // A fill could only say open or unresolved here, so see the rest of the column first.
+            long[] fetch = loadedOnly(topology.columnGaps(cell));
+            if (fetch.length > 0) {
+                return new Classification.NeedsSections(fetch);
+            }
+        }
+        FillResult result = fill.fill(topology, cell, zoned);
         return switch (result) {
             case FillResult.Enclosed e -> new Classification.Enclosed(e.cells());
-            case FillResult.Open o -> Classification.OPEN;
+            case FillResult.Open o -> {
+                open.add(cell, fill.visitedSections(topology));
+                yield Classification.OPEN;
+            }
             case FillResult.Unresolved u -> missing(u.missingSections());
         };
+    }
+
+    @Override
+    public void sectionChanged(long section) {
+        open.sectionChanged(section);
+    }
+
+    @Override
+    public void chunkUnloaded(long chunk) {
+        int x = SectionKeys.chunkX(chunk);
+        int z = SectionKeys.chunkZ(chunk);
+        for (int y = sections.minSectionY(); y <= sections.maxSectionY(); y++) {
+            open.sectionChanged(SectionKeys.section(x, y, z));
+        }
+    }
+
+    @Override
+    public void onFill(LongConsumer listener) {
+        fill.onFill(listener);
     }
 
     /** Splits missing sections into ones to fetch and unloaded ones (architecture §4.3, GEO-024). */

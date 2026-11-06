@@ -23,13 +23,29 @@ import java.util.Objects;
  *
  * <p>A held breach is classified again, from its seeds, once its missing sections arrive.
  * Deterministic: seeds are handled in ascending order and each region is filled once.
+ *
+ * <p>Given an {@link OpenCells}, a seed known to be open or open straight up is a vent with no fill
+ * (GEO-021, GEO-027), and a fill that finds its seed open is remembered there. A seed whose column runs
+ * into sections the view lacks is held for those, also with no fill: the region can't be a pocket, and
+ * the column may settle it.
  */
 public final class BreachResolver {
     private final EnclosureFill fill;
+    private final OpenCells open;
 
     /** @param fill the fill to classify with; its bound applies to the unzoned regions */
     public BreachResolver(EnclosureFill fill) {
         this.fill = Objects.requireNonNull(fill, "fill");
+        this.open = null;
+    }
+
+    /**
+     * @param fill the fill to classify with; its bound applies to the unzoned regions
+     * @param open the cells known to be open, which the caller keeps up to date
+     */
+    public BreachResolver(EnclosureFill fill, OpenCells open) {
+        this.fill = Objects.requireNonNull(fill, "fill");
+        this.open = Objects.requireNonNull(open, "open");
     }
 
     /**
@@ -89,6 +105,13 @@ public final class BreachResolver {
                 continue;
             }
             zones.clear();
+            if (open != null) {
+                Breach settled = withoutFill(graph, topology, seed, zones);
+                if (settled != null) {
+                    out.add(settled);
+                    continue;
+                }
+            }
             FillResult result = fill.fill(topology, seed, cell -> {
                 Zone z = graph.zoneOf(cell);
                 if (z == null) {
@@ -107,6 +130,9 @@ public final class BreachResolver {
             }
             long[] s = regionSeeds.sortedDistinct();
             long[] z = zones.sortedDistinct();
+            if (open != null && result instanceof FillResult.Open) {
+                open.add(seed, fill.visitedSections(topology));
+            }
             out.add(
                     switch (result) {
                         case FillResult.Enclosed e -> new Breach.Pocket(s, z, e);
@@ -115,6 +141,34 @@ public final class BreachResolver {
                     });
         }
         return out;
+    }
+
+    /** What can be said of a seed with no fill, or null if it takes one. Sees only the zones beside it. */
+    private Breach withoutFill(ZoneGraph graph, ResolvableTopology topology, long seed, LongList zones) {
+        FillResult.Open.Reason reason = null;
+        boolean gaps = false;
+        if (open.contains(seed)) {
+            reason = FillResult.Open.Reason.KNOWN_OPEN;
+        } else {
+            ResolvableTopology.Column column = topology.column(seed, c -> graph.zoneOf(c) != null);
+            if (column == ResolvableTopology.Column.OPEN) {
+                reason = FillResult.Open.Reason.OPEN_COLUMN;
+            }
+            gaps = column == ResolvableTopology.Column.UNKNOWN;
+        }
+        if (reason == null && !gaps) {
+            return null;
+        }
+        topology.forEachOpenNeighbour(seed, (n, direct) -> {
+            Zone z = graph.zoneOf(n);
+            if (z != null) {
+                zones.add(z.id());
+            }
+        });
+        long[] seeds = {seed};
+        return reason != null
+                ? new Breach.Vent(seeds, zones.sortedDistinct(), reason)
+                : new Breach.Hold(seeds, zones.sortedDistinct(), topology.columnGaps(seed));
     }
 
     /**

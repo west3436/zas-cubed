@@ -45,6 +45,22 @@ public interface Classifier {
     default void afterGeometry(ZoneGraph graph, long[] refreshedCells, LongConsumer requestSection) {}
 
     /**
+     * A block's geometry changed in a section, whether the mirror holds it or not: in the geometry phase
+     * of the tick that sees the change, or of the tick that applies it if it was held for a paused zone
+     * (GEO-037). Anything the classifier remembers that rests on the section no longer holds (GEO-027).
+     */
+    default void sectionChanged(long section) {}
+
+    /** A chunk unloaded: {@link #sectionChanged} for the sections in it. */
+    default void chunkUnloaded(long chunk) {}
+
+    /**
+     * Tells {@code listener} the seed of each fill from now on, on the worker; null for no one. For
+     * tests of when a fill runs (GEO-021, GEO-027). The default runs no fills.
+     */
+    default void onFill(LongConsumer listener) {}
+
+    /**
      * Whether a classification is waiting for sections. While one is, the scheduler keeps every
      * mirrored section, so repeated rounds of fetching always make progress.
      */

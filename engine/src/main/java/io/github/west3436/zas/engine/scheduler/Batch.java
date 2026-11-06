@@ -26,6 +26,8 @@ import java.util.Objects;
  *     chunk order (DATA-002); the sections their cells are in come with the batch
  * @param unloadedListedChunks the chunks the records' zones span that are not loaded at batch
  *     close, ascending: a zone rebuilt from the records stays paused until they load (GEO-030)
+ * @param changedOutsideMirror sections the worker doesn't mirror where a block's geometry changed
+ *     since the last batch, ascending: not captured, but a classification may rest on them (GEO-027)
  */
 public record Batch(
         long tick,
@@ -38,7 +40,8 @@ public record Batch(
         Rejection rejection,
         EngineSettings settings,
         List<ChunkRecord> records,
-        long[] unloadedListedChunks) {
+        long[] unloadedListedChunks,
+        long[] changedOutsideMirror) {
 
     /**
      * Checks and copies the arguments.
@@ -65,6 +68,7 @@ public record Batch(
             }
         }
         unloadedListedChunks = sorted(unloadedListedChunks);
+        changedOutsideMirror = sorted(changedOutsideMirror);
     }
 
     /** A batch without saved records. */
@@ -89,6 +93,7 @@ public record Batch(
                 rejection,
                 settings,
                 List.of(),
+                new long[0],
                 new long[0]);
     }
 
@@ -111,7 +116,8 @@ public record Batch(
                 rejection,
                 newSettings,
                 records,
-                unloadedListedChunks);
+                unloadedListedChunks,
+                changedOutsideMirror);
     }
 
     /** This batch carrying a rejection. */
@@ -127,7 +133,8 @@ public record Batch(
                 newRejection,
                 settings,
                 records,
-                unloadedListedChunks);
+                unloadedListedChunks,
+                changedOutsideMirror);
     }
 
     private static long[] sorted(long[] keys) {
@@ -154,5 +161,10 @@ public record Batch(
     @Override
     public long[] unloadedListedChunks() {
         return unloadedListedChunks.clone();
+    }
+
+    @Override
+    public long[] changedOutsideMirror() {
+        return changedOutsideMirror.clone();
     }
 }

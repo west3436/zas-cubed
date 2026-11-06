@@ -2,6 +2,9 @@ package io.github.west3436.zas.engine.classify;
 
 import io.github.west3436.zas.engine.SectionKeys;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.LongConsumer;
 import java.util.function.LongPredicate;
 
 /**
@@ -44,6 +47,9 @@ public final class EnclosureFill {
     private ResolvableTopology topology;
     private LongPredicate stopAt;
 
+    /** Set from any thread; read by the worker at each fill. */
+    private volatile LongConsumer onFill;
+
     /** A fill with the default bound of {@value #DEFAULT_MAX_CELLS} cells. */
     public EnclosureFill() {
         this(DEFAULT_MAX_CELLS);
@@ -65,6 +71,14 @@ public final class EnclosureFill {
 
     public int maxCells() {
         return maxCells;
+    }
+
+    /**
+     * Tells {@code listener} the seed of each fill that explores a region from now on, on the thread
+     * running it; null for no one. For tests of when a fill runs (GEO-021, GEO-027).
+     */
+    public void onFill(LongConsumer listener) {
+        onFill = listener;
     }
 
     /** {@link #fill(ResolvableTopology, long, LongPredicate)} with nothing to stop at. */
@@ -94,6 +108,10 @@ public final class EnclosureFill {
         }
         if (!(topology.volume(start) > 0)) {
             throw new IllegalArgumentException("fill seed " + start + " is not a cell");
+        }
+        LongConsumer listener = onFill;
+        if (listener != null) {
+            listener.accept(start);
         }
         this.topology = topology;
         this.stopAt = stopAt;
@@ -134,6 +152,23 @@ public final class EnclosureFill {
      */
     public boolean visitedInLastFill(long cell) {
         return contains(cell);
+    }
+
+    /**
+     * The sections of the cells the last fill visited, without duplicates, in no useful order: what an
+     * open result rests on ({@link OpenCells}). Valid until the next fill.
+     */
+    public long[] visitedSections(ResolvableTopology topology) {
+        Set<Long> sections = new HashSet<>();
+        for (int i = 0; i < tail; i++) {
+            sections.add(topology.sectionOf(queue[i]));
+        }
+        long[] out = new long[sections.size()];
+        int n = 0;
+        for (long section : sections) {
+            out[n++] = section;
+        }
+        return out;
     }
 
     private final class Visitor implements ResolvableTopology.FillVisitor {

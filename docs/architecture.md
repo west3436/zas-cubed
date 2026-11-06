@@ -511,12 +511,17 @@ section, S-10's station needs about 1–2 MiB.
 
 1. **Prefetch.** An operation that can create a zone (CORE-055, CORE-056)
    makes the server thread snapshot the non-empty, loaded sections within
-   3 sections of the target at the next batch close. Most enclosures under the
-   65,536-cell cap fit inside that 7³-section cube (about 100 µs of copying in
-   the worst case).
-2. **The fill** runs on the mirror (GEO-022). It first does the GEO-021 column
-   check (*spike (S3):* 0.7 µs), then the bounded fill (*spike (S3):* 5.5 ms at
-   the cap). Possible outcomes:
+   3 sections of the target at the next batch close, and the sections above
+   the target up to the top of the world. Most enclosures under the 65,536-cell
+   cap fit inside that 7³-section cube (about 100 µs of copying in the worst
+   case).
+2. **Without a fill.** A cell found open before is open, from the cache (GEO-027,
+   20 ns). So is a cell that nothing seals from the top of the world in its own
+   column, whatever the sky light (GEO-021, 0.8 µs). If the column reaches
+   a section the mirror lacks before anything seals it, a fill could only say
+   open or unresolved, so the operation waits for the rest of the column.
+3. **The fill** runs on the mirror (GEO-022): the bounded fill (*spike (S3):*
+   5.5 ms at the cap). Possible outcomes:
    - **Enclosed:** the zone is created in phase 3 and the buffered operations
      apply (GEO-028).
    - **Open:** the gas goes to the ambient and is reported (CORE-053).
@@ -525,8 +530,13 @@ section, S-10's station needs about 1–2 MiB.
      doesn't have. The worker asks for those sections in its result, the next
      batch carries them, and the fill reruns. Operations stay buffered, so a
      large or thin enclosure takes one or more extra atmos ticks.
-3. **Cache.** Cells classified open are cached per section until a dirty bit
-   in that section clears the entry (GEO-027).
+4. **Cache.** A cell found open is kept with the sections its result rests on:
+   those of the cells the fill visited, or its column's. A block change in one
+   of them or its chunk unloading clears the entry (GEO-027). It doesn't matter
+   whether the mirror holds the section: the batch lists the changes in sections
+   it doesn't hold (`Batch.changedOutsideMirror`), which the worker couldn't
+   otherwise see. At most 65,536 links between a cell and a section are kept;
+   past that the cache starts again, which only costs fills.
 
 *Implemented (#23):* the mirror is `SectionMirror`; `EnclosureClassifier`
 wires `engine.classify` (#26) into the scheduler through the `Classifier`
@@ -971,10 +981,11 @@ closing it is a cheap edge update.
   (CORE-066), and the group is equalized again once they sleep. It follows
   only edges that existed at the undo point, so the exchange components of
   §3.3 still hold every chain of exchange.
-- **Known cost.** A door that opens onto unzoned air, such as the open air
-  outside, is a breach each time it opens: `BreachResolver` runs a bounded fill
-  from the newly opened cell (GEO-023, GEO-025). Open-column classification
-  and the classification cache (GEO-021, GEO-027) will make that cheap.
+- **Known cost.** A door that opens onto unzoned air is a breach each time it
+  opens (GEO-023, GEO-025). Under open sky that takes no fill (GEO-021). Under
+  a roof `BreachResolver` runs a bounded fill from the newly opened cell each
+  time: the door's own change clears the cache entry (GEO-027), since the entry
+  rests on the door's section.
 
 ### 4.8 Heat (HEAT-001 to HEAT-016)
 

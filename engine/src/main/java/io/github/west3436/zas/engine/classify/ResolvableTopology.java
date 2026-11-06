@@ -1,6 +1,7 @@
 package io.github.west3436.zas.engine.classify;
 
 import io.github.west3436.zas.engine.zone.CellTopology;
+import java.util.function.LongPredicate;
 
 /**
  * A {@link CellTopology} over a partial view of the world, which can say where its knowledge
@@ -29,6 +30,36 @@ public interface ResolvableTopology extends CellTopology {
      * <p>A face counts as reached when gas could cross it if the neighbouring position were air.
      */
     void forEachNeighbour(long cell, FillVisitor visitor);
+
+    /**
+     * Looks straight up from a cell (GEO-021), following cells each open to the one above in the same
+     * column. Only {@link Column#OPEN} settles anything: a fill would get there too, so a caller can
+     * skip it. The default sees nothing, and leaves it to the fill.
+     *
+     * @param stopAt cells that count as sealed, as for {@link EnclosureFill#fill}
+     */
+    default Column column(long cell, LongPredicate stopAt) {
+        return Column.SEALED;
+    }
+
+    /** The sections the view doesn't hold from a cell's own up to the top of the world, lowest first. */
+    default long[] columnGaps(long cell) {
+        return new long[0];
+    }
+
+    /** What looking straight up from a cell finds. */
+    enum Column {
+        /** Nothing seals the cell from the top of the world. */
+        OPEN,
+        /** Something seals it. The region may be open some other way, which takes a fill to find. */
+        SEALED,
+        /**
+         * Nothing seals it as far as the view goes, up to a section the view doesn't hold. A fill can't
+         * find the region enclosed, only open or unresolved, so seeing the {@linkplain #columnGaps rest
+         * of the column} comes first.
+         */
+        UNKNOWN
+    }
 
     /** Receives the open neighbours of a cell and the faces beyond the view. */
     interface FillVisitor extends NeighbourVisitor {

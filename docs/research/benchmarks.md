@@ -29,6 +29,7 @@ measured here (see [Not measured](#not-measured)).
 | CORE-054: world generation creates no zone and no fill | 0 captures, 0 fills, 0 new zones over 320 generated chunks | Pass |
 | GEO-022: a 65,536-cell fill doesn't stall the server thread | Server ≤ 0.71 ms per round; the fill runs on the worker | Pass |
 | GEO-020: fill cost (no number set) | 7.5 ms median at the 65,536-cell cap | Recorded |
+| GEO-021 and GEO-027: what classifying without a fill saves (no number set) | *2026-11-05:* 0.8 µs for the column check and 20 ns from the cache, against 5.6 ms for the fill; a worker tick holding one open add goes from 7.9 ms to 0.4 ms ([run](#open-classification-geo-021-and-geo-027)) | Recorded |
 | CORE-025: a connected edit costs the same at any zone size | Split search: 24 visits at 1,000, 8,000 and 50,000 cells. Worker tick: 0.06, 0.23 and 1.4 ms. *2026-11-01: 0.046, 0.041 and 0.054 ms* | Pass since [#106](https://github.com/west3436/zas-cubed/issues/106) ([check](#membership-palette-check-2026-11-01)) |
 | CORE-045: server-thread versus worker time | 31 µs versus 0.94 ms per atmos tick in S-10 | Recorded |
 | CORE-046: cost at each period | 0.5 s: 1.29 ms of worker time per game second; 1 s: 0.94 ms; 2 s: 0.67 ms | Recorded |
@@ -288,6 +289,50 @@ The server thread never sees the fill: it spends half a millisecond capturing
 sections while the worker spends 82 ms. That worker tick is within NFR-005,
 but it's 15 times spike S3's 5.6 ms for a fill plus zone creation (see
 [Findings](#findings)).
+
+## Open classification: GEO-021 and GEO-027
+
+*Run 2026-11-05 on the same machine, with other builds running on it, by
+`./gradlew :engine:bench -Pbench.args=fill`.*
+
+The world is flat, with ground at y = 63 and the overworld's build height. It has
+two cells: one under open sky, and one in a 3 × 3 × 3 room with a roof and a hole
+in its side, whose column stops at the roof, so only a fill or the cache can find
+it open.
+
+**Each way alone,** 50 runs after 30 warm-up runs. The column check and the cache
+time 1,000 calls a run and give the cost of one.
+
+| Way | Cell | Visited | Median | p99 |
+|---|---|---|---|---|
+| Fill | Open sky | 65,536 | 5.63 ms | 10.90 ms |
+| Column check | Open sky | 256 | 803 ns | 1,208 ns |
+| Fill | Roof, hole in the side | 65,536 | 5.42 ms | 8.17 ms |
+| Remembering that fill's result | 47 sections | | 0.450 ms | 3.43 ms |
+| From the cache | Either | 0 | 20 ns | 76 ns |
+
+The column check is about 7,000 times cheaper than the fill it saves, and close to
+spike S3's 0.7 µs. The cache is about 270,000 times cheaper. Remembering a result
+adds about 8 % to the fill that found it, once.
+
+**Through the pipeline,** in a fresh engine each round, 20 rounds after 5 warm-up
+rounds. Every add finished in the atmos tick holding it.
+
+| Tick | Worker median | Worker max | Close median | Close max |
+|---|---|---|---|---|
+| No add, for reference | 0.038 ms | 0.147 ms | 9.2 µs | 0.027 ms |
+| An add under open sky | 0.400 ms | 0.723 ms | 0.216 ms | 0.396 ms |
+| First add under the roof | 7.86 ms | 50.75 ms | 0.200 ms | 0.280 ms |
+| Second add under the roof | 0.382 ms | 0.616 ms | 0.258 ms | 0.365 ms |
+
+The worker's tick falls from 7.9 ms to 0.4 ms. The server thread saves nothing:
+it can't tell which cells are known to be open, so an add outside the mirror still
+copies the sections around it, about 0.2 ms each time. That includes the sections
+above the add that the column check needs; the 65,536-cell hall's close, which now
+copies them too, is 0.476 ms against 0.488 ms in the R0 run. Nor do they show in
+the burst of 1,000 zone-creating adds (`scaling`): over 5 runs each, the worst
+close has a median of 2.16 ms with them and 1.96 ms without, and reached 5 to 6 ms
+once or twice either way on the busy machine, under CORE-047's 10 ms.
 
 ## Merge and split: CORE-023, CORE-024 and CORE-025
 
