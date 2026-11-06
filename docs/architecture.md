@@ -490,10 +490,15 @@ uncovered part of the face (GEO-003, GEO-004).
   photosynthesis drains once a period and filters by the sections it keeps
   plants for (§5, [Photosynthesis](#photosynthesis-cont-053-cont-057)). A crop
   growing isn't one. Any other write costs the same two array reads again.
-- **Revalidation on load (GEO-013).** When a chunk with saved zone data loads,
-  all its non-empty sections are snapshotted and the worker compares them with
-  saved membership. `BlockGeometry.markDirty(level, pos)` (GEO-014) sets the
-  dirty bit and forces re-evaluation of position-dependent overrides.
+- **Revalidation on load (GEO-013).** When a chunk loads, the pipeline captures
+  the sections of it the worker mirrors, and those holding its saved zones'
+  cells with their neighbours, whatever the dirty bits say, so the worker sees
+  changes no hook could (offline or worldgen edits). A paused zone takes the
+  fresh copy as it takes any block change when it resumes. A zone rebuilt from
+  its shares keeps only the cells still open, splits if they no longer connect
+  (one search over its cells), and has its surface classified before it
+  resumes. `BlockGeometry.markDirty(level, pos)` (GEO-014) sets the dirty bit
+  and forces re-evaluation of position-dependent overrides.
 
 ### 4.3 The worker's section mirror and classification (GEO-020 to GEO-028)
 

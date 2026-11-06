@@ -817,6 +817,48 @@ public final class ZoneGraph {
         lastSplitVisits = visits;
     }
 
+    /**
+     * Splits a zone whose cells no longer all connect, for a zone rebuilt from saved shares: the blocks
+     * may have changed while it was saved (GEO-013), and no single change marks where to look, so this
+     * visits every cell. The part found last keeps the zone and its id, and the others become new zones
+     * as in any split (CORE-064).
+     *
+     * @return the zones split off
+     */
+    public List<Zone> splitDisconnected(Zone zone) {
+        requireLive(zone);
+        int epoch = ++searchEpoch;
+        List<List<Cell>> parts = new ArrayList<>();
+        for (int i = 0; i < zone.cellCount(); i++) {
+            Cell start = zone.cellAt(i);
+            if (start.visitEpoch == epoch) {
+                continue;
+            }
+            start.visitEpoch = epoch;
+            List<Cell> part = new ArrayList<>();
+            part.add(start);
+            for (int at = 0; at < part.size(); at++) {
+                Cell cell = part.get(at);
+                for (int l = 0; l < cell.degree; l++) {
+                    if (!cell.direct[l]) {
+                        continue;
+                    }
+                    Cell n = cells.get(cell.neighbours[l]);
+                    if (n.zone == zone && n.visitEpoch != epoch) {
+                        n.visitEpoch = epoch;
+                        part.add(n);
+                    }
+                }
+            }
+            parts.add(part);
+        }
+        List<Zone> created = new ArrayList<>();
+        for (int i = 0; i + 1 < parts.size(); i++) {
+            created.add(splitOff(zone, parts.get(i)));
+        }
+        return created;
+    }
+
     private static int root(int[] parent, int i) {
         while (parent[i] != i) {
             parent[i] = parent[parent[i]];
@@ -839,7 +881,7 @@ public final class ZoneGraph {
      * temperature, with moles in proportion to its volume (CORE-064), and the
      * zone's pins (D-64).
      */
-    private void splitOff(Zone zone, List<Cell> remnant) {
+    private Zone splitOff(Zone zone, List<Cell> remnant) {
         double volume = 0;
         for (Cell c : remnant) {
             volume += c.volume;
@@ -853,6 +895,7 @@ public final class ZoneGraph {
         splitCount++;
         created.changed = true;
         zone.changed = true;
+        return created;
     }
 
     // ---- Merge (CORE-023) ---------------------------------------------------

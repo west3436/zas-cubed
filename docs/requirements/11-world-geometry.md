@@ -283,7 +283,7 @@ in the next geometry phase.
   geometry pass handles them.
 
 #### GEO-013 · Revalidation on chunk load
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [neoforge §3](../research/neoforge-1.21.1.md#3-block-change-detection)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [neoforge §3](../research/neoforge-1.21.1.md#3-block-change-detection)
 
 Zones touching a chunk shall be revalidated when that chunk loads, to catch
 changes that couldn't be observed at write time (offline or worldgen edits).
@@ -293,6 +293,12 @@ changes that couldn't be observed at write time (offline or worldgen edits).
   §3](../research/neoforge-1.21.1.md#3-block-change-detection)).
 - **Verify:** A GameTest changes a zone's wall while its chunk is unloaded and
   checks the zone is revalidated on load.
+
+*2026-11-05: Implemented. `geo_013_a_wall_opened_while_unloaded_breaches_the_paused_zone`
+and `geo_013_a_wall_opened_while_unloaded_breaches_the_rebuilt_zone` are the
+plan's tests, for a zone waiting in memory and one rebuilt from its chunks. The
+other `geo_013_` tests in `ChunkRevalidationTests` check a block placed, a wall
+built across the zone and a hole mended, each under the chunk hook.*
 
 #### GEO-014 · Mark-dirty API
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [neoforge §3](../research/neoforge-1.21.1.md#3-block-change-detection)
