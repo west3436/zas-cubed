@@ -129,6 +129,15 @@ version.
 - **Verify:** Inspect: the CI API diff (API-043) flags any removal that wasn't
   deprecated in an earlier minor version.
 
+*2026-11-06: Still Accepted. `:zas-api:apiCompat` now fails on a removal its baseline
+didn't mark `@Deprecated`, even in a new major, where it used to report only. Against a
+scratch baseline of 1.0.0, a 2.0.0 failed on a field, a method and a class with no mark,
+and on members of a class marked only in 2.0.0, and passed with only marked ones removed.
+The policy is in [docs/api-consumers.md](../api-consumers.md#versioning-and-the-compatibility-check).
+CI compares nothing until `api_baseline_version` names a release (API-043). The check sees
+only that baseline, so it can't tell which release added a mark, and it exempts a `0.x`
+baseline, for which API-041 promises nothing.*
+
 #### API-043 · API-diff check in CI
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04
 
