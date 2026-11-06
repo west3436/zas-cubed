@@ -2279,6 +2279,14 @@ checked with real parts across a firelock.*
 (GameTest) checks a real vent linked across a firelock runs from the
 controller's buffer.*
 
+*2026-11-06: Note ([#162](https://github.com/west3436/zas-cubed/issues/162)):
+`PowerChargeTests` (GameTest) lets the game step controllers and stand-in parts
+in real time and reads their FE stores at every game tick, since a test that
+steps them itself sees only the first charge. Each atmos tick costs each part
+once, whether one controller covers it twice or two controllers cover it, with
+no charge repeated or missed; the buffer refills each time (CONT-062), and
+charges stop as it runs out (CONT-064).*
+
 #### CONT-069 · Parts without a controller have no power
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-68
 

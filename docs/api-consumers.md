@@ -447,6 +447,13 @@ API-041 promises nothing for `0.x`. Requiring a minor bump for a break is
 stricter than that, and follows semver's convention that a `0.x` minor
 version may break. The HTML report is in `zas-api/build/reports/apiCompat/`.
 
+From 1.0, anything removed is deprecated first, for at least one minor version
+(API-042): mark it `@Deprecated` in a minor version, with a `@deprecated` tag
+saying what to use instead, and remove it in a later major. The check fails on
+a removal the baseline didn't mark, even in a new major. It sees only the
+baseline, so it can't tell which release added the mark: don't add one in a
+patch.
+
 With `api_baseline_version` empty, as now (nothing has been released), the
 check is skipped with a notice. After each release, set it to the released
 version. A set but unresolvable baseline fails the build.
