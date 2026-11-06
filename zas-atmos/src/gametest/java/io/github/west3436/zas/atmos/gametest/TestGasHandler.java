@@ -96,8 +96,14 @@ public final class TestGasHandler {
         public double capacity = Double.MAX_VALUE;
         /** Moles of each gas it says it took beyond what it did. */
         public double overstates;
+        /** Whether looking up the capability throws. */
+        public boolean failsLookup;
+        /** Run each time it's asked for its contents. */
+        public Runnable duringContents = () -> {};
         /** Run at the start of an executed fill, before it takes anything. */
         public Runnable duringFill = () -> {};
+        /** Run at the start of an executed drain, before it gives anything. */
+        public Runnable duringDrain = () -> {};
         /** The executed fills it has been asked for, refused or not. */
         public int fills;
         /** The executed drains it has been asked for, refused or not. */
@@ -111,12 +117,16 @@ public final class TestGasHandler {
 
         @Nullable
         private IGasHandler on(@Nullable Direction side) {
+            if (failsLookup) {
+                throw new IllegalStateException("the test handler's capability failing");
+            }
             return exposed && (onlySide == null || onlySide == side) ? this : null;
         }
 
         @Override
         public GasMixture contents() {
             threads.add(Thread.currentThread());
+            duringContents.run();
             return tank.mixture();
         }
 
@@ -147,6 +157,7 @@ public final class TestGasHandler {
             threads.add(Thread.currentThread());
             if (action == Action.EXECUTE) {
                 drains++;
+                duringDrain.run();
             }
             if (refusesDrain) {
                 return GasParcel.EMPTY;

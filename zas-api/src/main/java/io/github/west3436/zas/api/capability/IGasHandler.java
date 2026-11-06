@@ -27,6 +27,10 @@ import org.jetbrains.annotations.Nullable;
  * to the network. So gas is conserved as long as the handler's returns are true: it gains what it
  * says it took, and loses what it says it gave.
  *
+ * <p><b>If it throws</b> (NFR-013). ZAS³'s content mod catches it, skips the handler for that atmos
+ * tick and logs the fault at most once a minute. If a fill throws, all it was offered goes back to the
+ * network, so a handler shouldn't throw after taking gas.
+ *
  * <p>Without ZAS³ or its content mod the capability still exists, but nothing here calls it.
  *
  * <p><b>Threads.</b> ZAS³ makes every call on the server thread (API-026).

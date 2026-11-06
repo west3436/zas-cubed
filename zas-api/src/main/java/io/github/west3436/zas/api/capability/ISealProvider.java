@@ -21,6 +21,10 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
  * <p><b>Threads.</b> ZAS³ calls it on the server thread, when it copies the block's section for an
  * atmos tick (D-30). It should be cheap, since a section's copy waits for it. Without ZAS³ the
  * capability still exists, but nothing reads it.
+ *
+ * <p><b>If it throws</b> (NFR-013). ZAS³ catches it and uses the block's collision shape for that
+ * atmos tick. It asks again the next atmos tick, without waiting for {@code markDirty}, and logs the
+ * fault at most once a minute.
  */
 public interface ISealProvider {
     /** The capability on blocks. */

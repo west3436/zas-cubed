@@ -297,7 +297,7 @@ Requirements: CORE-036, CORE-048, CORE-070, CORE-074, D-43.
   `DimensionAtmos.close` calls `Ambients.takeProviderAnswer` first, in every
   dimension, an excluded one included. `ProvidedAmbients` keeps the answer, which
   the batch and every query read until the next close, and is the only place a
-  provider is called, so NFR-013's guard has one place to go.
+  provider is called, with NFR-013's guard around it.
 - Hand off the op queue (a list swap).
 
 **Per apply:**
@@ -367,6 +367,26 @@ contribution for the tick (D-55, NFR-013). Code-defined reactions run on the
 worker: API-020 implementations must be pure functions of their inputs, they
 are guarded the same way, and the API documents them as worker-thread
 callbacks.
+
+*Implemented for each kind but hazard handlers, which don't exist yet (LIFE-032):*
+each kind has one call point, which catches `Exception` and `LinkageError` and asks
+`ThirdPartyFaults` (API-062) whether to log. That's the one limit for both mods, per
+source, with a bounded record. It reads a clock, so it stays out of the engine, and it
+only decides what's logged.
+
+| Kind | Call point | What "skipped" means |
+|---|---|---|
+| Ambient provider | `ProvidedAmbients.call` | As if it answered null: the next source applies for that atmos tick (ENV-014) |
+| Seal provider | `SealProviders.ask` | The block's own shape for that atmos tick. Nothing is kept, and the position is marked dirty, so its section is copied and the provider asked again the next atmos tick |
+| Code reaction | `ApiReactionType.compute` | No change for that call |
+| Event listener | `ApiEvents.post` | That listener misses that event; the others hear it |
+| Gas handler (`zas_atmos`) | `GasHandlers` | No more transfer on that face that atmos tick, and what a failed fill was offered goes back to the network. A lookup that throws keeps the pipe's arm, so a fault can't leave an open end |
+
+The bus's own `post` stops at a listener that throws, logs an error each time and
+rethrows. So `ApiEvents` calls the listeners itself, reading the bus's private
+`getListenerList` by reflection, which the bus's open module permits. If that method
+ever goes, it falls back to `post` inside a guard, and
+`nfr_013_an_event_listener_that_throws_is_skipped_and_logged_once_a_minute` fails.
 
 ## 4. Geometry, storage and persistence
 
@@ -2013,7 +2033,7 @@ sound, and nothing here runs for it.*
 
 | Package | Contents |
 |---|---|
-| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, and the `ServerThreads` check |
+| `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, the `ServerThreads` check, and `ThirdPartyFaults`, the limit on logging another mod's faults (API-062) |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
 | `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `BlockGeometry` (`markDirty(level, pos)`; GEO-014), `CompletableFuture`-based returns |
@@ -2501,7 +2521,7 @@ the cell in front of its grille).
   nothing. A pipe's arms follow the capability each step, so one that comes or
   goes with no block changing is followed within an atmos tick, and an arm into a
   chunk that's away stays as it is. `GasHandlers` holds every lookup and every
-  call into a handler, so a fault guard (NFR-013) has one place to go. The client
+  call into a handler, each with NFR-013's fault guard. The client
   never looks: providers run on the server thread, and arms reach the client in
   the block state.
 - **Blocks in several networks.** A block entity that pipes join is a

@@ -180,6 +180,32 @@ skipped for that tick.
 - **Verify:** GameTests make each kind of third-party code throw and check it
   is skipped and logged at most once a minute.
 
+*2026-11-05: Stays `Accepted`, because hazard handlers don't exist yet (LIFE-032,
+API-033, [#35](https://github.com/west3436/zas-cubed/issues/35)), so the plan can't
+make that kind throw. They're all that's left, and they must go through the same
+guard when they're built.*
+
+*Every other kind is guarded, with a GameTest that makes it throw over several atmos
+ticks and counts the errors in the log, then moves the limit's clock on a minute and
+counts one more. A kind's source is what the log names. An ambient provider is skipped
+as if it had answered null, so the next source applies for that atmos tick
+(`nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_once_a_minute`). A seal
+provider's block has its own shape for that atmos tick, and its section goes back to
+the worker so that it's asked again the next
+(`nfr_013_a_seal_provider_that_throws_is_skipped_and_logged_once_a_minute`). A code
+reaction changes nothing that step, and its source is its definition
+(`nfr_013_a_code_reaction_that_throws_is_skipped_and_logged_once_a_minute`). An event
+listener misses only that event, the others still hear it, and the bus logs nothing
+(`nfr_013_an_event_listener_that_throws_is_skipped_and_logged_once_a_minute`).*
+
+*The statement doesn't name gas handlers (API-021), but they're third-party code too, so
+they're treated as included: a handler is skipped for the atmos tick whichever of its
+calls throws, and no gas is lost
+(`nfr_013_a_gas_handler_that_throws_is_skipped_and_logged_once_a_minute`). Its source is
+its block. The limit is `ThirdPartyFaults` (API-062), whose `ThirdPartyFaultsTest` checks
+the minute and that its record stays bounded. An item's or entity's `ILifeSupport` and
+`IInternalSupply` (API-022) aren't named either, and aren't guarded yet.*
+
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
 
