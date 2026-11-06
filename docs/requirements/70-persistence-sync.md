@@ -122,6 +122,9 @@ differences it excused for each seed.
 So there is something the fuzz can no longer catch: a real bug that makes or
 loses no more than that bound, in a zone that has just divided after an unload.*
 
+*2026-11-06: the owner accepted this as a known limit, with no follow-up, so the
+alternatives above aren't planned. The fuzz keeps excusing exactly that event.*
+
 #### DATA-010 · Held changes persist
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: GEO-037, D-43
 

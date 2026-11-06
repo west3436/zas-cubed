@@ -261,6 +261,10 @@ an unloaded chunk (`geo_034_`, `geo_035_` tests in the same class,
 `destroyBlock`, and a tick breaks at most `pressure_fragile_breaks_per_tick` blocks
 in a dimension.*
 
+*2026-11-06: the owner left two layers of glass holding at any pressure as they
+are. A block made for that on purpose is
+[#320](https://github.com/west3436/zas-cubed/issues/320).*
+
 #### FLOW-015 · Default fragility threshold
 `Should` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-28
 

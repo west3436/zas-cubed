@@ -181,6 +181,11 @@ The half with pipes adds 11 to 15 s, as the first seed on a server, so a PR's fu
 comes to 63 to 67 s, a little over the minute it aims for. The 20-seed engine run
 takes 17 min of its 30-minute limit.*
 
+*2026-11-06: the owner kept OPS-013's rule, so the fuzz keeps resetting only
+zones with no neighbour, and accepted DATA-008's limit. On the figure above:
+#326's own run measured the half with pipes at 8.9 s, so a PR's fuzz comes to 60
+to 67 s.*
+
 #### NFR-011 · Server authority
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: A-03, CONT-074, LIFE-029
 
@@ -287,6 +292,12 @@ which replaces `nfr_013_an_ambient_provider_that_throws_is_skipped_and_logged_on
 `nfr_013_a_providers_last_good_answer_is_kept_for_each_dimension`; and
 `nfr_013_a_provider_doesnt_keep_another_providers_answer`. Stays `Accepted`, because
 hazard handlers still aren't built.*
+
+*2026-11-06: the owner's decisions. Gas handlers count as third-party code here,
+as the note above reads them. `ILifeSupport` and `IInternalSupply` (API-022)
+join this list, and get the same guard with the hazard handlers
+([#35](https://github.com/west3436/zas-cubed/issues/35)). It stays Accepted
+until then.*
 
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
