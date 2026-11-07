@@ -169,6 +169,48 @@ public final class AtmosItems {
             "softsuit_boots",
             p -> new SuitItem(GearMaterials.SOFTSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.softsuit(false), false));
 
+    /** The gas mask (CONT-088): seals the breathing, for internals, and filters the toxic gases out of it. */
+    public static final DeferredItem<SuitItem> GAS_MASK = ITEMS.registerItem(
+            "gas_mask",
+            p -> new SuitItem(GearMaterials.GAS_MASK, ArmorItem.Type.HELMET, p, SuitItem.Rating.GAS_MASK, false));
+
+    /**
+     * The hardsuit (CONT-036): every pressure and temperature. Its helmet seals the breathing, its
+     * chestplate has a tank slot (CONT-090), and each piece slows its wearer (CONT-089).
+     */
+    public static final DeferredItem<SuitItem> HARDSUIT_HELMET = ITEMS.registerItem(
+            "hardsuit_helmet",
+            p -> new SuitItem(GearMaterials.HARDSUIT, ArmorItem.Type.HELMET, p, SuitItem.Rating.hardsuit(true), false));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_CHESTPLATE = ITEMS.registerItem(
+            "hardsuit_chestplate",
+            p -> new SuitItem(
+                    GearMaterials.HARDSUIT, ArmorItem.Type.CHESTPLATE, p, SuitItem.Rating.hardsuit(false), true));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_LEGGINGS = ITEMS.registerItem(
+            "hardsuit_leggings",
+            p -> new SuitItem(
+                    GearMaterials.HARDSUIT, ArmorItem.Type.LEGGINGS, p, SuitItem.Rating.hardsuit(false), false));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_BOOTS = ITEMS.registerItem(
+            "hardsuit_boots",
+            p -> new SuitItem(GearMaterials.HARDSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.hardsuit(false), false));
+
+    /** The masks and suit pieces, in the creative tab's order; each has a {@link SuitItem#lifeSupport}. */
+    public static List<DeferredItem<SuitItem>> gear() {
+        return List.of(
+                BREATH_MASK,
+                GAS_MASK,
+                SOFTSUIT_HELMET,
+                SOFTSUIT_CHESTPLATE,
+                SOFTSUIT_LEGGINGS,
+                SOFTSUIT_BOOTS,
+                HARDSUIT_HELMET,
+                HARDSUIT_CHESTPLATE,
+                HARDSUIT_LEGGINGS,
+                HARDSUIT_BOOTS);
+    }
+
     /** A filled emergency O2 tank's gas: O2 at 3 atm in 2 L (CONT-030). */
     public static GasParcel emergencyFill() {
         return GasTankItem.fill(Map.of(StandardAir.OXYGEN, 1.0), 3 * StandardAir.PRESSURE, 2);

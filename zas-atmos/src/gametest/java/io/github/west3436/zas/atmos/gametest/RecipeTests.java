@@ -70,12 +70,8 @@ public final class RecipeTests {
                 AtmosItems.FIRE_EXTINGUISHER.get(),
                 AtmosItems.EMPTY_TANK.get(),
                 AtmosItems.TANK_TRANSFER_VALVE.get(),
-                AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
-                AtmosItems.BREATH_MASK.get(),
-                AtmosItems.SOFTSUIT_HELMET.get(),
-                AtmosItems.SOFTSUIT_CHESTPLATE.get(),
-                AtmosItems.SOFTSUIT_LEGGINGS.get(),
-                AtmosItems.SOFTSUIT_BOOTS.get()));
+                AtmosItems.EMERGENCY_OXYGEN_TANK.get()));
+        AtmosItems.gear().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.batteries().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
         return items;
