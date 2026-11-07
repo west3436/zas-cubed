@@ -23,7 +23,8 @@ import java.util.Optional;
  * <ul>
  *   <li>{@code blocks}: block ids, or block tags prefixed with {@code #}. Unknown ids and tags
  *       are skipped.
- *   <li>{@code transmittance}: U in W/(m²·K) per block-thick layer, positive. Optional.
+ *   <li>{@code transmittance}: U in W/(m²·K) per block-thick layer, 0 or more. Optional. A block of
+ *       U 0 lets no heat through, by conduction or by radiating to a vacuum (HEAT-019).
  *   <li>{@code temperature}: makes the blocks heat sources at this temperature in K (HEAT-003).
  *       Optional.
  * </ul>
@@ -44,9 +45,9 @@ public record ThermalData(
     /** The highest U or temperature accepted, so a typo can't make a block a perfect conductor. */
     static final double MAX = 1e6;
 
-    private static final Codec<Double> TRANSMITTANCE = Codec.DOUBLE.validate(u -> u > 0 && u <= MAX
+    private static final Codec<Double> TRANSMITTANCE = Codec.DOUBLE.validate(u -> u >= 0 && u <= MAX
             ? DataResult.success(u)
-            : DataResult.error(() -> "Transmittance must be above 0 and at most " + MAX + " W/(m²·K), got " + u));
+            : DataResult.error(() -> "Transmittance must be 0 to " + MAX + " W/(m²·K), got " + u));
 
     private static final Codec<Double> TEMPERATURE = Codec.DOUBLE.validate(t -> t >= 0 && t <= MAX
             ? DataResult.success(t)
