@@ -533,7 +533,7 @@ content, alongside the GUI work ([#349](https://github.com/west3436/zas-cubed/pu
 | Sealed zones dissolving, and zone events | [#346](https://github.com/west3436/zas-cubed/pull/346), [#351](https://github.com/west3436/zas-cubed/pull/351) | CORE-052, API-030 | None |
 | Displaced gas | [#333](https://github.com/west3436/zas-cubed/pull/333) | CORE-029 | None |
 | Saved operations keep their sub-cell | [#332](https://github.com/west3436/zas-cubed/pull/332) | None | None |
-| Open-air gas under test-driven atmos ticks | [#338](https://github.com/west3436/zas-cubed/pull/338) | None | Two older tests, `cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and `cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`, still run in real time, with comments that are now wrong |
+| Open-air gas under test-driven atmos ticks | [#338](https://github.com/west3436/zas-cubed/pull/338) | None | ~~Two older tests, `cont_014_a_vent_vents_to_the_ambient_in_an_open_cell` and `cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient`, still run in real time, with comments that are now wrong~~ *Moved to test-driven atmos ticks by [#359](https://github.com/west3436/zas-cubed/pull/359).* |
 | Hazard handlers, hazard events and guards | [#344](https://github.com/west3436/zas-cubed/pull/344), [#337](https://github.com/west3436/zas-cubed/pull/337), [#334](https://github.com/west3436/zas-cubed/pull/334) | LIFE-032, API-033, NFR-013 | The owner's ruling on a suit whose code throws |
 | Drowning, and internals under water | [#336](https://github.com/west3436/zas-cubed/pull/336) | LIFE-022, LIFE-047 | A look in game, in the world below |
 | Airflow impact damage | [#348](https://github.com/west3436/zas-cubed/pull/348) | FLOW-005 | A look in game, in the world below |
@@ -585,7 +585,7 @@ right too.
 | The nested-jar test's CI step (API-007) | It keeps its own step |
 | Displaced gas (CORE-029) | As built |
 | A valve at a chunk's edge rebuilding twice per atmos tick ([#341](https://github.com/west3436/zas-cubed/pull/341)) | As built, and measured with S-09 |
-| The audit's stale comments, the two real-time tests left from [#338](https://github.com/west3436/zas-cubed/pull/338), and CONTRIBUTING's checks | Next, as a small PR |
+| The audit's stale comments, the two real-time tests left from [#338](https://github.com/west3436/zas-cubed/pull/338), and CONTRIBUTING's checks | Done, [#359](https://github.com/west3436/zas-cubed/pull/359) |
 
 | Track | Area | Notes |
 |---|---|---|
