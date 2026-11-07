@@ -166,6 +166,21 @@ Each step is the exact solution over the tick, not an explicit step. Checked
 by `heat_006_never_crosses_equilibrium` and
 `heat_006_never_overshoots_in_the_engine` (Unit).*
 
+#### HEAT-019 · A block that doesn't conduct
+`Should` · `R1` · `Draft` · Verify: Unit · Trace: D-80, HEAT-002, HEAT-004, HEAT-012
+
+A block's transmittance may be 0. No heat shall cross a path through such a block, by
+conduction or by radiating to a vacuum.
+
+- **Rationale:** Decision: D-80.
+- **Verify:** Unit tests check that a path with a layer of U 0 carries no heat, next to a
+  path that does, and that it radiates nothing to a vacuum.
+
+*2026-11-06: Added for review. `ThermalData` and `Geometry` reject a U of 0 today, so
+this needs a change in the heat code, which
+[#179](https://github.com/west3436/zas-cubed/issues/179) didn't expect. `HEAT-002`'s data
+format gains the value, and `docs/datapacks.md` changes with the code.*
+
 ## Sources and sinks
 
 #### HEAT-003 · Heat-source blocks
