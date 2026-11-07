@@ -84,6 +84,12 @@ public final class ContainerFailureTests {
         return a.zone(2, 2, 2).mixture().totalMoles();
     }
 
+    /** A room well off the ambient, so other tests' atmos ticks can't dissolve it while a test waits (CORE-052). */
+    private static void roomOffAmbient(Area a) {
+        GasDeviceTests.room(a);
+        a.fill(2, 2, 2, Map.of(N2, 200.0));
+    }
+
     private static void power(GameTestHelper h, Explosion blast, double expected) {
         h.assertTrue(
                 Math.abs(blast.radius() - expected) < 1e-4,
@@ -456,9 +462,7 @@ public final class ContainerFailureTests {
     public static void cont_038_a_tank_fails_in_an_inventory_a_suit_and_on_the_ground(GameTestHelper h) {
         Area a = new Area(h, 305);
         a.forceLoad(true); // it waits in real time
-        GasDeviceTests.room(a);
-        // Well off the ambient, or other tests' atmos ticks can dissolve the room while this waits (CORE-052).
-        a.fill(2, 2, 2, Map.of(N2, 200.0));
+        roomOffAmbient(a);
         double room = roomMoles(a);
 
         FakePlayer player = TestPlayers.hurtable(a.level, "zas_cont_038");
@@ -1045,7 +1049,7 @@ public final class ContainerFailureTests {
         SoundLog.listen();
         Area a = new Area(h, 885);
         a.forceLoad(true); // it waits in real time
-        GasDeviceTests.room(a);
+        roomOffAmbient(a);
         FakePlayer player = TestPlayers.hurtable(a.level, "zas_suit_leak");
         player.moveTo(Vec3.atBottomCenterOf(a.abs(2, 1, 2)));
         ItemStack suit = new ItemStack(AtmosItems.SOFTSUIT_CHESTPLATE.get());

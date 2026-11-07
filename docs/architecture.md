@@ -2906,8 +2906,8 @@ the cell in front of its grille).
     work. A portable pump or scrubber reads its cell through its `CellWatch` at every
     step, on or off, so one switched on after standing off doesn't lose a step
     (§11.5). The GUI's status stays what the last step did.
-- **Air conditioner** (CONT-019, CONT-087, D-73), the requirements' freezer,
-  in `.heater`. The heater's mirror, the same size and on the same code. Its
+- **Air conditioner** (CONT-019, CONT-087, D-73), in
+  `.heater`. The heater's mirror, the same size and on the same code. Its
   setpoint runs from 73 to 293 K (default 293 K). Each atmos tick, while on, it
   takes heat from its room through API-013's `HeatMutations.remove`:
   `AirConditionerMath.cool` gives the least of `[power] air_conditioner_watts`
