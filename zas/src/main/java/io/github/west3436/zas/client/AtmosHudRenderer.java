@@ -21,14 +21,17 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
- * Draws the atmosphere HUD (CLIENT-001, CLIENT-008, CLIENT-014): one alert per reading at warning
- * or worse, in a column at the right edge of the screen, as vg's screen alerts are. Each is vg's
- * icon for that alert with the reading beside it, in the client's display units (CLIENT-006):
- * yellow for a warning, red for a danger.
+ * Draws the atmosphere HUD (CLIENT-001, CLIENT-008, CLIENT-009, CLIENT-014): one alert per reading
+ * at warning or worse, in a column at the right edge of the screen, as vg's screen alerts are. Each
+ * is vg's icon for that alert with the reading beside it, in the client's display units
+ * (CLIENT-006): yellow for a warning, red for a danger. Above the column, where a full column
+ * doesn't reach it and it doesn't move the alerts, is the internals indicator: vg's internals icon
+ * with the tank's pressure beside it, if there is a tank.
  *
  * <p>Colour is never the only cue (CLIENT-014): low and high pressure and cold and heat have
  * different icons, and every danger icon flashes with vg's two-frame animation while warnings stay
- * still. The HUD is hidden while no reading has an alert, and with the rest of the GUI (F1).
+ * still. Internals off, on and failing have different icons, and failing flashes. The HUD is hidden
+ * while nothing shows it ({@link AtmosHudPayload#shown}), and with the rest of the GUI (F1).
  */
 public final class AtmosHudRenderer {
     /** The layer's id. */
@@ -37,8 +40,11 @@ public final class AtmosHudRenderer {
     private static final int ICON = 16;
     private static final int ROW = ICON + 2;
     private static final int MARGIN = 2;
+    private static final int MAX_ALERTS = 4;
     private static final int WARNING_COLOUR = 0xFFFFFF55;
     private static final int DANGER_COLOUR = 0xFFFF5555;
+    private static final int TANK_ON_COLOUR = 0xFFFFFFFF;
+    private static final int TANK_OFF_COLOUR = 0xFFAAAAAA;
 
     /** One of vg's alert icons: a 32 × 32 texture per frame, frames stacked downward. */
     private enum Icon {
@@ -51,7 +57,10 @@ public final class AtmosHudRenderer {
         COLD_WARNING("temperature_cold_warning", 1, 0),
         COLD_DANGER("temperature_cold_danger", 2, 300),
         HOT_WARNING("temperature_hot_warning", 1, 0),
-        HOT_DANGER("temperature_hot_danger", 2, 300);
+        HOT_DANGER("temperature_hot_danger", 2, 300),
+        INTERNALS_OFF("internals_off", 1, 0),
+        INTERNALS_ON("internals_on", 1, 0),
+        INTERNALS_FAILING("internals_failing", 2, 500);
 
         final ResourceLocation texture;
         final int frames;
@@ -77,7 +86,7 @@ public final class AtmosHudRenderer {
     private static void render(GuiGraphics g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         AtmosHudPayload hud = ClientAtmosHud.current();
-        if (mc.options.hideGui || mc.player == null || !hud.any()) {
+        if (mc.options.hideGui || mc.player == null || !hud.shown()) {
             return;
         }
         List<Alert> alerts = alerts(hud);
@@ -87,14 +96,35 @@ public final class AtmosHudRenderer {
         long now = Util.getMillis();
         RenderSystem.enableBlend();
         for (Alert a : alerts) {
-            int frame = a.danger() && a.icon().frames > 1 ? (int) ((now / a.icon().frameMillis) % a.icon().frames) : 0;
-            g.blit(a.icon().texture, x, y, ICON, ICON, 0, frame * 32, 32, 32, 32, 32 * a.icon().frames);
             int colour = a.danger() ? DANGER_COLOUR : WARNING_COLOUR;
-            int width = font.width(a.reading());
-            g.drawString(font, a.reading(), x - 3 - width, y + (ICON - font.lineHeight) / 2 + 1, colour, true);
+            row(g, font, a.icon(), a.danger(), a.reading(), colour, x, y, now);
             y += ROW;
         }
+        internals(g, font, hud, x, g.guiHeight() / 2 - MAX_ALERTS * ROW / 2 - ROW, now);
         RenderSystem.disableBlend();
+    }
+
+    /** One row: an icon, flashing or not, with a text to its left. */
+    private static void row(
+            GuiGraphics g, Font font, Icon icon, boolean flashing, Component text, int colour, int x, int y, long now) {
+        int frame = flashing && icon.frames > 1 ? (int) ((now / icon.frameMillis) % icon.frames) : 0;
+        g.blit(icon.texture, x, y, ICON, ICON, 0, frame * 32, 32, 32, 32, 32 * icon.frames);
+        int width = font.width(text);
+        g.drawString(font, text, x - 3 - width, y + (ICON - font.lineHeight) / 2 + 1, colour, true);
+    }
+
+    /** The internals indicator (CLIENT-009): the icon for what they do, and the tank's pressure if there is a tank. */
+    private static void internals(GuiGraphics g, Font font, AtmosHudPayload hud, int x, int y, long now) {
+        Component tank = hud.tankKpa() < 0
+                ? Component.empty()
+                : Component.translatable("hud.zas.tank", pressure(hud.tankKpa(), 0));
+        switch (hud.internals()) {
+            case AtmosHudPayload.INTERNALS_ON ->
+                row(g, font, Icon.INTERNALS_ON, false, tank, TANK_ON_COLOUR, x, y, now);
+            case AtmosHudPayload.INTERNALS_FAILING ->
+                row(g, font, Icon.INTERNALS_FAILING, true, tank, DANGER_COLOUR, x, y, now);
+            default -> row(g, font, Icon.INTERNALS_OFF, false, tank, TANK_OFF_COLOUR, x, y, now);
+        }
     }
 
     /** The alerts to draw, top to bottom: pressure, O₂, toxins, temperature. */
