@@ -3131,7 +3131,7 @@ glass holds any pressure only in two layers
 ([#320](https://github.com/west3436/zas-cubed/issues/320)).
 
 #### CONT-129 · Station wall
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-80, HEAT-019
 
 A station wall shall be a full gas-tight block that conducts no heat (HEAT-019), with
 stone's blast resistance (6).
@@ -3151,8 +3151,11 @@ come in their own PR. Checked by
 
 *2026-11-07: the owner approved its hardness: 3, mined with a stone pickaxe or better.*
 
+*2026-11-07: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner saw it in the R1 items round's world.*
+
 #### CONT-130 · Reinforced station wall
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-80, HEAT-019
 
 A reinforced station wall shall be a full gas-tight block that conducts no heat (HEAT-019),
 with obsidian's blast resistance (1,200).
@@ -3172,8 +3175,11 @@ PR. Checked by
 
 *2026-11-07: the owner approved its hardness: 25, mined with a diamond pickaxe or better.*
 
+*2026-11-07: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner saw it in the R1 items round's world.*
+
 #### CONT-131 · Reinforced glass
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-81, FLOW-007
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-81, FLOW-007
 
 A reinforced glass block shall seal and show through as glass does, shall never break from
 a pressure difference whatever the preset or threshold, and shall have obsidian's blast
@@ -3207,8 +3213,13 @@ as CONT-129 and CONT-130 do. Checked by
 with a reinforced glass window keeps its temperature, and by
 `cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
+*2026-11-07: Accepted by the owner, and Implemented: its Verify plan's GameTests pass,
+`cont_131_reinforced_glass_holds_above_the_threshold_that_breaks_glass` and
+`cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks` among
+them. The owner saw it in the R1 items round's world.*
+
 #### CONT-132 · Connected textures with Fusion
-`Could` · `R1` · `Draft` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
+`Could` · `R1` · `Accepted` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
 
 On a client with Fusion (Connected Textures) installed, station walls, reinforced station
 walls and reinforced glass shall each join with touching blocks of their own kind, showing
@@ -3233,6 +3244,13 @@ frame shows only on outside edges, with the wire every 5 px across the pane. The
 are in a built-in resource pack that's added only when Fusion is loaded
 ([architecture §11.15](../architecture.md#1115-station-blocks-cont-129-to-cont-132)). The
 `Could` is mine.*
+
+*2026-11-07: Accepted by the owner. `ConnectedTexturesTest` passes, and the panels were
+checked in a dev client with Fusion 1.3.16 and without it: they join as the art the owner
+approved, the glass stays translucent and the items show a lone block's tile. A joined wall
+can show a one-pixel crack where a block's edge meets the middle of the next block's face,
+from the way Fusion draws a face in quarters. The owner's own look in game (`./gradlew
+:zas-atmos:runClient -Pfusion=true`) is left, so this stays Accepted.*
 
 ## R1 / R2 split
 
