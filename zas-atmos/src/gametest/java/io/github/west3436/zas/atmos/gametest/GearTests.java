@@ -12,18 +12,24 @@ import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
+import io.github.west3436.zas.atmos.portable.PortableGasDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.gametest.TestPlayers;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
@@ -36,6 +42,7 @@ import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -269,6 +276,43 @@ public final class GearTests {
             s.clear();
         }
         h.succeed();
+    }
+
+    // ---- CLIENT-006 -----------------------------------------------------------------------------
+
+    /**
+     * An item's tooltip gives its gas in the display units (CLIENT-006). A server has no client config
+     * and so answers in the defaults: °C here means the tooltip didn't print the K it holds.
+     */
+    @GameTest(template = "empty")
+    public static void client_006_item_tooltips_follow_the_display_units(GameTestHelper h) {
+        ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
+        List<Component> lines = new ArrayList<>();
+        tank.getItem().appendHoverText(tank, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.gas_tank.distribution", "21.3 kPa");
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "609.3 kPa", "20.0 °C");
+
+        ItemStack canister = AtmosItems.CANISTER.get().filled(O2, CanisterColor.WHITE);
+        lines.clear();
+        canister.getItem().appendHoverText(canister, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "4,560 kPa", "20.0 °C");
+
+        ItemStack portable = stack(AtmosItems.PORTABLE_PUMP);
+        double moles = ATM * PortableGasDevice.STORE_LITRES / (GasMixture.GAS_CONSTANT * T);
+        portable.set(AtmosComponents.GAS.get(), new GasParcel(Map.of(N2, moles), T));
+        lines.clear();
+        portable.getItem().appendHoverText(portable, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "101.3 kPa", "20.0 °C");
+        h.succeed();
+    }
+
+    private static void hasLine(GameTestHelper h, List<Component> lines, String key, Object... args) {
+        h.assertTrue(
+                lines.stream()
+                        .anyMatch(line -> line.getContents() instanceof TranslatableContents t
+                                && t.getKey().equals(key)
+                                && Arrays.equals(t.getArgs(), args)),
+                key + " " + Arrays.toString(args) + " isn't in " + lines);
     }
 
     // ---- CONT-031, CONT-032 -------------------------------------------------------------------------

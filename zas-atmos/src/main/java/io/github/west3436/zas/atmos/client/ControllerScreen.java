@@ -289,7 +289,9 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
                     tone,
                     () -> press(mode.ordinal()));
             ui.line(
-                    text("mode_help." + mode.key()),
+                    mode == ControllerMode.CYCLE
+                            ? text("mode_help.cycle", Readout.pressure(ControllerMode.CYCLE_DONE_KPA))
+                            : text("mode_help." + mode.key()),
                     x + Ui.PAD + buttonWidth + 4,
                     rowY,
                     MODE_ROW - 1,

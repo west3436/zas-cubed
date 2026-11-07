@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.portable;
 
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import java.util.List;
@@ -28,8 +29,8 @@ public class PortableGasItem extends BlockItem {
         }
         tooltip.add(Component.translatable(
                         "item.zas_atmos.canister.pressure",
-                        String.format(Locale.ROOT, "%.0f", GasCodecs.pressure(gas, PortableGasDevice.STORE_LITRES)),
-                        String.format(Locale.ROOT, "%.1f", gas.temperature()))
+                        Readout.pressure(GasCodecs.pressure(gas, PortableGasDevice.STORE_LITRES)),
+                        Readout.temperature(gas.temperature()))
                 .withStyle(ChatFormatting.GRAY));
         gas.moles()
                 .forEach((id, n) -> tooltip.add(Component.translatable(
