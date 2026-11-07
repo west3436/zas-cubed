@@ -12,11 +12,13 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
 import io.github.west3436.zas.atmos.particle.GasJet;
+import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.energy.ComponentEnergyStorage;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.registries.DeferredItem;
 
 /**
  * The content mod's capabilities and network payloads. The generator gives FE and takes fuel
@@ -65,11 +67,7 @@ public final class AtmosCapabilities {
         event.registerItem(
                 ILifeSupport.ITEM,
                 (stack, ctx) -> SuitItem.lifeSupport(stack),
-                AtmosItems.BREATH_MASK.get(),
-                AtmosItems.SOFTSUIT_HELMET.get(),
-                AtmosItems.SOFTSUIT_CHESTPLATE.get(),
-                AtmosItems.SOFTSUIT_LEGGINGS.get(),
-                AtmosItems.SOFTSUIT_BOOTS.get());
+                AtmosItems.gear().stream().map(DeferredItem::get).toArray(Item[]::new));
         AtmosItems.batteries().forEach(battery -> {
             int capacity = battery.get().capacity();
             event.registerItem(

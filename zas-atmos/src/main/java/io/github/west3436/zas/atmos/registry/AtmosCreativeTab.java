@@ -96,11 +96,7 @@ public final class AtmosCreativeTab {
         GasTankItem.setGas(emergency, AtmosItems.emergencyFill());
         out.accept(emergency);
         out.accept(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
-        out.accept(AtmosItems.BREATH_MASK.get());
-        out.accept(AtmosItems.SOFTSUIT_HELMET.get());
-        out.accept(AtmosItems.SOFTSUIT_CHESTPLATE.get());
-        out.accept(AtmosItems.SOFTSUIT_LEGGINGS.get());
-        out.accept(AtmosItems.SOFTSUIT_BOOTS.get());
+        AtmosItems.gear().forEach(g -> out.accept(g.get()));
         AtmosItems.components().forEach(c -> out.accept(c.get()));
     }
 

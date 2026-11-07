@@ -97,6 +97,9 @@ public final class AtmosServerConfig {
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
 
+    /** The share of movement speed each hardsuit piece worn takes away (CONT-089). */
+    public static final ModConfigSpec.DoubleValue HARDSUIT_SLOWDOWN;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -177,6 +180,13 @@ public final class AtmosServerConfig {
         EXPLOSION_POWER_CAP = builder.comment(
                         "The most power a tank's or canister's explosion can have (CONT-109). TNT is 4.")
                 .defineInRange("explosion_power_cap", ContainerFailure.DEFAULT_POWER_CAP, 0.0, 64.0);
+        builder.pop();
+
+        builder.comment("Breathing gear (CONT-089).").push("gear");
+        HARDSUIT_SLOWDOWN = builder.comment(
+                        "The share of movement speed each hardsuit piece worn takes away (CONT-089): 0.1 is 10 %,",
+                        "so the full suit leaves 60 %.")
+                .defineInRange("hardsuit_slowdown", 0.1, 0.0, 0.25);
         builder.pop();
         SPEC = builder.build();
     }

@@ -1349,7 +1349,7 @@ holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
 canister's loss and the kinds.*
 
 #### CONT-031 · Breath mask and helmets
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
 
 A breath mask and suit helmets shall provide sealed breathing for internals.
 
@@ -1362,8 +1362,13 @@ seal the breathing; the hardsuit helmet comes with CONT-036. The breath mask
 gives no other protection. `cont_031_internals_with_each_sealed_head` checks
 both.*
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The hardsuit helmet seals too.
+`cont_031_internals_with_each_sealed_head` now checks internals work with the
+breath mask, the gas mask and both suits' helmets, and not with either suit
+without its helmet.*
+
 #### CONT-088 · Gas mask
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021, LIFE-026
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021, LIFE-026
 
 A gas mask shall provide sealed breathing and filter `zas:toxic` gases (CO,
 N₂O) out of the breath. It supplies no O₂, and its filter never wears out in
@@ -1372,6 +1377,15 @@ R1.
 - **Rationale:** Decision: D-47. A never-wearing filter keeps R1 lean.
 - **Verify:** A GameTest checks a gas-masked player in a CO zone takes no CO
   harm but still suffers hypoxia without O₂.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). `zas_atmos:gas_mask` is a `SuitItem` whose
+life support seals and filters (API-022), with no pressure or thermal rating,
+no armor points and no durability, so nothing wears out.
+`cont_088_a_gas_masked_player_takes_no_co_harm_but_still_suffers_hypoxia`
+puts a masked player in a sealed room of air with 1 kPa of CO: its breath has
+no CO and two seconds leave it unhurt, while a bare player beside it is
+harmed. With the room's O₂ taken away, its breath still has no CO, it is short
+of O₂, its air meter drains and hypoxia hurts it.*
 
 #### CONT-032 · Softsuit
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, S-02, D-47
@@ -1391,7 +1405,7 @@ never breaks and loses its tank. Each piece is rated from 0 to 1 atm and 0 to
 suited player in vacuum, at 450 K and at 600 kPa.*
 
 #### CONT-036 · Hardsuit
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-47
 
 A four-piece hardsuit shall provide a full seal and protection against all
 pressures and temperatures.
@@ -1400,16 +1414,40 @@ pressures and temperatures.
 - **Verify:** GameTests check a hardsuited player in vacuum, at 2,000 kPa and
   at 1,500 K is protected.
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). Four `SuitItem` pieces of the `hardsuit`
+armor material, each rated from 0 kPa to any pressure and from 0 K to any
+temperature, its helmet sealing. As the softsuit, it has no durability.
+`cont_036_a_hardsuited_player_is_protected_at_every_extreme` checks a
+hardsuited player takes no decompression in vacuum, no barotrauma at 2,000 kPa,
+no burns at 1,500 K and no frostbite at 50 K, where a bare player beside it
+takes each.*
+
+*2026-11-07: The owner's call on the armor, which the requirement doesn't give:
+diamond's, so 3, 8, 6 and 3 armor points from helmet to boots and a toughness of
+2, and the hardsuit keeps CONT-089's slowdown. It still can't be enchanted or
+repaired, and it sounds like iron when put on. The same GameTest checks the
+armor.*
+
 #### CONT-089 · Hardsuit encumbrance
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-47
 
 Each hardsuit piece worn shall reduce movement speed by 10 % (configurable).
 
 - **Rationale:** Decision: D-47.
 - **Verify:** A GameTest checks movement speed with one to four pieces.
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The 10 % is `[gear] hardsuit_slowdown` in
+`zas_atmos-server.toml`, 0 to 0.25 ([config.md](../config.md)). The pieces'
+shares add up: one transient movement-speed modifier multiplies the speed by
+(1 − pieces × the setting), so the full suit leaves 60 %. The server sets it
+when the wearer's equipment changes and again each second, so a new setting
+reaches suits already worn, and a mob in a hardsuit is slowed too.
+`cont_089_each_hardsuit_piece_cuts_speed_by_10_percent` checks one to four
+pieces leave 90, 80, 70 and 60 % of a player's speed, a new setting, a
+softsuit piece, taking the suit off and a zombie.*
+
 #### CONT-090 · Suit tank slot
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-028
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-028
 
 Softsuit and hardsuit chestplates shall each have a tank slot.
 
@@ -1424,6 +1462,12 @@ component. Right-clicking a tank onto the chestplate in an inventory puts it
 in, swapping out the one there, and right-clicking the chestplate with an empty
 cursor takes it out, as a bundle does. `cont_090_suit_tank_slot` checks the
 slot and that internals draw from it first.*
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The hardsuit chestplate has the same slot.
+`cont_090_suit_tank_slot` checks each chestplate's. The hardsuit chestplate is
+crafted from the softsuit's, so a softsuit chestplate crafted with a tank in
+it leaves the tank in the grid, as a bucket is left;
+`cont_090_crafting_a_chestplate_leaves_its_tank` checks it.*
 
 #### CONT-033 · Magnetic boots
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FLOW-012
