@@ -11,7 +11,7 @@ in DATA-005 (D-53).
 ## HUD
 
 #### CLIENT-001 · HUD visibility
-`Must` · `R1` · `Accepted` · Verify: Manual · Trace: S-02, S-08
+`Must` · `R1` · `Implemented` · Verify: Manual · Trace: S-02, S-08
 
 The atmosphere HUD shall be shown while any reading is at warning level or
 worse (CLIENT-008), while the player wears a head item that provides sealed
@@ -50,6 +50,11 @@ a sealed helmet and an analyzer, and with F1, so this stays Accepted.*
 the tag the HUD's held-item trigger reads. It is also in `#zas:shows_readings`, so
 holding it shows all four readings as well as the internals indicator (CLIENT-008). The
 owner's check of all three triggers is still to come, so this stays Accepted.*
+
+*2026-11-07: Implemented. The owner made the Manual check in the R1 items round's world:
+the HUD showed while they held the analyzer and went with an empty hand, showed with a
+mask on, as a sealed helmet does, and went when it came off, and F1 hid it. The HUD at a
+warning passed in the audit round's world (CLIENT-008).*
 
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
@@ -113,7 +118,7 @@ with no alerts (LIFE-037), and a spectator doesn't see them.
 the new look is for the owner's check.*
 
 #### CLIENT-009 · Internals indicator
-`Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028
+`Must` · `R1` · `Implemented` · Verify: Manual · Trace: LIFE-029, LIFE-028
 
 While the HUD is shown, it shall show whether internals are on (LIFE-029) and
 the pressure of the tank they draw from (LIFE-028).
@@ -134,6 +139,10 @@ reaches the client at 1 kPa (DATA-014).
 `client_009_internals_update_while_the_atmosphere_is_unresolved`,
 `client_009_payload_round_trips` and `client_001_the_mask_and_helmet_show_the_hud`
 (GameTests) pass. Left: the Manual check while a tank drains, so this stays Accepted.*
+
+*2026-11-07: Implemented. The owner made the Manual check in the R1 items round's world:
+the indicator with a mask and an emergency tank, its pressure falling with internals on,
+F1, and the flashing icon once the tank was taken away.*
 
 #### CLIENT-014 · Not colour alone
 `Should` · `R1` · `Implemented` · Verify: Manual
@@ -605,7 +614,7 @@ round's test world.*
 ## Units and language
 
 #### CLIENT-006 · Display units
-`Should` · `R1` · `Accepted` · Verify: Manual · Trace: A-04
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: A-04
 
 Display units shall be a client setting:
 - pressure: kPa (default), atm, bar or psi
@@ -638,6 +647,12 @@ analyzer, which doesn't exist yet. The conversions are tested by
 *2026-11-07: The analyzer part is built: the analyzer's window (CONT-034) shows its
 pressures and temperature in the player's units. The owner's check of each unit in the
 HUD, the analyzer and a GUI is still to come, so this stays Accepted.*
+
+*2026-11-07: Implemented. The owner made the Manual check in the R1 items round's world,
+with the client set to psi and °F: item tooltips, the central controller's and the area
+air controller's windows, the heater's window, the HUD and the analyzer. The other units
+share that code, and their conversions are unit-tested. The world's headless checks show
+commands printing kPa and K.*
 
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074

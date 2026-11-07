@@ -1502,7 +1502,7 @@ toggle's handler, what it refuses, and that the state is saved and kept with
 the inventory.*
 
 #### CONT-034 · Gas analyzer
-`Must` · `R1` · `Accepted` · Verify: Manual
+`Must` · `R1` · `Implemented` · Verify: Manual
 
 A handheld analyzer shall report the composition, pressure and temperature
 of:
@@ -1539,6 +1539,13 @@ can't name the analyzer, so it reads the new item tag `#zas:shows_readings`, and
 puts the analyzer in it. `cont_034_held_in_either_hand_it_shows_every_hud_reading` and
 `client_008_a_held_analyzer_shows_every_reading` (GameTests) pass. The look is part of the
 Manual check, so this stays Accepted.*
+
+*2026-11-07: Implemented. The owner made the Manual check in the R1 items round's world:
+the readout on the air in a sealed zone and in the open air, walking out with the window
+open, on a tank's tab, a canister and a pump's output port, against the values the
+world's headless checks read with `/zas at`. The room's zone was lost to a fault in the
+world (one step onto a plate opened its door), and the analyzer read the new zone the
+owner made.*
 
 #### CONT-035 · Wrench
 `Should` · `R1` · `Implemented` · Verify: GameTest
@@ -2677,7 +2684,7 @@ powers its own parts (CONT-068), and still takes FE from the blocks next to
 it (CONT-062).
 
 #### CONT-115 · Central atmospherics controller
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75
 
 A central atmospherics controller shall take FE from any block next to it that
 exposes the FE capability into an internal 100,000 FE buffer, and pay its own
@@ -2701,6 +2708,9 @@ Its blocks show a screen: no power, or the worst danger among its area air contr
 plan, and `cont_115_placing_and_breaking_any_block_keeps_exactly_one_item`,
 `cont_115_a_blocked_space_refuses_placing` and `cont_115_its_four_blocks_act_as_one`
 (GameTests) check the form. It stays Accepted until the owner has seen the console.*
+
+*2026-11-07: Implemented. The owner saw the console in the R1 items round's world: four
+of them against a station wall, showing normal, danger 1, danger 2 and no power.*
 
 #### CONT-116 · Claiming area air controllers
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-115

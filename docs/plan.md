@@ -607,6 +607,58 @@ right too.
 | Player guides ([#270](https://github.com/west3436/zas-cubed/issues/270)) | In R1. If Ponder has to be bundled, the Patchouli book is dropped (D-82). Whether it has to be is still to check |
 | Windows for the items still to come | Each gets the same TGUI window as the other machines (D-76) |
 
+*2026-11-07: the R1 items round on main.* Subagents closed the smaller gaps first, then built
+every item still missing, the analyzer first. Each new window uses the TGUI kit (D-76).
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| The owner's answers of 2026-11-06 | [#374](https://github.com/west3436/zas-cubed/pull/374) | D-80 to D-82, CONT-129 to CONT-131 and HEAT-019, all *Draft* | None |
+| A version on item data, the internals switch and the primed valve | [#376](https://github.com/west3436/zas-cubed/pull/376) | DATA-012 stays *Accepted* | Saved fixtures and the old-world GameTest, which need a release |
+| Hard-coded player text fails the build | [#378](https://github.com/west3436/zas-cubed/pull/378) | CLIENT-007 | None |
+| A block that doesn't conduct | [#382](https://github.com/west3436/zas-cubed/pull/382) | HEAT-019 stays *Draft* | The owner's acceptance |
+| Tooltips and the Cycle help in the player's units | [#375](https://github.com/west3436/zas-cubed/pull/375) | CLIENT-006 | None |
+| The internals indicator and the HUD's triggers | [#377](https://github.com/west3436/zas-cubed/pull/377) | CLIENT-001, CLIENT-009. DATA-014 stays *Accepted* | DATA-014's bench |
+| A flared mouth on open pipe ends | [#379](https://github.com/west3436/zas-cubed/pull/379) | None | None |
+| Gas mask and hardsuit | [#380](https://github.com/west3436/zas-cubed/pull/380) | CONT-031, CONT-036, CONT-088, CONT-089, CONT-090 | None |
+| Magnetic boots | [#381](https://github.com/west3436/zas-cubed/pull/381) | CONT-033 | None |
+| Water electrolyzer | [#383](https://github.com/west3436/zas-cubed/pull/383) | CONT-050, CONT-055, CONT-056. CONT-060 and CONT-065 stay *Accepted* | Every FE device now exists: a check that each has its power-cut GameTest (CONT-060) and its draw in the config (CONT-065) |
+| Atmos analyzer and its live window | [#384](https://github.com/west3436/zas-cubed/pull/384) | CONT-034 | None |
+| Station walls and reinforced glass, their art and four recipes | [#385](https://github.com/west3436/zas-cubed/pull/385), [#386](https://github.com/west3436/zas-cubed/pull/386) | CONT-129, CONT-130 and CONT-131 stay *Draft* | The owner's acceptance. Connected textures with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391)) followed in [#392](https://github.com/west3436/zas-cubed/pull/392), with CONT-132 *Draft* |
+| Wrench | [#387](https://github.com/west3436/zas-cubed/pull/387) | CONT-035, CONT-091 | None |
+| Central atmospherics controller: the block, the console's art and the window | [#388](https://github.com/west3436/zas-cubed/pull/388), [#389](https://github.com/west3436/zas-cubed/pull/389), [#390](https://github.com/west3436/zas-cubed/pull/390) | CONT-115 to CONT-117, CONT-119 to CONT-122, CONT-124. CONT-118 and CONT-123 stay *Accepted* | Seen in game: a controller moved from one console to another (CONT-118), and a row for a controller in an unloaded chunk (CONT-123) |
+
+Every requirement above moved to *Implemented* unless the table says otherwise. CONT-034,
+CONT-115, CLIENT-001, CLIENT-006 and CLIENT-009 moved after the world below.
+
+*2026-11-07: the owner played the round's world.* **ZAS R1 Items Round Test** was built on a
+local branch at 004e66af: main at ac1b1e9 plus the twelve PRs held for it. All 21 steps
+passed, in about 6 minutes against the plan's 17. Main after the merges, at ed5ec260, matches
+that branch but for the "1 chunk" label below. That moves CONT-034, CONT-115, CLIENT-001,
+CLIENT-006 and CLIENT-009 to *Implemented*. For CLIENT-006 the owner checked psi and °F in
+tooltips, windows, the HUD and the analyzer. The other units share that code and their
+conversions are unit-tested, and the world's headless checks show commands printing kPa
+and K.
+
+| Note from the world | Result |
+|---|---|
+| Every console's range read 1 chunk | The world set each console's range to 1 on purpose, so they wouldn't claim each other's controllers. The label said "1 chunks", fixed in [#390](https://github.com/west3436/zas-cubed/pull/390) before it merged |
+| The analyzer's room read the open air | A fault in the test world. The player arrived beside the plate inside the room, and one step onto it opened the door. Under Normal the room stays open air until it's reset. The analyzer read a new zone correctly |
+| Connected textures for the walls and glass | Added to R1 with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391), CONT-132 *Draft*). The owner approved the art the same day, and it's on main ([#392](https://github.com/west3436/zas-cubed/pull/392)) |
+
+*2026-11-07: the owner's answers on the round's decisions.* The PRs listed 57 decisions. The
+owner answered the ones that change the game, and the rest stand as built.
+
+| Decision | Answer |
+|---|---|
+| Open pipe ends ([#164](https://github.com/west3436/zas-cubed/issues/164)) | Option 2, a flared bell, with six mouths on a lone pipe |
+| The walls' and glass's art, recipes and hardness | The walls as drawn, the glass as 3A (wired). Recipes and hardness as proposed: the wall 3 with a stone pickaxe, the reinforced wall and the glass 25 with a diamond pickaxe, and the glass drops itself |
+| The central controller's form (CONT-115) | A console 2 blocks wide, 2 tall and 1 deep, in vg's console style: 2A, vg's computer stood up |
+| The hardsuit's armour (CONT-036) | Diamond's, keeping the 60 % slowdown in the full suit |
+| What holding an analyzer shows (CLIENT-008) | All four readings, all the time. A sealed helmet changes nothing |
+| Reinforced glass's heat (CONT-131) | U 0, no heat, like the walls |
+| The wrench and canisters (CONT-035) | The wrench leaves canisters alone |
+| Connected textures | Fusion, over CTM and Continuity |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -692,7 +744,7 @@ right too.
 
 ## Immediate next steps
 
-_Updated 2026-11-06._
+_Updated 2026-11-07._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -716,14 +768,20 @@ _Updated 2026-11-06._
    ~~S-11 and S-13~~ *pass on main 2026-11-04 (#214 to #243; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
    played its combined test world the next day.
-   - **Now (owner, 2026-11-06):** the smaller gaps (CLIENT-001, CLIENT-006, CLIENT-007,
+   - ~~**Then (owner, 2026-11-06):** the smaller gaps (CLIENT-001, CLIENT-006, CLIENT-007,
      CLIENT-009, DATA-012's unversioned data and open pipe ends,
      [#164](https://github.com/west3436/zas-cubed/issues/164)), then the items not built
      yet, the analyzer first: gas mask, hardsuit, magnetic boots, wrench, electrolyzer, the
      central atmospherics controller
      ([#200](https://github.com/west3436/zas-cubed/issues/200)), station walls
      ([#179](https://github.com/west3436/zas-cubed/issues/179)) and reinforced glass
-     ([#320](https://github.com/west3436/zas-cubed/issues/320)).
+     ([#320](https://github.com/west3436/zas-cubed/issues/320)).~~ *on main
+     2026-11-07 (#374 to #390; see
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner played
+     its combined test world and answered its decisions the same day.
+   - ~~Connected textures for the station walls and reinforced glass with Fusion
+     ([#391](https://github.com/west3436/zas-cubed/issues/391))~~ *on main 2026-11-07 ([#392](https://github.com/west3436/zas-cubed/pull/392))*. CONT-132 is *Draft*.
+   - **Now:** whether Ponder has to be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270)).
    - **Last:** S-09 and S-10.
    - **What each open requirement still needs:** the 2026-11-06 status audit in
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the
@@ -732,9 +790,10 @@ _Updated 2026-11-06._
      #348, #350, #351, #354; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
      played its combined test world and settled its decisions the same day.
-   - **Before the first release:** a version on item data, the player's internals
+   - ~~**Before the first release:** a version on item data, the player's internals
      switch and the primed transfer valve (DATA-012,
-     [#58](https://github.com/west3436/zas-cubed/issues/58)).
+     [#58](https://github.com/west3436/zas-cubed/issues/58)).~~ *done 2026-11-07
+     (#376)*. DATA-012 stays *Accepted* until a release gives its saved fixtures.
    - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation
