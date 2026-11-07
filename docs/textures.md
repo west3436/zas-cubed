@@ -106,6 +106,14 @@ the controller would set while it cycles.
 The wall-mounted blocks and the doors get flat sprites, as vanilla's torches
 and doors do. Any of them could use its block model instead.
 
+**Station walls and glass**
+
+| Proposed id | Name | Priority | Requirement | Item | States and notes |
+|---|---|---|---|---|---|
+| `zas_atmos:station_wall` | Station wall | Should | CONT-129 | Block model | A full block, the same on every face. vg's plain wall (`icons/turf/walls.dmi` `metal0`) in vg's dark greys: a plate with a recessed rim, a bolt in each corner and a raised middle panel. |
+| `zas_atmos:reinforced_station_wall` | Reinforced station wall | Should | CONT-130 | Block model | The station wall with vg's reinforcing rods (`rwall0`) crossing its middle and a boss where they meet. |
+| `zas_atmos:reinforced_glass_block` | Reinforced glass | Should | CONT-131 | Block model | A full see-through block, after vg's full reinforced window (`icons/obj/structures/window.dmi` `frwindow0`): a blue-steel frame with white rods along it, and wired glass, a square wire mesh through a grey-blue pane (the owner's choice of 2026-11-07). Translucent. |
+
 ### Content mod (`zas_atmos`): creative canisters
 
 Canisters pre-filled with each built-in gas (the 8 of D-42) exist only in
@@ -212,13 +220,16 @@ All are done (2026-11-02).
 | | Must | Should | Could | Not set | Total |
 |---|---|---|---|---|---|
 | Blocks (`zas`) | 1 | – | – | – | 1 |
-| Blocks (`zas_atmos`) | 13 | 9 | 1 | 8 | 31 |
+| Blocks (`zas_atmos`) | 13 | 13 | 1 | 8 | 35 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
 | Items (`zas_atmos`) | 18 | 5 | 1 | – | 24 |
 | Crafting components (`zas_atmos`) | 15 | 4 | – | – | 19 |
 
 *2026-11-02: R1 now has crafting components of its own (D-72). Its recipes
 still come down to vanilla materials (CONT-051).*
+
+*2026-11-07: the station walls and reinforced glass are added (D-80, D-81).
+The Should count for blocks was one short before them and is corrected.*
 
 ## Art that isn't a block or item
 

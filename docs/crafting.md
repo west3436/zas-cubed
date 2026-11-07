@@ -1,9 +1,10 @@
 # Crafting
 
 **Status:** approved by the owner, 2026-11-02. The fire extinguisher's recipe was
-proposed on 2026-11-04 and approved on 2026-11-05. Recipes for blocks and items
-that aren't in the mod yet are already shipped, and load once their item exists,
-except the central atmospherics controller's: its row below has no recipe file yet.
+proposed on 2026-11-04 and approved on 2026-11-05, and those of the central
+atmospherics controller, the station walls and reinforced glass on 2026-11-07.
+Recipes for blocks and items that aren't in the mod yet are already shipped, and
+load once their item exists.
 
 This page lists how every ZAS³ Atmospherics block and item is crafted, and
 the order a survival player gets them in (CONT-058). Every recipe uses
@@ -36,8 +37,8 @@ once its components are broken down.
 
 | Stage | Needs | What it unlocks |
 |---|---|---|
-| Workshop | Iron, copper, redstone, glass, amethyst and other early materials | Nearly everything: pipes, every device, the area air controller, the multitool, the softsuit and the first two batteries |
-| Hardened | Obsidian, so a diamond pickaxe | Plasteel, and with it the firelock and the hardsuit |
+| Workshop | Iron, copper, redstone, glass, amethyst and other early materials | Nearly everything: pipes, every device, the area air controller and the central atmospherics controller, the station wall, the multitool, the softsuit and the first two batteries |
+| Hardened | Obsidian, so a diamond pickaxe | Plasteel, and with it the firelock, the hardsuit, the reinforced station wall and reinforced glass |
 | Bluespace | Ender pearls | The bluespace crystal, the super capacitor and the super-capacity battery |
 
 A few patterns repeat:
@@ -46,11 +47,13 @@ A few patterns repeat:
   parts across the top, the pipe ports and an iron casing in the middle, and
   cable coil, a circuit board and cable coil along the bottom.
 - **The bigger machines and the portables** are built on a machine frame:
-  the heater, air conditioner, electrolyzer, generator, recharger, portable
-  pump and portable scrubber.
+  the heater, air conditioner, electrolyzer, generator, recharger, central
+  atmospherics controller, portable pump and portable scrubber.
 - **Wall panels and doors** take electronics instead of a circuit board and
   frame.
 - **The hardsuit** is the softsuit, plated piece by piece in plasteel.
+- **The reinforced station wall and reinforced glass** add a plasteel sheet:
+  to a station wall, and to two reinforced glass sheets.
 - **The capacitors set the battery tiers:** the battery takes a capacitor,
   the high-capacity battery an advanced capacitor, and the super-capacity
   battery a super capacitor.
@@ -64,11 +67,11 @@ cropped to 16×16 where they fit, and otherwise unchanged at 32×32 (D-72).
 
 | Component | Stage | Goes into |
 |---|---|---|
-| Cable coil | Workshop | Electronics, Igniter assembly, Timer assembly, Subspace transmitter, Pressure pump, Volume pump, Filter, Mixer, Vent, Scrubber, Igniter, Heater, Air conditioner, Water electrolyzer, Generator, Recharger, Magnetic boots |
-| Reinforced glass sheet | Workshop | Water electrolyzer, Large airlock |
-| Plasteel sheet | Hardened | Firelock, Hardsuit helmet, Hardsuit chestplate, Hardsuit leggings, Hardsuit boots |
-| Machine frame | Workshop | Portable pump, Portable scrubber, Heater, Air conditioner, Water electrolyzer, Generator, Recharger |
-| Circuit board | Workshop | Electronics, Subspace ansible, Pressure pump, Volume pump, Filter, Mixer, Vent, Scrubber, Heater, Air conditioner, Water electrolyzer, Generator, Recharger, Multitool |
+| Cable coil | Workshop | Electronics, Igniter assembly, Timer assembly, Subspace transmitter, Pressure pump, Volume pump, Filter, Mixer, Vent, Scrubber, Igniter, Heater, Air conditioner, Water electrolyzer, Generator, Recharger, Central atmospherics controller, Magnetic boots |
+| Reinforced glass sheet | Workshop | Water electrolyzer, Large airlock, Reinforced glass |
+| Plasteel sheet | Hardened | Firelock, Reinforced station wall, Reinforced glass, Hardsuit helmet, Hardsuit chestplate, Hardsuit leggings, Hardsuit boots |
+| Machine frame | Workshop | Portable pump, Portable scrubber, Heater, Air conditioner, Water electrolyzer, Generator, Recharger, Central atmospherics controller |
+| Circuit board | Workshop | Electronics, Subspace ansible, Pressure pump, Volume pump, Filter, Mixer, Vent, Scrubber, Heater, Air conditioner, Water electrolyzer, Generator, Recharger, Central atmospherics controller, Multitool |
 | Electronics | Workshop | Area air controller, Fire alarm, Airlock controller, Air sensor, Firelock, Airlock, Large airlock |
 | Capacitor | Workshop | Advanced capacitor, Igniter assembly, Subspace ansible, Subspace transmitter, Volume pump, Portable pump, Portable scrubber, Generator, Recharger, Battery, Area air controller, Magnetic boots, Atmos analyzer |
 | Advanced capacitor | Workshop | Super capacitor, High-capacity battery |
@@ -76,12 +79,12 @@ cropped to 16×16 where they fit, and otherwise unchanged at 32×32 (D-72).
 | Scanning module | Workshop | Filter, Scrubber, Recharger, Area air controller, Fire alarm, Air sensor, Atmos analyzer |
 | Micro-manipulator | Workshop | Redstone valve, Pressure pump, Volume pump, Filter, Mixer, Vent, Scrubber, Firelock, Airlock, Large airlock |
 | Micro-laser | Workshop | Heater, Air conditioner |
-| Console screen | Workshop | Heater, Air conditioner, Area air controller, Airlock controller, Atmos analyzer |
+| Console screen | Workshop | Heater, Air conditioner, Area air controller, Central atmospherics controller, Airlock controller, Atmos analyzer |
 | Igniter assembly | Workshop | Igniter |
 | Timer assembly | Workshop | Tank transfer valve |
 | Ansible crystal | Workshop | Subspace ansible, Subspace transmitter, Air sensor, Multitool |
-| Subspace ansible | Workshop | Area air controller, Airlock controller |
-| Subspace transmitter | Workshop | Area air controller |
+| Subspace ansible | Workshop | Area air controller, Central atmospherics controller, Airlock controller |
+| Subspace transmitter | Workshop | Area air controller, Central atmospherics controller |
 | Bluespace crystal | Bluespace | Super capacitor |
 
 <!-- END GENERATED: components -->
@@ -181,6 +184,14 @@ in any arrangement.
 | Firelock | Hardened | `SE` / `SM` / `SS` | `S` plasteel sheet, `E` electronics, `M` micro-manipulator |
 | Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
 | Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
+
+### Station walls and glass
+
+| Makes | Stage | Grid | Ingredients |
+|---|---|---|---|
+| 8 × Station wall | Workshop | `III` / `IWI` / `III` | `I` iron ingot, `W` white wool |
+| Reinforced station wall | Hardened | Shapeless | station wall, plasteel sheet |
+| Reinforced glass | Hardened | Shapeless | 2 × reinforced glass sheet, plasteel sheet |
 
 ### Wearables and tools
 

@@ -2387,6 +2387,41 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_
 origin: original
 notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).
 
+# Station walls and reinforced glass (D-80, D-81).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: metal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's lone wall tile at 16 px, in vg's dark greys: a recessed rim with a bolt in each corner, the plate's seam notched at the middle of each side, and the raised middle panel. vg's bevel becomes the vanilla finish.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: rwall0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The station wall's plate with vg's reinforcing rods crossing its middle, three each way, and a square boss where they meet. vg's darker rim and rods.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_glass_block.png
+origin: vgstation13
+source: icons/obj/structures/window.dmi
+state: frwindow0, frwindow15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's full reinforced window at 16 px: an opaque blue-steel frame with vg's white rods as dashes along it, and the grey-blue pane with a square wire mesh (the owner's pick of the wired pane; vg's diamond mesh reads as a checker at 16 px). The pane and mesh are partly transparent; each texel has 1 - sqrt(1 - a) of vg's alpha a, since a block shows it on two faces. vg's sprites came from /tg/station and Baystation 12, which license their icons CC BY-SA 3.0.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_glass_block.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all). Render type translucent, for the glass.
+
 # Crafting components (D-72).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/cable_coil.png
