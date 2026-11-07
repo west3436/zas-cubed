@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
 import io.github.west3436.zas.atmos.failure.TankFailure;
@@ -377,8 +378,8 @@ public class GasTankItem extends Item {
         } else {
             out.add(Component.translatable(
                             "item.zas_atmos.canister.pressure",
-                            String.format(Locale.ROOT, "%.0f", contents(stack).pressure()),
-                            String.format(Locale.ROOT, "%.1f", gas.temperature()))
+                            Readout.pressure(contents(stack).pressure()),
+                            Readout.temperature(gas.temperature()))
                     .withStyle(ChatFormatting.GRAY));
             gas.moles()
                     .forEach((id, n) -> out.add(Component.translatable(
@@ -388,8 +389,7 @@ public class GasTankItem extends Item {
                             .withStyle(ChatFormatting.GRAY)));
         }
         out.add(Component.translatable(
-                        "item.zas_atmos.gas_tank.distribution",
-                        String.format(Locale.ROOT, "%.1f", distributionPressure(stack)))
+                        "item.zas_atmos.gas_tank.distribution", Readout.pressure(distributionPressure(stack)))
                 .withStyle(ChatFormatting.GRAY));
     }
 }

@@ -582,6 +582,16 @@ API-063. The area air controller's window is the first device GUI to use them.*
 
 *2026-11-06: The owner's decision: bar joins the list, as the config already offers it.*
 
+*2026-11-06: Every device window's values, the area air controller's Cycle help and the
+tooltips of canisters, gas tanks, portables, suits and TTVs now follow the units. Still
+fixed: a stepper's tooltip, in kPa or K, because that's what its button adds, and messages
+the server sends (a firelock's lockdown, filling a tank, internals), because the server
+doesn't know a client's units. This stays Accepted: its manual check includes the
+analyzer, which doesn't exist yet. The conversions are tested by
+`client_006_pressures_convert_to_each_unit` and
+`client_006_temperatures_convert_to_each_unit`, and the tooltips by
+`client_006_item_tooltips_follow_the_display_units`.*
+
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074
 
