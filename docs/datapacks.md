@@ -369,6 +369,13 @@ data/<namespace>/zas/thermal/<path>.json
   | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
   | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
 
+  The content mod ships its own, in `data/zas_atmos/zas/thermal/`:
+
+  | File | Blocks | U |
+  |---|---|---|
+  | `station_walls.json` | `zas_atmos:station_wall`, `zas_atmos:reinforced_station_wall` | 0 (CONT-129, CONT-130) |
+  | `reinforced_glass_block.json` | `zas_atmos:reinforced_glass_block` | 5.8, as glass (CONT-131) |
+
   And the heat sources (HEAT-016), one file per block in
   `data/zas/zas/thermal/sources/`:
 
@@ -714,6 +721,9 @@ tag, `[airflow] pressure_fragile_threshold_kpa`
   pressure_fragile_breaks_per_tick` blocks per atmos tick. The rest break in later
   ticks, if the difference is still there, so a chain of windows goes over several
   ticks rather than in one.
+- **Reinforced glass** (`zas_atmos:reinforced_glass_block`, CONT-131) is in neither
+  `#c:glass_blocks` nor `#c:glass_panes`, so it isn't in the tag and no pressure
+  difference breaks it. A pack that adds it to the tag makes it fragile.
 
 A change to the tag applies after `/reload`, from the dimension's next atmos tick.
 

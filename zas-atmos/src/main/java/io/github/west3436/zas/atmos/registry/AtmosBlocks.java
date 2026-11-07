@@ -24,8 +24,11 @@ import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
@@ -122,7 +125,48 @@ public final class AtmosBlocks {
     public static final DeferredBlock<RedstoneValveBlock> REDSTONE_VALVE =
             BLOCKS.registerBlock("redstone_valve", RedstoneValveBlock::new, metal());
 
+    // ---- Station blocks (CONT-129 to CONT-131, D-80, D-81) ----
+    // Full blocks, so they seal as any full block does. Their U is heat data, in
+    // data/zas_atmos/zas/thermal/: 0 for the walls (HEAT-019) and glass's 5.8 for the glass.
+    // Hardness and tool are proposals awaiting the owner.
+
+    /** The station wall: conducts no heat, with stone's blast resistance (CONT-129). */
+    public static final DeferredBlock<Block> STATION_WALL =
+            BLOCKS.registerSimpleBlock("station_wall", wall().strength(3.0f, 6.0f));
+
+    /** The reinforced station wall: conducts no heat, with obsidian's blast resistance (CONT-130). */
+    public static final DeferredBlock<Block> REINFORCED_STATION_WALL =
+            BLOCKS.registerSimpleBlock("reinforced_station_wall", wall().strength(25.0f, 1200.0f));
+
+    /**
+     * Reinforced glass: seen through as glass is, never broken by a pressure difference, since it
+     * isn't in {@code #zas:pressure_fragile}, with obsidian's blast resistance (CONT-131). A {@link
+     * TransparentBlock}, as glass is, so it hides none of its neighbours' faces and skips its faces
+     * against itself. It drops itself, without Silk Touch.
+     */
+    public static final DeferredBlock<TransparentBlock> REINFORCED_GLASS_BLOCK = BLOCKS.registerBlock(
+            "reinforced_glass_block",
+            TransparentBlock::new,
+            BlockBehaviour.Properties.of()
+                    .instrument(NoteBlockInstrument.HAT)
+                    .strength(25.0f, 1200.0f)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.GLASS)
+                    .noOcclusion()
+                    .isValidSpawn((state, level, pos, type) -> false)
+                    .isRedstoneConductor((state, level, pos) -> false)
+                    .isSuffocating((state, level, pos) -> false)
+                    .isViewBlocking((state, level, pos) -> false));
+
     private AtmosBlocks() {}
+
+    /** The properties of a station wall, before its strength: metal, mined with a pickaxe. */
+    private static BlockBehaviour.Properties wall() {
+        return BlockBehaviour.Properties.of()
+                .mapColor(MapColor.METAL)
+                .requiresCorrectToolForDrops()
+                .sound(SoundType.METAL);
+    }
 
     /** The properties of a metal atmospherics part: as hard as a hopper, mined with a pickaxe. */
     public static BlockBehaviour.Properties metal() {

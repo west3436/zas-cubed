@@ -3657,3 +3657,22 @@ and sends each player in the level one `ClientboundSoundPacket`, which
 nobody hears a near and a far sound together. These packets don't use the server's
 range check, but the events' ranges are still what the client attenuates by. Any
 other explosion goes through vanilla's code and keeps vanilla's sound.
+
+### 11.14 Station blocks (CONT-129 to CONT-131)
+
+Three building blocks in `AtmosBlocks`, with no code of their own and nothing added
+to the API:
+
+- **The station wall** and **the reinforced station wall** are plain full blocks.
+  They seal as any full block does, and
+  `data/zas_atmos/zas/thermal/station_walls.json` gives both a U of 0, so no heat
+  crosses them (HEAT-019, §4.8). Their blast resistance is 6 and 1,200.
+- **Reinforced glass**, `reinforced_glass_block`, is a vanilla `TransparentBlock`,
+  as glass is: its collision shape is full, so it seals, while it hides none of its
+  neighbours' faces and skips its faces against itself. Its U is glass's 5.8, in
+  its own heat file, since glass's file names `#c:glass_blocks`. It stays out of
+  that tag and `#c:glass_panes`, which make up `#zas:pressure_fragile`, so no
+  pressure difference breaks it (FLOW-007). Its blast resistance is 1,200.
+
+Their blockstates and item models name the block models `zas_atmos:block/<id>`,
+which come with their art.

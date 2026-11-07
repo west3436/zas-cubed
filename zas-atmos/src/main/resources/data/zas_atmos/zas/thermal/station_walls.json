@@ -1,0 +1,4 @@
+{
+  "blocks": ["zas_atmos:station_wall", "zas_atmos:reinforced_station_wall"],
+  "transmittance": 0
+}

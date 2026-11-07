@@ -2896,6 +2896,13 @@ stone's blast resistance (6).
 
 *2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
 
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:station_wall`, with a
+U of 0 from `data/zas_atmos/zas/thermal/station_walls.json` (HEAT-019). Its art, hardness,
+tool and recipe are still to settle: hardness 3 with a stone pickaxe for now. Checked by
+`cont_129_station_walls_keep_a_room_at_its_temperature_beside_lava`,
+`cont_129_cont_130_station_walls_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
+
 #### CONT-130 · Reinforced station wall
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
 
@@ -2907,6 +2914,13 @@ with obsidian's blast resistance (1,200).
   and that a room walled with it keeps its temperature in a vacuum.
 
 *2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
+
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:reinforced_station_wall`,
+with a U of 0 from the same file as the station wall's. Its art, hardness, tool and recipe are
+still to settle: hardness 25 with a diamond pickaxe for now. Checked by
+`cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks`,
+`cont_129_cont_130_station_walls_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 #### CONT-131 · Reinforced glass
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-81, FLOW-007
@@ -2921,6 +2935,17 @@ resistance (1,200). It has no pane form.
 
 *2026-11-06: Added for review. The owner set the block form and blast resistance;
 [#320](https://github.com/west3436/zas-cubed/issues/320) set the rest. The `Should` is mine.*
+
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:reinforced_glass_block`
+(`zas_atmos:reinforced_glass` is the crafting component's sheet). It is a vanilla
+`TransparentBlock`, as glass is, with a U of 5.8, glass's, which no requirement sets. It stays
+out of `#zas:pressure_fragile` by staying out of `#c:glass_blocks` and `#c:glass_panes`, the
+tag's defaults, so a pack that adds it to the tag on purpose can make it fragile. Its art,
+hardness, tool and recipe are still to settle: hardness 25 with a diamond pickaxe for now, and
+it drops itself without Silk Touch. Checked by
+`cont_131_reinforced_glass_holds_above_the_threshold_that_breaks_glass`,
+`cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 ## R1 / R2 split
 

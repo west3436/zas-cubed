@@ -83,6 +83,19 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);
 
+    // The station blocks (CONT-129 to CONT-131).
+
+    public static final DeferredItem<BlockItem> STATION_WALL = ITEMS.registerSimpleBlockItem(AtmosBlocks.STATION_WALL);
+    public static final DeferredItem<BlockItem> REINFORCED_STATION_WALL =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.REINFORCED_STATION_WALL);
+    public static final DeferredItem<BlockItem> REINFORCED_GLASS_BLOCK =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.REINFORCED_GLASS_BLOCK);
+
+    /** The station blocks, in the creative tab's order. */
+    public static List<DeferredItem<BlockItem>> stationBlocks() {
+        return List.of(STATION_WALL, REINFORCED_STATION_WALL, REINFORCED_GLASS_BLOCK);
+    }
+
     // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
 
     public static final DeferredItem<BatteryItem> BATTERY =

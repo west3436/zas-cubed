@@ -321,5 +321,8 @@
   "gui.zas_atmos.device.temperature": "Temp",
   "gui.zas_atmos.device.timer": "Timer",
   "gui.zas_atmos.device.valve": "Valve",
-  "gui.zas_atmos.device.valve_is_open": "Valve open"
+  "gui.zas_atmos.device.valve_is_open": "Valve open",
+  "block.zas_atmos.station_wall": "Station Wall",
+  "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
+  "block.zas_atmos.reinforced_glass_block": "Reinforced Glass"
 }

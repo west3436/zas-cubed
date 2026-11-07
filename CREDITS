@@ -2947,3 +2947,28 @@ source: https://dejavu-fonts.github.io/ (DejaVu Sans Bold 2.37)
 license: Bitstream-Vera
 attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
 adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
+
+# Station blocks (CONT-129 to CONT-131). Their block models and textures come with their art.
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/station_wall.json
+origin: original
+notes: The station wall's one state, with the station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall's one state, with the reinforced_station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block's one state, with the reinforced_glass_block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/station_wall.json
+origin: original
+notes: The station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block item: the block model.
