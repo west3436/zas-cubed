@@ -87,6 +87,7 @@ public final class AtmosCreativeTab {
         });
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
+        out.accept(AtmosItems.WRENCH.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
         out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());

@@ -2428,7 +2428,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
+| `tool` | The multitool (§11.6), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.14) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
@@ -2992,10 +2992,10 @@ the cell in front of its grille).
   - `portFaces` gives the faces it has a pipe port on, in port order. The
     default is two: port 0 at the back, where gas comes in, and port 1 at the
     front. A device with a side port adds it.
-  - Placed, its gas goes the way the player looks. Nothing can turn it
-    afterwards until the wrench exists, so if that way joins no pipe and another
-    does, it takes the nearest way that does: looking down at a run on the
-    floor, it lines up with the run.
+  - Placed, its gas goes the way the player looks, unless that way joins no
+    pipe and another does: then it takes the nearest way that does, so looking
+    down at a run on the floor, it lines up with the run. The wrench turns it
+    afterwards (§11.14).
   - An `InlineDeviceEntity` has a 200 L `PipePort` per port (CONT-007), each
     in a network of its own (§11.4). It saves each port's share, in `Ports`, and
     releases them into its cell when it is removed (CONT-009). Pipes that join
@@ -3045,8 +3045,8 @@ the cell in front of its grille).
     facing by the port faces that gives (D-77). `registerBlocks` is empty there, so
     the block's own item stays the plain one. A mirrored block's loot table and
     `getCloneItemStack` give the mirrored item, and a shapeless recipe turns each
-    item into the other. The wrench will rotate a device and not mirror it
-    (CONT-035).
+    item into the other. The wrench turns a device's facing alone, so a
+    mirrored one stays mirrored (CONT-035, §11.14).
   - Building one port's network can dissolve another that it reaches, so
     `networks` asks for all three and then again, and a step uses only the
     second answers. A device idles as `SAME_NETWORK` only when all three ports
@@ -3651,3 +3651,39 @@ and sends each player in the level one `ClientboundSoundPacket`, which
 nobody hears a near and a far sound together. These packets don't use the server's
 range check, but the events' ranges are still what the client attenuates by. Any
 other explosion goes through vanilla's code and keeps vanilla's sound.
+
+### 11.14 The wrench (CONT-035, CONT-091)
+
+`tool.WrenchItem`, one to a stack, with vg's sprite (D-70). It works on the
+blocks pipes join (`PipeConnector`) except the canister, a portable that is
+mined into an item keeping its gas (CONT-017): pipes, caps, valves, connector
+ports, vents, scrubbers, passive vents, pumps, filters and mixers. The area air
+controller, the firelock and the other wall parts aren't among them. It acts in
+`onItemUseFirst`, before the block's own use, so a click opens no GUI and turns
+no valve; the stack has already checked that the player may build there.
+
+- **Use turns a part** (`turned`). Its `facing`, or a valve's `axis`, turns a
+  quarter turn about the axis of the face clicked, clockwise as seen from that
+  face; a part pointing along that axis turns around instead. A pipe or a port
+  has nothing to turn, and a valve clicked on its end can't turn that way, so
+  those clicks do nothing. The new state is set with a full update, so the pipes
+  beside it follow, and `invalidateCapabilities`, so a capability offered on
+  some faces turns with them. `PipeHost.reconnect` then dissolves its networks
+  and those on its new faces. Every node keeps its share by volume, so a
+  device's buffers go with it. A filter's or mixer's `mirrored` never changes,
+  so its side port stays on its side of the gas (D-77). Facing up or down, a side port is east, or
+  west while mirrored, so a turn into or out of the vertical can move it.
+- **Sneak-use removes a part** (`remove`), as mining would: it drops its item,
+  except in creative, through the block's loot table with the wrench as the
+  tool, and its block entity's removal sends what it held into its cell
+  (CONT-009). A `ServerPlayer`'s removal posts NeoForge's `BreakEvent` first,
+  so a mod guarding the block can refuse it.
+- **The pressure lock** (CONT-091). `overAmbient` is `PipeHost.highestPressure`,
+  the highest pressure of the networks its nodes are in, less the pressure at
+  the block's centre, where its gas would go: its zone, or the ambient. A full
+  block's centre has no cell, so that is the cell beside it the API resolves to
+  (API-015). More than `LOCK_KPA` (2 atm) over, it refuses, and the action bar
+  says `item.zas_atmos.wrench.pressurized` with the pressure over, in kPa: the
+  server doesn't know the player's units.
+- **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
+  part, with the block's own breaking sound on a removal.

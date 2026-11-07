@@ -111,6 +111,9 @@ public final class AtmosSounds {
             event("device.extinguisher.refill");
     public static final DeferredHolder<SoundEvent, SoundEvent> EXTINGUISHER_EMPTY = event("device.extinguisher.empty");
 
+    // The wrench turning or removing a part (CONT-035)
+    public static final DeferredHolder<SoundEvent, SoundEvent> WRENCH = event("device.wrench.use");
+
     private AtmosSounds() {}
 
     private static DeferredHolder<SoundEvent, SoundEvent> event(String name) {

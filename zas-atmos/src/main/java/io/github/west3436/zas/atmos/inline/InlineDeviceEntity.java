@@ -121,8 +121,18 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         return index < 0 ? null : ports[index];
     }
 
-    /** Rebuilds its ports' networks. */
-    private void portsChanged() {
+    @Override
+    public double highestPressure() {
+        double most = 0;
+        for (PipePort p : ports) {
+            most = Math.max(most, p.network().gas().pressure());
+        }
+        return most;
+    }
+
+    /** Rebuilds its ports' networks, and those of the nodes on their faces. */
+    @Override
+    public void reconnect() {
         for (PipePort p : ports) {
             p.dissolve();
             p.dissolveLinks();
@@ -289,7 +299,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         super.onLoad();
         if (level instanceof ServerLevel) {
             unloading = false;
-            portsChanged();
+            reconnect();
         }
     }
 
