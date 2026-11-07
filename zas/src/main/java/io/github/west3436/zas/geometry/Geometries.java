@@ -172,24 +172,50 @@ public final class Geometries {
         if (event.getUpdateCause() != TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
             return;
         }
+        long start = System.nanoTime();
         Map<Block, GeometryOverride> byBlock = resolve(allOverrides());
         List<Block> boundaries = taggedBlocks(ZONE_BOUNDARY);
         List<Block> fragile = taggedBlocks(PRESSURE_FRAGILE);
         Map<Block, double[]> heat = resolveThermal(thermal);
         int[] sources = sourceStates();
         List<BlockIgnitions.Flammable> flammable = BlockIgnitions.flammableStates();
+        if (GeometryDerivation.PROFILE) {
+            LOGGER.info(
+                    "Gas geometry profile: overrides, tags, ignition sources and flammability read in {} ms on {}",
+                    (System.nanoTime() - start) / 1_000_000,
+                    Thread.currentThread().getName());
+        }
+        long asked = System.nanoTime();
         current = CompletableFuture.supplyAsync(
-                () -> build(byBlock, boundaries, heat, sources, flammable, fragile), Util.backgroundExecutor());
+                () -> {
+                    long begun = System.nanoTime();
+                    GeometryTable t = build(byBlock, boundaries, heat, sources, flammable, fragile);
+                    if (GeometryDerivation.PROFILE) {
+                        LOGGER.info(
+                                "Gas geometry profile: table built in {} ms on {}, {} ms after it was asked for",
+                                (System.nanoTime() - begun) / 1_000_000,
+                                Thread.currentThread().getName(),
+                                (System.nanoTime() - asked) / 1_000_000);
+                    }
+                    return t;
+                },
+                Util.backgroundExecutor());
     }
 
     private static void onServerStarted(ServerStartedEvent event) {
+        long start = System.nanoTime();
         GeometryTable t = table();
+        long waited = System.nanoTime() - start;
         LOGGER.info(
                 "Gas geometry ready: {} block states, {} geometries, {} states overridden, {} zone boundaries",
                 t.stateCount(),
                 t.palette().size(),
                 t.overriddenStates(),
                 t.boundaryStates());
+        if (GeometryDerivation.PROFILE) {
+            LOGGER.info("Gas geometry profile: the server waited {} ms for the table once started", waited / 1_000_000);
+            CompletableFuture.runAsync(GeometryDerivation::profileWarm, Util.backgroundExecutor());
+        }
     }
 
     /**
