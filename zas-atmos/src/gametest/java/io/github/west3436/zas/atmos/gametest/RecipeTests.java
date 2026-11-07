@@ -34,9 +34,10 @@ public final class RecipeTests {
     private RecipeTests() {}
 
     /**
-     * Every item the content mod registers today has a recipe, but the O2 and air tanks, which are
-     * made by filling an empty tank (CONT-039). Items still to come bring theirs:
-     * their recipes ship already and load once the item exists (docs/crafting.md).
+     * The items {@code cont_051_recipes_use_vanilla_materials} checks by name. It isn't every item the
+     * content mod registers: the O2 and air tanks have no recipe, as they're made by filling an empty
+     * tank (CONT-039), and this list leaves out the fire alarm, igniter, pressure pump, volume pump,
+     * filter, mixer and tank transfer valve.
      */
     private static List<Item> craftable() {
         List<Item> items = new ArrayList<>(List.of(
@@ -83,7 +84,7 @@ public final class RecipeTests {
     /**
      * The content is craftable from vanilla materials (CONT-051): each recipe's ingredients are
      * vanilla items or the mod's own, and each of the mod's own has a recipe too, so every chain
-     * ends in vanilla materials. Each registered item and crafting component has a recipe.
+     * ends in vanilla materials. Each item in {@link #craftable} has a recipe.
      */
     @GameTest(template = "empty")
     public static void cont_051_recipes_use_vanilla_materials(GameTestHelper h) {

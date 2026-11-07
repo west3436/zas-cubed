@@ -103,13 +103,16 @@ mods itself.
 |---|---|
 | `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks formatting, the API's packages and dependencies, its javadoc and its compatibility |
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests, including S-12 (the example addon without `zas`). `zas-atmos`'s server also repeats `zas`'s tests with the content mod loaded; add `-Pgametests.ownOnly=true` to leave those out, as CI does on a PR. The [Full GameTests](https://github.com/west3436/zas-cubed/actions/workflows/full-gametests.yml) workflow runs them nightly |
+| `./gradlew :example-addon:runOneCopyGameTestServer` | Loads the built `zas` jar and a built copy of the example addon, each nesting the API, on one GameTest server, and checks only one copy of the API loads (API-007); not part of `build` or `runGameTestServer` |
 | `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](docs/research/benchmarks.md)); not part of `build` |
+| `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](docs/research/benchmarks.md)); not part of `build` |
 | `./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed=S` | Replays one seed of the integrity fuzz (NFR-010), which `build` runs on one seed; add `-Pfuzz.seeds=N` to run N seeds from it |
 | `./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed=S` | Replays one seed of the fuzz's half with pipes, among the rest of those GameTests; takes `-Pfuzz.seeds=N` as well |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
 | `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
+| `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
 
 The projects and the rules for what may depend on what are in
 [architecture §2](docs/architecture.md#2-modules-and-packaging). In short: the
@@ -142,7 +145,8 @@ audit zones against the blocks and profile each phase. The config files are in
    change made with AI, include the human testing evidence described in
    [Using AI](#using-ai).
 3. CI must pass: "Build and test" (asset credits, build, unit tests,
-   formatting, GameTests) and "Docs links".
+   formatting, the API's javadoc with no comment missing, the S-10 regression
+   check, GameTests, and one copy of the API from built jars) and "Docs links".
 4. PRs are squash-merged, so the PR title becomes the commit subject. Write it
    in the imperative: "Add Spotless formatting".
 

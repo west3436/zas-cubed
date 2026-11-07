@@ -457,6 +457,8 @@ public final class ContainerFailureTests {
         Area a = new Area(h, 305);
         a.forceLoad(true); // it waits in real time
         GasDeviceTests.room(a);
+        // Well off the ambient, or other tests' atmos ticks can dissolve the room while this waits (CORE-052).
+        a.fill(2, 2, 2, Map.of(N2, 200.0));
         double room = roomMoles(a);
 
         FakePlayer player = TestPlayers.hurtable(a.level, "zas_cont_038");

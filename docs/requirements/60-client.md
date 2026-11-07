@@ -28,6 +28,11 @@ any reading is at warning or worse, and hides otherwise and with the rest of
 the GUI (F1). Nothing seals breathing or analyzes gas yet, so the sealed
 helmet and analyzer parts wait for them, and this stays Accepted.*
 
+*2026-11-06: This replaces "Nothing seals breathing" above: the breath mask and the
+softsuit helmet have sealed it since
+[#182](https://github.com/west3436/zas-cubed/pull/182) (LIFE-021). The HUD doesn't
+show for them yet and there's still no analyzer (CONT-034), so this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
@@ -72,6 +77,10 @@ stays Accepted until the owner checks the display by hand.*
 *2026-11-06: Implemented. The owner checked the display in a test world with a
 room at each reading's warning and danger levels: each showed the icon its sign
 named, still at a warning and flashing at a danger.*
+
+*2026-11-06: The 2026-11-02 note's list leaves out a fifth GameTest,
+`client_008_a_filter_hides_the_gas_it_stops`: a filter's wearer is shown no toxin
+alert for the gas it keeps out of its breath (API-022).*
 
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028

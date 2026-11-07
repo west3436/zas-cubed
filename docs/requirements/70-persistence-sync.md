@@ -302,6 +302,9 @@ per-cell data, so it keeps to D-53.*
 no longer applies. `ControllerSync` and `CanisterSync` each go only to the player with
 that window open.*
 
+*2026-11-06: DATA-017, DATA-018 and DATA-019 are Implemented, so this replaces "All three
+are Draft until the owner's review" in the first 2026-11-05 note above.*
+
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 
@@ -323,6 +326,9 @@ bytes. `data_014_hud_syncs_on_change_at_most_4_a_second`,
 `data_014_values_resend_at_their_resolution` and
 `data_014_payload_round_trips` (GameTests) pass. There's no bench yet, and
 LIFE-023's breathing sync is separate, so this stays Accepted.*
+
+*2026-11-06: LIFE-023 is Implemented, so this replaces "LIFE-023's breathing sync is
+separate" above as a reason to stay Accepted. Only the Bench is left.*
 
 #### DATA-015 · Airflow sync
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005

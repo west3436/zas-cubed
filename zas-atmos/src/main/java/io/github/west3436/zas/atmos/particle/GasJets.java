@@ -34,7 +34,7 @@ public final class GasJets {
 
     /**
      * The most flowing jets a player is sent in a second: about 1.2 KiB/s of 60-byte packets at most,
-     * however large the station, within DATA-006's 2 KiB/s.
+     * however large the station. That counts towards DATA-006's 2 KiB/s, which all atmos sync shares.
      */
     static final int FLOWING_PER_SECOND = 20;
 

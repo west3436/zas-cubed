@@ -653,7 +653,8 @@ public final class ScenarioTests {
      * zone paused by an unloaded chunk at the restart stays paused until that chunk loads, then
      * resumes unchanged. The restart is {@code AtmosService#stopForTest} and {@code startForTest}
      * (see {@code PersistenceTests}); the unloaded chunk is {@link DimensionAtmos#simulateUnload}.
-     * Pipe and canister contents arrive with CONT (R1).
+     * Pipes and canisters are {@code zas_atmos}'s, which this mod can't name, so S-09's part with them
+     * belongs to that mod's GameTests (DATA-016).
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
     public static void s_09_restart_keeps_zones_and_paused_zone_resumes(GameTestHelper h) {

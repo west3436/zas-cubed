@@ -2,7 +2,8 @@
 
 **Status:** approved by the owner, 2026-11-02. The fire extinguisher's recipe was
 proposed on 2026-11-04 and approved on 2026-11-05. Recipes for blocks and items
-that aren't in the mod yet are already shipped, and load once their item exists.
+that aren't in the mod yet are already shipped, and load once their item exists,
+except the central atmospherics controller's: its row below has no recipe file yet.
 
 This page lists how every ZAS³ Atmospherics block and item is crafted, and
 the order a survival player gets them in (CONT-058). Every recipe uses

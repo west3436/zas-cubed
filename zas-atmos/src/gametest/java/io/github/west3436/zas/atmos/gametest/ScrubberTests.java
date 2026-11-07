@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.power.DevicePower;
@@ -397,24 +398,21 @@ public final class ScrubberTests {
 
     /**
      * CONT-015: in an open cell a scrubber takes from the ambient and forms no zone, as a siphoning
-     * vent does. This one runs in real time: a removal from the open air doesn't complete in atmos
-     * ticks run by {@code tickNow} within one game tick.
+     * vent does.
      */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = BATCH)
     public static void cont_015_a_scrubber_in_an_open_cell_takes_from_the_ambient(GameTestHelper h) {
         Area a = new Area(h, 710);
-        a.forceLoad(true); // it waits in real time
         a.clear(0, 0, 4, 4);
         a.place(2, 1, 2, scrubber(Direction.NORTH));
         ScrubberBlockEntity s = a.entity(2, 1, 2);
         s.power().setTestPowered(true);
         s.command(ScrubberMode.SIPHON, GasSelection.DEFAULT);
-        h.startSequence()
-                .thenWaitUntil(() -> {
-                    h.assertTrue(s.network().gas().totalMoles() > 0, "the scrubber took nothing");
-                    h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "scrubbing formed a zone");
-                })
-                .thenExecute(() -> a.forceLoad(false))
-                .thenSucceed();
+        for (int i = 0; i <= CellWatch.SETTLE_STEPS; i++) {
+            a.step();
+        }
+        h.assertTrue(s.network().gas().totalMoles() > 0, "the scrubber took nothing");
+        h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "scrubbing formed a zone");
+        h.succeed();
     }
 }

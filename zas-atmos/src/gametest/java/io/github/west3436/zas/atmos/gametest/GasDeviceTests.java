@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.canister.CanisterRelease;
 import io.github.west3436.zas.atmos.canister.CanisterSync;
+import io.github.west3436.zas.atmos.device.CellWatch;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
@@ -224,15 +225,10 @@ public final class GasDeviceTests {
         h.succeed();
     }
 
-    /**
-     * CONT-014: in an open cell a vent blows into the ambient, at its rate, and forms no zone. This
-     * one runs in real time: an addition to the open air doesn't complete in atmos ticks run by
-     * {@code tickNow} within one game tick.
-     */
-    @GameTest(template = "empty", batch = BATCH, timeoutTicks = 400)
+    /** CONT-014: in an open cell a vent blows into the ambient, at its rate, and forms no zone. */
+    @GameTest(template = "empty", batch = BATCH)
     public static void cont_014_a_vent_vents_to_the_ambient_in_an_open_cell(GameTestHelper h) {
         Area a = new Area(h, 24);
-        a.forceLoad(true); // it waits in real time
         a.clear(0, 0, 4, 4);
         a.place(2, 1, 2, vent(Direction.NORTH));
         a.place(2, 1, 3, pipe());
@@ -252,19 +248,14 @@ public final class GasDeviceTests {
         vent.command(VentSettings.blow(500));
 
         // Each atmos tick that moves gas sends half the vent's share: the network keeps
-        // 1 - 0.5·400/540 of its gas. Three such ticks, and no zone in front.
+        // 1 - 0.5·400/540 of its gas. Three such ticks, once its cell has settled, and no zone in front.
+        for (int i = 0; i < CellWatch.SETTLE_STEPS + 3; i++) {
+            a.step();
+        }
         double keep = 1 - 0.5 * PipeVolumes.VENT / net.volume();
-        double third = 100.0 * Math.pow(keep, 3);
-        h.startSequence()
-                .thenWaitUntil(() -> {
-                    double n = vent.network().gas().totalMoles();
-                    h.assertTrue(n <= third * (1 + 1e-9), "the network holds " + n + " mol");
-                    h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
-                    double k = Math.log(n / 100.0) / Math.log(keep);
-                    h.assertTrue(Math.abs(k - Math.rint(k)) < 1e-6, "the network fell by other than whole ticks: " + k);
-                })
-                .thenExecute(() -> a.forceLoad(false))
-                .thenSucceed();
+        a.close(net.gas().totalMoles(), 100.0 * Math.pow(keep, 3), "the network's moles after three ticks");
+        h.assertTrue(Atmospheres.zoneAt(a.level, a.abs(2, 1, 1)).isEmpty(), "venting formed a zone");
+        h.succeed();
     }
 
     /** CONT-060: an unpowered vent does nothing, and shows off. */
