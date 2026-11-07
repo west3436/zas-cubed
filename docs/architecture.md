@@ -3370,7 +3370,8 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   rating: the breath mask only seals; the gas mask seals and filters; each
   softsuit piece protects from 0 to 1 atm and 0 to 500 K; each hardsuit piece
   protects at every pressure and temperature; and each suit's helmet seals.
-  They have no durability.
+  They have no durability. Their armor points are small, except the hardsuit's,
+  which are diamond's.
 - **Magnetic boots** (CONT-033, `MagneticBootsItem`). A `SuitItem` rated as
   the hardsuit's boots, whose airflow resistance is 1 while it's on and 0 while
   it's off (FLOW-012). On or off is the stack's `zas_atmos:magnetized`, so it's

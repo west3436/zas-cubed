@@ -617,7 +617,7 @@ public final class GearTests {
      * Each hardsuit piece is rated for every pressure and temperature, and the helmet seals
      * (CONT-036). A hardsuited player is protected in vacuum, at 2,000 kPa and at 1,500 K, and in
      * the cold, where a bare player beside it is harmed. The pieces have no durability, as the
-     * softsuit's haven't.
+     * softsuit's haven't, and diamond's armor points and toughness, the owner's call.
      */
     @GameTest(template = "empty")
     public static void cont_036_a_hardsuited_player_is_protected_at_every_extreme(GameTestHelper h) {
@@ -626,6 +626,8 @@ public final class GearTests {
                 EquipmentSlot.CHEST, AtmosItems.HARDSUIT_CHESTPLATE,
                 EquipmentSlot.LEGS, AtmosItems.HARDSUIT_LEGGINGS,
                 EquipmentSlot.FEET, AtmosItems.HARDSUIT_BOOTS);
+        Map<EquipmentSlot, Integer> diamond =
+                Map.of(EquipmentSlot.HEAD, 3, EquipmentSlot.CHEST, 8, EquipmentSlot.LEGS, 6, EquipmentSlot.FEET, 3);
         suit.forEach((slot, item) -> {
             ItemStack piece = new ItemStack(item.get());
             ILifeSupport r = support(h, piece);
@@ -637,6 +639,8 @@ public final class GearTests {
             h.assertFalse(r.gasFiltering(), slot + " filters");
             h.assertValueEqual(item.get().getEquipmentSlot(), slot, slot + ": its slot");
             h.assertFalse(piece.isDamageableItem(), slot + " wears out");
+            h.assertValueEqual(item.get().getDefense(), diamond.get(slot), slot + ": armor points");
+            close(h, item.get().getToughness(), 2, 0, slot + ": toughness");
         });
 
         Site s = new Site(h, 2701);

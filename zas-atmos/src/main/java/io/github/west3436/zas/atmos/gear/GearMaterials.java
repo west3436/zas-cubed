@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -18,7 +19,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 /**
  * The armor materials of the breathing gear. Their layers are the worn textures in {@code
  * textures/models/armor}; what the gear protects against is its life support ({@link SuitItem}),
- * not its armor points, which are small.
+ * not its armor points. Those are small, except the hardsuit's.
  */
 public final class GearMaterials {
     public static final DeferredRegister<ArmorMaterial> MATERIALS =
@@ -37,11 +38,14 @@ public final class GearMaterials {
             MATERIALS.register("gas_mask", () -> material("gas_mask", 0, 0, 0, 0, SoundEvents.ARMOR_EQUIP_LEATHER));
 
     /**
-     * The hardsuit (CONT-036): chainmail's armor, a little more than the softsuit's. Its pieces are
-     * what {@link Encumbrance} counts.
+     * The hardsuit (CONT-036): diamond's armor points and toughness, the owner's call, which pays for
+     * its slowdown. Unlike diamond, it can't be enchanted or repaired, and it sounds like iron. Its
+     * pieces are what {@link Encumbrance} counts.
      */
-    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> HARDSUIT =
-            MATERIALS.register("hardsuit", () -> material("hardsuit", 1, 4, 5, 2, SoundEvents.ARMOR_EQUIP_IRON));
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> HARDSUIT = MATERIALS.register("hardsuit", () -> {
+        ArmorMaterial diamond = ArmorMaterials.DIAMOND.value();
+        return material("hardsuit", diamond.defense(), diamond.toughness(), SoundEvents.ARMOR_EQUIP_IRON);
+    });
 
     /**
      * The magnetic boots (CONT-033): iron boots' armor, as they're made from them. Its layer is the
@@ -60,13 +64,19 @@ public final class GearMaterials {
         defense.put(ArmorItem.Type.CHESTPLATE, chestplate);
         defense.put(ArmorItem.Type.HELMET, helmet);
         defense.put(ArmorItem.Type.BODY, 0);
+        return material(layer, defense, 0, equip);
+    }
+
+    /** No enchanting, no repair item and no knockback resistance, whatever the armor. */
+    private static ArmorMaterial material(
+            String layer, Map<ArmorItem.Type, Integer> defense, float toughness, Holder<SoundEvent> equip) {
         return new ArmorMaterial(
                 defense,
                 0,
                 equip,
                 () -> Ingredient.EMPTY,
                 List.of(new ArmorMaterial.Layer(ZasAtmosMod.id(layer))),
-                0,
+                toughness,
                 0);
     }
 
