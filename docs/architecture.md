@@ -1059,7 +1059,7 @@ closing it is a cheap edge update.
   time: the door's own change clears the cache entry (GEO-027), since the entry
   rests on the door's section.
 
-### 4.8 Heat (HEAT-001 to HEAT-016)
+### 4.8 Heat (HEAT-001 to HEAT-016, HEAT-019)
 
 *Implemented 2026-11-02 ([#39](https://github.com/west3436/zas-cubed/issues/39);
 sources and heat operations [#40](https://github.com/west3436/zas-cubed/issues/40)).*
@@ -1081,8 +1081,8 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   - `partitions`: pairs of the block's own cells with solid between them, and
     how many lines cross from one to the other. That's 256 lines (1 m²) for a
     pane's two halves.
-  - `transmittance`: U in W/(m²·K) per block-thick layer, or NaN for the
-    configured fallback (HEAT-015).
+  - `transmittance`: U in W/(m²·K) per block-thick layer, 0 for a block no
+    heat crosses (HEAT-019), or NaN for the configured fallback (HEAT-015).
   - `sourceTemperature`: the fixed temperature of a heat-source block, or NaN
     (HEAT-003). A source also has `FLAG_HEAT_SOURCE`.
 
@@ -1117,6 +1117,12 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   then it was the neighbour that sealed the face, so that block is the layer.
   A partition links the block's two cells through the block itself
   (HEAT-013). A link to a cell names the cell, not its zone.
+
+  A block of U 0 is an infinite resistance (HEAT-019). A line that crosses one
+  ends there and makes no link, so nothing past it, a cell, a source, the
+  ground or a vacuum to radiate to, takes heat through it. No conductance is
+  ever worked out from an infinite resistance, so none reaches a zone's
+  temperature or energy.
 - **Resolution.** When membership changes, each link is resolved to what is
   there now:
   - a cell in the same zone is ignored;
@@ -2395,7 +2401,7 @@ The test names include requirement IDs (README rule 5).
 | GEO | §4.1–§4.3, §4.6 |
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
-| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
+| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015, HEAT-019; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
 | LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042; hazards: LIFE-010, LIFE-011, LIFE-014 to LIFE-016, LIFE-030, LIFE-031, LIFE-033, LIFE-035 to LIFE-038) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50), §11 (the content mod) |

@@ -33,7 +33,8 @@ import java.util.Set;
  * or, past the last layer, at the ground, which is the ambient. Every block the line crosses is a
  * layer in series (HEAT-012); lines with the same end and layers are grouped, each line being
  * 1/256 m². Two cells of one block with solid between them, such as the sides of a pane, are
- * linked through that block (HEAT-013).
+ * linked through that block (HEAT-013). A block of U 0 has an infinite resistance: a line that
+ * crosses one ends there and makes no link, so it neither conducts nor radiates (HEAT-019).
  *
  * <p><b>Resolution.</b> A link to a cell is resolved each time membership changes: the cell's zone,
  * or the ambient if it is unzoned. A zone's links to sources become a total conductance and a
@@ -278,7 +279,7 @@ final class Conduction implements MembershipListener {
                 continue;
             }
             Geometry.Cell c = g.cell(sub);
-            double ownLayer = 1 / transmittance[id];
+            double ownLayer = HeatMath.resistance(transmittance[id]);
             for (Face f : FACES) {
                 int qx = x + f.dx();
                 int qy = y + f.dy();
@@ -365,15 +366,20 @@ final class Conduction implements MembershipListener {
                 return; // outside the world or not mirrored
             }
             Geometry q = palette.geometry(qid);
-            double layer = 1 / transmittance[qid];
+            double layer = HeatMath.resistance(transmittance[qid]);
             long block = SectionKeys.block(qx, qy, qz);
             boolean any = false;
             for (int m = 0; m < masks.length; m++) {
                 long[] mask = masks[m];
+                double r = resistances[m];
+                if (Double.isInfinite(r)) {
+                    // Lines that crossed the cell's own block, of U 0, carry nothing (HEAT-019).
+                    masks[m] = new long[4];
+                    continue;
+                }
                 if (isEmpty(mask)) {
                     continue;
                 }
-                double r = resistances[m];
                 if (q.isHeatSource()) {
                     // A heat source ends every line, conducting with its own U (HEAT-003).
                     add(found, SOURCE, Double.doubleToLongBits(q.sourceTemperature()), r + layer, count(mask));
@@ -393,7 +399,8 @@ final class Conduction implements MembershipListener {
                         add(found, CELL, naming.cell(block, j), r + layer, behind);
                     }
                 }
-                long[] next = and(mask, q.through(back), new long[4]);
+                // Past a layer of U 0 a line carries no heat to anything, so it ends (HEAT-019).
+                long[] next = Double.isInfinite(layer) ? new long[4] : and(mask, q.through(back), new long[4]);
                 masks[m] = next;
                 resistances[m] = r + layer;
                 any |= !isEmpty(next);
@@ -410,9 +417,13 @@ final class Conduction implements MembershipListener {
         }
     }
 
-    /** Adds {@code area} m² to the link with this end and resistance, in (m²·K)/W. */
+    /**
+     * Adds {@code area} m² to the link with this end and resistance, in (m²·K)/W. A path through a
+     * layer of U 0 has an infinite resistance and carries no heat, so it is no link (HEAT-019): no
+     * conductance, radiating wall or pair ever divides by it.
+     */
     private static void add(Map<LinkKey, double[]> found, int kind, long far, double resistance, double area) {
-        if (!(resistance > 0) || !(area > 0)) {
+        if (!(resistance > 0 && resistance < Double.POSITIVE_INFINITY) || !(area > 0)) {
             return;
         }
         found.computeIfAbsent(new LinkKey(kind, far, resistance), k -> new double[1])[0] += area;
