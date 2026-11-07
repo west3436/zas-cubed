@@ -1910,7 +1910,7 @@ power.
 ## Obtaining gas and progression
 
 #### CONT-050 · Gas acquisition
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, D-33
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, D-33
 
 R1 shall provide these ways to obtain gas, with no other mods installed:
 - the water electrolyzer (CONT-055)
@@ -1925,11 +1925,16 @@ R1 shall provide these ways to obtain gas, with no other mods installed:
 routes. The Verify plan now says which gases each one gives, because the electrolyzer
 makes no N₂.*
 
+*2026-11-07: `ElectrolyzerTests.cont_050_gas_by_each_route` (GameTest) checks that
+no mod but Minecraft, NeoForge and ZAS³ is loaded. A water electrolyzer fills a
+canister with O₂. A scrubber takes the O₂ and N₂ from a room's air, and a filter
+splits them into two canisters: one holds only O₂ and the other only N₂.*
+
 #### CONT-054 · Air compressor
 `Must` · `R1` · `Rejected` — removed by the owner: R1 has no air compressor, and gets gas from the electrolyzer and from scrubbing and filtering (CONT-050), 2026-11-06.
 
 #### CONT-055 · Water electrolyzer
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33
 
 A water electrolyzer shall produce 1 mol/s of O₂ and 2 mol/s of H₂, drawing
 80 FE/t. The rate is gameplay-scaled; real electrolysis energy would make
@@ -1943,8 +1948,19 @@ facing its front, O₂ on the left and H₂ on the right.
 - **Changed 2026-11-02 (the owner, in the batch 4 art review):** each gas
   leaves by its own pipe port, on opposite sides.
 
+*2026-11-07: `ElectrolyzerTests.cont_055_it_makes_1_mol_of_o2_and_2_mol_of_h2_a_second`
+(GameTest) runs one for 5 s and finds exactly 5 mol of O₂ and 10 mol of H₂ at
+293.15 K, and nothing else, while the room around it gains no gas.
+`cont_055_each_gas_leaves_only_by_its_own_port` puts a pipe on each of its six
+faces at each of its four facings. Only the pipes on its left and right join it,
+and they get only O₂ and only H₂. `cont_055_it_stops_while_an_outlet_is_full`
+checks that it stops while either outlet is at 4500 kPa, the pressure pump's
+limit, and starts again once the gas is taken. The 80 FE/t is
+`[power] electrolyzer`, checked in
+`cont_060_an_electrolyzer_stops_when_its_power_is_cut`.*
+
 #### CONT-056 · Electrolyzer water supply
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 The electrolyzer shall take water from buckets or a fluid capability into a
 4-bucket internal tank. One bucket lasts about 7.7 h of operation. Fluid
@@ -1957,6 +1973,18 @@ pipes join it only at the water inlet on its back.
   offered on the back and no other face.
 - **Changed 2026-11-02 (the owner, in the batch 4 art review):** fluid pipes
   join only the water inlet on the back.
+
+*2026-11-07: `ElectrolyzerTests.cont_056_buckets_and_a_fluid_capability_fill_the_tank`
+(GameTest) pours four water buckets in from different sides. Each leaves an
+empty bucket, and a fifth is refused once the tank is full. It then fills an
+empty tank with 2500 mB and 1500 mB through the fluid capability. Lava is
+refused, a simulated fill changes nothing, and nothing drains out. The water
+is kept through a save and load. `cont_056_the_water_used_per_second` checks
+that it uses one mole of water per mole of H₂: 0.036 mB a second, so a bucket
+lasts about 7.7 h. On its last drop it makes only the gas that water gives,
+then stops with no water.
+`cont_056_the_fluid_capability_is_on_the_back_only` checks each face at each
+facing.*
 
 #### CONT-053 · Photosynthesis
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
@@ -2146,6 +2174,14 @@ and `cont_060_a_real_mixer_runs_on_a_controller_and_stops_when_its_power_is_cut`
 `VolumePumpPowerTests.cont_060_a_real_volume_pump_stops_when_its_power_is_cut`
 (GameTest), as the pressure pump's. This stays Accepted until each device exists to check.*
 
+*2026-11-07: The water electrolyzer stops when its provider's power is cut:
+`ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`
+(GameTest). It has no power with no controller, even on and beside a burning
+generator. Under a generator-powered controller, it makes gas. The generators
+are removed and the buffer spent; once its lease runs out, it makes nothing,
+uses no water and shows off, and stays switched on. This stays Accepted until
+each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -2182,6 +2218,11 @@ draws come with them.*
 *2026-11-02: The controller's 5 FE/t is in the config (`[power]
 area_air_controller`, [config.md](../config.md)). This stays Accepted until
 every device's draw is.*
+
+*2026-11-07: The electrolyzer's 80 FE/t is `[power] electrolyzer`, drawn from
+its controller while it is on, in the gas production group (CONT-064). It is
+checked in `ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`.
+This stays Accepted until every device's draw is in the config.*
 
 *2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing

@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
+import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlock;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
@@ -121,6 +122,10 @@ public final class AtmosBlocks {
     /** The redstone valve (CONT-010). */
     public static final DeferredBlock<RedstoneValveBlock> REDSTONE_VALVE =
             BLOCKS.registerBlock("redstone_valve", RedstoneValveBlock::new, metal());
+
+    /** The water electrolyzer (CONT-055, CONT-056). */
+    public static final DeferredBlock<ElectrolyzerBlock> ELECTROLYZER =
+            BLOCKS.registerBlock("electrolyzer", ElectrolyzerBlock::new, metal());
 
     private AtmosBlocks() {}
 

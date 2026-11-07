@@ -79,6 +79,9 @@ public final class AtmosItems {
     public static final DeferredItem<MirroredDeviceItem> MIXER_MIRRORED =
             ITEMS.registerItem("mixer_mirrored", p -> new MirroredDeviceItem(AtmosBlocks.MIXER.get(), p));
 
+    /** The water electrolyzer (CONT-055). */
+    public static final DeferredItem<BlockItem> ELECTROLYZER = ITEMS.registerSimpleBlockItem(AtmosBlocks.ELECTROLYZER);
+
     public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);

@@ -22,6 +22,7 @@
     "zas_atmos:filter",
     "zas_atmos:mixer",
     "zas_atmos:manual_valve",
-    "zas_atmos:redstone_valve"
+    "zas_atmos:redstone_valve",
+    "zas_atmos:electrolyzer"
   ]
 }

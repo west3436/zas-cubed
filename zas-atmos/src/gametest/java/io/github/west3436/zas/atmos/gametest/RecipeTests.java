@@ -65,6 +65,7 @@ public final class RecipeTests {
                 AtmosItems.PORTABLE_PUMP.get(),
                 AtmosItems.PORTABLE_SCRUBBER.get(),
                 AtmosItems.RECHARGER.get(),
+                AtmosItems.ELECTROLYZER.get(),
                 AtmosItems.MULTITOOL.get(),
                 AtmosItems.CROWBAR.get(),
                 AtmosItems.FIRE_EXTINGUISHER.get(),

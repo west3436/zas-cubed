@@ -321,5 +321,12 @@
   "gui.zas_atmos.device.temperature": "Temp",
   "gui.zas_atmos.device.timer": "Timer",
   "gui.zas_atmos.device.valve": "Valve",
-  "gui.zas_atmos.device.valve_is_open": "Valve open"
+  "gui.zas_atmos.device.valve_is_open": "Valve open",
+  "block.zas_atmos.electrolyzer": "Water Electrolyzer",
+  "gui.zas_atmos.inline.status.no_water": "No water",
+  "gui.zas_atmos.inline.status.output_full": "Output full",
+  "gui.zas_atmos.electrolyzer.making": "Making gas",
+  "gui.zas_atmos.electrolyzer.water": "Water",
+  "gui.zas_atmos.electrolyzer.water_formula": "H₂O",
+  "gui.zas_atmos.electrolyzer.millibuckets": "%s / %s mB"
 }

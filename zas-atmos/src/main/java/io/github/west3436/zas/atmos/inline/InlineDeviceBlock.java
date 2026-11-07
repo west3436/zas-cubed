@@ -37,7 +37,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * <p>Its models are drawn facing north, the way the gas goes, and its blockstate turns them: y 90,
  * 180 and 270 for east, south and west, x 270 for up and x 90 for down.
  */
-public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeConnector {
+public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeConnector, PortedBlock {
     /** The way its gas goes: out of the front, in at the back. */
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
@@ -60,7 +60,7 @@ public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeC
     }
 
     /** A shape drawn facing north, turned as the blockstate turns the model. */
-    static VoxelShape turned(VoxelShape north, Direction facing) {
+    public static VoxelShape turned(VoxelShape north, Direction facing) {
         VoxelShape[] out = {Shapes.empty()};
         north.forAllBoxes((x0, y0, z0, x1, y1, z1) -> {
             double[] a = turned(x0, y0, z0, facing);
@@ -97,6 +97,7 @@ public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeC
      * @param state the block's state
      * @return the faces, one per port
      */
+    @Override
     public List<Direction> portFaces(BlockState state) {
         Direction front = state.getValue(FACING);
         return List.of(front.getOpposite(), front);

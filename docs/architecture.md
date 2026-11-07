@@ -2437,6 +2437,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
+| `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
 
@@ -2989,9 +2990,9 @@ the cell in front of its grille).
     Its models are drawn facing north and turned by the blockstate: y 90, 180
     and 270 for east, south and west, x 270 for up and x 90 for down. Its shape
     is drawn facing north, too, and turned the same way.
-  - `portFaces` gives the faces it has a pipe port on, in port order. The
-    default is two: port 0 at the back, where gas comes in, and port 1 at the
-    front. A device with a side port adds it.
+  - `portFaces` (from `PortedBlock`) gives the faces it has a pipe port on, in
+    port order. The default is two: port 0 at the back, where gas comes in, and
+    port 1 at the front. A device with a side port adds it.
   - Placed, its gas goes the way the player looks. Nothing can turn it
     afterwards until the wrench exists, so if that way joins no pipe and another
     does, it takes the nearest way that does: looking down at a run on the
@@ -3002,8 +3003,8 @@ the cell in front of its grille).
     two of its ports make them one network; it then has nothing to move gas
     between. Before its own step, each port takes its turn in its network's
     atmos tick (CONT-100), so a network of ports alone reacts too.
-  - It is a controller's part in the gas-handling group (CONT-064), through
-    its zone or a link, with its own cell as its `airPoint`. It draws
+  - It is a controller's part, in the gas-handling group unless it names
+    another (CONT-064), through its zone or a link, with its own cell as its `airPoint`. It draws
     `drawWhenOn()` FE/t while on, running or idle, and runs only on paid-for
     power. So a lease it got while it was off, which cost nothing, doesn't run
     it. `work` moves the gas and returns an `InlineStatus` for its GUI: moving,
@@ -3080,7 +3081,28 @@ the cell in front of its grille).
   100 L at its own conditions, and when one can't give what it's asked for, both
   scale by the same factor. An input with a fraction of 0 is never asked for gas,
   so it can be empty. It draws `[power] mixer` FE/t (20).
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump or inline device with an empty hand opens its
+- **Water electrolyzer** (CONT-055, CONT-056), in `.electrolyzer`. An
+  `ElectrolyzerBlock` stands on the floor with its front to the player who
+  placed it, in one of four ways. It isn't an `InlineDeviceBlock`, but its
+  entity is an `InlineDeviceEntity` with two ports and no input, and both blocks
+  give their port faces through `PortedBlock`.
+  - Facing its front, port 0, for O₂, is on its left (`facing` turned
+    clockwise), and port 1, for H₂, is on its right. Gas pipes join only those.
+  - Each second it is on, powered and has water, it adds 1 mol of O₂ and 2 mol
+    of H₂ at 293.15 K to its outlets and takes 2 mol of water, 0.036 mB, from
+    its tank (`ElectrolyzerMath`). With less than a second's water left, it
+    makes what that water gives. It stops while either outlet is at 4,500 kPa,
+    the pumps' limit, since a network of ports alone never bursts.
+  - `ElectrolyzerTank` holds 4,000 mB, saved as a double in `Water`. A water
+    container used on any face fills it (`FluidUtil.interactWithFluidHandler`),
+    and so does `Capabilities.FluidHandler.BLOCK`, which it offers only on its
+    back, where its inlet is. Nothing drains out.
+  - Its block state's `water`, 0 to 4, counts the buckets the tank has begun
+    to fill, and `on` shows it making gas: on, powered and not stopped.
+  - It is a controller's part in the auxiliary group, as gas production
+    (CONT-064), and draws `[power] electrolyzer` FE/t (80) while on. Its GUI
+    adds a water bar below the strip of its outlets.
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, inline device or electrolyzer with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The

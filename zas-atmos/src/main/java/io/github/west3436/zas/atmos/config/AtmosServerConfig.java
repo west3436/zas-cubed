@@ -58,6 +58,9 @@ public final class AtmosServerConfig {
     /** The mixer's draw from its controller while it is on, in FE/t (CONT-065). */
     public static final ModConfigSpec.IntValue MIXER_DRAW;
 
+    /** The electrolyzer's draw from its controller while it is on, in FE/t (CONT-065). */
+    public static final ModConfigSpec.IntValue ELECTROLYZER_DRAW;
+
     /** What the recharger puts into its battery while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_RATE;
 
@@ -121,6 +124,8 @@ public final class AtmosServerConfig {
                 .defineInRange("filter", 20, 0, 100_000);
         MIXER_DRAW = builder.comment("Mixer, from its controller while it is on (CONT-065)")
                 .defineInRange("mixer", 20, 0, 100_000);
+        ELECTROLYZER_DRAW = builder.comment("Electrolyzer, from its controller while it is on (CONT-065)")
+                .defineInRange("electrolyzer", 80, 0, 100_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
