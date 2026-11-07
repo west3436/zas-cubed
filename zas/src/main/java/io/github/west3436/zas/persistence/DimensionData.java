@@ -82,13 +82,24 @@ public final class DimensionData extends SavedData {
      * @param steps entry {@code i} takes version {@code i + 1} to {@code i + 2}
      */
     static void migrate(CompoundTag tag, List<Consumer<CompoundTag>> steps) {
+        migrate(NAME, tag, steps);
+    }
+
+    /**
+     * Brings another saved tag of this mod forward in the same way, with its version at the same key.
+     *
+     * @param name what the tag is, for the warning
+     * @param tag the saved tag
+     * @param steps entry {@code i} takes version {@code i + 1} to {@code i + 2}
+     */
+    public static void migrate(String name, CompoundTag tag, List<Consumer<CompoundTag>> steps) {
         int version = tag.getInt("version");
         int current = steps.size() + 1;
         if (version < 1 || version > current) {
             LOGGER.warn(
                     "{} has version {}, and this version of zas only knows 1 to {}. It reads the fields it recognises,"
                             + " and any others are lost at the next save",
-                    NAME,
+                    name,
                     version,
                     current);
             return;
