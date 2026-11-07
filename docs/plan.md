@@ -623,7 +623,7 @@ every item still missing, the analyzer first. Each new window uses the TGUI kit 
 | Magnetic boots | [#381](https://github.com/west3436/zas-cubed/pull/381) | CONT-033 | None |
 | Water electrolyzer | [#383](https://github.com/west3436/zas-cubed/pull/383) | CONT-050, CONT-055, CONT-056. CONT-060 and CONT-065 stay *Accepted* | Every FE device now exists: a check that each has its power-cut GameTest (CONT-060) and its draw in the config (CONT-065) |
 | Atmos analyzer and its live window | [#384](https://github.com/west3436/zas-cubed/pull/384) | CONT-034 | None |
-| Station walls and reinforced glass, their art and four recipes | [#385](https://github.com/west3436/zas-cubed/pull/385), [#386](https://github.com/west3436/zas-cubed/pull/386) | CONT-129, CONT-130 and CONT-131 stay *Draft* | The owner's acceptance. Connected textures with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391)) |
+| Station walls and reinforced glass, their art and four recipes | [#385](https://github.com/west3436/zas-cubed/pull/385), [#386](https://github.com/west3436/zas-cubed/pull/386) | CONT-129, CONT-130 and CONT-131 stay *Draft* | The owner's acceptance. Connected textures with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391)) followed in [#392](https://github.com/west3436/zas-cubed/pull/392), with CONT-132 *Draft* |
 | Wrench | [#387](https://github.com/west3436/zas-cubed/pull/387) | CONT-035, CONT-091 | None |
 | Central atmospherics controller: the block, the console's art and the window | [#388](https://github.com/west3436/zas-cubed/pull/388), [#389](https://github.com/west3436/zas-cubed/pull/389), [#390](https://github.com/west3436/zas-cubed/pull/390) | CONT-115 to CONT-117, CONT-119 to CONT-122, CONT-124. CONT-118 and CONT-123 stay *Accepted* | Seen in game: a controller moved from one console to another (CONT-118), and a row for a controller in an unloaded chunk (CONT-123) |
 
@@ -643,7 +643,7 @@ and K.
 |---|---|
 | Every console's range read 1 chunk | The world set each console's range to 1 on purpose, so they wouldn't claim each other's controllers. The label said "1 chunks", fixed in [#390](https://github.com/west3436/zas-cubed/pull/390) before it merged |
 | The analyzer's room read the open air | A fault in the test world. The player arrived beside the plate inside the room, and one step onto it opened the door. Under Normal the room stays open air until it's reset. The analyzer read a new zone correctly |
-| Connected textures for the walls and glass | Added to R1 with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391), CONT-132). The owner approved the art the same day |
+| Connected textures for the walls and glass | Added to R1 with Fusion ([#391](https://github.com/west3436/zas-cubed/issues/391), CONT-132 *Draft*). The owner approved the art the same day, and it's on main ([#392](https://github.com/west3436/zas-cubed/pull/392)) |
 
 *2026-11-07: the owner's answers on the round's decisions.* The PRs listed 57 decisions. The
 owner answered the ones that change the game, and the rest stand as built.
@@ -779,9 +779,9 @@ _Updated 2026-11-07._
      2026-11-07 (#374 to #390; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner played
      its combined test world and answered its decisions the same day.
-   - **Now:** connected textures for the station walls and reinforced glass with Fusion
-     ([#391](https://github.com/west3436/zas-cubed/issues/391)), and whether Ponder has to
-     be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270)).
+   - ~~Connected textures for the station walls and reinforced glass with Fusion
+     ([#391](https://github.com/west3436/zas-cubed/issues/391))~~ *on main 2026-11-07 ([#392](https://github.com/west3436/zas-cubed/pull/392))*. CONT-132 is *Draft*.
+   - **Now:** whether Ponder has to be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270)).
    - **Last:** S-09 and S-10.
    - **What each open requirement still needs:** the 2026-11-06 status audit in
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the
