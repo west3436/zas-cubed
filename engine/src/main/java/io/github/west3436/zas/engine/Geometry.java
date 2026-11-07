@@ -18,9 +18,9 @@ import java.util.Set;
  * Cell#shields()} gives the lines that, entering from a face, cross solid before they reach that
  * cell. {@code partitions} are the pairs of the block's own cells with solid between them, such as
  * the two sides of a pane, and the area they face each other across. {@code transmittance} is the
- * block's U in W/(m²·K) per block-thick layer (HEAT-002), or NaN for the configured fallback
- * (HEAT-015); {@code sourceTemperature} is the fixed temperature of a heat-source block (HEAT-003),
- * or NaN.
+ * block's U in W/(m²·K) per block-thick layer (HEAT-002), 0 for a block no heat crosses (HEAT-019),
+ * or NaN for the configured fallback (HEAT-015); {@code sourceTemperature} is the fixed temperature
+ * of a heat-source block (HEAT-003), or NaN.
  *
  * <p><b>Fire</b> (FIRE-033, FIRE-034). {@code igniteOdds} is a flammable block's vanilla ignite odds,
  * 0 if it isn't flammable, and {@code ignitionTemperature} the gas temperature in K it catches fire
@@ -33,7 +33,7 @@ import java.util.Set;
  * @param through six masks, indexed by {@link Face#ordinal()}: lines through the block that meet no
  *     cell; a face and its opposite have the same mask
  * @param partitions the pairs of cells with solid between them
- * @param transmittance U in W/(m²·K), positive, or NaN for the fallback
+ * @param transmittance U in W/(m²·K), 0 or more and finite, or NaN for the fallback
  * @param sourceTemperature the heat source's temperature in K, or NaN if the block isn't one
  * @param igniteOdds the block's vanilla ignite odds, or 0 if it isn't flammable
  * @param ignitionTemperature the temperature in K it catches fire at, or NaN for the configured one
@@ -131,8 +131,12 @@ public record Geometry(
         if (through.size() != 6) {
             throw new IllegalArgumentException("through needs 6 masks, got " + through.size());
         }
-        if (!Double.isNaN(transmittance) && !(transmittance > 0 && Double.isFinite(transmittance))) {
-            throw new IllegalArgumentException("transmittance must be positive and finite, or NaN: " + transmittance);
+        if (!Double.isNaN(transmittance) && !(transmittance >= 0 && Double.isFinite(transmittance))) {
+            throw new IllegalArgumentException("transmittance must be 0 or more and finite, or NaN: " + transmittance);
+        }
+        if (transmittance == 0) {
+            // -0.0 is 0, so the two are one palette entry.
+            transmittance = 0;
         }
         if (!Double.isNaN(sourceTemperature) && !(sourceTemperature >= 0 && Double.isFinite(sourceTemperature))) {
             throw new IllegalArgumentException(

@@ -203,6 +203,17 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pipe.json
 origin: original
 notes: The pipe item: the straight pipe model, scaled up in the inventory.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_mouth.json
+origin: original
+notes: A pipe's open end, on each face it leaks from: the tube flaring through a 6 px step to an 8 px lip at the block edge, hollow, its hole 6 px then 4 px wide and 3 px deep. The tube uses pipe.png; the rest uses pipe_mouth.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_mouth.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The open end's lip and rims in pipe.png's flange greys, which the dye colour tints, and its dark inside, which isn't tinted.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_yellow.png
 origin: vgstation13
 source: icons/obj/atmos.dmi
@@ -466,6 +477,10 @@ notes: The panel unpowered.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/area_air_controller.json
 origin: original
 notes: A flat item model for the panel's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/central_atmos_controller.json
+origin: original
+notes: The console's four blocks in each facing and screen, each its own model.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/generator.png
 origin: vgstation13
@@ -2677,6 +2692,26 @@ source: icons/mob/screen_alarms.dmi
 state: carbon_temp4
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
+
+# HUD internals indicator (CLIENT-009), from vg's internals button.
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_off.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_on.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal1_old
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_failing.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal2_old, internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, to flash between the two states.
 
 # Sounds (docs/research/vg-sounds.md)
 

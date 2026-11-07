@@ -32,6 +32,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * @param pin the last pin's outcome, or "" before one
  * @param breach whether its last reading was a breach (CONT-043)
  * @param fire whether a fire alarm it covers was triggered at its last reading (CONT-044)
+ * @param central the central controller it belongs to, or null (CONT-118)
  */
 public record ControllerSync(
         int containerId,
@@ -50,7 +51,8 @@ public record ControllerSync(
         List<AreaAirControllerBlockEntity.Part> parts,
         String pin,
         boolean breach,
-        boolean fire)
+        boolean fire,
+        BlockPos central)
         implements CustomPacketPayload {
 
     public static final Type<ControllerSync> TYPE = new Type<>(ZasAtmosMod.id("controller_sync"));
@@ -90,6 +92,10 @@ public record ControllerSync(
         buf.writeUtf(pin);
         buf.writeBoolean(breach);
         buf.writeBoolean(fire);
+        buf.writeBoolean(central != null);
+        if (central != null) {
+            buf.writeBlockPos(central);
+        }
     }
 
     private static ControllerSync read(RegistryFriendlyByteBuf buf) {
@@ -127,6 +133,7 @@ public record ControllerSync(
         String pin = buf.readUtf();
         boolean breach = buf.readBoolean();
         boolean fire = buf.readBoolean();
+        BlockPos central = buf.readBoolean() ? buf.readBlockPos() : null;
         return new ControllerSync(
                 containerId,
                 mode,
@@ -144,7 +151,8 @@ public record ControllerSync(
                 parts,
                 pin,
                 breach,
-                fire);
+                fire,
+                central);
     }
 
     @Override

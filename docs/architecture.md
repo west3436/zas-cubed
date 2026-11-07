@@ -1059,7 +1059,7 @@ closing it is a cheap edge update.
   time: the door's own change clears the cache entry (GEO-027), since the entry
   rests on the door's section.
 
-### 4.8 Heat (HEAT-001 to HEAT-016)
+### 4.8 Heat (HEAT-001 to HEAT-016, HEAT-019)
 
 *Implemented 2026-11-02 ([#39](https://github.com/west3436/zas-cubed/issues/39);
 sources and heat operations [#40](https://github.com/west3436/zas-cubed/issues/40)).*
@@ -1081,8 +1081,8 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   - `partitions`: pairs of the block's own cells with solid between them, and
     how many lines cross from one to the other. That's 256 lines (1 m²) for a
     pane's two halves.
-  - `transmittance`: U in W/(m²·K) per block-thick layer, or NaN for the
-    configured fallback (HEAT-015).
+  - `transmittance`: U in W/(m²·K) per block-thick layer, 0 for a block no
+    heat crosses (HEAT-019), or NaN for the configured fallback (HEAT-015).
   - `sourceTemperature`: the fixed temperature of a heat-source block, or NaN
     (HEAT-003). A source also has `FLAG_HEAT_SOURCE`.
 
@@ -1117,6 +1117,12 @@ wall's outer surface. Conduction is steady-state: walls store no heat
   then it was the neighbour that sealed the face, so that block is the layer.
   A partition links the block's two cells through the block itself
   (HEAT-013). A link to a cell names the cell, not its zone.
+
+  A block of U 0 is an infinite resistance (HEAT-019). A line that crosses one
+  ends there and makes no link, so nothing past it, a cell, a source, the
+  ground or a vacuum to radiate to, takes heat through it. No conductance is
+  ever worked out from an infinite resistance, so none reaches a zone's
+  temperature or energy.
 - **Resolution.** When membership changes, each link is resolved to what is
   there now:
   - a cell in the same zone is ignored;
@@ -1971,10 +1977,9 @@ Rejected:
 ### Atmosphere HUD
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
-the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
-helmet trigger of CLIENT-001 and the internals indicator (CLIENT-009) aren't
-built, though internals are. CLIENT-001's analyzer trigger waits for the
-analyzer (CONT-034).*
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The triggers of
+CLIENT-001 and the internals indicator (CLIENT-009) are built and wait for the
+owner's check. The analyzer itself isn't built (CONT-034).*
 
 - **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
   gets none, a warning or a danger, judged on what reaches the player through
@@ -1985,19 +1990,32 @@ analyzer (CONT-034).*
   that is off in the dimension has no alert, and an exempt player none at all.
   The level comes from `BreathingRules.assess`, the same assessment a breath
   check makes.
+- **Triggers and indicator** (`HudLevels`). The HUD also shows while the
+  player's breathing is sealed (`WornProtection.sealedBreathing`, LIFE-021) or
+  it holds an item in `#zas:shows_hud` in either hand, unless it's a spectator
+  (CLIENT-001). The server decides this, because only it has protection data,
+  and `zas` reaches the analyzer through the tag because it can't name
+  `zas_atmos`. While the HUD is shown, the state holds what the internals do
+  (off, on, or on but failing) and the pressure of the first tank found
+  (CLIENT-009).
 - **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
   entity id, each player's state is worked out and sent to that player only if
-  a level, the worst toxic gas, or a shown value at its display resolution has
-  changed since the last send. A reading with no alert carries no value, so in
-  normal air nothing is sent. While the atmosphere at the eyes is unresolved
-  the last state stands. The last send is kept in an unsaved player
-  attachment, so a respawned player gets its state at once.
+  a level, the worst toxic gas, the HUD's showing or hiding, the internals, or a
+  shown value at its display resolution has changed since the last send. A
+  reading with no alert carries no value and a hidden HUD no internals or tank,
+  so in normal air with no trigger nothing is sent. While the atmosphere at the
+  eyes is unresolved the last readings stand, and the triggers and indicator go
+  on. The last send is kept in an unsaved player attachment, so a respawned
+  player gets its state at once.
 - **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
   the status effects draws one alert per reading in a column at the right edge
   of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
   in the client's display units, yellow for a warning, red for a danger. Danger
   icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
-  The state is cleared on logout.
+  A row above the column, in a fixed place that moves no alert, has vg's
+  internals icon and the tank's pressure in the display units. Internals off,
+  on and failing have different icons, and failing flashes. The state is
+  cleared on logout.
 
 ### Looping sounds and thin air
 
@@ -2395,7 +2413,7 @@ The test names include requirement IDs (README rule 5).
 | GEO | §4.1–§4.3, §4.6 |
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
-| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
+| HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015, HEAT-019; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
 | LIFE, FLOW, FIRE, HEAT | §5, §7; phases 4–7 in §3.2 |
 | LIFE (breathing: LIFE-001 to LIFE-009, LIFE-040 to LIFE-042; hazards: LIFE-010, LIFE-011, LIFE-014 to LIFE-016, LIFE-030, LIFE-031, LIFE-033, LIFE-035 to LIFE-038) | §5 [Life support (breathing)](#life-support-breathing); §6.2 (the verdict) |
 | CONT | §5 (devices through the API, D-50), §11 (the content mod) |
@@ -3217,9 +3235,11 @@ since it needs the temperature anyway and a poll survives a reload. Its sound is
 **The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
 that controller's position and dimension on the stack. Used on a powered
 part, it links the part to the stored controller, or unlinks it if it was
-linked. Sneak-use in the air clears the selection. Links are positions saved
-with the controller, and a link whose block is no longer a powered part is
-dropped when its chunk is loaded.
+linked. Used on a central atmospherics controller, it moves the stored
+controller to that one, if it is in range (CONT-118, §11.7). Sneak-use in the
+air clears the selection. Links are positions saved with the controller, and a
+link whose block is no longer a powered part is dropped when its chunk is
+loaded.
 
 **GUI** (`ControllerMenu`, `ControllerSync`, CONT-049, CONT-074). The menu has
 no slots. Twice a second the server sends the viewer a `ControllerSync`
@@ -3230,7 +3250,12 @@ menu button clicks. Vanilla checks that the player is still near the
 controller, and `clickMenuButton` refuses any unknown id. Edits go through
 `Thresholds.with`, which clamps each bound to 0–5,066 and between its
 enabled neighbours. Nudging a disabled bound is refused. A threshold cell selects
-its bound with its own id, checked against the preset's readings.
+its bound with its own id, checked against the preset's readings. The sync also
+names the central controller the controller belongs to, if any (CONT-118). The
+same menu opens from a central controller (CONT-124, §11.7), with the central
+controller's position as the place the player must stay near. It then stays
+valid only while the controller is loaded and that central controller still has
+it, and button `40` reopens the central controller's GUI.
 
 The screen is `client.ControllerScreen`, on the TGUI kit in `client.tgui` (D-76,
 CLIENT-022). `Ui` draws in code each frame from the last sync, as a TGUI window
@@ -3295,6 +3320,83 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
   no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE. Its sounds are in §11.13.
+
+**The central atmospherics controller** (`controller.CentralControllerBlock`,
+`CentralControllerBlockEntity`, CONT-115 to CONT-124, D-75). A console 2 blocks
+wide, 2 tall and 1 deep, facing its placer. Each of its four blocks has a `half`
+(`lower`, `upper`) and a `side` (`left`, `right`, as seen from the front), and all
+show one `screen` (`normal`, `danger1`, `danger2`, `unpowered`: no power, or the
+worst danger among its area air controllers' last readings), which picks the
+model. It behaves as vanilla's two-block blocks do:
+
+- The block placed is the lower left one, and the rest grow up and to the
+  placing player's right (`toRight(facing)`). All four spaces must be free.
+- Each block's `updateShape` goes to air when the block beside it, or above or
+  below it, in the console isn't its partner, so breaking any block breaks them
+  all. Only the lower left block's loot drops the item, which it does when it
+  goes, whichever block was broken; `playerWillDestroy` removes it without a drop
+  in creative or without the right tool, as a door's lower half. Pistons can't
+  move it.
+- The lower left block holds the block entity. The others pass use, the
+  multitool and the FE capability to it (`CentralControllerBlock.entity`), and it
+  pulls FE from the blocks beside any of the four.
+- Each block collides as a full block, so the console is gas-tight, and outlines
+  the whole console. The lower left block sets the `screen`, and the others copy
+  it in `updateShape`.
+
+Its block entity is an `AtmosDevice` but not a `PoweredDevice`: it powers area
+air controllers, not parts. Each atmos tick it:
+
+1. Holds or lets go of its chunks (`CentralChunks`, CONT-122). While `[central_controller]
+   force_load` is true, a NeoForge `TicketController` forces its chunk and the 8 around it,
+   owned by its position, as `/forceload` does: block entities and entities tick, with no
+   random ticks unless a player is near. Removing it, or the option turning false, releases
+   them. NeoForge saves the tickets with the level, and on load keeps only those of a central
+   controller still there, and none while the option is false.
+2. Lets go of the area air controllers out of its range, and those whose loaded block is gone,
+   then claims every loaded one in range that no central controller has (CONT-116). Range is
+   `range()` chunks of its own in X and Z, at any height: the one set in its GUI, 1 to
+   `max_range_chunks`, or the maximum (CONT-117).
+3. Feeds them (CONT-120, CONT-121). Each claimed area air controller in contact first pulls
+   from its own neighbours. Its shortfall is what a step costs it (`demand()`, as of its last:
+   its own draw and every covered part's, even one another provider paid that time, since
+   the next charge may fall to it) less what its buffer holds. The central controller then
+   pulls from the neighbours of its four blocks as much as its own buffer and theirs have room for, and the
+   pure `CentralFeed.plan` shares it out: its own draw first, or nothing at all; then each
+   shortfall, Critical, Normal, then Low, and in claim order within one; then what it took in
+   this tick and hasn't spent, split evenly among the buffers with room, a share one can't hold
+   passing to the others. The rest stays in its buffer. So a full central controller with a
+   generator beside it passes the generator's output on, and its own store stays a reserve for
+   shortfalls.
+4. Records each claimed controller's readings (pressure, temperature, danger, power) for its
+   GUI (CONT-123), and sets its `screen`.
+
+An area air controller is in contact while its chunk is loaded in full and its block entity is
+in the schedule. One that isn't keeps its claim, gets nothing, and is listed with its last
+readings.
+
+- **Claims** (`CentralClaims`) are one `SavedData` per level, `data/zas_atmos_central_claims.dat`,
+  keyed by the area air controller: its central controller, its zone priority (`ZonePriority`),
+  its claim order and its last readings. One table, rather than a list in each central
+  controller, keeps an area air controller to one central controller while either is
+  unloaded, so two never fight over one. It is saved with a `FormatVersion` (DATA-012). Breaking
+  either block removes its claims. A claim whose central controller is loaded and gone, as
+  after `/setblock`, is dropped when another reaches it.
+- **Its buffer** is an `EnergyStore` of `[power] central_controller_buffer` (100,000 FE), with a
+  receive-only FE capability on each of its four blocks, like the area air controller's. Its own draw is `[power]
+  central_controller` (5 FE/t).
+- **GUI** (`CentralMenu`, `CentralSync`). The menu has no slots. Twice a second the server sends
+  its status, buffer, range and maximum, and a row per claimed controller: position, readings,
+  priority and whether it is in contact. Buttons `0` and `1` lower and raise the range; `1000 +
+  row` opens that row's area air controller's own menu (§11.6) if it is loaded (CONT-124);
+  `100000 + row × 3 + p` sets its priority. A row's button names its place in the list the server
+  last sent that player, so it can only reach a controller this one has claimed.
+- **The multitool** moves the selected area air controller here from any other central
+  controller, if it is in range (CONT-118). It joins at Normal priority, last in claim order.
+- **Saved:** buffer and range on the block entity; claims as above.
+- **Tests.** `CentralFeed` has unit tests. `CentralControllerTests` steps it within one game tick,
+  as `ControllerTests` does, except for the priority, chunk and remote-control tests, which wait
+  in real time.
 
 ### 11.8 Firelocks
 

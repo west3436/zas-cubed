@@ -21,17 +21,32 @@ public final class HeatMath {
     private HeatMath() {}
 
     /**
-     * The series transmittance of layers: 1/U = Σ 1/Uᵢ (HEAT-012).
+     * The series transmittance of layers: 1/U = Σ 1/Uᵢ (HEAT-012). A layer of U 0 conducts nothing,
+     * so neither does the path (HEAT-019).
      *
-     * @param transmittances each layer's U, positive
-     * @return the path's U in W/(m²·K)
+     * @param transmittances each layer's U, not negative
+     * @return the path's U in W/(m²·K), 0 if any layer's is
      */
     public static double series(double... transmittances) {
         double r = 0;
         for (double u : transmittances) {
+            if (u == 0) {
+                return 0;
+            }
             r += 1 / u;
         }
         return 1 / r;
+    }
+
+    /**
+     * The resistance of a layer, 1/U in (m²·K)/W, or infinity for a layer of U 0 (HEAT-019). A path
+     * with an infinite resistance carries no heat, and callers drop it before dividing by it.
+     *
+     * @param u the layer's U, not negative
+     * @return 1/U, or {@link Double#POSITIVE_INFINITY} if U is 0
+     */
+    public static double resistance(double u) {
+        return u == 0 ? Double.POSITIVE_INFINITY : 1 / u;
     }
 
     /**
@@ -76,15 +91,19 @@ public final class HeatMath {
      * The outer surface temperature of a wall that conducts heat from a zone and radiates it to a
      * vacuum (HEAT-004): where U·(T_zone − T_s) = εσ(T_s⁴ − T_bg⁴). The left side falls and the
      * right side rises with T_s, so the root between T_bg and T_zone is unique; it is found by
-     * Newton steps kept inside a shrinking bracket.
+     * Newton steps kept inside a shrinking bracket. A wall of U 0 carries nothing to its surface, which
+     * is then at the background (HEAT-019).
      *
-     * @param u the wall's U, W/(m²·K), positive
+     * @param u the wall's U, W/(m²·K), not negative
      * @param tZone the zone's temperature, K
      * @param tBackground the vacuum's temperature, K
      * @param emissivity ε, 0 to 1
      * @return T_s in K
      */
     public static double surfaceTemperature(double u, double tZone, double tBackground, double emissivity) {
+        if (u == 0) {
+            return tBackground;
+        }
         double es = emissivity * STEFAN_BOLTZMANN;
         if (tZone == tBackground || !(es > 0)) {
             return tZone;
@@ -119,9 +138,12 @@ public final class HeatMath {
     /**
      * The heat flux, in W/m², from a zone through a wall of transmittance U to a vacuum at
      * {@code tBackground} (HEAT-004): conduction through the wall in series with radiation from
-     * its outer surface. Positive when the zone is warmer.
+     * its outer surface. Positive when the zone is warmer, and 0 through a wall of U 0 (HEAT-019).
      */
     public static double radiativeFlux(double u, double tZone, double tBackground, double emissivity) {
+        if (u == 0) {
+            return 0;
+        }
         return u * (tZone - surfaceTemperature(u, tZone, tBackground, emissivity));
     }
 }

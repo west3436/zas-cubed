@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
+import io.github.west3436.zas.atmos.controller.CentralMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMenu;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
@@ -41,6 +42,10 @@ public final class AtmosMenus {
 
     public static final Supplier<MenuType<ControllerMenu>> AREA_AIR_CONTROLLER =
             MENUS.register("area_air_controller", () -> IMenuTypeExtension.create(ControllerMenu::new));
+
+    /** A central controller's range, its area air controllers' priorities, and opening theirs (CONT-123). */
+    public static final Supplier<MenuType<CentralMenu>> CENTRAL_ATMOS_CONTROLLER =
+            MENUS.register("central_atmos_controller", () -> IMenuTypeExtension.create(CentralMenu::new));
 
     public static final Supplier<MenuType<GeneratorMenu>> GENERATOR =
             MENUS.register("generator", () -> IMenuTypeExtension.create(GeneratorMenu::new));

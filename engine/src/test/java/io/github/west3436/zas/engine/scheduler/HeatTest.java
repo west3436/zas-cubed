@@ -41,6 +41,10 @@ class HeatTest {
     private static final int LAVA = BUILDER.intern(Geometry.SOLID.withThermal(Double.NaN, 1450));
     /** A glass pane running north to south: sub-cell 0 is its west half, 1 its east half. */
     private static final int PANE = BUILDER.intern(pane().withThermal(5.8, Double.NaN));
+    /** A solid block of U 0, which no heat crosses (HEAT-019). */
+    private static final int NONE = BUILDER.intern(Geometry.SOLID.withThermal(0, Double.NaN));
+    /** The pane, of U 0. */
+    private static final int PANE_NONE = BUILDER.intern(pane().withThermal(0, Double.NaN));
 
     private static final GeometryPalette PALETTE = BUILDER.build();
     private static final int AIR = GeometryPalette.AIR_ID;
@@ -343,6 +347,101 @@ class HeatTest {
         // Each face's flux, as a conductance to the background over this tick.
         double g = 6 * flux / (t - bg);
         assertStep(sim, X, Y, Z, g, bg, "radiation");
+    }
+
+    /** Steps a few times and checks the zone at the point kept its temperature bit for bit. */
+    private static void assertStill(Sim sim, int x, int y, int z, String what) {
+        double before = sim.zoneAt(x, y, z).temperature();
+        assertTrue(Double.isFinite(before), what + ": " + before + " K");
+        sim.steps(5);
+        ZoneView after = sim.zoneAt(x, y, z);
+        assertEquals(before, after.temperature(), 0.0, what);
+        assertTrue(Double.isFinite(after.moles(N2)), what + ": the gas");
+    }
+
+    /**
+     * HEAT-019: a path with a layer of U 0 carries no heat, next to a path that does. Everything
+     * round the room is of U 0; east of it are stone, then lava, and west of it stone, a block of U
+     * 0, then lava.
+     */
+    @Test
+    void heat_019_a_path_with_a_layer_of_0_carries_no_heat() {
+        Sim sim = sim(Ambient.STANDARD_AIR, NONE);
+        sim.world.set(X, Y, Z, AIR).set(X + 1, Y, Z, SOLID).set(X + 2, Y, Z, LAVA);
+        sim.world.set(X - 1, Y, Z, SOLID).set(X - 3, Y, Z, LAVA);
+        add(sim, X, Y, Z, 30, 293.15);
+        sim.step();
+        // The east path alone: two layers in series, U = 1.7 / 2.
+        assertStep(sim, X, Y, Z, STONE / 2, 1450, "beside a path through U 0");
+
+        // With the east path through U 0 as well, nothing moves.
+        Sim none = sim(Ambient.STANDARD_AIR, NONE);
+        none.world.set(X, Y, Z, AIR).set(X + 2, Y, Z, LAVA);
+        none.world.set(X - 1, Y, Z, SOLID).set(X - 3, Y, Z, LAVA);
+        add(none, X, Y, Z, 30, 293.15);
+        none.step();
+        assertStill(none, X, Y, Z, "every path through U 0");
+    }
+
+    /**
+     * HEAT-019: rooms either side of a block or a pane of U 0 exchange nothing; rooms either side of
+     * stone, next to them, do.
+     */
+    @Test
+    void heat_019_rooms_either_side_of_a_layer_of_0_exchange_nothing() {
+        Sim sim = sim(Ambient.STANDARD_AIR, NONE);
+        sim.world.set(X - 1, Y, Z, AIR).set(X + 1, Y, Z, AIR); // a block of U 0 between them
+        sim.world.set(X - 1, Y + 2, Z, AIR).set(X, Y + 2, Z, PANE_NONE).set(X + 1, Y + 2, Z, AIR);
+        sim.world.set(X - 1, Y + 4, Z, AIR).set(X, Y + 4, Z, SOLID).set(X + 1, Y + 4, Z, AIR);
+        for (int y : new int[] {Y, Y + 2, Y + 4}) {
+            add(sim, X - 1, y, Z, 30, 400);
+            add(sim, X + 1, y, Z, 10, 250);
+        }
+        sim.step();
+        assertTrue(
+                sim.zoneAt(X - 1, Y + 2, Z).id() != sim.zoneAt(X + 1, Y + 2, Z).id(), "the pane joined them");
+        ZoneView a = sim.zoneAt(X - 1, Y + 4, Z);
+        ZoneView b = sim.zoneAt(X + 1, Y + 4, Z);
+        double[] apart = {
+            sim.zoneAt(X - 1, Y, Z).temperature(),
+            sim.zoneAt(X + 1, Y, Z).temperature(),
+            sim.zoneAt(X - 1, Y + 2, Z).temperature(),
+            sim.zoneAt(X + 1, Y + 2, Z).temperature()
+        };
+        sim.step();
+        // Through stone: the pair closes its difference at U 1.7.
+        double factor = Math.exp(-STONE * (1 / heatCapacity(a) + 1 / heatCapacity(b)) * dt(sim));
+        ZoneView a2 = sim.zoneAt(X - 1, Y + 4, Z);
+        ZoneView b2 = sim.zoneAt(X + 1, Y + 4, Z);
+        assertEquals((a.temperature() - b.temperature()) * factor, a2.temperature() - b2.temperature(), 1e-6, "stone");
+        // Through U 0: nothing, bit for bit.
+        assertEquals(apart[0], sim.zoneAt(X - 1, Y, Z).temperature(), 0.0, "a block of U 0, the warm side");
+        assertEquals(apart[1], sim.zoneAt(X + 1, Y, Z).temperature(), 0.0, "a block of U 0, the cold side");
+        assertEquals(apart[2], sim.zoneAt(X - 1, Y + 2, Z).temperature(), 0.0, "a pane of U 0, the warm side");
+        assertEquals(apart[3], sim.zoneAt(X + 1, Y + 2, Z).temperature(), 0.0, "a pane of U 0, the cold side");
+    }
+
+    /**
+     * HEAT-019: a room walled with U 0 in a vacuum radiates nothing; one stone wall in its place
+     * radiates as HEAT-004 says.
+     */
+    @Test
+    void heat_019_a_wall_of_0_radiates_nothing_to_a_vacuum() {
+        Sim sim = sim(Ambient.VACUUM, AIR);
+        sim.world.box(X - 1, Y - 1, Z - 1, X + 1, Y + 1, Z + 1, NONE).set(X, Y, Z, AIR);
+        sim.world.set(X + 1, Y, Z, SOLID);
+        add(sim, X, Y, Z, 30, 293.15);
+        sim.step();
+        double t = sim.zoneAt(X, Y, Z).temperature();
+        double bg = Ambient.COSMIC_BACKGROUND;
+        double flux = HeatMath.radiativeFlux(STONE, t, bg, HeatSettings.DEFAULT.emissivity());
+        assertStep(sim, X, Y, Z, flux / (t - bg), bg, "the stone wall alone");
+
+        Sim none = sim(Ambient.VACUUM, AIR);
+        none.world.box(X - 1, Y - 1, Z - 1, X + 1, Y + 1, Z + 1, NONE).set(X, Y, Z, AIR);
+        add(none, X, Y, Z, 30, 293.15);
+        none.step();
+        assertStill(none, X, Y, Z, "walls of U 0 in a vacuum");
     }
 
     /**
