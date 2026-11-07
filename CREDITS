@@ -2607,6 +2607,132 @@ notes: A flat item model for the bluespace crystal sprite.
 
 # End of crafting components.
 
+# Central atmospherics controller (D-75): the 2 by 2 by 1 console, after vg's
+# atmospheric alert computer.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The console's screen texture, normal, 32 x 32. Rows 0 to 18: the monitor's front, vg's alert display at 1 texel a pixel in vg's cyan bezel: the status light (drawn at 6 x 6), two gauges and three readouts, then a row of four zone lights (new) over vg's line. Rows 19 to 24: the keyboard shelf from above, vg's keys.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger1.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 1: vg's yellow light, and one zone light yellow.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger2.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 2: vg's red light and one zone light, flashing over vg's 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger2.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_unpowered.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:00
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Unpowered: the screen and keys dark.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_front.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The casing in vg's console grey with the vanilla finish: the monitor's top with vents (rows 6 to 15), and the shelf's front edge and the pedestal's front with vg's grille (rows 19 to 31).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_side.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The left side (columns 0 to 15, front at the right) and the right side (16 to 31, front at the left) of the monitor, shelf and pedestal. On the right side, vg's red power cable runs from the monitor down into the pedestal.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_back.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The back of the monitor, shelf and pedestal, with vents. The undersides use its lower rows.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left.json
+origin: original
+notes: The 2 by 2 console's lower left block, facing north (left as seen from the front, so the east block): its part of the pedestal, the keyboard shelf and the foot of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_danger1.json
+origin: original
+notes: The lower left block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_danger2.json
+origin: original
+notes: The lower left block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_unpowered.json
+origin: original
+notes: The lower left block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right.json
+origin: original
+notes: The 2 by 2 console's lower right block, facing north (right as seen from the front, so the west block): its part of the pedestal, the keyboard shelf and the foot of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_danger1.json
+origin: original
+notes: The lower right block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_danger2.json
+origin: original
+notes: The lower right block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_unpowered.json
+origin: original
+notes: The lower right block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left.json
+origin: original
+notes: The 2 by 2 console's upper left block, facing north (left as seen from the front, so the east block): its part of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_danger1.json
+origin: original
+notes: The upper left block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_danger2.json
+origin: original
+notes: The upper left block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_unpowered.json
+origin: original
+notes: The upper left block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right.json
+origin: original
+notes: The 2 by 2 console's upper right block, facing north (right as seen from the front, so the west block): its part of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_danger1.json
+origin: original
+notes: The upper right block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_danger2.json
+origin: original
+notes: The upper right block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_unpowered.json
+origin: original
+notes: The upper right block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/central_atmos_controller.json
+origin: original
+notes: The whole console in one model, 32 x 32 x 16 centred on the block, scaled to fit the slot and the hand.
+
+# End of the central atmospherics controller.
+
 # HUD alerts (CLIENT-008), from vg's screen alarms.
 path: zas/src/main/resources/assets/zas/textures/gui/hud/oxygen.png
 origin: vgstation13
