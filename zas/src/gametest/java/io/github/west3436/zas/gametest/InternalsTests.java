@@ -26,9 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -43,6 +46,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.attachment.AttachmentHolder;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
@@ -169,6 +173,79 @@ public final class InternalsTests {
             loaded.load(saved);
             h.assertTrue(Internals.on(loaded), "internals switched on weren't saved");
             loaded.discard();
+        }
+        h.succeed();
+    }
+
+    /** Copying a player on death keeps the switch, which goes through what saves it (LIFE-029). */
+    @GameTest(template = "empty")
+    public static void life_029_internals_are_kept_through_death(GameTestHelper h) {
+        FakePlayer before = TestPlayers.hurtable(h.getLevel(), "zas_switch_before");
+        Internals.set(before, true);
+        FakePlayer after = TestPlayers.hurtable(h.getLevel(), "zas_switch_after");
+        after.copyAttachmentsFrom(before, true);
+        h.assertTrue(Internals.on(after), "internals switched on were lost on death");
+        h.succeed();
+    }
+
+    // ---- DATA-012 -----------------------------------------------------------------------------
+
+    /** The switch's key in an entity's saved attachments. */
+    private static final String SWITCH = "zas:internals";
+
+    /** Reads a switch saved in a player's tag, or a zombie's, on a new one of the same. */
+    private static <E extends LivingEntity> E loaded(Supplier<E> make, Tag savedSwitch) {
+        CompoundTag saved = make.get().saveWithoutId(new CompoundTag());
+        CompoundTag attachments = new CompoundTag();
+        attachments.put(SWITCH, savedSwitch);
+        saved.put(AttachmentHolder.ATTACHMENTS_NBT_KEY, attachments);
+        E loaded = make.get();
+        loaded.load(saved);
+        return loaded;
+    }
+
+    private static CompoundTag savedSwitch(LivingEntity entity) {
+        return entity.saveWithoutId(new CompoundTag())
+                .getCompound(AttachmentHolder.ATTACHMENTS_NBT_KEY)
+                .getCompound(SWITCH);
+    }
+
+    /**
+     * A switch saved before versions were added is the boolean alone, and reads as the first format,
+     * on a player or any other entity. Saved again, it has a version.
+     */
+    @GameTest(template = "empty")
+    public static void data_012_a_switch_saved_with_no_version_reads_as_the_first_format(GameTestHelper h) {
+        List<Supplier<LivingEntity>> kinds = List.of(
+                () -> TestPlayers.hurtable(h.getLevel(), "zas_old_switch"),
+                () -> EntityType.ZOMBIE.create(h.getLevel()));
+        for (Supplier<LivingEntity> kind : kinds) {
+            for (boolean on : new boolean[] {true, false}) {
+                LivingEntity entity = loaded(kind, ByteTag.valueOf(on));
+                h.assertValueEqual(Internals.on(entity), on, "the old switch on a " + entity.getType());
+                CompoundTag again = savedSwitch(entity);
+                h.assertValueEqual(again.getInt("version"), 1, "the version it saves");
+                h.assertValueEqual(again.getBoolean("on"), on, "the switch it saves");
+            }
+        }
+        h.succeed();
+    }
+
+    /** A switch saved as current reads back, on a player or any other entity. */
+    @GameTest(template = "empty")
+    public static void data_012_a_switch_saved_as_current_reads_back(GameTestHelper h) {
+        List<Supplier<LivingEntity>> kinds = List.of(
+                () -> TestPlayers.hurtable(h.getLevel(), "zas_new_switch"),
+                () -> EntityType.ZOMBIE.create(h.getLevel()));
+        for (Supplier<LivingEntity> kind : kinds) {
+            for (boolean on : new boolean[] {true, false}) {
+                LivingEntity entity = kind.get();
+                Internals.set(entity, on);
+                CompoundTag current = savedSwitch(entity);
+                h.assertValueEqual(current.getInt("version"), 1, "the version it saves");
+                LivingEntity back = loaded(kind, current);
+                h.assertValueEqual(Internals.on(back), on, "the switch on a " + entity.getType());
+            }
         }
         h.succeed();
     }

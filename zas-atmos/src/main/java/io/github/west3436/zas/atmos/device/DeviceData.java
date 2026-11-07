@@ -14,6 +14,10 @@ import org.slf4j.Logger;
  *
  * <p>To change the format, add a step to {@link #STEPS}. The version written follows from the list.
  * A new field that reads as a default when it's missing needs no step.
+ *
+ * <p>What else this mod saves keeps a list of its own, under the same key, and brings itself forward
+ * with {@link #migrate(CompoundTag, List)}: the primed TTV, the multitool's selection and {@link
+ * ItemData}.
  */
 public final class DeviceData {
     /** The key of the format version, in a block entity's tag. */
@@ -39,29 +43,30 @@ public final class DeviceData {
         tag.putInt(VERSION_KEY, VERSION);
     }
 
-    /**
-     * Brings a saved tag forward to the current format, in place. A newer version, from a newer mod,
-     * is left as it is and read by name, as the fields are read one at a time and each has a default.
-     * One warning is logged the first time, since a station holds thousands of block entities.
-     */
+    /** Brings a block entity's saved tag forward to the current format, in place. */
     public static void migrate(CompoundTag tag) {
-        if (migrate(tag, STEPS) && WARNED.compareAndSet(false, true)) {
-            LOGGER.warn(
-                    "A block entity was saved in format {}, and this version of zas_atmos only knows up to {}. "
-                            + "It reads the fields it recognises, and any others are lost at the next save",
-                    tag.getInt(VERSION_KEY),
-                    STEPS.size());
-        }
+        migrate(tag, STEPS);
     }
 
     /**
-     * Brings a saved tag forward with the given steps.
+     * Brings a saved tag forward with the given steps, in place. A newer version, from a newer mod,
+     * is left as it is and read by name, as the fields are read one at a time and each has a default.
+     * One warning is logged the first time, since a station holds thousands of block entities.
      *
+     * @param tag the saved tag
+     * @param steps entry {@code i} takes version {@code i} to {@code i + 1}
      * @return whether the tag's version is newer than the steps reach, so it was left as it is
      */
-    static boolean migrate(CompoundTag tag, List<Consumer<CompoundTag>> steps) {
+    public static boolean migrate(CompoundTag tag, List<Consumer<CompoundTag>> steps) {
         int version = tag.getInt(VERSION_KEY);
         if (version > steps.size()) {
+            if (WARNED.compareAndSet(false, true)) {
+                LOGGER.warn(
+                        "Something was saved in format {}, and this version of zas_atmos only knows up to {}. "
+                                + "It reads the fields it recognises, and any others are lost at the next save",
+                        version,
+                        steps.size());
+            }
             return true;
         }
         for (int v = Math.max(0, version); v < steps.size(); v++) {
