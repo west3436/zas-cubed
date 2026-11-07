@@ -27,7 +27,8 @@ import net.minecraft.world.level.Level;
 
 /**
  * A piece of breathing gear worn in an armor slot: a softsuit or hardsuit piece (CONT-032,
- * CONT-036), the breath mask (CONT-031) or the gas mask (CONT-088). What it protects against is its
+ * CONT-036), the breath mask (CONT-031), the gas mask (CONT-088) or the magnetic boots ({@link
+ * MagneticBootsItem}, CONT-033). What it protects against is its
  * {@link Rating}, which its {@link ILifeSupport} capability gives ZAS³ (API-022). A hardsuit piece
  * also slows its wearer ({@link Encumbrance}, CONT-089).
  *
@@ -107,6 +108,11 @@ public class SuitItem extends ArmorItem {
     /** Whether it has a tank slot. */
     public boolean hasTankSlot() {
         return tankSlot;
+    }
+
+    /** How much a stack of it resists airflow, 0 to 1 (FLOW-012): none, but for magnetic boots that are on. */
+    protected double airflowResistance(ItemStack stack) {
+        return 0;
     }
 
     // ---- The tank slot -----------------------------------------------------------------------
@@ -258,6 +264,11 @@ public class SuitItem extends ArmorItem {
             @Override
             public boolean gasFiltering() {
                 return r.gasFiltering();
+            }
+
+            @Override
+            public double airflowResistance() {
+                return item.airflowResistance(stack);
             }
 
             @Override

@@ -43,6 +43,13 @@ public final class GearMaterials {
     public static final DeferredHolder<ArmorMaterial, ArmorMaterial> HARDSUIT =
             MATERIALS.register("hardsuit", () -> material("hardsuit", 1, 4, 5, 2, SoundEvents.ARMOR_EQUIP_IRON));
 
+    /**
+     * The magnetic boots (CONT-033): iron boots' armor, as they're made from them. Its layer is the
+     * boots off; {@link MagneticBootsItem} shows them on.
+     */
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> MAGNETIC_BOOTS = MATERIALS.register(
+            "magnetic_boots", () -> material("magnetic_boots", 2, 0, 0, 0, SoundEvents.ARMOR_EQUIP_IRON));
+
     private GearMaterials() {}
 
     private static ArmorMaterial material(

@@ -1,6 +1,11 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.zas.airflow.Airflow;
+import io.github.west3436.zas.airflow.AirflowClass;
+import io.github.west3436.zas.airflow.AirflowImpulsePayload;
+import io.github.west3436.zas.airflow.AirflowReceiver;
+import io.github.west3436.zas.airflow.AirflowSyncPayload;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
@@ -19,16 +24,21 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.engine.flow.FlowField;
+import io.github.west3436.zas.engine.flow.FlowSettings;
 import io.github.west3436.zas.gametest.TestPlayers;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.LifeDamage;
+import io.github.west3436.zas.life.WornProtection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +47,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
@@ -71,7 +84,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * The breathing gear: gas tanks (CONT-030, LIFE-044), filling them from a canister (CONT-039), the
  * breath and gas masks, softsuit and hardsuit (CONT-031, CONT-032, CONT-036, CONT-088, CONT-089,
- * LIFE-021) and the suits' tank slots (CONT-090, LIFE-028). Those that need a place build in their
+ * LIFE-021), the suits' tank slots (CONT-090, LIFE-028) and the magnetic boots (CONT-033,
+ * FLOW-012). Those that need a place build in their
  * own {@link Site} (areas 40 and up, and 2700 and up). S-08 is in {@link StationTests}.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -705,6 +719,240 @@ public final class GearTests {
         } finally {
             AtmosServerConfig.HARDSUIT_SLOWDOWN.set(before);
         }
+        h.succeed();
+    }
+
+    // ---- CONT-033 -------------------------------------------------------------------------------
+
+    /**
+     * Magnetic boots stop airflow while on and not while off (CONT-033, FLOW-012). A vacuum room
+     * opened to the Overworld's air draws air in through a hole; beside it, a zombie in boots that are
+     * off is pushed as a bare one is, and one in boots that are on isn't. A player in boots that are on
+     * is sent a resistance of 1, so its client doesn't push it and it gets no impulse; switched off,
+     * the same boots send 0 and its client pushes it as it pushes a player in boots that were never on.
+     */
+    @GameTest(template = "empty")
+    public static void cont_033_magnetic_boots_stop_airflow_while_on_and_not_while_off(GameTestHelper h) {
+        Site s = new Site(h, 2703);
+        List<CustomPacketPayload> onSent = new ArrayList<>();
+        List<CustomPacketPayload> offSent = new ArrayList<>();
+        try {
+            breach(s);
+            FlowField field = Airflow.field(s.level);
+            FlowSettings settings = AirflowConfig.settings();
+            double mob = AirflowClass.MOB.threshold();
+
+            // Mobs, pushed by the server as Airflow.step pushes them.
+            Zombie bare = zombie(s, null);
+            Zombie off = zombie(s, false);
+            Zombie on = zombie(s, true);
+            close(h, Airflow.resistance(off), 0, 0, "the resistance of boots that are off");
+            close(h, Airflow.resistance(on), 1, 0, "the resistance of boots that are on");
+            Vec3 pushed = Airflow.apply(bare, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(bare));
+            h.assertTrue(pushed != null && pushed.length() > 0.01, "the breach doesn't push a bare zombie: " + pushed);
+            Vec3 offPush = Airflow.apply(off, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(off));
+            h.assertTrue(offPush != null, "boots that are off held the zombie");
+            close(h, offPush.length(), pushed.length(), 1e-12, "the push on boots that are off");
+            h.assertTrue(
+                    Airflow.apply(on, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(on)) == null,
+                    "boots that are on let the zombie be pushed");
+            h.assertValueEqual(on.getDeltaMovement(), Vec3.ZERO, "the zombie in boots that are on");
+            for (Zombie z : List.of(bare, off, on)) {
+                z.discard();
+            }
+
+            // Players, pushed by their clients from what the server sends.
+            FakePlayer onPlayer = standing(s, "zas_magboots_on", true);
+            FakePlayer offPlayer = standing(s, "zas_magboots_off", false);
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == onPlayer) {
+                    onSent.add(p);
+                } else if (to == offPlayer) {
+                    offSent.add(p);
+                }
+            });
+            Airflow.syncForTest(s.level, onPlayer);
+            Airflow.syncForTest(s.level, offPlayer);
+            AirflowSyncPayload onSync = last(onSent, AirflowSyncPayload.class);
+            AirflowSyncPayload offSync = last(offSent, AirflowSyncPayload.class);
+            h.assertTrue(
+                    onSync != null && !onSync.openings().isEmpty(),
+                    "the player in boots that are on wasn't sent the breach");
+            h.assertTrue(
+                    offSync != null && !offSync.openings().isEmpty(),
+                    "the player in boots that are off wasn't sent the breach");
+            close(h, onSync.resistance(), 1, 0, "the resistance sent for boots that are on");
+            close(h, offSync.resistance(), 0, 0, "the resistance sent for boots that are off");
+            h.assertTrue(last(onSent, AirflowImpulsePayload.class) == null, "boots that are on got an impulse");
+            h.assertTrue(last(offSent, AirflowImpulsePayload.class) != null, "boots that are off got no impulse");
+            Vec3 onPush = clientPush(onSync, onPlayer);
+            h.assertTrue(onPush == null, "the client pushed the player in boots that are on: " + onPush);
+            h.assertValueEqual(onPlayer.getDeltaMovement(), Vec3.ZERO, "the player in boots that are on");
+            Vec3 offPlayerPush = clientPush(offSync, offPlayer);
+            h.assertTrue(
+                    offPlayerPush != null && offPlayerPush.length() > 0,
+                    "the client didn't push the player in boots that are off");
+
+            // The same boots switched off: 0 is sent, and the client pushes as for boots never on.
+            MagneticBootsItem.set(onPlayer.getItemBySlot(EquipmentSlot.FEET), false);
+            onSent.clear();
+            Airflow.syncForTest(s.level, onPlayer);
+            AirflowSyncPayload switched = last(onSent, AirflowSyncPayload.class);
+            h.assertTrue(switched != null, "nothing was sent once the boots were off");
+            close(h, switched.resistance(), 0, 0, "the resistance sent once the boots were off");
+            Vec3 switchedPush = clientPush(switched, onPlayer);
+            h.assertTrue(switchedPush != null, "the client didn't push the player once its boots were off");
+            close(h, switchedPush.length(), offPlayerPush.length(), 1e-12, "the push once the boots were off");
+        } finally {
+            Airflow.sendHookForTest(null);
+            s.clear();
+        }
+        h.succeed();
+    }
+
+    /**
+     * Builds a hollow stone box over the whole of a site, x 0 to 16, y 0 to 6 and z 0 to 6, empties it
+     * to a vacuum, then opens a hole at (16, 2, 3), its east wall, to the Overworld's air, and runs
+     * atmos ticks and airflow until the hole has an opening.
+     */
+    private static void breach(Site s) {
+        s.clear();
+        for (BlockPos p : BlockPos.betweenClosed(s.abs(0, 0, 0), s.abs(16, 6, 6))) {
+            int x = p.getX() - s.origin.getX();
+            int y = p.getY() - s.origin.getY();
+            int z = p.getZ() - s.origin.getZ();
+            boolean wall = x == 0 || x == 16 || y == 0 || y == 6 || z == 0 || z == 6;
+            s.level.setBlockAndUpdate(p, wall ? Site.STONE : Site.AIR);
+        }
+        s.settle(GasMutations.remove(s.level, s.point(8, 3, 3), Map.of(N2, 1e6, O2, 1e6), Site.SOURCE));
+        s.empty(8, 3, 3);
+        s.h.assertTrue(s.zone(8, 3, 3).mixture().pressure() < 1, "the room didn't empty");
+        s.set(16, 2, 3, Site.AIR);
+        BlockPos hole = s.abs(16, 2, 3);
+        for (int i = 0; i < 6 && !opening(s, hole); i++) {
+            s.tick();
+            Airflow.step(s.level);
+        }
+        s.h.assertTrue(opening(s, hole), "the hole has no airflow");
+    }
+
+    private static boolean opening(Site s, BlockPos hole) {
+        for (FlowField.Opening o : Airflow.field(s.level).openings()) {
+            if (Math.abs(o.hx() - hole.getX()) <= 2 && o.hy() == hole.getY() && o.hz() == hole.getZ()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A zombie 3 blocks inside the hole, in magnetic boots that are on or off, or in none for null. */
+    private static Zombie zombie(Site s, Boolean bootsOn) {
+        Zombie z = EntityType.ZOMBIE.create(s.level);
+        s.h.assertTrue(z != null, "no zombie");
+        z.moveTo(Vec3.atBottomCenterOf(s.abs(13, 1, 3)));
+        z.setDeltaMovement(Vec3.ZERO);
+        if (bootsOn != null) {
+            ItemStack boots = stack(AtmosItems.MAGNETIC_BOOTS);
+            MagneticBootsItem.set(boots, bootsOn);
+            z.setItemSlot(EquipmentSlot.FEET, boots);
+        }
+        return z;
+    }
+
+    /** A player 3 blocks inside the hole, in magnetic boots that are on or off. */
+    private static FakePlayer standing(Site s, String name, boolean bootsOn) {
+        FakePlayer p = FakePlayerFactory.get(s.level, new GameProfile(UUID.randomUUID(), name));
+        p.moveTo(Vec3.atBottomCenterOf(s.abs(13, 1, 3)));
+        p.setDeltaMovement(Vec3.ZERO);
+        ItemStack boots = stack(AtmosItems.MAGNETIC_BOOTS);
+        MagneticBootsItem.set(boots, bootsOn);
+        p.setItemSlot(EquipmentSlot.FEET, boots);
+        return p;
+    }
+
+    private static <T> T last(List<CustomPacketPayload> sent, Class<T> type) {
+        T found = null;
+        for (CustomPacketPayload p : sent) {
+            if (type.isInstance(p)) {
+                found = type.cast(p);
+            }
+        }
+        return found;
+    }
+
+    /** What a client given this sync pushes its player by in one game tick, from rest; null for nothing. */
+    private static Vec3 clientPush(AirflowSyncPayload sync, FakePlayer p) {
+        p.setDeltaMovement(Vec3.ZERO);
+        AirflowReceiver client = new AirflowReceiver();
+        client.accept(sync);
+        return client.tick(p);
+    }
+
+    /**
+     * The keybind's toggle switches the boots its sender wears, on the server (CONT-033, NFR-011): on,
+     * then off, with the resistance following. It does nothing for a sender wearing none, even with
+     * boots in hand, nor for a spectator or a dead sender. New boots are off. Whether they're on is
+     * the boots' own, so it is saved with them, comes back on a mob wearing them, and stays with them
+     * when a player's inventory is kept through death.
+     */
+    @GameTest(template = "empty")
+    public static void cont_033_the_keybind_switches_the_worn_boots_and_they_keep_it(GameTestHelper h) {
+        ItemStack fresh = stack(AtmosItems.MAGNETIC_BOOTS);
+        h.assertFalse(MagneticBootsItem.on(fresh), "new boots are on");
+        close(h, support(h, fresh).airflowResistance(), 0, 0, "new boots' resistance");
+        h.assertFalse(fresh.isDamageableItem(), "magnetic boots wear out");
+        h.assertValueEqual(AtmosItems.MAGNETIC_BOOTS.get().getEquipmentSlot(), EquipmentSlot.FEET, "their slot");
+
+        FakePlayer sender = TestPlayers.hurtable(h.getLevel(), "zas_magboots_sender");
+        MagneticBootsItem.TogglePayload press = MagneticBootsItem.TogglePayload.INSTANCE;
+        // In hand, not worn: nothing to switch.
+        sender.setItemInHand(InteractionHand.MAIN_HAND, stack(AtmosItems.MAGNETIC_BOOTS));
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(MagneticBootsItem.on(sender.getMainHandItem()), "the toggle switched boots in hand");
+        h.assertFalse(MagneticBootsItem.toggle(sender), "a player without boots switched them on");
+
+        sender.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.MAGNETIC_BOOTS));
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(
+                MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "the toggle didn't switch them on");
+        close(h, WornProtection.airflowResistance(sender), 1, 0, "the resistance with the boots on");
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(
+                MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "the toggle didn't switch them off");
+        close(h, WornProtection.airflowResistance(sender), 0, 0, "the resistance with the boots off");
+
+        sender.setGameMode(GameType.SPECTATOR);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "a spectator switched them");
+        sender.setGameMode(GameType.SURVIVAL);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "back in survival, no switch");
+
+        // Saved: as an item, and worn by a mob.
+        var registries = h.getLevel().registryAccess();
+        ItemStack saved = ItemStack.parse(
+                        registries, sender.getItemBySlot(EquipmentSlot.FEET).save(registries))
+                .orElseThrow();
+        h.assertTrue(MagneticBootsItem.on(saved), "boots saved on load off");
+        Zombie z = EntityType.ZOMBIE.create(h.getLevel());
+        h.assertTrue(z != null, "no zombie");
+        z.setItemSlot(EquipmentSlot.FEET, saved);
+        Zombie loaded = EntityType.ZOMBIE.create(h.getLevel());
+        h.assertTrue(loaded != null, "no zombie");
+        loaded.load(z.saveWithoutId(new CompoundTag()));
+        h.assertTrue(MagneticBootsItem.on(loaded.getItemBySlot(EquipmentSlot.FEET)), "a saved zombie's boots load off");
+        close(h, WornProtection.airflowResistance(loaded), 1, 0, "the loaded zombie's resistance");
+        z.discard();
+        loaded.discard();
+
+        // Through death, with the inventory kept as respawning copies it.
+        FakePlayer respawned = TestPlayers.hurtable(h.getLevel(), "zas_magboots_respawned");
+        respawned.getInventory().replaceWith(sender.getInventory());
+        h.assertTrue(MagneticBootsItem.on(respawned.getItemBySlot(EquipmentSlot.FEET)), "the boots came back off");
+
+        sender.setHealth(0);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "a dead player switched them");
         h.succeed();
     }
 
