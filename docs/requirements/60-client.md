@@ -33,6 +33,19 @@ softsuit helmet have sealed it since
 [#182](https://github.com/west3436/zas-cubed/pull/182) (LIFE-021). The HUD doesn't
 show for them yet and there's still no analyzer (CONT-034), so this stays Accepted.*
 
+*2026-11-06: This replaces "The HUD doesn't show for them yet" above. The sealed-head part
+is built: the server sends whether the player's breathing is sealed (LIFE-021), by a
+capability or by protection data, so a breath mask or softsuit helmet on the head shows the
+HUD and taking it off hides it. The analyzer has its way in: an item in `#zas:shows_hud`
+([datapacks.md](../datapacks.md#item-tags)) shows the HUD while held in either hand, and the
+analyzer joins the tag when it's built. A creative player gets both triggers and still no
+alerts, and a spectator neither. With no alert, the HUD shows only the internals indicator
+(CLIENT-009), since a reading with no alert isn't shown (CLIENT-008).
+`client_001_a_sealed_head_shows_the_hud`, `client_001_a_held_tag_item_shows_the_hud`,
+`client_001_creative_is_shown_the_hud_and_a_spectator_is_not` and
+`client_001_the_mask_and_helmet_show_the_hud` (GameTests) pass. Left: the Manual check with
+a sealed helmet and an analyzer, and with F1, so this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
@@ -91,6 +104,19 @@ the pressure of the tank they draw from (LIFE-028).
 - **Rationale:** Inferred: a player on internals needs to know how much air is
   left.
 - **Verify:** Manual check of the indicator while a tank drains.
+
+*2026-11-06: Built ([#38](https://github.com/west3436/zas-cubed/issues/38)). A row above
+the alert column, where a full column doesn't reach it and it doesn't move the alerts, has
+vg's internals icon and the pressure of the first tank found (LIFE-028) in the display units
+(CLIENT-006), or no value without a tank. The icon has three states: off, with no hose or
+tile; on with the tank delivering, on a green tile; and on but failing with no seal, no tank
+or a tank that can't deliver, flashing between a red tile and the off icon (CLIENT-014). The
+pressure shows with internals off too, so a tank can be checked before switching on. It
+reaches the client at 1 kPa (DATA-014).
+`client_009_internals_and_the_tanks_pressure`, `client_009_an_alert_shows_the_indicator`,
+`client_009_internals_update_while_the_atmosphere_is_unresolved`,
+`client_009_payload_round_trips` and `client_001_the_mask_and_helmet_show_the_hud`
+(GameTests) pass. Left: the Manual check while a tank drains, so this stays Accepted.*
 
 #### CLIENT-014 · Not colour alone
 `Should` · `R1` · `Implemented` · Verify: Manual

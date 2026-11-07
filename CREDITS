@@ -2678,6 +2678,26 @@ state: carbon_temp4
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
 
+# HUD internals indicator (CLIENT-009), from vg's internals button.
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_off.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_on.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal1_old
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_failing.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal2_old, internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, to flash between the two states.
+
 # Sounds (docs/research/vg-sounds.md)
 
 path: zas/src/main/resources/assets/zas/sounds/airflow/hiss.ogg

@@ -1977,10 +1977,9 @@ Rejected:
 ### Atmosphere HUD
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
-the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
-helmet trigger of CLIENT-001 and the internals indicator (CLIENT-009) aren't
-built, though internals are. CLIENT-001's analyzer trigger waits for the
-analyzer (CONT-034).*
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The triggers of
+CLIENT-001 and the internals indicator (CLIENT-009) are built and wait for the
+owner's check. The analyzer itself isn't built (CONT-034).*
 
 - **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
   gets none, a warning or a danger, judged on what reaches the player through
@@ -1991,19 +1990,32 @@ analyzer (CONT-034).*
   that is off in the dimension has no alert, and an exempt player none at all.
   The level comes from `BreathingRules.assess`, the same assessment a breath
   check makes.
+- **Triggers and indicator** (`HudLevels`). The HUD also shows while the
+  player's breathing is sealed (`WornProtection.sealedBreathing`, LIFE-021) or
+  it holds an item in `#zas:shows_hud` in either hand, unless it's a spectator
+  (CLIENT-001). The server decides this, because only it has protection data,
+  and `zas` reaches the analyzer through the tag because it can't name
+  `zas_atmos`. While the HUD is shown, the state holds what the internals do
+  (off, on, or on but failing) and the pressure of the first tank found
+  (CLIENT-009).
 - **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
   entity id, each player's state is worked out and sent to that player only if
-  a level, the worst toxic gas, or a shown value at its display resolution has
-  changed since the last send. A reading with no alert carries no value, so in
-  normal air nothing is sent. While the atmosphere at the eyes is unresolved
-  the last state stands. The last send is kept in an unsaved player
-  attachment, so a respawned player gets its state at once.
+  a level, the worst toxic gas, the HUD's showing or hiding, the internals, or a
+  shown value at its display resolution has changed since the last send. A
+  reading with no alert carries no value and a hidden HUD no internals or tank,
+  so in normal air with no trigger nothing is sent. While the atmosphere at the
+  eyes is unresolved the last readings stand, and the triggers and indicator go
+  on. The last send is kept in an unsaved player attachment, so a respawned
+  player gets its state at once.
 - **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
   the status effects draws one alert per reading in a column at the right edge
   of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
   in the client's display units, yellow for a warning, red for a danger. Danger
   icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
-  The state is cleared on logout.
+  A row above the column, in a fixed place that moves no alert, has vg's
+  internals icon and the tank's pressure in the display units. Internals off,
+  on and failing have different icons, and failing flashes. The state is
+  cleared on logout.
 
 ### Looping sounds and thin air
 

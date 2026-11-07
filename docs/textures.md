@@ -232,7 +232,10 @@ These need textures too, but aren't in the tables above:
   `carbon_pressure±1/±2`, `carbon_temp±2/±4`), Crops at 32×32 in
   `zas/textures/gui/hud/`, with animated states' frames stacked downward. vg
   took its screen-alert framework from /tg/station (CC BY-SA 3.0). The
-  internals indicator is still to do.
+  internals indicator is vg's internals button from `icons/mob/screen1_old.dmi`
+  (`internal0`, `internal1_old`, `internal2_old`), as `internals_off`,
+  `internals_on` and `internals_failing`, which flashes between `internal2_old`
+  and `internal0`.
 - airflow particles (CLIENT-003)
 
 ## Later releases (R2)
