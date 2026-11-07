@@ -1,12 +1,17 @@
 package io.github.west3436.zas.engine.bench;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -20,6 +25,10 @@ import java.util.Locale;
  * own class loader so that neither shares the other's classes or their JIT profiles. Each pair
  * gives a ratio, and the result is the median over the pairs, after warm-up pairs that let the JIT
  * settle.
+ *
+ * <p>A run over the limit runs once more, in a new JVM, and the check fails only if that one is over
+ * too. A JVM's pairs agree with each other more than with another JVM's, and one with no change has
+ * read +12.3 %, while a real slowdown reads high in both.
  */
 public final class RegressionCheck {
     /** How much slower than the baseline still passes, in percent (NFR-034). */
@@ -33,6 +42,9 @@ public final class RegressionCheck {
 
     private static final int WARM_MINUTES = 2;
 
+    /** Added to the arguments of the run that a run over the limit starts. */
+    private static final String SECOND_RUN = "--second-run";
+
     private RegressionCheck() {}
 
     /**
@@ -41,9 +53,36 @@ public final class RegressionCheck {
      * @param args the baseline's commit, its classes, and this code's classes as a class path
      * @throws ReflectiveOperationException if either engine's script doesn't have the shape {@link
      *     Script} expects
+     * @throws IOException if the second run can't start
+     * @throws InterruptedException if this is interrupted waiting for the second run
      */
-    public static void main(String[] args) throws ReflectiveOperationException {
+    public static void main(String[] args) throws ReflectiveOperationException, IOException, InterruptedException {
         Locale.setDefault(Locale.ROOT);
+        if (withinLimit(args)) {
+            return;
+        }
+        if (args.length <= 3) {
+            System.out.println("Over the limit, so it runs once more, in a new JVM.");
+            System.exit(runAgain(args));
+        }
+        String message = "S-10 costs more than " + TOLERANCE_PERCENT
+                + " % over its recorded baseline (NFR-034), in two runs. To accept that, see"
+                + " docs/research/benchmarks.md.";
+        System.out.println((System.getenv("GITHUB_ACTIONS") != null ? "::error::" : "") + message);
+        System.exit(1);
+    }
+
+    private static int runAgain(String[] args) throws IOException, InterruptedException {
+        List<String> command = new ArrayList<>();
+        command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        command.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
+        command.addAll(List.of("-cp", System.getProperty("java.class.path"), RegressionCheck.class.getName()));
+        command.addAll(List.of(args));
+        command.add(SECOND_RUN);
+        return new ProcessBuilder(command).inheritIO().start().waitFor();
+    }
+
+    private static boolean withinLimit(String[] args) throws ReflectiveOperationException {
         Script baseline = new Script(args[1]);
         Script current = new Script(args[2]);
         double[] worker = new double[PAIRS];
@@ -69,12 +108,7 @@ public final class RegressionCheck {
                 + " to warm up.");
         boolean workerOk = row("Worker thread, per atmos tick", worker, baselineWorker);
         boolean serverOk = row("Server thread, per atmos tick", server, baselineServer);
-        if (!workerOk || !serverOk) {
-            String message = "S-10 costs more than " + TOLERANCE_PERCENT
-                    + " % over its recorded baseline (NFR-034). To accept that, see docs/research/benchmarks.md.";
-            System.out.println((System.getenv("GITHUB_ACTIONS") != null ? "::error::" : "") + message);
-            System.exit(1);
-        }
+        return workerOk && serverOk;
     }
 
     private static boolean row(String what, double[] ratios, double[] baselineMs) {
