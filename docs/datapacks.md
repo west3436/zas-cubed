@@ -348,7 +348,7 @@ data/<namespace>/zas/thermal/<path>.json
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
-| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, above 0 and at most 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ |
+| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, 0 to 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ. A block of 0 lets no heat through, by conduction or by radiating to a vacuum, so no path through it carries any (HEAT-019) |
 | `temperature` | number | no | Makes the blocks heat sources at this temperature in K, 0 to 1,000,000. A source ends any heat path that reaches it and conducts with its own U |
 
 - A file needs `transmittance`, `temperature` or both.
