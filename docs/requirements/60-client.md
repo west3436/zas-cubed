@@ -4,8 +4,8 @@
 with more than one verifiable claim have been split; new IDs follow the rule in
 the [README](README.md#writing-rules).
 
-**Scope.** What players see and hear: the HUD, airflow effects, sound, and
-debug rendering. The client never simulates (A-03), and receives only the data
+**Scope.** What players see and hear: the HUD, airflow effects, sound, debug
+rendering and the Ponder scenes. The client never simulates (A-03), and receives only the data
 in DATA-005 (D-53).
 
 ## HUD
@@ -703,3 +703,56 @@ and a datapack problem's line, which is also the log's. `/zas` output is otherwi
 the command package has no exemption. The mods' descriptions in the mods list have keys too;
 NeoForge shows a mod's display name as written, so that can't. The example addon is never
 published, so it isn't scanned.*
+
+## Player guides
+
+#### CLIENT-023 · A Ponder scene for each device and tool
+`Must` · `R1` · `Draft` · Verify: Manual, Inspect · Trace: D-82, D-83, [#270](https://github.com/west3436/zas-cubed/issues/270)
+
+Every placed device and handheld tool in `zas_atmos` shall have at least one Ponder scene
+showing how to set it up and use it.
+
+- **Rationale:** Decision: D-82.
+- **Verify:** Inspect the scene list against the content mod's devices and tools, and a
+  Manual check that each scene opens from the ZAS³ tag in Ponder's index on a client
+  without Create.
+
+*2026-11-07: added for review.*
+
+#### CLIENT-024 · The Ponder addon
+`Must` · `R1` · `Draft` · Verify: Inspect · Trace: D-83, NFR-022
+
+The Ponder scenes shall ship in a separate addon, `zas_ponder`, that requires `zas_atmos`
+and nests Ponder and Flywheel with jar-in-jar, in version ranges that accept the copies
+Create nests.
+
+- **Rationale:** Decision: D-83.
+- **Verify:** Inspect the built jar's nested jars, their version ranges and its mod
+  metadata.
+
+*2026-11-07: added for review.*
+
+#### CLIENT-025 · A dedicated server with the Ponder addon
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: NFR-022, [#270](https://github.com/west3436/zas-cubed/issues/270)
+
+A dedicated server with the Ponder addon installed shall start and run normally.
+
+- **Rationale:** Inferred: players share one modpack between client and server, so
+  the addon will be on servers too ([#270](https://github.com/west3436/zas-cubed/issues/270)).
+- **Verify:** A GameTest server, which is a dedicated server, loads the built addon jar
+  with what it nests, beside `zas` and `zas_atmos`, and passes its tests.
+
+*2026-11-07: added for review.*
+
+#### CLIENT-026 · What a device's scene shows
+`Must` · `R1` · `Draft` · Verify: Manual · Trace: D-68, CONT-014, CONT-015, CONT-016, CONT-083 · Depends: CLIENT-023
+
+A device's scene shall show which of its faces take a pipe, what powers it, and what the
+wrench or multitool does to it, wherever these apply.
+
+- **Rationale:** Inferred: several devices take a pipe on one face only (CONT-014,
+  CONT-015, CONT-016, CONT-083), and a part has power only through an area air controller
+  (D-68), which a player can't see from the block.
+- **Verify:** Manual check of each scene against its device's requirements.
+
+*2026-11-07: added for review.*
