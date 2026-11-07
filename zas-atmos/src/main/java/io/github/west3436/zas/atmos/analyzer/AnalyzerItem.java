@@ -15,7 +15,8 @@ import net.minecraft.world.phys.BlockHitResult;
  * The atmos analyzer (CONT-034). Used on nothing, its window reads the air the player is in, and
  * follows the player. Used on a block, it reads what {@link AnalyzerTarget#on} says, before the block
  * can open a window of its own. A tank in the other hand gets a tab of its own. Holding one shows the
- * atmosphere HUD (CLIENT-001), through the {@code #zas:shows_hud} item tag.
+ * atmosphere HUD (CLIENT-001) with all four of its readings, safe ones too (CLIENT-008), through the
+ * {@code #zas:shows_hud} and {@code #zas:shows_readings} item tags.
  */
 public class AnalyzerItem extends Item {
     public AnalyzerItem(Properties properties) {

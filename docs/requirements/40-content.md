@@ -1466,6 +1466,15 @@ GameTests check each reading against `/zas zone at`, `/zas at` or the target's o
 that a player with no rights can't read a far target, and the sync's rate. The readout
 itself is the Manual check, so this stays Accepted until the owner has made it.*
 
+*2026-11-07: The owner's call: while a player holds the analyzer, in either hand, the HUD
+shows all four readings, pressure, O₂, toxins and temperature, all the time, not only those
+at warning or worse (CLIENT-008). A sealed helmet doesn't do this; only holding the analyzer
+does. A safe reading is plain white with no icon; warnings and dangers look as before. `zas`
+can't name the analyzer, so it reads the new item tag `#zas:shows_readings`, and `zas_atmos`
+puts the analyzer in it. `cont_034_held_in_either_hand_it_shows_every_hud_reading` and
+`client_008_a_held_analyzer_shows_every_reading` (GameTests) pass. The look is part of the
+Manual check, so this stays Accepted.*
+
 #### CONT-035 · Wrench
 `Should` · `R1` · `Accepted` · Verify: GameTest
 

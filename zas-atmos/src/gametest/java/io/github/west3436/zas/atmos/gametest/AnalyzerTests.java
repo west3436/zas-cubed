@@ -4,6 +4,7 @@ import static io.github.west3436.zas.atmos.gametest.Area.N2;
 import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.T;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -22,11 +23,13 @@ import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.command.ZasCommands;
+import io.github.west3436.zas.hud.HudLevels;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,6 +50,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -563,5 +567,25 @@ public final class AnalyzerTests {
             a.forceLoad(false);
             h.succeed();
         });
+    }
+
+    // ---- CONT-034, CLIENT-008: the HUD while it's held ----------------------------------------------
+
+    /**
+     * Held in either hand, it makes the HUD show every reading, safe ones too: it's in {@code
+     * #zas:shows_readings}. With empty hands, it doesn't.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_held_in_either_hand_it_shows_every_hud_reading(GameTestHelper h) {
+        ServerPlayer p = FakePlayerFactory.get(h.getLevel(), new GameProfile(UUID.randomUUID(), "zas_analyzer_hud"));
+        ItemStack analyzer = new ItemStack(AtmosItems.ATMOS_ANALYZER.get());
+        h.assertTrue(analyzer.is(HudLevels.SHOWS_READINGS), "the analyzer isn't in #zas:shows_readings");
+        h.assertFalse(HudLevels.showsReadings(p), "every reading shows with empty hands");
+        p.setItemInHand(InteractionHand.MAIN_HAND, analyzer);
+        h.assertTrue(HudLevels.showsReadings(p), "every reading doesn't show with it in the main hand");
+        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        p.setItemInHand(InteractionHand.OFF_HAND, analyzer);
+        h.assertTrue(HudLevels.showsReadings(p), "every reading doesn't show with it in the off hand");
+        h.succeed();
     }
 }

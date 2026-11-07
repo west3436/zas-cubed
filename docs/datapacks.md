@@ -5,7 +5,7 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
-[hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
+[item tags](#item-tags), [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
 [airflow class tags](#airflow-classes), [reactions](#reactions) and
 [ignition sources](#ignition-sources), [fuel profiles](#fuel-profiles) and
 [block ignition](#block-ignition). Every format
@@ -716,6 +716,18 @@ tag, `[airflow] pressure_fragile_threshold_kpa`
   ticks rather than in one.
 
 A change to the tag applies after `/reload`, from the dimension's next atmos tick.
+
+## Item tags
+
+ZAS³ reads these Minecraft item tags, at `data/zas/tags/item/<name>.json`. Packs
+and mods add to them as to any tag.
+
+| Tag | Holds by default | Used for |
+|---|---|---|
+| `#zas:shows_readings` | nothing | An item here, held in either hand, makes the atmosphere HUD show all four readings, safe ones too, not only those at warning or worse (CLIENT-008). `zas_atmos` adds its analyzer (CONT-034) |
+
+The server checks the tags, and a change applies after `/reload`, from the
+player's next HUD update, within a quarter of a second.
 
 ## Ignition sources
 

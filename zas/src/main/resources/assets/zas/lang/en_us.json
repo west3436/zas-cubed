@@ -26,6 +26,7 @@
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",
+  "hud.zas.toxin.none": "Toxins %s",
   "hud.zas.temperature": "%s",
 
   "death.attack.zas.hypoxia": "%1$s ran out of oxygen",

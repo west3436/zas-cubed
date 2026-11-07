@@ -34,8 +34,10 @@ softsuit helmet have sealed it since
 show for them yet and there's still no analyzer (CONT-034), so this stays Accepted.*
 
 *2026-11-07: The analyzer part is built: the analyzer (CONT-034) is in `#zas:shows_hud`,
-the tag the HUD's held-item trigger reads. That trigger is still waiting to merge, and
-the owner's check of all three triggers is still to come, so this stays Accepted.*
+the tag the HUD's held-item trigger reads. That trigger is still waiting to merge. The
+analyzer is also in `#zas:shows_readings`, so holding it shows the HUD with all four
+readings already (CLIENT-008). The owner's check of all three triggers is still to come, so
+this stays Accepted.*
 
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
@@ -85,6 +87,18 @@ named, still at a warning and flashing at a danger.*
 *2026-11-06: The 2026-11-02 note's list leaves out a fifth GameTest,
 `client_008_a_filter_hides_the_gas_it_stops`: a filter's wearer is shown no toxin
 alert for the gas it keeps out of its breath (API-022).*
+
+*2026-11-07: The owner's call: while the player holds an analyzer (CONT-034) in either hand,
+the HUD shows all four readings all the time, not only at a warning or danger. A sealed
+helmet doesn't change this. Built: an item in `#zas:shows_readings`
+([datapacks.md](../datapacks.md#item-tags)) sends every reading's value, and the analyzer is
+in it. A safe reading shows in plain white with no icon, since vg's icons are all alerts;
+warnings and dangers look as before, and the order stays pressure, O₂, toxins, temperature.
+With no toxic gas in the breath the toxin row reads "Toxins 0.0 kPa". O₂ and toxins have no
+row while the eyes are in a fluid (LIFE-022). A creative player holding one sees the values
+with no alerts (LIFE-037), and a spectator doesn't see them.
+`client_008_a_held_analyzer_shows_every_reading` (GameTest) passes. This stays Implemented;
+the new look is for the owner's check.*
 
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028

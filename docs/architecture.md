@@ -1973,8 +1973,8 @@ Rejected:
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
 the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
 helmet trigger of CLIENT-001 and the internals indicator (CLIENT-009) aren't
-built, though internals are. CLIENT-001's analyzer trigger waits for the
-analyzer (CONT-034).*
+built, though internals are. Holding the analyzer (CONT-034) shows the HUD with
+every reading, safe ones too (owner's choice, 2026-11-07).*
 
 - **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
   gets none, a warning or a danger, judged on what reaches the player through
@@ -1983,6 +1983,10 @@ analyzer (CONT-034).*
   temperature unless its thermal protection takes all temperature damage
   there. Pressure and temperature are signed, low and cold negative. A hazard
   that is off in the dimension has no alert, and an exempt player none at all.
+  While the player holds an item in `#zas:shows_readings` in either hand, as
+  `zas_atmos` puts its analyzer, every reading keeps its value, alert or not, so
+  the HUD shows all four; an exempt player's show with no alert. O₂ and toxins
+  have no value while there's no breath, with the eyes in a fluid.
   The level comes from `BreathingRules.assess`, the same assessment a breath
   check makes.
 - **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
@@ -1995,7 +1999,9 @@ analyzer (CONT-034).*
 - **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
   the status effects draws one alert per reading in a column at the right edge
   of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
-  in the client's display units, yellow for a warning, red for a danger. Danger
+  in the client's display units, yellow for a warning, red for a danger. A safe
+  reading, shown only while every reading is, is white with no icon, as vg's
+  icons are all alerts. Danger
   icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
   The state is cleared on logout.
 
@@ -3701,4 +3707,6 @@ with no slots (`analyzer.AnalyzerMenu`, `client.AnalyzerScreen`).
   the player can walk with the window open. Turning to look still needs the
   window closed.
 - **The HUD.** The item is in `#zas:shows_hud`, so holding one shows the
-  atmosphere HUD (CLIENT-001).
+  atmosphere HUD (CLIENT-001), and in `#zas:shows_readings`, so the HUD shows all
+  four readings while it's held, safe ones too (CLIENT-008, owner's choice,
+  2026-11-07).

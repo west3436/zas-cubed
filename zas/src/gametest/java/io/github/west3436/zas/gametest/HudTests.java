@@ -26,8 +26,10 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -289,6 +291,73 @@ public final class HudTests {
         h.succeed();
     }
 
+    // ---- CLIENT-008, CONT-034: every reading while an analyzer is held --------------------------
+
+    /** Which of the four readings a state shows, top to bottom: pressure, O₂, toxins, temperature. */
+    private static List<Boolean> shown(AtmosHudPayload s) {
+        return List.of(
+                s.shows(s.pressure(), s.pressureKpa()),
+                s.shows(s.oxygen(), s.oxygenKpa()),
+                s.shows(s.toxins(), s.toxinKpa()),
+                s.shows(s.temperature(), s.temperatureK()));
+    }
+
+    /**
+     * Holding an item in {@code #zas:shows_readings} in either hand shows all four readings, safe
+     * ones with their values; with empty hands only those at warning or worse show. Here the item is a
+     * clock, and {@code zas_atmos} adds its analyzer. In air at 230 K only the temperature has an
+     * alert. A creative player holding one has its values and no alerts, and a spectator isn't shown
+     * them. With no breath, O₂ and toxins have no value, so they don't show.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_008_a_held_analyzer_shows_every_reading(GameTestHelper h) {
+        List<Boolean> all = List.of(true, true, true, true);
+        try (Lab lab = new Lab(h, 320)) {
+            lab.room(0, air(StandardAir.PRESSURE), 230);
+
+            AtmosHudPayload bare = synced(h, lab.player(0), "empty hands");
+            h.assertFalse(bare.readings(), "empty hands: every reading shown");
+            h.assertValueEqual(shown(bare), List.of(false, false, false, true), "empty hands: readings shown");
+            h.assertValueEqual(bare.pressureKpa(), 0f, "empty hands: a safe value sent");
+
+            FakePlayer p = lab.player(0);
+            p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.CLOCK));
+            AtmosHudPayload held = synced(h, p, "main hand");
+            h.assertValueEqual(shown(held), all, "main hand: readings shown");
+            h.assertValueEqual(held.pressure(), HudLevels.NONE, "main hand: pressure");
+            h.assertValueEqual(held.oxygen(), HudLevels.NONE, "main hand: O2");
+            h.assertValueEqual(held.toxins(), HudLevels.NONE, "main hand: toxins");
+            h.assertValueEqual(held.temperature(), -HudLevels.WARNING, "main hand: temperature");
+            close(h, held.pressureKpa(), StandardAir.PRESSURE, 0.5, "main hand: pressure shown");
+            close(h, held.oxygenKpa(), StandardAir.PRESSURE * 0.21, 0.1, "main hand: O2 shown");
+            close(h, held.temperatureK(), 230, 0.5, "main hand: temperature shown");
+            h.assertValueEqual(held.toxinGas(), Optional.empty(), "main hand: toxic gas shown");
+            h.assertValueEqual(held.toxinKpa(), 0f, "main hand: toxins shown");
+
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            p.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.CLOCK));
+            h.assertValueEqual(HudLevels.of(p), held, "off hand: the state");
+            p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            AtmosHudPayload away = HudLevels.of(p);
+            h.assertValueEqual(away, bare, "put away: the state");
+            h.assertTrue(away.differsFrom(held), "putting it away sends nothing");
+
+            FakePlayer creative = lab.player(0);
+            creative.setGameMode(GameType.CREATIVE);
+            creative.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.CLOCK));
+            AtmosHudPayload c = HudLevels.of(creative);
+            h.assertValueEqual(shown(c), all, "creative: readings shown");
+            h.assertFalse(c.any(), "creative: an alert");
+            close(h, c.temperatureK(), 230, 0.5, "creative: temperature shown");
+            creative.setGameMode(GameType.SPECTATOR);
+            h.assertFalse(HudLevels.showsReadings(creative), "a spectator is shown every reading");
+        }
+        AtmosHudPayload breathless = new AtmosHudPayload(
+                0, 0, 0, 0, 101, AtmosHudPayload.NO_BREATH, 293, Optional.empty(), AtmosHudPayload.NO_BREATH, true);
+        h.assertValueEqual(shown(breathless), List.of(true, false, false, true), "no breath: readings shown");
+        h.succeed();
+    }
+
     // ---- DATA-014: own-state sync -----------------------------------------------------------
 
     /**
@@ -357,7 +426,9 @@ public final class HudTests {
         for (AtmosHudPayload p : List.of(
                 AtmosHudPayload.NONE,
                 new AtmosHudPayload(-2, 2, 2, 2, 12.5f, 2.6f, 410, Optional.of(CO), 0.3f),
-                new AtmosHudPayload(1, 0, -1, 0, 400, 0, 235, Optional.empty(), 0))) {
+                new AtmosHudPayload(1, 0, -1, 0, 400, 0, 235, Optional.empty(), 0),
+                new AtmosHudPayload(
+                        0, 0, -1, 0, 101.3f, AtmosHudPayload.NO_BREATH, 230, Optional.empty(), 0.04f, true))) {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             AtmosHudPayload.STREAM_CODEC.encode(buf, p);
             h.assertValueEqual(AtmosHudPayload.STREAM_CODEC.decode(buf), p, "round trip");
