@@ -892,7 +892,11 @@ the lever if the per-cell cost ever matters.
 - **Older saves are brought forward (DATA-012).** Chunk records branch on their
   version as they are read. `DimensionData` and `zas_atmos` block entities
   (`DeviceData`) keep a list of steps, and the version they write follows from
-  it. A version they don't know is read by name, with a warning.
+  it. A version they don't know is read by name, with a warning. The internals
+  switch, the primed TTV, the multitool's selection and each `zas_atmos` data
+  component (`ItemData`) do the same with lists of their own. A component's
+  version is only in its saved form, so it doesn't affect how items compare or
+  what's synced. Data saved before these had versions reads as the first format.
 - **Corruption** of a chunk's record (bad checksum, unknown version, another
   chunk's data, a bad value) resets that chunk's cells to unzoned, with one
   warning naming the dimension and chunk (DATA-004, DATA-013). The rest of the

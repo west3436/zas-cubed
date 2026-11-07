@@ -219,6 +219,29 @@ player's internals switch, and the primed transfer valve entity.*
 the first release. A newer or unversioned `DimensionData` stays read by name with a
 warning, though fields the older mod doesn't know are lost at its next save.*
 
+*2026-11-06: Those three kinds of saved data now have versions. This stays Accepted, as
+saved sample worlds from a release can't exist yet.*
+
+- *Item data. Every component `zas_atmos` registers saves as `{FormatVersion, value}`
+  (`ItemData`): `gas`, `distribution_pressure`, `tank_low`, `leaking`, `suit_tank`,
+  `energy`, `charges`, `ttv_tanks`, `ttv_open` and `ttv_timer`. `zas` registers none. The
+  version is only in the saved form, so an old item and a new one are equal and stack, and
+  what's synced to clients carries none. A value with no version reads as the first
+  format.*
+- *The multitool's selection, in vanilla's `custom_data`, saves a `FormatVersion` beside
+  its fields. A canister's or pipe's paint, in vanilla's `block_state`, has none: its
+  format is vanilla's.*
+- *The internals switch (LIFE-029) saves as `{version, on}`, with steps of `DimensionData`'s
+  kind. The boolean alone, as it was saved before, reads as version 1.*
+- *The primed transfer valve saves a `FormatVersion`, with steps of `DeviceData`'s kind.*
+
+*Checked by the `data_012_` tests in `ItemDataTest` (Unit), and `ItemDataTests` and
+`InternalsTests` (GameTest), each reading old data written by hand and data saved as
+current. As before, the steps are only tested with made-up formats.*
+
+*What's left: saved sample worlds from each release, the Unit tests that migrate them, and
+the GameTest that loads an old world. All of these wait for a first release.*
+
 #### DATA-004 · Corruption tolerance
 `Must` · `R0` · `Implemented` · Verify: GameTest
 

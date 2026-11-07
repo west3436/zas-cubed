@@ -117,6 +117,13 @@ tasks.named('test', Test) {
     useJUnitPlatform()
     // The shipped sounds, which tests read as files.
     systemProperty 'zas_atmos.resources', file('src/main/resources').absolutePath
+    // CLIENT-007 reads both mods' compiled classes and language files, and prints what it finds.
+    def zasMain = project(':zas').sourceSets.main
+    inputs.files(zasMain.output.classesDirs, sourceSets.main.output.classesDirs)
+    systemProperty 'zas.resources', project(':zas').file('src/main/resources').absolutePath
+    systemProperty 'zas.mainClasses', zasMain.java.destinationDirectory.get().asFile.absolutePath
+    systemProperty 'zas_atmos.mainClasses', sourceSets.main.java.destinationDirectory.get().asFile.absolutePath
+    testLogging.exceptionFormat = 'full'
 }
 
 // The compatibility matrix (NFR-025, docs/release-checklist.md). Only -Pcompat.matrix=true adds these

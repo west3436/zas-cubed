@@ -1,9 +1,12 @@
 package io.github.west3436.zas.atmos.tool;
 
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
+import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -31,6 +34,13 @@ import net.minecraft.world.level.block.state.BlockState;
 public class MultitoolItem extends Item {
     private static final String CONTROLLER = "Controller";
     private static final String DIMENSION = "Dimension";
+
+    /**
+     * What brings a saved selection forward, oldest first, for {@link DeviceData#migrate(CompoundTag,
+     * List)} (DATA-012). Version 0 is a selection saved before versions were added, and its fields are
+     * those of version 1. It's brought forward each time it's read, and written only when one is made.
+     */
+    private static final List<Consumer<CompoundTag>> FORMAT_STEPS = List.of(tag -> {});
 
     public MultitoolItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -82,6 +92,7 @@ public class MultitoolItem extends Item {
     /** Selects the controller at a position. */
     public static void select(ItemStack stack, Level level, BlockPos pos) {
         CompoundTag tag = new CompoundTag();
+        tag.putInt(DeviceData.VERSION_KEY, FORMAT_STEPS.size());
         tag.putLong(CONTROLLER, pos.asLong());
         tag.putString(DIMENSION, level.dimension().location().toString());
         CustomData.set(DataComponents.CUSTOM_DATA, stack, tag);
@@ -91,6 +102,7 @@ public class MultitoolItem extends Item {
     public static Optional<BlockPos> selected(ItemStack stack, Level level) {
         CompoundTag tag =
                 stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        DeviceData.migrate(tag, FORMAT_STEPS);
         if (!tag.contains(CONTROLLER)
                 || !level.dimension().location().toString().equals(tag.getString(DIMENSION))) {
             return Optional.empty();
