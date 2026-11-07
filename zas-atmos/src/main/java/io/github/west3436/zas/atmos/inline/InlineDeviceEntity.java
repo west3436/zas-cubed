@@ -30,16 +30,18 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * The block entity of an {@link InlineDeviceBlock}: a pump, filter or mixer (architecture §11.5). It
- * has one 200 L {@link PipePort} per port face (CONT-007), each in a network of its own, and moves
- * gas between them in {@link #work}, only while it is switched on and powered.
+ * The block entity of a {@link PortedBlock}: a pump, filter or mixer (architecture §11.5), or the
+ * electrolyzer. It has one 200 L {@link PipePort} per port face (CONT-007), each in a network of its
+ * own, and moves gas between them, or into them, in {@link #work}, only while it is switched on and
+ * powered.
  *
- * <p>It is an area air controller's part in the gas-handling group (CONT-064), powered through its
- * zone or a multitool link like a vent. It draws {@link #drawWhenOn()} FE/t while it is on (CONT-065)
- * and works only on power that was paid for, so the lease it holds while off doesn't run it for
- * free.
+ * <p>It is an area air controller's part, powered through its zone or a multitool link like a vent:
+ * in the gas-handling group (CONT-064) unless it says otherwise. It draws {@link #drawWhenOn()} FE/t
+ * while it is on (CONT-065) and works only on power that was paid for, so the lease it holds while
+ * off doesn't run it for free.
  *
  * <p>A device extends this, gives {@link #work} and {@link #drawWhenOn}, and opens a menu that
  * extends {@link InlineDeviceMenu}.
@@ -49,7 +51,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     private static final String ON = "On";
 
     private final PipePort[] ports;
-    private final DevicePower power = new DevicePower(PowerPriority.GAS_HANDLING, this::currentDraw, this::now);
+    private final DevicePower power;
     private boolean on;
     private boolean unloading;
     private InlineStatus status = InlineStatus.OFF;
@@ -73,10 +75,23 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
      * @param type the block entity type
      * @param pos its position
      * @param state its block state
-     * @param portCount its ports, as many as its block's {@link InlineDeviceBlock#portFaces}
+     * @param portCount its ports, as many as its block's {@link PortedBlock#portFaces}
      */
     protected InlineDeviceEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, int portCount) {
+        this(type, pos, state, portCount, PowerPriority.GAS_HANDLING);
+    }
+
+    /**
+     * @param type the block entity type
+     * @param pos its position
+     * @param state its block state
+     * @param portCount its ports, as many as its block's {@link PortedBlock#portFaces}
+     * @param priority its group when its controller runs short (CONT-064)
+     */
+    protected InlineDeviceEntity(
+            BlockEntityType<?> type, BlockPos pos, BlockState state, int portCount, PowerPriority priority) {
         super(type, pos, state);
+        power = new DevicePower(priority, this::currentDraw, this::now);
         ports = new PipePort[portCount];
         for (int i = 0; i < portCount; i++) {
             int index = i;
@@ -90,10 +105,22 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     /** What it draws while it is on, in FE/t (CONT-065). */
     protected abstract int drawWhenOn();
 
-    /** The sound of its switch going on or off (CONT-126). */
-    protected abstract Supplier<SoundEvent> switchSound(boolean on);
+    /**
+     * The sound of its switch going on or off (CONT-126), or null for a device whose switch has none.
+     */
+    protected abstract @Nullable Supplier<SoundEvent> switchSound(boolean on);
 
-    /** A port, in the order of its block's {@link InlineDeviceBlock#portFaces}. */
+    /**
+     * Whether its block shows it running after a step that ran with this status. The default is
+     * every status: a pump shows running while it is on and powered, idle or not.
+     *
+     * @param status what its step did, never {@link InlineStatus#OFF}
+     */
+    protected boolean showsRunning(InlineStatus status) {
+        return true;
+    }
+
+    /** A port, in the order of its block's {@link PortedBlock#portFaces}. */
     public PipePort port(int index) {
         return ports[index];
     }
@@ -104,7 +131,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
             return List.of();
         }
         BlockState self = level.getBlockState(worldPosition);
-        if (!(self.getBlock() instanceof InlineDeviceBlock block)) {
+        if (!(self.getBlock() instanceof PortedBlock block)) {
             return List.of();
         }
         PipeNode n = PipeHost.across(
@@ -115,7 +142,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     @Override
     public PipeNode nodeOn(Direction face) {
         BlockState self = getBlockState();
-        int index = self.getBlock() instanceof InlineDeviceBlock block
+        int index = self.getBlock() instanceof PortedBlock block
                 ? block.portFaces(self).indexOf(face)
                 : -1;
         return index < 0 ? null : ports[index];
@@ -155,8 +182,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
         if (on != this.on) {
             this.on = on;
             setChanged();
-            if (level != null) {
-                AtmosSounds.play(level, worldPosition, switchSound(on));
+            Supplier<SoundEvent> sound = switchSound(on);
+            if (level != null && sound != null) {
+                AtmosSounds.play(level, worldPosition, sound);
             }
             if (!on && !isRemoved() && level instanceof ServerLevel server) {
                 showRunning(server, false);
@@ -214,7 +242,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
 
     private void exchangeWithHandler(ServerLevel level, int index) {
         BlockState self = getBlockState();
-        if (self.getBlock() instanceof InlineDeviceBlock block) {
+        if (self.getBlock() instanceof PortedBlock block) {
             Direction face = block.portFaces(self).get(index);
             if (GasHandlers.connects(level, worldPosition, self, face)) {
                 PipePort port = ports[index];
@@ -244,8 +272,10 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
     @Override
     protected final void atmosTick(ServerLevel level) {
         boolean running = running();
-        showRunning(level, running);
         status = running ? work(level) : InlineStatus.OFF;
+        if (!isRemoved()) {
+            showRunning(level, running && showsRunning(status));
+        }
         if (!running) {
             reportStopped();
         }

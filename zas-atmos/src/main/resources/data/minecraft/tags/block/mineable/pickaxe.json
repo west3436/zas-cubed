@@ -8,6 +8,7 @@
     "zas_atmos:scrubber",
     "zas_atmos:passive_vent",
     "zas_atmos:area_air_controller",
+    "zas_atmos:central_atmos_controller",
     "zas_atmos:fire_alarm",
     "zas_atmos:generator",
     "zas_atmos:firelock",
@@ -22,6 +23,10 @@
     "zas_atmos:filter",
     "zas_atmos:mixer",
     "zas_atmos:manual_valve",
-    "zas_atmos:redstone_valve"
+    "zas_atmos:redstone_valve",
+    "zas_atmos:electrolyzer",
+    "zas_atmos:station_wall",
+    "zas_atmos:reinforced_station_wall",
+    "zas_atmos:reinforced_glass_block"
   ]
 }

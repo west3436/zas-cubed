@@ -87,7 +87,7 @@ reads a setting gets the new one the next time it runs:
 | `[fire]` | The next check; for gas fires, the next atmos tick |
 | `[commands]` | At once. A player's client only updates its command suggestions when it next joins or its op status changes, but the server decides who can run a command |
 | `[profiling]` | At once |
-| `zas_atmos-server.toml` | Each device's next step, or the next explosion |
+| `zas_atmos-server.toml` | Each device's next step, or the next explosion; for `[gear]`, each wearer's speed within a second |
 
 **Restart-only** settings keep the value they had when the server started, and
 a reload doesn't change them: the two that choose the threads, `[atmos]
@@ -243,14 +243,20 @@ Its FE values are starting points for playtesting (D-37). Every key is live
 | `[power] volume_pump` | `20` | What a volume pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] filter` | `20` | What a filter draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] mixer` | `20` | What a mixer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] electrolyzer` | `80` | What a water electrolyzer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] fire_alarm` | `1` | A fire alarm's draw from the controller that covers it, in FE/t, 0 to 100,000 (CONT-044, CONT-065) |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
+| `[power] central_controller` | `5` | The central atmospherics controller's own draw, in FE/t, 0 to 100,000 (CONT-115). It pays this before any area air controller's shortfall; without it, it is unpowered and pays nothing |
+| `[power] central_controller_buffer` | `100000` | The central atmospherics controller's buffer, in FE, 1,000 to 10,000,000 (CONT-115) |
 | `[power] generator_output` | `40` | What the generator makes while it burns, in FE/t, 0 to 100,000 (CONT-061) |
 | `[power] generator_buffer` | `8000` | The generator's own store, in FE, 1,000 to 30,000. It starts no new fuel while the store is full |
 | `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 | `[controller] breach_drop_kpa` | `10.0` | A fall in a controller's zone pressure within one atmos tick, in kPa, 0 to 1,000, that sends it to danger 2 at once, as a breach to space does. It counts only for a preset with a pressure min2 above 0, and only once the pressure is below min1. 0 turns it off (CONT-043) |
+| `[central_controller] max_range_chunks` | `10` | How far a central atmospherics controller reaches from its own chunk, in chunks, 1 to 32: a square of chunks, at any height. It is also a new one's range, which a player may lower in its GUI. Lowering this lowers every range above it (CONT-116, CONT-117) |
+| `[central_controller] force_load` | `true` | Whether a central atmospherics controller keeps its own chunk and the 8 around it loaded, as `/forceload` does. Turned off, each lets its chunks go at its next step (CONT-122) |
 | `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
+| `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
 
 ## Common: `zas-common.toml`
 
@@ -268,5 +274,6 @@ shows values. Gas overlays, the HUD and their visual settings arrive in R1.
 | `[units] pressure` | `KPA` | Pressure unit: `KPA`, `ATM`, `BAR` or `PSI` |
 | `[units] temperature` | `CELSIUS` | Temperature unit: `KELVIN`, `CELSIUS` or `FAHRENHEIT` |
 
-Operator commands ([commands.md](commands.md)) run on the server and always
+They apply to the HUD, debug overlay, device windows and item tooltips. Operator
+commands ([commands.md](commands.md)) and other messages the server sends always
 report kPa and K.

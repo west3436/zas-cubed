@@ -34,9 +34,17 @@ public final class RecipeTests {
     private RecipeTests() {}
 
     /**
-     * The items {@code cont_051_recipes_use_vanilla_materials} checks by name. It isn't every item the
-     * content mod registers: the O2 and air tanks have no recipe, as they're made by filling an empty
-     * tank (CONT-039).
+     * Blocks whose recipes ship before the blocks do: the central atmospherics controller and the
+     * station walls and glass (CONT-129 to CONT-131). {@link #craftable} checks each once it's
+     * registered.
+     */
+    private static final List<String> RECIPES_AHEAD =
+            List.of("central_atmos_controller", "station_wall", "reinforced_station_wall", "reinforced_glass_block");
+
+    /**
+     * The items {@code cont_051_recipes_use_vanilla_materials} checks by name, and those of {@link
+     * #RECIPES_AHEAD} that are registered. It isn't every item the content mod registers: the O2 and
+     * air tanks have no recipe, as they're made by filling an empty tank (CONT-039).
      */
     private static List<Item> craftable() {
         List<Item> items = new ArrayList<>(List.of(
@@ -65,19 +73,22 @@ public final class RecipeTests {
                 AtmosItems.PORTABLE_PUMP.get(),
                 AtmosItems.PORTABLE_SCRUBBER.get(),
                 AtmosItems.RECHARGER.get(),
+                AtmosItems.ELECTROLYZER.get(),
                 AtmosItems.MULTITOOL.get(),
                 AtmosItems.CROWBAR.get(),
                 AtmosItems.FIRE_EXTINGUISHER.get(),
                 AtmosItems.EMPTY_TANK.get(),
                 AtmosItems.TANK_TRANSFER_VALVE.get(),
-                AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
-                AtmosItems.BREATH_MASK.get(),
-                AtmosItems.SOFTSUIT_HELMET.get(),
-                AtmosItems.SOFTSUIT_CHESTPLATE.get(),
-                AtmosItems.SOFTSUIT_LEGGINGS.get(),
-                AtmosItems.SOFTSUIT_BOOTS.get()));
+                AtmosItems.ATMOS_ANALYZER.get(),
+                AtmosItems.EMERGENCY_OXYGEN_TANK.get()));
+        AtmosItems.gear().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.batteries().stream().map(DeferredItem::get).forEach(items::add);
         AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
+        for (String id : RECIPES_AHEAD) {
+            BuiltInRegistries.ITEM
+                    .getOptional(ResourceLocation.fromNamespaceAndPath(ZasAtmosMod.MOD_ID, id))
+                    .ifPresent(items::add);
+        }
         return items;
     }
 

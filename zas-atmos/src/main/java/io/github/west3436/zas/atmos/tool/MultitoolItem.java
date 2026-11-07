@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.tool;
 
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
+import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
+import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -28,8 +30,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * The multitool links parts to an area air controller by hand (CONT-042, CONT-068): use it on a
  * controller to select it, then on a part or a firelock to link it to that controller, or unlink
  * it if it is linked. A linked part is powered and commanded; a linked firelock closes when the
- * controller alarms (CONT-043). Use it on nothing while sneaking to clear the selection. The
- * selection is kept on the stack, as the controller's position and dimension.
+ * controller alarms (CONT-043). Used on a central atmospherics controller, it moves the selected
+ * controller to that one, if it is in range (CONT-118). Use it on nothing while sneaking to clear the
+ * selection. The selection is kept on the stack, as the controller's position and dimension.
  */
 public class MultitoolItem extends Item {
     private static final String CONTROLLER = "Controller";
@@ -59,6 +62,14 @@ public class MultitoolItem extends Item {
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
         BlockState state = level.getBlockState(context.getClickedPos());
+        if (state.getBlock() instanceof CentralControllerBlock) {
+            // Any of the console's four blocks (CONT-118).
+            CentralControllerBlockEntity central = CentralControllerBlock.entity(level, context.getClickedPos(), state);
+            if (central != null && level instanceof ServerLevel server) {
+                tell(player, move(context.getItemInHand(), server, central));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (state.getBlock() instanceof FirelockBlock) {
             // Either half: the firelock is its lower half (CONT-043).
             if (level instanceof ServerLevel server) {
@@ -129,6 +140,26 @@ public class MultitoolItem extends Item {
                 linked ? "item.zas_atmos.multitool.linked" : "item.zas_atmos.multitool.unlinked",
                 pos(part),
                 pos(at.get()));
+    }
+
+    /**
+     * Moves the selected area air controller to a central controller, from whichever had it, if it is
+     * in that one's range (CONT-118).
+     *
+     * @return what to tell the player
+     */
+    public static Component move(ItemStack stack, ServerLevel level, CentralControllerBlockEntity central) {
+        Optional<BlockPos> at = selected(stack, level);
+        if (at.isEmpty()) {
+            return Component.translatable("item.zas_atmos.multitool.no_controller");
+        }
+        if (!level.isLoaded(at.get()) || !(level.getBlockEntity(at.get()) instanceof AreaAirControllerBlockEntity)) {
+            return Component.translatable("item.zas_atmos.multitool.controller_gone", pos(at.get()));
+        }
+        if (!central.take(at.get())) {
+            return Component.translatable("item.zas_atmos.multitool.out_of_range", pos(at.get()));
+        }
+        return Component.translatable("item.zas_atmos.multitool.moved", pos(at.get()), pos(central.getBlockPos()));
     }
 
     private static String pos(BlockPos p) {

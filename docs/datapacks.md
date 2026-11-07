@@ -5,7 +5,7 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
-[hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
+[item tags](#item-tags), [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
 [airflow class tags](#airflow-classes), [reactions](#reactions) and
 [ignition sources](#ignition-sources), [fuel profiles](#fuel-profiles) and
 [block ignition](#block-ignition). Every format
@@ -348,7 +348,7 @@ data/<namespace>/zas/thermal/<path>.json
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
-| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, above 0 and at most 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ |
+| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, 0 to 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ. A block of 0 lets no heat through, by conduction or by radiating to a vacuum, so no path through it carries any (HEAT-019) |
 | `temperature` | number | no | Makes the blocks heat sources at this temperature in K, 0 to 1,000,000. A source ends any heat path that reaches it and conducts with its own U |
 
 - A file needs `transmittance`, `temperature` or both.
@@ -368,6 +368,12 @@ data/<namespace>/zas/thermal/<path>.json
   | `ice.json` | `#minecraft:ice` | 2.2 |
   | `glass.json` | `#c:glass_blocks`, `#c:glass_panes` | 5.8 |
   | `metal.json` | iron, gold, copper and netherite storage blocks (`#c:storage_blocks/…`), iron bars, iron door, iron trapdoor | 50 |
+
+  The content mod ships its own, in `data/zas_atmos/zas/thermal/`:
+
+  | File | Blocks | U |
+  |---|---|---|
+  | `station_blocks.json` | `zas_atmos:station_wall`, `zas_atmos:reinforced_station_wall`, `zas_atmos:reinforced_glass_block` | 0 (CONT-129 to CONT-131) |
 
   And the heat sources (HEAT-016), one file per block in
   `data/zas/zas/thermal/sources/`:
@@ -714,8 +720,24 @@ tag, `[airflow] pressure_fragile_threshold_kpa`
   pressure_fragile_breaks_per_tick` blocks per atmos tick. The rest break in later
   ticks, if the difference is still there, so a chain of windows goes over several
   ticks rather than in one.
+- **Reinforced glass** (`zas_atmos:reinforced_glass_block`, CONT-131) is in neither
+  `#c:glass_blocks` nor `#c:glass_panes`, so it isn't in the tag and no pressure
+  difference breaks it. A pack that adds it to the tag makes it fragile.
 
 A change to the tag applies after `/reload`, from the dimension's next atmos tick.
+
+## Item tags
+
+ZAS³ reads these Minecraft item tags, at `data/zas/tags/item/<name>.json`. Packs
+and mods add to them as to any tag.
+
+| Tag | Holds by default | Used for |
+|---|---|---|
+| `#zas:shows_hud` | nothing | An item here shows the atmosphere HUD while held in either hand, with or without an alert (CLIENT-001). `zas_atmos` adds its analyzer (CONT-034) |
+| `#zas:shows_readings` | nothing | An item here, held in either hand, makes the atmosphere HUD show all four readings, safe ones too, not only those at warning or worse (CLIENT-008). `zas_atmos` adds its analyzer (CONT-034) |
+
+The server checks the tags, and a change applies after `/reload`, from the
+player's next HUD update, within a quarter of a second.
 
 ## Ignition sources
 
@@ -953,7 +975,7 @@ data/<namespace>/zas/protection/<name>.json
 | `max_pressure_kpa` | 101.325 | The highest pressure it protects against, at least 101.325 kPa; the default protects against no high pressure |
 | `min_temperature_k` | 293.15 | The lowest temperature it protects against, 0 to 293.15 K; the default protects against no cold |
 | `max_temperature_k` | 293.15 | The highest temperature it protects against, at least 293.15 K; the default protects against no heat |
-| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021) |
+| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021). It also shows the atmosphere HUD there (CLIENT-001) |
 | `gas_filtering` | `false` | Whether it filters the `#zas:toxic` gases out of the breath, in the head slot (API-022, CONT-088) |
 | `airflow_resistance` | 0 | How much it resists being pushed by airflow, 0 to 1 (FLOW-012) |
 

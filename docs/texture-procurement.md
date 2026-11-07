@@ -31,13 +31,13 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 - **AI tools make the textures,** the owner reviews each one before it
   merges, and a person checks it in game when its block or item is
   registered ([§7](#7-order-of-work)).
-- **A set-up batch, then five batches** that follow the build order, starting
+- **A set-up batch, then six batches** that follow the build order, starting
   with the S-01 slice ([§7](#7-order-of-work)).
 
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
 | Crop | 2 | – | 12 | – |
-| Redraw | 28 | 17 | 15 | 8 files |
+| Redraw | 31 | 17 | 15 | 8 files |
 | As is | – | – | 2 | – |
 | Original | 2 | – | – | – |
 
@@ -172,7 +172,7 @@ face.
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. |
+| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. An open end has a flared mouth, new for [#164](https://github.com/west3436/zas-cubed/issues/164): the tube steps out to an 8 px lip at the block edge, with a dark hole 6 px then 4 px wide (the owner's pick of three, 2026-11-07). |
 | `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | Done in batch 1: the pipe's flange and tube to the block's middle, closed by a rounded end. Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. Done in batch 5: a finned tube, the pipe's 4 px round tube with 8 px round fins every 2 px, in vg's near-black, not dyed, and with no flanges, since it joins only radiator pipe and the adaptor. The owner picked it over vg's four thin tubes. Its item is the 3D straight piece, like the pipe's. |
 | `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. Done in batch 5: inline, an undyed pipe's flange and tube into a steel collar, then the finned radiator pipe. It has no texture of its own. |
@@ -239,6 +239,17 @@ overlay, so the firelock's textures must work over any door:
   choice, 2026-11-01).
 - **Its model sits just outside the door's faces,** so the two don't flicker
   where they meet.
+
+#### Station walls and glass
+
+Added 2026-11-06 with D-80 and D-81, and done in wave 7. Each is one texture
+on every face of a full block.
+
+| Proposed id | vg source | States | Notes |
+|---|---|---|---|
+| `zas_atmos:station_wall` | `icons/turf/walls.dmi` | `metal0` | vg's lone wall tile in vg's dark greys: a recessed rim with a bolt in each corner, the plate's seam notched at the middle of each side, and the raised middle panel. vg's bevel becomes the vanilla finish. `metal0` dates from 2012 (7ad20bf); no change since has altered it, so it has no Goon or NC source. |
+| `zas_atmos:reinforced_station_wall` | `icons/turf/walls.dmi` | `rwall0` | The same plate with vg's reinforcing rods crossing its middle, three each way, and a boss where they meet. `rwall0` dates from 2010 (a620df8) and is unchanged since, so it has no Goon or NC source. |
+| `zas_atmos:reinforced_glass_block` | `icons/obj/structures/window.dmi` | `frwindow0`, `frwindow15` | vg's full reinforced window as a see-through block, translucent: an opaque blue-steel frame, 3 px, with vg's white rods as dashes along it, and a grey-blue pane at vg's alpha split over the block's two faces. The owner chose the wired pane (2026-11-07); vg's diamond wire mesh reads as a checker at 16 px, so it's a square mesh instead. vg's frame is half see-through and is drawn opaque, in the colours it shows over grey. Both states came into vg's `structures.dmi` in 2012 (b31ce8e), in a /tg/station import that ported Baystation 12 code; both license their icons CC BY-SA 3.0. They moved unchanged to `window.dmi` in 2022 (d567708). |
 
 ### 6.3 Content mod (`zas_atmos`): items
 
@@ -409,8 +420,9 @@ changes.
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters. Done (2026-11-02) | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber. Done (2026-11-02) | 17 |
 | 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent. Done (2026-11-02) | 8 |
+| 6. Station walls and glass (D-80, D-81) | Station wall, reinforced station wall, reinforced glass. Done in wave 7 (2026-11-07) | 3 |
 
-The batches cover all 63 rows. The pilot's three textures count in batch 1.
+The batches cover all 66 rows. The pilot's three textures count in batch 1.
 The pipe cap has no priority yet, but it's in batch 1 because an open pipe end
 leaks (CONT-004). Batches 4 and 5 can run alongside 2 and 3.
 

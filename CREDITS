@@ -203,6 +203,17 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pipe.json
 origin: original
 notes: The pipe item: the straight pipe model, scaled up in the inventory.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_mouth.json
+origin: original
+notes: A pipe's open end, on each face it leaks from: the tube flaring through a 6 px step to an 8 px lip at the block edge, hollow, its hole 6 px then 4 px wide and 3 px deep. The tube uses pipe.png; the rest uses pipe_mouth.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_mouth.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The open end's lip and rims in pipe.png's flange greys, which the dye colour tints, and its dark inside, which isn't tinted.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_yellow.png
 origin: vgstation13
 source: icons/obj/atmos.dmi
@@ -466,6 +477,10 @@ notes: The panel unpowered.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/area_air_controller.json
 origin: original
 notes: A flat item model for the panel's sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/central_atmos_controller.json
+origin: original
+notes: The console's four blocks in each facing and screen, each its own model.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/generator.png
 origin: vgstation13
@@ -1688,6 +1703,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/electrolyzer.jso
 origin: original
 notes: The electrolyzer item: the block model, off.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/electrolyzer.json
+origin: original
+notes: The electrolyzer's four facings, on and off, with its water at 0 to 4 buckets added on top, with the existing electrolyzer models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger.png
 origin: vgstation13
 source: icons/obj/power.dmi
@@ -1952,7 +1971,7 @@ notes: vg's sprite with two of its repeated columns dropped to fit 16, the light
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots.json
 origin: original
-notes: A flat item model for the magnetic boots, off.
+notes: A flat item model for the magnetic boots, off; its override picks magnetic_boots_on by the zas_atmos:on property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots_on.json
 origin: original
@@ -2387,6 +2406,41 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_
 origin: original
 notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).
 
+# Station walls and reinforced glass (D-80, D-81).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: metal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's lone wall tile at 16 px, in vg's dark greys: a recessed rim with a bolt in each corner, the plate's seam notched at the middle of each side, and the raised middle panel. vg's bevel becomes the vanilla finish.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: rwall0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The station wall's plate with vg's reinforcing rods crossing its middle, three each way, and a square boss where they meet. vg's darker rim and rods.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_glass_block.png
+origin: vgstation13
+source: icons/obj/structures/window.dmi
+state: frwindow0, frwindow15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's full reinforced window at 16 px: an opaque blue-steel frame with vg's white rods as dashes along it, and the grey-blue pane with a square wire mesh (the owner's pick of the wired pane; vg's diamond mesh reads as a checker at 16 px). The pane and mesh are partly transparent; each texel has 1 - sqrt(1 - a) of vg's alpha a, since a block shows it on two faces. vg's sprites came from /tg/station and Baystation 12, which license their icons CC BY-SA 3.0.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_glass_block.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all). Render type translucent, for the glass.
+
 # Crafting components (D-72).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/cable_coil.png
@@ -2674,6 +2728,26 @@ state: carbon_temp4
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
 
+# HUD internals indicator (CLIENT-009), from vg's internals button.
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_off.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_on.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal1_old
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_failing.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal2_old, internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, to flash between the two states.
+
 # Sounds (docs/research/vg-sounds.md)
 
 path: zas/src/main/resources/assets/zas/sounds/airflow/hiss.ogg
@@ -2947,3 +3021,28 @@ source: https://dejavu-fonts.github.io/ (DejaVu Sans Bold 2.37)
 license: Bitstream-Vera
 attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
 adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
+
+# Station blocks (CONT-129 to CONT-131). Their block models and textures come with their art.
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/station_wall.json
+origin: original
+notes: The station wall's one state, with the station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall's one state, with the reinforced_station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block's one state, with the reinforced_glass_block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/station_wall.json
+origin: original
+notes: The station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block item: the block model.

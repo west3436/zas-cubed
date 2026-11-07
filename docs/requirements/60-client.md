@@ -33,6 +33,24 @@ softsuit helmet have sealed it since
 [#182](https://github.com/west3436/zas-cubed/pull/182) (LIFE-021). The HUD doesn't
 show for them yet and there's still no analyzer (CONT-034), so this stays Accepted.*
 
+*2026-11-06: This replaces "The HUD doesn't show for them yet" above. The sealed-head part
+is built: the server sends whether the player's breathing is sealed (LIFE-021), by a
+capability or by protection data, so a breath mask or softsuit helmet on the head shows the
+HUD and taking it off hides it. The analyzer has its way in: an item in `#zas:shows_hud`
+([datapacks.md](../datapacks.md#item-tags)) shows the HUD while held in either hand, and the
+analyzer joins the tag when it's built. A creative player gets both triggers and still no
+alerts, and a spectator neither. With no alert, the HUD shows only the internals indicator
+(CLIENT-009), since a reading with no alert isn't shown (CLIENT-008).
+`client_001_a_sealed_head_shows_the_hud`, `client_001_a_held_tag_item_shows_the_hud`,
+`client_001_creative_is_shown_the_hud_and_a_spectator_is_not` and
+`client_001_the_mask_and_helmet_show_the_hud` (GameTests) pass. Left: the Manual check with
+a sealed helmet and an analyzer, and with F1, so this stays Accepted.*
+
+*2026-11-07: The analyzer part is built: the analyzer (CONT-034) is in `#zas:shows_hud`,
+the tag the HUD's held-item trigger reads. It is also in `#zas:shows_readings`, so
+holding it shows all four readings as well as the internals indicator (CLIENT-008). The
+owner's check of all three triggers is still to come, so this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
@@ -82,6 +100,18 @@ named, still at a warning and flashing at a danger.*
 `client_008_a_filter_hides_the_gas_it_stops`: a filter's wearer is shown no toxin
 alert for the gas it keeps out of its breath (API-022).*
 
+*2026-11-07: The owner's call: while the player holds an analyzer (CONT-034) in either hand,
+the HUD shows all four readings all the time, not only at a warning or danger. A sealed
+helmet doesn't change this. Built: an item in `#zas:shows_readings`
+([datapacks.md](../datapacks.md#item-tags)) sends every reading's value, and the analyzer is
+in it. A safe reading shows in plain white with no icon, since vg's icons are all alerts;
+warnings and dangers look as before, and the order stays pressure, O₂, toxins, temperature.
+With no toxic gas in the breath the toxin row reads "Toxins 0.0 kPa". O₂ and toxins have no
+row while the eyes are in a fluid (LIFE-022). A creative player holding one sees the values
+with no alerts (LIFE-037), and a spectator doesn't see them.
+`client_008_a_held_analyzer_shows_every_reading` (GameTest) passes. This stays Implemented;
+the new look is for the owner's check.*
+
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028
 
@@ -91,6 +121,19 @@ the pressure of the tank they draw from (LIFE-028).
 - **Rationale:** Inferred: a player on internals needs to know how much air is
   left.
 - **Verify:** Manual check of the indicator while a tank drains.
+
+*2026-11-06: Built ([#38](https://github.com/west3436/zas-cubed/issues/38)). A row above
+the alert column, where a full column doesn't reach it and it doesn't move the alerts, has
+vg's internals icon and the pressure of the first tank found (LIFE-028) in the display units
+(CLIENT-006), or no value without a tank. The icon has three states: off, with no hose or
+tile; on with the tank delivering, on a green tile; and on but failing with no seal, no tank
+or a tank that can't deliver, flashing between a red tile and the off icon (CLIENT-014). The
+pressure shows with internals off too, so a tank can be checked before switching on. It
+reaches the client at 1 kPa (DATA-014).
+`client_009_internals_and_the_tanks_pressure`, `client_009_an_alert_shows_the_indicator`,
+`client_009_internals_update_while_the_atmosphere_is_unresolved`,
+`client_009_payload_round_trips` and `client_001_the_mask_and_helmet_show_the_hud`
+(GameTests) pass. Left: the Manual check while a tank drains, so this stays Accepted.*
 
 #### CLIENT-014 · Not colour alone
 `Should` · `R1` · `Implemented` · Verify: Manual
@@ -582,6 +625,20 @@ API-063. The area air controller's window is the first device GUI to use them.*
 
 *2026-11-06: The owner's decision: bar joins the list, as the config already offers it.*
 
+*2026-11-06: Every device window's values, the area air controller's Cycle help and the
+tooltips of canisters, gas tanks, portables, suits and TTVs now follow the units. Still
+fixed: a stepper's tooltip, in kPa or K, because that's what its button adds, and messages
+the server sends (a firelock's lockdown, filling a tank, internals), because the server
+doesn't know a client's units. This stays Accepted: its manual check includes the
+analyzer, which doesn't exist yet. The conversions are tested by
+`client_006_pressures_convert_to_each_unit` and
+`client_006_temperatures_convert_to_each_unit`, and the tooltips by
+`client_006_item_tooltips_follow_the_display_units`.*
+
+*2026-11-07: The analyzer part is built: the analyzer's window (CONT-034) shows its
+pressures and temperature in the player's units. The owner's check of each unit in the
+HUD, the analyzer and a GUI is still to come, so this stays Accepted.*
+
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074
 
@@ -602,6 +659,10 @@ and analyzer have no window yet because they don't exist yet.*
 *2026-11-06: every one of those windows passed the owner's check in the game, with the
 filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, and
 Implemented.*
+
+*2026-11-07: The analyzer's window (CONT-034) uses the kit too, with a list of each gas's
+share and partial pressure added to it (`GasParts.shares`). Its look waits for the
+owner's check with CONT-034's.*
 
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Implemented` · Verify: Inspect
