@@ -6,6 +6,48 @@
     { "when": { "south": "true" }, "apply": { "model": "zas_atmos:block/pipe_arm", "y": 180 } },
     { "when": { "west": "true" }, "apply": { "model": "zas_atmos:block/pipe_arm", "y": 270 } },
     { "when": { "up": "true" }, "apply": { "model": "zas_atmos:block/pipe_arm", "x": 270 } },
-    { "when": { "down": "true" }, "apply": { "model": "zas_atmos:block/pipe_arm", "x": 90 } }
+    { "when": { "down": "true" }, "apply": { "model": "zas_atmos:block/pipe_arm", "x": 90 } },
+    {
+      "when": { "OR": [
+        { "north": "false", "east": "false", "south": "true", "west": "false", "up": "false", "down": "false" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth" }
+    },
+    {
+      "when": { "OR": [
+        { "north": "false", "east": "false", "south": "false", "west": "true", "up": "false", "down": "false" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth", "y": 90 }
+    },
+    {
+      "when": { "OR": [
+        { "north": "true", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth", "y": 180 }
+    },
+    {
+      "when": { "OR": [
+        { "north": "false", "east": "true", "south": "false", "west": "false", "up": "false", "down": "false" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth", "y": 270 }
+    },
+    {
+      "when": { "OR": [
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "true" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth", "x": 270 }
+    },
+    {
+      "when": { "OR": [
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "true", "down": "false" },
+        { "north": "false", "east": "false", "south": "false", "west": "false", "up": "false", "down": "false" }
+      ] },
+      "apply": { "model": "zas_atmos:block/pipe_mouth", "x": 90 }
+    }
   ]
 }

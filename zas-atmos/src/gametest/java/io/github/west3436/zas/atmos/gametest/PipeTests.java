@@ -29,11 +29,14 @@ import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.gametest.TestPlayers;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -52,6 +55,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -209,6 +213,68 @@ public final class PipeTests {
         h.succeed();
     }
 
+    /**
+     * CONT-004: a pipe has a mouth, in its shape as in its model, on each face it leaks from. A lone pipe
+     * has six. One that joins a pipe, a cap, a valve or a vent's back has one, on the far face, and
+     * joining it to something else takes that away. A straight run and a bend have none.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_004_a_pipe_has_a_mouth_on_each_face_it_leaks_from(GameTestHelper h) {
+        Area a = new Area(h, 2610);
+        a.clear(-1, -1, 7, 9);
+        pipe(a, 0, 2, 0);
+        mouths(a, 0, 2, 0, Direction.values());
+        pipe(a, 1, 2, 0);
+        mouths(a, 0, 2, 0, Direction.WEST);
+        mouths(a, 1, 2, 0, Direction.EAST);
+        pipe(a, 2, 2, 0);
+        mouths(a, 1, 2, 0);
+        mouths(a, 2, 2, 0, Direction.EAST);
+
+        cap(a, 0, 2, 2, Direction.EAST);
+        pipe(a, 1, 2, 2);
+        mouths(a, 1, 2, 2, Direction.EAST);
+        place(
+                a,
+                0,
+                2,
+                4,
+                AtmosBlocks.MANUAL_VALVE.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST));
+        pipe(a, 1, 2, 4);
+        mouths(a, 1, 2, 4, Direction.EAST);
+        place(a, 0, 2, 6, AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.WEST));
+        pipe(a, 1, 2, 6);
+        mouths(a, 1, 2, 6, Direction.EAST);
+
+        pipe(a, 4, 2, 2);
+        pipe(a, 5, 2, 2);
+        pipe(a, 5, 2, 3);
+        mouths(a, 5, 2, 2);
+        h.succeed();
+    }
+
+    /**
+     * Checks a pipe's mouths by its shape: a point half a pixel inside each face and 3.5 px off its
+     * axis is in a mouth's 8 px lip, and outside the 6 px flange of an arm.
+     */
+    private static void mouths(Area a, int x, int y, int z, Direction... want) {
+        VoxelShape shape = a.get(x, y, z).getShape(a.level, a.abs(x, y, z));
+        Set<Direction> mouths = EnumSet.noneOf(Direction.class);
+        mouths.addAll(List.of(want));
+        for (Direction d : Direction.values()) {
+            double off = 3.5 / 16;
+            Vec3 point = new Vec3(0.5, 0.5, 0.5)
+                    .add(Vec3.atLowerCornerOf(d.getNormal()).scale(7.5 / 16))
+                    .add(
+                            d.getAxis() == Direction.Axis.X ? 0 : off,
+                            d.getAxis() == Direction.Axis.Y ? 0 : off,
+                            d.getAxis() == Direction.Axis.Z ? 0 : off);
+            boolean lip = shape.toAabbs().stream().anyMatch(box -> box.contains(point));
+            a.h.assertValueEqual(
+                    lip, mouths.contains(d), "the pipe at " + x + ", " + y + ", " + z + ": a mouth to the " + d);
+        }
+    }
+
     // ---- CLIENT-019 ------------------------------------------------------------------------------
 
     /** A sealed room with its zone formed, holding gas. */
@@ -290,7 +356,7 @@ public final class PipeTests {
         h.assertValueEqual(jet.kind(), GasJetKind.OPEN_END, "the jet's kind");
         h.assertTrue(jet.dx() == 1 && jet.dy() == 0 && jet.dz() == 0, "the jet doesn't look east: " + jet);
         h.assertTrue(
-                new Vec3(jet.x(), jet.y(), jet.z()).distanceTo(near.add(0.2, 0, 0)) < 1e-6,
+                new Vec3(jet.x(), jet.y(), jet.z()).distanceTo(near.add(GasJets.PIPE_MOUTH, 0, 0)) < 1e-6,
                 "the jet isn't at the pipe's east mouth: " + jet);
         close(a, jet.amount(), flow.net(), "the jet's flow");
         h.succeed();
