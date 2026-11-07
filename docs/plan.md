@@ -616,8 +616,8 @@ right too.
    and planet ambients ([SPACE](requirements/51-compat-space.md), #54 to
    #56). Like Mekanism, it uses only the public API.
 3. **Northstar Redux and Create Cosmonautics adapters** (SPACE-011/012).
-4. **The D-78 adapters** ([COMPAT](requirements/52-compat-mods.md)), kept in this
-   repo. PneumaticCraft, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI
+4. **The D-78 adapters** ([COMPAT](requirements/52-compat-mods.md), #361 to #372),
+   kept in this repo. PneumaticCraft, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI
    with EMI come first, then Applied Energistics 2, Create Aeronautics and Modern
    Industrialization. Moving structures on Sable and The Factory Must Grow are
    maybes.
