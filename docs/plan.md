@@ -628,7 +628,7 @@ right too.
 | `zas` (framework mod) | api (jar-in-jar), engine | Geometry, hooks and mixins, persistence, sync, environments, life support, heat, fire, airflow, presets, commands, client |
 | `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power (D-68, D-69), GUIs, CC BY-SA 4.0 assets (D-39) |
 | `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023), R2 (D-66) |
-| `example-addon` | api | Usage examples for consumers (API-005) |
+| `example-addon` | api | Usage examples for consumers (API-047) |
 
 **Constraints from the platform research:**
 - **No split packages.** FML loads JPMS modules, and the same Java package in

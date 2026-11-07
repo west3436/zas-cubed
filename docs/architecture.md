@@ -1968,8 +1968,9 @@ Rejected:
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
 the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
-helmet and analyzer triggers of CLIENT-001 and the internals indicator
-(CLIENT-009) wait for internals and the analyzer.*
+helmet trigger of CLIENT-001 and the internals indicator (CLIENT-009) aren't
+built, though internals are. CLIENT-001's analyzer trigger waits for the
+analyzer (CONT-034).*
 
 - **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
   gets none, a warning or a danger, judged on what reaches the player through
@@ -3530,7 +3531,7 @@ client works out for itself. No client ever sees a zone (D-53).
   `OPEN_END`, 32 for the rest. `LEAK` and `OPEN_END` are `flowing`, sent every
   atmos tick while gas flows, so each player is sent at most 20 of them per
   second (`SendLimiter`): at most about 1.2 KiB/s, however large the station,
-  within DATA-006's 2 KiB/s. The budget is per second, not per game tick, because
+  which counts towards DATA-006's 2 KiB/s. The budget is per second, not per game tick, because
   a device's phase comes from the order it was added, so a few ends can share a
   game tick. Past the budget they just aren't sent, and since phases are fixed
   the same ends lose out each second.

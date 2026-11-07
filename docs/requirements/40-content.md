@@ -936,8 +936,8 @@ gas when mined, which is the gas they acquired, not a pre-filled one.
 #### CONT-018 · Portable pump and scrubber
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69
 
-The portables, a portable pump, a portable scrubber, a heater and a freezer
-(CONT-019), shall be blocks that run on a battery in a slot (CONT-112) and
+The portables, a portable pump, a portable scrubber, a heater and an air
+conditioner (CONT-019), shall be blocks that run on a battery in a slot (CONT-112) and
 work on their own on the zone they stand in. No area air controller shall
 power, order or list them. The portable pump and scrubber shall also work on
 a held tank. A portable's block shall show its switch at once: dark when switched
@@ -948,7 +948,7 @@ never moves more than leaving it on.
 - **Rationale:** vg: vg's portable pump and scrubber, which act on the room or
   a held tank ([vg
   §2.3](../research/vg-atmos-content.md#23-canisters-and-portables)); the
-  battery follows D-69, and the heater and freezer joining them D-73.
+  battery follows D-69, and the heater and air conditioner joining them D-73.
 - **Verify:** A GameTest checks each works on a room and on a held tank, and
   stops when its battery is empty, and that a controller in its room doesn't
   power or list it. Others check its block follows its switch at once, that it
@@ -1001,13 +1001,17 @@ as a release and as the portable scrubber. A held tank is smaller than that, so 
 empties at once. `cont_018_a_siphon_is_limited_to_150_litres_of_the_air` (Unit) and
 `cont_018_portable_pump_works_on_its_room_on_its_battery` (GameTest) cover it.*
 
-#### CONT-019 · Heater and freezer
+*2026-11-06: "freezer" in the statement and rationale is now "air conditioner", the
+built item and config key (D-73). The meaning doesn't change, and older notes keep
+the old name.*
+
+#### CONT-019 · Heater and air conditioner
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-05, D-73, S-05
 
-A heater (293–573 K) and a freezer (73–293 K) shall be portables
+A heater (293–573 K) and an air conditioner (73–293 K) shall be portables
 (CONT-018), each running on a battery in a slot (CONT-112), that hold the
-zone they stand in at a setpoint. A heater shall add heat to that zone, and a
-freezer take heat from it, until the zone reaches the setpoint, and neither
+zone they stand in at a setpoint. A heater shall add heat to that zone, and an
+air conditioner take heat from it, until the zone reaches the setpoint, and neither
 shall take it past the setpoint. With no zone where it stands, it shall do
 nothing.
 
@@ -1016,7 +1020,7 @@ nothing.
   D-73.
 - **Verify:** A GameTest checks a heater on a battery holds a room at its
   setpoint, within 0.5 K and never above it, and stops when its battery is
-  empty; and that a freezer holds a room at its setpoint, never below it.
+  empty; and that an air conditioner holds a room at its setpoint, never below it.
 - **Changed 2026-11-02 (the owner, reviewing
   [#177](https://github.com/west3436/zas-cubed/pull/177)):** the heater
   regulates the room. Its setpoint is the temperature of the zone its air
@@ -1059,6 +1063,10 @@ setpoint and never below it (architecture §11.5). Checked by
 *2026-11-05: its block follows its switch at once, and flipping its switch moves no
 more heat than leaving it on (CONT-018), checked by `DeviceSoundTests.cont_019_*`
 (GameTest).*
+
+*2026-11-06: "freezer" in the title, statement and Verify is now "air conditioner", the
+built item and config key (D-73). The meaning doesn't change. The rationale keeps
+"freezer", vg's name for it, and older notes keep the old name.*
 
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Implemented` · Verify: Unit
@@ -2135,7 +2143,7 @@ Devices shall draw these amounts by default:
 | Vent | 10 |
 | Scrubber (panic) | 15 (30) |
 | Pumps, filter, mixer | 20 |
-| Heater, freezer | 60 |
+| Heater, air conditioner | 60 |
 | Igniter (while active) | 20 |
 | Recharger (while charging) | 40 |
 | Electrolyzer | 80 |
@@ -2190,6 +2198,9 @@ scrubber_panic`, drawn while it isn't off
 This stays Accepted until every device's draw is in the config.*
 
 *2026-11-06: the air compressor and its 40 FE/t are removed (CONT-054).*
+
+*2026-11-06: "freezer" in the table is now "air conditioner", the built item and config
+key (`[power] air_conditioner`, D-73). The meaning doesn't change.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -2542,7 +2553,7 @@ reaches.
 *2026-11-03: Accepted by the owner as written.*
 
 #### CONT-118 · Moving an area air controller to another central controller
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
 
 The multitool shall move an area air controller to another central
 controller whose range it's in. The area air controller's GUI shall name the
@@ -2555,6 +2566,8 @@ central controller it belongs to, if any.
   Manual check that its GUI names the central controller.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-06: The tags line now lists Manual, which the Verify plan above already asks for.*
 
 #### CONT-119 · Removing a central controller
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116

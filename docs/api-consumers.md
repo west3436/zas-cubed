@@ -417,7 +417,7 @@ cover the common cases.
 A fire in a zone burns as hotspots, one per block: a vanilla fire block in the
 zone, or a `zas:gas_fire` block in mid-air (FIRE-018, FIRE-019). Each burns the
 zone's flammable gas. `Fires` finds them, starts them and puts them out
-(API-055 to API-058, Draft until the owner's review).
+(API-055 to API-058).
 
 ```java
 // Ignite the gas at a block, say from your igniter (server thread):
@@ -448,8 +448,8 @@ boolean burning = Fires.isBurning(level, zone);
 ## Sound on the client
 
 `ClientSounds` plays looping sounds and tells you how much thin air leaves of a
-sound (API-060 and API-061, Draft until the owner's review). It refers to no
-client-only class, so it is safe to call from code a server also loads.
+sound (API-060 and API-061). It refers to no client-only class, so it is safe
+to call from code a server also loads.
 
 ```java
 // A machine's hum, from a client tick, for as long as the machine is running:

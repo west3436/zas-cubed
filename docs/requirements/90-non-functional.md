@@ -81,11 +81,9 @@ rebuilds the published table, about 0.4 µs per zone.*
 `Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
 
 Atmos heap use shall average at most 256 bytes per zoned cell and 4 KiB per
-zone (excluding its cells), and at most 64 MiB in total in S-10. Spikes S3 and
-S5 may revise these by dated note.
+zone (excluding its cells), and at most 64 MiB in total in S-10.
 
-- **Rationale:** Inferred: starting budgets that fit a 4 GB heap (D-40);
-  spikes S3 and S5 may revise them.
+- **Rationale:** Inferred: starting budgets that fit a 4 GB heap (D-40).
 - **Verify:** Bench measures heap use in S-10.
 
 *2026-11-01: per-cell budget revised from 64 to 256 bytes after measuring it
@@ -108,6 +106,11 @@ what this budget is set against.*
 
 *2026-11-01: Accepted by the owner with the 256-byte per-cell budget. The
 per-zone and total limits are unchanged.*
+
+*2026-11-06: Removed "Spikes S3 and S5 may revise these by dated note" from the
+statement and its echo from the rationale. Those spikes are done
+([results](../research/spikes.md)), and the one revision came from #78, as above. The
+budgets don't change.*
 
 ## Reliability
 
@@ -235,9 +238,9 @@ numbers.*
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, D-04
 
 An exception thrown by third-party code (ambient providers, seal providers,
-code-defined reactions, hazard handlers, event listeners) shall be caught,
-logged at most once per source per minute, and that source's contribution
-skipped for that tick.
+code-defined reactions, hazard handlers, gas handlers, `ILifeSupport`,
+`IInternalSupply`, event listeners) shall be caught, logged at most once per
+source per minute, and that source's contribution skipped for that tick.
 
 - **Rationale:** Decision: D-55.
 - **Verify:** GameTests make each kind of third-party code throw and check it
@@ -327,6 +330,9 @@ more. A throwing suit leaving its wearer exposed is still for the owner to rule 
 *2026-11-06: The owner's ruling: a suit whose `ILifeSupport` or `IInternalSupply` throws
 gives no protection while it throws, as built, unlike an ambient provider, which keeps its
 last good answer.*
+
+*2026-11-06: The statement now names gas handlers, `ILifeSupport` and `IInternalSupply`,
+which the owner's decisions above added. The tests in the notes above already cover them.*
 
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
