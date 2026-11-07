@@ -331,15 +331,18 @@ LIFE-023's breathing sync is separate, so this stays Accepted.*
 separate" above as a reason to stay Accepted. Only the Bench is left.*
 
 #### DATA-015 · Airflow sync
-`Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005
+`Must` · `R1` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005
 
-Airflow data for active edges within 32 blocks of a player shall be sent to
-that player at most once per atmos tick, and only when an edge's pressure
-difference changes.
+Airflow data shall be sent to a player at most once per atmos tick:
+- what pushes the player (FLOW-017): while the player is near airflow, changed
+  or not, for edges within the push range (`range_blocks`) plus 8 blocks
+- what shows airflow (CLIENT-010): for openings within 32 blocks, only when the
+  list changes, and again every 10 s as a failsafe
 
 - **Rationale:** Decision: D-53.
-- **Verify:** A GameTest checks airflow packets reach only players within 32
-  blocks, at most once per tick; Bench measures bytes.
+- **Verify:** A Unit test checks what shows airflow stops at 32 blocks; GameTests
+  check it goes at most once per atmos tick and is held while nothing changes;
+  Bench measures bytes.
 
 *2026-11-05: Checked for CLIENT-003 and CLIENT-010. What the client had wasn't
 enough, and the rule above wasn't what the code did. FLOW-017's
@@ -376,6 +379,10 @@ comparison, is 89 bytes every second for one hole. `AirflowEffectsPayloadTest`, 
 `data_015_a_new_player_object_is_sent_it_again` (GameTests) check the sending.
 There's no bench yet, and FLOW-017's payload is the exception above, so this stays
 Accepted.*
+
+*2026-11-06: The owner's decision: the statement now says what's built, so FLOW-017's payload is
+no longer an exception to it. With `range_blocks` above 24, that payload reaches past 32 blocks,
+up to 40. There's still no bench, so this stays Accepted.*
 
 #### DATA-019 · Listener pressure sync
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
@@ -514,3 +521,8 @@ player, excluding the debug overlay.
 *2026-11-05: Gas particle events a block repeats while gas flows (CLIENT-019)
 count here. A player is sent at most 20 a second, about 1.2 KiB/s, however large
 the station. No Bench has measured this yet.*
+
+*2026-11-06: Two per-player caps alone add up to about 2.4 KiB/s (1.2 KiB/s and 1,230 B/s). That
+isn't a violation, as this is an average in S-10, but no cap guarantees it. The owner's decision:
+S-10's Bench decides, and only a measured average over 2 KiB/s calls for lower caps.*
+

@@ -26,7 +26,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * The air conditioner, the requirements' freezer (CONT-019, CONT-087, D-73). Each test builds in its
+ * The air conditioner (CONT-019, CONT-087, D-73). Each test builds in its
  * own {@link Site} and runs within one game tick, in a batch of its own so other tests' devices never
  * meet these.
  */

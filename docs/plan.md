@@ -586,6 +586,16 @@ right too.
 | Displaced gas (CORE-029) | As built |
 | A valve at a chunk's edge rebuilding twice per atmos tick ([#341](https://github.com/west3436/zas-cubed/pull/341)) | As built, and measured with S-09 |
 | The audit's stale comments, the two real-time tests left from [#338](https://github.com/west3436/zas-cubed/pull/338), and CONTRIBUTING's checks | Done, [#359](https://github.com/west3436/zas-cubed/pull/359) |
+| A pressure min2 of 0 and the breach alarm (CONT-043, [#356](https://github.com/west3436/zas-cubed/pull/356)) | Kept as merged |
+| What the doc cleanup before release removes (NFR-031) | Everything in `docs/`, with the docs NFR-031 lists moving to the wiki (D-79) |
+| The compatibility matrix (NFR-025) | Reworded: a client launch with all four mods, and the GameTests with the mods that load on a server |
+| The tick budget (NFR-002) and the sync budget (DATA-006) | Nothing yet: S-10's figures decide both |
+| Airflow sync (DATA-015) | Reworded to what's built, including the 40-block reach with `range_blocks` above 24 |
+| The `BAR` unit (CLIENT-006) | Added to the requirement |
+| The name "freezer" | Now "air conditioner" in current text. The decision log, vg's name and older dated notes keep it |
+| NFR-032's and API-042's Verify, S-09's text and NFR-040's tag | Reworded to match what's true |
+| `cont_127_a_leak_in_a_suit_hisses_once_and_again_when_refilled` and `cont_051_recipes_use_vanilla_materials` | The first gets `cont_038`'s room, and the second checks the seven items it left out |
+| The moved tests that nearly repeat `OpenCellTests` | Both sets stay |
 
 | Track | Area | Notes |
 |---|---|---|

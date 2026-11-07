@@ -36,13 +36,16 @@ public final class RecipeTests {
     /**
      * The items {@code cont_051_recipes_use_vanilla_materials} checks by name. It isn't every item the
      * content mod registers: the O2 and air tanks have no recipe, as they're made by filling an empty
-     * tank (CONT-039), and this list leaves out the fire alarm, igniter, pressure pump, volume pump,
-     * filter, mixer and tank transfer valve.
+     * tank (CONT-039).
      */
     private static List<Item> craftable() {
         List<Item> items = new ArrayList<>(List.of(
+                AtmosItems.FILTER.get(),
                 AtmosItems.FILTER_MIRRORED.get(),
+                AtmosItems.MIXER.get(),
                 AtmosItems.MIXER_MIRRORED.get(),
+                AtmosItems.PRESSURE_PUMP.get(),
+                AtmosItems.VOLUME_PUMP.get(),
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get(),
                 AtmosItems.MANUAL_VALVE.get(),
@@ -55,6 +58,8 @@ public final class RecipeTests {
                 AtmosItems.AREA_AIR_CONTROLLER.get(),
                 AtmosItems.GENERATOR.get(),
                 AtmosItems.FIRELOCK.get(),
+                AtmosItems.FIRE_ALARM.get(),
+                AtmosItems.IGNITER.get(),
                 AtmosItems.HEATER.get(),
                 AtmosItems.AIR_CONDITIONER.get(),
                 AtmosItems.PORTABLE_PUMP.get(),
@@ -64,6 +69,7 @@ public final class RecipeTests {
                 AtmosItems.CROWBAR.get(),
                 AtmosItems.FIRE_EXTINGUISHER.get(),
                 AtmosItems.EMPTY_TANK.get(),
+                AtmosItems.TANK_TRANSFER_VALVE.get(),
                 AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
                 AtmosItems.BREATH_MASK.get(),
                 AtmosItems.SOFTSUIT_HELMET.get(),

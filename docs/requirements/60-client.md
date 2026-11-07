@@ -565,7 +565,7 @@ round's test world.*
 `Should` · `R1` · `Accepted` · Verify: Manual · Trace: A-04
 
 Display units shall be a client setting:
-- pressure: kPa (default), atm or psi
+- pressure: kPa (default), atm, bar or psi
 - temperature: °C (default), K or °F
 
 They apply to the HUD, the analyzer and device GUIs. Commands always print kPa
@@ -579,6 +579,8 @@ and K.
 *2026-11-06: the config's temperature default was K, and is now °C as this says, so
 the HUD and debug overlay change with it. Other mods' GUIs read the units through
 API-063. The area air controller's window is the first device GUI to use them.*
+
+*2026-11-06: The owner's decision: bar joins the list, as the config already offers it.*
 
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074

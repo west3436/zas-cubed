@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * An air conditioner, the requirements' freezer (CONT-019): a portable that cools the zone it stands
+ * An air conditioner (CONT-019): a portable that cools the zone it stands
  * in toward a setpoint, on a battery (D-73). Its {@link #LIT} property is true while it cools.
  */
 public class AirConditionerBlock extends PortableBlock {

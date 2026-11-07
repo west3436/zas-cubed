@@ -1071,7 +1071,7 @@ built item and config key (D-73). The meaning doesn't change. The rationale keep
 #### CONT-087 · Thermomachine power
 `Should` · `R1` · `Implemented` · Verify: Unit
 
-A heater or freezer shall move up to 5 kW toward its setpoint, drawing
+A heater or air conditioner shall move up to 5 kW toward its setpoint, drawing
 60 FE/t from its battery while it works.
 
 - **Rationale:** Inferred: vg's thermomachines have no real power limit ([vg
@@ -1103,6 +1103,9 @@ moves at most `[power] air_conditioner_watts`, 5,000 W, and draws
 `cont_087_never_more_than_5_kw_and_never_below_the_setpoint` and
 `cont_087_limited_or_exact` (Unit, `AirConditionerMathTest`) and
 `cont_019_air_conditioner_cools_its_room_on_its_battery` (GameTest).*
+
+*2026-11-06: "freezer" in the statement is now "air conditioner", the built item and config key
+(D-73). The meaning doesn't change, and older notes keep the old name.*
 
 #### CONT-105 · Igniter
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, FIRE-014, FIRE-016
@@ -1811,6 +1814,9 @@ and `cont_043_a_link_covers_the_part_s_room`.*
 *2026-11-06: following the owner's change to CONT-040, a pressure min2 of 0 counts
 as no min2, so neither breach rule applies to it. `BreachAlarmTest` checks this.*
 
+*2026-11-06: The owner kept [#356](https://github.com/west3436/zas-cubed/pull/356)'s change: a room with a pressure min2 of 0 that opens to space
+doesn't go to danger 2 at once.*
+
 #### CONT-092 · Firelock reopening
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)
 
@@ -1887,7 +1893,7 @@ hotspot half has its GameTest, which needs the hotspots' API (FIRE-019).*
 room well below 473 K trips the alarm and raises its controller to danger 2.*
 
 #### CONT-045 · Thermostat
-`Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and freezer cover it), 2026-10-30. · Verify: GameTest
+`Could` · `R2` · `Deferred` — moved to R2 (lean scope; the heater and air conditioner cover it), 2026-10-30. · Verify: GameTest
 
 An area air controller may move its zone's temperature toward a target, using
 power.
@@ -2869,7 +2875,7 @@ passed it in the sound and particle world.*
 | R1 | R2 |
 |---|---|
 | Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
-| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and freezer, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
+| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and air conditioner, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's
 pipe layers reuse the multipart block, so they need another design. Batteries

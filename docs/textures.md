@@ -62,7 +62,7 @@ texture), or none (the block has no item).
 | `zas_atmos:airlock_controller` | Airlock controller | Not set | None yet | Flat sprite | Wall-mounted. Cycles an airlock with its vents and an air sensor. Idle and cycling. A small wall panel, like the fire alarm. |
 | `zas_atmos:air_sensor` | Air sensor | Not set | None yet | Block model | Reads the gas where it's placed, for an airlock controller. A small wall panel: standby, cycling and alert. |
 
-The heater and freezer are now portables (below).
+The heater and air conditioner are now portables (below).
 
 **Portable atmospherics**
 
@@ -72,7 +72,7 @@ The heater and freezer are now portables (below).
 | `zas_atmos:portable_pump` | Portable pump | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. A portable on a battery that heats the room, not piped gas (D-73). 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
-| `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. Replaces the freezer: a portable that cools the room. It should look different from the heater. The heater's size, in white. |
+| `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. A portable that cools the room. It should look different from the heater. The heater's size, in white. |
 | `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It shows the tanks it holds, standing on two shelves of five, each tinted by its kind (the owner's choices of 2026-11-02). |
 
 Portables connect to and disconnect from connector ports with the wrench.

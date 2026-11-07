@@ -135,8 +135,8 @@ version.
 
 - **Rationale:** Inferred: the usual library convention under D-04, giving
   consumers one minor version to migrate.
-- **Verify:** Inspect: the CI API diff (API-043) flags any removal that wasn't
-  deprecated in an earlier minor version.
+- **Verify:** Inspect: the CI API diff (API-043) flags any removal that its baseline
+  release didn't mark `@Deprecated`.
 
 *2026-11-06: Still Accepted. `:zas-api:apiCompat` now fails on a removal its baseline
 didn't mark `@Deprecated`, even in a new major, where it used to report only. Against a
@@ -146,6 +146,8 @@ The policy is in [docs/api-consumers.md](../api-consumers.md#versioning-and-the-
 CI compares nothing until `api_baseline_version` names a release (API-043). The check sees
 only that baseline, so it can't tell which release added a mark, and it exempts a `0.x`
 baseline, for which API-041 promises nothing.*
+
+*2026-11-06: The owner's decision: Verify now says what the check can see.*
 
 #### API-043 · API-diff check in CI
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04

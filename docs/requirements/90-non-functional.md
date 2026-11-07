@@ -57,6 +57,11 @@ and the zone still vents correctly.
 - **Verify:** Bench runs the explosion breach in S-10 and checks every tick's
   atmos time.
 
+*2026-11-06: This doesn't say what's built. The budget covers closing a tick's work, applying a
+result is never split, and devices, hazards and sync sit outside it. The owner's decision:
+S-10's figures settle it. If no tick goes over 10 ms, this is reworded to what's built. If one
+does, that shows what needs gating.*
+
 #### NFR-003 · Cost scales with activity
 `Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011
 
@@ -452,13 +457,13 @@ and a row.*
 #### NFR-025 · Compatibility matrix
 `Must` · `R1` · `Accepted` · Verify: Manual, GameTest
 
-Before each release, with ModernFix, FerriteCore, Lithium and Sodium (NeoForge
-builds) installed, the game shall launch and the S-01 to S-04
-smoke tests shall pass.
+Before each release, the game shall launch on a client with ModernFix,
+FerriteCore, Lithium and Sodium (NeoForge builds) installed, and the S-01 to S-04
+GameTests shall pass on a dedicated server with those of them that load there.
 
 - **Rationale:** Inferred: these performance mods are in most modpacks.
-- **Verify:** Manual and GameTest smoke tests with the matrix installed before
-  each release.
+- **Verify:** Before each release, a client launch by hand with all four, and the
+  GameTests with the server's mods (`-Pcompat.matrix=true`).
 
 *2026-11-01: Ad Astra left the R1 matrix with the adapter (D-66). It joins the matrix again when the adapter ships.*
 
@@ -470,6 +475,10 @@ tested there: it isn't loaded on a server, and all its mixins are client mixins.
 the client launch with all four mods, which has to be by hand and hasn't been run. It
 repeats with the headless run before each release:
 [release checklist](../release-checklist.md#compatibility-matrix-nfr-025).*
+
+*2026-11-06: The owner's decision: the statement and Verify now say what can be checked, as
+Sodium doesn't load on a dedicated server, so nobody plays S-01 to S-04 by hand with it. The
+client launch is still to do, so this stays Accepted.*
 
 #### NFR-022 · Optional compat isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: A-01
@@ -514,7 +523,11 @@ Every R1 scenario (S-xx) shall have a GameTest or a scripted manual test.
 
 - **Rationale:** Inferred: README rule 5; scenarios are how the requirements
   are proven end to end.
-- **Verify:** Inspect the test list against S-01 to S-13.
+- **Verify:** Inspect the test list against R1's scenarios, S-01 to S-05 and S-08 to
+  S-13. S-10's test is its Bench.
+
+*2026-11-06: The owner's decision: Verify leaves out S-06 and S-07, which moved to R2, and counts
+S-10's Bench as its test.*
 
 #### NFR-033 · CI on every PR
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: API-043, API-048
@@ -560,17 +573,20 @@ if that one is over too. The limit stays 10 %, though a slowdown just over it no
 chances to pass.*
 
 #### NFR-031 · Documentation
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04, D-10
+`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04, D-79
 
-Releases shall ship with the following, as Markdown in `docs/` linked from each
-release:
+Releases shall ship with the following, on the project's GitHub wiki, linked from
+each release:
 - player docs (mechanics and content)
 - pack and datapack docs (formats, defaults)
-- developer docs (API guide, javadoc)
+- developer docs (API guide, a link to the javadoc)
 - a changelog
 
-- **Rationale:** Decision: D-04 and D-10.
-- **Verify:** Inspect the release checklist and docs folder.
+- **Rationale:** Decision: D-04 and D-79.
+- **Verify:** Inspect the release checklist and the wiki.
+
+*2026-11-06: The owner's decision (D-79): these move from `docs/` to the wiki, in a cleanup before
+the first release that removes the rest of `docs/`. Until then they stay where they are.*
 
 ## Licensing and provenance
 
@@ -583,6 +599,9 @@ governed by NFR-041.
 
 - **Rationale:** Decision: D-01.
 - **Verify:** Inspect: PR reviews against the clean-room rule (NFR-043).
+
+*2026-11-06: The tag says when this began. It's a standing rule that holds for every release, and
+[#69](https://github.com/west3436/zas-cubed/issues/69) checks it at R1's.*
 
 #### NFR-043 · Clean-room rule in contributions
 `Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-01

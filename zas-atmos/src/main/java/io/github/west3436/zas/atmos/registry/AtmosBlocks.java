@@ -80,7 +80,7 @@ public final class AtmosBlocks {
     /** The heater (CONT-019). */
     public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
 
-    /** The air conditioner, the requirements' freezer (CONT-019). */
+    /** The air conditioner (CONT-019). */
     public static final DeferredBlock<AirConditionerBlock> AIR_CONDITIONER =
             BLOCKS.registerBlock("air_conditioner", AirConditionerBlock::new, metal());
 

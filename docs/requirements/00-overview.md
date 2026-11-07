@@ -53,7 +53,7 @@ decision that supersedes it.
 | D-07 | 2026-10-30 | **R1 space scope:** per-dimension ambients (core), life-support API, space-mod compat. **Not in R1:** biome/altitude ambients, moving structures. | Compat scope narrowed by D-29, then moved to R2 by D-66 |
 | D-08 | 2026-10-30 | **Built-in gases are real-world gases only.** SS13 fictional gases go in an optional addon or datapack. | |
 | D-09 | 2026-10-30 | **Platform:** Minecraft 1.21.1, NeoForge, Java 21 | Minimum NeoForge 21.1.264 (NFR-020) |
-| D-10 | 2026-10-30 | **Repository:** public at `github.com/west3436/zas-cubed`. Docs live in `docs/` as Markdown. | |
+| D-10 | 2026-10-30 | **Repository:** public at `github.com/west3436/zas-cubed`. Docs live in `docs/` as Markdown. | Docs changed by D-79 |
 | D-11 | 2026-10-30 | **Mekanism is cut from R1.** It's the first planned compat target after R1. When built, it's a free reference integration that uses only the public API, so other mods can copy it. ZAS³ is fully standalone. | Supersedes D-06. The [MEK](50-compat-mekanism.md) area is deferred. |
 | D-12 | 2026-10-30 | **ZAS³ aims to become the shared atmosphere API** for NeoForge 1.21.1. Research found no such API exists. | [research](../research/space-mods-and-prior-art.md#c-shared-api-niche-and-survival-mod-targets) |
 | D-13 | 2026-10-30 | **Zones form only when an area is enclosed *and* its air is being modified.** Ambient air never forms zones, natural caves included. What can trigger a new zone depends on the preset (D-14): **Normal** — deliberate changes only (devices, leaks, API calls, breaches of existing zones). **Hardcore** — also combustion (fires, lit furnaces and campfires) and planting in an enclosed area (D-33). | Once a zone exists, all processes affect it. D-68 adds a trigger, in both presets, that modifies no air: placing an area air controller (API-050). |
@@ -122,6 +122,7 @@ decision that supersedes it.
 | D-76 | 2026-11-06 | **Device GUIs take TGUI's look, drawn in code.** Device windows look like SS13's TGUI: its title bar and status eye, sections, labelled lists, tabs and colours. A small Java kit on `GuiGraphics` draws them, with no texture per screen and no embedded browser, and keeps vanilla menus and button ids (CONT-074). Text is DejaVu Sans, sized so a window fits at Auto GUI scale. DejaVu keeps its own license (Bitstream Vera), the one kind of asset that isn't CC BY-SA: a font may keep a license that allows bundling and changes, with its text in the jar. [#185](https://github.com/west3436/zas-cubed/issues/185) narrows to what code can't draw, and the owner closed it on 2026-11-06 with nothing left to draw. | Owner's call, 2026-11-06, on the mockups: "Your recommendations are sound." A window's shape changes with its state, which fixed textures fight, and a browser would be a large dependency no player could go without. vg's code stays reference only (D-01). The area air controller's window comes first. CLIENT-022, API-063, NFR-045. |
 | D-77 | 2026-11-06 | **A filter's or mixer's mirrored version is its own item, and the wrench doesn't mirror.** A filter or mixer keeps its side port on the side it was placed with. A Mirrored Filter and a Mirrored Mixer place the same blocks with the port on the left, craft shapelessly to and from the plain ones, and are what a mirrored block drops. The wrench will rotate parts and not mirror them, and the windows' Flip button is gone. | Owner's call, 2026-11-06, on the device windows: "there should be a "mirrored" version of the filter that can be shapelessly crafted using the regular filter and vice-versa", and "The wrench will *rotate* objects but won't mirror them." This replaces the wrench swap the owner chose on 2026-11-02, which no requirement covered. CONT-013, CONT-077, CONT-035. |
 | D-78 | 2026-11-06 | **Compat beyond Mekanism and the space mods comes in four tiers, and every adapter stays in this repo.** For sure: PneumaticCraft: Repressurized, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI with EMI. Very likely: Applied Energistics 2, and Create Aeronautics, with ambient parameters affecting lift. Likely: Modern Industrialization. Maybe: Sable, with moving structures carrying zones, and Create: The Factory Must Grow. Create itself gets no adapter. All are filed under R2. | Owner's call, 2026-11-06: "All of these compats should stay within our own repo; we provide the compat not them". On TFMG, the owner's reading is that its licence centres on training LLMs with its data, which we don't do. R1 still has no moving structures (D-07, SPACE-032). Sable replaces Valkyrien Skies and Create contraptions as the moving-structure target. COMPAT; [compat-targets](../research/compat-targets.md). |
+| D-79 | 2026-11-06 | **Everything in `docs/` goes before the first release.** A cleanup removes the folder, requirements, plan, research and architecture included. The player, pack and developer docs and the changelog move to the GitHub wiki (NFR-031). | Changes D-10 |
 
 ## Assumptions (confirmed 2026-10-31)
 
@@ -218,8 +219,8 @@ R1 end-to-end test plan (NFR-032).
 - **S-08:** A GameTest checks a softsuited player on internals survives in
   vacuum and in a CO zone while the tank lasts, and that hypoxia begins once
   it runs dry (with an accelerated tank).
-- **S-09:** A GameTest saves and reloads a station with zones, pipes,
-  canisters and a paused zone, checks every amount within 1e-9, and checks
+- **S-09:** A GameTest saves and reloads a station with zones, pipes, devices,
+  canisters, tanks and a paused zone, checks every amount within 1e-9, and checks
   the paused zone resumes when its chunk loads.
 - **S-10:** Bench runs the scripted scenario on reference hardware against
   NFR-001, NFR-002, NFR-004 and NFR-005; CI runs its headless engine version
@@ -243,6 +244,8 @@ firelock; S-09 keeps zones and a paused zone, with no pipe or canister
 contents. The vacuum test dimension is the End with a test datapack's vacuum
 ambient, since the GameTest server has only the vanilla dimensions. The plans
 above stay the R1 plans. See [Phase D exit status](../plan.md#phase-d-exit-status-2026-10-31).*
+
+*2026-11-06: S-09's plan gains devices and tanks, to match DATA-016's Verify.*
 
 *2026-11-02: S-01's R1 plan passes on the integration branch
 ([#160](https://github.com/west3436/zas-cubed/pull/160)), as
