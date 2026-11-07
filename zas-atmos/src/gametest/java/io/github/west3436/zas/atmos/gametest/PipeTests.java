@@ -29,6 +29,7 @@ import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.valve.ValveBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
 import io.github.west3436.zas.gametest.TestPlayers;
 import java.util.ArrayList;
@@ -239,7 +240,7 @@ public final class PipeTests {
                 0,
                 2,
                 4,
-                AtmosBlocks.MANUAL_VALVE.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST));
+                AtmosBlocks.MANUAL_VALVE.get().defaultBlockState().setValue(ValveBlock.AXIS, Direction.Axis.X));
         pipe(a, 1, 2, 4);
         mouths(a, 1, 2, 4, Direction.EAST);
         place(a, 0, 2, 6, AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.WEST));
