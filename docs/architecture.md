@@ -2447,7 +2447,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
-| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown) and `TankSettings` (the tank screen's payload) |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
@@ -3474,6 +3474,13 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   protects at every pressure and temperature; and each suit's helmet seals.
   They have no durability. Their armor points are small, except the hardsuit's,
   which are diamond's.
+- **Magnetic boots** (CONT-033, `MagneticBootsItem`). A `SuitItem` rated as
+  the hardsuit's boots, whose airflow resistance is 1 while it's on and 0 while
+  it's off (FLOW-012). On or off is the stack's `zas_atmos:magnetized`, so it's
+  saved with the boots and goes where they go. A keybind, B by default, sends
+  `MagneticBootsItem.TogglePayload`, and the server switches the boots in the
+  sender's feet slot and answers in the action bar. The item model's
+  `zas_atmos:on` property and `getArmorTexture` show them on or off.
 - **Hardsuit encumbrance** (CONT-089). `Encumbrance` keeps one transient
   `MOVEMENT_SPEED` modifier on a wearer, multiplying its speed by
   (1 − pieces × `[gear] hardsuit_slowdown`). The server sets it on NeoForge's

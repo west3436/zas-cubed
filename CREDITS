@@ -1967,7 +1967,7 @@ notes: vg's sprite with two of its repeated columns dropped to fit 16, the light
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots.json
 origin: original
-notes: A flat item model for the magnetic boots, off.
+notes: A flat item model for the magnetic boots, off; its override picks magnetic_boots_on by the zas_atmos:on property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots_on.json
 origin: original

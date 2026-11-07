@@ -170,6 +170,11 @@ openings, and the client's push and the onset impulse use it. The
 of a mob and of a player, and the impulse, and r = 1 from protection data stops
 both. Magnetic boots don't exist yet; they give r = 1 when CONT-033 lands.*
 
+*2026-11-07: Magnetic boots are built (CONT-033): r is 1 while they're on and 0
+while they're off. `cont_033_magnetic_boots_stop_airflow_while_on_and_not_while_off`
+checks that they stop the push on a mob and a player while on, and not while
+off.*
+
 #### FLOW-005 · Impact damage
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-030
 

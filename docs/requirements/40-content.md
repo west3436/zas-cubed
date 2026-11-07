@@ -1470,7 +1470,7 @@ it leaves the tank in the grid, as a bucket is left;
 `cont_090_crafting_a_chestplate_leaves_its_tank` checks it.*
 
 #### CONT-033 · Magnetic boots
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FLOW-012
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: FLOW-012
 
 Magnetic boots shall toggle on and off with a keybind, giving airflow
 resistance 1 while on.
@@ -1479,6 +1479,26 @@ resistance 1 while on.
   LIFE-029 does internals.
 - **Verify:** A GameTest checks magnetic boots stop airflow while on and not
   while off.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). `zas_atmos:magnetic_boots` are a `SuitItem`
+whose airflow resistance is 1 while they're on and 0 while they're off. New
+boots are off. Whether they're on belongs to the boots
+(`zas_atmos:magnetized`), so it's saved with them and goes where they go,
+through death too. The keybind, B by default under "Atmospherics", sends a
+toggle to the server. The server switches the boots in the sender's feet slot,
+for a living sender that isn't spectating, and answers in the action bar. The
+item and the worn boots show the vg light, red off and green on. The
+requirement gives no other protection: they protect as the hardsuit's boots
+do, so they can take those boots' place, with iron boots' armor, no slowdown
+and no durability.
+`cont_033_magnetic_boots_stop_airflow_while_on_and_not_while_off` checks a
+breach doesn't push a zombie in boots that are on but pushes one in boots
+that are off, as a bare one is pushed. For a player, it checks the server
+sends a resistance of 1 and no impulse, so its client doesn't push it, and
+sends 0 once the same boots are off.
+`cont_033_the_keybind_switches_the_worn_boots_and_they_keep_it` checks the
+toggle's handler, what it refuses, and that the state is saved and kept with
+the inventory.*
 
 #### CONT-034 · Gas analyzer
 `Must` · `R1` · `Accepted` · Verify: Manual

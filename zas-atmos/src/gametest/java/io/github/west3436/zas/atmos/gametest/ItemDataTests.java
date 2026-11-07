@@ -168,6 +168,7 @@ public final class ItemDataTests {
         samples.put(AtmosComponents.TANK_LOW.get(), Unit.INSTANCE);
         samples.put(AtmosComponents.LEAKING.get(), 1.5f);
         samples.put(AtmosComponents.SUIT_TANK.get(), ItemContainerContents.fromItems(List.of(tank())));
+        samples.put(AtmosComponents.MAGNETIZED.get(), true);
         samples.put(AtmosComponents.ENERGY.get(), 1234);
         samples.put(AtmosComponents.CHARGES.get(), 3);
         samples.put(AtmosComponents.TTV_TANKS.get(), ItemContainerContents.fromItems(List.of(tank(), tank())));

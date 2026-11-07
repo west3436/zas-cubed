@@ -7,6 +7,7 @@ import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
+import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.inline.MirroredDeviceItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
@@ -198,8 +199,12 @@ public final class AtmosItems {
             "hardsuit_boots",
             p -> new SuitItem(GearMaterials.HARDSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.hardsuit(false), false));
 
-    /** The masks and suit pieces, in the creative tab's order; each has a {@link SuitItem#lifeSupport}. */
-    public static List<DeferredItem<SuitItem>> gear() {
+    /** Magnetic boots (CONT-033): a keybind switches them, and while on airflow can't move their wearer. */
+    public static final DeferredItem<MagneticBootsItem> MAGNETIC_BOOTS =
+            ITEMS.registerItem("magnetic_boots", MagneticBootsItem::new);
+
+    /** The masks, suit pieces and boots, in the creative tab's order; each has a {@link SuitItem#lifeSupport}. */
+    public static List<DeferredItem<? extends SuitItem>> gear() {
         return List.of(
                 BREATH_MASK,
                 GAS_MASK,
@@ -210,7 +215,8 @@ public final class AtmosItems {
                 HARDSUIT_HELMET,
                 HARDSUIT_CHESTPLATE,
                 HARDSUIT_LEGGINGS,
-                HARDSUIT_BOOTS);
+                HARDSUIT_BOOTS,
+                MAGNETIC_BOOTS);
     }
 
     /** A filled emergency O2 tank's gas: O2 at 3 atm in 2 L (CONT-030). */

@@ -47,6 +47,13 @@ public final class GearMaterials {
         return material("hardsuit", diamond.defense(), diamond.toughness(), SoundEvents.ARMOR_EQUIP_IRON);
     });
 
+    /**
+     * The magnetic boots (CONT-033): iron boots' armor, as they're made from them. Its layer is the
+     * boots off; {@link MagneticBootsItem} shows them on.
+     */
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> MAGNETIC_BOOTS = MATERIALS.register(
+            "magnetic_boots", () -> material("magnetic_boots", 2, 0, 0, 0, SoundEvents.ARMOR_EQUIP_IRON));
+
     private GearMaterials() {}
 
     private static ArmorMaterial material(
