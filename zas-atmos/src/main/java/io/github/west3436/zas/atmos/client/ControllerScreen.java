@@ -23,7 +23,9 @@ import net.minecraft.world.entity.player.Inventory;
 /**
  * The area air controller's window (CONT-040, CONT-041, CONT-047, CONT-049, CONT-110): its status,
  * power, room and mode above four tabs. Air shows each reading and its rating, Mode the modes and
- * presets, Thresholds the preset's editor, and Parts what it covers and where each came from.
+ * presets, Thresholds the preset's editor, and Parts what it covers and where each came from. A
+ * controller a central atmospherics controller has claimed names it (CONT-118), and when its window
+ * was opened from there, a button goes back to that central controller's window (CONT-124).
  *
  * <p>A danger shows an icon and a word as well as a colour (CLIENT-014). Readings follow the player's
  * display units (CLIENT-006), while a threshold's steps stay in kPa and K, which is what the server
@@ -118,7 +120,7 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
     }
 
     private int header(Ui ui, ControllerSync s, int x, int y, int w) {
-        int rows = 4;
+        int rows = s.central() == null ? 4 : 5;
         ui.section(x, y, w, rows * Ui.ROW + 4, null);
         int labelX = x + Ui.PAD;
         int valueX = labelX + LABEL_WIDTH;
@@ -151,7 +153,31 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
         Component preset = text("preset." + s.preset());
         Component mode = text("mode." + ControllerMode.values()[s.mode()].key());
         ui.line(text(s.edited() ? "summary_edited" : "summary", mode, preset), valueX, y, Ui.ROW, Ui.WHITE, Face.BODY);
+        if (s.central() != null) {
+            y += Ui.ROW;
+            central(ui, s.central(), labelX, valueX, x + w - Ui.PAD, y);
+        }
         return y + Ui.ROW + 2;
+    }
+
+    /**
+     * The central controller it belongs to (CONT-118) and, opened from there, a button back to its
+     * window (CONT-124).
+     */
+    private void central(Ui ui, BlockPos central, int labelX, int valueX, int right, int y) {
+        ui.line(text("label.central"), labelX, y, Ui.ROW, Ui.LABEL, Face.BODY);
+        ui.line(
+                Component.literal(central.getX() + ", " + central.getY() + ", " + central.getZ()),
+                valueX,
+                y,
+                Ui.ROW,
+                Ui.WHITE,
+                Face.BODY);
+        if (menu.remote()) {
+            Component back = text("back");
+            int width = ui.buttonWidth(back);
+            ui.button(right - width, y, width, Ui.BUTTON_HEIGHT, back, Tone.DEFAULT, () -> press(ControllerMenu.BACK));
+        }
     }
 
     private static String formatted(int energy) {

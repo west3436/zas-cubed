@@ -664,6 +664,10 @@ Implemented.*
 share and partial pressure added to it (`GasParts.shares`). Its look waits for the
 owner's check with CONT-034's.*
 
+*2026-11-07: The central atmospherics controller's window (CONT-123) uses the kit, in the
+area air controller's proportions, 300 × 220 GUI pixels. It waits for the owner's check
+in the game.*
+
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Implemented` · Verify: Inspect
 
