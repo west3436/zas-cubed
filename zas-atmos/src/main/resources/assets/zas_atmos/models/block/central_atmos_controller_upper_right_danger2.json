@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/central_atmos_controller_upper_right",
+  "textures": {
+    "screen": "zas_atmos:block/central_atmos_controller_danger2"
+  }
+}

@@ -29,8 +29,8 @@ public final class GasJets {
     /** How far below the eye it is, in blocks. */
     static final double NOZZLE_BELOW = 0.25;
 
-    /** How far from a pipe's middle its open end's mouth is, in blocks: just past its 4 px core. */
-    public static final double PIPE_MOUTH = 0.2;
+    /** How far from a pipe's middle its open end's mouth is, in blocks: the mouth's lip, at the block's face. */
+    public static final double PIPE_MOUTH = 0.5;
 
     /**
      * The most flowing jets a player is sent in a second: about 1.2 KiB/s of 60-byte packets at most,

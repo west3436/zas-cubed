@@ -1349,7 +1349,7 @@ holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
 canister's loss and the kinds.*
 
 #### CONT-031 · Breath mask and helmets
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
 
 A breath mask and suit helmets shall provide sealed breathing for internals.
 
@@ -1362,8 +1362,13 @@ seal the breathing; the hardsuit helmet comes with CONT-036. The breath mask
 gives no other protection. `cont_031_internals_with_each_sealed_head` checks
 both.*
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The hardsuit helmet seals too.
+`cont_031_internals_with_each_sealed_head` now checks internals work with the
+breath mask, the gas mask and both suits' helmets, and not with either suit
+without its helmet.*
+
 #### CONT-088 · Gas mask
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-021, LIFE-026
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021, LIFE-026
 
 A gas mask shall provide sealed breathing and filter `zas:toxic` gases (CO,
 N₂O) out of the breath. It supplies no O₂, and its filter never wears out in
@@ -1372,6 +1377,15 @@ R1.
 - **Rationale:** Decision: D-47. A never-wearing filter keeps R1 lean.
 - **Verify:** A GameTest checks a gas-masked player in a CO zone takes no CO
   harm but still suffers hypoxia without O₂.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). `zas_atmos:gas_mask` is a `SuitItem` whose
+life support seals and filters (API-022), with no pressure or thermal rating,
+no armor points and no durability, so nothing wears out.
+`cont_088_a_gas_masked_player_takes_no_co_harm_but_still_suffers_hypoxia`
+puts a masked player in a sealed room of air with 1 kPa of CO: its breath has
+no CO and two seconds leave it unhurt, while a bare player beside it is
+harmed. With the room's O₂ taken away, its breath still has no CO, it is short
+of O₂, its air meter drains and hypoxia hurts it.*
 
 #### CONT-032 · Softsuit
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, S-02, D-47
@@ -1391,7 +1405,7 @@ never breaks and loses its tank. Each piece is rated from 0 to 1 atm and 0 to
 suited player in vacuum, at 450 K and at 600 kPa.*
 
 #### CONT-036 · Hardsuit
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-47
 
 A four-piece hardsuit shall provide a full seal and protection against all
 pressures and temperatures.
@@ -1400,16 +1414,40 @@ pressures and temperatures.
 - **Verify:** GameTests check a hardsuited player in vacuum, at 2,000 kPa and
   at 1,500 K is protected.
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). Four `SuitItem` pieces of the `hardsuit`
+armor material, each rated from 0 kPa to any pressure and from 0 K to any
+temperature, its helmet sealing. As the softsuit, it has no durability.
+`cont_036_a_hardsuited_player_is_protected_at_every_extreme` checks a
+hardsuited player takes no decompression in vacuum, no barotrauma at 2,000 kPa,
+no burns at 1,500 K and no frostbite at 50 K, where a bare player beside it
+takes each.*
+
+*2026-11-07: The owner's call on the armor, which the requirement doesn't give:
+diamond's, so 3, 8, 6 and 3 armor points from helmet to boots and a toughness of
+2, and the hardsuit keeps CONT-089's slowdown. It still can't be enchanted or
+repaired, and it sounds like iron when put on. The same GameTest checks the
+armor.*
+
 #### CONT-089 · Hardsuit encumbrance
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-47
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-47
 
 Each hardsuit piece worn shall reduce movement speed by 10 % (configurable).
 
 - **Rationale:** Decision: D-47.
 - **Verify:** A GameTest checks movement speed with one to four pieces.
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The 10 % is `[gear] hardsuit_slowdown` in
+`zas_atmos-server.toml`, 0 to 0.25 ([config.md](../config.md)). The pieces'
+shares add up: one transient movement-speed modifier multiplies the speed by
+(1 − pieces × the setting), so the full suit leaves 60 %. The server sets it
+when the wearer's equipment changes and again each second, so a new setting
+reaches suits already worn, and a mob in a hardsuit is slowed too.
+`cont_089_each_hardsuit_piece_cuts_speed_by_10_percent` checks one to four
+pieces leave 90, 80, 70 and 60 % of a player's speed, a new setting, a
+softsuit piece, taking the suit off and a zombie.*
+
 #### CONT-090 · Suit tank slot
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: LIFE-028
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-028
 
 Softsuit and hardsuit chestplates shall each have a tank slot.
 
@@ -1425,8 +1463,14 @@ in, swapping out the one there, and right-clicking the chestplate with an empty
 cursor takes it out, as a bundle does. `cont_090_suit_tank_slot` checks the
 slot and that internals draw from it first.*
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). The hardsuit chestplate has the same slot.
+`cont_090_suit_tank_slot` checks each chestplate's. The hardsuit chestplate is
+crafted from the softsuit's, so a softsuit chestplate crafted with a tank in
+it leaves the tank in the grid, as a bucket is left;
+`cont_090_crafting_a_chestplate_leaves_its_tank` checks it.*
+
 #### CONT-033 · Magnetic boots
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: FLOW-012
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: FLOW-012
 
 Magnetic boots shall toggle on and off with a keybind, giving airflow
 resistance 1 while on.
@@ -1435,6 +1479,26 @@ resistance 1 while on.
   LIFE-029 does internals.
 - **Verify:** A GameTest checks magnetic boots stop airflow while on and not
   while off.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). `zas_atmos:magnetic_boots` are a `SuitItem`
+whose airflow resistance is 1 while they're on and 0 while they're off. New
+boots are off. Whether they're on belongs to the boots
+(`zas_atmos:magnetized`), so it's saved with them and goes where they go,
+through death too. The keybind, B by default under "Atmospherics", sends a
+toggle to the server. The server switches the boots in the sender's feet slot,
+for a living sender that isn't spectating, and answers in the action bar. The
+item and the worn boots show the vg light, red off and green on. The
+requirement gives no other protection: they protect as the hardsuit's boots
+do, so they can take those boots' place, with iron boots' armor, no slowdown
+and no durability.
+`cont_033_magnetic_boots_stop_airflow_while_on_and_not_while_off` checks a
+breach doesn't push a zombie in boots that are on but pushes one in boots
+that are off, as a bare one is pushed. For a player, it checks the server
+sends a resistance of 1 and no impulse, so its client doesn't push it, and
+sends 0 once the same boots are off.
+`cont_033_the_keybind_switches_the_worn_boots_and_they_keep_it` checks the
+toggle's handler, what it refuses, and that the state is saved and kept with
+the inventory.*
 
 #### CONT-034 · Gas analyzer
 `Must` · `R1` · `Accepted` · Verify: Manual
@@ -1456,8 +1520,27 @@ It tells a player about the zone they're in without needing an area air controll
 used on nothing it reads the point they're standing at. It's built first of the items
 still to come, and its window uses the TGUI kit (D-76).*
 
+*2026-11-07: Built (architecture §11.14). Used on nothing it reads the air at the player's
+eyes and follows them, since they can walk with its window open. On a pipe it reads the
+network, on a pump, filter or mixer the network on the port clicked, and on a canister its
+own gas. On any other block it reads the point in front of the face clicked. A tank in the
+other hand gets a tab of its own, which reads the tank. The server reads every target and
+syncs the window at most four times a second, only when a shown value changes.
+GameTests check each reading against `/zas zone at`, `/zas at` or the target's own gas,
+that a player with no rights can't read a far target, and the sync's rate. The readout
+itself is the Manual check, so this stays Accepted until the owner has made it.*
+
+*2026-11-07: The owner's call: while a player holds the analyzer, in either hand, the HUD
+shows all four readings, pressure, O₂, toxins and temperature, all the time, not only those
+at warning or worse (CLIENT-008). A sealed helmet doesn't do this; only holding the analyzer
+does. A safe reading is plain white with no icon; warnings and dangers look as before. `zas`
+can't name the analyzer, so it reads the new item tag `#zas:shows_readings`, and `zas_atmos`
+puts the analyzer in it. `cont_034_held_in_either_hand_it_shows_every_hud_reading` and
+`client_008_a_held_analyzer_shows_every_reading` (GameTests) pass. The look is part of the
+Manual check, so this stays Accepted.*
+
 #### CONT-035 · Wrench
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 A wrench shall rotate and remove atmos parts.
 
@@ -1468,8 +1551,17 @@ A wrench shall rotate and remove atmos parts.
 *2026-11-06: The owner's call: the wrench rotates parts and doesn't mirror them.
 A filter's or mixer's mirrored version is crafted instead (D-77).*
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`zas_atmos:wrench` works on the blocks pipes join, other than a canister. Use
+turns a part a quarter turn about the face clicked; sneak-use removes it as
+mining would ([architecture §11.16](../architecture.md#1116-the-wrench-cont-035-cont-091)).
+It doesn't attach or detach a canister. `WrenchTests.cont_035_*` (GameTest)
+checks a pump and a cap turn, a pipe and the pump come off as items, a
+mirrored filter stays mirrored with its side port on its pipe, and a part that
+only faces sideways, such as the electrolyzer, turns about the vertical.*
+
 #### CONT-091 · Wrench pressure lock
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 The wrench shall refuse to remove a part holding more than 2 atm above ambient
 until it has been vented.
@@ -1478,6 +1570,16 @@ until it has been vented.
   §1](../research/vg-atmos-content.md#1-pipe-networks)).
 - **Verify:** A GameTest checks a part at 3 atm over ambient refuses removal
   and comes off once vented.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+A part's pressure is the highest of its networks' (a device's ports each have
+one); the ambient is the pressure where its gas would go if it came off. A
+refusal tells the player how many kPa over it is.
+`WrenchTests.cont_091_a_part_3_atm_over_ambient_comes_off_only_once_vented`
+(GameTest) checks a pipe at 3 atm over refuses and comes off once vented;
+`WrenchTests.cont_091_removing_a_part_with_a_wrench_conserves_its_gas` checks
+removing a pipe and a pump makes and loses no gas, with the conservation
+checker on.*
 
 #### CONT-037 · Fire extinguisher
 `Could` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, D-74
@@ -1910,7 +2012,7 @@ power.
 ## Obtaining gas and progression
 
 #### CONT-050 · Gas acquisition
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-01, D-33
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-01, D-33
 
 R1 shall provide these ways to obtain gas, with no other mods installed:
 - the water electrolyzer (CONT-055)
@@ -1925,11 +2027,16 @@ R1 shall provide these ways to obtain gas, with no other mods installed:
 routes. The Verify plan now says which gases each one gives, because the electrolyzer
 makes no N₂.*
 
+*2026-11-07: `ElectrolyzerTests.cont_050_gas_by_each_route` (GameTest) checks that
+no mod but Minecraft, NeoForge and ZAS³ is loaded. A water electrolyzer fills a
+canister with O₂. A scrubber takes the O₂ and N₂ from a room's air, and a filter
+splits them into two canisters: one holds only O₂ and the other only N₂.*
+
 #### CONT-054 · Air compressor
 `Must` · `R1` · `Rejected` — removed by the owner: R1 has no air compressor, and gets gas from the electrolyzer and from scrubbing and filtering (CONT-050), 2026-11-06.
 
 #### CONT-055 · Water electrolyzer
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-33
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33
 
 A water electrolyzer shall produce 1 mol/s of O₂ and 2 mol/s of H₂, drawing
 80 FE/t. The rate is gameplay-scaled; real electrolysis energy would make
@@ -1943,8 +2050,19 @@ facing its front, O₂ on the left and H₂ on the right.
 - **Changed 2026-11-02 (the owner, in the batch 4 art review):** each gas
   leaves by its own pipe port, on opposite sides.
 
+*2026-11-07: `ElectrolyzerTests.cont_055_it_makes_1_mol_of_o2_and_2_mol_of_h2_a_second`
+(GameTest) runs one for 5 s and finds exactly 5 mol of O₂ and 10 mol of H₂ at
+293.15 K, and nothing else, while the room around it gains no gas.
+`cont_055_each_gas_leaves_only_by_its_own_port` puts a pipe on each of its six
+faces at each of its four facings. Only the pipes on its left and right join it,
+and they get only O₂ and only H₂. `cont_055_it_stops_while_an_outlet_is_full`
+checks that it stops while either outlet is at 4500 kPa, the pressure pump's
+limit, and starts again once the gas is taken. The 80 FE/t is
+`[power] electrolyzer`, checked in
+`cont_060_an_electrolyzer_stops_when_its_power_is_cut`.*
+
 #### CONT-056 · Electrolyzer water supply
-`Must` · `R1` · `Accepted` · Verify: GameTest
+`Must` · `R1` · `Implemented` · Verify: GameTest
 
 The electrolyzer shall take water from buckets or a fluid capability into a
 4-bucket internal tank. One bucket lasts about 7.7 h of operation. Fluid
@@ -1957,6 +2075,18 @@ pipes join it only at the water inlet on its back.
   offered on the back and no other face.
 - **Changed 2026-11-02 (the owner, in the batch 4 art review):** fluid pipes
   join only the water inlet on the back.
+
+*2026-11-07: `ElectrolyzerTests.cont_056_buckets_and_a_fluid_capability_fill_the_tank`
+(GameTest) pours four water buckets in from different sides. Each leaves an
+empty bucket, and a fifth is refused once the tank is full. It then fills an
+empty tank with 2500 mB and 1500 mB through the fluid capability. Lava is
+refused, a simulated fill changes nothing, and nothing drains out. The water
+is kept through a save and load. `cont_056_the_water_used_per_second` checks
+that it uses one mole of water per mole of H₂: 0.036 mB a second, so a bucket
+lasts about 7.7 h. On its last drop it makes only the gas that water gives,
+then stops with no water.
+`cont_056_the_fluid_capability_is_on_the_back_only` checks each face at each
+facing.*
 
 #### CONT-053 · Photosynthesis
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-33, D-13, S-11
@@ -2146,6 +2276,14 @@ and `cont_060_a_real_mixer_runs_on_a_controller_and_stops_when_its_power_is_cut`
 `VolumePumpPowerTests.cont_060_a_real_volume_pump_stops_when_its_power_is_cut`
 (GameTest), as the pressure pump's. This stays Accepted until each device exists to check.*
 
+*2026-11-07: The water electrolyzer stops when its provider's power is cut:
+`ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`
+(GameTest). It has no power with no controller, even on and beside a burning
+generator. Under a generator-powered controller, it makes gas. The generators
+are removed and the buffer spent; once its lease runs out, it makes nothing,
+uses no water and shows off, and stays switched on. This stays Accepted until
+each device exists to check.*
+
 #### CONT-065 · Device draws
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
 
@@ -2182,6 +2320,11 @@ draws come with them.*
 *2026-11-02: The controller's 5 FE/t is in the config (`[power]
 area_air_controller`, [config.md](../config.md)). This stays Accepted until
 every device's draw is.*
+
+*2026-11-07: The electrolyzer's 80 FE/t is `[power] electrolyzer`, drawn from
+its controller while it is on, in the gas production group (CONT-064). It is
+checked in `ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`.
+This stays Accepted until every device's draw is in the config.*
 
 *2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing
@@ -2988,6 +3131,15 @@ stone's blast resistance (6).
 
 *2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
 
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:station_wall`, with a
+U of 0 from `data/zas_atmos/zas/thermal/station_blocks.json` (HEAT-019). Its art and recipe
+come in their own PR. Checked by
+`cont_129_cont_131_station_blocks_keep_a_room_at_its_temperature_beside_lava`,
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
+
+*2026-11-07: the owner approved its hardness: 3, mined with a stone pickaxe or better.*
+
 #### CONT-130 · Reinforced station wall
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
 
@@ -2999,6 +3151,15 @@ with obsidian's blast resistance (1,200).
   and that a room walled with it keeps its temperature in a vacuum.
 
 *2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
+
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:reinforced_station_wall`,
+with a U of 0 from the same file as the station wall's. Its art and recipe come in their own
+PR. Checked by
+`cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks`,
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
+
+*2026-11-07: the owner approved its hardness: 25, mined with a diamond pickaxe or better.*
 
 #### CONT-131 · Reinforced glass
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-81, FLOW-007
@@ -3013,6 +3174,27 @@ resistance (1,200). It has no pane form.
 
 *2026-11-06: Added for review. The owner set the block form and blast resistance;
 [#320](https://github.com/west3436/zas-cubed/issues/320) set the rest. The `Should` is mine.*
+
+*2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:reinforced_glass_block`
+(`zas_atmos:reinforced_glass` is the crafting component's sheet). It is a vanilla
+`TransparentBlock`, as glass is. It stays
+out of `#zas:pressure_fragile` by staying out of `#c:glass_blocks` and `#c:glass_panes`, the
+tag's defaults, so a pack that adds it to the tag on purpose can make it fragile. Its art and
+recipe come in their own PR. Checked by
+`cont_131_reinforced_glass_holds_above_the_threshold_that_breaks_glass`,
+`cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks` and
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
+
+*2026-11-07: the owner approved its hardness: 25, mined with a diamond pickaxe or better, and
+it drops itself without Silk Touch.*
+
+*2026-11-07: the owner's call: it lets no heat through, like the station walls. Its U is
+0, from `data/zas_atmos/zas/thermal/station_blocks.json` with theirs (HEAT-019). It stays Draft,
+as CONT-129 and CONT-130 do. Checked by
+`cont_129_cont_131_station_blocks_keep_a_room_at_its_temperature_beside_lava` and
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum`, where a room
+with a reinforced glass window keeps its temperature, and by
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 ## R1 / R2 split
 

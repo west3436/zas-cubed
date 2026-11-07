@@ -18,13 +18,13 @@ import net.minecraft.world.entity.player.Inventory;
  */
 public class CanisterScreen extends TguiScreen<CanisterMenu> {
     private static final int WIDTH = 216;
-    private static final double[] GAUGE_STOPS = {
+    static final double[] GAUGE_STOPS = {
         ContainerFailure.CANISTER_RATED_KPA / 2,
         ContainerFailure.CANISTER_RATED_KPA,
         ContainerFailure.CANISTER_EXPLODE_KPA
     };
     private static final int[] GAUGE_COLOURS = {Ui.GOOD, Ui.AVERAGE, Ui.BAD_FILL};
-    private static final int GAUGE_RADIUS = 21;
+    static final int GAUGE_RADIUS = 21;
     private static final int READINGS_HEIGHT = 3 * Ui.ROW;
     private static final int RELEASE_HEIGHT = 2 + 2 * Ui.BUTTON_ROW + 1;
     private static final List<Component> VALVE = List.of(DeviceParts.text("open"), DeviceParts.text("closed"));

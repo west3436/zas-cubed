@@ -5,6 +5,7 @@ import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
+import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
@@ -158,6 +159,11 @@ public final class AtmosBlockEntities {
             "valve",
             () -> BlockEntityType.Builder.of(
                             ValveBlockEntity::new, AtmosBlocks.MANUAL_VALVE.get(), AtmosBlocks.REDSTONE_VALVE.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<ElectrolyzerBlockEntity>> ELECTROLYZER = BLOCK_ENTITIES.register(
+            "electrolyzer",
+            () -> BlockEntityType.Builder.of(ElectrolyzerBlockEntity::new, AtmosBlocks.ELECTROLYZER.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

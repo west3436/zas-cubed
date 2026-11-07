@@ -21,6 +21,20 @@ public interface PipeHost {
     PipeNode nodeOn(Direction face);
 
     /**
+     * Dissolves the networks of its nodes and of the nodes they join, so the next ones built follow
+     * its connections as they are now: call it after they change, as when a wrench turns the block
+     * (CONT-035). Each member keeps its share by volume (CONT-003). Server side.
+     */
+    void reconnect();
+
+    /**
+     * The pressure it holds, in kPa: the highest of its nodes' networks', building any that has
+     * dissolved. A node's buffer is part of its network, so this is a pipe's network's pressure, or
+     * the highest of a device's ports'. Server side.
+     */
+    double highestPressure();
+
+    /**
      * The node across a face of a block, if gas passes between the two blocks there ({@link
      * PipeConnector#joined}, so not through a shut valve) and the neighbour is loaded. A neighbour in
      * an unloaded chunk isn't reached, and that chunk keeps its share saved.

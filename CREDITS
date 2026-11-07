@@ -203,6 +203,17 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/pipe.json
 origin: original
 notes: The pipe item: the straight pipe model, scaled up in the inventory.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_mouth.json
+origin: original
+notes: A pipe's open end, on each face it leaks from: the tube flaring through a 6 px step to an 8 px lip at the block edge, hollow, its hole 6 px then 4 px wide and 3 px deep. The tube uses pipe.png; the rest uses pipe_mouth.png.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/pipe_mouth.png
+origin: vgstation13
+source: icons/obj/pipes/regular.dmi
+state: 12, 3
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The open end's lip and rims in pipe.png's flange greys, which the dye colour tints, and its dark inside, which isn't tinted.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/canister_yellow.png
 origin: vgstation13
 source: icons/obj/atmos.dmi
@@ -1692,6 +1703,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/electrolyzer.jso
 origin: original
 notes: The electrolyzer item: the block model, off.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/electrolyzer.json
+origin: original
+notes: The electrolyzer's four facings, on and off, with its water at 0 to 4 buckets added on top, with the existing electrolyzer models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger.png
 origin: vgstation13
 source: icons/obj/power.dmi
@@ -1956,7 +1971,7 @@ notes: vg's sprite with two of its repeated columns dropped to fit 16, the light
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots.json
 origin: original
-notes: A flat item model for the magnetic boots, off.
+notes: A flat item model for the magnetic boots, off; its override picks magnetic_boots_on by the zas_atmos:on property.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/magnetic_boots_on.json
 origin: original
@@ -2391,6 +2406,41 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_
 origin: original
 notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).
 
+# Station walls and reinforced glass (D-80, D-81).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: metal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's lone wall tile at 16 px, in vg's dark greys: a recessed rim with a bolt in each corner, the plate's seam notched at the middle of each side, and the raised middle panel. vg's bevel becomes the vanilla finish.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: rwall0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The station wall's plate with vg's reinforcing rods crossing its middle, three each way, and a square boss where they meet. vg's darker rim and rods.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/reinforced_glass_block.png
+origin: vgstation13
+source: icons/obj/structures/window.dmi
+state: frwindow0, frwindow15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's full reinforced window at 16 px: an opaque blue-steel frame with vg's white rods as dashes along it, and the grey-blue pane with a square wire mesh (the owner's pick of the wired pane; vg's diamond mesh reads as a checker at 16 px). The pane and mesh are partly transparent; each texel has 1 - sqrt(1 - a) of vg's alpha a, since a block shows it on two faces. vg's sprites came from /tg/station and Baystation 12, which license their icons CC BY-SA 3.0.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_station_wall.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_glass_block.json
+origin: original
+notes: A full block with one texture on every face (vanilla's cube_all). Render type translucent, for the glass.
+
 # Crafting components (D-72).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/cable_coil.png
@@ -2611,6 +2661,132 @@ notes: A flat item model for the bluespace crystal sprite.
 
 # End of crafting components.
 
+# Central atmospherics controller (D-75): the 2 by 2 by 1 console, after vg's
+# atmospheric alert computer.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The console's screen texture, normal, 32 x 32. Rows 0 to 18: the monitor's front, vg's alert display at 1 texel a pixel in vg's cyan bezel: the status light (drawn at 6 x 6), two gauges and three readouts, then a row of four zone lights (new) over vg's line. Rows 19 to 24: the keyboard shelf from above, vg's keys.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger1.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:1
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 1: vg's yellow light, and one zone light yellow.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger2.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:2
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Danger 2: vg's red light and one zone light, flashing over vg's 2 frames.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_danger2.png.mcmeta
+origin: original
+notes: 10 ticks a frame, vg's 0.5 s.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_unpowered.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:00
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Unpowered: the screen and keys dark.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_front.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The casing in vg's console grey with the vanilla finish: the monitor's top with vents (rows 6 to 15), and the shelf's front edge and the pedestal's front with vg's grille (rows 19 to 31).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_side.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The left side (columns 0 to 15, front at the right) and the right side (16 to 31, front at the left) of the monitor, shelf and pedestal. On the right side, vg's red power cable runs from the monitor down into the pedestal.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/central_atmos_controller_back.png
+origin: vgstation13
+source: icons/obj/computer.dmi
+state: alert:0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The back of the monitor, shelf and pedestal, with vents. The undersides use its lower rows.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left.json
+origin: original
+notes: The 2 by 2 console's lower left block, facing north (left as seen from the front, so the east block): its part of the pedestal, the keyboard shelf and the foot of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_danger1.json
+origin: original
+notes: The lower left block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_danger2.json
+origin: original
+notes: The lower left block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_left_unpowered.json
+origin: original
+notes: The lower left block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right.json
+origin: original
+notes: The 2 by 2 console's lower right block, facing north (right as seen from the front, so the west block): its part of the pedestal, the keyboard shelf and the foot of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_danger1.json
+origin: original
+notes: The lower right block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_danger2.json
+origin: original
+notes: The lower right block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_lower_right_unpowered.json
+origin: original
+notes: The lower right block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left.json
+origin: original
+notes: The 2 by 2 console's upper left block, facing north (left as seen from the front, so the east block): its part of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_danger1.json
+origin: original
+notes: The upper left block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_danger2.json
+origin: original
+notes: The upper left block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_left_unpowered.json
+origin: original
+notes: The upper left block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right.json
+origin: original
+notes: The 2 by 2 console's upper right block, facing north (right as seen from the front, so the west block): its part of the monitor. The console is built from boxes in one 32 x 32 x 16 space and cut into its four blocks: a monitor 10 deep at the back, a shelf 3 tall the full depth with the keys in front, and a pedestal set 2 back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_danger1.json
+origin: original
+notes: The upper right block with the danger 1 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_danger2.json
+origin: original
+notes: The upper right block with the danger 2 screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/central_atmos_controller_upper_right_unpowered.json
+origin: original
+notes: The upper right block with the unpowered screen texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/central_atmos_controller.json
+origin: original
+notes: The whole console in one model, 32 x 32 x 16 centred on the block, scaled to fit the slot and the hand.
+
+# End of the central atmospherics controller.
+
 # HUD alerts (CLIENT-008), from vg's screen alarms.
 path: zas/src/main/resources/assets/zas/textures/gui/hud/oxygen.png
 origin: vgstation13
@@ -2677,6 +2853,26 @@ source: icons/mob/screen_alarms.dmi
 state: carbon_temp4
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
+
+# HUD internals indicator (CLIENT-009), from vg's internals button.
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_off.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_on.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal1_old
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+
+path: zas/src/main/resources/assets/zas/textures/gui/hud/internals_failing.png
+origin: vgstation13
+source: icons/mob/screen1_old.dmi
+state: internal2_old, internal0
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: 2 frames stacked vertically, to flash between the two states.
 
 # Sounds (docs/research/vg-sounds.md)
 
@@ -2951,3 +3147,28 @@ source: https://dejavu-fonts.github.io/ (DejaVu Sans Bold 2.37)
 license: Bitstream-Vera
 attribution: Bitstream and the DejaVu fonts team; license text in META-INF/licenses/DejaVu-Fonts.txt
 adapted: Cut down to the Latin, Greek, punctuation, arrow, maths, shape and symbol ranges.
+
+# Station blocks (CONT-129 to CONT-131). Their block models and textures come with their art.
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/station_wall.json
+origin: original
+notes: The station wall's one state, with the station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall's one state, with the reinforced_station_wall model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block's one state, with the reinforced_glass_block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/station_wall.json
+origin: original
+notes: The station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_station_wall.json
+origin: original
+notes: The reinforced station wall item: the block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_glass_block.json
+origin: original
+notes: The reinforced glass block item: the block model.

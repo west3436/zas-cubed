@@ -25,7 +25,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * port 2 is to the right of the way its gas goes, or to the left while {@link #MIRRORED}, as its
  * {@code _mirrored} models show. Facing up or down, its models turn about the x axis, so the side
  * port stays east, or west while mirrored. Which side it's on comes from the item that places it, a
- * {@link MirroredDeviceItem} for the left, and nothing in the game changes it afterwards.
+ * {@link MirroredDeviceItem} for the left, and nothing in the game changes it afterwards: a wrench
+ * turns its facing alone, so its port stays on the same side of its gas (CONT-035, D-77).
  */
 public abstract class SidePortBlock extends InlineDeviceBlock {
     /** Whether the side port is on the left of the way its gas goes. */

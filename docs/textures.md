@@ -38,7 +38,7 @@ texture), or none (the block has no item).
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). |
+| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). Each face it leaks from shows a mouth: the tube flaring to an 8 px lip at the block edge, hollow and dark inside (the owner's choice of 2026-11-07, [#164](https://github.com/west3436/zas-cubed/issues/164)). That's the face opposite a pipe's one connection, or every face of a pipe with none. Runs, bends and tees have no mouth. The lip is a darker shade of the dye, like the flanges, and the inside isn't tinted. |
 | `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Block model | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it: a finned tube in vg's near-black, not dyed, with no flanges (the owner's choice of 2026-11-02). Its item is the 3D straight piece, like the pipe's. |
 | `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind: inline, an undyed pipe's flange and tube at one end and the finned tube at the other. |
@@ -94,7 +94,7 @@ and from scrubbing and filtering (CONT-050).
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
 | `zas_atmos:area_air_controller` | Area air controller | Must | CONT-040, CONT-048, CONT-068 | Flat sprite | Wall-mounted. Normal, danger 1, danger 2 and unpowered. Was the air alarm. It also powers every atmospherics part in its zone or linked to it (D-68). |
-| `zas_atmos:central_atmos_controller` | Central atmospherics controller | Should | CONT-115, CONT-123 | Block model | A console, after vg's atmospheric alert computer (`icons/obj/computer.dmi` `alert:0`, `alert:1`, `alert:2`): normal, danger 1 somewhere, danger 2 somewhere, and unpowered. Powers and runs the area air controllers around it (D-75). |
+| `zas_atmos:central_atmos_controller` | Central atmospherics controller | Should | CONT-115, CONT-123 | Block model | A standing console 2 blocks wide, 2 tall and 1 deep, after vg's atmospheric alert computer (`icons/obj/computer.dmi` `alert:0`, `alert:1`, `alert:2`, `alert:00`): a monitor, a keyboard shelf at desk height and a pedestal (the owner's choice of 2026-11-07). Four block models, lower and upper, left and right. Its screen shows normal, danger 1 somewhere, danger 2 somewhere, and unpowered, with a light for each of four zones. Its item is the whole console. Powers and runs the area air controllers around it (D-75). |
 | `zas_atmos:fire_alarm` | Fire alarm | Should | CONT-044 | Flat sprite | Wall-mounted. Normal, alarm and unpowered. vg's small red box, not the controller's panel (the owner's choice of 2026-11-02). |
 | `zas_atmos:airlock` | Airlock | Not set | None yet | Flat sprite | A zone-boundary door, worked by an airlock controller. Open, closed and bolted. Two sizes: 1 wide and 2 tall like a standard door, and 2 by 2. The 1 by 2 is vg's red external airlock, its leaf sliding up; the 2 by 2 is vg's glass two-tile door, which you can see through, its leaves parting sideways (the owner's choices of 2026-11-02). The 2 by 2 is proposed as a block of its own, `zas_atmos:large_airlock`, with its own item. |
 | `zas_atmos:firelock` | Firelock | Must | CONT-043, CONT-093 | Flat sprite | Open, closed and locked down, which shows a warning. Modelled on vg's old full-tile firelock. It can be placed on a door, a vanilla door or an airlock, and is then drawn as an overlay on it, so it comes in the doors' sizes: 1 by 2 and 2 by 2. On its own it's 1 by 2, a frame the block's full depth with its panel in the middle (the owner's choice of 2026-11-01). |
@@ -105,6 +105,14 @@ the controller would set while it cycles.
 
 The wall-mounted blocks and the doors get flat sprites, as vanilla's torches
 and doors do. Any of them could use its block model instead.
+
+**Station walls and glass**
+
+| Proposed id | Name | Priority | Requirement | Item | States and notes |
+|---|---|---|---|---|---|
+| `zas_atmos:station_wall` | Station wall | Should | CONT-129 | Block model | A full block, the same on every face. vg's plain wall (`icons/turf/walls.dmi` `metal0`) in vg's dark greys: a plate with a recessed rim, a bolt in each corner and a raised middle panel. |
+| `zas_atmos:reinforced_station_wall` | Reinforced station wall | Should | CONT-130 | Block model | The station wall with vg's reinforcing rods (`rwall0`) crossing its middle and a boss where they meet. |
+| `zas_atmos:reinforced_glass_block` | Reinforced glass | Should | CONT-131 | Block model | A full see-through block, after vg's full reinforced window (`icons/obj/structures/window.dmi` `frwindow0`): a blue-steel frame with white rods along it, and wired glass, a square wire mesh through a grey-blue pane (the owner's choice of 2026-11-07). Translucent. |
 
 ### Content mod (`zas_atmos`): creative canisters
 
@@ -212,13 +220,16 @@ All are done (2026-11-02).
 | | Must | Should | Could | Not set | Total |
 |---|---|---|---|---|---|
 | Blocks (`zas`) | 1 | – | – | – | 1 |
-| Blocks (`zas_atmos`) | 13 | 9 | 1 | 8 | 31 |
+| Blocks (`zas_atmos`) | 13 | 13 | 1 | 8 | 35 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
 | Items (`zas_atmos`) | 18 | 5 | 1 | – | 24 |
 | Crafting components (`zas_atmos`) | 15 | 4 | – | – | 19 |
 
 *2026-11-02: R1 now has crafting components of its own (D-72). Its recipes
 still come down to vanilla materials (CONT-051).*
+
+*2026-11-07: the station walls and reinforced glass are added (D-80, D-81).
+The Should count for blocks was one short before them and is corrected.*
 
 ## Art that isn't a block or item
 
@@ -232,7 +243,10 @@ These need textures too, but aren't in the tables above:
   `carbon_pressure±1/±2`, `carbon_temp±2/±4`), Crops at 32×32 in
   `zas/textures/gui/hud/`, with animated states' frames stacked downward. vg
   took its screen-alert framework from /tg/station (CC BY-SA 3.0). The
-  internals indicator is still to do.
+  internals indicator is vg's internals button from `icons/mob/screen1_old.dmi`
+  (`internal0`, `internal1_old`, `internal2_old`), as `internals_off`,
+  `internals_on` and `internals_failing`, which flashes between `internal2_old`
+  and `internal0`.
 - airflow particles (CLIENT-003)
 
 ## Later releases (R2)

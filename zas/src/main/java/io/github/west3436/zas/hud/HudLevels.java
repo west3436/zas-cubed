@@ -1,6 +1,9 @@
 package io.github.west3436.zas.hud;
 
+import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.config.BreathingConfig;
@@ -11,12 +14,18 @@ import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
+import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.Shielding;
+import io.github.west3436.zas.life.WornProtection;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,9 +49,17 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A side of a reading whose hazard is off in the player's dimension (LIFE-031, LIFE-036) has no
  * alert, nor has anything for a player exempt from hazards (LIFE-037). O₂ and toxins have none
- * while its eyes are in a fluid, where vanilla's breathing applies (LIFE-022). Server thread.
+ * while its eyes are in a fluid, where vanilla's breathing applies (LIFE-022).
+ *
+ * <p>The rest of the state goes with the readings: what shows the HUD without an alert ({@link
+ * #triggered}, CLIENT-001), and its internals and tank (CLIENT-009). The server decides these, as
+ * only it has protection data (LIFE-026). Server thread.
  */
 public final class HudLevels {
+    /** The items that show every reading, alert or not, while held, such as an analyzer (CLIENT-008, CONT-034). */
+    public static final TagKey<Item> SHOWS_READINGS =
+            TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "shows_readings"));
+
     /** No alert. */
     public static final int NONE = 0;
 
@@ -63,6 +80,10 @@ public final class HudLevels {
 
     /** How far inside the comfort band the temperature warnings start, in K. */
     public static final double TEMPERATURE_MARGIN = 20.0;
+
+    /** The items that show the HUD while held, such as an analyzer (CLIENT-001, CONT-034). */
+    public static final TagKey<Item> SHOWS_HUD =
+            TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "shows_hud"));
 
     private HudLevels() {}
 
@@ -139,16 +160,42 @@ public final class HudLevels {
     }
 
     /**
+     * Whether an entity is shown every reading, alert or not (CLIENT-008, CONT-034): it holds an item
+     * in {@link #SHOWS_READINGS} in either hand. A spectator holds nothing, so it isn't.
+     */
+    public static boolean showsReadings(LivingEntity entity) {
+        return !entity.isSpectator()
+                && (entity.getMainHandItem().is(SHOWS_READINGS)
+                        || entity.getOffhandItem().is(SHOWS_READINGS));
+    }
+
+    /**
      * A living entity's HUD state where it is now, or null while the atmosphere at its eyes is
      * unresolved (LIFE-048, API-010), when the HUD keeps what it last showed.
+     *
+     * <p>While it {@linkplain #showsReadings is shown every reading}, the state keeps each value, and
+     * an exempt or immune entity has its values with no alerts. O₂ and toxins have {@link
+     * AtmosHudPayload#NO_BREATH} while it has no breath.
      */
     public static @Nullable AtmosHudPayload of(LivingEntity entity) {
-        if (EnvironmentHazards.exempt(entity) || EnvironmentHazards.immune(entity)) {
+        boolean readings = showsReadings(entity);
+        boolean spared = EnvironmentHazards.exempt(entity) || EnvironmentHazards.immune(entity);
+        if (spared && !readings) {
             return AtmosHudPayload.NONE;
         }
         BreathingRules.Assessment a = BreathingRules.assess(entity);
         EnvironmentHazards.Exposure exposure = a.exposure();
-        if (exposure == null || (a.sample() != null && a.sample().state() == AtmosphereState.UNRESOLVED)) {
+        AtmosphereSample sample = a.sample();
+        if (spared) {
+            // Nothing harms it, so nothing assessed its exposure: take it from the air at its eyes.
+            if (sample == null) {
+                sample = Atmospheres.of(entity);
+            }
+            exposure = sample.state() == AtmosphereState.UNRESOLVED
+                    ? null
+                    : EnvironmentHazards.exposure(entity, sample.mixture());
+        }
+        if (exposure == null || (sample != null && sample.state() == AtmosphereState.UNRESOLVED)) {
             return null;
         }
         ResourceKey<Level> dimension = entity.level().dimension();
@@ -169,29 +216,38 @@ public final class HudLevels {
         }
 
         int oxygen = NONE;
-        double oxygenKpa = 0;
+        double oxygenKpa = AtmosHudPayload.NO_BREATH;
         int toxins = NONE;
         ResourceLocation toxinGas = null;
-        double toxinKpa = 0;
+        double toxinKpa = AtmosHudPayload.NO_BREATH;
         Optional<GasMixture> breath = a.verdict().breath();
         if (breath.isPresent()) {
             GasMixture b = breath.get();
+            oxygenKpa = b.partialPressure(StandardAir.OXYGEN);
             if (!off(dimension, HazardType.HYPOXIA)) {
-                oxygenKpa = b.partialPressure(StandardAir.OXYGEN);
                 oxygen = oxygen(oxygenKpa, BreathingConfig.oxygenMinimum());
             }
-            if (!off(dimension, HazardType.TOXIC_GAS)) {
-                for (Map.Entry<ResourceLocation, HazardProfile> e :
-                        HazardProfiles.all().entrySet()) {
-                    double p = b.partialPressure(e.getKey());
-                    int level = toxin(e.getValue(), p);
-                    if (level > toxins || level == toxins && level > NONE && p > toxinKpa) {
-                        toxins = level;
-                        toxinGas = e.getKey();
-                        toxinKpa = p;
-                    }
+            // The worst gas, and of those at the same level the one with the most.
+            toxinKpa = 0;
+            for (Map.Entry<ResourceLocation, HazardProfile> e :
+                    HazardProfiles.all().entrySet()) {
+                double p = b.partialPressure(e.getKey());
+                int level = toxin(e.getValue(), p);
+                if (level > toxins || level == toxins && p > toxinKpa) {
+                    toxins = level;
+                    toxinGas = e.getKey();
+                    toxinKpa = p;
                 }
             }
+            if (off(dimension, HazardType.TOXIC_GAS)) {
+                toxins = NONE;
+            }
+        }
+        if (spared) {
+            pressure = NONE;
+            temperature = NONE;
+            oxygen = NONE;
+            toxins = NONE;
         }
         return new AtmosHudPayload(
                 pressure,
@@ -202,7 +258,54 @@ public final class HudLevels {
                 (float) oxygenKpa,
                 (float) kelvin,
                 Optional.ofNullable(toxinGas),
-                (float) toxinKpa);
+                (float) toxinKpa,
+                false,
+                AtmosHudPayload.INTERNALS_OFF,
+                AtmosHudPayload.NO_TANK,
+                readings);
+    }
+
+    /**
+     * Whether something other than an alert shows a player's HUD (CLIENT-001): its breathing is
+     * sealed (LIFE-021), or it holds an item in {@link #SHOWS_HUD} in either hand. A spectator uses
+     * neither, so it has no trigger.
+     */
+    public static boolean triggered(Player player) {
+        return !player.isSpectator()
+                && (WornProtection.sealedBreathing(player)
+                        || player.getMainHandItem().is(SHOWS_HUD)
+                        || player.getOffhandItem().is(SHOWS_HUD));
+    }
+
+    /**
+     * What an entity's internals do now (CLIENT-009, LIFE-029): {@link
+     * AtmosHudPayload#INTERNALS_OFF}, {@link AtmosHudPayload#INTERNALS_ON} or {@link
+     * AtmosHudPayload#INTERNALS_FAILING}.
+     */
+    public static int internals(LivingEntity entity) {
+        if (!Internals.on(entity)) {
+            return AtmosHudPayload.INTERNALS_OFF;
+        }
+        return Internals.active(entity) != null ? AtmosHudPayload.INTERNALS_ON : AtmosHudPayload.INTERNALS_FAILING;
+    }
+
+    /**
+     * The pressure in kPa of the tank an entity's internals draw from (CLIENT-009, LIFE-028), switched
+     * on or not, or {@link AtmosHudPayload#NO_TANK}.
+     */
+    public static float tankPressure(LivingEntity entity) {
+        return Internals.find(entity)
+                .map(tank -> (float) tank.contents().pressure())
+                .orElse(AtmosHudPayload.NO_TANK);
+    }
+
+    /** A player's readings with what else its HUD state holds: its trigger, and while shown, its internals and tank. */
+    public static AtmosHudPayload withIndicator(AtmosHudPayload readings, Player player) {
+        boolean triggered = triggered(player);
+        if (!triggered && !readings.shown()) {
+            return readings.withIndicator(false, AtmosHudPayload.INTERNALS_OFF, AtmosHudPayload.NO_TANK);
+        }
+        return readings.withIndicator(triggered, internals(player), tankPressure(player));
     }
 
     private static boolean off(ResourceKey<Level> dimension, HazardType hazard) {

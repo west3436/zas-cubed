@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:reinforced_glass"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:reinforced_glass_block"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "zas_atmos:reinforced_glass"
+    },
+    {
+      "item": "zas_atmos:reinforced_glass"
+    },
+    {
+      "item": "zas_atmos:plasteel_sheet"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:reinforced_glass_block"
+  }
+}

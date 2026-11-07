@@ -51,7 +51,7 @@ public final class AtmosCreativeTab {
 
     /**
      * The tab's contents, in order: pipes first, then devices, then the creative canisters, then the
-     * tools, then the breathing gear, then the crafting components.
+     * station blocks, then the tools, then the breathing gear, then the crafting components.
      */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
@@ -75,6 +75,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.CENTRAL_ATMOS_CONTROLLER.get());
         out.accept(AtmosItems.FIRE_ALARM.get());
         out.accept(AtmosItems.GENERATOR.get());
+        out.accept(AtmosItems.ELECTROLYZER.get());
         out.accept(AtmosItems.HEATER.get());
         out.accept(AtmosItems.AIR_CONDITIONER.get());
         out.accept(AtmosItems.PORTABLE_SCRUBBER.get());
@@ -86,8 +87,11 @@ public final class AtmosCreativeTab {
             out.accept(b.get());
             out.accept(b.get().full());
         });
+        out.accept(AtmosItems.ATMOS_ANALYZER.get());
+        AtmosItems.stationBlocks().forEach(b -> out.accept(b.get()));
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
+        out.accept(AtmosItems.WRENCH.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());
         out.accept(AtmosItems.TANK_TRANSFER_VALVE.get());
         out.accept(AtmosItems.OXYGEN_TANK.get());
@@ -97,11 +101,7 @@ public final class AtmosCreativeTab {
         GasTankItem.setGas(emergency, AtmosItems.emergencyFill());
         out.accept(emergency);
         out.accept(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
-        out.accept(AtmosItems.BREATH_MASK.get());
-        out.accept(AtmosItems.SOFTSUIT_HELMET.get());
-        out.accept(AtmosItems.SOFTSUIT_CHESTPLATE.get());
-        out.accept(AtmosItems.SOFTSUIT_LEGGINGS.get());
-        out.accept(AtmosItems.SOFTSUIT_BOOTS.get());
+        AtmosItems.gear().forEach(g -> out.accept(g.get()));
         AtmosItems.components().forEach(c -> out.accept(c.get()));
     }
 

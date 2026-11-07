@@ -3,10 +3,12 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerItem;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
+import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.inline.MirroredDeviceItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
@@ -14,6 +16,7 @@ import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.WrenchItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import java.util.List;
 import java.util.Map;
@@ -81,9 +84,25 @@ public final class AtmosItems {
     public static final DeferredItem<MirroredDeviceItem> MIXER_MIRRORED =
             ITEMS.registerItem("mixer_mirrored", p -> new MirroredDeviceItem(AtmosBlocks.MIXER.get(), p));
 
+    /** The water electrolyzer (CONT-055). */
+    public static final DeferredItem<BlockItem> ELECTROLYZER = ITEMS.registerSimpleBlockItem(AtmosBlocks.ELECTROLYZER);
+
     public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);
+
+    // The station blocks (CONT-129 to CONT-131).
+
+    public static final DeferredItem<BlockItem> STATION_WALL = ITEMS.registerSimpleBlockItem(AtmosBlocks.STATION_WALL);
+    public static final DeferredItem<BlockItem> REINFORCED_STATION_WALL =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.REINFORCED_STATION_WALL);
+    public static final DeferredItem<BlockItem> REINFORCED_GLASS_BLOCK =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.REINFORCED_GLASS_BLOCK);
+
+    /** The station blocks, in the creative tab's order. */
+    public static List<DeferredItem<BlockItem>> stationBlocks() {
+        return List.of(STATION_WALL, REINFORCED_STATION_WALL, REINFORCED_GLASS_BLOCK);
+    }
 
     // The batteries (CONT-111), which run the heater and other portables and charge in the recharger.
 
@@ -102,6 +121,9 @@ public final class AtmosItems {
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
 
+    /** Turns and removes atmos parts (CONT-035, CONT-091). */
+    public static final DeferredItem<WrenchItem> WRENCH = ITEMS.registerItem("wrench", WrenchItem::new);
+
     /** Puts out the fires it is aimed at (CONT-037). */
     public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =
             ITEMS.registerItem("fire_extinguisher", FireExtinguisherItem::new);
@@ -109,6 +131,10 @@ public final class AtmosItems {
     /** Two gas tanks joined by a valve, with a timer (CONT-103, CONT-104). */
     public static final DeferredItem<TransferValveItem> TANK_TRANSFER_VALVE =
             ITEMS.registerItem("tank_transfer_valve", TransferValveItem::new);
+
+    /** Reads the air where the player is, a point, a pipe network, a canister or a tank (CONT-034). */
+    public static final DeferredItem<AnalyzerItem> ATMOS_ANALYZER =
+            ITEMS.registerItem("atmos_analyzer", AnalyzerItem::new);
 
     // ---- Breathing gear (S-08) ----
 
@@ -170,6 +196,53 @@ public final class AtmosItems {
     public static final DeferredItem<SuitItem> SOFTSUIT_BOOTS = ITEMS.registerItem(
             "softsuit_boots",
             p -> new SuitItem(GearMaterials.SOFTSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.softsuit(false), false));
+
+    /** The gas mask (CONT-088): seals the breathing, for internals, and filters the toxic gases out of it. */
+    public static final DeferredItem<SuitItem> GAS_MASK = ITEMS.registerItem(
+            "gas_mask",
+            p -> new SuitItem(GearMaterials.GAS_MASK, ArmorItem.Type.HELMET, p, SuitItem.Rating.GAS_MASK, false));
+
+    /**
+     * The hardsuit (CONT-036): every pressure and temperature. Its helmet seals the breathing, its
+     * chestplate has a tank slot (CONT-090), and each piece slows its wearer (CONT-089).
+     */
+    public static final DeferredItem<SuitItem> HARDSUIT_HELMET = ITEMS.registerItem(
+            "hardsuit_helmet",
+            p -> new SuitItem(GearMaterials.HARDSUIT, ArmorItem.Type.HELMET, p, SuitItem.Rating.hardsuit(true), false));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_CHESTPLATE = ITEMS.registerItem(
+            "hardsuit_chestplate",
+            p -> new SuitItem(
+                    GearMaterials.HARDSUIT, ArmorItem.Type.CHESTPLATE, p, SuitItem.Rating.hardsuit(false), true));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_LEGGINGS = ITEMS.registerItem(
+            "hardsuit_leggings",
+            p -> new SuitItem(
+                    GearMaterials.HARDSUIT, ArmorItem.Type.LEGGINGS, p, SuitItem.Rating.hardsuit(false), false));
+
+    public static final DeferredItem<SuitItem> HARDSUIT_BOOTS = ITEMS.registerItem(
+            "hardsuit_boots",
+            p -> new SuitItem(GearMaterials.HARDSUIT, ArmorItem.Type.BOOTS, p, SuitItem.Rating.hardsuit(false), false));
+
+    /** Magnetic boots (CONT-033): a keybind switches them, and while on airflow can't move their wearer. */
+    public static final DeferredItem<MagneticBootsItem> MAGNETIC_BOOTS =
+            ITEMS.registerItem("magnetic_boots", MagneticBootsItem::new);
+
+    /** The masks, suit pieces and boots, in the creative tab's order; each has a {@link SuitItem#lifeSupport}. */
+    public static List<DeferredItem<? extends SuitItem>> gear() {
+        return List.of(
+                BREATH_MASK,
+                GAS_MASK,
+                SOFTSUIT_HELMET,
+                SOFTSUIT_CHESTPLATE,
+                SOFTSUIT_LEGGINGS,
+                SOFTSUIT_BOOTS,
+                HARDSUIT_HELMET,
+                HARDSUIT_CHESTPLATE,
+                HARDSUIT_LEGGINGS,
+                HARDSUIT_BOOTS,
+                MAGNETIC_BOOTS);
+    }
 
     /** A filled emergency O2 tank's gas: O2 at 3 atm in 2 L (CONT-030). */
     public static GasParcel emergencyFill() {

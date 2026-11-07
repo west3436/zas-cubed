@@ -1,0 +1,63 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:cable_coil"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:central_atmos_controller"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:circuit_board"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:console_screen"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:subspace_ansible"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:subspace_transmitter"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "TTT",
+    "AFX",
+    "WBW"
+  ],
+  "key": {
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    },
+    "W": {
+      "item": "zas_atmos:cable_coil"
+    },
+    "B": {
+      "item": "zas_atmos:circuit_board"
+    },
+    "T": {
+      "item": "zas_atmos:console_screen"
+    },
+    "A": {
+      "item": "zas_atmos:subspace_ansible"
+    },
+    "X": {
+      "item": "zas_atmos:subspace_transmitter"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:central_atmos_controller"
+  }
+}

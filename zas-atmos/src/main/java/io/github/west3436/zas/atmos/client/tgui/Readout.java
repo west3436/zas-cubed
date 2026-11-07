@@ -3,7 +3,11 @@ package io.github.west3436.zas.atmos.client.tgui;
 import io.github.west3436.zas.api.client.DisplayUnits;
 import java.util.Locale;
 
-/** Pressures and temperatures as a GUI shows them, in the player's units (CLIENT-006). */
+/**
+ * Pressures and temperatures as a GUI or an item's tooltip shows them, in the player's units
+ * (CLIENT-006). It refers to no client-only class, so an item, which a dedicated server also loads,
+ * can use it.
+ */
 public final class Readout {
     private Readout() {}
 
@@ -26,6 +30,11 @@ public final class Readout {
     public static String temperatureNumber(double kelvin) {
         String text = String.format(Locale.ROOT, "%,.1f", DisplayUnits.temperature(kelvin));
         return text.equals("-0.0") ? "0.0" : text;
+    }
+
+    /** A share, such as a gas's of a mixture, as a number of percent: 78.1, 0.93 or 0.005. */
+    public static String percentNumber(double fraction) {
+        return number(fraction * 100);
     }
 
     /**

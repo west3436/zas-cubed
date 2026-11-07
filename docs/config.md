@@ -87,7 +87,7 @@ reads a setting gets the new one the next time it runs:
 | `[fire]` | The next check; for gas fires, the next atmos tick |
 | `[commands]` | At once. A player's client only updates its command suggestions when it next joins or its op status changes, but the server decides who can run a command |
 | `[profiling]` | At once |
-| `zas_atmos-server.toml` | Each device's next step, or the next explosion |
+| `zas_atmos-server.toml` | Each device's next step, or the next explosion; for `[gear]`, each wearer's speed within a second |
 
 **Restart-only** settings keep the value they had when the server started, and
 a reload doesn't change them: the two that choose the threads, `[atmos]
@@ -243,6 +243,7 @@ Its FE values are starting points for playtesting (D-37). Every key is live
 | `[power] volume_pump` | `20` | What a volume pump draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] filter` | `20` | What a filter draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] mixer` | `20` | What a mixer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
+| `[power] electrolyzer` | `80` | What a water electrolyzer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] fire_alarm` | `1` | A fire alarm's draw from the controller that covers it, in FE/t, 0 to 100,000 (CONT-044, CONT-065) |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
@@ -255,6 +256,7 @@ Its FE values are starting points for playtesting (D-37). Every key is live
 | `[central_controller] max_range_chunks` | `10` | How far a central atmospherics controller reaches from its own chunk, in chunks, 1 to 32: a square of chunks, at any height. It is also a new one's range, which a player may lower in its GUI. Lowering this lowers every range above it (CONT-116, CONT-117) |
 | `[central_controller] force_load` | `true` | Whether a central atmospherics controller keeps its own chunk and the 8 around it loaded, as `/forceload` does. Turned off, each lets its chunks go at its next step (CONT-122) |
 | `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
+| `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
 
 ## Common: `zas-common.toml`
 
@@ -272,5 +274,6 @@ shows values. Gas overlays, the HUD and their visual settings arrive in R1.
 | `[units] pressure` | `KPA` | Pressure unit: `KPA`, `ATM`, `BAR` or `PSI` |
 | `[units] temperature` | `CELSIUS` | Temperature unit: `KELVIN`, `CELSIUS` or `FAHRENHEIT` |
 
-Operator commands ([commands.md](commands.md)) run on the server and always
+They apply to the HUD, debug overlay, device windows and item tooltips. Operator
+commands ([commands.md](commands.md)) and other messages the server sends always
 report kPa and K.

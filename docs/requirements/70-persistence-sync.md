@@ -328,6 +328,11 @@ that window open.*
 *2026-11-06: DATA-017, DATA-018 and DATA-019 are Implemented, so this replaces "All three
 are Draft until the owner's review" in the first 2026-11-05 note above.*
 
+*2026-11-07: The analyzer's window (CONT-034) has a sync of its own, `AnalyzerSync`, sent
+only to the player with it open. It holds what the window shows: the target's name, the
+air's state and zone id, and one mixture, as `/zas at` gives them. It holds no zone
+geometry or per-cell data, so it keeps to D-53.*
+
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 
@@ -352,6 +357,21 @@ LIFE-023's breathing sync is separate, so this stays Accepted.*
 
 *2026-11-06: LIFE-023 is Implemented, so this replaces "LIFE-023's breathing sync is
 separate" above as a reason to stay Accepted. Only the Bench is left.*
+
+*2026-11-06: The state now also holds what shows the HUD without an alert (CLIENT-001), the
+internals and the tank's pressure (CLIENT-009), at the same rate and under the same rule. The
+tank's display resolution is 1 kPa. A hidden HUD holds neither internals nor a tank, so normal
+air still sends nothing. This replaces "21 to about 40 bytes" above: a state is 27 to about 46
+bytes. `data_014_the_indicator_resends_at_its_resolution` and
+`data_014_a_draining_tank_syncs_at_most_4_a_second` (GameTests) pass. The second drains a test
+tank slowly and fast, and counts the states sent.*
+
+*2026-11-07: While the player holds an analyzer, every reading is shown (CLIENT-008), so
+the state carries each value with or without an alert, at the same rate and resolutions. So
+normal air sends nothing only while no analyzer is held. The state gains one byte for this:
+this replaces "27 to about 46 bytes" above, as a state is 28 to about 47 bytes.
+`client_008_a_held_analyzer_shows_every_reading` and `data_014_payload_round_trips`
+(GameTests) pass.*
 
 #### DATA-015 · Airflow sync
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005

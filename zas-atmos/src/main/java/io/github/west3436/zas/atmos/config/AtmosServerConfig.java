@@ -58,6 +58,9 @@ public final class AtmosServerConfig {
     /** The mixer's draw from its controller while it is on, in FE/t (CONT-065). */
     public static final ModConfigSpec.IntValue MIXER_DRAW;
 
+    /** The electrolyzer's draw from its controller while it is on, in FE/t (CONT-065). */
+    public static final ModConfigSpec.IntValue ELECTROLYZER_DRAW;
+
     /** What the recharger puts into its battery while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_RATE;
 
@@ -97,6 +100,9 @@ public final class AtmosServerConfig {
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
 
+    /** The share of movement speed each hardsuit piece worn takes away (CONT-089). */
+    public static final ModConfigSpec.DoubleValue HARDSUIT_SLOWDOWN;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -133,6 +139,8 @@ public final class AtmosServerConfig {
                 .defineInRange("filter", 20, 0, 100_000);
         MIXER_DRAW = builder.comment("Mixer, from its controller while it is on (CONT-065)")
                 .defineInRange("mixer", 20, 0, 100_000);
+        ELECTROLYZER_DRAW = builder.comment("Electrolyzer, from its controller while it is on (CONT-065)")
+                .defineInRange("electrolyzer", 80, 0, 100_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
@@ -177,6 +185,13 @@ public final class AtmosServerConfig {
         EXPLOSION_POWER_CAP = builder.comment(
                         "The most power a tank's or canister's explosion can have (CONT-109). TNT is 4.")
                 .defineInRange("explosion_power_cap", ContainerFailure.DEFAULT_POWER_CAP, 0.0, 64.0);
+        builder.pop();
+
+        builder.comment("Breathing gear (CONT-089).").push("gear");
+        HARDSUIT_SLOWDOWN = builder.comment(
+                        "The share of movement speed each hardsuit piece worn takes away (CONT-089): 0.1 is 10 %,",
+                        "so the full suit leaves 60 %.")
+                .defineInRange("hardsuit_slowdown", 0.1, 0.0, 0.25);
         builder.pop();
         SPEC = builder.build();
     }

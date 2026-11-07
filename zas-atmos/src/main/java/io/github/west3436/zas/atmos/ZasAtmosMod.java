@@ -5,6 +5,7 @@ import io.github.west3436.zas.atmos.controller.CentralChunks;
 import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
+import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -45,6 +46,7 @@ public final class ZasAtmosMod {
         DeviceTicker.register(NeoForge.EVENT_BUS);
         CanisterFailure.register(NeoForge.EVENT_BUS);
         DeviceActivitySync.register(NeoForge.EVENT_BUS);
+        Encumbrance.register(NeoForge.EVENT_BUS);
     }
 
     /** An id in this mod's namespace. */

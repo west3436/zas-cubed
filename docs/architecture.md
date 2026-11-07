@@ -1843,7 +1843,7 @@ client breathing sync (LIFE-023): the server sends each player its own state
     and the verdict lists `GAS_FILTERING`. Only what is breathed changes: the
     filter holds nothing and doesn't wear out, the zone keeps its gas, and a
     tank's draw and exhale carry its gas on unfiltered (LIFE-045). The gas mask
-    itself (CONT-088) is still to come.
+    (CONT-088) is the content mod's filter.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -1977,10 +1977,10 @@ Rejected:
 ### Atmosphere HUD
 
 *Implemented in part ([#38](https://github.com/west3436/zas-cubed/issues/38)):
-the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The sealed
-helmet trigger of CLIENT-001 and the internals indicator (CLIENT-009) aren't
-built, though internals are. CLIENT-001's analyzer trigger waits for the
-analyzer (CONT-034).*
+the alerts (CLIENT-008, CLIENT-014) and their sync (DATA-014). The triggers of
+CLIENT-001 and the internals indicator (CLIENT-009) are built and wait for the
+owner's check. Holding the analyzer (CONT-034) shows the HUD with every
+reading, safe ones too (owner's choice, 2026-11-07).*
 
 - **Levels** (`HudLevels`, package `io.github.west3436.zas.hud`). Each reading
   gets none, a warning or a danger, judged on what reaches the player through
@@ -1989,21 +1989,40 @@ analyzer (CONT-034).*
   temperature unless its thermal protection takes all temperature damage
   there. Pressure and temperature are signed, low and cold negative. A hazard
   that is off in the dimension has no alert, and an exempt player none at all.
+  While the player holds an item in `#zas:shows_readings` in either hand, as
+  `zas_atmos` puts its analyzer, every reading keeps its value, alert or not, so
+  the HUD shows all four; an exempt player's show with no alert. O₂ and toxins
+  have no value while there's no breath, with the eyes in a fluid.
   The level comes from `BreathingRules.assess`, the same assessment a breath
   check makes.
+- **Triggers and indicator** (`HudLevels`). The HUD also shows while the
+  player's breathing is sealed (`WornProtection.sealedBreathing`, LIFE-021) or
+  it holds an item in `#zas:shows_hud` in either hand, unless it's a spectator
+  (CLIENT-001). The server decides this, because only it has protection data,
+  and `zas` reaches the analyzer through the tag because it can't name
+  `zas_atmos`. While the HUD is shown, the state holds what the internals do
+  (off, on, or on but failing) and the pressure of the first tank found
+  (CLIENT-009).
 - **Sync** (`AtmosHud`, `AtmosHudPayload`). Every 5 game ticks, staggered by
   entity id, each player's state is worked out and sent to that player only if
-  a level, the worst toxic gas, or a shown value at its display resolution has
-  changed since the last send. A reading with no alert carries no value, so in
-  normal air nothing is sent. While the atmosphere at the eyes is unresolved
-  the last state stands. The last send is kept in an unsaved player
-  attachment, so a respawned player gets its state at once.
+  a level, the worst toxic gas, the HUD's showing or hiding, the internals, or a
+  shown value at its display resolution has changed since the last send. A
+  reading with no alert carries no value and a hidden HUD no internals or tank,
+  so in normal air with no trigger nothing is sent. While the atmosphere at the
+  eyes is unresolved the last readings stand, and the triggers and indicator go
+  on. The last send is kept in an unsaved player attachment, so a respawned
+  player gets its state at once.
 - **Client** (`ClientAtmosHud`, `client.AtmosHudRenderer`). A GUI layer above
   the status effects draws one alert per reading in a column at the right edge
   of the screen, as vg's screen alerts are: vg's icon (CREDITS) and the reading
-  in the client's display units, yellow for a warning, red for a danger. Danger
+  in the client's display units, yellow for a warning, red for a danger. A safe
+  reading, shown only while every reading is, is white with no icon, as vg's
+  icons are all alerts. Danger
   icons flash with vg's two-frame animation and warnings don't (CLIENT-014).
-  The state is cleared on logout.
+  A row above the column, in a fixed place that moves no alert, has vg's
+  internals icon and the tank's pressure in the display units. Internals off,
+  on and failing have different icons, and failing flashes. The state is
+  cleared on logout.
 
 ### Looping sounds and thin air
 
@@ -2434,17 +2453,19 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
-| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `tool` | The multitool (§11.6), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
+| `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
+| `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2995,21 +3016,21 @@ the cell in front of its grille).
     Its models are drawn facing north and turned by the blockstate: y 90, 180
     and 270 for east, south and west, x 270 for up and x 90 for down. Its shape
     is drawn facing north, too, and turned the same way.
-  - `portFaces` gives the faces it has a pipe port on, in port order. The
-    default is two: port 0 at the back, where gas comes in, and port 1 at the
-    front. A device with a side port adds it.
-  - Placed, its gas goes the way the player looks. Nothing can turn it
-    afterwards until the wrench exists, so if that way joins no pipe and another
-    does, it takes the nearest way that does: looking down at a run on the
-    floor, it lines up with the run.
+  - `portFaces` (from `PortedBlock`) gives the faces it has a pipe port on, in
+    port order. The default is two: port 0 at the back, where gas comes in, and
+    port 1 at the front. A device with a side port adds it.
+  - Placed, its gas goes the way the player looks, unless that way joins no
+    pipe and another does: then it takes the nearest way that does, so looking
+    down at a run on the floor, it lines up with the run. The wrench turns it
+    afterwards (§11.16).
   - An `InlineDeviceEntity` has a 200 L `PipePort` per port (CONT-007), each
     in a network of its own (§11.4). It saves each port's share, in `Ports`, and
     releases them into its cell when it is removed (CONT-009). Pipes that join
     two of its ports make them one network; it then has nothing to move gas
     between. Before its own step, each port takes its turn in its network's
     atmos tick (CONT-100), so a network of ports alone reacts too.
-  - It is a controller's part in the gas-handling group (CONT-064), through
-    its zone or a link, with its own cell as its `airPoint`. It draws
+  - It is a controller's part, in the gas-handling group unless it names
+    another (CONT-064), through its zone or a link, with its own cell as its `airPoint`. It draws
     `drawWhenOn()` FE/t while on, running or idle, and runs only on paid-for
     power. So a lease it got while it was off, which cost nothing, doesn't run
     it. `work` moves the gas and returns an `InlineStatus` for its GUI: moving,
@@ -3051,8 +3072,8 @@ the cell in front of its grille).
     facing by the port faces that gives (D-77). `registerBlocks` is empty there, so
     the block's own item stays the plain one. A mirrored block's loot table and
     `getCloneItemStack` give the mirrored item, and a shapeless recipe turns each
-    item into the other. The wrench will rotate a device and not mirror it
-    (CONT-035).
+    item into the other. The wrench turns a device's facing alone, so a
+    mirrored one stays mirrored (CONT-035, §11.16).
   - Building one port's network can dissolve another that it reaches, so
     `networks` asks for all three and then again, and a step uses only the
     second answers. A device idles as `SAME_NETWORK` only when all three ports
@@ -3086,7 +3107,28 @@ the cell in front of its grille).
   100 L at its own conditions, and when one can't give what it's asked for, both
   scale by the same factor. An input with a fraction of 0 is never asked for gas,
   so it can be empty. It draws `[power] mixer` FE/t (20).
-- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump or inline device with an empty hand opens its
+- **Water electrolyzer** (CONT-055, CONT-056), in `.electrolyzer`. An
+  `ElectrolyzerBlock` stands on the floor with its front to the player who
+  placed it, in one of four ways. It isn't an `InlineDeviceBlock`, but its
+  entity is an `InlineDeviceEntity` with two ports and no input, and both blocks
+  give their port faces through `PortedBlock`.
+  - Facing its front, port 0, for O₂, is on its left (`facing` turned
+    clockwise), and port 1, for H₂, is on its right. Gas pipes join only those.
+  - Each second it is on, powered and has water, it adds 1 mol of O₂ and 2 mol
+    of H₂ at 293.15 K to its outlets and takes 2 mol of water, 0.036 mB, from
+    its tank (`ElectrolyzerMath`). With less than a second's water left, it
+    makes what that water gives. It stops while either outlet is at 4,500 kPa,
+    the pumps' limit, since a network of ports alone never bursts.
+  - `ElectrolyzerTank` holds 4,000 mB, saved as a double in `Water`. A water
+    container used on any face fills it (`FluidUtil.interactWithFluidHandler`),
+    and so does `Capabilities.FluidHandler.BLOCK`, which it offers only on its
+    back, where its inlet is. Nothing drains out.
+  - Its block state's `water`, 0 to 4, counts the buckets the tank has begun
+    to fill, and `on` shows it making gas: on, powered and not stopped.
+  - It is a controller's part in the auxiliary group, as gas production
+    (CONT-064), and draws `[power] electrolyzer` FE/t (80) while on. Its GUI
+    adds a water bar below the strip of its outlets.
+- **GUIs** (CONT-074). Using a canister, vent, heater, air conditioner, portable scrubber, portable pump, inline device or electrolyzer with an empty hand opens its
   menu. Values reach the client as the menu's data slots (whole kPa); the
   client sends only button ids, through the game's menu-button packet, and
   the menu's `clickMenuButton` refuses unknown ids and clamps the result. The
@@ -3461,13 +3503,30 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   1,000 L. Reaching a chest would mean scanning every container each second,
   which is why it isn't done, and no API change would help. Offline players'
   tanks wait likewise.
-- **Mask and suit** (`SuitItem`). Armor items whose life support is a fixed
-  rating: the breath mask only seals; each softsuit piece protects from 0 to
-  1 atm and 0 to 500 K, and the helmet seals. They have no durability.
-- **Tank slot** (CONT-090). The chestplate keeps one tank in
-  `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
+- **Masks and suits** (`SuitItem`). Armor items whose life support is a fixed
+  rating: the breath mask only seals; the gas mask seals and filters; each
+  softsuit piece protects from 0 to 1 atm and 0 to 500 K; each hardsuit piece
+  protects at every pressure and temperature; and each suit's helmet seals.
+  They have no durability. Their armor points are small, except the hardsuit's,
+  which are diamond's.
+- **Magnetic boots** (CONT-033, `MagneticBootsItem`). A `SuitItem` rated as
+  the hardsuit's boots, whose airflow resistance is 1 while it's on and 0 while
+  it's off (FLOW-012). On or off is the stack's `zas_atmos:magnetized`, so it's
+  saved with the boots and goes where they go. A keybind, B by default, sends
+  `MagneticBootsItem.TogglePayload`, and the server switches the boots in the
+  sender's feet slot and answers in the action bar. The item model's
+  `zas_atmos:on` property and `getArmorTexture` show them on or off.
+- **Hardsuit encumbrance** (CONT-089). `Encumbrance` keeps one transient
+  `MOVEMENT_SPEED` modifier on a wearer, multiplying its speed by
+  (1 − pieces × `[gear] hardsuit_slowdown`). The server sets it on NeoForge's
+  equipment change event and again once a second, so a change to the setting
+  reaches suits already worn, and the game syncs a player's speed to its client.
+- **Tank slot** (CONT-090). The softsuit's and hardsuit's chestplates keep one
+  tank in `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+  A chestplate crafted into another item, as the softsuit's into the
+  hardsuit's, leaves its tank in the grid as its crafting remainder.
 - **Tank failure** (CONT-038, CONT-107, CONT-109). `ContainerFailure` turns a
   pressure into a verdict: nothing, a leak, a rupture or an explosion with its
   capped power. It is plain arithmetic, unit-tested without the game.
@@ -3746,3 +3805,115 @@ and sends each player in the level one `ClientboundSoundPacket`, which
 nobody hears a near and a far sound together. These packets don't use the server's
 range check, but the events' ranges are still what the client attenuates by. Any
 other explosion goes through vanilla's code and keeps vanilla's sound.
+
+### 11.14 The analyzer (CONT-034)
+
+The atmos analyzer (`analyzer.AnalyzerItem`) reads gas where the player is, or
+in what they use it on, without the area air controller. Its window is a menu
+with no slots (`analyzer.AnalyzerMenu`, `client.AnalyzerScreen`).
+
+- **What it reads** (`AnalyzerTarget`). Used on nothing, the air at the player's
+  eyes, as `/zas at` reads it, through `Atmospheres.of` (API-010): their zone, or
+  the open air. It follows the player while the window is open. Used on a
+  block, `onItemUseFirst` takes the click before the block's own use, so a
+  canister or a vent doesn't open its own window. A pipe reads its network. A
+  device in a pipe line reads the network on the port whose face was clicked,
+  or else the port nearest the point clicked, named as the device's window
+  names it. A canister reads its own share, in its node's volume, as its window
+  shows it. Any other block reads the point 0.01 in front of the face clicked,
+  through `Atmospheres.at`, so each side of a pane reads its own cell. Air goes
+  through the public API, and pipe gas is the content mod's own (CONT-095).
+- **A tank** isn't a target, since a tank in the off hand is often breathing
+  gear (LIFE-028). The window gets a second tab while the other hand holds a
+  tank, and that tab reads `GasTankItem.contents`.
+- **Server authority** (CONT-074). The target stays on the server. A client
+  sends only the two tabs' button ids. `clickMenuButton` refuses any other id,
+  and the tank's tab with no tank in the other hand. The item refuses a block
+  beyond the player's reach, as the game's packet handler does, so no other
+  caller can read a far block through it. `stillValid` holds while the hand
+  holds an analyzer and, for a block, while the block is there and within
+  `REACH` (4) blocks past the player's reach, as a container's window does. So
+  the player's tick closes the window once they walk away.
+- **The sync** (`AnalyzerSync`, DATA-005, DATA-014). The menu reads every
+  `SYNC_TICKS` (5) server ticks, four times a second, by the server's tick
+  count. Counting `broadcastChanges` calls would let a client read faster by
+  sending buttons, since the game calls it after each one. It sends only to its
+  viewer, on opening, after a tab change, and when `showsSameAs` says a shown
+  value changed. That check is as fine as the finest unit a player can choose:
+  pressure to 4 significant figures, temperature to 0.05 K, and each gas's share
+  to 3 significant figures. The payload carries the target's and the tank's
+  names, the air's state and zone id, and the mixture. It holds no geometry.
+- **The window** shows the target's tab and the tank's, then a gauge, the target,
+  its pressure and temperature in the player's units (`Readout`), and
+  `GasParts.shares`: a bar, and each gas's share and partial pressure. For air,
+  the gauge's bands and the values' colours are CLIENT-008's warning and danger
+  levels. A canister or tank uses its own window's bands, and a network
+  `PipeBurst`'s half and full burst pressure. Screens stop the movement keys,
+  so `client.WalkingInput` stands in for the player's `Input` while the window
+  is open. It reads the keys the movement bindings are bound to from GLFW, so
+  the player can walk with the window open. Turning to look still needs the
+  window closed.
+- **The HUD.** The item is in `#zas:shows_hud`, so holding one shows the
+  atmosphere HUD (CLIENT-001), and in `#zas:shows_readings`, so the HUD shows all
+  four readings while it's held, safe ones too (CLIENT-008, owner's choice,
+  2026-11-07).
+
+### 11.15 Station blocks (CONT-129 to CONT-131)
+
+Three building blocks in `AtmosBlocks`, with no code of their own and nothing added
+to the API. None lets heat through:
+`data/zas_atmos/zas/thermal/station_blocks.json` gives all three a U of 0 (HEAT-019,
+§4.8).
+
+- **The station wall** and **the reinforced station wall** are plain full blocks.
+  They seal as any full block does. Their blast resistance is 6 and 1,200.
+- **Reinforced glass**, `reinforced_glass_block`, is a vanilla `TransparentBlock`,
+  as glass is: its collision shape is full, so it seals, while it hides none of its
+  neighbours' faces and skips its faces against itself. It stays out of
+  `#c:glass_blocks` and `#c:glass_panes`, which make up `#zas:pressure_fragile`, so
+  no pressure difference breaks it (FLOW-007). Its blast resistance is 1,200.
+
+All three are mined with a pickaxe: the station wall at hardness 3 with a stone
+pickaxe or better, and the other two at 25 with a diamond pickaxe or better
+(`#minecraft:needs_stone_tool`, `#minecraft:needs_diamond_tool`). Each drops
+itself, the glass without Silk Touch. Their blockstates and item models name the
+block models `zas_atmos:block/<id>`, which come with their art.
+
+### 11.16 The wrench (CONT-035, CONT-091)
+
+`tool.WrenchItem`, one to a stack, with vg's sprite (D-70). It works on the
+blocks pipes join (`PipeConnector`) except the canister, a portable that is
+mined into an item keeping its gas (CONT-017): pipes, caps, valves, connector
+ports, vents, scrubbers, passive vents, pumps, filters, mixers and the
+electrolyzer (CONT-055). The area air controller, the firelock and the other
+wall parts aren't among them. It acts in
+`onItemUseFirst`, before the block's own use, so a click opens no GUI and turns
+no valve; the stack has already checked that the player may build there.
+
+- **Use turns a part** (`turned`). Its `facing`, or a valve's `axis`, turns a
+  quarter turn about the axis of the face clicked, clockwise as seen from that
+  face; a part pointing along that axis turns around instead. A part that only
+  faces sideways (`horizontal_facing`, the electrolyzer's) turns about the
+  vertical: by that rule when its top or bottom is clicked, and clockwise as
+  seen from above when a side is. A pipe or a port has nothing to turn, and a valve clicked on its end can't turn that way, so
+  those clicks do nothing. The new state is set with a full update, so the pipes
+  beside it follow, and `invalidateCapabilities`, so a capability offered on
+  some faces turns with them. `PipeHost.reconnect` then dissolves its networks
+  and those on its new faces. Every node keeps its share by volume, so a
+  device's buffers go with it. A filter's or mixer's `mirrored` never changes,
+  so its side port stays on its side of the gas (D-77). Facing up or down, a side port is east, or
+  west while mirrored, so a turn into or out of the vertical can move it.
+- **Sneak-use removes a part** (`remove`), as mining would: it drops its item,
+  except in creative, through the block's loot table with the wrench as the
+  tool, and its block entity's removal sends what it held into its cell
+  (CONT-009). A `ServerPlayer`'s removal posts NeoForge's `BreakEvent` first,
+  so a mod guarding the block can refuse it.
+- **The pressure lock** (CONT-091). `overAmbient` is `PipeHost.highestPressure`,
+  the highest pressure of the networks its nodes are in, less the pressure at
+  the block's centre, where its gas would go: its zone, or the ambient. A full
+  block's centre has no cell, so that is the cell beside it the API resolves to
+  (API-015). More than `LOCK_KPA` (2 atm) over, it refuses, and the action bar
+  says `item.zas_atmos.wrench.pressurized` with the pressure over, in kPa: the
+  server doesn't know the player's units.
+- **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
+  part, with the block's own breaking sound on a removal.

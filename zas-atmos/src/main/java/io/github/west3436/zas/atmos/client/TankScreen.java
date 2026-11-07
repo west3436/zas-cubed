@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 final class TankScreen extends TguiWindow {
     private static final int WIDTH = 216;
-    private static final double[] GAUGE_STOPS = {
+    static final double[] GAUGE_STOPS = {
         ContainerFailure.TANK_LEAK_KPA, ContainerFailure.TANK_RUPTURE_KPA, ContainerFailure.TANK_EXPLODE_KPA
     };
     private static final int[] GAUGE_COLOURS = {Ui.GOOD, Ui.AVERAGE, Ui.BAD_FILL};
