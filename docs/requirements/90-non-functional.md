@@ -544,6 +544,11 @@ CI jobs read -3.0 to +3.9 %; added slowdowns of 15 % and 25 % failed it, and so 
 deliberate slowdown in the engine's tick
 ([numbers](../research/benchmarks.md#regression-check-nfr-034-2026-11-06)).*
 
+*2026-11-06: The owner's decision, after the check failed a docs-only PR at +12.3 % on
+the server thread: a run over 10 % runs once more in a new JVM, and the check fails only
+if that one is over too. The limit stays 10 %, though a slowdown just over it now gets two
+chances to pass.*
+
 #### NFR-031 · Documentation
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-04, D-10
 
