@@ -330,3 +330,6 @@ contraptions or Create: Deep Seas.
 
 - **Rationale:** Decision: D-07.
 - **Verify:** Inspect: no adapters for these mods exist.
+
+*2026-11-06: This still holds for R1. D-78 makes zones on Sable sub-levels a maybe for
+R2 (COMPAT-100), and Create contraptions stay out (COMPAT-120).*

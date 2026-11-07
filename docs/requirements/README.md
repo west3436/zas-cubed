@@ -31,6 +31,7 @@ platform services, and 9x is cross-cutting qualities. Gaps leave room to grow.
 | [40-content.md](40-content.md) | `CONT` | Pipes and networks, devices, portable atmos, tanks and suits, area air controllers, firelocks, tools, power |
 | [50-compat-mekanism.md](50-compat-mekanism.md) | `MEK` | ⏸ Deferred after R1 (D-11): chemical bridge, venting into rooms, breathing gear, heat coupling |
 | [51-compat-space.md](51-compat-space.md) | `SPACE` | Compat with other space mods' oxygen, sealing and temperature checks. Ad Astra first, in R2 with Mekanism (D-29, D-66); R1 keeps SPACE-002. |
+| [52-compat-mods.md](52-compat-mods.md) | `COMPAT` | Adapters for tech, tooling and flight mods, all after R1 and kept in this repo (D-78) |
 | [60-client.md](60-client.md) | `CLIENT` | Gas visuals, particles, sound, HUD, debug rendering |
 | [70-persistence-sync.md](70-persistence-sync.md) | `DATA` | Save format and migration, client sync |
 | [80-config-tooling.md](80-config-tooling.md) | `OPS` | Config, datapacks, commands, profiling, admin tools |
