@@ -34,8 +34,8 @@ NeoForge 1.21.1** (D-12):
 |---|---|---|
 | **R0 Foundation** | Internal milestone that retires the architectural risks | Off-thread simulation engine, world geometry and enclosure detection, ambient environments, persistence, debug and admin tooling, standalone API module skeleton. No survival content. |
 | **R1 First playable** | First public release | D-05 features (breathing and hazards, airflow, fire and reactions, heat conduction); the Normal/Hardcore preset; the life-support API; the R1 content subset, including power (scoped in [CONT](40-content.md)) |
-| **R2 Post-launch** | Breadth | The rest of the SS13 device set; the reference integrations, Mekanism (D-11) and the Ad Astra adapter (D-66); Northstar Redux and Create Cosmonautics adapters; biome/altitude ambients |
-| **Later** | Explicitly parked | Moving structures (Valkyrien Skies, Create contraptions), an SS13 fictional-gas addon, anything marked `Won't` |
+| **R2 Post-launch** | Breadth | The rest of the SS13 device set; the reference integrations, Mekanism (D-11) and the Ad Astra adapter (D-66); Northstar Redux and Create Cosmonautics adapters; the D-78 adapters (PneumaticCraft, CC: Tweaked, Jade, Curios and Accessories, KubeJS, JEI and EMI; then Applied Energistics 2, Create Aeronautics and Modern Industrialization; and maybe moving structures on Sable and Create: The Factory Must Grow); biome/altitude ambients |
+| **Later** | Explicitly parked | An SS13 fictional-gas addon, anything marked `Won't` |
 
 ## Decision log
 
@@ -121,6 +121,7 @@ decision that supersedes it.
 | D-75 | 2026-11-03 | **A central atmospherics controller powers and runs the area air controllers around it.** A console block with a 100,000 FE buffer, filled from blocks next to it. It claims every unclaimed area air controller in its dimension within 10 chunks (a square of chunks, any height); each belongs to at most one, the multitool moves one to another, and removing it releases them. The server sets the maximum range, and a player may lower it. Each atmos tick it pays each claimed controller's shortfall, after that controller's own buffer and the blocks next to it, in zone priority order (Critical, Normal, Low), then splits the tick's unspent intake into their buffers. Nothing is lost in sending. It keeps its own chunk and the 8 around it loaded, which the server can turn off. Its GUI lists each controller's position, pressure, temperature, danger, power and priority, shows unloaded ones as out of contact, and opens any loaded one's own GUI for full remote control. | Owner's call, 2026-11-03: wall-mounted controllers need unsightly cables or a battery beside them to get power. Adds to D-68, which keeps every part powered only through an area air controller. CONT-115 to CONT-124; notes on CONT-062, CONT-064 and CONT-065. |
 | D-76 | 2026-11-06 | **Device GUIs take TGUI's look, drawn in code.** Device windows look like SS13's TGUI: its title bar and status eye, sections, labelled lists, tabs and colours. A small Java kit on `GuiGraphics` draws them, with no texture per screen and no embedded browser, and keeps vanilla menus and button ids (CONT-074). Text is DejaVu Sans, sized so a window fits at Auto GUI scale. DejaVu keeps its own license (Bitstream Vera), the one kind of asset that isn't CC BY-SA: a font may keep a license that allows bundling and changes, with its text in the jar. [#185](https://github.com/west3436/zas-cubed/issues/185) narrows to what code can't draw, and the owner closed it on 2026-11-06 with nothing left to draw. | Owner's call, 2026-11-06, on the mockups: "Your recommendations are sound." A window's shape changes with its state, which fixed textures fight, and a browser would be a large dependency no player could go without. vg's code stays reference only (D-01). The area air controller's window comes first. CLIENT-022, API-063, NFR-045. |
 | D-77 | 2026-11-06 | **A filter's or mixer's mirrored version is its own item, and the wrench doesn't mirror.** A filter or mixer keeps its side port on the side it was placed with. A Mirrored Filter and a Mirrored Mixer place the same blocks with the port on the left, craft shapelessly to and from the plain ones, and are what a mirrored block drops. The wrench will rotate parts and not mirror them, and the windows' Flip button is gone. | Owner's call, 2026-11-06, on the device windows: "there should be a "mirrored" version of the filter that can be shapelessly crafted using the regular filter and vice-versa", and "The wrench will *rotate* objects but won't mirror them." This replaces the wrench swap the owner chose on 2026-11-02, which no requirement covered. CONT-013, CONT-077, CONT-035. |
+| D-78 | 2026-11-06 | **Compat beyond Mekanism and the space mods comes in four tiers, and every adapter stays in this repo.** For sure: PneumaticCraft: Repressurized, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI with EMI. Very likely: Applied Energistics 2, and Create Aeronautics, with ambient parameters affecting lift. Likely: Modern Industrialization. Maybe: Sable, with moving structures carrying zones, and Create: The Factory Must Grow. Create itself gets no adapter. All are filed under R2. | Owner's call, 2026-11-06: "All of these compats should stay within our own repo; we provide the compat not them". On TFMG, the owner's reading is that its licence centres on training LLMs with its data, which we don't do. R1 still has no moving structures (D-07, SPACE-032). Sable replaces Valkyrien Skies and Create contraptions as the moving-structure target. COMPAT; [compat-targets](../research/compat-targets.md). |
 
 ## Assumptions (confirmed 2026-10-31)
 
@@ -398,10 +399,14 @@ accepted the blast's strength as it is.*
 ### Open
 
 Each one is resolved into a decision during review, and the requirements it
-blocks reference it as `TBD(Q-nn)`. Only the questions parked with Mekanism
-(D-11) remain; they are revisited when that integration is scheduled.
+blocks reference it as `TBD(Q-nn)`. Only questions parked with an adapter remain,
+and each is revisited when its adapter is scheduled: Q-19 and Q-20 with Mekanism
+(D-11), and Q-24 to Q-26 with the D-78 adapters.
 
 | ID | Question | Blocks | Proposed default |
 |---|---|---|---|
-| Q-19 | How many moles is 1 mB of a Mekanism chemical? | MEK (deferred) | Revisit with D-11. Lean: 1 mB = 1 L at 20 °C (≈0.0416 mol), so 1,000 mB fills one block at 1 atm. |
+| Q-19 | How many moles is 1 mB of a Mekanism chemical? | MEK (deferred), COMPAT-090 | Revisit with D-11. Lean: 1 mB = 1 L at 20 °C (≈0.0416 mol), so 1,000 mB fills one block at 1 atm. |
 | Q-20 | Mekanism gear policy: does scuba gear protect against pressure? Does the Electrolytic Breathing Unit work in vacuum? | MEK (deferred) | Revisit with D-11. Lean: faithful to Mekanism. |
+| Q-24 | How many moles is 1 mL of PneumaticCraft air? | COMPAT-011, COMPAT-012 | Lean: physical, so 1 mL at 1 bar and 293.15 K (≈4.1 × 10⁻⁵ mol). |
+| Q-25 | How many joules is one PneumaticCraft heat unit? | COMPAT-013 | Lean: one configurable factor, starting at 1 J and tuned in playtesting. |
+| Q-26 | What temperature does gas leave ME storage at? | COMPAT-072 | Lean: 293.15 K, as with Ad Astra's suit oxygen (SPACE-023). |

@@ -616,7 +616,12 @@ right too.
    and planet ambients ([SPACE](requirements/51-compat-space.md), #54 to
    #56). Like Mekanism, it uses only the public API.
 3. **Northstar Redux and Create Cosmonautics adapters** (SPACE-011/012).
-4. **The rest of the SS13 device set** (CONT R2 column), and biome/altitude
+4. **The D-78 adapters** ([COMPAT](requirements/52-compat-mods.md), #361 to #372),
+   kept in this repo. PneumaticCraft, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI
+   with EMI come first, then Applied Energistics 2, Create Aeronautics and Modern
+   Industrialization. Moving structures on Sable and The Factory Must Grow are
+   maybes.
+5. **The rest of the SS13 device set** (CONT R2 column), and biome/altitude
    ambients.
 
 ## Proposed module layout (to be validated in Phase B)
@@ -628,6 +633,7 @@ right too.
 | `zas` (framework mod) | api (jar-in-jar), engine | Geometry, hooks and mixins, persistence, sync, environments, life support, heat, fire, airflow, presets, commands, client |
 | `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power (D-68, D-69), GUIs, CC BY-SA 4.0 assets (D-39) |
 | `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023), R2 (D-66) |
+| one module per D-78 adapter | api, its target mod (compile-only), and `zas` or `zas_atmos` if it needs their classes | The COMPAT adapters, R2 (D-78) |
 | `example-addon` | api | Usage examples for consumers (API-005) |
 
 **Constraints from the platform research:**
