@@ -348,7 +348,7 @@ data/<namespace>/zas/thermal/<path>.json
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `blocks` | list of strings | yes | Block ids, or block tags prefixed with `#`. Unknown ids and tags are skipped |
-| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, above 0 and at most 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ |
+| `transmittance` | number | no | U in W/(m²·K) per block-thick layer, 0 to 1,000,000. Heat crossing a wall passes each block in turn: 1/U = Σ 1/Uᵢ. A block of 0 lets no heat through, by conduction or by radiating to a vacuum, so no path through it carries any (HEAT-019) |
 | `temperature` | number | no | Makes the blocks heat sources at this temperature in K, 0 to 1,000,000. A source ends any heat path that reaches it and conducts with its own U |
 
 - A file needs `transmittance`, `temperature` or both.
@@ -724,6 +724,7 @@ and mods add to them as to any tag.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
+| `#zas:shows_hud` | nothing | An item here shows the atmosphere HUD while held in either hand, with or without an alert (CLIENT-001). `zas_atmos` adds its analyzer (CONT-034) |
 | `#zas:shows_readings` | nothing | An item here, held in either hand, makes the atmosphere HUD show all four readings, safe ones too, not only those at warning or worse (CLIENT-008). `zas_atmos` adds its analyzer (CONT-034) |
 
 The server checks the tags, and a change applies after `/reload`, from the
@@ -965,7 +966,7 @@ data/<namespace>/zas/protection/<name>.json
 | `max_pressure_kpa` | 101.325 | The highest pressure it protects against, at least 101.325 kPa; the default protects against no high pressure |
 | `min_temperature_k` | 293.15 | The lowest temperature it protects against, 0 to 293.15 K; the default protects against no cold |
 | `max_temperature_k` | 293.15 | The highest temperature it protects against, at least 293.15 K; the default protects against no heat |
-| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021) |
+| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021). It also shows the atmosphere HUD there (CLIENT-001) |
 | `gas_filtering` | `false` | Whether it filters the `#zas:toxic` gases out of the breath, in the head slot (API-022, CONT-088) |
 | `airflow_resistance` | 0 | How much it resists being pushed by airflow, 0 to 1 (FLOW-012) |
 

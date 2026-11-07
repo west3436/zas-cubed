@@ -181,6 +181,16 @@ this needs a change in the heat code, which
 [#179](https://github.com/west3436/zas-cubed/issues/179) didn't expect. `HEAT-002`'s data
 format gains the value, and `docs/datapacks.md` changes with the code.*
 
+*2026-11-07: built, and left Draft for the owner to accept. A heat file's `transmittance` may be 0
+([datapacks](../datapacks.md#heat-data)). In the engine a layer of U 0 is an infinite
+resistance: a line of the heat grid that crosses one ends there and makes no link, so no
+conductance, pair or radiating face is ever worked out from it, and NaN still means the
+fallback. Checked by `heat_019_a_path_with_a_layer_of_0_carries_no_heat`,
+`heat_019_rooms_either_side_of_a_layer_of_0_exchange_nothing`,
+`heat_019_a_wall_of_0_radiates_nothing_to_a_vacuum`, `heat_019_a_layer_of_0_in_series`,
+`heat_019_a_wall_of_0_radiates_nothing` and `heat_019_a_transmittance_of_0` (engine Unit),
+and `heat_019_a_transmittance_of_0_loads` (the data format, Unit).*
+
 ## Sources and sinks
 
 #### HEAT-003 · Heat-source blocks

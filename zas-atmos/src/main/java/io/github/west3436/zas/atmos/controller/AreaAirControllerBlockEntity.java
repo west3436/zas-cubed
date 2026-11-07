@@ -66,6 +66,9 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *   <li>When it reaches danger 2, steps the firelocks it covers at once, so they close in the same
  *       atmos tick (CONT-043).
  * </ol>
+ *
+ * <p>It records what a step costs ({@link #demand()}), so a central atmospherics controller that has
+ * claimed it can pay what its buffer doesn't hold before its next step (CONT-120).
  */
 public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider {
     /** A part the controller covers, as the GUI lists it (CONT-049). */
@@ -78,6 +81,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     private ControllerPreset preset = ControllerPreset.HUMAN;
     private ControllerMode mode = ControllerMode.SCRUBBING;
     private boolean powered;
+    private long demand;
     private ControllerStatus status = ControllerStatus.UNPOWERED;
 
     private CompletableFuture<PinResult> pending;
@@ -127,6 +131,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         List<PoweredDevice> covered = covered(level);
         coverage();
         if (!powered) {
+            demand = fullBill(own, covered);
             danger.reset();
             breachCheck.reset();
             breach = false;
@@ -175,7 +180,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                 s.scrubberOrder(scrubber);
             }
         }
-        boolean[] supplied = feed(covered);
+        boolean[] supplied = feed(covered, own);
         parts = describe(covered, supplied);
         setStatus(level, ControllerStatus.of(danger.level()));
         if (!wasAlarming && alarming()) {
@@ -209,8 +214,12 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return at.state() == AtmosphereState.AMBIENT ? at.pressure() : Double.NaN;
     }
 
-    /** Takes FE from every block next to it that gives it (CONT-062). */
-    private void pull(ServerLevel level) {
+    /**
+     * Takes FE from every block next to it that gives it (CONT-062). A central controller calls it
+     * too, before it works out this controller's shortfall, so the blocks next to it pay first
+     * (CONT-120).
+     */
+    void pull(ServerLevel level) {
         for (Direction dir : Direction.values()) {
             if (buffer.space() <= 0) {
                 return;
@@ -249,11 +258,15 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         });
     }
 
-    /** Called by the block when the controller is removed: unpins its zone (CONT-110). */
+    /**
+     * Called by the block when the controller is removed: unpins its zone (CONT-110) and leaves its
+     * central controller (CONT-119).
+     */
     void removedFromWorld(ServerLevel level) {
         pending = null;
         pinnedZone = null;
         ZonePins.unpin(level, owner());
+        CentralClaims.of(level).release(getBlockPos());
     }
 
     /** The parts in its zone and those linked to it, in the order they joined the schedule. */
@@ -336,8 +349,20 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return Atmospheres.at(level, d.airPoint()).zone().filter(zone::equals).isPresent();
     }
 
+    /**
+     * What a step costs with every covered part paid, at what each draws now: its own draw and theirs,
+     * including those another provider paid for this time, which may fall to it next time.
+     */
+    private static long fullBill(long own, List<PoweredDevice> covered) {
+        long cost = own;
+        for (PoweredDevice d : covered) {
+            cost += d.power().drawPerAtmosTick();
+        }
+        return cost;
+    }
+
     /** Powers the covered parts from the buffer, in priority order (CONT-064, CONT-068). */
-    private boolean[] feed(List<PoweredDevice> covered) {
+    private boolean[] feed(List<PoweredDevice> covered, long own) {
         List<PowerFeed.Demand> demands = new ArrayList<>();
         List<Integer> unpaid = new ArrayList<>();
         boolean[] supplied = new boolean[covered.size()];
@@ -350,6 +375,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                 unpaid.add(i);
             }
         }
+        demand = fullBill(own, covered);
         PowerFeed.Plan plan = PowerFeed.plan(buffer.getEnergyStored(), demands);
         buffer.take(plan.spent());
         for (int j = 0; j < unpaid.size(); j++) {
@@ -449,6 +475,16 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
     /** Whether it paid its own draw at its last step. */
     public boolean powered() {
         return powered;
+    }
+
+    /**
+     * What a step costs, as of its last: its own draw and that of every part it covered, at what each
+     * drew then, whether or not it could pay and whether or not another provider paid for some
+     * (CONT-120). A central controller tops its buffer up to this, so a part whose next charge comes
+     * due finds it there. 0 before its first step.
+     */
+    public long demand() {
+        return demand;
     }
 
     /** The last readings, numbered as in {@link ControllerPreset}; empty before the first. */

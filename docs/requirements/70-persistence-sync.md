@@ -358,11 +358,20 @@ LIFE-023's breathing sync is separate, so this stays Accepted.*
 *2026-11-06: LIFE-023 is Implemented, so this replaces "LIFE-023's breathing sync is
 separate" above as a reason to stay Accepted. Only the Bench is left.*
 
+*2026-11-06: The state now also holds what shows the HUD without an alert (CLIENT-001), the
+internals and the tank's pressure (CLIENT-009), at the same rate and under the same rule. The
+tank's display resolution is 1 kPa. A hidden HUD holds neither internals nor a tank, so normal
+air still sends nothing. This replaces "21 to about 40 bytes" above: a state is 27 to about 46
+bytes. `data_014_the_indicator_resends_at_its_resolution` and
+`data_014_a_draining_tank_syncs_at_most_4_a_second` (GameTests) pass. The second drains a test
+tank slowly and fast, and counts the states sent.*
+
 *2026-11-07: While the player holds an analyzer, every reading is shown (CLIENT-008), so
 the state carries each value with or without an alert, at the same rate and resolutions. So
-normal air sends nothing only while no analyzer is held. The state gains one byte for this,
-so it is 22 to about 41 bytes. `client_008_a_held_analyzer_shows_every_reading` and
-`data_014_payload_round_trips` (GameTests) pass.*
+normal air sends nothing only while no analyzer is held. The state gains one byte for this:
+this replaces "27 to about 46 bytes" above, as a state is 28 to about 47 bytes.
+`client_008_a_held_analyzer_shows_every_reading` and `data_014_payload_round_trips`
+(GameTests) pass.*
 
 #### DATA-015 · Airflow sync
 `Must` · `R1` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005

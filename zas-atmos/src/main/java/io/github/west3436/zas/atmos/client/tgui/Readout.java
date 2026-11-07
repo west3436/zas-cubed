@@ -3,7 +3,11 @@ package io.github.west3436.zas.atmos.client.tgui;
 import io.github.west3436.zas.api.client.DisplayUnits;
 import java.util.Locale;
 
-/** Pressures and temperatures as a GUI shows them, in the player's units (CLIENT-006). */
+/**
+ * Pressures and temperatures as a GUI or an item's tooltip shows them, in the player's units
+ * (CLIENT-006). It refers to no client-only class, so an item, which a dedicated server also loads,
+ * can use it.
+ */
 public final class Readout {
     private Readout() {}
 

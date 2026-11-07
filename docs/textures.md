@@ -38,7 +38,7 @@ texture), or none (the block has no item).
 
 | Proposed id | Name | Priority | Requirement | Item | States and notes |
 |---|---|---|---|---|---|
-| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). |
+| `zas_atmos:pipe` | Pipe | Must | CONT-001, CONT-007 | Block model | A core plus an arm for each connected side. An unconnected end leaks (CONT-004) unless it's capped. Players dye pipes (the owner's choice, 2026-11-01; no requirement yet). Each face it leaks from shows a mouth: the tube flaring to an 8 px lip at the block edge, hollow and dark inside (the owner's choice of 2026-11-07, [#164](https://github.com/west3436/zas-cubed/issues/164)). That's the face opposite a pipe's one connection, or every face of a pipe with none. Runs, bends and tees have no mouth. The lip is a darker shade of the dye, like the flanges, and the inside isn't tinted. |
 | `zas_atmos:pipe_cap` | Pipe end cap | Not set | None yet | Block model | Closes a pipe end so it doesn't leak (CONT-004). Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | Radiator pipe | Not set | None yet | Block model | Exchanges heat with its surroundings, like vg's heat-exchange pipe. It joins ordinary pipe only through the adaptor, so it must look clearly different from it: a finned tube in vg's near-black, not dyed, with no flanges (the owner's choice of 2026-11-02). Its item is the 3D straight piece, like the pipe's. |
 | `zas_atmos:radiator_adaptor` | Radiator adaptor pipe | Not set | None yet | Block model | Joins an ordinary pipe to a radiator pipe. One end of each kind: inline, an undyed pipe's flange and tube at one end and the finned tube at the other. |
@@ -232,7 +232,10 @@ These need textures too, but aren't in the tables above:
   `carbon_pressure±1/±2`, `carbon_temp±2/±4`), Crops at 32×32 in
   `zas/textures/gui/hud/`, with animated states' frames stacked downward. vg
   took its screen-alert framework from /tg/station (CC BY-SA 3.0). The
-  internals indicator is still to do.
+  internals indicator is vg's internals button from `icons/mob/screen1_old.dmi`
+  (`internal0`, `internal1_old`, `internal2_old`), as `internals_off`,
+  `internals_on` and `internals_failing`, which flashes between `internal2_old`
+  and `internal0`.
 - airflow particles (CLIENT-003)
 
 ## Later releases (R2)
