@@ -3858,7 +3858,7 @@ with no slots (`analyzer.AnalyzerMenu`, `client.AnalyzerScreen`).
   four readings while it's held, safe ones too (CLIENT-008, owner's choice,
   2026-11-07).
 
-### 11.15 Station blocks (CONT-129 to CONT-131)
+### 11.15 Station blocks (CONT-129 to CONT-132)
 
 Three building blocks in `AtmosBlocks`, with no code of their own and nothing added
 to the API. None lets heat through:
@@ -3878,6 +3878,22 @@ pickaxe or better, and the other two at 25 with a diamond pickaxe or better
 (`#minecraft:needs_stone_tool`, `#minecraft:needs_diamond_tool`). Each drops
 itself, the glass without Silk Touch. Their blockstates and item models name the
 block models `zas_atmos:block/<id>`, which come with their art.
+
+**Connected textures (CONT-132)** come from Fusion, an optional client mod
+(`type = "optional"`, `side = "CLIENT"` in `neoforge.mods.toml`). Fusion joins any
+texture whose `.png.mcmeta` has a `fusion` section, so the models stay vanilla's
+`cube_all`. Each block's joined texture is a strip in Fusion's pieced layout, five 16 px
+tiles: alone, joined all round, joined above and below, joined left and right, and joined
+on four sides but no corner (an inner corner). Fusion builds each face from four quarters,
+each taken from one tile. The `is_same_block` rule joins each block to its own kind only.
+
+Without Fusion the game would squash a strip onto each face, so the strips can't replace
+the mod's own textures. They live in a built-in resource pack,
+`src/main/resources/resourcepacks/fusion_connected/`, which `ConnectedTextures` adds from
+`AddPackFindersEvent` only when Fusion is loaded: a client pack, always on, above the
+mod's own assets. A strip's first tile is the block's own texture, so a lone block and the
+items look the same with Fusion or without it. `-Pfusion=true` adds Fusion to the dev
+client from Modrinth's maven, as a `localRuntime` dependency that no jar or CI run holds.
 
 ### 11.16 The wrench (CONT-035, CONT-091)
 

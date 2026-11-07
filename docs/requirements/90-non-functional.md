@@ -650,6 +650,10 @@ in a separate `LICENSE-ASSETS` file. Code stays MIT.
 `src/*/resources/assets/` under CC BY-SA 4.0, with its full text, and `LICENSE` keeps
 the code MIT.*
 
+*2026-11-07: assets can also sit in a built-in resource pack, under
+`src/*/resources/resourcepacks/<pack>/assets/`, as the connected textures for Fusion do
+(CONT-132). `LICENSE-ASSETS` covers those too.*
+
 #### NFR-045 · Asset provenance
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26, D-56, D-62
 
@@ -676,6 +680,9 @@ asset files have an entry, and an uncredited probe file made the script exit 1.*
 *2026-11-06: a font may keep its own license instead of being adapted under CC BY-SA 4.0
 (D-76). The script allows `Bitstream-Vera`, for files under `font/` only. DejaVu Sans's
 license text ships at `META-INF/licenses/DejaVu-Fonts.txt` in the `zas_atmos` jar.*
+
+*2026-11-07: the script also checks the `assets/` of each built-in resource pack under
+`src/*/resources/resourcepacks/`, where the connected textures for Fusion are (CONT-132).*
 
 #### NFR-046 · No NonCommercial assets
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-26

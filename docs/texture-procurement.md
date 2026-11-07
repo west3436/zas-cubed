@@ -252,6 +252,22 @@ on every face of a full block.
 | `zas_atmos:reinforced_station_wall` | `icons/turf/walls.dmi` | `rwall0` | The same plate with vg's reinforcing rods crossing its middle, three each way, and a boss where they meet. `rwall0` dates from 2010 (a620df8) and is unchanged since, so it has no Goon or NC source. |
 | `zas_atmos:reinforced_glass_block` | `icons/obj/structures/window.dmi` | `frwindow0`, `frwindow15` | vg's full reinforced window as a see-through block, translucent: an opaque blue-steel frame, 3 px, with vg's white rods as dashes along it, and a grey-blue pane at vg's alpha split over the block's two faces. The owner chose the wired pane (2026-11-07); vg's diamond wire mesh reads as a checker at 16 px, so it's a square mesh instead. vg's frame is half see-through and is drawn opaque, in the colours it shows over grey. Both states came into vg's `structures.dmi` in 2012 (b31ce8e), in a /tg/station import that ported Baystation 12 code; both license their icons CC BY-SA 3.0. They moved unchanged to `window.dmi` in 2022 (d567708). |
 
+**Connected textures (CONT-132).** Done in wave ct1, and approved by the owner as drawn
+(2026-11-07). With Fusion installed each block joins blocks of its own kind, from a strip of
+five 16 px tiles in Fusion's pieced layout: the texture above, then the block joined all
+round, above and below, left and right, and on four sides with an inner corner. They follow
+vg's joined states, `metal15`, `rwall15` and `frwindow15`, in the same commit: the rim or
+frame, with its bolts or rod dashes, only on outside edges.
+- The station wall is flat plate inside, and keeps the seam's notch at the middle of each
+  outside edge.
+- The reinforced wall keeps a cross of rods and a boss on each block, stopping short of its
+  edges as in `rwall15` (the owner's choice over one lattice of rods).
+- The glass's wire runs every 5 px, at 0, 5 and 10, so the mesh stays nearly even from block
+  to block.
+
+The strips are in a built-in resource pack that's added only with Fusion
+([architecture §11.15](architecture.md#1115-station-blocks-cont-129-to-cont-132)).
+
 ### 6.3 Content mod (`zas_atmos`): items
 
 The vg size is the sprite's opaque area inside its 32 px frame.
@@ -421,7 +437,7 @@ changes.
 | 3. S-03 to S-05 and S-13 | Gas fire, igniter, heater, air conditioner, pressure pump, manual and redstone valves, tank transfer valve, the other 14 canister colours, which cover the six other creative canisters. Done (2026-11-02) | 14 |
 | 4. The rest of R1's Must and Should | Hardsuit, magnetic boots, multitool, fire alarm, filter, mixer, volume pump, electrolyzer, recharger, the three batteries, portable pump and scrubber. Done (2026-11-02) | 17 |
 | 5. Could, and rows with no priority yet | Radiator pipe and adaptor, heat exchanger, airlock in both sizes with the 2-by-2 firelock, airlock controller, air sensor, tank holder, passive vent. Done (2026-11-02) | 8 |
-| 6. Station walls and glass (D-80, D-81) | Station wall, reinforced station wall, reinforced glass. Done in wave 7 (2026-11-07) | 3 |
+| 6. Station walls and glass (D-80, D-81) | Station wall, reinforced station wall, reinforced glass. Done in wave 7, and their connected textures for Fusion (CONT-132) in wave ct1 (2026-11-07) | 3 |
 
 The batches cover all 66 rows. The pilot's three textures count in batch 1.
 The pipe cap has no priority yet, but it's in batch 1 because an open pipe end

@@ -114,6 +114,12 @@ and doors do. Any of them could use its block model instead.
 | `zas_atmos:reinforced_station_wall` | Reinforced station wall | Should | CONT-130 | Block model | The station wall with vg's reinforcing rods (`rwall0`) crossing its middle and a boss where they meet. |
 | `zas_atmos:reinforced_glass_block` | Reinforced glass | Should | CONT-131 | Block model | A full see-through block, after vg's full reinforced window (`icons/obj/structures/window.dmi` `frwindow0`): a blue-steel frame with white rods along it, and wired glass, a square wire mesh through a grey-blue pane (the owner's choice of 2026-11-07). Translucent. |
 
+With Fusion installed, each of the three joins with blocks of its own kind (CONT-132). Each
+has one more texture, a strip of five tiles in Fusion's pieced layout, in a built-in resource
+pack: the rim or frame only on outside edges, as vg's joined walls and windows have it
+(`metal15`, `rwall15`, `frwindow15`), and the reinforced wall's cross of rods on every
+block. The owner approved them as drawn on 2026-11-07.
+
 ### Content mod (`zas_atmos`): creative canisters
 
 Canisters pre-filled with each built-in gas (the 8 of D-42) exist only in
