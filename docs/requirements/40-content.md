@@ -2157,7 +2157,7 @@ checks the table in the world for wheat, a sapling and leaves. Leaves dim their 
 position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 All R1 content shall be craftable from vanilla materials.
 
@@ -2170,8 +2170,18 @@ vanilla materials (D-72), so every chain ends in vanilla materials. The
 GameTest `cont_051_recipes_use_vanilla_materials` checks it for the recipes
 that load.*
 
+*2026-11-07: Implemented. Every recipe's ingredients are vanilla or the mod's
+own, and every chain ends in vanilla materials. Of the mod's 73 items, all but
+the O2 and air tanks have a recipe that loads; those two are made by filling an
+empty tank (CONT-039). `cont_051_recipes_use_vanilla_materials` (GameTest) now takes the
+items from the mod's registry, not a list, so a new item without a recipe
+fails it. `CraftingDocTest` (unit test) checks the chains of all 81 recipe
+files, including the 8 whose blocks aren't in the mod. A battery's charge, the
+magnetic boots switched on and a transfer valve's tanks are models of one item,
+not items of their own.*
+
 #### CONT-058 · Documented progression
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 The content's crafting progression shall be documented.
 
@@ -2181,6 +2191,14 @@ The content's crafting progression shall be documented.
 
 *2026-11-02: the progression and every recipe are in
 [docs/crafting.md](../crafting.md).*
+
+*2026-11-07: Implemented. [docs/crafting.md](../crafting.md) matches all 81
+recipe files. `CraftingDocTest` (unit test) fails when a row of its recipe
+tables and a recipe file differ in name, count, stage, grid or ingredients, or
+when the components table's stages and uses don't follow from the recipes.
+The page now uses the names the game shows (the pipe end cap and the emergency
+oxygen tank), and lists the 8 recipes whose blocks aren't in the mod yet under
+a heading of their own.*
 
 #### CONT-059 · Data-driven recipes
 `Must` · `R1` · `Implemented` · Verify: Inspect

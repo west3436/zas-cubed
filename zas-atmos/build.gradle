@@ -123,6 +123,10 @@ tasks.named('test', Test) {
     systemProperty 'zas.resources', project(':zas').file('src/main/resources').absolutePath
     systemProperty 'zas.mainClasses', zasMain.java.destinationDirectory.get().asFile.absolutePath
     systemProperty 'zas_atmos.mainClasses', sourceSets.main.java.destinationDirectory.get().asFile.absolutePath
+    // CONT-058 compares the crafting page with the recipe files.
+    def craftingDoc = rootProject.file('docs/crafting.md')
+    inputs.file(craftingDoc)
+    systemProperty 'zas.craftingDoc', craftingDoc.absolutePath
     testLogging.exceptionFormat = 'full'
 }
 
