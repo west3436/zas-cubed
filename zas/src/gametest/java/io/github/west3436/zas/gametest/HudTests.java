@@ -2,6 +2,9 @@ package io.github.west3436.zas.gametest;
 
 import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -14,6 +17,7 @@ import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
+import io.github.west3436.zas.life.Internals;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,9 +30,13 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -36,7 +44,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * The atmosphere HUD's alert levels (CLIENT-008) and their sync to the player (DATA-014).
+ * The atmosphere HUD's alert levels (CLIENT-008), what shows it (CLIENT-001), its internals
+ * indicator (CLIENT-009) and their sync to the player (DATA-014).
  *
  * <p>The thresholds are checked on {@link HudLevels} directly, then in sealed rooms through {@link
  * AtmosHud#syncAt}, which records what would be sent. Like {@code HazardTests}, each room test
@@ -118,6 +127,16 @@ public final class HudTests {
 
     private static void close(GameTestHelper h, double actual, double expected, double tolerance, String what) {
         h.assertTrue(Math.abs(actual - expected) <= tolerance, what + ": expected " + expected + ", got " + actual);
+    }
+
+    /** The state a player's HUD should hold now, sent or not; the atmosphere at its eyes must be resolved. */
+    private static AtmosHudPayload now(FakePlayer p) {
+        return HudLevels.withIndicator(HudLevels.of(p), p);
+    }
+
+    /** Puts the test item that seals the breathing on a player's head. */
+    private static void seal(FakePlayer p) {
+        p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
     }
 
     // ---- CLIENT-008: thresholds ---------------------------------------------------------
@@ -358,6 +377,319 @@ public final class HudTests {
                 AtmosHudPayload.NONE,
                 new AtmosHudPayload(-2, 2, 2, 2, 12.5f, 2.6f, 410, Optional.of(CO), 0.3f),
                 new AtmosHudPayload(1, 0, -1, 0, 400, 0, 235, Optional.empty(), 0))) {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            AtmosHudPayload.STREAM_CODEC.encode(buf, p);
+            h.assertValueEqual(AtmosHudPayload.STREAM_CODEC.decode(buf), p, "round trip");
+            h.assertValueEqual(buf.readableBytes(), 0, "bytes left over");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A trigger, the internals and the tank's pressure send a state as a shown value does: the tank
+     * at 1 kPa, the internals and the HUD showing or hiding at any change. A hidden HUD holds neither
+     * internals nor a tank, and a trigger under an alert changes nothing shown.
+     */
+    @GameTest(batch = "hud", template = "empty")
+    public static void data_014_the_indicator_resends_at_its_resolution(GameTestHelper h) {
+        int on = AtmosHudPayload.INTERNALS_ON;
+        AtmosHudPayload base = AtmosHudPayload.NONE.withIndicator(true, on, 200);
+        h.assertFalse(base.differsFrom(base), "the same state");
+        h.assertFalse(AtmosHudPayload.NONE.withIndicator(true, on, 200.9f).differsFrom(base), "under 1 kPa");
+        h.assertTrue(AtmosHudPayload.NONE.withIndicator(true, on, 199).differsFrom(base), "1 kPa");
+        h.assertTrue(
+                AtmosHudPayload.NONE
+                        .withIndicator(true, AtmosHudPayload.INTERNALS_OFF, 200)
+                        .differsFrom(base),
+                "internals off");
+        h.assertTrue(
+                AtmosHudPayload.NONE
+                        .withIndicator(true, AtmosHudPayload.INTERNALS_FAILING, 200)
+                        .differsFrom(base),
+                "internals failing");
+        h.assertTrue(
+                AtmosHudPayload.NONE
+                        .withIndicator(true, on, AtmosHudPayload.NO_TANK)
+                        .differsFrom(base),
+                "the tank gone");
+        h.assertTrue(
+                AtmosHudPayload.NONE
+                        .withIndicator(true, on, 0)
+                        .differsFrom(AtmosHudPayload.NONE.withIndicator(true, on, AtmosHudPayload.NO_TANK)),
+                "an empty tank in place of none");
+        h.assertTrue(AtmosHudPayload.NONE.differsFrom(base), "hidden");
+        h.assertTrue(base.differsFrom(AtmosHudPayload.NONE), "shown");
+
+        h.assertValueEqual(AtmosHudPayload.NONE.withIndicator(false, on, 200), AtmosHudPayload.NONE, "hidden");
+        AtmosHudPayload alert = new AtmosHudPayload(-1, 0, 0, 0, 40, 0, 0, Optional.empty(), 0);
+        h.assertFalse(alert.withIndicator(true, 0, -1).differsFrom(alert), "a trigger under an alert");
+        h.assertValueEqual(alert.withIndicator(false, on, 200).tankKpa(), 200f, "the tank under an alert");
+        h.succeed();
+    }
+
+    /**
+     * A state with a tank draining slowly goes once for each 1 kPa, and a tank draining fast goes at
+     * most every 5 ticks, 4 a second.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void data_014_a_draining_tank_syncs_at_most_4_a_second(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 305)) {
+            lab.room(0, air(StandardAir.PRESSURE), StandardAir.TEMPERATURE);
+            FakePlayer p = lab.player(0);
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 1.0), 21.3));
+            Internals.set(p, true);
+            IInternalSupply tank = Internals.find(p).orElseThrow();
+            double molesPerKpa = TestLifeSupport.TANK_VOLUME / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+            List<AtmosHudPayload> sent = new ArrayList<>();
+            long t = p.level().getGameTime();
+            AtmosHud.syncAt(p, t, sent::add);
+            h.assertValueEqual(sent.size(), 1, "the first state");
+
+            // 0.04 kPa a tick for 100 ticks: 4 kPa.
+            for (int i = 1; i <= 100; i++) {
+                tank.draw(0.04 * molesPerKpa);
+                AtmosHud.syncAt(p, t + i, sent::add);
+            }
+            h.assertValueEqual(sent.size(), 5, "states sent while 4 kPa drained");
+            for (int i = 1; i < sent.size(); i++) {
+                close(h, sent.get(i - 1).tankKpa() - sent.get(i).tankKpa(), 1, 0.05, "the drop between states");
+            }
+
+            // 1 kPa a tick for 20 ticks.
+            int before = sent.size();
+            long last = t + 100;
+            for (int i = 1; i <= 20; i++) {
+                tank.draw(molesPerKpa);
+                AtmosHudPayload out = AtmosHud.syncAt(p, last + i, sent::add);
+                if (out != null) {
+                    h.assertValueEqual(i % 5, 0, "the tick of a state sent");
+                }
+            }
+            h.assertValueEqual(sent.size() - before, 4, "states sent in 20 ticks");
+        }
+        h.succeed();
+    }
+
+    // ---- CLIENT-001: what shows the HUD -----------------------------------------------------
+
+    /**
+     * In normal air, a head item that seals the breathing shows the HUD, by its capability or by
+     * protection data. Nothing else on the head does, nor a sealing item elsewhere, and it raises no
+     * alert. Taking it off sends the state that hides the HUD.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_001_a_sealed_head_shows_the_hud(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 306)) {
+            lab.room(0, air(StandardAir.PRESSURE), StandardAir.TEMPERATURE);
+            FakePlayer p = lab.player(0);
+            h.assertValueEqual(now(p), AtmosHudPayload.NONE, "bare-headed");
+            p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(TestLifeSupport.item()));
+            h.assertFalse(now(p).shown(), "a sealing item on the chest");
+            p.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+            p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.DIAMOND_HELMET));
+            h.assertFalse(now(p).shown(), "a helmet with no seal");
+            p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CARVED_PUMPKIN));
+            h.assertTrue(now(p).shown(), "a head sealed by protection data");
+            seal(p);
+            AtmosHudPayload sealed = now(p);
+            h.assertTrue(sealed.shown(), "a head sealed by its capability");
+            h.assertFalse(sealed.any(), "a sealed head in normal air raises an alert");
+
+            List<AtmosHudPayload> sent = new ArrayList<>();
+            long t = p.level().getGameTime();
+            AtmosHud.syncAt(p, t, sent::add);
+            h.assertValueEqual(sent, List.of(sealed), "the state with the head on");
+            p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+            AtmosHud.syncAt(p, t + 5, sent::add);
+            h.assertValueEqual(sent, List.of(sealed, AtmosHudPayload.NONE), "the state with it off");
+        }
+        h.succeed();
+    }
+
+    /**
+     * An item in {@code #zas:shows_hud}, a spyglass standing in for an analyzer, shows the HUD while
+     * held in either hand. It doesn't elsewhere in the inventory or worn, and an item outside the tag
+     * doesn't in the hand.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_001_a_held_tag_item_shows_the_hud(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 307)) {
+            lab.room(0, air(StandardAir.PRESSURE), StandardAir.TEMPERATURE);
+            FakePlayer p = lab.player(0);
+            p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+            h.assertFalse(now(p).shown(), "a stick in the hand");
+            p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPYGLASS));
+            h.assertTrue(now(p).shown(), "in the main hand");
+            h.assertFalse(now(p).any(), "held in normal air, an alert");
+            p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            p.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.SPYGLASS));
+            h.assertTrue(now(p).shown(), "in the offhand");
+            p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            p.getInventory().setItem(1, new ItemStack(Items.SPYGLASS));
+            h.assertFalse(now(p).shown(), "in a hotbar slot not selected");
+            p.getInventory().setItem(1, ItemStack.EMPTY);
+            p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.SPYGLASS));
+            h.assertFalse(now(p).shown(), "worn");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A creative player's sealed head shows the HUD in air that would alert another, still with no
+     * alert (LIFE-037). A spectator's shows nothing.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_001_creative_is_shown_the_hud_and_a_spectator_is_not(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 308)) {
+            lab.room(0, Map.of(StandardAir.NITROGEN, 1.0), 100);
+            FakePlayer p = lab.player(0);
+            seal(p);
+            p.setGameMode(GameType.CREATIVE);
+            AtmosHudPayload creative = now(p);
+            h.assertTrue(creative.shown(), "creative, sealed");
+            h.assertFalse(creative.any(), "creative, an alert");
+            p.setGameMode(GameType.SPECTATOR);
+            h.assertValueEqual(now(p), AtmosHudPayload.NONE, "a spectator, sealed");
+        }
+        h.succeed();
+    }
+
+    // ---- CLIENT-009: the internals indicator -----------------------------------------------
+
+    /**
+     * While the HUD is shown, the state holds what the internals do and the pressure of the first
+     * tank found, on or off: off, on with a tank that delivers, and failing with no tank or one that
+     * can't deliver. A hidden HUD holds neither, even with internals on and a tank.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_009_internals_and_the_tanks_pressure(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 309)) {
+            lab.room(0, air(StandardAir.PRESSURE), StandardAir.TEMPERATURE);
+            FakePlayer p = lab.player(0);
+            seal(p);
+            Map<ResourceLocation, Double> full = Map.of(StandardAir.OXYGEN, 1.0);
+            double fullKpa = GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE / TestLifeSupport.TANK_VOLUME;
+
+            AtmosHudPayload none = now(p);
+            h.assertValueEqual(none.internals(), AtmosHudPayload.INTERNALS_OFF, "off, no tank");
+            h.assertValueEqual(none.tankKpa(), AtmosHudPayload.NO_TANK, "off, no tank: pressure");
+            Internals.set(p, true);
+            none = now(p);
+            h.assertValueEqual(none.internals(), AtmosHudPayload.INTERNALS_FAILING, "on, no tank");
+            h.assertValueEqual(none.tankKpa(), AtmosHudPayload.NO_TANK, "on, no tank: pressure");
+
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(full, 21.3));
+            AtmosHudPayload on = now(p);
+            h.assertValueEqual(on.internals(), AtmosHudPayload.INTERNALS_ON, "on");
+            close(h, on.tankKpa(), fullKpa, 0.01, "on: pressure");
+            Internals.set(p, false);
+            AtmosHudPayload off = now(p);
+            h.assertValueEqual(off.internals(), AtmosHudPayload.INTERNALS_OFF, "off");
+            close(h, off.tankKpa(), fullKpa, 0.01, "off: pressure");
+            Internals.set(p, true);
+
+            p.setItemSlot(EquipmentSlot.CHEST, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 0.5), 21.3));
+            close(h, now(p).tankKpa(), fullKpa / 2, 0.01, "the first tank found (LIFE-028)");
+            p.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(full, fullKpa + 1));
+            AtmosHudPayload failing = now(p);
+            h.assertValueEqual(failing.internals(), AtmosHudPayload.INTERNALS_FAILING, "a tank below its setting");
+            close(h, failing.tankKpa(), fullKpa, 0.01, "a tank below its setting: pressure");
+
+            p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(full, 21.3));
+            h.assertValueEqual(now(p), AtmosHudPayload.NONE, "hidden, on, with a tank");
+        }
+        h.succeed();
+    }
+
+    /** An alert shows the indicator too: bare-headed in thin air, internals on fail with no seal, and the tank shows. */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_009_an_alert_shows_the_indicator(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 310)) {
+            lab.room(0, air(40), StandardAir.TEMPERATURE);
+            FakePlayer p = lab.player(0);
+            Internals.set(p, true);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(StandardAir.OXYGEN, 1.0), 21.3));
+            AtmosHudPayload s = now(p);
+            h.assertTrue(s.any(), "40 kPa has an alert");
+            h.assertFalse(s.triggered(), "bare-headed, a trigger");
+            h.assertValueEqual(s.internals(), AtmosHudPayload.INTERNALS_FAILING, "on, no seal");
+            close(
+                    h,
+                    s.tankKpa(),
+                    GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE / TestLifeSupport.TANK_VOLUME,
+                    0.01,
+                    "the tank");
+        }
+        h.succeed();
+    }
+
+    /**
+     * While the atmosphere at the eyes is unresolved the last readings stand, and the internals still
+     * reach the client. A player with nothing sent yet waits. The unresolved region is one held at a
+     * breach because it reaches an unloaded chunk (GEO-026), as in LIFE-048's test.
+     */
+    @GameTest(batch = "hud", template = "empty", timeoutTicks = 200)
+    public static void client_009_internals_update_while_the_atmosphere_is_unresolved(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 311)) {
+            Rooms r = lab.r;
+            r.clear(0, 23);
+            r.shell(2, 9); // A, in the west chunk: a vacuum
+            r.shell(9, 21); // B, unzoned, across both chunks, sharing the wall at x = 9
+            r.settle(GasMutations.remove(
+                    r.level,
+                    r.point(5, 2, 2),
+                    Map.of(StandardAir.NITROGEN, 1e6, StandardAir.OXYGEN, 1e6),
+                    Rooms.source("hud")));
+            FakePlayer p = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_hud"));
+            p.moveTo(Vec3.atBottomCenterOf(r.abs(5, 1, 2)));
+            List<AtmosHudPayload> sent = new ArrayList<>();
+            long t = p.level().getGameTime();
+            AtmosHud.syncAt(p, t, sent::add);
+            h.assertValueEqual(sent.size(), 1, "the state in the vacuum");
+            AtmosHudPayload vacuum = sent.get(0);
+            h.assertValueEqual(vacuum.pressure(), -HudLevels.DANGER, "the vacuum: pressure");
+            h.assertValueEqual(vacuum.internals(), AtmosHudPayload.INTERNALS_OFF, "the vacuum: internals");
+
+            ChunkPos east = new ChunkPos(r.abs(16, 0, 0));
+            byte[] saved = r.dimension().simulateUnload(east);
+            try {
+                r.tick();
+                r.set(9, 2, 2, Blocks.AIR.defaultBlockState());
+                r.tick();
+                Vec3 inB = Vec3.atBottomCenterOf(r.abs(12, 1, 2));
+                p.moveTo(inB);
+                h.assertValueEqual(Atmospheres.of(p).state(), AtmosphereState.UNRESOLVED, "B's loaded part");
+                AtmosHud.syncAt(p, t + 5, sent::add);
+                h.assertValueEqual(sent.size(), 1, "states sent with nothing changed");
+                Internals.set(p, true);
+                AtmosHud.syncAt(p, t + 10, sent::add);
+                h.assertValueEqual(sent.size(), 2, "states sent with internals on");
+                h.assertValueEqual(sent.get(1).internals(), AtmosHudPayload.INTERNALS_FAILING, "internals on");
+                h.assertValueEqual(sent.get(1).pressure(), vacuum.pressure(), "the reading that stood");
+
+                FakePlayer fresh = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_hud"));
+                fresh.moveTo(inB);
+                seal(fresh);
+                h.assertTrue(AtmosHud.syncAt(fresh, t, sent::add) == null, "a state with nothing to go on");
+            } finally {
+                r.dimension().simulateLoad(east, saved);
+            }
+        }
+        h.succeed();
+    }
+
+    /** The indicator survives the stream codec. */
+    @GameTest(batch = "hud", template = "empty")
+    public static void client_009_payload_round_trips(GameTestHelper h) {
+        for (AtmosHudPayload p : List.of(
+                AtmosHudPayload.NONE.withIndicator(true, AtmosHudPayload.INTERNALS_ON, 608.5f),
+                AtmosHudPayload.NONE.withIndicator(true, AtmosHudPayload.INTERNALS_FAILING, AtmosHudPayload.NO_TANK),
+                new AtmosHudPayload(-2, 2, 2, 2, 12.5f, 2.6f, 410, Optional.of(CO), 0.3f)
+                        .withIndicator(false, AtmosHudPayload.INTERNALS_OFF, 12))) {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             AtmosHudPayload.STREAM_CODEC.encode(buf, p);
             h.assertValueEqual(AtmosHudPayload.STREAM_CODEC.decode(buf), p, "round trip");

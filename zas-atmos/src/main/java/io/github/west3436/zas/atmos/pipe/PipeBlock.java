@@ -30,9 +30,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A pipe segment (CONT-001, CONT-007): a 4 px tube with an arm toward each connected neighbour. It
- * connects on every face to any neighbour that offers a connection back ({@link PipeConnector}) or
- * provides a gas handler ({@link GasHandlers}, API-025), and it can be dyed (CONT-114).
+ * A pipe segment (CONT-001, CONT-007): a 4 px tube with an arm toward each connected neighbour, and a
+ * flared mouth on each face it leaks from ({@link PipeMouths}, CONT-004). It connects on every face to
+ * any neighbour that offers a connection back ({@link PipeConnector}) or provides a gas handler
+ * ({@link GasHandlers}, API-025), and it can be dyed (CONT-114).
  */
 public class PipeBlock extends BaseEntityBlock implements PipeConnector {
     public static final MapCodec<PipeBlock> CODEC = simpleCodec(PipeBlock::new);
@@ -54,14 +55,28 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
             Direction.EAST, Block.box(10, 5, 5, 16, 11, 11),
             Direction.DOWN, Block.box(5, 0, 5, 11, 6, 11),
             Direction.UP, Block.box(5, 10, 5, 11, 16, 11)));
+    /** The 8 px lip of a mouth, at the block's edge. The rest of a mouth fits in its arm's box. */
+    private static final Map<Direction, VoxelShape> LIPS = new EnumMap<>(Map.of(
+            Direction.NORTH, Block.box(4, 4, 0, 12, 12, 1),
+            Direction.SOUTH, Block.box(4, 4, 15, 12, 12, 16),
+            Direction.WEST, Block.box(0, 4, 4, 1, 12, 12),
+            Direction.EAST, Block.box(15, 4, 4, 16, 12, 12),
+            Direction.DOWN, Block.box(4, 0, 4, 12, 1, 12),
+            Direction.UP, Block.box(4, 15, 4, 12, 16, 12)));
+    /** By the bits of the faces it connects on, as {@link PipeMouths} counts them. */
     private static final VoxelShape[] SHAPES = new VoxelShape[64];
 
     static {
         for (int mask = 0; mask < 64; mask++) {
+            int mouths = PipeMouths.of(mask);
             VoxelShape shape = CORE;
             for (Direction d : Direction.values()) {
-                if ((mask & (1 << d.ordinal())) != 0) {
+                int bit = 1 << d.ordinal();
+                if ((mask & bit) != 0) {
                     shape = Shapes.or(shape, ARMS.get(d));
+                }
+                if ((mouths & bit) != 0) {
+                    shape = Shapes.or(shape, ARMS.get(d), LIPS.get(d));
                 }
             }
             SHAPES[mask] = shape;

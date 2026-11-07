@@ -15,15 +15,17 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Sends each player its own atmosphere HUD state (CLIENT-008, DATA-005, DATA-014).
+ * Sends each player its own atmosphere HUD state (CLIENT-001, CLIENT-008, CLIENT-009, DATA-005,
+ * DATA-014).
  *
  * <p>Every {@value #INTERVAL_TICKS} game ticks, staggered by entity id, the server works out a
- * player's state ({@link HudLevels#of}) and sends it to that player alone if it {@linkplain
- * AtmosHudPayload#differsFrom differs} from the last one sent: so at most 4 times a second, and
- * only when a threshold is crossed or a shown value changes by its display resolution. In normal
- * air nothing is shown, so nothing is sent. While the atmosphere at the player's eyes is
- * unresolved the last state stands. A new player object, as after a respawn, starts with nothing
- * sent, so its first state goes at once. Fake players get nothing.
+ * player's state ({@link HudLevels#of}, {@link HudLevels#withIndicator}) and sends it to that player
+ * alone if it {@linkplain AtmosHudPayload#differsFrom differs} from the last one sent: so at most 4
+ * times a second, and only when a threshold is crossed or a shown value changes by its display
+ * resolution. In normal air with no trigger nothing is shown, so nothing is sent. While the
+ * atmosphere at the player's eyes is unresolved the last readings stand; what shows the HUD and the
+ * internals indicator don't depend on it, so they go on. A new player object, as after a respawn,
+ * starts with nothing sent, so its first state goes at once. Fake players get nothing.
  */
 public final class AtmosHud {
     /** Game ticks between a player's HUD updates: 4 a second at most (DATA-014). */
@@ -76,8 +78,15 @@ public final class AtmosHud {
         if (sent.time >= 0 && now - sent.time < INTERVAL_TICKS) {
             return null;
         }
-        AtmosHudPayload state = HudLevels.of(player);
-        if (state == null || !state.differsFrom(sent.state)) {
+        AtmosHudPayload readings = HudLevels.of(player);
+        if (readings == null) {
+            readings = sent.state;
+        }
+        if (readings == null) {
+            return null;
+        }
+        AtmosHudPayload state = HudLevels.withIndicator(readings, player);
+        if (!state.differsFrom(sent.state)) {
             return null;
         }
         sent.state = state;

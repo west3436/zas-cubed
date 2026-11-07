@@ -43,6 +43,8 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> PASSIVE_VENT = ITEMS.registerSimpleBlockItem(AtmosBlocks.PASSIVE_VENT);
     public static final DeferredItem<BlockItem> AREA_AIR_CONTROLLER =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.AREA_AIR_CONTROLLER);
+    public static final DeferredItem<BlockItem> CENTRAL_ATMOS_CONTROLLER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.CENTRAL_ATMOS_CONTROLLER);
     public static final DeferredItem<BlockItem> FIRE_ALARM = ITEMS.registerSimpleBlockItem(AtmosBlocks.FIRE_ALARM);
     public static final DeferredItem<BlockItem> GENERATOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.GENERATOR);
 
