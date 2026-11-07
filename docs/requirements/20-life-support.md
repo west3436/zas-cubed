@@ -528,6 +528,10 @@ seals the breathing. A verdict on internals lists `SEALED_BREATHING`.
 helmet, and not the rest of the suit. The gas mask and the hardsuit helmet will
 pass the same way once they are built (CONT-088, CONT-036).*
 
+*2026-11-07: The gas mask and the hardsuit helmet are built and seal through the
+same path. `cont_031_internals_with_each_sealed_head` checks all four sealed head
+items.*
+
 #### LIFE-028 · Tank location
 `Must` · `R1` · `Implemented` · Verify: GameTest
 

@@ -1,60 +1,99 @@
 package io.github.west3436.zas.atmos.gametest;
 
 import com.mojang.authlib.GameProfile;
+import io.github.west3436.zas.airflow.Airflow;
+import io.github.west3436.zas.airflow.AirflowClass;
+import io.github.west3436.zas.airflow.AirflowImpulsePayload;
+import io.github.west3436.zas.airflow.AirflowReceiver;
+import io.github.west3436.zas.airflow.AirflowSyncPayload;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.Breathability;
+import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.Hazard;
+import io.github.west3436.zas.api.life.Protection;
+import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
+import io.github.west3436.zas.atmos.config.AtmosServerConfig;
+import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.config.AirflowConfig;
+import io.github.west3436.zas.engine.flow.FlowField;
+import io.github.west3436.zas.engine.flow.FlowSettings;
 import io.github.west3436.zas.gametest.TestPlayers;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
+import io.github.west3436.zas.life.LifeDamage;
+import io.github.west3436.zas.life.WornProtection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.SlotAccess;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The breathing gear: gas tanks (CONT-030, LIFE-044), filling them from a canister (CONT-039), the
- * breath mask and softsuit (CONT-031, CONT-032, LIFE-021) and the suit's tank slot (CONT-090,
- * LIFE-028). Those that need a place build in their own {@link Site} (areas 40 and up). S-08 is in
- * {@link StationTests}.
+ * breath and gas masks, softsuit and hardsuit (CONT-031, CONT-032, CONT-036, CONT-088, CONT-089,
+ * LIFE-021), the suits' tank slots (CONT-090, LIFE-028) and the magnetic boots (CONT-033,
+ * FLOW-012). Those that need a place build in their
+ * own {@link Site} (areas 40 and up, and 2700 and up). S-08 is in {@link StationTests}.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class GearTests {
     private static final ResourceLocation O2 = StandardAir.OXYGEN;
     private static final ResourceLocation N2 = StandardAir.NITROGEN;
+    private static final ResourceLocation CO = ResourceLocation.fromNamespaceAndPath("zas", "carbon_monoxide");
     private static final double T = StandardAir.TEMPERATURE;
     private static final double ATM = StandardAir.PRESSURE;
 
@@ -321,8 +360,8 @@ public final class GearTests {
     // ---- CONT-031, LIFE-021 ---------------------------------------------------------------------
 
     /**
-     * Internals work with the breath mask and with the softsuit helmet on the head, and not with
-     * nothing there or with only the rest of the suit (LIFE-021, CONT-031).
+     * Internals work with the breath mask, the gas mask and each suit helmet on the head, and not with
+     * nothing there or with only the rest of either suit (LIFE-021, CONT-031, CONT-088).
      */
     @GameTest(template = "empty")
     public static void cont_031_internals_with_each_sealed_head(GameTestHelper h) {
@@ -331,30 +370,51 @@ public final class GearTests {
         p.setItemInHand(InteractionHand.OFF_HAND, stack(AtmosItems.OXYGEN_TANK));
         Internals.set(p, true);
         h.assertTrue(Internals.active(p) == null, "internals work bare-headed");
-        p.setItemSlot(EquipmentSlot.CHEST, stack(AtmosItems.SOFTSUIT_CHESTPLATE));
-        p.setItemSlot(EquipmentSlot.LEGS, stack(AtmosItems.SOFTSUIT_LEGGINGS));
-        p.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.SOFTSUIT_BOOTS));
-        h.assertTrue(Internals.active(p) == null, "internals work with a suit but no helmet");
-        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.BREATH_MASK));
-        h.assertTrue(Internals.active(p) != null, "internals don't work with a breath mask");
-        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.SOFTSUIT_HELMET));
-        h.assertTrue(Internals.active(p) != null, "internals don't work with the softsuit helmet");
+        for (String suit : new String[] {"softsuit", "hardsuit"}) {
+            boolean soft = suit.equals("softsuit");
+            p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+            p.setItemSlot(
+                    EquipmentSlot.CHEST, stack(soft ? AtmosItems.SOFTSUIT_CHESTPLATE : AtmosItems.HARDSUIT_CHESTPLATE));
+            p.setItemSlot(
+                    EquipmentSlot.LEGS, stack(soft ? AtmosItems.SOFTSUIT_LEGGINGS : AtmosItems.HARDSUIT_LEGGINGS));
+            p.setItemSlot(EquipmentSlot.FEET, stack(soft ? AtmosItems.SOFTSUIT_BOOTS : AtmosItems.HARDSUIT_BOOTS));
+            h.assertTrue(Internals.active(p) == null, "internals work with the " + suit + " but no helmet");
+        }
+        Map<String, java.util.function.Supplier<SuitItem>> heads = Map.of(
+                "the breath mask", AtmosItems.BREATH_MASK,
+                "the gas mask", AtmosItems.GAS_MASK,
+                "the softsuit helmet", AtmosItems.SOFTSUIT_HELMET,
+                "the hardsuit helmet", AtmosItems.HARDSUIT_HELMET);
+        heads.forEach((name, item) -> {
+            p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(item.get()));
+            h.assertTrue(Internals.active(p) != null, "internals don't work with " + name);
+        });
         h.succeed();
     }
 
     // ---- CONT-090, LIFE-028 ---------------------------------------------------------------------
 
     /**
-     * The softsuit chestplate has a tank slot (CONT-090): a tank right-clicked onto it goes in, and
-     * an empty cursor right-clicking it takes it out. Worn, internals draw from the slotted tank
-     * before the offhand's and the hotbar's (LIFE-028), and the draw comes out of the tank in the
-     * slot.
+     * The softsuit and hardsuit chestplates each have a tank slot (CONT-090): a tank right-clicked
+     * onto one goes in, and an empty cursor right-clicking it takes it out. Worn, internals draw from
+     * the slotted tank before the offhand's and the hotbar's (LIFE-028), and the draw comes out of
+     * the tank in the slot.
      */
     @GameTest(template = "empty")
     public static void cont_090_suit_tank_slot(GameTestHelper h) {
         Site s = new Site(h, 43);
-        FakePlayer p = player(s, "zas_tank_slot");
-        ItemStack chest = stack(AtmosItems.SOFTSUIT_CHESTPLATE);
+        tankSlot(h, player(s, "zas_tank_slot"), AtmosItems.SOFTSUIT_HELMET, AtmosItems.SOFTSUIT_CHESTPLATE);
+        tankSlot(h, player(s, "zas_hardsuit_tank_slot"), AtmosItems.HARDSUIT_HELMET, AtmosItems.HARDSUIT_CHESTPLATE);
+        h.succeed();
+    }
+
+    private static void tankSlot(
+            GameTestHelper h,
+            FakePlayer p,
+            java.util.function.Supplier<SuitItem> helmet,
+            java.util.function.Supplier<SuitItem> chestplate) {
+        ItemStack chest = stack(chestplate);
+        h.assertTrue(((SuitItem) chest.getItem()).hasTankSlot(), chest + " has no tank slot");
         h.assertTrue(SuitItem.tank(chest).isEmpty(), "a new chestplate holds a tank");
         h.assertTrue(support(h, chest).internalSupply().isEmpty(), "an empty slot is a supply");
 
@@ -379,7 +439,7 @@ public final class GearTests {
                 "a left click put a tank in");
 
         // Worn, with an air tank in the offhand and the hotbar: the slot's O2 tank comes first.
-        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.SOFTSUIT_HELMET));
+        p.setItemSlot(EquipmentSlot.HEAD, stack(helmet));
         p.setItemSlot(EquipmentSlot.CHEST, chest);
         p.setItemInHand(InteractionHand.OFF_HAND, stack(AtmosItems.AIR_TANK));
         p.getInventory().setItem(0, stack(AtmosItems.AIR_TANK));
@@ -389,7 +449,7 @@ public final class GearTests {
         close(h, active.supply().distributionPressure(), 21.3, 0, "the supply found (the O2 tank's 21.3 kPa)");
         double before = GasTankItem.contents(SuitItem.tank(p.getItemBySlot(EquipmentSlot.CHEST)))
                 .totalMoles();
-        Internals.breathe(s.level, p, active.supply(), 100);
+        Internals.breathe(p.serverLevel(), p, active.supply(), 100);
         double after = GasTankItem.contents(SuitItem.tank(p.getItemBySlot(EquipmentSlot.CHEST)))
                 .totalMoles();
         close(h, before - after, Internals.drawRate(21.3, T) * 100, 1e-12, "the slotted tank's draw");
@@ -412,6 +472,487 @@ public final class GearTests {
         close(h, GasTankItem.contents(cursor[0]).totalMoles(), after, 1e-12, "the tank taken out");
         h.assertTrue(SuitItem.tank(worn).isEmpty(), "the slot still holds a tank");
         close(h, Internals.find(p).orElseThrow().distributionPressure(), 101.3, 0, "then the offhand's air tank");
+    }
+
+    /**
+     * A softsuit chestplate crafted into a hardsuit chestplate leaves the tank it held in the grid, as
+     * a bucket is left, rather than losing it (CONT-090). An empty one leaves nothing.
+     */
+    @GameTest(template = "empty")
+    public static void cont_090_crafting_a_chestplate_leaves_its_tank(GameTestHelper h) {
+        ItemStack soft = stack(AtmosItems.SOFTSUIT_CHESTPLATE);
+        ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
+        SuitItem.setTank(soft, tank);
+        ItemStack plasteel = stack(AtmosItems.PLASTEEL_SHEET);
+        List<ItemStack> grid = new ArrayList<>(List.of(
+                plasteel,
+                ItemStack.EMPTY,
+                plasteel.copy(),
+                plasteel.copy(),
+                soft,
+                plasteel.copy(),
+                plasteel.copy(),
+                plasteel.copy(),
+                plasteel.copy()));
+        CraftingInput input = CraftingInput.of(3, 3, grid);
+        ServerLevel level = h.getLevel();
+        RecipeHolder<CraftingRecipe> recipe = level.getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, input, level)
+                .orElse(null);
+        h.assertTrue(recipe != null, "nothing crafts the hardsuit chestplate");
+        h.assertTrue(
+                recipe.value().assemble(input, level.registryAccess()).is(AtmosItems.HARDSUIT_CHESTPLATE.get()),
+                "the recipe doesn't make a hardsuit chestplate");
+        List<ItemStack> left = recipe.value().getRemainingItems(input);
+        ItemStack back = left.get(4);
+        h.assertTrue(back.is(AtmosItems.OXYGEN_TANK.get()), "the grid kept " + back + ", not the tank");
+        close(
+                h,
+                GasTankItem.contents(back).totalMoles(),
+                GasTankItem.contents(tank).totalMoles(),
+                0,
+                "its gas");
+        for (int i = 0; i < left.size(); i++) {
+            h.assertTrue(i == 4 || left.get(i).isEmpty(), "slot " + i + " kept " + left.get(i));
+        }
+
+        grid.set(4, stack(AtmosItems.SOFTSUIT_CHESTPLATE));
+        input = CraftingInput.of(3, 3, grid);
+        h.assertTrue(
+                recipe.value().getRemainingItems(input).stream().allMatch(ItemStack::isEmpty),
+                "an empty one left something");
+        h.succeed();
+    }
+
+    // ---- CONT-088 -------------------------------------------------------------------------------
+
+    /**
+     * A gas-masked player in a CO zone takes no CO harm but still suffers hypoxia without O2
+     * (CONT-088). In a sealed room of air with 1 kPa of CO, its breath has no CO, it is
+     * {@code BREATHABLE} with {@code GAS_FILTERING} listed, and two seconds there leave it unhurt,
+     * while a bare player beside it is harmed. With the room's O2 taken away, the CO stays filtered,
+     * but its breath is short of O2: its air meter drains, and then hypoxia hurts it.
+     */
+    @GameTest(template = "empty")
+    public static void cont_088_a_gas_masked_player_takes_no_co_harm_but_still_suffers_hypoxia(GameTestHelper h) {
+        ILifeSupport mask = support(h, stack(AtmosItems.GAS_MASK));
+        h.assertTrue(mask.sealedBreathing() && mask.gasFiltering(), "the gas mask doesn't seal and filter");
+        close(h, mask.minPressure(), ATM, 0, "the gas mask's low-pressure rating");
+        close(h, mask.maxPressure(), ATM, 0, "the gas mask's high-pressure rating");
+        close(h, mask.minTemperature(), T, 0, "the gas mask's cold rating");
+        close(h, mask.maxTemperature(), T, 0, "the gas mask's heat rating");
+        h.assertTrue(mask.internalSupply().isEmpty(), "the gas mask supplies gas");
+        h.assertFalse(stack(AtmosItems.GAS_MASK).isDamageableItem(), "the gas mask wears out");
+
+        Site s = new Site(h, 2700);
+        try {
+            s.clear();
+            s.room(0, 4); // interior x 1–3, y 1–3, z 1–3
+            s.settle(GasMutations.remove(s.level, s.point(2, 2, 2), Map.of(N2, 1e6, O2, 1e6), Site.SOURCE));
+            double air = ATM * 27_000 / (GasMixture.GAS_CONSTANT * T);
+            double co = 1.0 * 27_000 / (GasMixture.GAS_CONSTANT * T);
+            s.settle(GasMutations.add(
+                    s.level,
+                    s.point(2, 2, 2),
+                    new GasParcel(Map.of(N2, air * 0.79, O2, air * 0.21, CO, co), T),
+                    Site.SOURCE));
+            s.close(s.zone(2, 2, 2).mixture().partialPressure(CO), 1.0, 1e-9, "the room's CO");
+
+            FakePlayer masked = TestPlayers.hurtable(s.level, "zas_gas_mask");
+            masked.moveTo(Vec3.atBottomCenterOf(s.abs(2, 1, 2)));
+            masked.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.GAS_MASK));
+            FakePlayer bare = TestPlayers.hurtable(s.level, "zas_gas_mask_bare");
+            bare.moveTo(Vec3.atBottomCenterOf(s.abs(2, 1, 3)));
+
+            // With O2: the CO is filtered out, and nothing harms the masked player.
+            Breathability v = Breathing.of(masked);
+            h.assertTrue(v.protection().contains(Protection.GAS_FILTERING), "the masked protection: " + v);
+            h.assertFalse(v.hazards().contains(Hazard.TOXIC_GAS), "the masked hazards: " + v);
+            h.assertValueEqual(v.reason(), BreathReason.BREATHABLE, "the masked player's breath");
+            close(h, v.breath().orElseThrow().moles(CO), 0, 0, "CO in the masked breath");
+            h.assertTrue(Breathing.of(bare).hazards().contains(Hazard.TOXIC_GAS), "the CO doesn't harm a bare player");
+            long t0 = s.level.getGameTime();
+            for (FakePlayer p : List.of(masked, bare)) {
+                Breathers.checkAt(p, t0);
+                Breathers.checkAt(p, t0 + 40);
+            }
+            close(h, masked.getHealth(), masked.getMaxHealth(), 0, "the masked player's health in the CO");
+            h.assertTrue(
+                    masked.getActiveEffects().isEmpty(), "the masked player's effects: " + masked.getActiveEffects());
+            h.assertTrue(bare.getHealth() < bare.getMaxHealth(), "the CO didn't harm the bare player");
+
+            // Without O2: still no CO, but nothing to breathe.
+            s.removeGas(2, 2, 2, O2);
+            s.close(s.zone(2, 2, 2).mixture().partialPressure(CO), 1.0, 1e-9, "the room's CO without O2");
+            Breathability gasping = Breathers.checkAt(masked, t0 + 80).verdict();
+            h.assertValueEqual(gasping.reason(), BreathReason.LOW_OXYGEN, "the masked player's breath without O2");
+            h.assertFalse(gasping.hazards().contains(Hazard.TOXIC_GAS), "the masked hazards without O2: " + gasping);
+            h.assertTrue(gasping.protection().contains(Protection.GAS_FILTERING), "the masked protection: " + gasping);
+            close(h, gasping.breath().orElseThrow().moles(CO), 0, 0, "CO in the breath without O2");
+            close(h, masked.getHealth(), masked.getMaxHealth(), 0, "the masked player's health from the CO");
+            int air0 = masked.getAirSupply();
+            for (int i = 0; i < AtmosTicks.PERIOD; i++) {
+                masked.baseTick();
+            }
+            h.assertTrue(masked.getAirSupply() < air0, "the air meter didn't drain: " + masked.getAirSupply());
+            masked.setAirSupply(0);
+            masked.invulnerableTime = 0;
+            for (int i = 0; i < 2 * AtmosTicks.PERIOD && masked.getHealth() >= masked.getMaxHealth(); i++) {
+                masked.baseTick();
+            }
+            h.assertTrue(masked.getHealth() < masked.getMaxHealth(), "no hypoxia without O2");
+            h.assertTrue(
+                    masked.getLastDamageSource() != null
+                            && masked.getLastDamageSource().is(LifeDamage.HYPOXIA),
+                    "the harm wasn't hypoxia: " + masked.getLastDamageSource());
+        } finally {
+            s.clear();
+        }
+        h.succeed();
+    }
+
+    // ---- CONT-036 -------------------------------------------------------------------------------
+
+    /**
+     * Each hardsuit piece is rated for every pressure and temperature, and the helmet seals
+     * (CONT-036). A hardsuited player is protected in vacuum, at 2,000 kPa and at 1,500 K, and in
+     * the cold, where a bare player beside it is harmed. The pieces have no durability, as the
+     * softsuit's haven't.
+     */
+    @GameTest(template = "empty")
+    public static void cont_036_a_hardsuited_player_is_protected_at_every_extreme(GameTestHelper h) {
+        Map<EquipmentSlot, java.util.function.Supplier<SuitItem>> suit = Map.of(
+                EquipmentSlot.HEAD, AtmosItems.HARDSUIT_HELMET,
+                EquipmentSlot.CHEST, AtmosItems.HARDSUIT_CHESTPLATE,
+                EquipmentSlot.LEGS, AtmosItems.HARDSUIT_LEGGINGS,
+                EquipmentSlot.FEET, AtmosItems.HARDSUIT_BOOTS);
+        suit.forEach((slot, item) -> {
+            ItemStack piece = new ItemStack(item.get());
+            ILifeSupport r = support(h, piece);
+            close(h, r.minPressure(), 0, 0, slot + ": low pressure");
+            h.assertTrue(r.maxPressure() == Double.POSITIVE_INFINITY, slot + ": high pressure " + r.maxPressure());
+            close(h, r.minTemperature(), 0, 0, slot + ": cold");
+            h.assertTrue(r.maxTemperature() == Double.POSITIVE_INFINITY, slot + ": heat " + r.maxTemperature());
+            h.assertValueEqual(r.sealedBreathing(), slot == EquipmentSlot.HEAD, slot + ": the seal");
+            h.assertFalse(r.gasFiltering(), slot + " filters");
+            h.assertValueEqual(item.get().getEquipmentSlot(), slot, slot + ": its slot");
+            h.assertFalse(piece.isDamageableItem(), slot + " wears out");
+        });
+
+        Site s = new Site(h, 2701);
+        FakePlayer p = player(s, "zas_hardsuit");
+        suit.forEach((slot, item) -> p.setItemSlot(slot, new ItemStack(item.get())));
+        FakePlayer bare = player(s, "zas_hardsuit_bare");
+        GasMixture vacuum = new GasMixture(Map.of(), T, StandardAir.CELL_VOLUME);
+        close(h, EnvironmentHazards.exposure(p, vacuum).decompression(), 0, 0, "decompression in vacuum");
+        h.assertTrue(EnvironmentHazards.exposure(bare, vacuum).decompression() > 0, "the vacuum harms no one");
+        close(h, EnvironmentHazards.exposure(p, nitrogen(2_000, T)).barotrauma(), 0, 0, "barotrauma at 2,000 kPa");
+        h.assertTrue(EnvironmentHazards.exposure(bare, nitrogen(2_000, T)).barotrauma() > 0, "2,000 kPa harms no one");
+        close(h, EnvironmentHazards.exposure(p, nitrogen(ATM, 1_500)).burns(), 0, 0, "burns at 1,500 K");
+        h.assertTrue(EnvironmentHazards.exposure(bare, nitrogen(ATM, 1_500)).burns() > 0, "1,500 K harms no one");
+        close(h, EnvironmentHazards.exposure(p, nitrogen(ATM, 50)).frostbite(), 0, 0, "frostbite at 50 K");
+        h.assertTrue(EnvironmentHazards.exposure(bare, nitrogen(ATM, 50)).frostbite() > 0, "50 K harms no one");
+        h.succeed();
+    }
+
+    // ---- CONT-089 -------------------------------------------------------------------------------
+
+    /**
+     * Each hardsuit piece worn cuts movement speed by 10 % (CONT-089): one to four pieces leave 90,
+     * 80, 70 and 60 %, a softsuit piece nothing, and taking them off restores it. The share is
+     * {@code [gear] hardsuit_slowdown}, read when the speed is next set, and the server sets it when
+     * the equipment changes. A mob in a hardsuit is slowed too.
+     */
+    @GameTest(template = "empty")
+    public static void cont_089_each_hardsuit_piece_cuts_speed_by_10_percent(GameTestHelper h) {
+        Site s = new Site(h, 2702);
+        FakePlayer p = player(s, "zas_hardsuit_speed");
+        AttributeInstance speed = p.getAttribute(Attributes.MOVEMENT_SPEED);
+        double base = speed.getValue();
+        close(h, base, speed.getBaseValue(), 0, "the speed before");
+        List<Map.Entry<EquipmentSlot, java.util.function.Supplier<SuitItem>>> pieces = List.of(
+                Map.entry(EquipmentSlot.HEAD, AtmosItems.HARDSUIT_HELMET),
+                Map.entry(EquipmentSlot.CHEST, AtmosItems.HARDSUIT_CHESTPLATE),
+                Map.entry(EquipmentSlot.LEGS, AtmosItems.HARDSUIT_LEGGINGS),
+                Map.entry(EquipmentSlot.FEET, AtmosItems.HARDSUIT_BOOTS));
+        double before = AtmosServerConfig.HARDSUIT_SLOWDOWN.get();
+        try {
+            close(h, before, 0.1, 0, "the default slowdown");
+            for (int n = 1; n <= 4; n++) {
+                var piece = pieces.get(n - 1);
+                ItemStack stack = new ItemStack(piece.getValue().get());
+                p.setItemSlot(piece.getKey(), stack);
+                // The game posts this when it sees the change, on the server.
+                NeoForge.EVENT_BUS.post(new LivingEquipmentChangeEvent(p, piece.getKey(), ItemStack.EMPTY, stack));
+                close(h, speed.getValue(), base * (1 - 0.1 * n), 1e-12, n + " pieces");
+            }
+
+            // The setting reaches what is worn at the next update.
+            AtmosServerConfig.HARDSUIT_SLOWDOWN.set(0.05);
+            Encumbrance.update(p);
+            close(h, speed.getValue(), base * 0.8, 1e-12, "4 pieces at 5 %");
+            AtmosServerConfig.HARDSUIT_SLOWDOWN.set(0.0);
+            Encumbrance.update(p);
+            close(h, speed.getValue(), base, 1e-12, "4 pieces at 0");
+            h.assertTrue(speed.getModifier(Encumbrance.MODIFIER) == null, "a slowdown of 0 left a modifier");
+            AtmosServerConfig.HARDSUIT_SLOWDOWN.set(0.1);
+
+            // A softsuit piece doesn't slow; taking the suit off restores the speed.
+            p.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.SOFTSUIT_BOOTS));
+            Encumbrance.update(p);
+            close(h, speed.getValue(), base * 0.7, 1e-12, "3 hardsuit pieces and softsuit boots");
+            for (var piece : pieces) {
+                p.setItemSlot(piece.getKey(), ItemStack.EMPTY);
+            }
+            Encumbrance.update(p);
+            close(h, speed.getValue(), base, 0, "the suit taken off");
+
+            Zombie zombie = EntityType.ZOMBIE.create(s.level);
+            h.assertTrue(zombie != null, "no zombie");
+            AttributeInstance its = zombie.getAttribute(Attributes.MOVEMENT_SPEED);
+            double zombieBase = its.getValue();
+            pieces.forEach(piece -> zombie.setItemSlot(
+                    piece.getKey(), new ItemStack(piece.getValue().get())));
+            Encumbrance.update(zombie);
+            close(h, its.getValue(), zombieBase * 0.6, 1e-12, "the hardsuited zombie's speed");
+            zombie.discard();
+        } finally {
+            AtmosServerConfig.HARDSUIT_SLOWDOWN.set(before);
+        }
+        h.succeed();
+    }
+
+    // ---- CONT-033 -------------------------------------------------------------------------------
+
+    /**
+     * Magnetic boots stop airflow while on and not while off (CONT-033, FLOW-012). A vacuum room
+     * opened to the Overworld's air draws air in through a hole; beside it, a zombie in boots that are
+     * off is pushed as a bare one is, and one in boots that are on isn't. A player in boots that are on
+     * is sent a resistance of 1, so its client doesn't push it and it gets no impulse; switched off,
+     * the same boots send 0 and its client pushes it as it pushes a player in boots that were never on.
+     */
+    @GameTest(template = "empty")
+    public static void cont_033_magnetic_boots_stop_airflow_while_on_and_not_while_off(GameTestHelper h) {
+        Site s = new Site(h, 2703);
+        List<CustomPacketPayload> onSent = new ArrayList<>();
+        List<CustomPacketPayload> offSent = new ArrayList<>();
+        try {
+            breach(s);
+            FlowField field = Airflow.field(s.level);
+            FlowSettings settings = AirflowConfig.settings();
+            double mob = AirflowClass.MOB.threshold();
+
+            // Mobs, pushed by the server as Airflow.step pushes them.
+            Zombie bare = zombie(s, null);
+            Zombie off = zombie(s, false);
+            Zombie on = zombie(s, true);
+            close(h, Airflow.resistance(off), 0, 0, "the resistance of boots that are off");
+            close(h, Airflow.resistance(on), 1, 0, "the resistance of boots that are on");
+            Vec3 pushed = Airflow.apply(bare, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(bare));
+            h.assertTrue(pushed != null && pushed.length() > 0.01, "the breach doesn't push a bare zombie: " + pushed);
+            Vec3 offPush = Airflow.apply(off, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(off));
+            h.assertTrue(offPush != null, "boots that are off held the zombie");
+            close(h, offPush.length(), pushed.length(), 1e-12, "the push on boots that are off");
+            h.assertTrue(
+                    Airflow.apply(on, field, FlowField.ANY_ZONE, mob, settings, Airflow.resistance(on)) == null,
+                    "boots that are on let the zombie be pushed");
+            h.assertValueEqual(on.getDeltaMovement(), Vec3.ZERO, "the zombie in boots that are on");
+            for (Zombie z : List.of(bare, off, on)) {
+                z.discard();
+            }
+
+            // Players, pushed by their clients from what the server sends.
+            FakePlayer onPlayer = standing(s, "zas_magboots_on", true);
+            FakePlayer offPlayer = standing(s, "zas_magboots_off", false);
+            Airflow.sendHookForTest((ServerPlayer to, CustomPacketPayload p) -> {
+                if (to == onPlayer) {
+                    onSent.add(p);
+                } else if (to == offPlayer) {
+                    offSent.add(p);
+                }
+            });
+            Airflow.syncForTest(s.level, onPlayer);
+            Airflow.syncForTest(s.level, offPlayer);
+            AirflowSyncPayload onSync = last(onSent, AirflowSyncPayload.class);
+            AirflowSyncPayload offSync = last(offSent, AirflowSyncPayload.class);
+            h.assertTrue(
+                    onSync != null && !onSync.openings().isEmpty(),
+                    "the player in boots that are on wasn't sent the breach");
+            h.assertTrue(
+                    offSync != null && !offSync.openings().isEmpty(),
+                    "the player in boots that are off wasn't sent the breach");
+            close(h, onSync.resistance(), 1, 0, "the resistance sent for boots that are on");
+            close(h, offSync.resistance(), 0, 0, "the resistance sent for boots that are off");
+            h.assertTrue(last(onSent, AirflowImpulsePayload.class) == null, "boots that are on got an impulse");
+            h.assertTrue(last(offSent, AirflowImpulsePayload.class) != null, "boots that are off got no impulse");
+            Vec3 onPush = clientPush(onSync, onPlayer);
+            h.assertTrue(onPush == null, "the client pushed the player in boots that are on: " + onPush);
+            h.assertValueEqual(onPlayer.getDeltaMovement(), Vec3.ZERO, "the player in boots that are on");
+            Vec3 offPlayerPush = clientPush(offSync, offPlayer);
+            h.assertTrue(
+                    offPlayerPush != null && offPlayerPush.length() > 0,
+                    "the client didn't push the player in boots that are off");
+
+            // The same boots switched off: 0 is sent, and the client pushes as for boots never on.
+            MagneticBootsItem.set(onPlayer.getItemBySlot(EquipmentSlot.FEET), false);
+            onSent.clear();
+            Airflow.syncForTest(s.level, onPlayer);
+            AirflowSyncPayload switched = last(onSent, AirflowSyncPayload.class);
+            h.assertTrue(switched != null, "nothing was sent once the boots were off");
+            close(h, switched.resistance(), 0, 0, "the resistance sent once the boots were off");
+            Vec3 switchedPush = clientPush(switched, onPlayer);
+            h.assertTrue(switchedPush != null, "the client didn't push the player once its boots were off");
+            close(h, switchedPush.length(), offPlayerPush.length(), 1e-12, "the push once the boots were off");
+        } finally {
+            Airflow.sendHookForTest(null);
+            s.clear();
+        }
+        h.succeed();
+    }
+
+    /**
+     * Builds a hollow stone box over the whole of a site, x 0 to 16, y 0 to 6 and z 0 to 6, empties it
+     * to a vacuum, then opens a hole at (16, 2, 3), its east wall, to the Overworld's air, and runs
+     * atmos ticks and airflow until the hole has an opening.
+     */
+    private static void breach(Site s) {
+        s.clear();
+        for (BlockPos p : BlockPos.betweenClosed(s.abs(0, 0, 0), s.abs(16, 6, 6))) {
+            int x = p.getX() - s.origin.getX();
+            int y = p.getY() - s.origin.getY();
+            int z = p.getZ() - s.origin.getZ();
+            boolean wall = x == 0 || x == 16 || y == 0 || y == 6 || z == 0 || z == 6;
+            s.level.setBlockAndUpdate(p, wall ? Site.STONE : Site.AIR);
+        }
+        s.settle(GasMutations.remove(s.level, s.point(8, 3, 3), Map.of(N2, 1e6, O2, 1e6), Site.SOURCE));
+        s.empty(8, 3, 3);
+        s.h.assertTrue(s.zone(8, 3, 3).mixture().pressure() < 1, "the room didn't empty");
+        s.set(16, 2, 3, Site.AIR);
+        BlockPos hole = s.abs(16, 2, 3);
+        for (int i = 0; i < 6 && !opening(s, hole); i++) {
+            s.tick();
+            Airflow.step(s.level);
+        }
+        s.h.assertTrue(opening(s, hole), "the hole has no airflow");
+    }
+
+    private static boolean opening(Site s, BlockPos hole) {
+        for (FlowField.Opening o : Airflow.field(s.level).openings()) {
+            if (Math.abs(o.hx() - hole.getX()) <= 2 && o.hy() == hole.getY() && o.hz() == hole.getZ()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A zombie 3 blocks inside the hole, in magnetic boots that are on or off, or in none for null. */
+    private static Zombie zombie(Site s, Boolean bootsOn) {
+        Zombie z = EntityType.ZOMBIE.create(s.level);
+        s.h.assertTrue(z != null, "no zombie");
+        z.moveTo(Vec3.atBottomCenterOf(s.abs(13, 1, 3)));
+        z.setDeltaMovement(Vec3.ZERO);
+        if (bootsOn != null) {
+            ItemStack boots = stack(AtmosItems.MAGNETIC_BOOTS);
+            MagneticBootsItem.set(boots, bootsOn);
+            z.setItemSlot(EquipmentSlot.FEET, boots);
+        }
+        return z;
+    }
+
+    /** A player 3 blocks inside the hole, in magnetic boots that are on or off. */
+    private static FakePlayer standing(Site s, String name, boolean bootsOn) {
+        FakePlayer p = FakePlayerFactory.get(s.level, new GameProfile(UUID.randomUUID(), name));
+        p.moveTo(Vec3.atBottomCenterOf(s.abs(13, 1, 3)));
+        p.setDeltaMovement(Vec3.ZERO);
+        ItemStack boots = stack(AtmosItems.MAGNETIC_BOOTS);
+        MagneticBootsItem.set(boots, bootsOn);
+        p.setItemSlot(EquipmentSlot.FEET, boots);
+        return p;
+    }
+
+    private static <T> T last(List<CustomPacketPayload> sent, Class<T> type) {
+        T found = null;
+        for (CustomPacketPayload p : sent) {
+            if (type.isInstance(p)) {
+                found = type.cast(p);
+            }
+        }
+        return found;
+    }
+
+    /** What a client given this sync pushes its player by in one game tick, from rest; null for nothing. */
+    private static Vec3 clientPush(AirflowSyncPayload sync, FakePlayer p) {
+        p.setDeltaMovement(Vec3.ZERO);
+        AirflowReceiver client = new AirflowReceiver();
+        client.accept(sync);
+        return client.tick(p);
+    }
+
+    /**
+     * The keybind's toggle switches the boots its sender wears, on the server (CONT-033, NFR-011): on,
+     * then off, with the resistance following. It does nothing for a sender wearing none, even with
+     * boots in hand, nor for a spectator or a dead sender. New boots are off. Whether they're on is
+     * the boots' own, so it is saved with them, comes back on a mob wearing them, and stays with them
+     * when a player's inventory is kept through death.
+     */
+    @GameTest(template = "empty")
+    public static void cont_033_the_keybind_switches_the_worn_boots_and_they_keep_it(GameTestHelper h) {
+        ItemStack fresh = stack(AtmosItems.MAGNETIC_BOOTS);
+        h.assertFalse(MagneticBootsItem.on(fresh), "new boots are on");
+        close(h, support(h, fresh).airflowResistance(), 0, 0, "new boots' resistance");
+        h.assertFalse(fresh.isDamageableItem(), "magnetic boots wear out");
+        h.assertValueEqual(AtmosItems.MAGNETIC_BOOTS.get().getEquipmentSlot(), EquipmentSlot.FEET, "their slot");
+
+        FakePlayer sender = TestPlayers.hurtable(h.getLevel(), "zas_magboots_sender");
+        MagneticBootsItem.TogglePayload press = MagneticBootsItem.TogglePayload.INSTANCE;
+        // In hand, not worn: nothing to switch.
+        sender.setItemInHand(InteractionHand.MAIN_HAND, stack(AtmosItems.MAGNETIC_BOOTS));
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(MagneticBootsItem.on(sender.getMainHandItem()), "the toggle switched boots in hand");
+        h.assertFalse(MagneticBootsItem.toggle(sender), "a player without boots switched them on");
+
+        sender.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.MAGNETIC_BOOTS));
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(
+                MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "the toggle didn't switch them on");
+        close(h, WornProtection.airflowResistance(sender), 1, 0, "the resistance with the boots on");
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(
+                MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "the toggle didn't switch them off");
+        close(h, WornProtection.airflowResistance(sender), 0, 0, "the resistance with the boots off");
+
+        sender.setGameMode(GameType.SPECTATOR);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertFalse(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "a spectator switched them");
+        sender.setGameMode(GameType.SURVIVAL);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "back in survival, no switch");
+
+        // Saved: as an item, and worn by a mob.
+        var registries = h.getLevel().registryAccess();
+        ItemStack saved = ItemStack.parse(
+                        registries, sender.getItemBySlot(EquipmentSlot.FEET).save(registries))
+                .orElseThrow();
+        h.assertTrue(MagneticBootsItem.on(saved), "boots saved on load off");
+        Zombie z = EntityType.ZOMBIE.create(h.getLevel());
+        h.assertTrue(z != null, "no zombie");
+        z.setItemSlot(EquipmentSlot.FEET, saved);
+        Zombie loaded = EntityType.ZOMBIE.create(h.getLevel());
+        h.assertTrue(loaded != null, "no zombie");
+        loaded.load(z.saveWithoutId(new CompoundTag()));
+        h.assertTrue(MagneticBootsItem.on(loaded.getItemBySlot(EquipmentSlot.FEET)), "a saved zombie's boots load off");
+        close(h, WornProtection.airflowResistance(loaded), 1, 0, "the loaded zombie's resistance");
+        z.discard();
+        loaded.discard();
+
+        // Through death, with the inventory kept as respawning copies it.
+        FakePlayer respawned = TestPlayers.hurtable(h.getLevel(), "zas_magboots_respawned");
+        respawned.getInventory().replaceWith(sender.getInventory());
+        h.assertTrue(MagneticBootsItem.on(respawned.getItemBySlot(EquipmentSlot.FEET)), "the boots came back off");
+
+        sender.setHealth(0);
+        MagneticBootsItem.handleToggle(press, TestPlayers.sentBy(sender));
+        h.assertTrue(MagneticBootsItem.on(sender.getItemBySlot(EquipmentSlot.FEET)), "a dead player switched them");
         h.succeed();
     }
 

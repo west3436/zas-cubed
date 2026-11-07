@@ -87,7 +87,7 @@ reads a setting gets the new one the next time it runs:
 | `[fire]` | The next check; for gas fires, the next atmos tick |
 | `[commands]` | At once. A player's client only updates its command suggestions when it next joins or its op status changes, but the server decides who can run a command |
 | `[profiling]` | At once |
-| `zas_atmos-server.toml` | Each device's next step, or the next explosion |
+| `zas_atmos-server.toml` | Each device's next step, or the next explosion; for `[gear]`, each wearer's speed within a second |
 
 **Restart-only** settings keep the value they had when the server started, and
 a reload doesn't change them: the two that choose the threads, `[atmos]
@@ -251,6 +251,7 @@ Its FE values are starting points for playtesting (D-37). Every key is live
 | `[power] generator_seconds_per_fuel` | `80` | How long one coal burns, in seconds, 1 to 1,600. Other furnace fuels burn for this times their furnace burn time over coal's 1,600 ticks: a coal block 10 times as long, a stick 1/16 (CONT-066) |
 | `[controller] breach_drop_kpa` | `10.0` | A fall in a controller's zone pressure within one atmos tick, in kPa, 0 to 1,000, that sends it to danger 2 at once, as a breach to space does. It counts only for a preset with a pressure min2 above 0, and only once the pressure is below min1. 0 turns it off (CONT-043) |
 | `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
+| `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
 
 ## Common: `zas-common.toml`
 

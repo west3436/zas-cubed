@@ -1837,7 +1837,7 @@ client breathing sync (LIFE-023): the server sends each player its own state
     and the verdict lists `GAS_FILTERING`. Only what is breathed changes: the
     filter holds nothing and doesn't wear out, the zone keeps its gas, and a
     tank's draw and exhale carry its gas on unfiltered (LIFE-045). The gas mask
-    itself (CONT-088) is still to come.
+    (CONT-088) is the content mod's filter.
 - **Settings** (LIFE-031, LIFE-036). `HazardType` names the seven hazards, one
   per damage type. `HazardConfig.scale(dimension, hazard)` is 0 while a hazard
   is off, else its scale; `[hazards] dimension_overrides` overrides either per
@@ -2429,7 +2429,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8) and the fire extinguisher (§11.10) |
-| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials) and `TankSettings` (the tank screen's payload) |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
@@ -3366,13 +3366,29 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   1,000 L. Reaching a chest would mean scanning every container each second,
   which is why it isn't done, and no API change would help. Offline players'
   tanks wait likewise.
-- **Mask and suit** (`SuitItem`). Armor items whose life support is a fixed
-  rating: the breath mask only seals; each softsuit piece protects from 0 to
-  1 atm and 0 to 500 K, and the helmet seals. They have no durability.
-- **Tank slot** (CONT-090). The chestplate keeps one tank in
-  `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
+- **Masks and suits** (`SuitItem`). Armor items whose life support is a fixed
+  rating: the breath mask only seals; the gas mask seals and filters; each
+  softsuit piece protects from 0 to 1 atm and 0 to 500 K; each hardsuit piece
+  protects at every pressure and temperature; and each suit's helmet seals.
+  They have no durability.
+- **Magnetic boots** (CONT-033, `MagneticBootsItem`). A `SuitItem` rated as
+  the hardsuit's boots, whose airflow resistance is 1 while it's on and 0 while
+  it's off (FLOW-012). On or off is the stack's `zas_atmos:magnetized`, so it's
+  saved with the boots and goes where they go. A keybind, B by default, sends
+  `MagneticBootsItem.TogglePayload`, and the server switches the boots in the
+  sender's feet slot and answers in the action bar. The item model's
+  `zas_atmos:on` property and `getArmorTexture` show them on or off.
+- **Hardsuit encumbrance** (CONT-089). `Encumbrance` keeps one transient
+  `MOVEMENT_SPEED` modifier on a wearer, multiplying its speed by
+  (1 − pieces × `[gear] hardsuit_slowdown`). The server sets it on NeoForge's
+  equipment change event and again once a second, so a change to the setting
+  reaches suits already worn, and the game syncs a player's speed to its client.
+- **Tank slot** (CONT-090). The softsuit's and hardsuit's chestplates keep one
+  tank in `zas_atmos:suit_tank` (`ItemContainerContents`), moved in and out by
   right-clicks in an inventory, as a bundle's contents are. Its life support's
   internal supply is that tank, written back to the chestplate after each draw.
+  A chestplate crafted into another item, as the softsuit's into the
+  hardsuit's, leaves its tank in the grid as its crafting remainder.
 - **Tank failure** (CONT-038, CONT-107, CONT-109). `ContainerFailure` turns a
   pressure into a verdict: nothing, a leak, a rupture or an explosion with its
   capped power. It is plain arithmetic, unit-tested without the game.

@@ -1,10 +1,12 @@
 package io.github.west3436.zas.atmos.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
+import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
@@ -17,6 +19,7 @@ import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
@@ -26,16 +29,43 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
-/** The content mod's client entry point: block and item tints, device GUIs and item model properties. */
+/**
+ * The content mod's client entry point: block and item tints, device GUIs, item model properties and
+ * the magnetic boots' keybind.
+ */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
 public final class ZasAtmosClient {
+    /**
+     * The key that switches the magnetic boots the player wears (CONT-033): B by default, beside the
+     * internals key under "Atmospherics".
+     */
+    public static final KeyMapping TOGGLE_MAGNETIC_BOOTS = new KeyMapping(
+            "key.zas_atmos.toggle_magnetic_boots",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B,
+            "key.categories.zas");
+
     public ZasAtmosClient(IEventBus modBus) {
+        modBus.addListener((RegisterKeyMappingsEvent e) -> e.register(TOGGLE_MAGNETIC_BOOTS));
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {
+            while (TOGGLE_MAGNETIC_BOOTS.consumeClick()) {
+                if (Minecraft.getInstance().getConnection() != null) {
+                    PacketDistributor.sendToServer(MagneticBootsItem.TogglePayload.INSTANCE);
+                }
+            }
+        });
         modBus.addListener(ZasAtmosClient::blockColors);
         modBus.addListener(ZasAtmosClient::itemColors);
         modBus.addListener(ZasAtmosClient::screens);
@@ -162,6 +192,12 @@ public final class ZasAtmosClient {
                     AtmosItems.TANK_TRANSFER_VALVE.get(),
                     ZasAtmosMod.id("tanks"),
                     (stack, level, entity, seed) -> TransferValveItem.tankCount(stack) / 2f);
+            // Magnetic boots show whether they're on: zas_atmos:on is 1 or 0, which
+            // models/item/magnetic_boots.json maps to its _on model (CONT-033).
+            ItemProperties.register(
+                    AtmosItems.MAGNETIC_BOOTS.get(),
+                    ZasAtmosMod.id("on"),
+                    (stack, level, entity, seed) -> MagneticBootsItem.on(stack) ? 1 : 0);
         });
     }
 }
