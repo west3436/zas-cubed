@@ -27,6 +27,7 @@
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",
   "hud.zas.temperature": "%s",
+  "hud.zas.tank": "%s",
 
   "death.attack.zas.hypoxia": "%1$s ran out of oxygen",
   "death.attack.zas.hypoxia.player": "%1$s ran out of oxygen while fighting %2$s",

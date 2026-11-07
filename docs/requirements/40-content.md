@@ -2259,6 +2259,12 @@ This stays Accepted until every device's draw is in the config.*
 *2026-11-06: "freezer" in the table is now "air conditioner", the built item and config
 key (`[power] air_conditioner`, D-73). The meaning doesn't change.*
 
+*2026-11-07: The central atmospherics controller's 5 FE/t is `[power] central_controller`
+([config.md](../config.md)).
+`cont_115_it_fills_from_a_generator_to_100000_fe_and_pays_5_fe_per_tick` (GameTest) checks
+it pays 100 FE per atmos tick. This stays Accepted until every device's draw is in the
+config.*
+
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
 
@@ -2360,6 +2366,12 @@ cables push. It gives none out
 controller pays what its buffer can't (CONT-120, D-75). The blocks next to it
 still pay first, so this requirement is unchanged.*
 
+*2026-11-07: With a central controller built (CONT-120), the blocks next to an area air
+controller still fill its buffer first: in
+`cont_120_a_controller_with_a_generator_draws_only_its_shortfall` (GameTest) its
+generator pays what it can and the central controller only the rest. Its buffer also
+takes a share of the central controller's spare intake.*
+
 #### CONT-068 · Wireless feed to parts
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-32, D-34, D-68
 
@@ -2459,6 +2471,10 @@ keep running and moving gas while the pump and the auxiliary part lose their
 leases and stop. With none, the vent and scrubber stop too. The pump and the
 auxiliary part are stand-ins, since the real ones are other work in this
 round; they differ only in their priority group.*
+
+*2026-11-07: With a central controller built (CONT-120, CONT-121), nothing here changes.
+It sends each area air controller FE, and each then pays its parts from its own buffer in
+this order.*
 
 #### CONT-111 · Batteries
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-69, [vg §2.5](../research/vg-atmos-content.md#25-power-cells-and-chargers)
@@ -2575,8 +2591,19 @@ draw of 5 FE/t from it.
 
 *2026-11-03: Accepted by the owner as written.*
 
+*2026-11-07: The owner set its form: a console 2 blocks wide, 2 tall and 1 deep, in the
+style of vgstation's consoles, built as a 2 × 2 multiblock. It is placed whole, needing all
+four spaces free, and grows up and to the placing player's right; breaking any block breaks
+it all, with one item dropped. The lower left block holds its state, and any block takes
+FE, use and the multitool for it. Every block is a full block, so the console is gas-tight.
+Its blocks show a screen: no power, or the worst danger among its area air controllers.
+`cont_115_it_fills_from_a_generator_to_100000_fe_and_pays_5_fe_per_tick` runs the Verify
+plan, and `cont_115_placing_and_breaking_any_block_keeps_exactly_one_item`,
+`cont_115_a_blocked_space_refuses_placing` and `cont_115_its_four_blocks_act_as_one`
+(GameTests) check the form. It stays Accepted until the owner has seen the console.*
+
 #### CONT-116 · Claiming area air controllers
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
 
 A central atmospherics controller shall claim every area air controller in
 the same dimension, at any height, within its range of 10 chunks of its own
@@ -2592,6 +2619,13 @@ controller belongs to at most one central controller.
   only the unclaimed ones in range are claimed.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-07: Implemented. `cont_116_it_claims_only_unclaimed_controllers_in_range`
+(GameTest) runs the Verify plan, with controllers 10 chunks east and north, at other
+heights, claimed, and those 11 chunks away not. A central controller claims at each of
+its atmos ticks, in the order the area air controllers loaded, so one in an unloaded
+chunk is claimed once it loads. The claims are saved per dimension, with a save version,
+and outlast chunk unloads and restarts.*
 
 #### CONT-117 · Central controller range
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
@@ -2627,7 +2661,7 @@ central controller it belongs to, if any.
 *2026-11-06: The tags line now lists Manual, which the Verify plan above already asks for.*
 
 #### CONT-119 · Removing a central controller
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
 
 Removing a central atmospherics controller shall release its area air
 controllers, which another central controller in range may then claim.
@@ -2638,8 +2672,13 @@ controllers, which another central controller in range may then claim.
 
 *2026-11-03: Accepted by the owner as written.*
 
+*2026-11-07: Implemented.
+`cont_119_breaking_a_central_controller_frees_its_controllers_for_another` (GameTest)
+runs the Verify plan. Its claims go when the block is removed, however that happens;
+a central controller whose chunk unloads keeps them.*
+
 #### CONT-120 · Central controller power feed
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-062, CONT-115, CONT-121
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-062, CONT-115, CONT-121
 
 Each atmos tick, a central atmospherics controller shall first pay, from its
 buffer, each claimed area air controller's shortfall: the part of that tick's
@@ -2662,6 +2701,17 @@ lost in sending.
 
 *2026-11-03: Accepted by the owner as written.*
 
+*2026-11-07: Implemented.
+`cont_120_a_controller_with_no_fe_block_runs_its_vent_from_the_central_one`,
+`cont_120_a_controller_with_a_generator_draws_only_its_shortfall` and
+`cont_120_spare_intake_fills_the_controllers_buffers_evenly` (GameTests) run the Verify
+plan; `CentralFeedTest` covers the split. A shortfall is what the area air controller's
+last step cost, its own draw and every part it covers, less what its buffer holds, so a
+part another provider paid for this time is in it. The central controller tops the
+buffer up to that, and pays a shortfall in part when it can't pay it all. Its intake is
+pulled from the blocks next to it, up to the room in its own buffer and its area air
+controllers' together.*
+
 #### CONT-121 · Zone power priority
 `Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
 
@@ -2681,7 +2731,7 @@ controllers it can't pay run on their own buffer, or stop.
 *2026-11-03: Accepted by the owner as written.*
 
 #### CONT-122 · Central controller keeps its chunks loaded
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
 
 While `[central_controller] force_load` is true (the default), a central
 atmospherics controller shall keep its own chunk and the 8 around it loaded
@@ -2697,6 +2747,12 @@ and ticking.
   false.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-07: Implemented.
+`cont_122_it_keeps_its_3x3_chunks_loaded_until_removed_or_turned_off` (GameTest) runs the
+Verify plan. The chunks are held as `/forceload` holds them: blocks and entities tick,
+with no random ticks or mob spawning. The option is read at each atmos tick, so turning
+it off releases them without a restart.*
 
 #### CONT-123 · Central controller GUI
 `Should` · `R1` · `Accepted` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121

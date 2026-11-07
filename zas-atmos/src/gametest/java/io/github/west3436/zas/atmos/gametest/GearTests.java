@@ -21,15 +21,20 @@ import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
+import io.github.west3436.zas.atmos.portable.PortableGasDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.gametest.TestPlayers;
+import io.github.west3436.zas.hud.AtmosHudPayload;
+import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.LifeDamage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +42,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -54,6 +60,7 @@ import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -296,6 +303,43 @@ public final class GearTests {
         h.succeed();
     }
 
+    // ---- CLIENT-006 -----------------------------------------------------------------------------
+
+    /**
+     * An item's tooltip gives its gas in the display units (CLIENT-006). A server has no client config
+     * and so answers in the defaults: °C here means the tooltip didn't print the K it holds.
+     */
+    @GameTest(template = "empty")
+    public static void client_006_item_tooltips_follow_the_display_units(GameTestHelper h) {
+        ItemStack tank = stack(AtmosItems.OXYGEN_TANK);
+        List<Component> lines = new ArrayList<>();
+        tank.getItem().appendHoverText(tank, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.gas_tank.distribution", "21.3 kPa");
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "609.3 kPa", "20.0 °C");
+
+        ItemStack canister = AtmosItems.CANISTER.get().filled(O2, CanisterColor.WHITE);
+        lines.clear();
+        canister.getItem().appendHoverText(canister, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "4,560 kPa", "20.0 °C");
+
+        ItemStack portable = stack(AtmosItems.PORTABLE_PUMP);
+        double moles = ATM * PortableGasDevice.STORE_LITRES / (GasMixture.GAS_CONSTANT * T);
+        portable.set(AtmosComponents.GAS.get(), new GasParcel(Map.of(N2, moles), T));
+        lines.clear();
+        portable.getItem().appendHoverText(portable, Item.TooltipContext.EMPTY, lines, TooltipFlag.NORMAL);
+        hasLine(h, lines, "item.zas_atmos.canister.pressure", "101.3 kPa", "20.0 °C");
+        h.succeed();
+    }
+
+    private static void hasLine(GameTestHelper h, List<Component> lines, String key, Object... args) {
+        h.assertTrue(
+                lines.stream()
+                        .anyMatch(line -> line.getContents() instanceof TranslatableContents t
+                                && t.getKey().equals(key)
+                                && Arrays.equals(t.getArgs(), args)),
+                key + " " + Arrays.toString(args) + " isn't in " + lines);
+    }
+
     // ---- CONT-031, CONT-032 -------------------------------------------------------------------------
 
     /**
@@ -375,6 +419,36 @@ public final class GearTests {
             p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(item.get()));
             h.assertTrue(Internals.active(p) != null, "internals don't work with " + name);
         });
+        h.succeed();
+    }
+
+    // ---- CLIENT-001, CLIENT-009 ------------------------------------------------------------------
+
+    /**
+     * The breath mask and the softsuit helmet show the HUD, and the rest of the suit doesn't
+     * (CLIENT-001). An O2 tank in the offhand shows its pressure, about 6 atm, and internals go from
+     * off to on (CLIENT-009).
+     */
+    @GameTest(template = "empty")
+    public static void client_001_the_mask_and_helmet_show_the_hud(GameTestHelper h) {
+        Site s = new Site(h, 44);
+        FakePlayer p = player(s, "zas_hud_heads");
+        h.assertFalse(HudLevels.triggered(p), "the HUD shows bare-headed");
+        p.setItemSlot(EquipmentSlot.CHEST, stack(AtmosItems.SOFTSUIT_CHESTPLATE));
+        p.setItemSlot(EquipmentSlot.LEGS, stack(AtmosItems.SOFTSUIT_LEGGINGS));
+        p.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.SOFTSUIT_BOOTS));
+        h.assertFalse(HudLevels.triggered(p), "the HUD shows with a suit but no helmet");
+        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.BREATH_MASK));
+        h.assertTrue(HudLevels.triggered(p), "the HUD doesn't show with a breath mask");
+        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.SOFTSUIT_HELMET));
+        h.assertTrue(HudLevels.triggered(p), "the HUD doesn't show with the softsuit helmet");
+
+        h.assertValueEqual(HudLevels.tankPressure(p), AtmosHudPayload.NO_TANK, "no tank");
+        p.setItemInHand(InteractionHand.OFF_HAND, stack(AtmosItems.OXYGEN_TANK));
+        close(h, HudLevels.tankPressure(p), 6 * ATM, 5, "the O2 tank's pressure");
+        h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_OFF, "internals off");
+        Internals.set(p, true);
+        h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_ON, "internals on");
         h.succeed();
     }
 

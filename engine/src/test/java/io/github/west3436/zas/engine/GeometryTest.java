@@ -265,8 +265,22 @@ class GeometryTest {
         assertTrue(lava.isHeatSource());
         assertTrue(lava.hasFlag(Geometry.FLAG_HEAT_SOURCE));
         assertFalse(lava.withThermal(Double.NaN, Double.NaN).hasFlag(Geometry.FLAG_HEAT_SOURCE));
-        assertThrows(IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(0, Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(-1, Double.NaN));
+        assertThrows(
+                IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(Double.POSITIVE_INFINITY, Double.NaN));
         assertThrows(IllegalArgumentException.class, () -> Geometry.SOLID.withThermal(Double.NaN, -1));
+    }
+
+    /** HEAT-019: a U of 0 is a value of its own, apart from NaN, the fallback; -0 is 0. */
+    @Test
+    void heat_019_a_transmittance_of_0() {
+        Geometry none = Geometry.SOLID.withThermal(0, Double.NaN);
+        assertEquals(0.0, none.transmittance());
+        assertFalse(none.equals(Geometry.SOLID), "0 is the fallback");
+        assertEquals(none, Geometry.SOLID.withThermal(-0.0, Double.NaN), "-0 is another palette entry");
+        assertEquals(
+                0,
+                Double.compare(0.0, Geometry.SOLID.withThermal(-0.0, Double.NaN).transmittance()));
     }
 
     /** Zone-boundary flags are per face; {@link Geometry#FLAG_ZONE_BOUNDARY} is all six (GEO-007). */

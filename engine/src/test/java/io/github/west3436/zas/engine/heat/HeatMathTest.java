@@ -16,6 +16,33 @@ class HeatMathTest {
         assertEquals(1 / (1 / 1.7 + 1 / 0.15 + 1 / 50.0), HeatMath.series(1.7, 0.15, 50), 1e-15);
     }
 
+    /** HEAT-019: a layer of U 0 makes the whole path 0, with no infinity or NaN on the way. */
+    @Test
+    void heat_019_a_layer_of_0_in_series() {
+        assertEquals(0, Double.compare(0.0, HeatMath.series(0)));
+        assertEquals(0, Double.compare(0.0, HeatMath.series(1.7, 0, 50)));
+        assertEquals(0, Double.compare(0.0, HeatMath.series(0.15, 0.04, 0)));
+        assertEquals(Double.POSITIVE_INFINITY, HeatMath.resistance(0));
+        assertEquals(1 / 1.7, HeatMath.resistance(1.7), 1e-15);
+        // NaN stays apart from 0: it is no layer of 0.
+        assertTrue(Double.isNaN(HeatMath.resistance(Double.NaN)));
+    }
+
+    /** HEAT-019: a wall of U 0 radiates nothing to a vacuum, whatever the temperatures. */
+    @Test
+    void heat_019_a_wall_of_0_radiates_nothing() {
+        Random random = new Random(19);
+        for (int i = 0; i < 1_000; i++) {
+            double tZone = 10 + random.nextDouble() * 1500;
+            double tBg = random.nextDouble() * 400;
+            double e = random.nextDouble();
+            assertEquals(0, Double.compare(0.0, HeatMath.radiativeFlux(0, tZone, tBg, e)), tZone + " K to " + tBg);
+            assertEquals(tBg, HeatMath.surfaceTemperature(0, tZone, tBg, e), 0, "the surface is at the background");
+        }
+        // Next to a wall that does conduct.
+        assertTrue(HeatMath.radiativeFlux(1.7, 293.15, 2.7, 0.9) > 0);
+    }
+
     /**
      * HEAT-006: random capacities, conductances and periods never cross equilibrium, and a pair
      * conserves its energy.
