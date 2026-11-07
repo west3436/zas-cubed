@@ -51,7 +51,7 @@ public final class AtmosCreativeTab {
 
     /**
      * The tab's contents, in order: pipes first, then devices, then the creative canisters, then the
-     * tools, then the breathing gear, then the crafting components.
+     * station blocks, then the tools, then the breathing gear, then the crafting components.
      */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
@@ -87,6 +87,7 @@ public final class AtmosCreativeTab {
             out.accept(b.get().full());
         });
         out.accept(AtmosItems.ATMOS_ANALYZER.get());
+        AtmosItems.stationBlocks().forEach(b -> out.accept(b.get()));
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());

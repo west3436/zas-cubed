@@ -350,5 +350,8 @@
   "gui.zas_atmos.electrolyzer.making": "Making gas",
   "gui.zas_atmos.electrolyzer.water": "Water",
   "gui.zas_atmos.electrolyzer.water_formula": "H₂O",
-  "gui.zas_atmos.electrolyzer.millibuckets": "%s / %s mB"
+  "gui.zas_atmos.electrolyzer.millibuckets": "%s / %s mB",
+  "block.zas_atmos.station_wall": "Station Wall",
+  "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
+  "block.zas_atmos.reinforced_glass_block": "Reinforced Glass"
 }
