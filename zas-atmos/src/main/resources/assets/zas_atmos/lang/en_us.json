@@ -1,4 +1,5 @@
 {
+  "fml.menu.mods.info.description.zas_atmos": "SS13-style atmospherics for ZAS³: pipes, pumps, vents, scrubbers, canisters,\nair alarms, firelocks, suits and power.\n",
   "itemGroup.zas_atmos": "ZAS³ Atmospherics",
   "block.zas_atmos.pipe": "Pipe",
   "block.zas_atmos.pipe_cap": "Pipe End Cap",

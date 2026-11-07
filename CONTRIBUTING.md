@@ -137,6 +137,15 @@ audit zones against the blocks and profile each phase. The config files are in
 - **Names trace back** to the requirement they verify (requirements writing
   rule 5): `core_012_zone_merge`. The same goes for GameTest structure names.
 
+### Player-facing text
+
+Text a player or operator reads goes in the mod's `en_us.json`, and the code
+names its key (CLIENT-007). `./gradlew build` fails on text written in the code
+and on a key the code spells out that `en_us.json` lacks. To run only that check:
+`./gradlew :zas-atmos:test --tests '*PlayerTextTest*'`. Text with no letters,
+such as a symbol or a number, is fine. The few things with letters that stay in
+the code, such as unit symbols, are listed at the top of `PlayerTextTest`.
+
 ## Pull requests
 
 1. Branch from `main`. Keep a PR to one issue where you can.
