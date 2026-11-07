@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.canister;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.client.tgui.Readout;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasCodecs;
@@ -78,8 +79,8 @@ public class CanisterItem extends BlockItem {
         }
         tooltip.add(Component.translatable(
                         "item.zas_atmos.canister.pressure",
-                        String.format(Locale.ROOT, "%.0f", GasCodecs.pressure(gas, PipeVolumes.CANISTER)),
-                        String.format(Locale.ROOT, "%.1f", gas.temperature()))
+                        Readout.pressure(GasCodecs.pressure(gas, PipeVolumes.CANISTER)),
+                        Readout.temperature(gas.temperature()))
                 .withStyle(ChatFormatting.GRAY));
         gas.moles()
                 .forEach((id, n) -> tooltip.add(Component.translatable(
