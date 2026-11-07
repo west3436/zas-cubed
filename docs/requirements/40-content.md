@@ -2584,7 +2584,7 @@ chunk is claimed once it loads. The claims are saved per dimension, with a save 
 and outlast chunk unloads and restarts.*
 
 #### CONT-117 · Central controller range
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
 
 A central atmospherics controller's range shall be set in its GUI, from 1
 chunk up to `[central_controller] max_range_chunks` (default 10), and start
@@ -2598,6 +2598,11 @@ reaches.
   the server's maximum.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-07: Implemented. `cont_117_lowering_the_range_releases_what_it_no_longer_reaches`
+(GameTest) runs the Verify plan through the window's buttons, which step the range by a
+chunk and are refused past 1 or the maximum. A range left at the maximum follows the
+server's maximum, and a lower one is cut to a lowered maximum.*
 
 #### CONT-118 · Moving an area air controller to another central controller
 `Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
@@ -2615,6 +2620,13 @@ central controller it belongs to, if any.
 *2026-11-03: Accepted by the owner as written.*
 
 *2026-11-06: The tags line now lists Manual, which the Verify plan above already asks for.*
+
+*2026-11-07: The GameTest half passes:
+`cont_118_the_multitool_moves_a_controller_to_another_central_controller` uses the
+multitool on an area air controller, then on a second central controller in range, and
+checks the second now has it and pays for it. The controller's window shows its central
+controller's position in a "Central" row. This stays Accepted until the owner has seen
+that row.*
 
 #### CONT-119 · Removing a central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
@@ -2669,7 +2681,7 @@ pulled from the blocks next to it, up to the room in its own buffer and its area
 controllers' together.*
 
 #### CONT-121 · Zone power priority
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-120
 
 Each area air controller a central atmospherics controller claims shall have
 a zone power priority, set in the central controller's GUI: Critical, Normal
@@ -2685,6 +2697,13 @@ controllers it can't pay run on their own buffer, or stop.
   zone's stops once its buffer is empty.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-07: Implemented.
+`cont_121_a_starved_central_controller_keeps_the_critical_zone_running` (GameTest) runs
+the Verify plan in real time. The priorities are set through the window's buttons, the
+Low zone is claimed first, and the central controller is held at its own draw and one
+zone's bill. The Critical zone's vent never loses power, and the Low zone's stops when
+its buffer reaches 0. A priority is saved with the claim, and goes when the claim does.*
 
 #### CONT-122 · Central controller keeps its chunks loaded
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-115
@@ -2726,8 +2745,16 @@ last readings.
 
 *2026-11-03: Accepted by the owner as written.*
 
+*2026-11-07: Built. The window lists each claimed controller in the order it was
+claimed: its position, pressure, temperature, a danger icon, a power icon and three
+priority buttons, with an Open button. One out of contact shows its last readings
+dimmed, with "No contact" in place of Open. Above the list are its status, power and
+range. `cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloaded`
+(GameTest) checks that an unloaded controller's row is out of contact with its last
+readings. This stays Accepted until the owner has checked the window.*
+
 #### CONT-124 · Remote control from the central controller
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
 From the central atmospherics controller's GUI, a player shall be able to
 open the GUI of any loaded area air controller it has claimed and do anything
@@ -2741,6 +2768,15 @@ if the player were there (CONT-074).
   an unloaded chunk can't be opened.
 
 *2026-11-03: Accepted by the owner as written.*
+
+*2026-11-07: Implemented.
+`cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloaded` (GameTest)
+runs the Verify plan with a real player. From the central controller's menu, it opens the
+claimed controller's own menu and switches it to Panic, and the vent turns off. A press
+from a player out of reach of the central controller is refused. Once the controller's
+chunk unloads, it won't open. The menu is the controller's own, with its own checks. It
+stays open only while the player is in reach of the central controller, the controller
+is loaded and still claimed. Its Back button reopens the central controller's window.*
 
 ## Device sounds
 

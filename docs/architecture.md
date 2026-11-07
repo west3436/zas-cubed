@@ -3356,7 +3356,12 @@ readings.
   priority and whether it is in contact. Buttons `0` and `1` lower and raise the range; `1000 +
   row` opens that row's area air controller's own menu (§11.6) if it is loaded (CONT-124);
   `100000 + row × 3 + p` sets its priority. A row's button names its place in the list the server
-  last sent that player, so it can only reach a controller this one has claimed.
+  last sent that player, so it can only reach a controller this one has claimed. The screen is
+  `client.CentralScreen`, on the TGUI kit: status, power and range above a scrolling list, each
+  row with its readings, a danger and a power icon, three priority buttons and an Open button.
+  A row out of contact shows its last readings dimmed and no Open button. `ControllerScreen`
+  shows the controller's central controller in a row of its own and, opened from there, a Back
+  button.
 - **The multitool** moves the selected area air controller here from any other central
   controller, if it is in range (CONT-118). It joins at Normal priority, last in claim order.
 - **Saved:** buffer and range on the block entity; claims as above.

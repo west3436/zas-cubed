@@ -603,6 +603,10 @@ and analyzer have no window yet because they don't exist yet.*
 filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, and
 Implemented.*
 
+*2026-11-07: The central atmospherics controller's window (CONT-123) uses the kit, in the
+area air controller's proportions, 300 × 220 GUI pixels. It waits for the owner's check
+in the game.*
+
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Implemented` · Verify: Inspect
 
