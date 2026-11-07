@@ -557,6 +557,36 @@ mod code #354 doesn't change. It covers the HUD alerts, a dive on internals, the
 fling and removing the mods. CLIENT-008, CLIENT-014 and DATA-007 stay *Accepted* until it
 passes. The round's decisions are with the owner.
 
+*2026-11-06: the owner played that world.* Every section passed, with no notes, on main at
+88cbdf6, whose mod code is the b90f959 the world was built on. The logs show about 4
+minutes in the world, not the plan's 8, and under a minute in the copy with no mods. That
+moves CLIENT-008, CLIENT-014 and DATA-007 to *Implemented*. The dive and the fling looked
+right too.
+
+*2026-11-06: the owner settled the round's decisions.*
+
+| Decision | Result |
+|---|---|
+| A suit whose code throws (NFR-013) | No protection while it throws, as built, unlike an ambient provider |
+| What zone events carry (API-030) | A `ZoneId`, as built. The architecture is reworded, and a snapshot can be added later |
+| Saved data with no version (DATA-012) | Item data, the player's internals switch and the primed transfer valve get a version before the first release |
+| A newer `DimensionData` (DATA-012) | Read by name with a warning, as built |
+| The air meter on internals under water (LIFE-047) | It refills, as built |
+| Airflow impact's size and knockback (FLOW-005) | As built |
+| Dissolving sealed zones (CORE-052) | As built: 60 s, joined zones going together, now in the statement, and CORE-006's tolerances. A fire that outlasts its zone is a known limit |
+| When zone events fire (API-030) | As built, with the statement now saying `breached` waits for the opening's classification |
+| Natural spawning in bad air (LIFE-034) | As built, including mobs that don't breathe spawning in a vacuum and dying there. The natural spawner still hasn't run end to end |
+| Hazard handlers (LIFE-032) | As built. A check holding on an unresolved atmosphere (LIFE-048) stays untested with a handler registered |
+| Hazard events (API-033) | As built |
+| Data formats in the example addon (API-047) | They don't count, as `docs/datapacks.md` has an example of each |
+| A window's sync (DATA-005) | `ControllerSync` and `CanisterSync` are named on its list |
+| API-042's status | Stays *Accepted* until a release exists for the check to compare, with the policy as built |
+| S-10's regression check (NFR-034) | As built, comparing means only |
+| The nested-jar test's CI step (API-007) | It keeps its own step |
+| Displaced gas (CORE-029) | As built |
+| A valve at a chunk's edge rebuilding twice per atmos tick ([#341](https://github.com/west3436/zas-cubed/pull/341)) | As built, and measured with S-09 |
+| The audit's stale comments, the two real-time tests left from [#338](https://github.com/west3436/zas-cubed/pull/338), and CONTRIBUTING's checks | Next, as a small PR |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -672,8 +702,11 @@ _Updated 2026-11-06._
      audit round after it built.
    - ~~**The audit's items that need no new content**~~ *on main 2026-11-06 (#331 to
      #348, #350, #351, #354; see
-     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. Its combined
-     test world and its decisions are with the owner.
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
+     played its combined test world and settled its decisions the same day.
+   - **Before the first release:** a version on item data, the player's internals
+     switch and the primed transfer valve (DATA-012,
+     [#58](https://github.com/west3436/zas-cubed/issues/58)).
    - ~~**Before them,** the gas-handler capability and seal providers (#60),
      ambient providers (#66), dimension pause and region reset (#67), default
      block overrides and moving-block geometry (#65), fuzzing and fault isolation

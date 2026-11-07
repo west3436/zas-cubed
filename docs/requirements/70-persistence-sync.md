@@ -215,6 +215,10 @@ and the GameTest that loads an old world. All of these wait for a first release.
 other kinds of saved data have no version: item data (tank contents and the like), the
 player's internals switch, and the primed transfer valve entity.*
 
+*2026-11-06: The owner's decisions. Those three kinds of saved data get a version before
+the first release. A newer or unversioned `DimensionData` stays read by name with a
+warning, though fields the older mod doesn't know are lost at its next save.*
+
 #### DATA-004 · Corruption tolerance
 `Must` · `R0` · `Implemented` · Verify: GameTest
 
@@ -237,7 +241,7 @@ chunk.
   chunk.
 
 #### DATA-007 · Clean uninstall
-`Should` · `R1` · `Accepted` · Verify: Manual
+`Should` · `R1` · `Implemented` · Verify: Manual
 
 Removing zas-cubed from a world shall leave vanilla data intact. Only
 zas-cubed's own blocks (including `zas:gas_fire`, which becomes air), items
@@ -249,6 +253,11 @@ and attachments are lost.
 - **Verify:** Manual: remove the mods from a test world and check it loads
   with vanilla blocks intact.
 
+*2026-11-06: Implemented. The owner opened a test world in a client with no mods. It
+loaded, its vanilla blocks stood, a chest kept its vanilla items and lost a breath mask,
+and a row of the mods' machines was gone. A NeoForge server with no mods checked the same
+copy, which also had a `zas:gas_fire` saved in it: the fire and the machines are air.*
+
 ## Client sync
 
 #### DATA-005 · Client sync scope
@@ -258,6 +267,7 @@ Clients shall receive only:
 - their own player's atmosphere state (DATA-014)
 - airflow data for nearby active edges (DATA-015)
 - debug data, while an operator has the overlay on (CLIENT-005)
+- what a window the player has open shows (`ControllerSync`, `CanisterSync`)
 
 No zone geometry or per-cell data is sent otherwise. Gas definitions
 (CORE-014) and breathing state (LIFE-023) are synced as those require.
@@ -287,6 +297,10 @@ the room. Debug data goes only to an operator with the overlay on, and stops whe
 Reading the packet types found one this list doesn't name: `ControllerSync`, what a
 controller's GUI shows, sent to the player with it open. It holds no zone geometry or
 per-cell data, so it keeps to D-53.*
+
+*2026-11-06: The owner's decision: a window's sync goes on this list, so the note above
+no longer applies. `ControllerSync` and `CanisterSync` each go only to the player with
+that window open.*
 
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005

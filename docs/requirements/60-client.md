@@ -29,7 +29,7 @@ the GUI (F1). Nothing seals breathing or analyzes gas yet, so the sealed
 helmet and analyzer parts wait for them, and this stays Accepted.*
 
 #### CLIENT-008 · HUD readings and thresholds
-`Must` · `R1` · `Accepted` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
+`Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
 The HUD shall show pressure, O₂ partial pressure, temperature and toxins, each
 at a warning or danger level. Toxin levels are read from the hazard profiles
@@ -69,6 +69,10 @@ dimension has no alert (LIFE-031), and a creative or spectator player none
 `client_008_hazards_off_and_creative_have_no_alerts` (GameTests) pass. It
 stays Accepted until the owner checks the display by hand.*
 
+*2026-11-06: Implemented. The owner checked the display in a test world with a
+room at each reading's warning and danger levels: each showed the icon its sign
+named, still at a warning and flashing at a danger.*
+
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028
 
@@ -80,7 +84,7 @@ the pressure of the tank they draw from (LIFE-028).
 - **Verify:** Manual check of the indicator while a tank drains.
 
 #### CLIENT-014 · Not colour alone
-`Should` · `R1` · `Accepted` · Verify: Manual
+`Should` · `R1` · `Implemented` · Verify: Manual
 
 Every HUD warning and danger cue shall have a shape or flashing cue as well as
 its colour.
@@ -94,6 +98,10 @@ Low and high pressure, and cold and heat, have different icons, and every
 danger icon flashes with vg's two-frame animation while warnings stay still.
 O₂ and toxins have one icon each, so for them the flashing is the cue. It
 stays Accepted until the owner checks it by hand.*
+
+*2026-11-06: Implemented. The owner went round the same rooms as CLIENT-008's
+check under Windows' greyscale filter, and could tell warning from danger, and low
+from high, with no colour to help.*
 
 ## Effects
 

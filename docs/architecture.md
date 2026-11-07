@@ -2210,8 +2210,9 @@ fallback, and a provider without it, give 16 kPa.
   hazard before it applies. *Implemented:* `LifeDamage.deal` and `LifeDamage.tick`
   post `HazardTickEvent` through `ApiEvents`, once per hazard each time it would
   harm an entity, so every hazard's damage goes through them.
-- Events carry snapshot data (`ZoneInfo`, `GasMixture`), never live engine
-  objects.
+- Events carry snapshot data (`GasMixture`) or a zone's `ZoneId`, never live
+  engine objects. A zone event's listener gets the rest from
+  `Atmospheres.zone(level, id)`, which is empty for a zone that's gone (API-030).
 
 ### 6.5 Point resolution (API-015, D-44)
 
