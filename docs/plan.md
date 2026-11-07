@@ -659,6 +659,11 @@ owner answered the ones that change the game, and the rest stand as built.
 | The wrench and canisters (CONT-035) | The wrench leaves canisters alone |
 | Connected textures | Fusion, over CTM and Continuity |
 
+*2026-11-07: the owner accepted CONT-129 to CONT-132 and HEAT-019.* CONT-129 to CONT-131 and
+HEAT-019 move to *Implemented*, as their Verify plans are headless and pass. CONT-132 is
+*Accepted*: its tests pass and the panels were checked in a dev client with Fusion, but the
+owner's own look in game is left.
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -780,7 +785,8 @@ _Updated 2026-11-07._
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner played
      its combined test world and answered its decisions the same day.
    - ~~Connected textures for the station walls and reinforced glass with Fusion
-     ([#391](https://github.com/west3436/zas-cubed/issues/391))~~ *on main 2026-11-07 ([#392](https://github.com/west3436/zas-cubed/pull/392))*. CONT-132 is *Draft*.
+     ([#391](https://github.com/west3436/zas-cubed/issues/391))~~ *on main 2026-11-07 ([#392](https://github.com/west3436/zas-cubed/pull/392))*. CONT-132 is
+     *Accepted*, with the owner's look in game left.
    - **Now:** whether Ponder has to be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270)).
    - **Last:** S-09 and S-10.
    - **What each open requirement still needs:** the 2026-11-06 status audit in

@@ -167,7 +167,7 @@ by `heat_006_never_crosses_equilibrium` and
 `heat_006_never_overshoots_in_the_engine` (Unit).*
 
 #### HEAT-019 · A block that doesn't conduct
-`Should` · `R1` · `Draft` · Verify: Unit · Trace: D-80, HEAT-002, HEAT-004, HEAT-012
+`Should` · `R1` · `Implemented` · Verify: Unit · Trace: D-80, HEAT-002, HEAT-004, HEAT-012
 
 A block's transmittance may be 0. No heat shall cross a path through such a block, by
 conduction or by radiating to a vacuum.
@@ -190,6 +190,9 @@ fallback. Checked by `heat_019_a_path_with_a_layer_of_0_carries_no_heat`,
 `heat_019_a_wall_of_0_radiates_nothing_to_a_vacuum`, `heat_019_a_layer_of_0_in_series`,
 `heat_019_a_wall_of_0_radiates_nothing` and `heat_019_a_transmittance_of_0` (engine Unit),
 and `heat_019_a_transmittance_of_0_loads` (the data format, Unit).*
+
+*2026-11-07: Accepted by the owner, and Implemented: its Verify plan's unit tests pass (see
+the note above).*
 
 ## Sources and sinks
 
