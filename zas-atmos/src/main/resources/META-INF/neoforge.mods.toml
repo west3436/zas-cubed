@@ -33,3 +33,11 @@ type = "required"
 versionRange = "[${minecraft_version}]"
 ordering = "NONE"
 side = "BOTH"
+
+# Connected textures for the station blocks (CONT-132), only when Fusion is installed.
+[[dependencies.zas_atmos]]
+modId = "fusion"
+type = "optional"
+versionRange = "[1.1.1,)"
+ordering = "NONE"
+side = "CLIENT"

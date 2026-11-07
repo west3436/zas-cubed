@@ -1,7 +1,8 @@
 # ZAS³ asset credits
 #
-# Every file under a project's src/<set>/resources/assets/ directory has one
-# entry here (NFR-045). All assets are licensed CC BY-SA 4.0 International;
+# Every file under a project's src/<set>/resources/assets/ directory, or under
+# the assets/ of a built-in resource pack in src/<set>/resources/resourcepacks/,
+# has one entry here (NFR-045). All assets are licensed CC BY-SA 4.0 International;
 # see LICENSE-ASSETS. scripts/check_credits.py checks this file in CI.
 #
 # Format
@@ -2440,6 +2441,44 @@ notes: A full block with one texture on every face (vanilla's cube_all).
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_glass_block.json
 origin: original
 notes: A full block with one texture on every face (vanilla's cube_all). Render type translucent, for the glass.
+
+# Connected textures with Fusion (CONT-132): the built-in pack fusion_connected. Each strip is
+# Fusion's pieced layout, five 16 px tiles: the block's own texture, then the block joined all
+# round, joined above and below, joined left and right, and joined on all four sides but not at
+# the corners.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: metal0, metal15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The station wall's texture, joined as vg's walls join (metal15): the rim and its bolts only on outside edges, with the seam's notch at the middle of each, and flat plate inside.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/station_wall.png.mcmeta
+origin: original
+notes: Fusion's connecting texture, pieced, joining only to station walls.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_station_wall.png
+origin: vgstation13
+source: icons/turf/walls.dmi
+state: rwall0, rwall15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The reinforced station wall's texture, joined as vg's reinforced walls join (rwall15): the rim only on outside edges, flat plate between, and each block keeping its cross of rods and boss, stopping short of its edges.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_station_wall.png.mcmeta
+origin: original
+notes: Fusion's connecting texture, pieced, joining only to reinforced station walls.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_glass_block.png
+origin: vgstation13
+source: icons/obj/structures/window.dmi
+state: frwindow0, frwindow15
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Reinforced glass's texture, joined as vg's full windows join (frwindow15): the frame and its rod dashes only on outside edges, and inside, the pane with its square wire every 5 px, so the mesh stays nearly even from block to block. Its colours and alpha are the block texture's. vg's sprites came from /tg/station and Baystation 12, which license their icons CC BY-SA 3.0.
+
+path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_glass_block.png.mcmeta
+origin: original
+notes: Fusion's connecting texture, pieced, joining only to reinforced glass.
 
 # Crafting components (D-72).
 

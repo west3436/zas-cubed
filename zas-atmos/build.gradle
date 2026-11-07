@@ -126,10 +126,11 @@ tasks.named('test', Test) {
     testLogging.exceptionFormat = 'full'
 }
 
-// The compatibility matrix (NFR-025, docs/release-checklist.md). Only -Pcompat.matrix=true adds these
-// mods, and only to this project's runs, so no jar and no ordinary run ever holds them. Sodium is left
-// out of the GameTest server, where it isn't loaded and all its mixins are client mixins.
-if (providers.gradleProperty('compat.matrix').getOrElse('false').toBoolean()) {
+def compatMatrix = providers.gradleProperty('compat.matrix').getOrElse('false').toBoolean()
+def fusion = providers.gradleProperty('fusion').getOrElse('false').toBoolean()
+
+// Optional mods for dev runs come from Modrinth's maven, which only the properties below add.
+if (compatMatrix || fusion) {
     repositories {
         exclusiveContent {
             forRepository {
@@ -138,6 +139,12 @@ if (providers.gradleProperty('compat.matrix').getOrElse('false').toBoolean()) {
             filter { includeGroup 'maven.modrinth' }
         }
     }
+}
+
+// The compatibility matrix (NFR-025, docs/release-checklist.md). Only -Pcompat.matrix=true adds these
+// mods, and only to this project's runs, so no jar and no ordinary run ever holds them. Sodium is left
+// out of the GameTest server, where it isn't loaded and all its mixins are client mixins.
+if (compatMatrix) {
     neoForge.runs.gameTestServer.systemProperty 'zas.compatMatrix', 'true'
     dependencies {
         ['modernfix:5.27.27+mc1.21.1', 'ferrite-core:7.0.3-neoforge', 'lithium:mc1.21.1-0.15.4-neoforge'].each {
@@ -145,5 +152,18 @@ if (providers.gradleProperty('compat.matrix').getOrElse('false').toBoolean()) {
             gametestRuntimeOnly "maven.modrinth:$it"
         }
         runtimeOnly 'maven.modrinth:sodium:mc1.21.1-0.8.13-neoforge'
+    }
+}
+
+// Connected textures (CONT-132). Only -Pfusion=true adds Fusion, to the dev client and server, to see
+// the station blocks join. localRuntime is never published or put in a jar, and the GameTest server
+// has its own classpath, so CI never fetches it.
+if (fusion) {
+    configurations {
+        localRuntime
+        runtimeClasspath.extendsFrom localRuntime
+    }
+    dependencies {
+        localRuntime 'maven.modrinth:fusion-connected-textures:1.3.16-neoforge-mc1.21.1'
     }
 }

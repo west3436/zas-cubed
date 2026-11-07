@@ -18,6 +18,7 @@ CONT-127, the other devices' sounds, and CONT-128, the fire alarm's, were added
 as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
+CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -3205,6 +3206,33 @@ as CONT-129 and CONT-130 do. Checked by
 `cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum`, where a room
 with a reinforced glass window keeps its temperature, and by
 `cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
+
+#### CONT-132 · Connected textures with Fusion
+`Could` · `R1` · `Draft` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
+
+On a client with Fusion (Connected Textures) installed, station walls, reinforced station
+walls and reinforced glass shall each join with touching blocks of their own kind, showing
+the rim or frame only on the outer edges of a flat run of them. Without Fusion, each block
+shall look as it does alone.
+
+- **Rationale:** Decision: the owner's request of 2026-11-07
+  ([#391](https://github.com/west3436/zas-cubed/issues/391)): a wall or window of these
+  blocks should read as one surface. The owner chose Fusion over CTM and Continuity.
+- **Verify:** Manual: panels of each block, 1 by 1, 3 by 1 and 3 by 3, the glass in front of
+  stone, looked at with Fusion and without it. `ConnectedTexturesTest` (Unit) checks the
+  pack: Fusion's pieced layout joining each block only to its own kind, a lone block's tile
+  the same as its texture, the joined tiles in that texture's colours, and nothing outside
+  the pack naming Fusion.
+
+*2026-11-07: added for review, with the behaviour built. It's the owner's request of
+2026-11-07, and the owner approved its art as drawn the same day. The blocks join as vg's
+walls and windows do (`metal15`, `rwall15`, `frwindow15`): the station wall's rim and bolts
+show only on outside edges, with flat plate inside; the reinforced wall keeps a cross of
+rods and a boss on each block (the owner's choice over one lattice of rods); and the glass's
+frame shows only on outside edges, with the wire every 5 px across the pane. The textures
+are in a built-in resource pack that's added only when Fusion is loaded
+([architecture §11.15](../architecture.md#1115-station-blocks-cont-129-to-cont-132)). The
+`Could` is mine.*
 
 ## R1 / R2 split
 
