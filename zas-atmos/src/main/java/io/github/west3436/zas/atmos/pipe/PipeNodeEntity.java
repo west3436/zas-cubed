@@ -174,6 +174,11 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
         return false;
     }
 
+    @Override
+    public double highestPressure() {
+        return network().gas().pressure();
+    }
+
     /** The node's share of its network's gas, or its own gas if it is in no network. */
     public GasParcel share() {
         return network != null && network.valid()
@@ -277,7 +282,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      * Dissolves this node's network and its neighbours', so the next ones built follow its current
      * connections: call it after they change. Members keep their shares by volume (CONT-003).
      */
-    protected void reconnect() {
+    @Override
+    public void reconnect() {
         if (network != null) {
             network.dissolve();
         }

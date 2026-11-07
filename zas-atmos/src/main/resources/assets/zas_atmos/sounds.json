@@ -306,5 +306,9 @@
   "device.extinguisher.empty": {
     "subtitle": "subtitles.zas_atmos.device.extinguisher.empty",
     "sounds": [{ "name": "zas_atmos:device/click", "pitch": 1.7, "volume": 0.3 }]
+  },
+  "device.wrench.use": {
+    "subtitle": "subtitles.zas_atmos.device.wrench.use",
+    "sounds": [{ "name": "zas_atmos:device/ratchet", "volume": 0.4 }]
   }
 }

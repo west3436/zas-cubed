@@ -1540,7 +1540,7 @@ puts the analyzer in it. `cont_034_held_in_either_hand_it_shows_every_hud_readin
 Manual check, so this stays Accepted.*
 
 #### CONT-035 · Wrench
-`Should` · `R1` · `Accepted` · Verify: GameTest
+`Should` · `R1` · `Implemented` · Verify: GameTest
 
 A wrench shall rotate and remove atmos parts.
 
@@ -1551,8 +1551,17 @@ A wrench shall rotate and remove atmos parts.
 *2026-11-06: The owner's call: the wrench rotates parts and doesn't mirror them.
 A filter's or mixer's mirrored version is crafted instead (D-77).*
 
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+`zas_atmos:wrench` works on the blocks pipes join, other than a canister. Use
+turns a part a quarter turn about the face clicked; sneak-use removes it as
+mining would ([architecture §11.16](../architecture.md#1116-the-wrench-cont-035-cont-091)).
+It doesn't attach or detach a canister. `WrenchTests.cont_035_*` (GameTest)
+checks a pump and a cap turn, a pipe and the pump come off as items, a
+mirrored filter stays mirrored with its side port on its pipe, and a part that
+only faces sideways, such as the electrolyzer, turns about the vertical.*
+
 #### CONT-091 · Wrench pressure lock
-`Should` · `R1` · `Accepted` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 The wrench shall refuse to remove a part holding more than 2 atm above ambient
 until it has been vented.
@@ -1561,6 +1570,16 @@ until it has been vented.
   §1](../research/vg-atmos-content.md#1-pipe-networks)).
 - **Verify:** A GameTest checks a part at 3 atm over ambient refuses removal
   and comes off once vented.
+
+*2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
+A part's pressure is the highest of its networks' (a device's ports each have
+one); the ambient is the pressure where its gas would go if it came off. A
+refusal tells the player how many kPa over it is.
+`WrenchTests.cont_091_a_part_3_atm_over_ambient_comes_off_only_once_vented`
+(GameTest) checks a pipe at 3 atm over refuses and comes off once vented;
+`WrenchTests.cont_091_removing_a_part_with_a_wrench_conserves_its_gas` checks
+removing a pipe and a pump makes and loses no gas, with the conservation
+checker on.*
 
 #### CONT-037 · Fire extinguisher
 `Could` · `R1` · `Implemented` · Verify: GameTest · Trace: FIRE-018, D-74

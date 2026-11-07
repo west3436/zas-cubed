@@ -16,6 +16,7 @@ import io.github.west3436.zas.atmos.portable.PortableGasItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
+import io.github.west3436.zas.atmos.tool.WrenchItem;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,9 @@ public final class AtmosItems {
 
     /** Links parts to an area air controller (CONT-042). */
     public static final DeferredItem<MultitoolItem> MULTITOOL = ITEMS.registerItem("multitool", MultitoolItem::new);
+
+    /** Turns and removes atmos parts (CONT-035, CONT-091). */
+    public static final DeferredItem<WrenchItem> WRENCH = ITEMS.registerItem("wrench", WrenchItem::new);
 
     /** Puts out the fires it is aimed at (CONT-037). */
     public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =

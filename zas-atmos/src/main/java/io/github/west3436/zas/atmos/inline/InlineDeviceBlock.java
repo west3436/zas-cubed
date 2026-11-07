@@ -114,9 +114,9 @@ public abstract class InlineDeviceBlock extends BaseEntityBlock implements PipeC
     }
 
     /**
-     * Its gas goes the way the player looks. Nothing can turn it afterwards, so if that leaves its
-     * ports clear of any pipe and another way joins one, it takes that way, the nearest to where the
-     * player looks: looking down at a run on the floor, it lines up with the run.
+     * Its gas goes the way the player looks, unless that leaves its ports clear of any pipe and
+     * another way joins one: then it takes that way, the nearest to where the player looks, so looking
+     * down at a run on the floor, it lines up with the run. A wrench turns it afterwards (CONT-035).
      */
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
