@@ -2880,8 +2880,8 @@ passed it in the sound and particle world.*
 ## Station blocks
 
 Decided in D-80 and D-81. A heater can't hold a stone or glass room in a vacuum at room
-temperature ([#179](https://github.com/west3436/zas-cubed/issues/179)), and two layers of
-glass are the only way yet to hold any pressure under Hardcore
+temperature ([#179](https://github.com/west3436/zas-cubed/issues/179)), and under Hardcore
+glass holds any pressure only in two layers
 ([#320](https://github.com/west3436/zas-cubed/issues/320)).
 
 #### CONT-129 · Station wall
