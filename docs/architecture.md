@@ -3661,18 +3661,17 @@ other explosion goes through vanilla's code and keeps vanilla's sound.
 ### 11.14 Station blocks (CONT-129 to CONT-131)
 
 Three building blocks in `AtmosBlocks`, with no code of their own and nothing added
-to the API:
+to the API. None lets heat through:
+`data/zas_atmos/zas/thermal/station_blocks.json` gives all three a U of 0 (HEAT-019,
+§4.8).
 
 - **The station wall** and **the reinforced station wall** are plain full blocks.
-  They seal as any full block does, and
-  `data/zas_atmos/zas/thermal/station_walls.json` gives both a U of 0, so no heat
-  crosses them (HEAT-019, §4.8). Their blast resistance is 6 and 1,200.
+  They seal as any full block does. Their blast resistance is 6 and 1,200.
 - **Reinforced glass**, `reinforced_glass_block`, is a vanilla `TransparentBlock`,
   as glass is: its collision shape is full, so it seals, while it hides none of its
-  neighbours' faces and skips its faces against itself. Its U is glass's 5.8, in
-  its own heat file, since glass's file names `#c:glass_blocks`. It stays out of
-  that tag and `#c:glass_panes`, which make up `#zas:pressure_fragile`, so no
-  pressure difference breaks it (FLOW-007). Its blast resistance is 1,200.
+  neighbours' faces and skips its faces against itself. It stays out of
+  `#c:glass_blocks` and `#c:glass_panes`, which make up `#zas:pressure_fragile`, so
+  no pressure difference breaks it (FLOW-007). Its blast resistance is 1,200.
 
 All three are mined with a pickaxe: the station wall at hardness 3 with a stone
 pickaxe or better, and the other two at 25 with a diamond pickaxe or better

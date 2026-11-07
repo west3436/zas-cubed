@@ -2897,10 +2897,10 @@ stone's blast resistance (6).
 *2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
 
 *2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:station_wall`, with a
-U of 0 from `data/zas_atmos/zas/thermal/station_walls.json` (HEAT-019). Its art and recipe
+U of 0 from `data/zas_atmos/zas/thermal/station_blocks.json` (HEAT-019). Its art and recipe
 come in their own PR. Checked by
-`cont_129_station_walls_keep_a_room_at_its_temperature_beside_lava`,
-`cont_129_cont_130_station_walls_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_cont_131_station_blocks_keep_a_room_at_its_temperature_beside_lava`,
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum` and
 `cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 *2026-11-07: the owner approved its hardness: 3, mined with a stone pickaxe or better.*
@@ -2921,7 +2921,7 @@ with obsidian's blast resistance (1,200).
 with a U of 0 from the same file as the station wall's. Its art and recipe come in their own
 PR. Checked by
 `cont_130_cont_131_a_blast_that_breaks_a_station_wall_leaves_the_reinforced_blocks`,
-`cont_129_cont_130_station_walls_keep_a_room_at_its_temperature_in_a_vacuum` and
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum` and
 `cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 *2026-11-07: the owner approved its hardness: 25, mined with a diamond pickaxe or better.*
@@ -2942,7 +2942,7 @@ resistance (1,200). It has no pane form.
 
 *2026-11-07: built, and left Draft for the owner to accept. `zas_atmos:reinforced_glass_block`
 (`zas_atmos:reinforced_glass` is the crafting component's sheet). It is a vanilla
-`TransparentBlock`, as glass is, with a U of 5.8, glass's, which no requirement sets. It stays
+`TransparentBlock`, as glass is. It stays
 out of `#zas:pressure_fragile` by staying out of `#c:glass_blocks` and `#c:glass_panes`, the
 tag's defaults, so a pack that adds it to the tag on purpose can make it fragile. Its art and
 recipe come in their own PR. Checked by
@@ -2952,6 +2952,14 @@ recipe come in their own PR. Checked by
 
 *2026-11-07: the owner approved its hardness: 25, mined with a diamond pickaxe or better, and
 it drops itself without Silk Touch.*
+
+*2026-11-07: the owner's call: it lets no heat through, like the station walls. Its U is
+0, from `data/zas_atmos/zas/thermal/station_blocks.json` with theirs (HEAT-019). It stays Draft,
+as CONT-129 and CONT-130 do. Checked by
+`cont_129_cont_131_station_blocks_keep_a_room_at_its_temperature_beside_lava` and
+`cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum`, where a room
+with a reinforced glass window keeps its temperature, and by
+`cont_129_station_blocks_seal_and_resist_blasts` (GameTests).*
 
 ## R1 / R2 split
 

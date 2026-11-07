@@ -43,8 +43,9 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * The station blocks (CONT-129 to CONT-131): the station wall and reinforced station wall, which
- * conduct no heat (HEAT-019), and reinforced glass, which no pressure difference breaks. Each test
+ * The station blocks (CONT-129 to CONT-131): the station wall, the reinforced station wall and
+ * reinforced glass, none of which conducts heat (HEAT-019), and the last of which no pressure
+ * difference breaks. Each test
  * builds in its own {@link Site} and drives its atmos ticks itself, within one game tick. The
  * vacuum test borrows the End, as S-05 does, and the Hardcore test sets the preset, so each of
  * those has a batch of its own.
@@ -82,6 +83,15 @@ public final class StationBlockTests {
                     boolean edge = x == x0 || x == x1 || y == 0 || y == 4 || z == 0 || z == 4;
                     s.set(x, y, z, edge ? wall : Site.AIR);
                 }
+            }
+        }
+    }
+
+    /** A 3 × 3 window of reinforced glass in the wall of a room at {@code x}, the whole wall but its edges. */
+    private static void window(Site s, int x) {
+        for (int y = 1; y <= 3; y++) {
+            for (int z = 1; z <= 3; z++) {
+                s.set(x, y, z, reinforcedGlass());
             }
         }
     }
@@ -133,9 +143,9 @@ public final class StationBlockTests {
     // ---- CONT-129 to CONT-131: the blocks --------------------------------------------------
 
     /**
-     * Each station block is a full gas-tight block in every state: every face sealed, no cell. The
-     * walls have a U of 0 and the glass has glass's 5.8, each from the content mod's heat data. Their
-     * blast resistance is stone's 6 for the station wall and obsidian's 1,200 for the reinforced wall
+     * Each station block is a full gas-tight block in every state: every face sealed, no cell. Each
+     * has a U of 0 from the content mod's heat data, the glass too (the owner's call, 2026-11-07).
+     * Their blast resistance is stone's 6 for the station wall and obsidian's 1,200 for the reinforced wall
      * and the glass (CONT-129 to CONT-131). The glass is out of {@code #zas:pressure_fragile} and of
      * {@code #c:glass_blocks}, which feeds it, and is seen through as glass is: it occludes nothing
      * and lets skylight through. Each is mined with a pickaxe at the hardness the owner approved on
@@ -146,7 +156,7 @@ public final class StationBlockTests {
     public static void cont_129_station_blocks_seal_and_resist_blasts(GameTestHelper h) {
         block(h, AtmosBlocks.STATION_WALL.get(), 0, 6, 3, BlockTags.NEEDS_STONE_TOOL);
         block(h, AtmosBlocks.REINFORCED_STATION_WALL.get(), 0, 1200, 25, BlockTags.NEEDS_DIAMOND_TOOL);
-        block(h, AtmosBlocks.REINFORCED_GLASS_BLOCK.get(), 5.8, 1200, 25, BlockTags.NEEDS_DIAMOND_TOOL);
+        block(h, AtmosBlocks.REINFORCED_GLASS_BLOCK.get(), 0, 1200, 25, BlockTags.NEEDS_DIAMOND_TOOL);
         BlockState glass = reinforcedGlass();
         h.assertFalse(glass.is(Geometries.PRESSURE_FRAGILE), "the reinforced glass is in zas:pressure_fragile");
         h.assertFalse(glass.is(Tags.Blocks.GLASS_BLOCKS), "the reinforced glass is in c:glass_blocks");
@@ -182,28 +192,43 @@ public final class StationBlockTests {
         }
     }
 
-    // ---- CONT-129, CONT-130: heat ------------------------------------------------------------
+    // ---- CONT-129 to CONT-131: heat ----------------------------------------------------------
+
+    /** Lava in the plane x, behind a room's wall: the wall but its edges, which are stone. */
+    private static void lava(Site s, int x) {
+        for (int y = 0; y <= 4; y++) {
+            for (int z = 0; z <= 4; z++) {
+                boolean edge = y == 0 || y == 4 || z == 0 || z == 4;
+                s.set(x, y, z, edge ? Site.STONE : Blocks.LAVA.defaultBlockState());
+            }
+        }
+    }
 
     /**
-     * CONT-129: a room walled with station walls keeps its temperature beside lava. Lava fills the
-     * gap between its east wall and the west wall of a stone room, which warms as a control.
+     * CONT-129, CONT-131: a room walled with station walls keeps its temperature beside lava, and so
+     * does one whose wall onto the lava is a window of reinforced glass. Lava fills the gaps between
+     * them and a stone room in the middle, which warms as a control.
      */
     @GameTest(template = "empty")
-    public static void cont_129_station_walls_keep_a_room_at_its_temperature_beside_lava(GameTestHelper h) {
+    public static void cont_129_cont_131_station_blocks_keep_a_room_at_its_temperature_beside_lava(GameTestHelper h) {
         Site s = new Site(h, 1290);
         try {
             s.clear();
             room(s, 0, 4, stationWall()); // interior x 1–3; the east wall is x = 4
-            s.room(6, 10); // stone, interior x 7–9; the west wall is x = 6
-            for (int y = 0; y <= 4; y++) {
-                for (int z = 0; z <= 4; z++) {
-                    boolean edge = y == 0 || y == 4 || z == 0 || z == 4;
-                    s.set(5, y, z, edge ? Site.STONE : Blocks.LAVA.defaultBlockState());
-                }
-            }
+            s.room(6, 10); // stone, interior x 7–9
+            room(s, 12, 16, stationWall()); // interior x 13–15; the west wall is x = 12
+            window(s, 12);
+            lava(s, 5);
+            lava(s, 11);
             form(s, 2, 2, 2);
             form(s, 8, 2, 2);
-            watch(s, new int[][] {{2, 2, 2}}, new String[] {"station walls"}, new int[] {8, 2, 2}, "beside lava");
+            form(s, 14, 2, 2);
+            watch(
+                    s,
+                    new int[][] {{2, 2, 2}, {14, 2, 2}},
+                    new String[] {"station walls", "station walls and a reinforced glass window"},
+                    new int[] {8, 2, 2},
+                    "beside lava");
             h.succeed();
         } finally {
             s.clear();
@@ -211,15 +236,17 @@ public final class StationBlockTests {
     }
 
     /**
-     * CONT-129, CONT-130: rooms walled with station walls and with reinforced station walls keep
-     * their temperature in the test datapack's 2.7 K vacuum. A stone room beside them cools, as a
-     * control.
+     * CONT-129 to CONT-131: rooms walled with station walls, and with reinforced station walls and a
+     * window of reinforced glass, keep their temperature in the test datapack's 2.7 K vacuum. A
+     * stone room beside them cools, as a control.
      */
     @GameTest(template = "empty", batch = "zas_atmos_cont_129_vacuum")
-    public static void cont_129_cont_130_station_walls_keep_a_room_at_its_temperature_in_a_vacuum(GameTestHelper h) {
+    public static void cont_129_to_cont_131_station_blocks_keep_a_room_at_its_temperature_in_a_vacuum(
+            GameTestHelper h) {
         inVacuum(h, 1291, s -> {
             room(s, 0, 4, stationWall());
             room(s, 6, 10, reinforcedWall());
+            window(s, 10); // onto the vacuum at x = 11
             s.room(12, 16);
             fillAir(s, 2, 2, 2);
             fillAir(s, 8, 2, 2);
@@ -227,7 +254,7 @@ public final class StationBlockTests {
             watch(
                     s,
                     new int[][] {{2, 2, 2}, {8, 2, 2}},
-                    new String[] {"station walls", "reinforced station walls"},
+                    new String[] {"station walls", "reinforced station walls and a reinforced glass window"},
                     new int[] {14, 2, 2},
                     "in a vacuum");
         });

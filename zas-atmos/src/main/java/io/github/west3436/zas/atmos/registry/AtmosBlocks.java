@@ -126,8 +126,8 @@ public final class AtmosBlocks {
             BLOCKS.registerBlock("redstone_valve", RedstoneValveBlock::new, metal());
 
     // ---- Station blocks (CONT-129 to CONT-131, D-80, D-81) ----
-    // Full blocks, so they seal as any full block does. Their U is heat data, in
-    // data/zas_atmos/zas/thermal/: 0 for the walls (HEAT-019) and glass's 5.8 for the glass.
+    // Full blocks, so they seal as any full block does. None lets heat through: their U is 0, in
+    // data/zas_atmos/zas/thermal/station_blocks.json (HEAT-019).
     // Hardness and tool are the owner's (2026-11-07): the station wall at 3, a stone pickaxe or
     // better; the reinforced wall and the glass at 25, a diamond pickaxe or better.
 
@@ -140,8 +140,9 @@ public final class AtmosBlocks {
             BLOCKS.registerSimpleBlock("reinforced_station_wall", wall().strength(25.0f, 1200.0f));
 
     /**
-     * Reinforced glass: seen through as glass is, never broken by a pressure difference, since it
-     * isn't in {@code #zas:pressure_fragile}, with obsidian's blast resistance (CONT-131). A {@link
+     * Reinforced glass: seen through as glass is, conducts no heat, never broken by a pressure
+     * difference, since it isn't in {@code #zas:pressure_fragile}, with obsidian's blast resistance
+     * (CONT-131). A {@link
      * TransparentBlock}, as glass is, so it hides none of its neighbours' faces and skips its faces
      * against itself. It drops itself, without Silk Touch.
      */

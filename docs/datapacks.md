@@ -373,8 +373,7 @@ data/<namespace>/zas/thermal/<path>.json
 
   | File | Blocks | U |
   |---|---|---|
-  | `station_walls.json` | `zas_atmos:station_wall`, `zas_atmos:reinforced_station_wall` | 0 (CONT-129, CONT-130) |
-  | `reinforced_glass_block.json` | `zas_atmos:reinforced_glass_block` | 5.8, as glass (CONT-131) |
+  | `station_blocks.json` | `zas_atmos:station_wall`, `zas_atmos:reinforced_station_wall`, `zas_atmos:reinforced_glass_block` | 0 (CONT-129 to CONT-131) |
 
   And the heat sources (HEAT-016), one file per block in
   `data/zas/zas/thermal/sources/`:
