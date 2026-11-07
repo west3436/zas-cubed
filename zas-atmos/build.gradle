@@ -115,6 +115,10 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // CONT-065 compares the content mod's config page with its config.
+    def configDoc = rootProject.file('docs/config.md')
+    inputs.file(configDoc)
+    systemProperty 'zas.configDoc', configDoc.absolutePath
     // The shipped sounds, which tests read as files.
     systemProperty 'zas_atmos.resources', file('src/main/resources').absolutePath
     // CLIENT-007 reads both mods' compiled classes and language files, and prints what it finds.
