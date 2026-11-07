@@ -3310,3 +3310,8 @@ and the recharger are added (D-69).*
 *2026-11-03: the central atmospherics controller is added (D-75).*
 
 *2026-11-06: station walls and reinforced glass are added (D-80, D-81).*
+
+*2026-11-07: batch 5's eight blocks are added (D-84): the airlock and the large airlock, the
+airlock controller, the air sensor, the radiator pipe, the radiator adaptor, the heat exchanger and the
+tank holder. Heat-exchange pipes and radiators, and air sensors, leave the R2 column; meters, the
+thermoelectric cooler and the rest of it stay.*
