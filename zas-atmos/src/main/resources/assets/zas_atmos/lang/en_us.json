@@ -127,6 +127,7 @@
   "gui.zas_atmos.controller.back": "Back",
   "gui.zas_atmos.central.label.range": "Range",
   "gui.zas_atmos.central.range": "%s chunks",
+  "gui.zas_atmos.central.range.one": "%s chunk",
   "gui.zas_atmos.central.empty": "None in range",
   "gui.zas_atmos.central.heading.position": "Position",
   "gui.zas_atmos.central.heading.pressure": "Pressure",
