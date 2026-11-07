@@ -1,0 +1,65 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "screen": "zas_atmos:block/central_atmos_controller",
+    "front": "zas_atmos:block/central_atmos_controller_front",
+    "side": "zas_atmos:block/central_atmos_controller_side",
+    "back": "zas_atmos:block/central_atmos_controller_back",
+    "particle": "zas_atmos:block/central_atmos_controller_side"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        6
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            8.0
+          ],
+          "texture": "#screen"
+        },
+        "south": {
+          "uv": [
+            8.0,
+            0.0,
+            16.0,
+            8.0
+          ],
+          "texture": "#back",
+          "cullface": "south"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            5.0,
+            8.0
+          ],
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "up": {
+          "uv": [
+            8.0,
+            3.0,
+            16.0,
+            8.0
+          ],
+          "texture": "#front",
+          "cullface": "up"
+        }
+      }
+    }
+  ]
+}
