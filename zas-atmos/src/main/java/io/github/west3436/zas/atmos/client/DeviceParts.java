@@ -16,8 +16,12 @@ final class DeviceParts {
     /** The column of labels in a window's rows. */
     static final int LABEL_WIDTH = 34;
 
+    /** What a stepper's buttons add, whatever unit its value shows in (CLIENT-006). */
     static final String KPA = "kPa";
+
+    /** What a stepper's buttons add, whatever unit its value shows in (CLIENT-006). */
     static final String KELVIN = "K";
+
     static final String[] BIG_STEPS = {"−100", "−10", "+10", "+100"};
     static final String[] SMALL_STEPS = {"−10", "−1", "+1", "+10"};
 

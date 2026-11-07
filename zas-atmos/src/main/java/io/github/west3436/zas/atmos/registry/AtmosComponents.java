@@ -60,6 +60,10 @@ public final class AtmosComponents {
             b -> b.persistent(ItemData.versioned(ItemContainerContents.CODEC))
                     .networkSynchronized(ItemContainerContents.STREAM_CODEC));
 
+    /** Whether magnetic boots are on (CONT-033). Without it, off. */
+    public static final Supplier<DataComponentType<Boolean>> MAGNETIZED = COMPONENTS.registerComponentType(
+            "magnetized", b -> b.persistent(ItemData.versioned(Codec.BOOL)).networkSynchronized(ByteBufCodecs.BOOL));
+
     /** The FE a battery holds (CONT-111), read and written through its FE item capability. */
     public static final Supplier<DataComponentType<Integer>> ENERGY = COMPONENTS.registerComponentType(
             "energy",

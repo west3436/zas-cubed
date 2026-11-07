@@ -1,0 +1,244 @@
+{
+  "variants": {
+    "facing=north,half=lower,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left"
+    },
+    "facing=north,half=lower,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger1"
+    },
+    "facing=north,half=lower,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger2"
+    },
+    "facing=north,half=lower,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_unpowered"
+    },
+    "facing=north,half=lower,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right"
+    },
+    "facing=north,half=lower,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger1"
+    },
+    "facing=north,half=lower,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger2"
+    },
+    "facing=north,half=lower,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_unpowered"
+    },
+    "facing=north,half=upper,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left"
+    },
+    "facing=north,half=upper,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger1"
+    },
+    "facing=north,half=upper,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger2"
+    },
+    "facing=north,half=upper,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_unpowered"
+    },
+    "facing=north,half=upper,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right"
+    },
+    "facing=north,half=upper,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger1"
+    },
+    "facing=north,half=upper,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger2"
+    },
+    "facing=north,half=upper,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_unpowered"
+    },
+    "facing=east,half=lower,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger1",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger2",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_unpowered",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger1",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger2",
+      "y": 90
+    },
+    "facing=east,half=lower,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_unpowered",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger1",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger2",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_unpowered",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger1",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger2",
+      "y": 90
+    },
+    "facing=east,half=upper,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_unpowered",
+      "y": 90
+    },
+    "facing=south,half=lower,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger1",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger2",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_unpowered",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger1",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger2",
+      "y": 180
+    },
+    "facing=south,half=lower,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_unpowered",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger1",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger2",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_unpowered",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger1",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger2",
+      "y": 180
+    },
+    "facing=south,half=upper,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_unpowered",
+      "y": 180
+    },
+    "facing=west,half=lower,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger1",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_danger2",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_left_unpowered",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger1",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_danger2",
+      "y": 270
+    },
+    "facing=west,half=lower,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_lower_right_unpowered",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=normal,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=danger1,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger1",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=danger2,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_danger2",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=unpowered,side=left": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_left_unpowered",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=normal,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=danger1,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger1",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=danger2,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_danger2",
+      "y": 270
+    },
+    "facing=west,half=upper,screen=unpowered,side=right": {
+      "model": "zas_atmos:block/central_atmos_controller_upper_right_unpowered",
+      "y": 270
+    }
+  }
+}

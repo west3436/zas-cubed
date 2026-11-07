@@ -5,7 +5,7 @@ ZAS³ reads these files from datapacks. Mods ship them in their own
 
 R0 reads three formats: [gases](#gases), [ambients](#ambients) and
 [geometry overrides](#geometry-overrides), and R1 adds [block tags](#block-tags),
-[hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
+[item tags](#item-tags), [hazard profiles](#hazard-profiles), the [breathers tag](#breathers), the
 [airflow class tags](#airflow-classes), [reactions](#reactions) and
 [ignition sources](#ignition-sources), [fuel profiles](#fuel-profiles) and
 [block ignition](#block-ignition). Every format
@@ -726,6 +726,19 @@ tag, `[airflow] pressure_fragile_threshold_kpa`
 
 A change to the tag applies after `/reload`, from the dimension's next atmos tick.
 
+## Item tags
+
+ZAS³ reads these Minecraft item tags, at `data/zas/tags/item/<name>.json`. Packs
+and mods add to them as to any tag.
+
+| Tag | Holds by default | Used for |
+|---|---|---|
+| `#zas:shows_hud` | nothing | An item here shows the atmosphere HUD while held in either hand, with or without an alert (CLIENT-001). `zas_atmos` adds its analyzer (CONT-034) |
+| `#zas:shows_readings` | nothing | An item here, held in either hand, makes the atmosphere HUD show all four readings, safe ones too, not only those at warning or worse (CLIENT-008). `zas_atmos` adds its analyzer (CONT-034) |
+
+The server checks the tags, and a change applies after `/reload`, from the
+player's next HUD update, within a quarter of a second.
+
 ## Ignition sources
 
 What ignites a flammable mixture (FIRE-014, FIRE-015), one source per file:
@@ -962,7 +975,7 @@ data/<namespace>/zas/protection/<name>.json
 | `max_pressure_kpa` | 101.325 | The highest pressure it protects against, at least 101.325 kPa; the default protects against no high pressure |
 | `min_temperature_k` | 293.15 | The lowest temperature it protects against, 0 to 293.15 K; the default protects against no cold |
 | `max_temperature_k` | 293.15 | The highest temperature it protects against, at least 293.15 K; the default protects against no heat |
-| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021) |
+| `sealed_breathing` | `false` | Whether it seals the breathing, which internals need, in the head slot (LIFE-021). It also shows the atmosphere HUD there (CLIENT-001) |
 | `gas_filtering` | `false` | Whether it filters the `#zas:toxic` gases out of the breath, in the head slot (API-022, CONT-088) |
 | `airflow_resistance` | 0 | How much it resists being pushed by airflow, 0 to 1 (FLOW-012) |
 

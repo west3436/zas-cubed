@@ -58,6 +58,9 @@ public final class AtmosServerConfig {
     /** The mixer's draw from its controller while it is on, in FE/t (CONT-065). */
     public static final ModConfigSpec.IntValue MIXER_DRAW;
 
+    /** The electrolyzer's draw from its controller while it is on, in FE/t (CONT-065). */
+    public static final ModConfigSpec.IntValue ELECTROLYZER_DRAW;
+
     /** What the recharger puts into its battery while it charges, in FE/t (CONT-113). */
     public static final ModConfigSpec.IntValue RECHARGER_RATE;
 
@@ -69,6 +72,18 @@ public final class AtmosServerConfig {
 
     /** The area air controller's buffer, in FE (CONT-062). */
     public static final ModConfigSpec.IntValue CONTROLLER_BUFFER;
+
+    /** The central atmospherics controller's own draw, in FE/t (CONT-065, CONT-115). */
+    public static final ModConfigSpec.IntValue CENTRAL_DRAW;
+
+    /** The central atmospherics controller's buffer, in FE (CONT-115). */
+    public static final ModConfigSpec.IntValue CENTRAL_BUFFER;
+
+    /** The most chunks a central atmospherics controller reaches, and its range when placed (CONT-116, CONT-117). */
+    public static final ModConfigSpec.IntValue CENTRAL_MAX_RANGE;
+
+    /** Whether a central atmospherics controller keeps its chunk and the 8 around it loaded (CONT-122). */
+    public static final ModConfigSpec.BooleanValue CENTRAL_FORCE_LOAD;
 
     /** What the generator makes while it burns, in FE/t (CONT-061). */
     public static final ModConfigSpec.IntValue GENERATOR_OUTPUT;
@@ -84,6 +99,9 @@ public final class AtmosServerConfig {
 
     /** The most power a tank's or canister's explosion can have (CONT-109). TNT is 4. */
     public static final ModConfigSpec.DoubleValue EXPLOSION_POWER_CAP;
+
+    /** The share of movement speed each hardsuit piece worn takes away (CONT-089). */
+    public static final ModConfigSpec.DoubleValue HARDSUIT_SLOWDOWN;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -121,6 +139,8 @@ public final class AtmosServerConfig {
                 .defineInRange("filter", 20, 0, 100_000);
         MIXER_DRAW = builder.comment("Mixer, from its controller while it is on (CONT-065)")
                 .defineInRange("mixer", 20, 0, 100_000);
+        ELECTROLYZER_DRAW = builder.comment("Electrolyzer, from its controller while it is on (CONT-065)")
+                .defineInRange("electrolyzer", 80, 0, 100_000);
         CONTROLLER_DRAW = builder.comment("Area air controller, its own base draw (CONT-065)")
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
@@ -128,6 +148,11 @@ public final class AtmosServerConfig {
         CONTROLLER_BUFFER = builder.comment(
                         "The area air controller's buffer, in FE (CONT-062). It fills from FE blocks next to it.")
                 .defineInRange("area_air_controller_buffer", 10_000, 1_000, 1_000_000);
+        CENTRAL_DRAW = builder.comment("Central atmospherics controller, its own base draw (CONT-115)")
+                .defineInRange("central_controller", 5, 0, 100_000);
+        CENTRAL_BUFFER = builder.comment(
+                        "The central atmospherics controller's buffer, in FE (CONT-115). It fills from FE blocks next to it.")
+                .defineInRange("central_controller_buffer", 100_000, 1_000, 10_000_000);
         GENERATOR_OUTPUT = builder.comment("What the generator makes while it burns, in FE/t (CONT-061)")
                 .defineInRange("generator_output", 40, 0, 100_000);
         GENERATOR_BUFFER = builder.comment("The generator's own store, in FE. It stops taking new fuel when full.")
@@ -145,10 +170,28 @@ public final class AtmosServerConfig {
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
         builder.pop();
 
+        builder.comment("The central atmospherics controller (CONT-116, CONT-122).")
+                .push("central_controller");
+        CENTRAL_MAX_RANGE = builder.comment(
+                        "The most chunks a central controller reaches from its own, as a square of chunks at any height,",
+                        "and its range when placed. A player may lower one's range in its GUI (CONT-117).")
+                .defineInRange("max_range_chunks", 10, 1, 32);
+        CENTRAL_FORCE_LOAD = builder.comment(
+                        "Whether a central controller keeps its own chunk and the 8 around it loaded (CONT-122)")
+                .define("force_load", true);
+        builder.pop();
+
         builder.comment("How tanks and canisters fail (CONT-038, CONT-102).").push("containers");
         EXPLOSION_POWER_CAP = builder.comment(
                         "The most power a tank's or canister's explosion can have (CONT-109). TNT is 4.")
                 .defineInRange("explosion_power_cap", ContainerFailure.DEFAULT_POWER_CAP, 0.0, 64.0);
+        builder.pop();
+
+        builder.comment("Breathing gear (CONT-089).").push("gear");
+        HARDSUIT_SLOWDOWN = builder.comment(
+                        "The share of movement speed each hardsuit piece worn takes away (CONT-089): 0.1 is 10 %,",
+                        "so the full suit leaves 60 %.")
+                .defineInRange("hardsuit_slowdown", 0.1, 0.0, 0.25);
         builder.pop();
         SPEC = builder.build();
     }
@@ -167,6 +210,11 @@ public final class AtmosServerConfig {
 
     /** A config value, or its default before the config loads. */
     public static double get(ModConfigSpec.DoubleValue value) {
+        return SPEC.isLoaded() ? value.get() : value.getDefault();
+    }
+
+    /** A config value, or its default before the config loads. */
+    public static boolean get(ModConfigSpec.BooleanValue value) {
         return SPEC.isLoaded() ? value.get() : value.getDefault();
     }
 }

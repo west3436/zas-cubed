@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -22,6 +23,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * the player is too far from is refused by vanilla before it gets here, and every edit is clamped
  * so the preset's bounds stay in range and in order.
  *
+ * <p>The same menu opens from a central atmospherics controller that has claimed this controller
+ * (CONT-124). Its buttons are checked here in the same way, and it stays open while the player is at
+ * the central controller, this controller is loaded and the central controller still has it.
+ *
  * <p>Buttons:
  *
  * <ul>
@@ -29,6 +34,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  *   <li>{@code 10}, {@code 11}: load the shipped Human or Vacuum preset, discarding edits;
  *   <li>{@code 30}–{@code 35}: change the selected bound by −10, −1, −0.1, +0.1, +1 or +10;
  *   <li>{@code 36}: turn the selected bound off, or back on;
+ *   <li>{@code 40}: opened from a central controller, go back to its GUI;
  *   <li>{@code 100} and up: select a bound for editing, {@code 100 + reading * 4 + bound}.
  * </ul>
  */
@@ -36,6 +42,7 @@ public class ControllerMenu extends AbstractContainerMenu {
     public static final int LOAD_PRESET = 10;
     public static final int ADJUST = 30;
     public static final int TOGGLE_BOUND = 36;
+    public static final int BACK = 40;
     public static final int SELECT_BOUND = 100;
 
     /** The steps of buttons {@code 30} to {@code 35}. */
@@ -45,6 +52,8 @@ public class ControllerMenu extends AbstractContainerMenu {
 
     private final BlockPos pos;
     private final AreaAirControllerBlockEntity controller;
+    private final BlockPos via;
+    private final boolean remote;
     private final ContainerLevelAccess access;
     private final Player player;
     private int reading;
@@ -52,26 +61,54 @@ public class ControllerMenu extends AbstractContainerMenu {
     private int sinceSync = SYNC_TICKS;
     private ControllerSync state;
 
-    /** On the server. */
+    /** On the server, opened at the controller. */
     public ControllerMenu(int id, Inventory inventory, AreaAirControllerBlockEntity controller) {
+        this(id, inventory, controller, null);
+    }
+
+    /**
+     * On the server, opened at the controller or, with {@code via}, from the central controller there
+     * that has claimed it (CONT-124).
+     */
+    public ControllerMenu(int id, Inventory inventory, AreaAirControllerBlockEntity controller, BlockPos via) {
         super(AtmosMenus.AREA_AIR_CONTROLLER.get(), id);
         this.pos = controller.getBlockPos();
         this.controller = controller;
-        this.access = ContainerLevelAccess.create(controller.getLevel(), pos);
+        this.via = via == null ? null : via.immutable();
+        this.remote = via != null;
+        this.access = ContainerLevelAccess.create(controller.getLevel(), via == null ? pos : via);
         this.player = inventory.player;
     }
 
-    /** On the client, from the position the server sent. */
+    /** On the client, from what {@link #writeOpening} sent. */
     public ControllerMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
         super(AtmosMenus.AREA_AIR_CONTROLLER.get(), id);
         this.pos = buf.readBlockPos();
+        this.remote = buf.readBoolean();
         this.controller = null;
+        this.via = null;
         this.access = ContainerLevelAccess.NULL;
         this.player = inventory.player;
     }
 
+    /**
+     * What the server sends the client as the menu opens.
+     *
+     * @param pos the controller's position
+     * @param remote whether it opens from a central controller
+     */
+    public static void writeOpening(RegistryFriendlyByteBuf buf, BlockPos pos, boolean remote) {
+        buf.writeBlockPos(pos);
+        buf.writeBoolean(remote);
+    }
+
     public BlockPos pos() {
         return pos;
+    }
+
+    /** Whether it was opened from a central controller (CONT-124). */
+    public boolean remote() {
+        return remote;
     }
 
     /** The last state from the server, on the client; null before the first. */
@@ -120,10 +157,25 @@ public class ControllerMenu extends AbstractContainerMenu {
             double now = t.bound(bound);
             double next = now == Thresholds.OFF ? defaultBound(t) : Thresholds.OFF;
             controller.setPreset(preset.with(reading, t.with(bound, next)));
+        } else if (id == BACK) {
+            return back(player);
         } else {
             return false;
         }
         sinceSync = SYNC_TICKS;
+        return true;
+    }
+
+    /** Opened from a central controller, opens that central controller's GUI again. */
+    private boolean back(Player player) {
+        if (via == null
+                || !(player instanceof ServerPlayer sp)
+                || !(controller.getLevel() instanceof ServerLevel level)
+                || !level.isLoaded(via)
+                || !(level.getBlockEntity(via) instanceof CentralControllerBlockEntity central)) {
+            return false;
+        }
+        sp.openMenu(central, buf -> buf.writeBlockPos(via));
         return true;
     }
 
@@ -180,7 +232,15 @@ public class ControllerMenu extends AbstractContainerMenu {
                 controller.parts(),
                 controller.lastPin() == null ? "" : controller.lastPin().name(),
                 controller.breach(),
-                controller.fire());
+                controller.fire(),
+                central());
+    }
+
+    /** The central controller it belongs to, or null (CONT-118). */
+    private BlockPos central() {
+        return controller.getLevel() instanceof ServerLevel level
+                ? CentralClaims.of(level).centralOf(pos).orElse(null)
+                : null;
     }
 
     @Override
@@ -188,8 +248,20 @@ public class ControllerMenu extends AbstractContainerMenu {
         return ItemStack.EMPTY;
     }
 
+    /**
+     * At the controller: the player is within reach of it. From a central controller: the player is
+     * within reach of that, this controller is loaded, and that central controller still has it.
+     */
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, AtmosBlocks.AREA_AIR_CONTROLLER.get());
+        if (via == null) {
+            return stillValid(access, player, AtmosBlocks.AREA_AIR_CONTROLLER.get());
+        }
+        return controller != null
+                && !controller.isRemoved()
+                && controller.getLevel() instanceof ServerLevel level
+                && level.isLoaded(pos)
+                && via.equals(central())
+                && stillValid(access, player, AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get());
     }
 }

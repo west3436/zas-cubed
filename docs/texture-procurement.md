@@ -172,7 +172,7 @@ face.
 
 | Proposed id | vg source | States | Notes |
 |---|---|---|---|
-| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. |
+| `zas_atmos:pipe` | `icons/obj/pipes/regular.dmi` | `12`, `3` | Done in the pilot: a round 4 px tube with 6 px flanges at the block edges, and a rounded joint. Players dye it ([§5](#5-style)). Its item is the 3D straight pipe. An open end has a flared mouth, new for [#164](https://github.com/west3436/zas-cubed/issues/164): the tube steps out to an 8 px lip at the block edge, with a dark hole 6 px then 4 px wide (the owner's pick of three, 2026-11-07). |
 | `zas_atmos:pipe_cap` | `icons/obj/pipes.dmi` | `cap` | Done in batch 1: the pipe's flange and tube to the block's middle, closed by a rounded end. Dyed like the pipe. |
 | `zas_atmos:radiator_pipe` | `icons/obj/pipes/heat.dmi` | `intact` | vg's is near-black and ribbed, already unlike grey pipe. Done in batch 5: a finned tube, the pipe's 4 px round tube with 8 px round fins every 2 px, in vg's near-black, not dyed, and with no flanges, since it joins only radiator pipe and the adaptor. The owner picked it over vg's four thin tubes. Its item is the 3D straight piece, like the pipe's. |
 | `zas_atmos:radiator_adaptor` | `icons/obj/pipes/junction.dmi` | `intact` | One grey end and one black end. Done in batch 5: inline, an undyed pipe's flange and tube into a steel collar, then the finned radiator pipe. It has no texture of its own. |
