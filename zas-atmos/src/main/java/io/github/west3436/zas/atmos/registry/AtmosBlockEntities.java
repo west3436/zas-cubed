@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
+import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
@@ -77,6 +78,13 @@ public final class AtmosBlockEntities {
                     "area_air_controller",
                     () -> BlockEntityType.Builder.of(
                                     AreaAirControllerBlockEntity::new, AtmosBlocks.AREA_AIR_CONTROLLER.get())
+                            .build(null));
+
+    public static final Supplier<BlockEntityType<CentralControllerBlockEntity>> CENTRAL_ATMOS_CONTROLLER =
+            BLOCK_ENTITIES.register(
+                    "central_atmos_controller",
+                    () -> BlockEntityType.Builder.of(
+                                    CentralControllerBlockEntity::new, AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get())
                             .build(null));
 
     public static final Supplier<BlockEntityType<FireAlarmBlockEntity>> FIRE_ALARM = BLOCK_ENTITIES.register(
