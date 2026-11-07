@@ -28,6 +28,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
@@ -136,13 +138,15 @@ public final class StationBlockTests {
      * blast resistance is stone's 6 for the station wall and obsidian's 1,200 for the reinforced wall
      * and the glass (CONT-129 to CONT-131). The glass is out of {@code #zas:pressure_fragile} and of
      * {@code #c:glass_blocks}, which feeds it, and is seen through as glass is: it occludes nothing
-     * and lets skylight through.
+     * and lets skylight through. Each is mined with a pickaxe at the hardness the owner approved on
+     * 2026-11-07: 3 and a stone pickaxe or better for the station wall, 25 and a diamond pickaxe or
+     * better for the others.
      */
     @GameTest(template = "empty")
     public static void cont_129_station_blocks_seal_and_resist_blasts(GameTestHelper h) {
-        block(h, AtmosBlocks.STATION_WALL.get(), 0, 6);
-        block(h, AtmosBlocks.REINFORCED_STATION_WALL.get(), 0, 1200);
-        block(h, AtmosBlocks.REINFORCED_GLASS_BLOCK.get(), 5.8, 1200);
+        block(h, AtmosBlocks.STATION_WALL.get(), 0, 6, 3, BlockTags.NEEDS_STONE_TOOL);
+        block(h, AtmosBlocks.REINFORCED_STATION_WALL.get(), 0, 1200, 25, BlockTags.NEEDS_DIAMOND_TOOL);
+        block(h, AtmosBlocks.REINFORCED_GLASS_BLOCK.get(), 5.8, 1200, 25, BlockTags.NEEDS_DIAMOND_TOOL);
         BlockState glass = reinforcedGlass();
         h.assertFalse(glass.is(Geometries.PRESSURE_FRAGILE), "the reinforced glass is in zas:pressure_fragile");
         h.assertFalse(glass.is(Tags.Blocks.GLASS_BLOCKS), "the reinforced glass is in c:glass_blocks");
@@ -159,10 +163,16 @@ public final class StationBlockTests {
         h.succeed();
     }
 
-    private static void block(GameTestHelper h, Block block, double u, float blastResistance) {
+    private static void block(
+            GameTestHelper h, Block block, double u, float blastResistance, float hardness, TagKey<Block> tool) {
         String name = block.getDescriptionId();
         h.assertValueEqual(block.getExplosionResistance(), blastResistance, name + "'s blast resistance");
         for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+            h.assertValueEqual(
+                    state.getDestroySpeed(h.getLevel(), BlockPos.ZERO), hardness, "the hardness of " + state);
+            h.assertTrue(state.is(BlockTags.MINEABLE_WITH_PICKAXE), state + " isn't mined with a pickaxe");
+            h.assertTrue(state.is(tool), state + " isn't in " + tool.location());
+            h.assertTrue(state.requiresCorrectToolForDrops(), state + " drops without a pickaxe");
             Geometry g = Geometries.table().geometry(state);
             for (Face f : Face.values()) {
                 h.assertTrue(g.isFaceFull(f), state + " doesn't seal its " + f + " face");

@@ -3674,5 +3674,8 @@ to the API:
   that tag and `#c:glass_panes`, which make up `#zas:pressure_fragile`, so no
   pressure difference breaks it (FLOW-007). Its blast resistance is 1,200.
 
-Their blockstates and item models name the block models `zas_atmos:block/<id>`,
-which come with their art.
+All three are mined with a pickaxe: the station wall at hardness 3 with a stone
+pickaxe or better, and the other two at 25 with a diamond pickaxe or better
+(`#minecraft:needs_stone_tool`, `#minecraft:needs_diamond_tool`). Each drops
+itself, the glass without Silk Touch. Their blockstates and item models name the
+block models `zas_atmos:block/<id>`, which come with their art.

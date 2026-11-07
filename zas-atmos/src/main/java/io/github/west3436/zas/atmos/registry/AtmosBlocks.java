@@ -128,7 +128,8 @@ public final class AtmosBlocks {
     // ---- Station blocks (CONT-129 to CONT-131, D-80, D-81) ----
     // Full blocks, so they seal as any full block does. Their U is heat data, in
     // data/zas_atmos/zas/thermal/: 0 for the walls (HEAT-019) and glass's 5.8 for the glass.
-    // Hardness and tool are proposals awaiting the owner.
+    // Hardness and tool are the owner's (2026-11-07): the station wall at 3, a stone pickaxe or
+    // better; the reinforced wall and the glass at 25, a diamond pickaxe or better.
 
     /** The station wall: conducts no heat, with stone's blast resistance (CONT-129). */
     public static final DeferredBlock<Block> STATION_WALL =
