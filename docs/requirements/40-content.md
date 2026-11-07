@@ -1520,6 +1520,25 @@ It tells a player about the zone they're in without needing an area air controll
 used on nothing it reads the point they're standing at. It's built first of the items
 still to come, and its window uses the TGUI kit (D-76).*
 
+*2026-11-07: Built (architecture §11.14). Used on nothing it reads the air at the player's
+eyes and follows them, since they can walk with its window open. On a pipe it reads the
+network, on a pump, filter or mixer the network on the port clicked, and on a canister its
+own gas. On any other block it reads the point in front of the face clicked. A tank in the
+other hand gets a tab of its own, which reads the tank. The server reads every target and
+syncs the window at most four times a second, only when a shown value changes.
+GameTests check each reading against `/zas zone at`, `/zas at` or the target's own gas,
+that a player with no rights can't read a far target, and the sync's rate. The readout
+itself is the Manual check, so this stays Accepted until the owner has made it.*
+
+*2026-11-07: The owner's call: while a player holds the analyzer, in either hand, the HUD
+shows all four readings, pressure, O₂, toxins and temperature, all the time, not only those
+at warning or worse (CLIENT-008). A sealed helmet doesn't do this; only holding the analyzer
+does. A safe reading is plain white with no icon; warnings and dangers look as before. `zas`
+can't name the analyzer, so it reads the new item tag `#zas:shows_readings`, and `zas_atmos`
+puts the analyzer in it. `cont_034_held_in_either_hand_it_shows_every_hud_reading` and
+`client_008_a_held_analyzer_shows_every_reading` (GameTests) pass. The look is part of the
+Manual check, so this stays Accepted.*
+
 #### CONT-035 · Wrench
 `Should` · `R1` · `Accepted` · Verify: GameTest
 

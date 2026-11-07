@@ -46,6 +46,11 @@ alerts, and a spectator neither. With no alert, the HUD shows only the internals
 `client_001_the_mask_and_helmet_show_the_hud` (GameTests) pass. Left: the Manual check with
 a sealed helmet and an analyzer, and with F1, so this stays Accepted.*
 
+*2026-11-07: The analyzer part is built: the analyzer (CONT-034) is in `#zas:shows_hud`,
+the tag the HUD's held-item trigger reads. It is also in `#zas:shows_readings`, so
+holding it shows all four readings as well as the internals indicator (CLIENT-008). The
+owner's check of all three triggers is still to come, so this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
@@ -94,6 +99,18 @@ named, still at a warning and flashing at a danger.*
 *2026-11-06: The 2026-11-02 note's list leaves out a fifth GameTest,
 `client_008_a_filter_hides_the_gas_it_stops`: a filter's wearer is shown no toxin
 alert for the gas it keeps out of its breath (API-022).*
+
+*2026-11-07: The owner's call: while the player holds an analyzer (CONT-034) in either hand,
+the HUD shows all four readings all the time, not only at a warning or danger. A sealed
+helmet doesn't change this. Built: an item in `#zas:shows_readings`
+([datapacks.md](../datapacks.md#item-tags)) sends every reading's value, and the analyzer is
+in it. A safe reading shows in plain white with no icon, since vg's icons are all alerts;
+warnings and dangers look as before, and the order stays pressure, O₂, toxins, temperature.
+With no toxic gas in the breath the toxin row reads "Toxins 0.0 kPa". O₂ and toxins have no
+row while the eyes are in a fluid (LIFE-022). A creative player holding one sees the values
+with no alerts (LIFE-037), and a spectator doesn't see them.
+`client_008_a_held_analyzer_shows_every_reading` (GameTest) passes. This stays Implemented;
+the new look is for the owner's check.*
 
 #### CLIENT-009 · Internals indicator
 `Must` · `R1` · `Accepted` · Verify: Manual · Trace: LIFE-029, LIFE-028
@@ -618,6 +635,10 @@ analyzer, which doesn't exist yet. The conversions are tested by
 `client_006_temperatures_convert_to_each_unit`, and the tooltips by
 `client_006_item_tooltips_follow_the_display_units`.*
 
+*2026-11-07: The analyzer part is built: the analyzer's window (CONT-034) shows its
+pressures and temperature in the player's units. The owner's check of each unit in the
+HUD, the analyzer and a GUI is still to come, so this stays Accepted.*
+
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074
 
@@ -638,6 +659,10 @@ and analyzer have no window yet because they don't exist yet.*
 *2026-11-06: every one of those windows passed the owner's check in the game, with the
 filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, and
 Implemented.*
+
+*2026-11-07: The analyzer's window (CONT-034) uses the kit too, with a list of each gas's
+share and partial pressure added to it (`GasParts.shares`). Its look waits for the
+owner's check with CONT-034's.*
 
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Implemented` · Verify: Inspect

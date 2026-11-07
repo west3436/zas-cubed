@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.api.capability.ILifeSupport;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerSync;
 import io.github.west3436.zas.atmos.canister.CanisterSync;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
@@ -97,6 +98,7 @@ public final class AtmosCapabilities {
                 .playToServer(
                         MagneticBootsItem.TogglePayload.TYPE,
                         MagneticBootsItem.TogglePayload.CODEC,
-                        MagneticBootsItem::handleToggle);
+                        MagneticBootsItem::handleToggle)
+                .playToClient(AnalyzerSync.TYPE, AnalyzerSync.CODEC, AnalyzerSync::handle);
     }
 }

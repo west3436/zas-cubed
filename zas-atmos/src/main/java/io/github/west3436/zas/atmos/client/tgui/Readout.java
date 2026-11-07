@@ -32,6 +32,11 @@ public final class Readout {
         return text.equals("-0.0") ? "0.0" : text;
     }
 
+    /** A share, such as a gas's of a mixture, as a number of percent: 78.1, 0.93 or 0.005. */
+    public static String percentNumber(double fraction) {
+        return number(fraction * 100);
+    }
+
     /**
      * A value with as many decimals as its size needs: thousands with separators and none, tens with
      * one unless it's whole, down to three for the smallest thresholds, such as CO's 0.005 kPa.

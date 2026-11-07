@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.registry;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerItem;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
@@ -113,6 +114,10 @@ public final class AtmosItems {
     /** Two gas tanks joined by a valve, with a timer (CONT-103, CONT-104). */
     public static final DeferredItem<TransferValveItem> TANK_TRANSFER_VALVE =
             ITEMS.registerItem("tank_transfer_valve", TransferValveItem::new);
+
+    /** Reads the air where the player is, a point, a pipe network, a canister or a tank (CONT-034). */
+    public static final DeferredItem<AnalyzerItem> ATMOS_ANALYZER =
+            ITEMS.registerItem("atmos_analyzer", AnalyzerItem::new);
 
     // ---- Breathing gear (S-08) ----
 

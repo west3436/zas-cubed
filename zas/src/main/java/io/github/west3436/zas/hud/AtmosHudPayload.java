@@ -20,6 +20,10 @@ import net.minecraft.resources.ResourceLocation;
  * Pressure and temperature are signed: negative for low pressure and cold, positive for high
  * pressure and heat.
  *
+ * <p>While the player holds an item in {@link HudLevels#SHOWS_READINGS}, such as an analyzer, every
+ * reading keeps its value, alert or not, and the HUD {@linkplain #shows shows} all four (CLIENT-008,
+ * CONT-034). Then O₂ and toxins have the value {@link #NO_BREATH} while it has no breath.
+ *
  * @param pressure the pressure level, −2 to 2
  * @param oxygen the O₂ level, 0 to 2
  * @param temperature the temperature level, −2 to 2
@@ -33,6 +37,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param internals its internals: {@link #INTERNALS_OFF}, {@link #INTERNALS_ON} or {@link
  *     #INTERNALS_FAILING}
  * @param tankKpa the pressure of the tank they draw from, in kPa, or {@link #NO_TANK}
+ * @param readings whether every reading is shown, alert or not ({@link HudLevels#showsReadings})
  */
 public record AtmosHudPayload(
         int pressure,
@@ -46,7 +51,8 @@ public record AtmosHudPayload(
         float toxinKpa,
         boolean triggered,
         int internals,
-        float tankKpa)
+        float tankKpa,
+        boolean readings)
         implements CustomPacketPayload {
 
     public static final Type<AtmosHudPayload> TYPE =
@@ -67,6 +73,12 @@ public record AtmosHudPayload(
     /** No alerts and no trigger: the HUD is hidden. */
     public static final AtmosHudPayload NONE = new AtmosHudPayload(0, 0, 0, 0, 0, 0, 0, Optional.empty(), 0);
 
+    /**
+     * {@link #oxygenKpa} and {@link #toxinKpa} while every reading is shown but the player has no
+     * breath: its eyes are in a fluid, where vanilla's breathing applies (LIFE-022).
+     */
+    public static final float NO_BREATH = -1;
+
     public static final StreamCodec<ByteBuf, AtmosHudPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
                 buf.writeByte(p.pressure);
@@ -81,6 +93,7 @@ public record AtmosHudPayload(
                 buf.writeBoolean(p.triggered);
                 buf.writeByte(p.internals);
                 buf.writeFloat(p.tankKpa);
+                buf.writeBoolean(p.readings);
             },
             buf -> new AtmosHudPayload(
                     buf.readByte(),
@@ -94,28 +107,29 @@ public record AtmosHudPayload(
                     buf.readFloat(),
                     buf.readBoolean(),
                     buf.readByte(),
-                    buf.readFloat()));
+                    buf.readFloat(),
+                    buf.readBoolean()));
 
     /**
-     * Clamps the levels to their ranges, zeroes the value of every reading with no alert, and drops
-     * the internals and tank of a hidden HUD.
+     * Clamps the levels to their ranges, zeroes the value of every reading with no alert unless
+     * every reading is shown, and drops the internals and tank of a hidden HUD.
      */
     public AtmosHudPayload {
         pressure = clamp(pressure, -2, 2);
         oxygen = clamp(oxygen, 0, 2);
         temperature = clamp(temperature, -2, 2);
         toxins = clamp(toxins, 0, 2);
-        if (pressure == 0) {
+        if (pressure == 0 && !readings) {
             pressureKpa = 0;
         }
-        if (oxygen == 0) {
+        if (oxygen == 0 && !readings) {
             oxygenKpa = 0;
         }
-        if (temperature == 0) {
+        if (temperature == 0 && !readings) {
             temperatureK = 0;
         }
         Objects.requireNonNull(toxinGas, "toxinGas");
-        if (toxins == 0) {
+        if (toxins == 0 && !readings) {
             toxinGas = Optional.empty();
             toxinKpa = 0;
         }
@@ -123,13 +137,13 @@ public record AtmosHudPayload(
         if (!(tankKpa >= 0)) {
             tankKpa = NO_TANK;
         }
-        if (!triggered && pressure == 0 && oxygen == 0 && temperature == 0 && toxins == 0) {
+        if (!triggered && !readings && pressure == 0 && oxygen == 0 && temperature == 0 && toxins == 0) {
             internals = INTERNALS_OFF;
             tankKpa = NO_TANK;
         }
     }
 
-    /** The readings alone: no trigger, internals off and no tank. */
+    /** The readings alone: no trigger, internals off, no tank, and only their alerts shown. */
     public AtmosHudPayload(
             int pressure,
             int oxygen,
@@ -152,10 +166,11 @@ public record AtmosHudPayload(
                 toxinKpa,
                 false,
                 INTERNALS_OFF,
-                NO_TANK);
+                NO_TANK,
+                false);
     }
 
-    /** These readings with a trigger, internals and a tank. */
+    /** These readings, with every reading shown or not as they are, with a trigger, internals and a tank. */
     public AtmosHudPayload withIndicator(boolean triggered, int internals, float tankKpa) {
         return new AtmosHudPayload(
                 pressure,
@@ -169,7 +184,8 @@ public record AtmosHudPayload(
                 toxinKpa,
                 triggered,
                 internals,
-                tankKpa);
+                tankKpa,
+                readings);
     }
 
     /** Whether any reading is at warning or worse. */
@@ -177,17 +193,31 @@ public record AtmosHudPayload(
         return pressure != 0 || oxygen != 0 || temperature != 0 || toxins != 0;
     }
 
-    /** Whether the HUD is shown: a reading is at warning or worse, or something else shows it (CLIENT-001). */
+    /**
+     * Whether the HUD is shown: a reading is at warning or worse, something else shows it, or every
+     * reading is shown (CLIENT-001).
+     */
     public boolean shown() {
-        return triggered || any();
+        return triggered || readings || any();
+    }
+
+    /**
+     * Whether the HUD shows a reading (CLIENT-008, CONT-034): at warning or worse always, and while
+     * every reading is shown, at any level it has a value for.
+     *
+     * @param level the reading's level
+     * @param value its value: {@link #NO_BREATH} for none
+     */
+    public boolean shows(int level, float value) {
+        return level != HudLevels.NONE || readings && value >= 0;
     }
 
     /**
      * Whether the player should be sent this state when it last got {@code sent} (DATA-014): a
-     * reading crossed a threshold, the worst toxic gas changed, the HUD was shown or hidden, the
-     * internals changed, or a shown value changed by its display resolution (1 kPa, 1 K, 0.1 kPa
-     * partial pressure, 1 kPa for the tank). A trigger that comes or goes while an alert shows the
-     * HUD anyway changes nothing shown.
+     * reading crossed a threshold, the worst toxic gas changed, the HUD was shown or hidden, every
+     * reading began or stopped being shown, the internals changed, or a shown value changed by its
+     * display resolution (1 kPa, 1 K, 0.1 kPa partial pressure, 1 kPa for the tank). A trigger that
+     * comes or goes while an alert shows the HUD anyway changes nothing shown.
      *
      * @param sent the state last sent, or null before the first
      */
@@ -201,6 +231,7 @@ public record AtmosHudPayload(
                 || toxins != sent.toxins
                 || !toxinGas.equals(sent.toxinGas)
                 || shown() != sent.shown()
+                || readings != sent.readings
                 || internals != sent.internals
                 || (tankKpa < 0) != (sent.tankKpa < 0)
                 || moved(pressureKpa, sent.pressureKpa, 1)

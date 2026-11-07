@@ -86,6 +86,7 @@ public final class AtmosCreativeTab {
             out.accept(b.get());
             out.accept(b.get().full());
         });
+        out.accept(AtmosItems.ATMOS_ANALYZER.get());
         out.accept(AtmosItems.MULTITOOL.get());
         out.accept(AtmosItems.CROWBAR.get());
         out.accept(AtmosItems.FIRE_EXTINGUISHER.get());

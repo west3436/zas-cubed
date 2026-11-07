@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.CentralMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
@@ -98,6 +99,10 @@ public final class AtmosMenus {
     public static final Supplier<MenuType<ElectrolyzerMenu>> ELECTROLYZER = MENUS.register(
             "electrolyzer",
             () -> new MenuType<>((id, inventory) -> new ElectrolyzerMenu(id), FeatureFlags.DEFAULT_FLAGS));
+
+    /** A held analyzer's reading of what it was used on, or of a tank in the other hand (CONT-034). */
+    public static final Supplier<MenuType<AnalyzerMenu>> ANALYZER =
+            MENUS.register("analyzer", () -> IMenuTypeExtension.create(AnalyzerMenu::new));
 
     private AtmosMenus() {}
 

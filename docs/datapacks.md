@@ -719,14 +719,15 @@ A change to the tag applies after `/reload`, from the dimension's next atmos tic
 
 ## Item tags
 
-ZAS³ reads this Minecraft item tag, at `data/zas/tags/item/<name>.json`. Packs
-and mods add to it as to any tag.
+ZAS³ reads these Minecraft item tags, at `data/zas/tags/item/<name>.json`. Packs
+and mods add to them as to any tag.
 
 | Tag | Holds by default | Used for |
 |---|---|---|
-| `#zas:shows_hud` | nothing | An item here shows the atmosphere HUD while held in either hand, with or without an alert (CLIENT-001). `zas_atmos`'s analyzer joins it when it's built (CONT-034) |
+| `#zas:shows_hud` | nothing | An item here shows the atmosphere HUD while held in either hand, with or without an alert (CLIENT-001). `zas_atmos` adds its analyzer (CONT-034) |
+| `#zas:shows_readings` | nothing | An item here, held in either hand, makes the atmosphere HUD show all four readings, safe ones too, not only those at warning or worse (CLIENT-008). `zas_atmos` adds its analyzer (CONT-034) |
 
-The server checks the tag, and a change applies after `/reload`, from the
+The server checks the tags, and a change applies after `/reload`, from the
 player's next HUD update, within a quarter of a second.
 
 ## Ignition sources
