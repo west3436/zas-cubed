@@ -22,10 +22,14 @@ abstract class InlineScreen<M extends InlineDeviceMenu> extends TguiScreen<M> {
     /** The state row, with its switch. */
     static final int STATE_ROW = Ui.BUTTON_ROW;
 
-    private static final int CELL_WIDTH = 72;
-    private static final int CELL_HEIGHT = 21;
+    /** A port's cell in the strip. */
+    static final int CELL_WIDTH = 72;
+
+    static final int CELL_HEIGHT = 21;
     private static final int SIDE_GAP = 7;
-    private static final int ARROW_GAP = 3;
+
+    /** The gap between an arrow and what it starts or ends at. */
+    static final int ARROW_GAP = 3;
 
     /** How tall a strip with no side port is. */
     static final int STRIP = CELL_HEIGHT;
@@ -60,11 +64,13 @@ abstract class InlineScreen<M extends InlineDeviceMenu> extends TguiScreen<M> {
         return menu.status() == InlineStatus.MOVING;
     }
 
-    private int arrowColour() {
+    /** Green while it moves gas, dim otherwise. */
+    final int arrowColour() {
         return moving() ? Ui.GOOD : Ui.DIM;
     }
 
-    private void cell(Ui ui, int x, int y, Component label, int port) {
+    /** A port's cell: its label over its network's pressure. */
+    final void cell(Ui ui, int x, int y, Component label, int port) {
         ui.section(x, y, CELL_WIDTH, CELL_HEIGHT, null);
         ui.lineCentred(label, x, CELL_WIDTH, y + 1, 9, Ui.LABEL, Face.BODY);
         ui.lineCentred(
@@ -120,21 +126,21 @@ abstract class InlineScreen<M extends InlineDeviceMenu> extends TguiScreen<M> {
         DeviceParts.label(ui, "state", labelX, y, Ui.BUTTON_HEIGHT);
         InlineStatus status = menu.status();
         DeviceParts.status(
-                ui,
-                Component.translatable(status.key()),
-                colour(status),
-                labelX + DeviceParts.LABEL_WIDTH,
-                y,
-                Ui.BUTTON_HEIGHT);
+                ui, statusWord(status), colour(status), labelX + DeviceParts.LABEL_WIDTH, y, Ui.BUTTON_HEIGHT);
         DeviceParts.onOff(ui, x + w - Ui.PAD, y, menu.on(), () -> press(InlineDeviceMenu.TOGGLE));
+    }
+
+    /** The words of its state row. The default is the status's own. */
+    protected Component statusWord(InlineStatus status) {
+        return Component.translatable(status.key());
     }
 
     private static int colour(InlineStatus status) {
         return switch (status) {
             case OFF -> Ui.DIM;
             case MOVING -> Ui.GOOD;
-            case TARGET_REACHED, SIDE_TARGET_REACHED -> Ui.LABEL;
-            case INPUT_EMPTY, SAME_NETWORK, RATE_ZERO -> Ui.AVERAGE;
+            case TARGET_REACHED, SIDE_TARGET_REACHED, OUTPUT_FULL -> Ui.LABEL;
+            case INPUT_EMPTY, SAME_NETWORK, RATE_ZERO, NO_WATER -> Ui.AVERAGE;
         };
     }
 

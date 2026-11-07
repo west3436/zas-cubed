@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.controller.CentralSync;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
 import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
+import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlock;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
@@ -25,7 +26,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
  * The content mod's capabilities and network payloads. The generator gives FE and takes fuel
  * (CONT-061); the area air controller's buffer takes FE, from cables that push it as well as from
  * the blocks it pulls from (CONT-062), and so does the central atmospherics controller's
- * (CONT-115). Devices expose no FE capability (CONT-069). The breathing gear gives ZAS³ its life
+ * (CONT-115). Devices expose no FE capability (CONT-069). The electrolyzer takes water through
+ * the fluid capability on its back (CONT-056). The breathing gear gives ZAS³ its life
  * support (API-022). A battery is an FE item, its charge in its {@code zas_atmos:energy}
  * component, so any mod's charger and machine can use it (CONT-111).
  */
@@ -57,6 +59,11 @@ public final class AtmosCapabilities {
                     return c == null ? null : c.buffer();
                 },
                 AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get());
+        // The electrolyzer's water inlet is its back, and fluid pipes join it nowhere else (CONT-056).
+        event.registerBlockEntity(
+                Capabilities.FluidHandler.BLOCK,
+                AtmosBlockEntities.ELECTROLYZER.get(),
+                (be, side) -> side == ElectrolyzerBlock.inletFace(be.getBlockState()) ? be.tank() : null);
         // Breathing gear (S-08): the tanks are internal supplies, the mask and suit protect (API-022).
         event.registerItem(
                 ILifeSupport.ITEM,

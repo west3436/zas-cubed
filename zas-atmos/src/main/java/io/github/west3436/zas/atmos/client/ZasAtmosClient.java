@@ -163,6 +163,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.VOLUME_PUMP.get(), PumpScreen::volume);
         event.register(AtmosMenus.FILTER.get(), FilterScreen::new);
         event.register(AtmosMenus.MIXER.get(), MixerScreen::new);
+        event.register(AtmosMenus.ELECTROLYZER.get(), ElectrolyzerScreen::new);
         event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
     }
 

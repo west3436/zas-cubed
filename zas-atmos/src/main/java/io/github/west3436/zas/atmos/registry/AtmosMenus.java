@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.CentralMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
+import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerMenu;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
@@ -92,6 +93,11 @@ public final class AtmosMenus {
     /** A held tank transfer valve's tanks, valve and timer (CONT-103, CONT-104). */
     public static final Supplier<MenuType<TransferValveMenu>> TANK_TRANSFER_VALVE =
             MENUS.register("tank_transfer_valve", () -> IMenuTypeExtension.create(TransferValveMenu::new));
+
+    /** The electrolyzer's switch, outlets and water (CONT-055, CONT-056). */
+    public static final Supplier<MenuType<ElectrolyzerMenu>> ELECTROLYZER = MENUS.register(
+            "electrolyzer",
+            () -> new MenuType<>((id, inventory) -> new ElectrolyzerMenu(id), FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 

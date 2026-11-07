@@ -1703,6 +1703,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/electrolyzer.jso
 origin: original
 notes: The electrolyzer item: the block model, off.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/electrolyzer.json
+origin: original
+notes: The electrolyzer's four facings, on and off, with its water at 0 to 4 buckets added on top, with the existing electrolyzer models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/recharger.png
 origin: vgstation13
 source: icons/obj/power.dmi
