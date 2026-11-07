@@ -1473,8 +1473,9 @@ A filter's or mixer's mirrored version is crafted instead (D-77).*
 turns a part a quarter turn about the face clicked; sneak-use removes it as
 mining would ([architecture §11.14](../architecture.md#1114-the-wrench-cont-035-cont-091)).
 It doesn't attach or detach a canister. `WrenchTests.cont_035_*` (GameTest)
-checks a pump and a cap turn, a pipe and the pump come off as items, and a
-mirrored filter stays mirrored with its side port on its pipe.*
+checks a pump and a cap turn, a pipe and the pump come off as items, a
+mirrored filter stays mirrored with its side port on its pipe, and a part that
+only faces sideways, such as the electrolyzer, turns about the vertical.*
 
 #### CONT-091 · Wrench pressure lock
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: [vg §1](../research/vg-atmos-content.md#1-pipe-networks)

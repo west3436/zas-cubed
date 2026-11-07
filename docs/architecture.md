@@ -3657,15 +3657,18 @@ other explosion goes through vanilla's code and keeps vanilla's sound.
 `tool.WrenchItem`, one to a stack, with vg's sprite (D-70). It works on the
 blocks pipes join (`PipeConnector`) except the canister, a portable that is
 mined into an item keeping its gas (CONT-017): pipes, caps, valves, connector
-ports, vents, scrubbers, passive vents, pumps, filters and mixers. The area air
-controller, the firelock and the other wall parts aren't among them. It acts in
+ports, vents, scrubbers, passive vents, pumps, filters, mixers and the
+electrolyzer (CONT-055). The area air controller, the firelock and the other
+wall parts aren't among them. It acts in
 `onItemUseFirst`, before the block's own use, so a click opens no GUI and turns
 no valve; the stack has already checked that the player may build there.
 
 - **Use turns a part** (`turned`). Its `facing`, or a valve's `axis`, turns a
   quarter turn about the axis of the face clicked, clockwise as seen from that
-  face; a part pointing along that axis turns around instead. A pipe or a port
-  has nothing to turn, and a valve clicked on its end can't turn that way, so
+  face; a part pointing along that axis turns around instead. A part that only
+  faces sideways (`horizontal_facing`, the electrolyzer's) turns about the
+  vertical: by that rule when its top or bottom is clicked, and clockwise as
+  seen from above when a side is. A pipe or a port has nothing to turn, and a valve clicked on its end can't turn that way, so
   those clicks do nothing. The new state is set with a full update, so the pipes
   beside it follow, and `invalidateCapabilities`, so a capability offered on
   some faces turns with them. `PipeHost.reconnect` then dissolves its networks

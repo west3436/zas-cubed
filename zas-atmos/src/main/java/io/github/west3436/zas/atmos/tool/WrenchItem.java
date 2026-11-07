@@ -33,8 +33,9 @@ import org.jetbrains.annotations.Nullable;
  *
  * <ul>
  *   <li><b>Use</b> turns a part a quarter turn about the face clicked, clockwise as seen from that
- *       face. A part pointing along that axis turns around instead. Only its facing changes, so a
- *       mirrored filter or mixer stays mirrored, its side port where its own rule puts it (D-77).
+ *       face. A part pointing along that axis turns around instead, and one that only faces
+ *       sideways turns about the vertical. Only its facing changes, so a mirrored filter or mixer
+ *       stays mirrored, its side port where its own rule puts it (D-77).
  *   <li><b>Sneak-use</b> removes it as mining would: it drops its item, except in creative, and what
  *       it held goes into its cell (CONT-009). It refuses while the part holds more than 2 atm over
  *       the ambient, and says by how much (CONT-091).
@@ -84,7 +85,9 @@ public class WrenchItem extends Item {
     /**
      * A part's state turned by a click on one of its faces: its facing, or a valve's axis, a quarter
      * turn about that face's axis, clockwise as seen from the face; or, if it points along that axis,
-     * turned around. Nothing else changes.
+     * turned around. A part that only faces sideways, such as the electrolyzer, turns about the
+     * vertical: by that rule when clicked on its top or bottom, and clockwise as seen from above when
+     * clicked on a side. Nothing else changes.
      *
      * @param state the part's state
      * @param face the face clicked
@@ -94,6 +97,12 @@ public class WrenchItem extends Item {
         if (state.hasProperty(BlockStateProperties.FACING)) {
             return state.setValue(
                     BlockStateProperties.FACING, turned(state.getValue(BlockStateProperties.FACING), face));
+        }
+        if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+            Direction way = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+            return state.setValue(
+                    BlockStateProperties.HORIZONTAL_FACING,
+                    face.getAxis() == Direction.Axis.Y ? turned(way, face) : way.getClockWise());
         }
         if (state.hasProperty(BlockStateProperties.AXIS)) {
             Direction along = Direction.fromAxisAndDirection(

@@ -45,7 +45,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
@@ -56,7 +58,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * The wrench (CONT-035, CONT-091): it turns and removes pipes and devices, keeps a mirrored filter
  * mirrored, refuses a part holding more than 2 atm over the ambient, and makes and loses no gas. Each
- * test builds in its own {@link Area} and drives atmos ticks itself, in a batch of its own; the one
+ * test that builds does so in its own {@link Area} and drives atmos ticks itself, in a batch of its own; the one
  * with the conservation checker on has another to itself, as the checker covers the whole dimension.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
@@ -253,6 +255,33 @@ public final class WrenchTests {
 
         a.clear(0, 0, 8, 4);
         player.discard();
+        h.succeed();
+    }
+
+    /**
+     * CONT-035: a part that only faces sideways, as the electrolyzer does, turns about the vertical. A
+     * click on its top turns it clockwise as seen from above, on its bottom clockwise as seen from
+     * below, and on any side clockwise as seen from above; four clicks bring it back. A furnace stands
+     * in for it, as its facing is the same property, and nothing else about it changes.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_035_a_part_facing_only_sideways_turns_about_the_vertical(GameTestHelper h) {
+        BlockState lit = Blocks.FURNACE.defaultBlockState().setValue(BlockStateProperties.LIT, true);
+        for (Direction way : Direction.Plane.HORIZONTAL) {
+            BlockState state = lit.setValue(BlockStateProperties.HORIZONTAL_FACING, way);
+            for (Direction face : Direction.values()) {
+                BlockState turned = WrenchItem.turned(state, face);
+                Direction expected = face == Direction.DOWN ? way.getCounterClockWise() : way.getClockWise();
+                h.assertValueEqual(
+                        turned.getValue(BlockStateProperties.HORIZONTAL_FACING), expected, way + " clicked " + face);
+                h.assertTrue(turned.getValue(BlockStateProperties.LIT), way + " clicked " + face + " changed more");
+            }
+            BlockState around = state;
+            for (int i = 0; i < 4; i++) {
+                around = WrenchItem.turned(around, Direction.UP);
+            }
+            h.assertTrue(around == state, way + " didn't come back after four turns");
+        }
         h.succeed();
     }
 
