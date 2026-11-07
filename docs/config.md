@@ -221,7 +221,8 @@ preset = "NORMAL"
 ## Content mod: `zas_atmos-server.toml`
 
 `zas_atmos` has a server config of its own, per world like the framework's.
-Its FE values are starting points for playtesting (D-37). Every key is live
+Its FE values are starting points for playtesting (D-37). A firelock draws
+nothing (CONT-065), so it has no key. Every key is live
 ([When changes apply](#when-changes-apply-ops-016)). The design is in
 [architecture §11](architecture.md#11-the-content-mod-zas_atmos).
 

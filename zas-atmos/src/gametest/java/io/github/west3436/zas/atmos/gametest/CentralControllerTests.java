@@ -705,6 +705,47 @@ public final class CentralControllerTests {
     }
 
     /**
+     * A central controller with a generator next to it and FE in its buffer runs an area air
+     * controller with no FE block next to it. When the generator goes and both buffers are spent, the
+     * central controller has no power and pays nothing, so the area air controller has none either
+     * (CONT-060, CONT-115, CONT-120). Its parts then stop as their leases run out, as any unpowered
+     * controller's do ({@code ScrubberStationTests}). The generator's FE alone wouldn't last: what a
+     * central controller takes in and doesn't spend goes to its area air controllers' buffers.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_060_a_central_controller_stops_when_its_power_is_cut(GameTestHelper h) {
+        Site s = new Site(h, 4315);
+        run(h, s, new ArrayList<>(), () -> {
+            s.room(0, 4);
+            AreaAirControllerBlockEntity c = s.controller(2);
+            TestParts.Vent vent = vent(s, 2);
+            CentralControllerBlockEntity central = central(s, 8, 1, 2);
+            GeneratorBlockEntity g =
+                    s.place(9, 1, 2, AtmosBlocks.GENERATOR.get().defaultBlockState(), GeneratorBlockEntity.class);
+            g.energy().set(8_000);
+            central.buffer().set(10_000);
+            for (int i = 0; i < 6 && !vent.power().isPowered(); i++) {
+                s.cycle(central, c);
+            }
+            h.assertValueEqual(g.energy().getEnergyStored(), 0, "the generator, which the central controller drew on");
+            h.assertTrue(central.powered(), "the central controller has no power");
+            h.assertTrue(c.powered(), "the controller has no power");
+            h.assertTrue(vent.power().source() == c, "the vent's power isn't its controller's");
+
+            // Cut the power: the generator goes, and both buffers are spent.
+            s.set(9, 1, 2, Site.AIR);
+            central.buffer().set(0);
+            c.buffer().set(0);
+            s.cycle(central, c);
+            h.assertFalse(central.powered(), "the central controller has power with no generator");
+            h.assertValueEqual(central.status(), ControllerStatus.UNPOWERED, "the central controller's status");
+            h.assertFalse(c.powered(), "the controller has power with its central controller cut");
+            h.assertValueEqual(c.status(), ControllerStatus.UNPOWERED, "the controller's status");
+            h.assertValueEqual(c.buffer().getEnergyStored(), 0, "the controller's buffer, paid nothing");
+        });
+    }
+
+    /**
      * An area air controller with a generator next to it takes what the generator holds first, and
      * the central controller pays only the rest of what its last step needed, from its own buffer,
      * which tops up nothing (CONT-120).

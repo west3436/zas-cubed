@@ -2265,7 +2265,7 @@ only power source for atmospherics parts, and portables run on batteries. All
 FE values below are configurable starting points, tuned in playtesting.
 
 #### CONT-060 · FE-powered devices
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-37
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-37
 
 Active devices shall consume Forge Energy (FE). A device without power stops.
 
@@ -2310,8 +2310,28 @@ are removed and the buffer spent; once its lease runs out, it makes nothing,
 uses no water and shows off, and stays switched on. This stays Accepted until
 each device exists to check.*
 
+*2026-11-07: Implemented. Every device that uses FE has a GameTest that cuts
+its power and sees it stop. Two are new.
+`PowerCutTests.cont_060_an_igniter_a_recharger_and_a_fire_alarm_stop_when_their_power_is_cut`:
+a generator-powered controller runs a sparking igniter, a charging recharger
+and a fire alarm; the generator is removed and the buffer spent, and once the
+leases run out the igniter goes out with its signal still on, the recharger
+charges nothing and the alarm shows unpowered.
+`CentralControllerTests.cont_060_a_central_controller_stops_when_its_power_is_cut`:
+with its generator removed and the buffers spent, the central controller has
+no power and pays nothing, so the area air controller it ran has none. The
+scrubber and the area air controller stop in
+`ScrubberStationTests.cont_064_a_starved_controller_keeps_a_real_vent_and_scrubber_running`,
+and the other devices on a controller in the tests named above. The heater, air
+conditioner and portables run on batteries (D-73) and stop when the battery
+runs out: `HeatStationTests.s_05_heater_holds_a_room_at_its_setpoint`,
+`AirConditionerTests.cont_019_air_conditioner_holds_a_room_at_its_setpoint`,
+`PortablePumpTests.cont_018_portable_pump_works_on_its_room_on_its_battery` and
+`PortableScrubberTests.cont_018_portable_scrubber_scrubs_its_room_on_its_battery`.
+A firelock uses no FE (CONT-065).*
+
 #### CONT-065 · Device draws
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-37
 
 Devices shall draw these amounts by default:
 
@@ -2389,6 +2409,12 @@ key (`[power] air_conditioner`, D-73). The meaning doesn't change.*
 `cont_115_it_fills_from_a_generator_to_100000_fe_and_pays_5_fe_per_tick` (GameTest) checks
 it pays 100 FE per atmos tick. This stays Accepted until every device's draw is in the
 config.*
+
+*2026-11-07: Implemented. Each draw in the table is the default of a `[power]` key
+in `zas_atmos-server.toml` ([config.md](../config.md)), but the firelock's 0: a firelock
+uses no FE, so it has no key, which config.md now says. `ContentConfigDocTest` (unit
+test) checks each key's default against the table, and that config.md lists every key
+of `zas_atmos-server.toml` with its default.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
