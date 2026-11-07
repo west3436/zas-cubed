@@ -597,6 +597,16 @@ right too.
 | `cont_127_a_leak_in_a_suit_hisses_once_and_again_when_refilled` and `cont_051_recipes_use_vanilla_materials` | The first gets `cont_038`'s room, and the second checks the seven items it left out |
 | The moved tests that nearly repeat `OpenCellTests` | Both sets stay |
 
+*2026-11-06: the owner's answers on what was still open for R1.*
+
+| Question | Answer |
+|---|---|
+| The analyzer's place in the order (CONT-034) | Not a last round. It's a critical tool that tells a player about the zone they're in without an area air controller, so it's built first of the items still to come |
+| Station walls ([#179](https://github.com/west3436/zas-cubed/issues/179)) | They don't conduct heat. The regular wall has stone's blast resistance and the reinforced one obsidian's (D-80, CONT-129, CONT-130). The heat code requires a U above 0, so this needs HEAT-019 |
+| Reinforced glass ([#320](https://github.com/west3436/zas-cubed/issues/320)) | In R1. A block with no pane form, and obsidian's blast resistance (D-81, CONT-131) |
+| Player guides ([#270](https://github.com/west3436/zas-cubed/issues/270)) | In R1. If Ponder has to be bundled, the Patchouli book is dropped (D-82). Whether it has to be is still to check |
+| Windows for the items still to come | Each gets the same TGUI window as the other machines (D-76) |
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -706,13 +716,15 @@ _Updated 2026-11-06._
    ~~S-11 and S-13~~ *pass on main 2026-11-04 (#214 to #243; see
    [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner
    played its combined test world the next day.
-   - **Last, together (owner, 2026-11-05):** S-09 and S-10, and the rest of #49
-     and #51 (gas mask, hardsuit, boots, analyzer, wrench, electrolyzer).
-   - **A later track of its own (owner, 2026-11-06):** the items not built yet,
-     among them the analyzer, the central atmospherics controller
+   - **Now (owner, 2026-11-06):** the smaller gaps (CLIENT-001, CLIENT-006, CLIENT-007,
+     CLIENT-009, DATA-012's unversioned data and open pipe ends,
+     [#164](https://github.com/west3436/zas-cubed/issues/164)), then the items not built
+     yet, the analyzer first: gas mask, hardsuit, magnetic boots, wrench, electrolyzer, the
+     central atmospherics controller
      ([#200](https://github.com/west3436/zas-cubed/issues/200)), station walls
      ([#179](https://github.com/west3436/zas-cubed/issues/179)) and reinforced glass
      ([#320](https://github.com/west3436/zas-cubed/issues/320)).
+   - **Last:** S-09 and S-10.
    - **What each open requirement still needs:** the 2026-11-06 status audit in
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the
      audit round after it built.
@@ -735,9 +747,6 @@ _Updated 2026-11-06._
      played its combined test world the same day, and accepted its *Draft* IDs.
    - ~~From this round, for the owner: the *Draft* IDs, the extinguisher's recipe and
      a stop hanging on a server running behind (#242)~~ *accepted 2026-11-05*.
-   - Carried over: art for open pipe ends (#164), GUI textures (#185),
-     display units and language (#57), magnetic boots (#49) and insulating
-     station walls (#179).
    - Follow-ups from R0: ~~saved operations keeping their sub-cell
      ([#122](https://github.com/west3436/zas-cubed/issues/122))~~ *fixed 2026-11-06
      (#332)*. Zone-creation

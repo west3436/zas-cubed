@@ -1,4 +1,5 @@
 {
+  "fml.menu.mods.info.description.zas": "Zone-based atmospherics: sealed spaces hold real gas mixtures that equalize,\nvent, burn and conduct heat. Provides the shared atmosphere API.\n",
   "block.zas.gas_fire": "Gas Fire",
   "commands.zas.debug.off": "Debug overlay off",
   "commands.zas.debug.on": "Debug overlay: %s",

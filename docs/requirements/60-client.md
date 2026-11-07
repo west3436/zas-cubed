@@ -614,7 +614,7 @@ filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, 
 Implemented.*
 
 #### CLIENT-007 · Localization
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 All player-facing text shall be translatable, with en_us as the baseline.
 
@@ -622,3 +622,14 @@ All player-facing text shall be translatable, with en_us as the baseline.
   community can translate.
 - **Verify:** Inspect: a check fails the build on hard-coded player-facing
   strings.
+
+*2026-11-06: Implemented. `PlayerTextTest`, among `zas-atmos`'s unit tests in `build`, reads
+both mods' compiled classes and follows each string that becomes text back to where it's
+written. `client_007_no_hard_coded_player_text` fails on one with a letter in it, and
+`client_007_every_key_the_code_spells_out_is_in_en_us` on a key en_us lacks. The
+`client_007_the_scan_*` tests hold what it catches and allows. Lists at the top of the test
+allow unit symbols, who paused a dimension and why, which are logged and saved in the world,
+and a datapack problem's line, which is also the log's. `/zas` output is otherwise keyed, so
+the command package has no exemption. The mods' descriptions in the mods list have keys too;
+NeoForge shows a mod's display name as written, so that can't. The example addon is never
+published, so it isn't scanned.*

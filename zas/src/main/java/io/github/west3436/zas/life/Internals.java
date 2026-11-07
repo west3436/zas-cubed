@@ -1,6 +1,5 @@
 package io.github.west3436.zas.life;
 
-import com.mojang.serialization.Codec;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.capability.ILifeSupport;
@@ -8,12 +7,18 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.persistence.DimensionData;
 import io.github.west3436.zas.provider.PointResolver;
 import io.github.west3436.zas.simulation.AtmosService;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -27,6 +32,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
+import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -63,11 +70,43 @@ public final class Internals {
     private static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, ZasMod.MOD_ID);
 
+    /**
+     * What brings a saved switch forward, oldest first: entry {@code i} changes version {@code i + 1}'s
+     * tag, in place, into version {@code i + 2}'s (DATA-012). The version written follows from the
+     * list.
+     */
+    private static final List<Consumer<CompoundTag>> SWITCH_STEPS = List.of();
+
+    /** The switch as it's saved. One from before versions were added is the boolean alone, and reads as version 1. */
+    private static final IAttachmentSerializer<Tag, Boolean> SWITCH = new IAttachmentSerializer<>() {
+        @Override
+        public Boolean read(IAttachmentHolder holder, Tag saved, HolderLookup.Provider registries) {
+            CompoundTag tag;
+            if (saved instanceof CompoundTag versioned) {
+                tag = versioned;
+            } else {
+                tag = new CompoundTag();
+                tag.putInt("version", 1);
+                tag.put("on", saved);
+            }
+            DimensionData.migrate("An entity's internals switch", tag, SWITCH_STEPS);
+            return tag.getBoolean("on");
+        }
+
+        @Override
+        public Tag write(Boolean on, HolderLookup.Provider registries) {
+            CompoundTag tag = new CompoundTag();
+            tag.putInt("version", SWITCH_STEPS.size() + 1);
+            tag.putBoolean("on", on);
+            return tag;
+        }
+    };
+
     /** Whether an entity's internals are on (LIFE-029): saved, and kept through death. */
     public static final Supplier<AttachmentType<Boolean>> ON = ATTACHMENTS.register(
             "internals",
             () -> AttachmentType.builder(() -> false)
-                    .serialize(Codec.BOOL)
+                    .serialize(SWITCH)
                     .copyOnDeath()
                     .build());
 

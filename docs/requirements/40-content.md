@@ -16,6 +16,8 @@ CONT-125 and CONT-126, the sounds of pipe devices, were added as Draft on
 2026-11-05.
 CONT-127, the other devices' sounds, and CONT-128, the fire alarm's, were added
 as Draft on 2026-11-05. The owner accepted all four the same day.
+CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
+2026-11-06 (D-80, D-81).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -1449,6 +1451,11 @@ of:
 - **Verify:** Manual check of the readout for each target against debug
   values.
 
+*2026-11-06: The owner's call: the analyzer is a critical tool, not a last-round item.
+It tells a player about the zone they're in without needing an area air controller, so
+used on nothing it reads the point they're standing at. It's built first of the items
+still to come, and its window uses the TGUI kit (D-76).*
+
 #### CONT-035 · Wrench
 `Should` · `R1` · `Accepted` · Verify: GameTest
 
@@ -2870,15 +2877,62 @@ out by 8 louder loops.*
 *2026-11-05: accepted by the owner, and Implemented: its tests pass, and the owner
 passed it in the sound and particle world.*
 
+## Station blocks
+
+Decided in D-80 and D-81. A heater can't hold a stone or glass room in a vacuum at room
+temperature ([#179](https://github.com/west3436/zas-cubed/issues/179)), and under Hardcore
+glass holds any pressure only in two layers
+([#320](https://github.com/west3436/zas-cubed/issues/320)).
+
+#### CONT-129 · Station wall
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
+
+A station wall shall be a full gas-tight block that conducts no heat (HEAT-019), with
+stone's blast resistance (6).
+
+- **Rationale:** Decision: D-80.
+- **Verify:** A GameTest checks a room walled with it keeps its temperature in a vacuum and
+  beside lava, and reads the block's blast resistance.
+
+*2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
+
+#### CONT-130 · Reinforced station wall
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-80, HEAT-019
+
+A reinforced station wall shall be a full gas-tight block that conducts no heat (HEAT-019),
+with obsidian's blast resistance (1,200).
+
+- **Rationale:** Decision: D-80.
+- **Verify:** A GameTest checks an explosion that breaks a station wall leaves it standing,
+  and that a room walled with it keeps its temperature in a vacuum.
+
+*2026-11-06: Added for review. The statement is the owner's; the `Should` is mine.*
+
+#### CONT-131 · Reinforced glass
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-81, FLOW-007
+
+A reinforced glass block shall seal and show through as glass does, shall never break from
+a pressure difference whatever the preset or threshold, and shall have obsidian's blast
+resistance (1,200). It has no pane form.
+
+- **Rationale:** Decision: D-81.
+- **Verify:** A GameTest under Hardcore checks it holds above the threshold that breaks
+  glass, and an explosion that breaks glass leaves it standing.
+
+*2026-11-06: Added for review. The owner set the block form and blast resistance;
+[#320](https://github.com/west3436/zas-cubed/issues/320) set the rest. The `Should` is mine.*
+
 ## R1 / R2 split
 
 | R1 | R2 |
 |---|---|
 | Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
-| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and air conditioner, magnetic boots, fire alarm, passive vent, central atmospherics controller | |
+| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and air conditioner, magnetic boots, fire alarm, passive vent, central atmospherics controller, station walls, reinforced glass | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's
 pipe layers reuse the multipart block, so they need another design. Batteries
 and the recharger are added (D-69).*
 
 *2026-11-03: the central atmospherics controller is added (D-75).*
+
+*2026-11-06: station walls and reinforced glass are added (D-80, D-81).*
