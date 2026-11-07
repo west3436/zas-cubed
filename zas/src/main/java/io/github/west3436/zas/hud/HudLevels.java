@@ -1,5 +1,6 @@
 package io.github.west3436.zas.hud;
 
+import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -11,12 +12,18 @@ import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.HazardProfile;
 import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
+import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.Shielding;
+import io.github.west3436.zas.life.WornProtection;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +47,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A side of a reading whose hazard is off in the player's dimension (LIFE-031, LIFE-036) has no
  * alert, nor has anything for a player exempt from hazards (LIFE-037). O₂ and toxins have none
- * while its eyes are in a fluid, where vanilla's breathing applies (LIFE-022). Server thread.
+ * while its eyes are in a fluid, where vanilla's breathing applies (LIFE-022).
+ *
+ * <p>The rest of the state goes with the readings: what shows the HUD without an alert ({@link
+ * #triggered}, CLIENT-001), and its internals and tank (CLIENT-009). The server decides these, as
+ * only it has protection data (LIFE-026). Server thread.
  */
 public final class HudLevels {
     /** No alert. */
@@ -63,6 +74,10 @@ public final class HudLevels {
 
     /** How far inside the comfort band the temperature warnings start, in K. */
     public static final double TEMPERATURE_MARGIN = 20.0;
+
+    /** The items that show the HUD while held, such as an analyzer (CLIENT-001, CONT-034). */
+    public static final TagKey<Item> SHOWS_HUD =
+            TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "shows_hud"));
 
     private HudLevels() {}
 
@@ -203,6 +218,49 @@ public final class HudLevels {
                 (float) kelvin,
                 Optional.ofNullable(toxinGas),
                 (float) toxinKpa);
+    }
+
+    /**
+     * Whether something other than an alert shows a player's HUD (CLIENT-001): its breathing is
+     * sealed (LIFE-021), or it holds an item in {@link #SHOWS_HUD} in either hand. A spectator uses
+     * neither, so it has no trigger.
+     */
+    public static boolean triggered(Player player) {
+        return !player.isSpectator()
+                && (WornProtection.sealedBreathing(player)
+                        || player.getMainHandItem().is(SHOWS_HUD)
+                        || player.getOffhandItem().is(SHOWS_HUD));
+    }
+
+    /**
+     * What an entity's internals do now (CLIENT-009, LIFE-029): {@link
+     * AtmosHudPayload#INTERNALS_OFF}, {@link AtmosHudPayload#INTERNALS_ON} or {@link
+     * AtmosHudPayload#INTERNALS_FAILING}.
+     */
+    public static int internals(LivingEntity entity) {
+        if (!Internals.on(entity)) {
+            return AtmosHudPayload.INTERNALS_OFF;
+        }
+        return Internals.active(entity) != null ? AtmosHudPayload.INTERNALS_ON : AtmosHudPayload.INTERNALS_FAILING;
+    }
+
+    /**
+     * The pressure in kPa of the tank an entity's internals draw from (CLIENT-009, LIFE-028), switched
+     * on or not, or {@link AtmosHudPayload#NO_TANK}.
+     */
+    public static float tankPressure(LivingEntity entity) {
+        return Internals.find(entity)
+                .map(tank -> (float) tank.contents().pressure())
+                .orElse(AtmosHudPayload.NO_TANK);
+    }
+
+    /** A player's readings with what else its HUD state holds: its trigger, and while shown, its internals and tank. */
+    public static AtmosHudPayload withIndicator(AtmosHudPayload readings, Player player) {
+        boolean triggered = triggered(player);
+        if (!triggered && !readings.any()) {
+            return readings.withIndicator(false, AtmosHudPayload.INTERNALS_OFF, AtmosHudPayload.NO_TANK);
+        }
+        return readings.withIndicator(triggered, internals(player), tankPressure(player));
     }
 
     private static boolean off(ResourceKey<Level> dimension, HazardType hazard) {

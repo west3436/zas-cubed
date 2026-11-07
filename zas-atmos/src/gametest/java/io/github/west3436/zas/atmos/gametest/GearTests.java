@@ -16,6 +16,8 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.gametest.TestPlayers;
+import io.github.west3436.zas.hud.AtmosHudPayload;
+import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import java.util.Map;
@@ -339,6 +341,36 @@ public final class GearTests {
         h.assertTrue(Internals.active(p) != null, "internals don't work with a breath mask");
         p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.SOFTSUIT_HELMET));
         h.assertTrue(Internals.active(p) != null, "internals don't work with the softsuit helmet");
+        h.succeed();
+    }
+
+    // ---- CLIENT-001, CLIENT-009 ------------------------------------------------------------------
+
+    /**
+     * The breath mask and the softsuit helmet show the HUD, and the rest of the suit doesn't
+     * (CLIENT-001). An O2 tank in the offhand shows its pressure, about 6 atm, and internals go from
+     * off to on (CLIENT-009).
+     */
+    @GameTest(template = "empty")
+    public static void client_001_the_mask_and_helmet_show_the_hud(GameTestHelper h) {
+        Site s = new Site(h, 44);
+        FakePlayer p = player(s, "zas_hud_heads");
+        h.assertFalse(HudLevels.triggered(p), "the HUD shows bare-headed");
+        p.setItemSlot(EquipmentSlot.CHEST, stack(AtmosItems.SOFTSUIT_CHESTPLATE));
+        p.setItemSlot(EquipmentSlot.LEGS, stack(AtmosItems.SOFTSUIT_LEGGINGS));
+        p.setItemSlot(EquipmentSlot.FEET, stack(AtmosItems.SOFTSUIT_BOOTS));
+        h.assertFalse(HudLevels.triggered(p), "the HUD shows with a suit but no helmet");
+        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.BREATH_MASK));
+        h.assertTrue(HudLevels.triggered(p), "the HUD doesn't show with a breath mask");
+        p.setItemSlot(EquipmentSlot.HEAD, stack(AtmosItems.SOFTSUIT_HELMET));
+        h.assertTrue(HudLevels.triggered(p), "the HUD doesn't show with the softsuit helmet");
+
+        h.assertValueEqual(HudLevels.tankPressure(p), AtmosHudPayload.NO_TANK, "no tank");
+        p.setItemInHand(InteractionHand.OFF_HAND, stack(AtmosItems.OXYGEN_TANK));
+        close(h, HudLevels.tankPressure(p), 6 * ATM, 5, "the O2 tank's pressure");
+        h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_OFF, "internals off");
+        Internals.set(p, true);
+        h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_ON, "internals on");
         h.succeed();
     }
 
