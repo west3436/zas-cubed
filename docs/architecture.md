@@ -3370,7 +3370,8 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   rating: the breath mask only seals; the gas mask seals and filters; each
   softsuit piece protects from 0 to 1 atm and 0 to 500 K; each hardsuit piece
   protects at every pressure and temperature; and each suit's helmet seals.
-  They have no durability.
+  They have no durability. Their armor points are small, except the hardsuit's,
+  which are diamond's.
 - **Hardsuit encumbrance** (CONT-089). `Encumbrance` keeps one transient
   `MOVEMENT_SPEED` modifier on a wearer, multiplying its speed by
   (1 − pieces × `[gear] hardsuit_slowdown`). The server sets it on NeoForge's

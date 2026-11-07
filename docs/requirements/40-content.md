@@ -1416,12 +1416,17 @@ pressures and temperatures.
 
 *2026-11-07: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)). Four `SuitItem` pieces of the `hardsuit`
 armor material, each rated from 0 kPa to any pressure and from 0 K to any
-temperature, its helmet sealing. The requirement gives no armor points: each
-piece has chainmail's (1, 4, 5 and 2) and no toughness, and, as the softsuit,
-no durability. `cont_036_a_hardsuited_player_is_protected_at_every_extreme`
-checks a hardsuited player takes no decompression in vacuum, no barotrauma at
-2,000 kPa, no burns at 1,500 K and no frostbite at 50 K, where a bare player
-beside it takes each.*
+temperature, its helmet sealing. As the softsuit, it has no durability.
+`cont_036_a_hardsuited_player_is_protected_at_every_extreme` checks a
+hardsuited player takes no decompression in vacuum, no barotrauma at 2,000 kPa,
+no burns at 1,500 K and no frostbite at 50 K, where a bare player beside it
+takes each.*
+
+*2026-11-07: The owner's call on the armor, which the requirement doesn't give:
+diamond's, so 3, 8, 6 and 3 armor points from helmet to boots and a toughness of
+2, and the hardsuit keeps CONT-089's slowdown. It still can't be enchanted or
+repaired, and it sounds like iron when put on. The same GameTest checks the
+armor.*
 
 #### CONT-089 · Hardsuit encumbrance
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-47
