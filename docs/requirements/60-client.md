@@ -33,6 +33,10 @@ softsuit helmet have sealed it since
 [#182](https://github.com/west3436/zas-cubed/pull/182) (LIFE-021). The HUD doesn't
 show for them yet and there's still no analyzer (CONT-034), so this stays Accepted.*
 
+*2026-11-07: The analyzer part is built: the analyzer (CONT-034) is in `#zas:shows_hud`,
+the tag the HUD's held-item trigger reads. That trigger is still waiting to merge, and
+the owner's check of all three triggers is still to come, so this stays Accepted.*
+
 #### CLIENT-008 · HUD readings and thresholds
 `Must` · `R1` · `Implemented` · Verify: Manual, GameTest · Trace: LIFE-003, LIFE-004, LIFE-010, LIFE-011, LIFE-014, LIFE-041
 
@@ -582,6 +586,10 @@ API-063. The area air controller's window is the first device GUI to use them.*
 
 *2026-11-06: The owner's decision: bar joins the list, as the config already offers it.*
 
+*2026-11-07: The analyzer part is built: the analyzer's window (CONT-034) shows its
+pressures and temperature in the player's units. The owner's check of each unit in the
+HUD, the analyzer and a GUI is still to come, so this stays Accepted.*
+
 #### CLIENT-022 · TGUI look for device GUIs
 `Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-76, CONT-074
 
@@ -602,6 +610,10 @@ and analyzer have no window yet because they don't exist yet.*
 *2026-11-06: every one of those windows passed the owner's check in the game, with the
 filter and a TTV checked at GUI scales 2, 3, 4 and Auto. Accepted by the owner, and
 Implemented.*
+
+*2026-11-07: The analyzer's window (CONT-034) uses the kit too, with a list of each gas's
+share and partial pressure added to it (`GasParts.shares`). Its look waits for the
+owner's check with CONT-034's.*
 
 #### CLIENT-007 · Localization
 `Must` · `R1` · `Implemented` · Verify: Inspect

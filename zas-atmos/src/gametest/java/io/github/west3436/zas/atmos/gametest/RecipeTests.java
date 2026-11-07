@@ -70,6 +70,7 @@ public final class RecipeTests {
                 AtmosItems.FIRE_EXTINGUISHER.get(),
                 AtmosItems.EMPTY_TANK.get(),
                 AtmosItems.TANK_TRANSFER_VALVE.get(),
+                AtmosItems.ATMOS_ANALYZER.get(),
                 AtmosItems.EMERGENCY_OXYGEN_TANK.get(),
                 AtmosItems.BREATH_MASK.get(),
                 AtmosItems.SOFTSUIT_HELMET.get(),

@@ -2436,9 +2436,10 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
+| `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank and TTV screens, item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -3651,3 +3652,53 @@ and sends each player in the level one `ClientboundSoundPacket`, which
 nobody hears a near and a far sound together. These packets don't use the server's
 range check, but the events' ranges are still what the client attenuates by. Any
 other explosion goes through vanilla's code and keeps vanilla's sound.
+
+### 11.14 The analyzer (CONT-034)
+
+The atmos analyzer (`analyzer.AnalyzerItem`) reads gas where the player is, or
+in what they use it on, without the area air controller. Its window is a menu
+with no slots (`analyzer.AnalyzerMenu`, `client.AnalyzerScreen`).
+
+- **What it reads** (`AnalyzerTarget`). Used on nothing, the air at the player's
+  eyes, as `/zas at` reads it, through `Atmospheres.of` (API-010): their zone, or
+  the open air. It follows the player while the window is open. Used on a
+  block, `onItemUseFirst` takes the click before the block's own use, so a
+  canister or a vent doesn't open its own window. A pipe reads its network. A
+  device in a pipe line reads the network on the port whose face was clicked,
+  or else the port nearest the point clicked, named as the device's window
+  names it. A canister reads its own share, in its node's volume, as its window
+  shows it. Any other block reads the point 0.01 in front of the face clicked,
+  through `Atmospheres.at`, so each side of a pane reads its own cell. Air goes
+  through the public API, and pipe gas is the content mod's own (CONT-095).
+- **A tank** isn't a target, since a tank in the off hand is often breathing
+  gear (LIFE-028). The window gets a second tab while the other hand holds a
+  tank, and that tab reads `GasTankItem.contents`.
+- **Server authority** (CONT-074). The target stays on the server. A client
+  sends only the two tabs' button ids. `clickMenuButton` refuses any other id,
+  and the tank's tab with no tank in the other hand. The item refuses a block
+  beyond the player's reach, as the game's packet handler does, so no other
+  caller can read a far block through it. `stillValid` holds while the hand
+  holds an analyzer and, for a block, while the block is there and within
+  `REACH` (4) blocks past the player's reach, as a container's window does. So
+  the player's tick closes the window once they walk away.
+- **The sync** (`AnalyzerSync`, DATA-005, DATA-014). The menu reads every
+  `SYNC_TICKS` (5) server ticks, four times a second, by the server's tick
+  count. Counting `broadcastChanges` calls would let a client read faster by
+  sending buttons, since the game calls it after each one. It sends only to its
+  viewer, on opening, after a tab change, and when `showsSameAs` says a shown
+  value changed. That check is as fine as the finest unit a player can choose:
+  pressure to 4 significant figures, temperature to 0.05 K, and each gas's share
+  to 3 significant figures. The payload carries the target's and the tank's
+  names, the air's state and zone id, and the mixture. It holds no geometry.
+- **The window** shows the target's tab and the tank's, then a gauge, the target,
+  its pressure and temperature in the player's units (`Readout`), and
+  `GasParts.shares`: a bar, and each gas's share and partial pressure. For air,
+  the gauge's bands and the values' colours are CLIENT-008's warning and danger
+  levels. A canister or tank uses its own window's bands, and a network
+  `PipeBurst`'s half and full burst pressure. Screens stop the movement keys,
+  so `client.WalkingInput` stands in for the player's `Input` while the window
+  is open. It reads the keys the movement bindings are bound to from GLFW, so
+  the player can walk with the window open. Turning to look still needs the
+  window closed.
+- **The HUD.** The item is in `#zas:shows_hud`, so holding one shows the
+  atmosphere HUD (CLIENT-001).

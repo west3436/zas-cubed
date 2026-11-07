@@ -328,6 +328,11 @@ that window open.*
 *2026-11-06: DATA-017, DATA-018 and DATA-019 are Implemented, so this replaces "All three
 are Draft until the owner's review" in the first 2026-11-05 note above.*
 
+*2026-11-07: The analyzer's window (CONT-034) has a sync of its own, `AnalyzerSync`, sent
+only to the player with it open. It holds what the window shows: the target's name, the
+air's state and zone id, and one mixture, as `/zas at` gives them. It holds no zone
+geometry or per-cell data, so it keeps to D-53.*
+
 #### DATA-014 · Own-state sync rate
 `Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 

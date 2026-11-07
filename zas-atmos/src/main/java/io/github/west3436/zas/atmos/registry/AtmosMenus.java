@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.ControllerMenu;
 import io.github.west3436.zas.atmos.filter.FilterMenu;
@@ -87,6 +88,10 @@ public final class AtmosMenus {
     /** A held tank transfer valve's tanks, valve and timer (CONT-103, CONT-104). */
     public static final Supplier<MenuType<TransferValveMenu>> TANK_TRANSFER_VALVE =
             MENUS.register("tank_transfer_valve", () -> IMenuTypeExtension.create(TransferValveMenu::new));
+
+    /** A held analyzer's reading of what it was used on, or of a tank in the other hand (CONT-034). */
+    public static final Supplier<MenuType<AnalyzerMenu>> ANALYZER =
+            MENUS.register("analyzer", () -> IMenuTypeExtension.create(AnalyzerMenu::new));
 
     private AtmosMenus() {}
 

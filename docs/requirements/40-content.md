@@ -1456,6 +1456,16 @@ It tells a player about the zone they're in without needing an area air controll
 used on nothing it reads the point they're standing at. It's built first of the items
 still to come, and its window uses the TGUI kit (D-76).*
 
+*2026-11-07: Built (architecture §11.14). Used on nothing it reads the air at the player's
+eyes and follows them, since they can walk with its window open. On a pipe it reads the
+network, on a pump, filter or mixer the network on the port clicked, and on a canister its
+own gas. On any other block it reads the point in front of the face clicked. A tank in the
+other hand gets a tab of its own, which reads the tank. The server reads every target and
+syncs the window at most four times a second, only when a shown value changes.
+GameTests check each reading against `/zas zone at`, `/zas at` or the target's own gas,
+that a player with no rights can't read a far target, and the sync's rate. The readout
+itself is the Manual check, so this stays Accepted until the owner has made it.*
+
 #### CONT-035 · Wrench
 `Should` · `R1` · `Accepted` · Verify: GameTest
 
