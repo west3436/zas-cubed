@@ -930,9 +930,11 @@ forms no zone. A fuel block of another mod still joins through the tag, as
 `Should` · `R1` · `Implemented` · Verify: GameTest
 
 A sealed zone, one with no ambient edge, shall be dissolved back to ambient when
-both hold:
+all hold:
 - its mixture has been equivalent to its ambient for a configurable time
 - nothing pins it (attached devices, API pins)
+- every zone joined to it through zone boundaries can go too, as they go together
+  or not at all
 
 - **Rationale:** Inferred: zones exist only where air differs from ambient
   (D-13), so one that has returned to ambient and holds nothing is removed to
@@ -967,6 +969,15 @@ breathing in keeps its zone, however little that changes its air; a zone joined 
 zone boundaries can't go yet, since that zone would then vent through the room as if it were
 the open air; or it is paused. The time isn't saved, so a zone rebuilt from its chunks starts
 over.*
+
+*2026-11-06: The owner's decisions. The 60 s default stands. Zones joined through zone
+boundaries going together is now in the statement above, so a sealed room at the ambient
+stays as long as the room through its door is pinned. "Equivalent" means CORE-006's
+tolerances, so up to 5 % of a gas's density goes when a zone dissolves. A known limit: a
+fire waiting in a chunk below full status changes nothing, so a sealed room at the ambient
+can lose its zone after the delay, and the fire then burns without using gas until
+something zones the room again. That comes from reading the code and `geo_034`, not from
+play.*
 
 #### CORE-053 · Adding gas to open air
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest

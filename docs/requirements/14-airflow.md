@@ -199,6 +199,9 @@ takes to do any damage and the hazard's settings, and
 `flow_005_a_player_flung_into_a_block_is_judged_by_its_moves` a player, from moves
 the test sends the server, not a real client's. `FlowImpactTest` checks the formula.*
 
+*2026-11-06: The owner was carried into a pillar in a test world, on a real client, and
+kept the hit and its knockback as built.*
+
 ## Cost
 
 #### FLOW-006 · Cost scales with entities in range

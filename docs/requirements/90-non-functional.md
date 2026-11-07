@@ -324,6 +324,10 @@ passes in full: each kind the statement names, plus gas handlers, `ILifeSupport`
 counts the errors in the log, then moves the limit's clock on a minute and counts one
 more. A throwing suit leaving its wearer exposed is still for the owner to rule on.*
 
+*2026-11-06: The owner's ruling: a suit whose `ILifeSupport` or `IInternalSupply` throws
+gives no protection while it throws, as built, unlike an ambient provider, which keeps its
+last good answer.*
+
 #### NFR-014 · Engine fault isolation
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-55, OPS-005
 
