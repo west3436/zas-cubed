@@ -752,8 +752,8 @@ until this measurement.
 ## Regression check (NFR-034, 2026-11-06)
 
 `./gradlew :engine:benchCheck`, a step in CI's "Build and test" job, fails if
-this code costs more than 10 % over the recorded baseline. The step took 35 to
-67 s.
+this code costs more than 10 % over the recorded baseline in two runs. The step
+took 35 to 67 s, and takes about twice that when the first run is over the limit.
 
 **The baseline is a commit, not a time.** `engine/s10-baseline.properties` names
 it. The task reads the engine and its benchmarks at that commit with
@@ -763,7 +763,8 @@ loader, so neither shares the other's classes or their JIT profiles. They take
 turns at the [S-10 script](#s-10-engine-load) with ops at the 1 s period: 10 pairs
 to warm up, then 20 to measure. For each of the worker thread and the server
 thread (close plus apply), the result is the median of the 20 ratios of mean time
-per atmos tick. Either one over 10 % fails the check.
+per atmos tick. Either one over 10 % means a second run in a new JVM, and either
+one over 10 % in that fails the check.
 
 **Why not a time:** CI's machines differ by far more than the 10 % being looked
 for. This is the same code in 8 jobs of one run:
@@ -792,8 +793,24 @@ code's side only, for that fraction of each close, apply and worker tick:
 | 15 % | 2 | +13.5, +14.9 % | +17.2, +17.5 % | Fail |
 | 25 % | 1 | +24.9 % | +24.6 % | Fail |
 
-So a job with no change has stayed about 6 points under the limit. The readings
+So a job with no change had stayed about 6 points under the limit. The readings
 carry a few points of noise, so a slowdown close to 10 % could go either way.
+
+**Why two runs.** That table undersold the noise. The check then read these on main
+and on PRs that didn't touch the engine, all on the engine as of
+[#351](https://github.com/west3436/zas-cubed/pull/351):
+
+| Runs | Worker | Server |
+|---|---|---|
+| 10 | -1.7 to +3.4 % | -5.3 to +12.3 % |
+
+The +12.3 % failed a docs-only PR, with the middle half of its pairs at +10.8 to
++14.9 %. So the pairs in one JVM agree with each other far better than with another
+JVM's. The likely cause is that its JIT's choices hold for the whole run, though
+that hasn't been shown. A second run in a new JVM keeps the 10 % limit and asks the
+same question again: a slowdown of 15 % or more read over the limit in every job
+above, while no-change readings over it have been rare. The cost is that a slowdown
+just over 10 % gets two chances to pass.
 
 **What it doesn't catch:** only means are compared, so a worse p99 or worst tick
 can pass. It covers the engine's side of S-10 and nothing of the platform's.
