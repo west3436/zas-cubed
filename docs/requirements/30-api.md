@@ -1030,7 +1030,8 @@ applied, and it isn't tied to an atmos tick. A listener asserts the thread in
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-43
 
 The API shall raise events when a zone is created, merged, split, breached
-(gains an ambient edge), sealed, dissolved, paused or resumed.
+(gains an ambient edge, once its opening is classified), sealed, dissolved,
+paused or resumed.
 
 - **Rationale:** Inferred: other mods (alarms, quests, compat) need to react
   to zones changing; D-43 added pause and resume.
@@ -1045,6 +1046,13 @@ check it fires once, and `ZoneEventTest` covers the other ways to reach each. A 
 remnant fires no created event, and a zone coming back from chunk storage fires
 resumed, not created, so after a restart resumed comes with no paused before it. A
 merge or dissolution in a rejected exchange component fires nothing until it is redone.*
+
+*2026-11-06: The owner's decisions. Breached waits until the opening is classified, now
+in the statement above, so a hole into an enclosed pocket raises nothing and the event can
+come a few atmos ticks after venting starts. A sealed room at the ambient that's opened
+can dissolve first, and then fires only dissolved. Events carry a `ZoneId`, not a
+`ZoneInfo`. A listener gets the rest from `Atmospheres.zone(level, id)`, which is empty
+for a zone that's gone, and a snapshot can be added later without breaking anything.*
 
 #### API-031 · Fire events
 `Should` · `R1` · `Implemented` · Verify: GameTest

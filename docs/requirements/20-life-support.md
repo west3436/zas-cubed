@@ -713,6 +713,9 @@ it drowns with internals off, without the seal and without the tank.
 `life_047_a_tank_short_of_o2_underwater_is_hypoxia` and
 `life_047_the_client_breathes_from_its_tank_underwater` check the rest.*
 
+*2026-11-06: The owner tried a dive in a test world, and chose the meter refilling, as
+built.*
+
 ## Damage, configuration and cost
 
 #### LIFE-030 · Damage types
