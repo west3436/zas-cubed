@@ -1,9 +1,12 @@
 package io.github.west3436.zas.atmos.ttv;
 
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -49,6 +52,13 @@ public class PrimedTransferValve extends Entity {
     private static final String TIMER = "Timer";
     private static final String FUSE = "Fuse";
     private static final String SETTLE = "Settle";
+
+    /**
+     * What brings a saved valve forward, oldest first, for {@link DeviceData#migrate(CompoundTag, List)}
+     * (DATA-012). Version 0 is a valve saved before versions were added, and its fields are those of
+     * version 1.
+     */
+    private static final List<Consumer<CompoundTag>> FORMAT_STEPS = List.of(tag -> {});
 
     private static final int TICKS_PER_SECOND = 20;
 
@@ -255,6 +265,7 @@ public class PrimedTransferValve extends Entity {
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         HolderLookup.Provider registries = registryAccess();
+        tag.putInt(DeviceData.VERSION_KEY, FORMAT_STEPS.size());
         tag.put(FIRST, valve.first().saveOptional(registries));
         tag.put(SECOND, valve.second().saveOptional(registries));
         tag.putBoolean(OPEN, valve.isOpen());
@@ -265,6 +276,7 @@ public class PrimedTransferValve extends Entity {
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
+        DeviceData.migrate(tag, FORMAT_STEPS);
         HolderLookup.Provider registries = registryAccess();
         valve = new TransferValve(
                 ItemStack.parseOptional(registries, tag.getCompound(FIRST)),
