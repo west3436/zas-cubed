@@ -581,7 +581,7 @@ right too.
 | Data formats in the example addon (API-047) | They don't count, as `docs/datapacks.md` has an example of each |
 | A window's sync (DATA-005) | `ControllerSync` and `CanisterSync` are named on its list |
 | API-042's status | Stays *Accepted* until a release exists for the check to compare, with the policy as built |
-| S-10's regression check (NFR-034) | As built, comparing means only |
+| S-10's regression check (NFR-034) | As built, comparing means only. It then failed a docs-only PR at +12.3 %, so a run over the limit now runs once more in a new JVM |
 | The nested-jar test's CI step (API-007) | It keeps its own step |
 | Displaced gas (CORE-029) | As built |
 | A valve at a chunk's edge rebuilding twice per atmos tick ([#341](https://github.com/west3436/zas-cubed/pull/341)) | As built, and measured with S-09 |
