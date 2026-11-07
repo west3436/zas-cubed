@@ -44,4 +44,12 @@ class BreachAlarmTest {
         b.check(VACUUM, 101, true, 0, 10);
         assertFalse(b.check(VACUUM, 0, true, 0, 10), "Vacuum: a room open to space, emptied in a reading");
     }
+
+    @Test
+    void cont_043_a_pressure_min2_at_0_never_alarms_for_a_breach() {
+        Thresholds noFloor = HUMAN.with(0, 0);
+        BreachAlarm b = new BreachAlarm();
+        assertFalse(b.check(noFloor, 101, true, 0, 10), "a breach to a vacuum");
+        assertFalse(b.check(noFloor, 50, true, 0, 10), "a fast fall below min1");
+    }
 }

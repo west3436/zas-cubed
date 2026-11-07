@@ -3109,13 +3109,15 @@ tick, in order:
    listed gas's partial pressure, and the summed partial pressure of the rest,
    each against a `Thresholds` (min2, min1, max1, max2; −1 disables a bound).
    At or beyond min2 or max2 is danger 2, at or beyond min1 or max1 danger 1.
+   A reading of 0 doesn't trip a bound of 0, so a minimum of 0 never trips and
+   a maximum of 0 trips on any of the reading.
    An open cell's ambient air is rated as well, so a controller in a vacuum
    reports it. An unresolved sample changes nothing. Nitrogen is listed with
    no bounds, so the filler gas isn't one of "the rest".
 5. **Updates its danger level** (`DangerLevel`, CONT-046): it rises to a
    reading at once, and falls after 10 readings in a row below it (10 s) to
    the highest of those readings. A **breach** reads as danger 2 at once
-   (`BreachAlarm`, CONT-043), for a preset with a pressure min2. It is a
+   (`BreachAlarm`, CONT-043), for a preset with a pressure min2 above 0. It is a
    breach when the zone has an edge to the ambient and the ambient's pressure
    is at or below min2, as space is, or when the pressure fell by
    `[controller] breach_drop_kpa` (10) since the last reading to below min1.

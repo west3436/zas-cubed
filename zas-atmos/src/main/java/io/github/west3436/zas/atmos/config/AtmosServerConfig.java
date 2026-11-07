@@ -141,7 +141,7 @@ public final class AtmosServerConfig {
         builder.comment("The area air controller (CONT-040, CONT-043).").push("controller");
         BREACH_DROP_KPA = builder.comment(
                         "A fall in its zone's pressure, in kPa within one atmos tick, that sends a controller to danger 2 at once, as a",
-                        "breach does (CONT-043). Only for presets with a pressure min2, and only while the pressure is below min1. 0 turns it off.")
+                        "breach does (CONT-043). Only for presets with a pressure min2 above 0, and only while the pressure is below min1. 0 turns it off.")
                 .defineInRange("breach_drop_kpa", 10.0, 0.0, 1_000.0);
         builder.pop();
 

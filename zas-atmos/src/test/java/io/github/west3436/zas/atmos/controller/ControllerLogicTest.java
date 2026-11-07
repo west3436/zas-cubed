@@ -47,6 +47,29 @@ class ControllerLogicTest {
     }
 
     @Test
+    void cont_040_a_reading_of_0_does_not_trip_a_bound_at_0() {
+        Thresholds maxima = Thresholds.max(0, 0);
+        assertEquals(0, maxima.rate(0), "a maximum at 0 with none of the reading");
+        assertEquals(2, maxima.rate(0.001), "a maximum at 0 with any of the reading");
+
+        Thresholds max1 = Thresholds.max(0, 5);
+        assertEquals(0, max1.rate(0));
+        assertEquals(1, max1.rate(0.001));
+        assertEquals(2, max1.rate(5));
+
+        Thresholds minima = new Thresholds(0, 0, Thresholds.OFF, Thresholds.OFF);
+        assertEquals(0, minima.rate(0), "a minimum at 0 never trips");
+        assertEquals(0, minima.rate(1));
+
+        Thresholds min1 = new Thresholds(0, 5, Thresholds.OFF, Thresholds.OFF);
+        assertEquals(1, min1.rate(0), "min1 is above 0, so a reading of 0 still trips it");
+        assertEquals(0, min1.rate(6));
+
+        Thresholds min2 = new Thresholds(5, 10, Thresholds.OFF, Thresholds.OFF);
+        assertEquals(2, min2.rate(0), "min2 is above 0, so a reading of 0 still trips it");
+    }
+
+    @Test
     void cont_040_standard_air_is_safe_for_humans_and_each_reading_trips() {
         ControllerPreset h = ControllerPreset.HUMAN;
         assertEquals(0, h.danger(standard()), "standard air under Human");

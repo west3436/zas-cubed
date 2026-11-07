@@ -212,6 +212,51 @@ public final class ControllerTests {
         });
     }
 
+    /**
+     * Bounds stepped down in the GUI stop at 0 and stay on. A reading of 0 doesn't trip them: CO₂'s
+     * maxima at 0 trip only once there is some CO₂, and O₂'s minima at 0 don't trip with none
+     * (CONT-040).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_040_a_reading_of_0_does_not_trip_a_bound_at_0(GameTestHelper h) {
+        Site s = new Site(h, 819);
+        run(h, s, () -> {
+            s.clear();
+            AreaAirControllerBlockEntity c = poweredRoom(s, 0);
+            s.cycle(c);
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            ControllerMenu menu = new ControllerMenu(0, player.getInventory(), c);
+
+            stepDown(h, menu, player, 4, 2); // CO2's max1, 5 kPa
+            stepDown(h, menu, player, 4, 3); // CO2's max2, 10 kPa
+            h.assertValueEqual(c.preset().thresholds(4), Thresholds.max(0, 0), "CO2 stepped down");
+            s.cycle(c);
+            h.assertValueEqual(c.ratings()[4], 0, "maxima at 0 with no CO2");
+            s.addKpa(2, 2, 2, CO2, 0.01);
+            s.cycle(c);
+            h.assertValueEqual(c.ratings()[4], 2, "maxima at 0 with some CO2");
+
+            h.assertValueEqual(c.preset().gas(2), StandardAir.OXYGEN, "reading 2");
+            stepDown(h, menu, player, 2, 0); // O2's min2, 16 kPa
+            stepDown(h, menu, player, 2, 1); // O2's min1, 18 kPa
+            h.assertValueEqual(c.preset().thresholds(2).min2(), 0.0, "O2's min2 stepped down");
+            h.assertValueEqual(c.preset().thresholds(2).min1(), 0.0, "O2's min1 stepped down");
+            s.removeGas(2, 2, 2, StandardAir.OXYGEN);
+            s.cycle(c);
+            s.close(c.values()[2], 0, 1e-9, "the O2 reading");
+            h.assertValueEqual(c.ratings()[2], 0, "minima at 0 with no O2");
+        });
+    }
+
+    /** Selects a bound and presses −10 until it can't go lower than 0. */
+    private static void stepDown(GameTestHelper h, ControllerMenu menu, Player player, int reading, int bound) {
+        h.assertTrue(
+                menu.clickMenuButton(player, ControllerMenu.SELECT_BOUND + reading * 4 + bound), "the bound's cell");
+        for (int i = 0; i < 3; i++) {
+            h.assertTrue(menu.clickMenuButton(player, ControllerMenu.ADJUST), "-10");
+        }
+    }
+
     private static void check(
             GameTestHelper h,
             Site s,
