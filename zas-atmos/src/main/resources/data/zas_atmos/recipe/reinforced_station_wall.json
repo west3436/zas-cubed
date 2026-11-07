@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:reinforced_station_wall"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:station_wall"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "zas_atmos:station_wall"
+    },
+    {
+      "item": "zas_atmos:plasteel_sheet"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:reinforced_station_wall"
+  }
+}
