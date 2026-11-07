@@ -147,7 +147,14 @@ public class CentralScreen extends TguiScreen<CentralMenu> {
                 down,
                 Tone.DEFAULT,
                 s.range() > 1 ? () -> press(CentralMenu.RANGE_DOWN) : null);
-        ui.lineCentred(text(s.range() == 1 ? "range.one" : "range", s.range()), x + buttonWidth, RANGE_WIDTH, y, Ui.ROW, Ui.WHITE, Face.BOLD);
+        ui.lineCentred(
+                text(s.range() == 1 ? "range.one" : "range", s.range()),
+                x + buttonWidth,
+                RANGE_WIDTH,
+                y,
+                Ui.ROW,
+                Ui.WHITE,
+                Face.BOLD);
         ui.button(
                 x + buttonWidth + RANGE_WIDTH,
                 y,
