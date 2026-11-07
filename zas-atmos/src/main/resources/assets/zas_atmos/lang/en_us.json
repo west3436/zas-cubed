@@ -356,5 +356,7 @@
   "gui.zas_atmos.electrolyzer.millibuckets": "%s / %s mB",
   "block.zas_atmos.station_wall": "Station Wall",
   "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
-  "block.zas_atmos.reinforced_glass_block": "Reinforced Glass"
+  "block.zas_atmos.reinforced_glass_block": "Reinforced Glass",
+  "pack.zas_atmos.fusion_connected": "ZAS³ Connected Textures",
+  "pack.zas_atmos.fusion_connected.description": "Joined station walls and glass"
 }

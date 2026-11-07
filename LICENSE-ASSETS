@@ -2,8 +2,10 @@ ZAS³ asset license
 ==================
 
 This license applies to the asset files of ZAS³: every file under any
-`src/*/resources/assets/` directory in this repository, and those files as
-packaged in the mod jars. The code is licensed separately under the MIT
+`src/*/resources/assets/` directory in this repository, every file under the
+`assets/` directory of a built-in resource pack in any
+`src/*/resources/resourcepacks/` directory, and those files as packaged in
+the mod jars. The code is licensed separately under the MIT
 License (see LICENSE).
 
 All assets, whether drawn from scratch, derived from vgstation13 sprites or

@@ -41,8 +41,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * The content mod's client entry point: block and item tints, device GUIs, item model properties and
- * the magnetic boots' keybind.
+ * The content mod's client entry point: block and item tints, device GUIs, item model properties, the
+ * magnetic boots' keybind and the station blocks' connected textures with Fusion.
  */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
 public final class ZasAtmosClient {
@@ -73,6 +73,7 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveColors);
         modBus.addListener(ZasAtmosClient::transferValveModels);
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
+        modBus.addListener(ConnectedTextures::addPack);
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);

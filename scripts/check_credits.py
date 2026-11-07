@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Check that every asset file has a valid CREDITS entry (NFR-045).
 
-Finds every file under */src/*/resources/assets/ and checks it against the
-entries in CREDITS. Fails when an asset has no entry, when an entry names a
+Finds every file under */src/*/resources/assets/, and under the assets/ of
+each built-in resource pack in */src/*/resources/resourcepacks/, and checks it
+against the entries in CREDITS. Fails when an asset has no entry, when an entry names a
 file that doesn't exist, when an entry is malformed, when a vg source is
 under goon/ (NFR-041), when a vg icon has no state or a vg sound has one, or
 when a third-party license isn't one that can be adapted under CC BY-SA 4.0
@@ -16,8 +17,8 @@ import re
 import sys
 from pathlib import Path
 
-ASSET_GLOB = "*/src/*/resources/assets/**/*"
-ASSET_PATH = re.compile(r"^[^/]+/src/[^/]+/resources/assets/.+")
+ASSET_GLOBS = ("*/src/*/resources/assets/**/*", "*/src/*/resources/resourcepacks/*/assets/**/*")
+ASSET_PATH = re.compile(r"^[^/]+/src/[^/]+/resources/(resourcepacks/[^/]+/)?assets/.+")
 KEYS = {"path", "origin", "source", "state", "commit", "license", "attribution", "author", "adapted", "notes"}
 ORIGINS = ("original", "vgstation13", "other")
 # Fields that only make sense for one origin, and those each origin requires.
@@ -125,7 +126,7 @@ def main():
         print(f"error: {credits_file} not found")
         return 1
 
-    assets = {p.relative_to(root).as_posix() for p in root.glob(ASSET_GLOB) if p.is_file()}
+    assets = {p.relative_to(root).as_posix() for glob in ASSET_GLOBS for p in root.glob(glob) if p.is_file()}
     entries, errors = parse(credits_file.read_text(encoding="utf-8"))
 
     credited = {}
@@ -139,7 +140,7 @@ def main():
             continue
         credited[path] = line
         if not ASSET_PATH.match(path):
-            errors.append(f"CREDITS:{line}: {path} is not under */src/*/resources/assets/")
+            errors.append(f"CREDITS:{line}: {path} is not under */src/*/resources/assets/ or a resource pack's assets/")
         elif path not in assets:
             errors.append(f"CREDITS:{line}: {path} does not exist")
 

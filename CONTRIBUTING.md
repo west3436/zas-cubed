@@ -49,8 +49,9 @@ rules as any other code, the clean-room rule included.
 Code is MIT; assets are CC BY-SA 4.0 International, under
 [`LICENSE-ASSETS`](LICENSE-ASSETS) (D-39, D-56). Assets can be drawn from
 scratch, derived from vgstation13, or taken from anywhere else whose license
-allows it (D-62). Every file under a project's `src/*/resources/assets/`
-needs an entry in [`CREDITS`](CREDITS) (NFR-045). An entry is a block of
+allows it (D-62). Every file under a project's `src/*/resources/assets/`,
+or under the `assets/` of a built-in resource pack in
+`src/*/resources/resourcepacks/`, needs an entry in [`CREDITS`](CREDITS) (NFR-045). An entry is a block of
 `key: value` lines, starting with the file's path from the repository root
 and its `origin`; blank lines separate entries:
 
@@ -110,6 +111,7 @@ mods itself.
 | `./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed=S` | Replays one seed of the fuzz's half with pipes, among the rest of those GameTests; takes `-Pfuzz.seeds=N` as well |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
+| `./gradlew :zas-atmos:runClient -Pfusion=true` | The same, with Fusion, to see the station blocks' connected textures (CONT-132); no jar or CI run holds it |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
 | `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
 | `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
