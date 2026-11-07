@@ -467,6 +467,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/area_air_control
 origin: original
 notes: A flat item model for the panel's sprite.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/central_atmos_controller.json
+origin: original
+notes: The console's four blocks in each facing and screen, each its own model.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/generator.png
 origin: vgstation13
 source: icons/obj/power.dmi

@@ -42,7 +42,8 @@ that has been removed.
 | `CanisterMenu` | Valve; release pressure | Ids 0–5. Clamped to 10–1,013 kPa |
 | `VentMenu` | Mode; external and internal bounds | Ids 0–12. Clamped to 0–5,066 kPa. Refused while a controller controls the vent (CONT-014) |
 | `ScrubberMenu` | Mode; which gases and tags it takes | Ids 0–14, each a fixed entry on the server's list. Refused while a controller controls the scrubber (CONT-015) |
-| `ControllerMenu` | Mode; preset; one reading's bounds | Ids are checked against the modes, the shipped presets, the fixed steps and the preset's cells. Bounds are clamped to 0–5,066 and kept in order (`Thresholds.with`) |
+| `ControllerMenu` | Mode; preset; one reading's bounds; going back to the central controller | Ids are checked against the modes, the shipped presets, the fixed steps and the preset's cells. Bounds are clamped to 0–5,066 and kept in order (`Thresholds.with`). Opened from a central controller (CONT-124), the menu is valid only while the player is in reach of that central controller, this controller is loaded and the central controller still has it; id 40 reopens the central controller's GUI |
+| `CentralMenu` | Range; a claimed controller's zone priority; opening a claimed controller's GUI | Ids 0–1 step the range, refused past 1 or `max_range_chunks`. The priority and open ids name a row of the list the server last sent, so only its own claimed controllers can be chosen, and each is checked to still be its own. Opening needs the controller loaded, and opens its `ControllerMenu`, with every check that has there |
 | `InlineDeviceMenu` | Switch | Id 0; anything else goes to the device's own check |
 | `PumpMenu` | Target or rate (pressure and volume pumps) | Ids 1–5. Clamped to 0–4,500 kPa or 0–100 L/s |
 | `SidePortMenu` | Target | Ids 1–5. Clamped to 0–4,500 kPa |
@@ -57,7 +58,9 @@ that has been removed.
 GameTests send these menus unknown ids and settings past their limits. The `cont_074_`
 tests cover the canister, vent, scrubber, controller, pump, filter and mixer, and each
 portable's and thermomachine's own tests cover those. `TransferValveMenuTests` checks
-that a stale menu refuses every button.
+that a stale menu refuses every button. The `cont_117_` and `cont_124_` tests check that a
+central controller refuses a range past its limits, that a controller's GUI opened from it
+refuses a player out of reach, and that it won't open one whose chunk isn't loaded.
 
 ## Slots: the game's menu-click packet
 

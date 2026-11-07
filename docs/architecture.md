@@ -3201,9 +3201,11 @@ since it needs the temperature anyway and a poll survives a reload. Its sound is
 **The multitool** (`tool.MultitoolItem`). Used on a controller, it stores
 that controller's position and dimension on the stack. Used on a powered
 part, it links the part to the stored controller, or unlinks it if it was
-linked. Sneak-use in the air clears the selection. Links are positions saved
-with the controller, and a link whose block is no longer a powered part is
-dropped when its chunk is loaded.
+linked. Used on a central atmospherics controller, it moves the stored
+controller to that one, if it is in range (CONT-118, §11.7). Sneak-use in the
+air clears the selection. Links are positions saved with the controller, and a
+link whose block is no longer a powered part is dropped when its chunk is
+loaded.
 
 **GUI** (`ControllerMenu`, `ControllerSync`, CONT-049, CONT-074). The menu has
 no slots. Twice a second the server sends the viewer a `ControllerSync`
@@ -3214,7 +3216,12 @@ menu button clicks. Vanilla checks that the player is still near the
 controller, and `clickMenuButton` refuses any unknown id. Edits go through
 `Thresholds.with`, which clamps each bound to 0–5,066 and between its
 enabled neighbours. Nudging a disabled bound is refused. A threshold cell selects
-its bound with its own id, checked against the preset's readings.
+its bound with its own id, checked against the preset's readings. The sync also
+names the central controller the controller belongs to, if any (CONT-118). The
+same menu opens from a central controller (CONT-124, §11.7), with the central
+controller's position as the place the player must stay near. It then stays
+valid only while the controller is loaded and that central controller still has
+it, and button `40` reopens the central controller's GUI.
 
 The screen is `client.ControllerScreen`, on the TGUI kit in `client.tgui` (D-76,
 CLIENT-022). `Ui` draws in code each frame from the last sync, as a TGUI window
@@ -3279,6 +3286,83 @@ The controller is the provider of §11.3 (CONT-062, CONT-064, CONT-068).
   lighting it is no zone trigger (CORE-056, FIRE-024), it uses no O₂ and adds
   no heat, and it runs in a vacuum. Its GUI (`GeneratorMenu`) has one fuel slot that
   takes only fuel, and shows the burn time and stored FE. Its sounds are in §11.13.
+
+**The central atmospherics controller** (`controller.CentralControllerBlock`,
+`CentralControllerBlockEntity`, CONT-115 to CONT-124, D-75). A console 2 blocks
+wide, 2 tall and 1 deep, facing its placer. Each of its four blocks has a `half`
+(`lower`, `upper`) and a `side` (`left`, `right`, as seen from the front), and all
+show one `screen` (`normal`, `danger1`, `danger2`, `unpowered`: no power, or the
+worst danger among its area air controllers' last readings), which picks the
+model. It behaves as vanilla's two-block blocks do:
+
+- The block placed is the lower left one, and the rest grow up and to the
+  placing player's right (`toRight(facing)`). All four spaces must be free.
+- Each block's `updateShape` goes to air when the block beside it, or above or
+  below it, in the console isn't its partner, so breaking any block breaks them
+  all. Only the lower left block's loot drops the item, which it does when it
+  goes, whichever block was broken; `playerWillDestroy` removes it without a drop
+  in creative or without the right tool, as a door's lower half. Pistons can't
+  move it.
+- The lower left block holds the block entity. The others pass use, the
+  multitool and the FE capability to it (`CentralControllerBlock.entity`), and it
+  pulls FE from the blocks beside any of the four.
+- Each block collides as a full block, so the console is gas-tight, and outlines
+  the whole console. The lower left block sets the `screen`, and the others copy
+  it in `updateShape`.
+
+Its block entity is an `AtmosDevice` but not a `PoweredDevice`: it powers area
+air controllers, not parts. Each atmos tick it:
+
+1. Holds or lets go of its chunks (`CentralChunks`, CONT-122). While `[central_controller]
+   force_load` is true, a NeoForge `TicketController` forces its chunk and the 8 around it,
+   owned by its position, as `/forceload` does: block entities and entities tick, with no
+   random ticks unless a player is near. Removing it, or the option turning false, releases
+   them. NeoForge saves the tickets with the level, and on load keeps only those of a central
+   controller still there, and none while the option is false.
+2. Lets go of the area air controllers out of its range, and those whose loaded block is gone,
+   then claims every loaded one in range that no central controller has (CONT-116). Range is
+   `range()` chunks of its own in X and Z, at any height: the one set in its GUI, 1 to
+   `max_range_chunks`, or the maximum (CONT-117).
+3. Feeds them (CONT-120, CONT-121). Each claimed area air controller in contact first pulls
+   from its own neighbours. Its shortfall is what a step costs it (`demand()`, as of its last:
+   its own draw and every covered part's, even one another provider paid that time, since
+   the next charge may fall to it) less what its buffer holds. The central controller then
+   pulls from the neighbours of its four blocks as much as its own buffer and theirs have room for, and the
+   pure `CentralFeed.plan` shares it out: its own draw first, or nothing at all; then each
+   shortfall, Critical, Normal, then Low, and in claim order within one; then what it took in
+   this tick and hasn't spent, split evenly among the buffers with room, a share one can't hold
+   passing to the others. The rest stays in its buffer. So a full central controller with a
+   generator beside it passes the generator's output on, and its own store stays a reserve for
+   shortfalls.
+4. Records each claimed controller's readings (pressure, temperature, danger, power) for its
+   GUI (CONT-123), and sets its `screen`.
+
+An area air controller is in contact while its chunk is loaded in full and its block entity is
+in the schedule. One that isn't keeps its claim, gets nothing, and is listed with its last
+readings.
+
+- **Claims** (`CentralClaims`) are one `SavedData` per level, `data/zas_atmos_central_claims.dat`,
+  keyed by the area air controller: its central controller, its zone priority (`ZonePriority`),
+  its claim order and its last readings. One table, rather than a list in each central
+  controller, keeps an area air controller to one central controller while either is
+  unloaded, so two never fight over one. It is saved with a `FormatVersion` (DATA-012). Breaking
+  either block removes its claims. A claim whose central controller is loaded and gone, as
+  after `/setblock`, is dropped when another reaches it.
+- **Its buffer** is an `EnergyStore` of `[power] central_controller_buffer` (100,000 FE), with a
+  receive-only FE capability on each of its four blocks, like the area air controller's. Its own draw is `[power]
+  central_controller` (5 FE/t).
+- **GUI** (`CentralMenu`, `CentralSync`). The menu has no slots. Twice a second the server sends
+  its status, buffer, range and maximum, and a row per claimed controller: position, readings,
+  priority and whether it is in contact. Buttons `0` and `1` lower and raise the range; `1000 +
+  row` opens that row's area air controller's own menu (§11.6) if it is loaded (CONT-124);
+  `100000 + row × 3 + p` sets its priority. A row's button names its place in the list the server
+  last sent that player, so it can only reach a controller this one has claimed.
+- **The multitool** moves the selected area air controller here from any other central
+  controller, if it is in range (CONT-118). It joins at Normal priority, last in claim order.
+- **Saved:** buffer and range on the block entity; claims as above.
+- **Tests.** `CentralFeed` has unit tests. `CentralControllerTests` steps it within one game tick,
+  as `ControllerTests` does, except for the priority, chunk and remote-control tests, which wait
+  in real time.
 
 ### 11.8 Firelocks
 

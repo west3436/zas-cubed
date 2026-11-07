@@ -2,6 +2,9 @@ package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.atmos.canister.CanisterSync;
+import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
+import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
+import io.github.west3436.zas.atmos.controller.CentralSync;
 import io.github.west3436.zas.atmos.controller.ControllerSync;
 import io.github.west3436.zas.atmos.device.ClientDeviceActivity;
 import io.github.west3436.zas.atmos.device.DeviceActivityPayload;
@@ -18,8 +21,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 /**
  * The content mod's capabilities and network payloads. The generator gives FE and takes fuel
  * (CONT-061); the area air controller's buffer takes FE, from cables that push it as well as from
- * the blocks it pulls from (CONT-062). Devices expose no FE capability (CONT-069). The breathing
- * gear gives ZAS³ its life support (API-022). A battery is an FE item, its charge in its {@code zas_atmos:energy}
+ * the blocks it pulls from (CONT-062), and so does the central atmospherics controller's
+ * (CONT-115). Devices expose no FE capability (CONT-069). The breathing gear gives ZAS³ its life
+ * support (API-022). A battery is an FE item, its charge in its {@code zas_atmos:energy}
  * component, so any mod's charger and machine can use it (CONT-111).
  */
 public final class AtmosCapabilities {
@@ -42,6 +46,14 @@ public final class AtmosCapabilities {
                 Capabilities.EnergyStorage.BLOCK,
                 AtmosBlockEntities.AREA_AIR_CONTROLLER.get(),
                 (be, side) -> be.buffer());
+        // Any of the console's four blocks takes FE into the buffer its lower left one holds (CONT-115).
+        event.registerBlock(
+                Capabilities.EnergyStorage.BLOCK,
+                (level, pos, state, be, side) -> {
+                    CentralControllerBlockEntity c = CentralControllerBlock.entity(level, pos, state);
+                    return c == null ? null : c.buffer();
+                },
+                AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get());
         // Breathing gear (S-08): the tanks are internal supplies, the mask and suit protect (API-022).
         event.registerItem(
                 ILifeSupport.ITEM,
@@ -71,6 +83,7 @@ public final class AtmosCapabilities {
     private static void payloads(RegisterPayloadHandlersEvent event) {
         event.registrar(PROTOCOL)
                 .playToClient(ControllerSync.TYPE, ControllerSync.CODEC, ControllerSync::handle)
+                .playToClient(CentralSync.TYPE, CentralSync.CODEC, CentralSync::handle)
                 .playToClient(CanisterSync.TYPE, CanisterSync.CODEC, CanisterSync::handle)
                 .playToClient(GasJet.TYPE, GasJet.CODEC, GasJet::handle)
                 .playToClient(DeviceActivityPayload.TYPE, DeviceActivityPayload.CODEC, ClientDeviceActivity::handle)

@@ -133,7 +133,7 @@ public class AreaAirControllerBlock extends HorizontalDirectionalBlock implement
     protected InteractionResult useWithoutItem(
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.getBlockEntity(pos) instanceof AreaAirControllerBlockEntity be && player instanceof ServerPlayer sp) {
-            sp.openMenu(be, buf -> buf.writeBlockPos(pos));
+            sp.openMenu(be, buf -> ControllerMenu.writeOpening(buf, pos, false));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
