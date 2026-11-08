@@ -310,6 +310,10 @@ public final class AtmosItems {
                 REINFORCED_GLASS);
     }
 
+    // The tank holder (CONT-149 to CONT-151, D-84).
+
+    public static final DeferredItem<BlockItem> TANK_HOLDER = ITEMS.registerSimpleBlockItem(AtmosBlocks.TANK_HOLDER);
+
     private AtmosItems() {}
 
     public static void register(IEventBus modBus) {

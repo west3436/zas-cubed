@@ -18,6 +18,7 @@ import io.github.west3436.zas.atmos.controller.ControllerSync;
 import io.github.west3436.zas.atmos.controller.VentOrder;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -972,58 +973,180 @@ public final class CentralControllerTests {
         h.assertValueEqual(vent.last().mode(), VentOrder.Mode.BLOW, "the vent under Scrubbing");
 
         // Six chunks east, out of what the test and the central controller hold, so its chunk
-        // unloads. An FE block behind it gives it power, so it has readings first.
+        // unloads once its own ticket goes. Until then it ticks, so it is in contact, and an FE block
+        // behind it gives it power, so it has readings first.
+        int farX = (s.origin.getX() >> 4) + 6;
+        int farZ = s.origin.getZ() >> 4;
+        Runnable unforce = () -> s.level.setChunkForced(farX, farZ, false);
+        CLEANUP.add(0, unforce);
+        s.level.setChunkForced(farX, farZ, true);
         AreaAirControllerBlockEntity far =
                 controllerOn(h, s, placed, 6 * 16 + 2, 1, 5, TestParts.battery().defaultBlockState());
-        s.cycle(far);
-        CentralControllerBlockEntity central = central(s, 8, 1, 2);
-        s.cycle(central);
-        h.assertValueEqual(
-                claims(s).claimedBy(central.getBlockPos()),
-                List.of(near.getBlockPos(), far.getBlockPos()),
-                "its claims");
-        CentralClaims.Readings farLast = claims(s).last(far.getBlockPos());
-        h.assertTrue(Double.isFinite(farLast.pressure()), "no reading from the far controller");
-
-        ServerPlayer p = player(s, 8, 1, 4);
-        BlockHitResult hit = new BlockHitResult(
-                Vec3.atCenterOf(central.getBlockPos()), Direction.SOUTH, central.getBlockPos(), false);
-        p.gameMode.useItemOn(p, s.level, ItemStack.EMPTY, InteractionHand.MAIN_HAND, hit);
-        h.assertTrue(p.containerMenu instanceof CentralMenu, "using it opened " + p.containerMenu);
-        CentralMenu menu = (CentralMenu) p.containerMenu;
-        menu.sync();
-        press(p, CentralMenu.OPEN + menu.row(near.getBlockPos()).orElseThrow());
-        h.assertTrue(
-                p.containerMenu instanceof ControllerMenu cm
-                        && cm.remote()
-                        && cm.pos().equals(near.getBlockPos()),
-                "the row's button opened " + p.containerMenu);
-        press(p, ControllerMode.PANIC.ordinal());
-        h.assertValueEqual(near.mode(), ControllerMode.PANIC, "the mode set from the central controller");
-        s.cycle(near);
-        h.assertValueEqual(vent.last().mode(), VentOrder.Mode.OFF, "the vent under Panic");
-
-        p.moveTo(Vec3.atBottomCenterOf(s.abs(8, 1, 40)));
-        press(p, ControllerMode.FILL.ordinal());
-        h.assertValueEqual(near.mode(), ControllerMode.PANIC, "the mode after a press from out of reach");
-        p.moveTo(Vec3.atBottomCenterOf(s.abs(8, 1, 4)));
-        press(p, ControllerMenu.BACK);
-        h.assertTrue(p.containerMenu instanceof CentralMenu, "going back opened " + p.containerMenu);
+        // What the steps after the chunks tick leave for the last checks.
+        class Run {
+            ServerPlayer p;
+            CentralClaims.Readings farLast;
+        }
+        Run run = new Run();
 
         GameTestSequence seq = h.startSequence()
+                .thenWaitUntil(() -> {
+                    h.assertTrue(near.stepping(), "the site doesn't tick yet");
+                    h.assertTrue(far.stepping(), "the far controller's chunk doesn't tick yet");
+                })
+                .thenExecute(() -> {
+                    s.cycle(far);
+                    CentralControllerBlockEntity central = central(s, 8, 1, 2);
+                    s.cycle(central);
+                    h.assertValueEqual(
+                            claims(s).claimedBy(central.getBlockPos()),
+                            List.of(near.getBlockPos(), far.getBlockPos()),
+                            "its claims");
+                    run.farLast = claims(s).last(far.getBlockPos());
+                    h.assertTrue(Double.isFinite(run.farLast.pressure()), "no reading from the far controller");
+
+                    ServerPlayer p = player(s, 8, 1, 4);
+                    run.p = p;
+                    BlockHitResult hit = new BlockHitResult(
+                            Vec3.atCenterOf(central.getBlockPos()), Direction.SOUTH, central.getBlockPos(), false);
+                    p.gameMode.useItemOn(p, s.level, ItemStack.EMPTY, InteractionHand.MAIN_HAND, hit);
+                    h.assertTrue(p.containerMenu instanceof CentralMenu, "using it opened " + p.containerMenu);
+                    CentralMenu menu = (CentralMenu) p.containerMenu;
+                    menu.sync();
+                    press(p, CentralMenu.OPEN + menu.row(near.getBlockPos()).orElseThrow());
+                    h.assertTrue(
+                            p.containerMenu instanceof ControllerMenu cm
+                                    && cm.remote()
+                                    && cm.pos().equals(near.getBlockPos()),
+                            "the row's button opened " + p.containerMenu);
+                    press(p, ControllerMode.PANIC.ordinal());
+                    h.assertValueEqual(near.mode(), ControllerMode.PANIC, "the mode set from the central controller");
+                    s.cycle(near);
+                    h.assertValueEqual(vent.last().mode(), VentOrder.Mode.OFF, "the vent under Panic");
+
+                    p.moveTo(Vec3.atBottomCenterOf(s.abs(8, 1, 40)));
+                    press(p, ControllerMode.FILL.ordinal());
+                    h.assertValueEqual(near.mode(), ControllerMode.PANIC, "the mode after a press from out of reach");
+                    p.moveTo(Vec3.atBottomCenterOf(s.abs(8, 1, 4)));
+                    press(p, ControllerMenu.BACK);
+                    h.assertTrue(p.containerMenu instanceof CentralMenu, "going back opened " + p.containerMenu);
+                })
+                .thenExecute(() -> {
+                    CLEANUP.remove(unforce);
+                    unforce.run();
+                })
                 .thenWaitUntil(() ->
                         h.assertFalse(s.level.isLoaded(far.getBlockPos()), "the far controller's chunk is loaded"));
         finish(seq, undo, () -> {
+            ServerPlayer p = run.p;
             CentralMenu list = (CentralMenu) p.containerMenu;
             CentralSync sync = list.sync();
             int row = list.row(far.getBlockPos())
                     .orElseThrow(() -> new GameTestAssertException("the far controller isn't listed"));
             CentralSync.Row r = sync.rows().get(row);
             h.assertFalse(r.contact(), "the unloaded controller is in contact");
-            s.close(r.pressure(), farLast.pressure(), 1e-9, "its last pressure");
-            s.close(r.temperature(), farLast.temperature(), 1e-9, "its last temperature");
+            s.close(r.pressure(), run.farLast.pressure(), 1e-9, "its last pressure");
+            s.close(r.temperature(), run.farLast.temperature(), 1e-9, "its last temperature");
             press(p, CentralMenu.OPEN + row);
             h.assertTrue(p.containerMenu == list, "the unloaded controller's GUI opened: " + p.containerMenu);
+        });
+    }
+
+    // ---- CONT-123 ---------------------------------------------------------------------------
+
+    /**
+     * A claimed controller in a chunk loaded in full that doesn't tick, at the edge of what is
+     * loaded, waits without stepping (architecture §11.2), so it is out of contact, as an unloaded
+     * one is: its row shows its last readings, the central controller feeds it nothing, and its GUI
+     * won't open from there, and closes there if it was open (CONT-123, CONT-124).
+     */
+    @GameTest(template = "empty", batch = LIVE, timeoutTicks = TIMEOUT)
+    public static void cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact(GameTestHelper h) {
+        Site s = new Site(h, 4316);
+        List<BlockPos> placed = new ArrayList<>();
+        Runnable undo = hold(s, placed);
+        // Three chunks east: two from the chunks the test and the central controller hold, so once
+        // its own ticket goes it stays loaded in full, at the edge, but doesn't tick.
+        int edgeX = (s.origin.getX() >> 4) + 3;
+        int edgeZ = s.origin.getZ() >> 4;
+        Runnable unforce = () -> s.level.setChunkForced(edgeX, edgeZ, false);
+        CLEANUP.add(0, unforce);
+        s.level.setChunkForced(edgeX, edgeZ, true);
+        AreaAirControllerBlockEntity edge =
+                controllerOn(h, s, placed, 3 * 16 + 2, 1, 5, TestParts.battery().defaultBlockState());
+        // What the steps while it ticks leave for the last checks.
+        class Run {
+            CentralControllerBlockEntity central;
+            CentralClaims.Readings last;
+            ServerPlayer p;
+            ControllerMenu remote;
+            CentralMenu list;
+        }
+        Run run = new Run();
+
+        GameTestSequence seq = h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(edge.stepping(), "the controller's chunk doesn't tick yet"))
+                .thenExecute(() -> {
+                    s.cycle(edge);
+                    CentralControllerBlockEntity central = central(s, 8, 1, 2);
+                    run.central = central;
+                    s.cycle(central);
+                    h.assertValueEqual(
+                            claims(s).claimedBy(central.getBlockPos()), List.of(edge.getBlockPos()), "its claims");
+                    run.last = claims(s).last(edge.getBlockPos());
+                    h.assertTrue(
+                            Double.isFinite(run.last.pressure()), "no reading from the controller while it ticked");
+
+                    ServerPlayer p = player(s, 8, 1, 4);
+                    run.p = p;
+                    BlockHitResult hit = new BlockHitResult(
+                            Vec3.atCenterOf(central.getBlockPos()), Direction.SOUTH, central.getBlockPos(), false);
+                    p.gameMode.useItemOn(p, s.level, ItemStack.EMPTY, InteractionHand.MAIN_HAND, hit);
+                    h.assertTrue(p.containerMenu instanceof CentralMenu, "using it opened " + p.containerMenu);
+                    CentralMenu opened = (CentralMenu) p.containerMenu;
+                    CentralSync first = opened.sync();
+                    int before = opened.row(edge.getBlockPos())
+                            .orElseThrow(() -> new GameTestAssertException("the controller isn't listed"));
+                    h.assertTrue(first.rows().get(before).contact(), "the ticking controller is out of contact");
+                    press(p, CentralMenu.OPEN + before);
+                    h.assertTrue(
+                            p.containerMenu instanceof ControllerMenu cm
+                                    && cm.remote()
+                                    && cm.pos().equals(edge.getBlockPos()),
+                            "the row's button opened " + p.containerMenu);
+                    run.remote = (ControllerMenu) p.containerMenu;
+                    h.assertTrue(run.remote.stillValid(p), "its GUI from the central controller closes while it steps");
+                    press(p, ControllerMenu.BACK);
+                    h.assertTrue(p.containerMenu instanceof CentralMenu, "going back opened " + p.containerMenu);
+                    run.list = (CentralMenu) p.containerMenu;
+                })
+                .thenExecute(() -> {
+                    CLEANUP.remove(unforce);
+                    unforce.run();
+                })
+                .thenWaitUntil(() -> {
+                    h.assertTrue(s.level.isLoaded(edge.getBlockPos()), "the controller's chunk left full status");
+                    h.assertFalse(
+                            LoadedBlocks.ticking(s.level, edge.getBlockPos()), "the controller's chunk still ticks");
+                });
+        finish(seq, undo, () -> {
+            ServerPlayer p = run.p;
+            CentralMenu list = run.list;
+            CentralClaims.Readings last = run.last;
+            edge.buffer().set(0);
+            s.cycles(2, run.central);
+            h.assertFalse(edge.stepping(), "the controller at the edge steps");
+            h.assertValueEqual(edge.buffer().getEnergyStored(), 0, "the FE the waiting controller was given");
+            h.assertFalse(run.remote.stillValid(p), "its GUI from the central controller stays open while it waits");
+            CentralSync sync = list.sync();
+            int row = list.row(edge.getBlockPos())
+                    .orElseThrow(() -> new GameTestAssertException("the controller isn't listed"));
+            CentralSync.Row r = sync.rows().get(row);
+            h.assertFalse(r.contact(), "the waiting controller is in contact");
+            s.close(r.pressure(), last.pressure(), 1e-9, "its last pressure");
+            s.close(r.temperature(), last.temperature(), 1e-9, "its last temperature");
+            press(p, CentralMenu.OPEN + row);
+            h.assertTrue(p.containerMenu == list, "the waiting controller's GUI opened: " + p.containerMenu);
         });
     }
 }

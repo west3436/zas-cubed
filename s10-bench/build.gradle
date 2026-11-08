@@ -1,0 +1,136 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The in-game S-10 bench (00-overview, scenario S-10; NFR-001, NFR-002, NFR-004, NFR-005, DATA-006,
+// and the bench halves of DATA-014 and DATA-015). A dedicated server loads zas, zas_atmos and this
+// project's own mod, zas_s10, which builds the station, runs the script, measures and stops the
+// server. `./gradlew :s10-bench:s10Bench` runs it; docs/research/benchmarks.md says how to read it.
+// Nothing here is published or goes into the zas or zas_atmos jar.
+
+evaluationDependsOn(':zas')
+evaluationDependsOn(':zas-atmos')
+
+// Source sets compiled elsewhere whose classes ship inside the zas jar, as in :zas.
+def zasMain = project(':zas').sourceSets.main
+def bundled = [project(':engine'), project(':compat-adastra')].collect { it.sourceSets.main }
+
+def runDir = layout.projectDirectory.dir('run')
+
+// What the bench run is told, from -Ps10.<name> (docs/research/benchmarks.md).
+def benchProps = [
+    // `quick`: a short script, to check the harness works. Its figures mean nothing.
+    'quick'   : providers.gradleProperty('s10.quick').getOrElse('false'),
+    // The processors the server may use, as a hex mask; `none` leaves it alone. The owner's rig:
+    // logical CPUs 0 to 11, six P-cores with hyperthreading, like D-40's 6-core, 12-thread parts.
+    'affinity': providers.gradleProperty('s10.affinity').getOrElse('FFF'),
+    // Where the report goes, besides the run directory.
+    'out'     : layout.buildDirectory.dir('s10').get().asFile.absolutePath,
+]
+// `jfr`: also a Java Flight Recorder recording, to see where time goes. It costs a little time.
+def benchJfr = providers.gradleProperty('s10.jfr').getOrElse('false').toBoolean()
+
+neoForge {
+    mods {
+        zas {
+            sourceSet zasMain
+            bundled.each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet project(':zas-atmos').sourceSets.main
+        }
+        zas_s10 {
+            sourceSet sourceSets.main
+        }
+    }
+    runs {
+        s10 {
+            server()
+            gameDirectory = runDir
+            programArgument '--nogui'
+            // D-40: the reference dedicated server has a 4 GB heap.
+            jvmArgument '-Xms4G'
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+            // The JVM sizes its pools for the processors the bench pins it to.
+            if (!benchProps.affinity.equalsIgnoreCase('none')) {
+                jvmArgument "-XX:ActiveProcessorCount=${Long.bitCount(Long.parseLong(benchProps.affinity, 16))}"
+            }
+            if (benchJfr) {
+                jvmArgument "-XX:StartFlightRecording=settings=profile,filename=${benchProps.out}/s10.jfr"
+            }
+            benchProps.each { k, v -> systemProperty "zas.s10.$k", v }
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+}
+
+dependencies {
+    implementation project(':zas-api')
+    compileOnly project(':zas')
+    compileOnly project(':engine')
+    compileOnly project(':zas-atmos')
+    runtimeOnly project(':zas')
+    runtimeOnly project(':zas-atmos')
+}
+
+// Never a jar: the bench runs from its classes in the dev run.
+tasks.named('jar') { enabled = false }
+
+// Each run starts from a new world and the bench's own settings, so one run can't change the next.
+tasks.matching { it.name == 'runS10' }.configureEach {
+    doFirst {
+        // The commit the run measures, for the report.
+        def commit = providers.exec {
+            commandLine 'git', 'rev-parse', '--short', 'HEAD'
+            ignoreExitValue = true
+        }.standardOutput.asText.get().trim()
+        if (it instanceof JavaExec) {
+            it.systemProperty 'zas.s10.commit', commit ?: 'unknown'
+        }
+        def dir = runDir.asFile
+        delete new File(dir, 'world')
+        new File(benchProps.out).mkdirs()
+        new File(dir, 'config').mkdirs()
+        new File(dir, 'server.properties').text = '''\
+# Written by :s10-bench before each run (docs/research/benchmarks.md).
+online-mode=false
+server-port=25695
+level-name=world
+level-type=minecraft\\:flat
+generator-settings={"layers"\\:[{"block"\\:"minecraft\\:air","height"\\:1}],"biome"\\:"minecraft\\:the_void"}
+generate-structures=false
+view-distance=10
+simulation-distance=10
+spawn-protection=0
+spawn-monsters=false
+spawn-animals=false
+spawn-npcs=false
+max-tick-time=-1
+network-compression-threshold=256
+sync-chunk-writes=false
+'''
+        // The scenario's settings. Everything else keeps its default (docs/config.md).
+        new File(dir, 'config/zas-server.toml').text = '''\
+# Written by :s10-bench before each run (docs/research/benchmarks.md).
+preset = "HARDCORE"
+
+[fire]
+\t# S-10 has 2 hotspots burning: with the default spread a fire takes a whole flammable zone.
+\tspread_chance = 0.0
+'''
+        new File(dir, 'config/zas_atmos-server.toml').text = '''\
+# Written by :s10-bench before each run (docs/research/benchmarks.md).
+[power]
+\t# One generator beside each area air controller covers its room's parts.
+\tgenerator_output = 400
+
+[central_controller]
+\tforce_load = false
+'''
+    }
+}
+
+tasks.register('s10Bench') {
+    group = 'verification'
+    description = 'Runs the in-game S-10 bench on a dedicated server (not part of build).'
+    dependsOn 'runS10'
+}

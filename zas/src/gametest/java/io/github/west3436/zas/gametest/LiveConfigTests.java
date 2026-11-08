@@ -152,6 +152,38 @@ public final class LiveConfigTests {
     }
 
     /**
+     * {@code [atmos] enclosure_max_cells} (GEO-020, D-23): a sealed room of 27 cells is open air with
+     * the limit at 26, and zones on the next atmos tick once it is 27, though its cells were found
+     * open a tick before.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void geo_020_the_enclosure_limit_applies_on_the_next_atmos_tick(GameTestHelper h) {
+        Rooms.withoutHeat(() -> {
+            Rooms r = new Rooms(h, 1518);
+            r.clear(0, 8);
+            r.shell(0, 4);
+            int configured = ZasServerConfig.ENCLOSURE_MAX_CELLS.get();
+            try {
+                ZasServerConfig.ENCLOSURE_MAX_CELLS.set(26);
+                MutationOutcome over = r.settle(GasMutations.add(
+                                r.level, r.point(2, 2, 2), new GasParcel(Map.of(O2, 10.0), 293.15), source("geo_020")))
+                        .outcome();
+                h.assertValueEqual(over, MutationOutcome.AMBIENT, "the room with the limit at 26 cells");
+
+                ZasServerConfig.ENCLOSURE_MAX_CELLS.set(27);
+                MutationOutcome at = r.settle(GasMutations.add(
+                                r.level, r.point(2, 2, 2), new GasParcel(Map.of(O2, 10.0), 293.15), source("geo_020")))
+                        .outcome();
+                h.assertValueEqual(at, MutationOutcome.ZONE, "the room with the limit at 27 cells");
+                h.assertValueEqual(r.zone(2, 2, 2).cellCount(), 27, "the zone's cells");
+            } finally {
+                ZasServerConfig.ENCLOSURE_MAX_CELLS.set(configured);
+            }
+        });
+        h.succeed();
+    }
+
+    /**
      * A sealed room brought back to the ambient dissolves after {@code [atmos]
      * sealed_zone_dissolve_seconds}: at the default period, 3 s is 3 atmos ticks. Its cells then read
      * as the ambient, and a later addition forms a zone there again (CORE-052).

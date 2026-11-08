@@ -163,6 +163,7 @@ in any arrangement.
 | Portable scrubber | Workshop | Shapeless | canister, scrubber, capacitor, machine frame |
 | Heater | Workshop | `LLL` / `CFT` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `L` micro-laser, `C` copper ingot, `T` console screen |
 | Air conditioner | Workshop | `LLL` / `SFT` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `L` micro-laser, `S` snow block, `T` console screen |
+| Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
 
 ### Gas sources and power
 
@@ -220,7 +221,6 @@ in any arrangement.
 
 | Makes | Stage | Grid | Ingredients |
 |---|---|---|---|
-| Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
 | Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
 | Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
 | Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |

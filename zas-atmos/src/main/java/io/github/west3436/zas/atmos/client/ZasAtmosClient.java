@@ -9,6 +9,7 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
@@ -118,6 +119,15 @@ public final class ZasAtmosClient {
                         ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
                         : -1,
                 AtmosBlocks.HEAT_EXCHANGER.get());
+
+        // A tank holder's tanks are tinted by their kinds: tint index n is the tank in place n (CONT-151).
+        event.register(
+                (state, level, pos, tintIndex) -> level != null
+                                && pos != null
+                                && level.getBlockEntity(pos) instanceof TankHolderBlockEntity holder
+                        ? holder.tint(tintIndex - 1)
+                        : -1,
+                AtmosBlocks.TANK_HOLDER.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */

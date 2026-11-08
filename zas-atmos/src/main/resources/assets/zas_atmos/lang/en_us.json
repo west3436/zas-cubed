@@ -165,6 +165,7 @@
   "block.zas_atmos.air_conditioner": "Air Conditioner",
   "block.zas_atmos.portable_scrubber": "Portable Scrubber",
   "block.zas_atmos.portable_pump": "Portable Pump",
+  "block.zas_atmos.tank_holder": "Tank Holder",
   "gui.zas_atmos.portable.status.off": "Off",
   "gui.zas_atmos.portable.status.no_battery": "No battery",
   "gui.zas_atmos.portable.status.battery_empty": "Battery empty",
