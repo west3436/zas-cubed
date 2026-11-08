@@ -135,9 +135,12 @@ import org.slf4j.Logger;
  *
  * <p>The station sits in three chunks held at full status only, so vanilla's block ticks, and so the
  * generator, don't run there, and entities don't tick: everything is idle but the framework and the
- * device schedule. Its devices are switched off or unpowered, so nothing moves while it waits for
- * chunks, which the test checks before it saves. It has a batch of its own, as it drives atmos ticks
- * with {@code tickNow} while building and turns the central controllers' {@code force_load} off.
+ * devices. The schedule steps devices only in chunks that tick (architecture §11.2), so the test
+ * steps the station's devices itself, once an atmos tick, wherever their chunk is loaded in full, as
+ * the schedule does near a player. Its devices are switched off or unpowered, so nothing moves while
+ * it waits for chunks, which the test checks before it saves. It has a batch of its own, as it drives
+ * atmos ticks with {@code tickNow} while building and turns the central controllers' {@code
+ * force_load} off.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -177,6 +180,7 @@ public final class StationSaveTests {
         CLEANUP.add(() -> AtmosServerConfig.CENTRAL_FORCE_LOAD.set(forceLoad));
         Station s = new Station(h);
         CLEANUP.add(0, s::done);
+        h.onEachTick(s::tick);
         Snapshot[] before = new Snapshot[1];
         List<BlockEntity> old = new ArrayList<>();
         List<PrimedTransferValve> oldPrimed = new ArrayList<>();
@@ -199,10 +203,15 @@ public final class StationSaveTests {
                     }
                     h.assertTrue(oldPrimed.get(0).isRemoved(), "the primed TTV hasn't unloaded");
                 })
+                // The engine hears of unloads when its next batch closes. A and B loading before
+                // then takes their unloads back, and P stays in memory whole, paused because C is
+                // away. Only once the zones have left memory are they in nothing but the save.
+                .thenWaitUntil(() -> s.zonesGone(before[0]))
                 .thenExecute(() -> {
                     s.assertWrittenByVolume(before[0]);
                     s.reloadClaims();
                     s.hold(true, 0, 1);
+                    s.cAway = true;
                 })
                 .thenWaitUntil(() -> h.assertTrue(s.full(0) && s.full(1), "chunks A and B haven't loaded"))
                 .thenWaitUntil(() -> s.zonesBack(before[0]))
@@ -212,6 +221,8 @@ public final class StationSaveTests {
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
                     h.assertFalse(s.full(2), "chunk C loaded with B");
+                    h.assertFalse(s.cCame, "chunk C was loaded while only A and B were held");
+                    s.cAway = false;
                     Snapshot after = s.snapshot();
                     LOGGER.info(
                             "s_09 station: comparing {} block states and {} block entities: {}",
@@ -299,6 +310,12 @@ public final class StationSaveTests {
         final ChunkPos[] chunks = new ChunkPos[3];
         UUID primed;
 
+        /** Set while only chunks A and B are held, and chunk C must stay away. */
+        boolean cAway;
+
+        /** Whether chunk C was loaded in full, for any game tick, while it had to stay away. */
+        boolean cCame;
+
         Station(GameTestHelper h) {
             this.h = h;
             this.a = new Area(h, INDEX);
@@ -314,6 +331,26 @@ public final class StationSaveTests {
         void hold(boolean on, int... which) {
             for (int i : which) {
                 PipeSaveTests.hold(a, chunks[i], on);
+            }
+        }
+
+        /**
+         * Each game tick: watches chunk C while it must stay away, and once an atmos tick steps the
+         * station's devices in the chunks loaded in full. The station's chunks don't tick, so the
+         * schedule steps nothing there.
+         */
+        void tick() {
+            if (cAway && full(2)) {
+                cCame = true;
+            }
+            if (AtmosTicks.now(a.level) % AtmosTicks.PERIOD != 0) {
+                return;
+            }
+            List<ChunkPos> station = Arrays.asList(chunks);
+            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+                if (station.contains(new ChunkPos(d.getBlockPos()))) {
+                    d.step(); // one in a chunk that isn't loaded in full waits
+                }
             }
         }
 
@@ -632,6 +669,14 @@ public final class StationSaveTests {
 
         ZoneInfo zone(ZoneId id) {
             return Atmospheres.zone(a.level, id).orElseThrow(() -> new GameTestAssertException("no zone " + id));
+        }
+
+        /** Whether the zones have left memory, with every chunk they span unloaded: R, Q and P. */
+        void zonesGone(Snapshot before) {
+            for (String name : List.of("R", "Q", "P")) {
+                h.assertTrue(
+                        Atmospheres.zone(a.level, before.zones.get(name).id()).isEmpty(), name + " hasn't left memory");
+            }
         }
 
         /** Whether the zones are back: R and Q, and P, paused, under the ids they had. */

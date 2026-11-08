@@ -308,13 +308,14 @@ cell: a solid block beside it takes none, and heat reaches a room's walls throug
 room's own conduction (HEAT-001).
 
 #### HEAT-020 · Radiator pipe and the gas around it
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-006, HEAT-008, HEAT-010, [vg §2.4](../research/vg-atmos-content.md#24-heat-exchange-and-generators) · Depends: CONT-143
+`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-006, HEAT-008, HEAT-010, [vg §2.4](../research/vg-atmos-content.md#24-heat-exchange-and-generators) · Depends: CONT-143, API-064
 
 Each atmos tick, heat shall flow between each radiator pipe segment's network and the gas of
 the cell the segment is in, its zone's or the open air's, at 20 W/K (configurable) per
 segment times their difference in temperature. A segment shall move no more heat in an atmos
 tick than its cell's share of that gas can take, and neither side shall pass the other's
-temperature. A cell thinner than 1 % of standard air's density takes no part (HEAT-008).
+temperature. A cell thinner than HEAT-008's near-vacuum density, 1 % of standard air's by
+default, takes no part.
 
 - **Rationale:** Decision: D-84. vg's heat-exchange pipe evens out its gas with a quarter of
   its tile's air each tick ([vg §2.4](../research/vg-atmos-content.md#24-heat-exchange-and-generators));
@@ -327,10 +328,23 @@ temperature. A cell thinner than 1 % of standard air's density takes no part (HE
 
 *2026-11-07: Added for review.*
 
-#### HEAT-021 · Radiator pipe in a vacuum
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-004 · Depends: CONT-143
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. The line is the
+one zones use, which the API now gives (API-064), so a server's `near_vacuum_percent` moves
+both. The network's new temperature is the implicit step over all its segments at once, so
+the flow is 20 W/K × ΔT where both capacities are large and less in a step where they're
+small (architecture §11.17). Checked by `RadiatorMathTest` (Unit:
+`heat_020_dense_gas_takes_20_w_per_k_times_the_difference`, `heat_020_a_thin_cell_caps_the_heat`,
+`heat_020_random_runs_never_cross` and two more) and the GameTests
+`heat_020_a_hot_run_warms_a_sealed_room_by_what_it_loses`,
+`heat_020_a_cold_run_cools_a_sealed_room_by_what_it_gains`,
+`heat_020_a_run_in_the_open_air_cools_to_the_ambient` and
+`heat_020_a_run_in_a_near_vacuum_room_changes_nothing`. A 512-segment run costs about
+0.2 ms an atmos tick (architecture §11.17).*
 
-A radiator pipe segment in the open air of an ambient thinner than 1 % of standard air's
+#### HEAT-021 · Radiator pipe in a vacuum
+`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-004 · Depends: CONT-143, API-064
+
+A radiator pipe segment in the open air of an ambient thinner than HEAT-008's near-vacuum
 density shall radiate εσA(T⁴ − T_bg⁴) from its network, where T_bg is the ambient's
 temperature, ε is 0.9 (configurable) and A is 1 m², never taking its network below T_bg.
 
@@ -343,6 +357,11 @@ temperature, ε is 0.9 (configurable) and A is 1 m², never taking its network b
   below T_bg. A GameTest checks a hot run in a vacuum's open air cools at that rate.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`heat_021_radiates_epsilon_sigma_a_t4` and `heat_021_never_below_the_background` (Unit) and
+`heat_021_a_hot_run_in_a_vacuum_radiates_at_the_law` (GameTest, in the test datapack's
+2.7 K vacuum): each atmos tick is the implicit step's, within 2 % of the law for its gas.*
 
 #### HEAT-022 · Heat exchanger pair
 `Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices) · Depends: CONT-147
@@ -361,6 +380,10 @@ of its network's gas by volume.
   one atmos tick, and that a lone exchanger, or two not facing each other, move none.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Of a pair, the
+exchanger facing south, east or up runs it, once per atmos tick. Checked by
+`heat_022_a_pair_shares_one_temperature` (Unit and GameTest).*
 
 ## Not in R1
 

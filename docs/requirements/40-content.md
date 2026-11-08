@@ -159,6 +159,16 @@ A node on a chunk's edge, and any port, now rejoins a connected neighbour in
 another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
 `cont_003_ports_away_in_turn_join_when_both_return`).*
 
+*2026-11-07: Note: still Implemented. Devices and nodes now step only in chunks that
+tick (CONT-006), and a chunk next to a ticking one is always loaded in full, so in
+play a network's near side steps while its far chunk is away only through a member
+further along, in a ticking chunk. The chunk tests above, `ValveTests`' chunk tests
+and `GasHandlerTests.api_026_a_handler_in_a_chunk_that_is_away_is_left_alone` now
+step the near side's devices directly while the far chunk is away, standing for that
+member, and hold both chunks ticking once they return. Each test's Javadoc says what
+play state it stands for. `PipeSaveTests` holds its chunks ticking where it needs
+steps, and `StationSaveTests` steps its station's devices itself.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -288,6 +298,23 @@ entities, which wait until it returns.
 `PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
 checks a vent there.*
 
+*2026-11-07: Note: still Implemented, with the note above changed. A device
+now steps only while its chunk ticks block entities, as vanilla's do: near a
+player, or held by a ticking ticket such as a central controller's. A chunk at
+the edge of what is loaded, in full only because a ticking neighbour is,
+doesn't tick, and a device there waits as it is, keeping its power. The S-10
+bench found that steps there kept those chunks loaded after every player had
+gone: reading a block through the level adds a ticket to its chunk, so each
+step ticketed its own chunk and its neighbours again, and a wing with a device
+due in every game tick never unloaded ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_a_member_that_is_not_ticking_is_passed_over_and_keeps_its_phase`
+(Unit) checks the schedule passes such a device over;
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_doesnt_tick` (GameTest,
+renamed from the test above) checks a vent at the edge and away, and
+`cont_006_a_chunk_at_the_edge_unloads_with_its_devices` that a chunk at the
+edge unloads with its neighbour.*
+
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Implemented` · Verify: Manual
 
@@ -398,6 +425,10 @@ to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
 
 *2026-11-07: Added for review.*
 
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. A gas handler and
+a heat exchanger's pipe face are checked too. Checked by
+`cont_143_radiator_pipe_joins_only_radiator_pipe` (GameTest).*
+
 #### CONT-144 · Radiator pipe ends are closed
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
 
@@ -410,6 +441,9 @@ A radiator pipe with fewer than two connections shall keep its gas: unlike a pip
   no gas leaves either.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_144_radiator_pipe_ends_keep_their_gas` (GameTest).*
 
 #### CONT-145 · Radiator adaptor
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
@@ -425,6 +459,10 @@ radiator end only to radiator pipe.
 
 *2026-11-07: Added for review.*
 
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Placed against
+radiator pipe its radiator end faces it, and otherwise its pipe end faces the block clicked.
+Checked by `cont_145_an_adaptor_joins_pipe_to_radiator_pipe` (GameTest).*
+
 #### CONT-146 · Radiator pipe bursts
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
 
@@ -436,6 +474,9 @@ Radiator pipe and radiator adaptors shall be segments that burst as pipe does (C
   100 atm over its room and checks one of them bursts.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_146_radiator_pipe_bursts_above_100_atm` (GameTest).*
 
 #### CONT-147 · Heat exchanger
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
@@ -449,6 +490,11 @@ its block, placed facing any of six ways, with a pipe connection only on the opp
   box, adding 200 L to the network.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes, in all six facings; it stays Draft for the
+owner. Placed against another's box it faces back, making a pair; otherwise its pipe faces
+the block clicked. Checked by `cont_147_a_heat_exchanger_takes_pipe_opposite_its_box`
+(GameTest).*
 
 #### CONT-148 · Heat exchanger's colour
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
@@ -472,6 +518,12 @@ between these colours, and its item shall show copper:
   between two. Manual: a heat exchanger on a cold network and on a hot one, and its item.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built; it stays Draft for the owner. Its Unit test passes:
+`HeatExchangerTintTest`, with six bands between each pair of stops. The server sets the band
+in the block state, and `heat_022_a_pair_shares_one_temperature` (GameTest) checks it follows
+the network and shows copper with no gas. The Manual check, how it looks, is in the round's
+combined test world.*
 
 ## Devices (R1 set)
 
@@ -1472,24 +1524,38 @@ each tank back with the item data it went in with, its gas to a relative error o
   went in.
 - **Verify:** A GameTest fills a holder with tanks of each kind, checks it refuses an eleventh
   tank and another item, saves and reloads it, takes some tanks out and breaks it, and
-  compares each tank with what went in.
+  compares each tank with what went in. Another checks a tank above the leak pressure is
+  unchanged after three seconds in it.
 
 *2026-11-07: added for review (D-84). The `Must` follows the owner's "All are R1 blockers".*
 
+*2026-11-07: built. `cont_149_it_holds_ten_tanks_and_nothing_else`,
+`cont_149_tanks_come_back_as_they_went_in_after_a_save`,
+`cont_149_tanks_come_back_as_they_went_in_taken_out_or_dropped` and
+`cont_149_tanks_in_it_dont_change` check it, counting every tank and mole after each step.
+The holder moves no gas, so the exploit to rule out is a tank made or lost (NFR-012).*
+
 #### CONT-150 · Moving tanks in and out of a tank holder
-`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-149
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-113 · Depends: CONT-149
 
-A player shall put a tank into a tank holder by using the tank on it or through the holder's
-window, and take any of its tanks out through that window, which shows each tank's pressure.
+A player shall put a tank into a tank holder by using the tank on it, and take out the last
+tank put in by using the holder with an empty hand. A tank used on a full holder shall stay
+in the hand.
 
-- **Rationale:** Decision: D-84, and D-76 for the window. Tanks move through slots, as on the
-  tank transfer valve's window (CONT-103), and using a tank on the block puts it in, as a battery
-  on the recharger (CONT-113).
-- **Verify:** GameTests put a tank in by use and through the window's slots, take one from the
-  middle, and check the slots refuse what the holder refuses and the server refuses a player
-  out of reach (CONT-074). Manual: the window's look.
+- **Rationale:** Decision: D-84, and the owner's choice of 2026-11-07: no window. Using a tank
+  on the block puts it in, as a battery on the recharger (CONT-113). Taking out the last one put
+  in keeps the tanks in the first places, as the model for each count shows them (CONT-151).
+- **Verify:** GameTests put tanks in by use, in survival and in creative, take them out with an
+  empty hand in the reverse order, and check that a hand holding anything else, or a tank on a
+  full holder, moves no tank.
 
 *2026-11-07: added for review (D-84).*
+
+*2026-11-07: changed by the owner before review: no window. It read: in by use or through the
+holder's window, and any tank out through that window, which shows each tank's pressure. With
+no window, a tank's pressure shows once it's in hand, in its tooltip. Verify was GameTest and
+Manual. `cont_150_using_a_tank_puts_it_in` and
+`cont_150_an_empty_hand_takes_out_the_last_tank_put_in` check it.*
 
 #### CONT-151 · A tank holder's shelves
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
@@ -1502,10 +1568,16 @@ blue, air tanks yellow and the rest grey.
   ([texture procurement](../texture-procurement.md)), which has a model for each count from 0
   to 10.
 - **Verify:** A GameTest checks the block shows as many tanks as it holds as tanks go in and
-  out. Manual: the tanks and their tints in game.
+  out, and that clients are sent each tank's kind in order. Manual: the tanks and their tints
+  in game.
 
 *2026-11-07: added for review (D-84). With a model for each count, the tanks always fill the
-first places, so taking one from the middle moves the tanks after it down a place.*
+first places.*
+
+*2026-11-07: since tanks come out last in, first out (CONT-150), play leaves no gap. A save
+or a command that leaves one is closed up when it's read.
+`cont_151_the_block_shows_as_many_tanks_as_it_holds` checks every count from 0 to 10 and
+the kinds sent.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
@@ -1952,6 +2024,16 @@ firelock (CONT-043).*
 (GameTest) links a real vent in the room across a firelock: it is powered from
 the controller's buffer, follows its orders, and is listed as linked, not in
 the zone.*
+
+*2026-11-07: Note: still Implemented, and a controller covers the same parts. It
+now finds them in an index of each loaded part's zone, asked again only when it
+may have changed, instead of asking every loaded part at every step, which took
+most of the S-10 bench's device time ([architecture
+§11.6](../architecture.md#116-the-area-air-controller)).
+`ControllerTests.cont_042_coverage_follows_its_zone_and_its_parts` (GameTest)
+merges two rooms' zones and splits them again, grows one into a room that had
+none, and places and breaks a part, and at each step checks the controller lists
+what asking every loaded part then finds.*
 
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
@@ -3115,6 +3197,14 @@ range. `cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloade
 (GameTest) checks that an unloaded controller's row is out of contact with its last
 readings. This stays Accepted until the owner has checked the window.*
 
+*2026-11-08: Note: still Accepted, text unchanged. Since devices step only in
+chunks that tick (CONT-006), a controller in a chunk loaded in full that doesn't
+tick, at the edge of what is loaded, waits as an unloaded one does, so it is
+shown as out of contact too, with its last readings, and gets no FE. Before, the
+console counted it in contact and showed its frozen readings as live.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
+(GameTest) checks its row.*
+
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
@@ -3139,6 +3229,12 @@ from a player out of reach of the central controller is refused. Once the contro
 chunk unloads, it won't open. The menu is the controller's own, with its own checks. It
 stays open only while the player is in reach of the central controller, the controller
 is loaded and still claimed. Its Back button reopens the central controller's window.*
+
+*2026-11-08: Note: still Implemented. A loaded controller here is one in contact (CONT-123):
+one waiting in a chunk loaded in full that doesn't tick won't open from the central
+controller, and its menu opened from there closes when it goes out of contact.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact` (GameTest)
+checks both.*
 
 ## Device sounds
 

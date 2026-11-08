@@ -9,6 +9,7 @@ import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
@@ -35,6 +36,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.InteractionHand;
@@ -743,56 +745,90 @@ public final class GasHandlerTests {
      * A handler's chunk leaves full status while the pipe's stays. Nothing asks for it, so it stays
      * away; the pipe keeps its arm, so it has no open end, and keeps its gas. When the chunk returns,
      * transfers resume.
+     *
+     * <p>A pipe steps only while its chunk ticks, and a chunk next to a ticking one is loaded in full,
+     * so in play a pipe beside a chunk that is away doesn't step. This stands for what a pipe reads
+     * beside such a chunk when something steps it all the same, as a test or a firelock's alarm may:
+     * the pipe is stepped directly while chunk B is away, and its reads must leave chunk B away. Both
+     * chunks tick while transfers run, before chunk B leaves and once it returns.
      */
     @GameTest(template = "empty", batch = CHUNK_BATCH, timeoutTicks = 800)
     public static void api_026_a_handler_in_a_chunk_that_is_away_is_left_alone(GameTestHelper h) {
         Area a = new Area(h, 1114);
         ChunkPos chunkA = new ChunkPos(a.abs(0, 0, 0));
         ChunkPos chunkB = new ChunkPos(a.abs(16, 0, 0));
-        hold(a, chunkA, true);
-        hold(a, chunkB, true);
+        hold(a, chunkA, 0, true);
+        hold(a, chunkB, 0, true);
         a.clear(13, 1, 17, 3);
         PipeBlockEntity pipe = capped(a, 15, 1, 2);
         TestGasHandler.Entity tank = handler(a, 16, 1, 2);
         pipe.network().gas().add(new GasParcel(Map.of(N2, 12.0), T));
         double[] held = new double[2];
         int[] calls = new int[1];
-        h.startSequence()
-                .thenWaitUntil(() -> h.assertTrue(tank.fills > 0, "no transfer before the chunk left"))
-                .thenExecute(() -> hold(a, chunkB, false))
+        GameTestSequence seq = h.startSequence();
+        bothTicking(h, a, seq, chunkA, chunkB);
+        seq.thenWaitUntil(() -> h.assertTrue(tank.fills > 0, "no transfer before the chunk left"))
+                .thenExecute(() -> {
+                    hold(a, chunkA, 1, false);
+                    hold(a, chunkB, 1, false);
+                    hold(a, chunkB, 0, false);
+                })
                 .thenWaitUntil(() -> h.assertFalse(full(a, chunkB), "chunk B is still loaded"))
                 .thenExecute(() -> {
                     held[0] = pipe.network().gas().moles(N2);
                     calls[0] = tank.threads.size();
                 })
-                .thenIdle(60) // three atmos ticks with chunk B away
+                .thenExecute(pipe::step) // three atmos ticks with chunk B away
+                .thenIdle(20)
+                .thenExecute(pipe::step)
+                .thenIdle(20)
+                .thenExecute(pipe::step)
+                .thenIdle(1)
                 .thenExecute(() -> {
                     h.assertFalse(full(a, chunkB), "chunk B came back by itself");
                     h.assertTrue(arm(a, 15, 1, 2, Direction.EAST), "the arm went with the chunk");
                     h.assertFalse(pipe.isOpen(), "an open end with the handler's chunk away");
                     a.close(pipe.network().gas().moles(N2), held[0], "the network's N2 with chunk B away");
                     h.assertValueEqual(tank.threads.size(), calls[0], "calls with chunk B away");
-                    hold(a, chunkB, true);
-                })
-                .thenWaitUntil(() -> h.assertTrue(full(a, chunkB), "chunk B hasn't returned"))
-                .thenExecute(() -> pipe.network().gas().add(new GasParcel(Map.of(O2, 12.0), T)))
+                });
+        bothTicking(h, a, seq, chunkA, chunkB);
+        seq.thenExecute(() -> pipe.network().gas().add(new GasParcel(Map.of(O2, 12.0), T)))
                 .thenWaitUntil(() -> h.assertTrue(tank.tank.moles(O2) > 0, "no transfer after chunk B returned"))
                 .thenExecute(() -> {
                     a.close(pipe.network().gas().moles(N2) + tank.tank.moles(N2), 12, "N2 in all");
                     a.close(pipe.network().gas().moles(O2) + tank.tank.moles(O2), 12, "O2 in all");
                     a.clear(13, 1, 17, 3);
-                    hold(a, chunkA, false);
-                    hold(a, chunkB, false);
+                    for (ChunkPos c : List.of(chunkA, chunkB)) {
+                        hold(a, c, 0, false);
+                        hold(a, c, 1, false);
+                    }
                 })
                 .thenSucceed();
     }
 
-    private static void hold(Area a, ChunkPos chunk, boolean on) {
+    /**
+     * Holds a chunk with a ticket of the test's own, or lets it go: at distance 0 it is loaded in
+     * full without ticking; at distance 1 its block entities tick, as near a player, and its
+     * neighbours are loaded in full.
+     */
+    private static void hold(Area a, ChunkPos chunk, int distance, boolean on) {
         if (on) {
-            a.level.getChunkSource().addRegionTicket(HOLD, chunk, 0, chunk);
+            a.level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
         } else {
-            a.level.getChunkSource().removeRegionTicket(HOLD, chunk, 0, chunk);
+            a.level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
         }
+    }
+
+    /** Holds two chunks where they tick, and waits until they do. */
+    private static void bothTicking(GameTestHelper h, Area a, GameTestSequence seq, ChunkPos one, ChunkPos two) {
+        seq.thenExecute(() -> {
+                    hold(a, one, 1, true);
+                    hold(a, two, 1, true);
+                })
+                .thenWaitUntil(() -> h.assertTrue(
+                        LoadedBlocks.ticking(a.level, one.getWorldPosition())
+                                && LoadedBlocks.ticking(a.level, two.getWorldPosition()),
+                        "the chunks don't tick their block entities"));
     }
 
     private static boolean full(Area a, ChunkPos chunk) {

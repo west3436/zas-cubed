@@ -28,7 +28,8 @@ import java.util.concurrent.Executor;
  * published snapshots, the undo point, then everything else the engine and pipeline hold. Inside a
  * part, some types are charged to a finer part: the graph's cells (with their stored connections
  * and the cell map) apart from its zones, mixtures and edges, and each zone's list of sections
- * apart from the section palettes.
+ * apart from the section palettes. A snapshot is charged to the published snapshots however it is
+ * reached: the section mirror reaches the last tick's first, through the fragile blocks' lookup.
  *
  * <p><b>Left out:</b> what isn't atmos state or is shared by every dimension: the bench's
  * stand-in world, threads and executors, classes, enum constants, the gas registry, the mixture
@@ -247,6 +248,9 @@ final class HeapAccounting {
         }
         if (n.equals(ENGINE + "scheduler.Membership$ZoneSections")) {
             return Part.ZONE_SECTIONS;
+        }
+        if (n.equals(ENGINE + "scheduler.AtmosSnapshot")) {
+            return Part.SNAPSHOT; // however reached (the fragile blocks' lookup of the last tick holds one)
         }
         if (n.equals(ENGINE + "SectionSnapshot")) {
             return Part.MIRROR;

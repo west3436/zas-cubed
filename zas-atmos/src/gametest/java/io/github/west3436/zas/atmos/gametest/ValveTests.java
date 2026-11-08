@@ -8,6 +8,9 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
@@ -23,6 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -489,17 +493,54 @@ public final class ValveTests {
             a.place(VALVE, 1, 2, manual(Direction.Axis.X).setValue(ValveBlock.OPEN, open));
         }
 
+        /** Holds a chunk loaded in full, without ticking, or lets it go. */
         void hold(ChunkPos chunk, boolean on) {
+            hold(chunk, 0, on);
+        }
+
+        /**
+         * Holds a chunk where its block entities tick, as a player near it would, or lets it go.
+         * Devices step only there (architecture §11.2). Its neighbours are loaded in full.
+         */
+        void holdTicking(ChunkPos chunk, boolean on) {
+            hold(chunk, 1, on);
+        }
+
+        private void hold(ChunkPos chunk, int distance, boolean on) {
             if (on) {
-                a.level.getChunkSource().addRegionTicket(HOLD, chunk, 0, chunk);
+                a.level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
             } else {
-                a.level.getChunkSource().removeRegionTicket(HOLD, chunk, 0, chunk);
+                a.level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
             }
         }
 
         /** Whether a chunk is loaded in full: asking loads nothing. */
         boolean full(ChunkPos chunk) {
             return a.level.getChunkSource().hasChunk(chunk.x, chunk.z);
+        }
+
+        /** Whether both chunks tick their block entities, so that the schedule steps them. */
+        boolean ticking() {
+            return LoadedBlocks.ticking(a.level, chunkA.getWorldPosition())
+                    && LoadedBlocks.ticking(a.level, chunkB.getWorldPosition());
+        }
+
+        /** Holds both chunks where they tick, and waits until they do. */
+        void bothTicking(GameTestSequence seq) {
+            seq.thenExecute(() -> {
+                        holdTicking(chunkA, true);
+                        holdTicking(chunkB, true);
+                    })
+                    .thenWaitUntil(() -> h.assertTrue(ticking(), "the chunks don't tick their block entities"));
+        }
+
+        /** Steps the devices in chunk A once, the valve among them. */
+        void stepA() {
+            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+                if (new ChunkPos(d.getBlockPos()).equals(chunkA)) {
+                    d.step();
+                }
+            }
         }
 
         PipeNodeEntity node(int x) {
@@ -519,15 +560,21 @@ public final class ValveTests {
         }
 
         void done() {
+            hold(chunkA, true);
+            hold(chunkB, true);
             a.clear(10, 1, 21, 4);
-            hold(chunkA, false);
-            hold(chunkB, false);
+            for (ChunkPos c : List.of(chunkA, chunkB)) {
+                hold(c, false);
+                holdTicking(c, false);
+            }
         }
     }
 
-    /** Waits for both chunks to unload, for two atmos ticks, and for them to load and settle again. */
-    private static void reload(
-            Row r, PipeNodeEntity oldA, PipeNodeEntity oldB, net.minecraft.gametest.framework.GameTestSequence seq) {
+    /**
+     * Waits for both chunks to unload, for two atmos ticks, and for them to load again and settle,
+     * ticking, as when a player leaves the valve and comes back to it.
+     */
+    private static void reload(Row r, PipeNodeEntity oldA, PipeNodeEntity oldB, GameTestSequence seq) {
         seq.thenExecute(() -> {
                     r.hold(r.chunkA, false);
                     r.hold(r.chunkB, false);
@@ -536,13 +583,9 @@ public final class ValveTests {
                     r.h.assertTrue(oldA.isRemoved(), "chunk A's nodes haven't unloaded");
                     r.h.assertTrue(oldB.isRemoved(), "chunk B's nodes haven't unloaded");
                 })
-                .thenIdle(40)
-                .thenExecute(() -> {
-                    r.hold(r.chunkA, true);
-                    r.hold(r.chunkB, true);
-                })
-                .thenWaitUntil(() -> r.h.assertTrue(r.full(r.chunkA) && r.full(r.chunkB), "the chunks haven't loaded"))
-                .thenIdle(60);
+                .thenIdle(40);
+        r.bothTicking(seq);
+        seq.thenIdle(60);
     }
 
     /**
@@ -557,7 +600,7 @@ public final class ValveTests {
         double energy = r.net(12).gas().thermalEnergy() + r.net(16).gas().thermalEnergy();
         PipeNodeEntity oldA = r.node(12);
         PipeNodeEntity oldB = r.node(16);
-        var seq = h.startSequence();
+        GameTestSequence seq = h.startSequence();
         reload(r, oldA, oldB, seq);
         seq.thenExecute(() -> {
                     h.assertTrue(r.node(12) != oldA, "chunk A's node is the one from before the unload");
@@ -595,7 +638,7 @@ public final class ValveTests {
         double energy = r.net(12).gas().thermalEnergy();
         PipeNodeEntity oldA = r.node(12);
         PipeNodeEntity oldB = r.node(16);
-        var seq = h.startSequence();
+        GameTestSequence seq = h.startSequence();
         reload(r, oldA, oldB, seq);
         seq.thenExecute(() -> {
                     h.assertTrue(r.open(), "the valve shut over the reload");
@@ -623,6 +666,12 @@ public final class ValveTests {
      * A valve opened while its far side's chunk is away (out of full status, its nodes in memory with
      * their network) joins that side when the chunk returns, with no gas lost and nothing loading
      * the chunk meanwhile.
+     *
+     * <p>A valve steps only while its chunk ticks, and a chunk next to a ticking one is loaded in
+     * full, so in play a valve on the edge of a chunk that is away takes its turn only once that
+     * chunk is back. This stands for what the valve's step reads beside such a chunk when something
+     * steps it all the same, as a test may: chunk A's devices are stepped directly after the turn,
+     * and their reads must leave chunk B away. Both chunks tick once it returns.
      */
     @GameTest(template = "empty", batch = CHUNK_BATCH, timeoutTicks = 600)
     public static void cont_075_a_valve_opened_while_its_far_side_is_away_joins_it(GameTestHelper h) {
@@ -630,7 +679,7 @@ public final class ValveTests {
         r.net(12).gas().add(new GasParcel(Map.of(N2, 40.0), T));
         r.net(16).gas().add(new GasParcel(Map.of(O2, 10.0), T));
         PipeNetwork[] east = new PipeNetwork[1];
-        h.startSequence()
+        GameTestSequence seq = h.startSequence()
                 .thenIdle(2) // the game's own onLoad calls dissolve the networks built above
                 .thenExecute(() -> {
                     east[0] = r.net(16);
@@ -642,8 +691,12 @@ public final class ValveTests {
                     // Checked now: chunk B would be back for only two game ticks, and whether a network
                     // is built in them depends on where the devices fall in the atmos period.
                     h.assertFalse(r.full(r.chunkB), "turning the valve loaded chunk B");
+                    r.stepA(); // the valve takes its turn
+                    h.assertFalse(r.full(r.chunkB), "the valve's step loaded chunk B");
                 })
-                .thenIdle(40)
+                .thenIdle(20)
+                .thenExecute(r::stepA)
+                .thenIdle(20)
                 .thenExecute(() -> {
                     h.assertFalse(r.full(r.chunkB), "chunk B came back by itself");
                     r.a.close(r.net(12).gas().moles(N2), 40.0, "N2 with chunk B away");
@@ -651,9 +704,9 @@ public final class ValveTests {
                     h.assertTrue(east[0].valid(), "chunk B's network dissolved while it was away");
                     r.a.close(east[0].gas().moles(O2), 10.0, "O2 in chunk B, away");
                     r.hold(r.chunkB, true);
-                })
-                .thenWaitUntil(() -> h.assertTrue(r.full(r.chunkB), "chunk B hasn't returned"))
-                .thenIdle(60)
+                });
+        r.bothTicking(seq);
+        seq.thenIdle(60)
                 .thenExecute(() -> {
                     h.assertTrue(r.net(12) == r.net(16), "the open valve didn't join the side that returned");
                     r.a.close(r.net(12).volume(), Row.VOLUME, "the joined volume");

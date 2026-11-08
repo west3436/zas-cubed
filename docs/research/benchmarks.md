@@ -904,13 +904,13 @@ platform around close and apply.
 ./gradlew :s10-bench:s10Bench
 ```
 
-It isn't part of `build`, though `build` compiles it. It takes about 20 minutes
-and writes `s10-report.md`, with each window's per-tick times as CSV, into
+It isn't part of `build`, though `build` compiles it. It takes about 40 minutes
+(the enclosure cap step about 20 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
 `s10-bench/run` and `s10-bench/build/s10`. Options, as `-P` properties:
 
 | Property | Default | What it does |
 |---|---|---|
-| `s10.quick` | `false` | A short script (20 s warm-up, 60 s measured, 2 survey shapes), to check the harness works. Its figures mean nothing |
+| `s10.quick` | `false` | A short script (20 s warm-up, 60 s measured, 2 survey shapes, the cap step's smallest and largest halls with 5 s windows), to check the harness works. Its figures mean nothing |
 | `s10.affinity` | `FFF` | The processors the server may use, as a hex mask, and the JVM is told it has that many (`-XX:ActiveProcessorCount`). `FFF` is the owner's rig: logical CPUs 0 to 11, six P-cores of an i7-13700K with hyperthreading, like D-40's 6-core, 12-thread parts. `none` leaves it alone |
 | `s10.jfr` | `false` | Also records the run with Java Flight Recorder's `profile` settings, into `s10-bench/build/s10/s10.jfr`, to see where time goes. It costs a little time, so a recorded run leaves it off |
 
@@ -944,7 +944,24 @@ controller's parts. The script, all on the server thread:
    out is lit again. 2 minutes of warm-up, then 10 minutes measured.
 4. Walks the heap, sets off TNT's power inside the big room by its east wall,
    and measures 60 s more with the scenario running (NFR-002).
-5. Runs spike #80's survey, writes the report and stops the server.
+5. Runs spike #80's survey.
+6. Runs the enclosure cap step (owner, 2026-11-08; GEO-020, D-23): how far
+   `[atmos] enclosure_max_cells` can go. Everything before it runs at the
+   default cap of 65,536 cells, so its figures stay comparable with earlier
+   runs. The station is let go (its players leave and its chunks unload), and
+   sealed halls 16 blocks high with insides of 64, 68, 72, 76 and 80 blocks
+   square (65,536 to 102,400 cells) are each built in `zas_s10:halls`, a void
+   dimension of their own with a vacuum ambient, with the cap set to the
+   hall's cells and one player by it, in ticking chunks. For each hall: (a) one
+   add zones it; (b) a twin with one cell more, roofed so the column check
+   can't answer, must classify as open, after a fill to the cap; (c) a 3 × 3
+   hole in its roof vents it to the vacuum for 10 s, and once filled the hall
+   must read sealed again; (d) placing the last block of a wall across its
+   middle splits it (CORE-024), and taking that block out merges it again
+   (CORE-023); (e) the server's atmos time per tick before it zones, zoned and
+   idle, and active, with a vent blowing under an area air controller and the
+   player inside breathing; (f) the heap before and after it zones. Then it
+   writes the report and stops the server.
 
 **How it measures.**
 
@@ -972,7 +989,15 @@ controller's parts. The script, all on the server thread:
   reaches it), from the engine and pipeline; then the platform's
   `DimensionAtmos`, the mods' static tables, their block entities in the
   station and their attachments on its entities. Minecraft's own objects are
-  left out.
+  left out. The engine's parts don't go into the mods' own objects
+  (2026-11-08). The log the platform gives the engine names the dimension,
+  so it holds the `DimensionAtmos`, and through it the pipeline and the
+  engine; walked from the zone graph's ledger, that charged the pending
+  operations, the pipeline's tables and the undo point to the zone graph.
+  The platform's objects go to the platform's part, as the engine bench
+  leaves its harness's alone, and a snapshot goes to the published snapshots
+  however it's reached, in both benches. The other dimensions' atmos is left
+  out: a pending operation's callback that holds the service reached it.
 - *Bytes (DATA-006, DATA-014, DATA-015).* Each player is a real
   `ServerPlayer` on the server's lists and in the level, so chunks load and
   track around it and every sync treats it as a client with the mods. Its
@@ -989,6 +1014,19 @@ controller's parts. The script, all on the server thread:
   one that completed it. The report also counts the scenario's own batches
   that carried sections the worker asked for. There's no sample of real player
   bases.
+- *Enclosure cap step.* Each hall gets a table with each budget's verdict:
+  NFR-005 for the largest worker tick of zoning, the open fill, the breach and
+  reseal, and the split and merge; NFR-002 for their largest server tick;
+  NFR-001 for the average and 99th percentile while the hall is idle and
+  active; NFR-004 for the bytes per zoned cell, which are what the parts that
+  scale with cells grew by when the hall zoned, over its cells. NFR-002 is
+  judged on zas's own time, the owner's call for the final run: while the step
+  runs, the clock keeps each timed call's start and end, so a collector pause
+  inside zas's calls is taken out, and the table gives it beside the verdict
+  with the tick's other pauses. Ticks over 10 ms are listed with where their
+  time went, so a stall that isn't the work shows. The report ends the step
+  with the largest hall that passes every budget, for the owner to set the
+  key's final range from.
 
 **Margins.** The owner's rig is faster per core than D-40's reference parts,
 so each budget is given with its margin, the budget over the figure. A time

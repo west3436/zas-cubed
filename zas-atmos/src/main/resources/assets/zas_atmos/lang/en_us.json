@@ -175,6 +175,7 @@
   "block.zas_atmos.air_conditioner": "Air Conditioner",
   "block.zas_atmos.portable_scrubber": "Portable Scrubber",
   "block.zas_atmos.portable_pump": "Portable Pump",
+  "block.zas_atmos.tank_holder": "Tank Holder",
   "gui.zas_atmos.portable.status.off": "Off",
   "gui.zas_atmos.portable.status.no_battery": "No battery",
   "gui.zas_atmos.portable.status.battery_empty": "Battery empty",
@@ -408,6 +409,9 @@
   "block.zas_atmos.station_wall": "Station Wall",
   "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
   "block.zas_atmos.reinforced_glass_block": "Reinforced Glass",
+  "block.zas_atmos.radiator_pipe": "Radiator Pipe",
+  "block.zas_atmos.radiator_adaptor": "Radiator Adaptor",
+  "block.zas_atmos.heat_exchanger": "Heat Exchanger",
   "pack.zas_atmos.fusion_connected": "ZAS³ Connected Textures",
   "pack.zas_atmos.fusion_connected.description": "Joined station walls and glass"
 }

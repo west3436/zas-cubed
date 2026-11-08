@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.zas.atmos.power.DevicePower;
+import io.github.west3436.zas.atmos.power.PoweredDevice;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
@@ -18,7 +20,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>While it is loaded on a server, the block entity is a member of its level's {@link
  * DeviceTicker} schedule, which calls {@link #atmosTick} once per atmos tick on the server thread,
  * spread across game ticks. It joins when it loads or is placed and leaves when it is removed or its
- * chunk unloads, so a device in an unloaded chunk never steps.
+ * chunk unloads, so a device in an unloaded chunk never steps. The schedule steps it only while its
+ * chunk ticks block entities, as vanilla's block entities tick ({@link #ticking()}); otherwise it
+ * waits as it is.
  *
  * <p>Everything a device does to zones goes through the public API (D-50, CONT-071): queries with
  * {@link io.github.west3436.zas.api.atmosphere.Atmospheres} and changes with {@link
@@ -132,14 +136,65 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     }
 
     /**
-     * Called by the schedule; runs {@link #atmosTick} if the block entity is still in a server level
-     * and its chunk is loaded in full. A chunk next to a loaded one that drops out of full status
-     * keeps its block entities in memory without unloading them; a device there waits, since reading
-     * its own block would load the chunk again.
+     * Whether the schedule steps the device when it is due (architecture §11.2): its chunk ticks
+     * block entities now ({@link LoadedBlocks#ticking}), and so does the chunk of the device that
+     * last powered it, if that is still loaded. A chunk at the edge of what is loaded, kept in full
+     * only by its neighbour, doesn't tick, and a device there waits as it is: a step there read its
+     * neighbours and its own block through the level, which kept the chunk loaded after every player
+     * had gone (S-10). A part waits with its provider, as the provider powers nothing while it waits;
+     * a part that waits keeps its power ({@link DevicePower#hold}), so the wait never reads as a power
+     * cut. Asking loads nothing.
+     */
+    @Override
+    public final boolean ticking() {
+        if (isRemoved() || !(level instanceof ServerLevel)) {
+            return true; // the step does nothing
+        }
+        if (stepping()) {
+            return true;
+        }
+        if (this instanceof PoweredDevice part) {
+            part.power().hold();
+        }
+        return false;
+    }
+
+    /**
+     * Whether the device is working now: it is in a server level, and the schedule steps it when it
+     * is due, as {@link #ticking} decides, without holding a waiting part's power. What needs to know
+     * whether a device works, rather than whether its block can be read, asks this: a device in a
+     * chunk loaded in full that doesn't tick is there to read, but waits (architecture §11.2).
+     * Asking loads nothing.
+     */
+    public final boolean stepping() {
+        return !isRemoved()
+                && level instanceof ServerLevel server
+                && LoadedBlocks.ticking(server, worldPosition)
+                && !providerWaits();
+    }
+
+    /** Whether the device that last powered this one is loaded and waiting. */
+    private boolean providerWaits() {
+        return this instanceof PoweredDevice part
+                && part.power().source() instanceof AtmosDevice provider
+                && provider != this
+                && !provider.isRemoved()
+                && DeviceTicker.isScheduled(provider)
+                && provider.level instanceof ServerLevel there
+                && !LoadedBlocks.ticking(there, provider.worldPosition);
+    }
+
+    /**
+     * Called by the schedule, and by tests and an alarm that step a device at once; runs {@link
+     * #atmosTick} if the block entity is still in a server level and its chunk is loaded in full. A
+     * chunk next to a loaded one that drops out of full status keeps its block entities in memory
+     * without unloading them; a device there waits, since reading its own block would load the chunk
+     * again.
      */
     @Override
     public final void step() {
         if (!isRemoved() && level instanceof ServerLevel server && server.isLoaded(worldPosition)) {
+            ZoneIndex.mark(server, this);
             beforeAtmosTick(server);
             if (!isRemoved()) {
                 atmosTick(server);
@@ -162,6 +217,16 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     /** The current game tick, as {@link AtmosTicks#now}; only on the server. */
     protected long now() {
         return level instanceof ServerLevel server ? AtmosTicks.now(server) : 0L;
+    }
+
+    /** A block changed in place, as when it is turned, may have moved the device's air point. */
+    @Override
+    @SuppressWarnings("deprecation")
+    public void setBlockState(BlockState state) {
+        super.setBlockState(state);
+        if (level instanceof ServerLevel server) {
+            ZoneIndex.mark(server, this);
+        }
     }
 
     @Override

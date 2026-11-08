@@ -29,7 +29,7 @@ import java.util.function.LongPredicate;
  *   <li>The cell topology is a {@link SectionTopology} over the mirror, with {@link CellIds} cell
  *       ids, shared by the zone graph and the fill.
  *   <li>A zone trigger at an unzoned cell runs one {@link EnclosureFill} (default bound 65,536
- *       cells, GEO-020), with zoned cells as walls. Enclosed: its cells join the zones they open
+ *       cells, GEO-020; each tick's settings set it, {@link #fillBound}), with zoned cells as walls. Enclosed: its cells join the zones they open
  *       onto, or become new zones ({@link EnclosureZones#absorb}, CORE-051). Open: the ambient.
  *       If the fill reached sections the mirror lacks, those whose chunks are loaded are fetched
  *       for the next tick, and the operation waits (GEO-028); if all of them are unloaded the
@@ -57,7 +57,10 @@ import java.util.function.LongPredicate;
  * <p>Single-threaded, like the engine that owns it.
  */
 public final class EnclosureClassifier implements Classifier {
-    /** The factory the platform passes to {@link DimensionEngine}, with the default fill bound. */
+    /**
+     * The factory the platform passes to {@link DimensionEngine}, with the default fill bound until a
+     * tick's settings give another.
+     */
     public static final Classifier.Factory FACTORY = EnclosureClassifier::new;
 
     private final SectionLookup sections;
@@ -186,6 +189,23 @@ public final class EnclosureClassifier implements Classifier {
         held = Arrays.stream(held)
                 .filter(s -> topology.inWorld(CellIds.x(s), CellIds.y(s), CellIds.z(s)))
                 .toArray();
+    }
+
+    /**
+     * A higher bound may enclose a region found open only for its size, so the cells found open are
+     * forgotten and put in doubt, as with new limits: a zone that opens onto one has it classified
+     * again (GEO-023, GEO-025). A lower bound leaves every open cell open.
+     */
+    @Override
+    public void fillBound(int maxCells) {
+        int was = fill.maxCells();
+        if (maxCells == was) {
+            return;
+        }
+        fill.setMaxCells(maxCells);
+        if (maxCells > was) {
+            open.clear();
+        }
     }
 
     @Override
