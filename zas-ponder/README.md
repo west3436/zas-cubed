@@ -55,6 +55,8 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
 - `Hand`
   - `use` and `sneakUse` show the mouse button over a block's face, with the item
     in hand, then pause before the scene shows what the use does.
+  - `useAt` does the same at a spot in the air, for a use on nothing, such as an
+    analyzer reading the air or an extinguisher spraying.
 - `Power`
   - `controller` puts up a station wall with an area air controller, turns the
     device on and says the controller powers it.
