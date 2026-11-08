@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.airlock;
 
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity.Slot;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.core.BlockPos;
@@ -12,43 +13,53 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * An airlock controller's window (CONT-153, CONT-074): whether it's cycling and toward which
- * airlock, its power, what's linked, and the pressure at the chamber's sensor and at the sensor
- * beyond each airlock. The client sends only button ids: cycle toward airlock 1 or 2, or stop. The
- * server checks each, and {@link AirlockControllerBlockEntity#requestCycle(int)} refuses a cycle
- * toward an airlock that isn't linked, as it does one with no power, without the sensors it needs,
- * or one already running.
+ * An airlock controller's window (CONT-138, CONT-153, CONT-074): whether it's cycling and toward
+ * which door, its power, its five slots and the armed one, and the pressure at the chamber sensor and
+ * at the sensor past each door. The client sends only button ids: cycle toward the inner or outer
+ * door, stop, arm a slot or clear one. The server checks each, and {@link
+ * AirlockControllerBlockEntity#requestCycle(int)} refuses a cycle toward a door that isn't set, as it
+ * does one with no power, without the sensors it needs, or one already running.
  */
 public class AirlockControllerMenu extends AbstractContainerMenu {
-    /** Cycle toward airlock 1 (id 0) or 2 (id 1). */
+    private static final int SLOTS = Slot.values().length;
+
+    /** Cycle toward the inner door (id 0) or the outer door (id 1). */
     public static final int CYCLE = 0;
 
     /** Stop a cycle. */
     public static final int STOP = 2;
 
-    /** 0 while idle, else 1 + the airlock it's cycling toward. */
+    /** Arm a slot, or disarm it if it's armed: 3 + its place in {@link Slot}'s order. */
+    public static final int ARM = 3;
+
+    /** Clear a slot: 8 + its place in {@link Slot}'s order. */
+    public static final int CLEAR = ARM + SLOTS;
+
+    /** 0 while idle, else 1 + the door it's cycling toward. */
     public static final int DATA_CYCLING = 0;
 
     public static final int DATA_POWERED = 1;
-    /**
-     * Bit 0 and bit 1: each airlock is linked; bit 2: the chamber has a sensor; bits 3 and 4: the
-     * side beyond airlock 1 and 2 has one.
-     */
+    /** Bit i: slot i, in {@link Slot}'s order, is filled. */
     public static final int DATA_LINKS = 2;
 
     public static final int DATA_VENTS = 3;
     /** The chamber's pressure in hundredths of a kPa, in two halves, or −1 with no reading. */
     public static final int DATA_CHAMBER = 4;
-    /** The pressure beyond airlock 1, then 2, as {@link #DATA_CHAMBER}. */
+    /** The pressure past the inner door, then the outer, as {@link #DATA_CHAMBER}. */
     public static final int DATA_BEYOND = 6;
     /** What its vents are doing: 0 nothing, 1 siphoning, 2 blowing. */
     public static final int DATA_STEP = 10;
-    /** Each airlock's look: bit 0 airlock 1 open, bit 1 airlock 1 bolted, bits 2 and 3 airlock 2's. */
+    /** Each door's look: bit 0 the inner door open, bit 1 it bolted, bits 2 and 3 the outer door's. */
     public static final int DATA_DOORS = 11;
+    /** 0 with no slot armed, else 1 + the armed slot's place in {@link Slot}'s order. */
+    public static final int DATA_ARMED = 12;
+    /** What fills each slot, in {@link Slot}'s order, as four shorts of {@link BlockPos#asLong}. */
+    public static final int DATA_SLOTS = 13;
 
-    public static final int DATA_COUNT = 12;
+    public static final int DATA_COUNT = DATA_SLOTS + 4 * SLOTS;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -74,12 +85,7 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
                 return switch (index) {
                     case DATA_CYCLING -> controller.cycling() + 1;
                     case DATA_POWERED -> controller.power().isPowered() ? 1 : 0;
-                    case DATA_LINKS ->
-                        (controller.airlocks()[0] != null ? 1 : 0)
-                                | (controller.airlocks()[1] != null ? 2 : 0)
-                                | (controller.sensor(AirlockCycle.CHAMBER) != null ? 4 : 0)
-                                | (controller.sensor(AirlockCycle.SIDE_1) != null ? 8 : 0)
-                                | (controller.sensor(AirlockCycle.SIDE_2) != null ? 16 : 0);
+                    case DATA_LINKS -> links(controller);
                     case DATA_VENTS ->
                         Math.min(Short.MAX_VALUE, controller.linkedVents().size());
                     case DATA_CHAMBER, DATA_CHAMBER + 1 -> half(controller.chamberKpa(), index - DATA_CHAMBER);
@@ -90,7 +96,9 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
                                 ? 1
                                 : controller.cycleStep() == AirlockCycle.Step.BLOW ? 2 : 0;
                     case DATA_DOORS -> door(controller, 0) | door(controller, 1) << 2;
-                    default -> 0;
+                    case DATA_ARMED ->
+                        controller.armed() == null ? 0 : controller.armed().ordinal() + 1;
+                    default -> index >= DATA_SLOTS && index < DATA_COUNT ? slotPart(controller, index - DATA_SLOTS) : 0;
                 };
             }
 
@@ -105,7 +113,21 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
         addDataSlots(data);
     }
 
-    /** Airlock {@code i}'s open and bolted bits, or 0 if it isn't linked or loaded. */
+    private static int links(AirlockControllerBlockEntity controller) {
+        int bits = 0;
+        for (Slot s : Slot.values()) {
+            bits |= controller.slot(s) != null ? 1 << s.ordinal() : 0;
+        }
+        return bits;
+    }
+
+    /** One of the four shorts of what fills a slot: {@code part} is 4 × the slot + which short. */
+    private static int slotPart(AirlockControllerBlockEntity controller, int part) {
+        BlockPos at = controller.slot(Slot.values()[part / 4]);
+        return at == null ? 0 : (short) (at.asLong() >> 16 * (part % 4));
+    }
+
+    /** Door {@code i}'s open and bolted bits, or 0 if it isn't set or loaded. */
     private static int door(AirlockControllerBlockEntity controller, int i) {
         BlockPos at = controller.airlocks()[i];
         Level level = controller.getLevel();
@@ -131,6 +153,28 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
         return v < 0 ? Double.NaN : v / 100.0;
     }
 
+    /** Whether a slot is filled. */
+    public boolean filled(Slot slot) {
+        return (data.get(DATA_LINKS) & 1 << slot.ordinal()) != 0;
+    }
+
+    /** What fills a slot, or null. */
+    public @Nullable BlockPos slotPos(Slot slot) {
+        if (!filled(slot)) {
+            return null;
+        }
+        long v = 0;
+        for (int i = 0; i < 4; i++) {
+            v |= (data.get(DATA_SLOTS + 4 * slot.ordinal() + i) & 0xFFFFL) << 16 * i;
+        }
+        return BlockPos.of(v);
+    }
+
+    /** The armed slot, or null. */
+    public @Nullable Slot armed() {
+        return Slot.of(data.get(DATA_ARMED) - 1);
+    }
+
     /** A synced value, by its {@code DATA_} index. */
     public int value(int index) {
         return data.get(index);
@@ -148,7 +192,14 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
         return switch (id) {
             case CYCLE, CYCLE + 1 -> controller.requestCycle(id - CYCLE);
             case STOP -> controller.stop();
-            default -> false;
+            default -> {
+                Slot slot = Slot.of(id - ARM);
+                if (slot != null) {
+                    yield controller.arm(slot);
+                }
+                slot = Slot.of(id - CLEAR);
+                yield slot != null && controller.clear(slot);
+            }
         };
     }
 

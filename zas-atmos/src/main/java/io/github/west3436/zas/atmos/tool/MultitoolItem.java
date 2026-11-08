@@ -10,6 +10,7 @@ import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
+import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.util.List;
 import java.util.Optional;
@@ -39,8 +40,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * controller to that one, if it is in range (CONT-118). Use it on nothing while sneaking to clear the
  * selection. The selection is kept on the stack, as the controller's position and dimension.
  *
- * <p>It selects an airlock controller too, and then links airlocks, air sensors and vents to it
- * (CONT-138). Used sneaking on an airlock controller, it links that controller to the selected area
+ * <p>It selects an airlock controller too, and then links airlocks and air sensors into its slots,
+ * and vents, to it (CONT-138). Used sneaking on an airlock controller, it links that controller to the selected area
  * air controller as a part instead (CONT-141). With an area air controller selected, it links a
  * firelock fitted to an airlock or a door (CONT-137).
  */
@@ -194,12 +195,26 @@ public class MultitoolItem extends Item {
         BlockEntity selected = level.isLoaded(at.get()) ? level.getBlockEntity(at.get()) : null;
         if (selected instanceof AirlockControllerBlockEntity airlockController) {
             return switch (airlockController.toggleLink(level, part)) {
-                case LINKED ->
-                    Component.translatable("item.zas_atmos.multitool.linked_airlock", pos(part), pos(at.get()));
+                case LINKED -> {
+                    AirlockControllerBlockEntity.Slot slot = airlockController.slotOf(part);
+                    yield slot == null
+                            ? Component.translatable(
+                                    "item.zas_atmos.multitool.linked_airlock", pos(part), pos(at.get()))
+                            : Component.translatable("item.zas_atmos.multitool.linked_slot", slotName(slot), pos(part));
+                }
                 case UNLINKED ->
                     Component.translatable("item.zas_atmos.multitool.unlinked_airlock", pos(part), pos(at.get()));
                 case AIRLOCKS_FULL -> Component.translatable("item.zas_atmos.multitool.airlocks_full");
                 case SENSOR_FULL -> Component.translatable("item.zas_atmos.multitool.sensor_full");
+                case WRONG_KIND -> {
+                    AtmosSounds.play(level, part, AtmosSounds.AIRLOCK_DENIED);
+                    AirlockControllerBlockEntity.Slot armed = airlockController.armed();
+                    yield Component.translatable(
+                            armed != null && armed.door()
+                                    ? "item.zas_atmos.multitool.wants_airlock"
+                                    : "item.zas_atmos.multitool.wants_sensor",
+                            armed == null ? "" : slotName(armed));
+                }
                 case NOT_LINKABLE -> Component.translatable("item.zas_atmos.multitool.not_linkable");
             };
         }
@@ -231,6 +246,11 @@ public class MultitoolItem extends Item {
             return Component.translatable("item.zas_atmos.multitool.out_of_range", pos(at.get()));
         }
         return Component.translatable("item.zas_atmos.multitool.moved", pos(at.get()), pos(central.getBlockPos()));
+    }
+
+    /** An airlock controller's slot by its name in the controller's window. */
+    private static Component slotName(AirlockControllerBlockEntity.Slot slot) {
+        return Component.translatable("gui.zas_atmos.airlock_controller." + slot.key());
     }
 
     private static String pos(BlockPos p) {

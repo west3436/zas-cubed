@@ -4009,33 +4009,52 @@ block-entity renderer.
     It opens as the door it wraps did: an iron door only by redstone. Broken,
     it drops the door and the firelock, and pick-block gives the door.
 - **The controller** (`AirlockControllerBlock`, `AirlockControllerBlockEntity`,
-  CONT-138 to CONT-140). A wall panel with `facing` and `cycling`. The
-  multitool links at most two airlocks, three air sensors and any number of
-  vents to it, as to an area air controller (`MultitoolItem`). Each atmos tick
-  it drops links that are no longer their kind and gives each sensor a role.
-  - **Roles.** Of the cells in front of an airlock and behind it, the chamber's
-    is the one whose zone the other airlock also borders, or the one nearer
-    the other airlock if that doesn't decide, as when both airlocks open onto
-    one room (`AirlockCycle.frontIsChamber`). An open airlock passes gas but
-    keeps its two zones apart, so opening one changes no role. A sensor in the
-    chamber's zone is the chamber's, and one in the zone past an airlock is
-    that side's. Where its zone fits none, as in open air or a vacuum, or
-    several, where it is decides: past the airlock whose far cell it's nearer
-    than its chamber cell, or the chamber's (`AirlockCycle.role`). The first
-    sensor in a role has it; the link order decides nothing else.
-  - **A cycle** needs both airlocks, the chamber's sensor and the sensor past
-    the airlock it's heading for. It closes and bolts both airlocks, then each
-    step siphons or blows (`AirlockCycle.next`) from the chamber's reading
-    toward that side's, and once within 5.07 kPa of it unbolts and opens that
-    airlock. Losing a sensor it reads stops it.
-  - **A press** of a linked sensor (`AirSensorBlock.useWithoutItem`,
-    `pressSensor`) cycles toward the airlock opposite the side the airlock is
-    accessing: the side whose airlock alone is unbolted, or else the airlock
+  CONT-138 to CONT-140). A wall panel with `facing` and `cycling`. It has five
+  slots (`Slot`), in the window's order: the inner and outer doors, which take
+  airlocks by their origin, and the inner, outer and chamber sensors, which take
+  air sensors. The multitool fills them, and links any number of vents besides
+  (`MultitoolItem`, `toggleLink`). Each atmos tick it empties a slot whose
+  block is no longer its kind.
+  - **Arming.** The window's button for a slot arms it, kept on the controller
+    so the window can close. The next airlock or sensor linked fills it and
+    disarms it; the other kind is refused with a buzz, and the slot stays
+    armed. A part in another slot moves to it, swapping with what was there, so
+    a part is in one slot only; a part not linked replaces what was there.
+    Vents link past an armed slot. The window's clear button empties a slot.
+    Emptying a door unbolts its airlock and stops a cycle; emptying or moving
+    anything a cycle reads stops it.
+  - **The guess.** With no slot armed, a part already in a slot is unlinked,
+    and any other goes to the slot guessed for it at the link, or else to the
+    first empty slot of its kind. The guess reads the cells in front of and
+    behind each door, and the sensor's own cell, as keys: a zone's id, open (the
+    dimension's ambient, open air or a vacuum) or unknown. A door's chamber side
+    is its zone side if the other is open, or the zone it shares with the other
+    door (`AirlockCycle.chamberSide`). A door whose far side is open is the
+    outer door, one whose other door's far side is open is the inner, and
+    otherwise the one onto the lower pressure, by more than 5.07 kPa, is the
+    outer (`doorGuess`). A sensor in a chamber side's zone is the chamber
+    sensor, and one in a door's far side is that side's (`sensorGuess`). Where
+    the guess fits no slot or several, there is none. A guessed slot filled as
+    the first empty slot, with no guess, makes way: what's in it moves to the
+    first empty slot of its kind. One the player set or the guess filled is
+    never changed, and later zone changes move nothing.
+  - **A cycle** needs both doors, the chamber sensor and the sensor past the
+    door it's heading for. It closes and bolts both airlocks, then each step
+    siphons or blows (`AirlockCycle.next`) from the chamber's reading toward
+    that side's, and once within 5.07 kPa of it unbolts and opens that
+    airlock. Losing a part it needs stops it.
+  - **A press** of a sensor in a slot (`AirSensorBlock.useWithoutItem`,
+    `pressSensor`) cycles toward the door opposite the side the airlock is
+    accessing: the side whose airlock alone is unbolted, or else the door
     opened last, which `AirlockBlock.setOpen` reports through `opened`. With
-    neither, it cycles away from the pressed sensor's side, or toward airlock
-    1 from the chamber's (`AirlockCycle.pressTarget`). A refused press buzzes.
-  - **Saved:** its links, the cycle, the airlock opened last and its power
-    lease. The roles aren't saved: each step works them out again.
+    neither, it cycles away from the pressed sensor's side, or toward the inner
+    door from the chamber sensor (`AirlockCycle.pressTarget`). A refused press
+    buzzes.
+  - **Saved:** each slot (`Airlock0` and `Airlock1` for the doors,
+    `InnerSensor`, `OuterSensor`, `ChamberSensor`), which slots the player or
+    the guess filled (`Sure`), the armed slot, the vents, the cycle, the door
+    opened last and its power lease. An older save's one `Sensor` loads as the
+    chamber sensor.
 - **Its power** (CONT-141). It is a `PoweredDevice` part of an area air
   controller, at `LIFE_SUPPORT` priority, drawing `[power] airlock_controller`
   (1 FE/t) plus what its loaded vents draw. While powered it supplies its vents
@@ -4049,11 +4068,16 @@ block-entity renderer.
   wall panel with `facing` and `status` (`standby`, `cycling`, `alert`), set
   from `SensorStatus.of`: cycling while a controller has marked it within
   `LEASE_TICKS`, otherwise alert outside 81 to 122 kPa at its own block. A
-  cycling controller marks all of its sensors. It needs no FE.
+  cycling controller marks the sensors in its slots. It needs no FE.
 - **The window** (`AirlockControllerMenu`, `client.AirlockControllerScreen`,
-  CONT-153). A TGUI window (D-76) synced by data slots: whether it's cycling
-  and its step, power, its airlocks and which roles have a sensor, the
-  pressure at each sensor, and each airlock's open and bolted bits. A role
-  with no sensor shows "No sensor" where its pressure would be. Its buttons go
-  through `clickMenuButton`: Cycle toward either airlock, and Stop.
+  CONT-138, CONT-153). A TGUI window (D-76) synced by data slots: whether it's
+  cycling and its step, power, which slots are filled and with what (each
+  position as four shorts), the armed slot, the pressure at each sensor, and
+  each door's open and bolted bits. Its first section draws the airlock from
+  the inner side to the outer, with a Cycle button under each side; a sensor
+  slot that's empty shows "No sensor" where its pressure would be. Its second
+  has a row for each slot: the slot's button, lit while armed; a dot, green
+  filled, orange armed, grey empty; the position; and a clear button. Its
+  buttons go through `clickMenuButton`: Cycle toward either door, Stop, arm a
+  slot and clear one.
 - **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.

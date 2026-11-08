@@ -1,22 +1,38 @@
 package io.github.west3436.zas.atmos.airlock;
 
 /**
- * The rules of an airlock controller's cycle (CONT-139, CONT-140), with no game classes: what its
- * vents do at each step, which side of an airlock is the chamber, which part of the airlock each
- * air sensor reads, and which way a press of a sensor cycles.
+ * The rules of an airlock controller (CONT-138 to CONT-140), with no game classes: what its vents do
+ * at each step of a cycle, which way a press of a sensor cycles, and the slot it guesses for an
+ * airlock or a sensor linked with no slot armed.
+ *
+ * <p>For the guess, each place is read as a key: its zone's id, {@link #OPEN} where it's open to the
+ * dimension's ambient (open air, or a vacuum in space), or {@link #UNKNOWN} where it reads nothing
+ * yet.
  */
 public final class AirlockCycle {
-    /** The role of a sensor beyond airlock 1; beyond airlock 2 is 1, the airlock's own index. */
-    public static final int SIDE_1 = 0;
+    /** The inner door, and the role of the sensor past it. */
+    public static final int INNER = 0;
 
-    /** The role of a sensor beyond airlock 2. */
-    public static final int SIDE_2 = 1;
+    /** The outer door, and the role of the sensor past it. */
+    public static final int OUTER = 1;
 
     /** The role of the chamber's sensor. */
     public static final int CHAMBER = 2;
 
-    /** No role: a sensor whose role can't be worked out, as with an airlock missing. */
+    /** No guess. */
     public static final int NONE = -1;
+
+    /** A place open to the dimension's ambient: open air, or a vacuum in space. */
+    public static final long OPEN = -2;
+
+    /** A place that reads nothing yet, or isn't known. */
+    public static final long UNKNOWN = -1;
+
+    /** Which side of a door is the chamber's: its front. */
+    public static final int FRONT = 0;
+
+    /** Which side of a door is the chamber's: its back. */
+    public static final int BACK = 1;
 
     /** How close the chamber must come to the far side's pressure, kPa: 5 % of 1 atm (CONT-041). */
     public static final double TOLERANCE_KPA = 0.05 * 101.325;
@@ -37,7 +53,7 @@ public final class AirlockCycle {
      * The step for a chamber at {@code chamberKpa} cycling toward a side at {@code targetKpa}.
      *
      * @param chamberKpa the pressure the chamber's sensor reads
-     * @param targetKpa the pressure the sensor beyond the airlock being cycled toward reads
+     * @param targetKpa the pressure the sensor past the door being cycled toward reads
      * @return what the vents do, or that the cycle is done
      */
     public static Step next(double chamberKpa, double targetKpa) {
@@ -48,87 +64,102 @@ public final class AirlockCycle {
     }
 
     /**
-     * Whether an airlock's front is the chamber's side. The chamber is the zone both airlocks
-     * border: a side whose zone one of the other airlock's sides has is the chamber, if only one
-     * is. Otherwise, as when both airlocks open onto one room, the side nearer the other airlock
-     * is.
+     * The door a press of a linked sensor cycles toward (CONT-140): the one opposite the side the
+     * airlock is accessing. That's the side whose door alone is unbolted, or else the one opened last.
+     * With neither, it's away from the pressed sensor's own side, or toward the inner door from the
+     * chamber's sensor.
      *
-     * @param frontZone the zone id in front of the airlock, or −1 if it reads no zone
-     * @param backZone the zone id behind it, or −1
-     * @param otherFront the zone id in front of the other airlock, or −1
-     * @param otherBack the zone id behind the other airlock, or −1
-     * @param frontDistanceSq the squared distance from the other airlock to the cell in front
-     * @param backDistanceSq the squared distance from the other airlock to the cell behind
-     */
-    public static boolean frontIsChamber(
-            long frontZone,
-            long backZone,
-            long otherFront,
-            long otherBack,
-            double frontDistanceSq,
-            double backDistanceSq) {
-        boolean front = frontZone >= 0 && (frontZone == otherFront || frontZone == otherBack);
-        boolean back = backZone >= 0 && (backZone == otherFront || backZone == otherBack);
-        if (front != back) {
-            return front;
-        }
-        return frontDistanceSq <= backDistanceSq;
-    }
-
-    /**
-     * A linked sensor's role, from its zone: the chamber's ({@link #CHAMBER}) if it's in the zone
-     * on the chamber's side of an airlock, or beyond airlock 1 or 2 ({@link #SIDE_1}, {@link
-     * #SIDE_2}) if it's in the zone past it. Where its zone fits none, as in open air or a vacuum,
-     * or more than one, as when both airlocks open onto one room, where it is decides among them:
-     * past the airlock whose far side it's nearer, by the most, or the chamber's if it's past
-     * neither.
-     *
-     * @param sensorZone the sensor's zone id, or −1 if it reads no zone
-     * @param chamberZones the zone id on the chamber's side of airlock 1 and of airlock 2, or −1
-     * @param farZones the zone id on the far side of each, or −1
-     * @param past how much nearer the sensor is to each airlock's far side than to its chamber
-     *     side, as a difference of squared distances; positive where it's past that airlock
-     * @return {@link #CHAMBER}, {@link #SIDE_1} or {@link #SIDE_2}
-     */
-    public static int role(long sensorZone, long[] chamberZones, long[] farZones, double[] past) {
-        boolean[] fits = new boolean[3];
-        int count = 0;
-        if (sensorZone >= 0) {
-            fits[CHAMBER] = sensorZone == chamberZones[0] || sensorZone == chamberZones[1];
-            fits[SIDE_1] = sensorZone == farZones[0];
-            fits[SIDE_2] = sensorZone == farZones[1];
-            for (boolean f : fits) {
-                count += f ? 1 : 0;
-            }
-        }
-        int where = past[0] <= 0 && past[1] <= 0 ? CHAMBER : past[0] >= past[1] ? SIDE_1 : SIDE_2;
-        if (count == 0 || fits[where]) {
-            return where;
-        }
-        for (int r : new int[] {CHAMBER, SIDE_1, SIDE_2}) {
-            if (fits[r]) {
-                return r; // its zone fits one role only, or several that where it is doesn't pick
-            }
-        }
-        return where;
-    }
-
-    /**
-     * The airlock a press of a linked sensor cycles toward (CONT-140): the one opposite the side
-     * the airlock is accessing. That's the side whose airlock alone is unbolted, or else the one
-     * opened last. With neither, it's away from the pressed sensor's own side, or toward airlock 1
-     * from the chamber's sensor.
-     *
-     * @param bolted whether airlock 1 and airlock 2 are bolted
-     * @param lastOpened the airlock opened last, 0 or 1, or −1 if none has been
-     * @param pressed the pressed sensor's role
-     * @return the airlock to cycle toward, 0 or 1
+     * @param bolted whether the inner and the outer door are bolted
+     * @param lastOpened the door opened last, {@link #INNER} or {@link #OUTER}, or −1 if none has been
+     * @param pressed the pressed sensor's role: {@link #INNER}, {@link #OUTER} or {@link #CHAMBER}
+     * @return the door to cycle toward, {@link #INNER} or {@link #OUTER}
      */
     public static int pressTarget(boolean[] bolted, int lastOpened, int pressed) {
-        int accessing = bolted[0] != bolted[1] ? (bolted[0] ? 1 : 0) : lastOpened;
-        if (accessing == 0 || accessing == 1) {
+        int accessing = bolted[0] != bolted[1] ? (bolted[0] ? OUTER : INNER) : lastOpened;
+        if (accessing == INNER || accessing == OUTER) {
             return 1 - accessing;
         }
-        return pressed == SIDE_1 || pressed == SIDE_2 ? 1 - pressed : 0;
+        return pressed == INNER || pressed == OUTER ? 1 - pressed : INNER;
+    }
+
+    // ---- The guess at link time (CONT-138) ------------------------------------------------
+
+    /**
+     * Which side of a door is the chamber's. A chamber is a zone, so with one side open and the other
+     * a zone, it's the zone. Otherwise it's the zone the other door also borders, if one side alone
+     * is.
+     *
+     * @param front the key in front of the door
+     * @param back the key behind it
+     * @param otherFront the key in front of the other door, or {@link #UNKNOWN} with no other door
+     * @param otherBack the key behind the other door, or {@link #UNKNOWN}
+     * @return {@link #FRONT}, {@link #BACK} or {@link #NONE}
+     */
+    public static int chamberSide(long front, long back, long otherFront, long otherBack) {
+        if (front >= 0 && back == OPEN) {
+            return FRONT;
+        }
+        if (back >= 0 && front == OPEN) {
+            return BACK;
+        }
+        boolean f = front >= 0 && (front == otherFront || front == otherBack);
+        boolean b = back >= 0 && (back == otherFront || back == otherBack);
+        return f == b ? NONE : f ? FRONT : BACK;
+    }
+
+    /**
+     * Which door a door is: the outer door if its far side is open, the inner door if the other door's
+     * is, and otherwise the outer door if its far side's pressure is lower than the other door's by
+     * more than {@link #TOLERANCE_KPA}, the inner door if higher.
+     *
+     * @param far the key on the door's far side, or {@link #UNKNOWN} if which side is the chamber's
+     *     isn't known
+     * @param farKpa the pressure there
+     * @param otherFar the key on the other door's far side, or {@link #UNKNOWN} with no other door
+     * @param otherFarKpa the pressure there
+     * @return {@link #INNER}, {@link #OUTER} or {@link #NONE}, as when both open onto one place
+     */
+    public static int doorGuess(long far, double farKpa, long otherFar, double otherFarKpa) {
+        if (far == UNKNOWN || far == otherFar) {
+            return NONE;
+        }
+        if (far == OPEN) {
+            return OUTER;
+        }
+        if (otherFar == OPEN) {
+            return INNER;
+        }
+        if (otherFar == UNKNOWN || Math.abs(farKpa - otherFarKpa) <= TOLERANCE_KPA) {
+            return NONE;
+        }
+        return farKpa < otherFarKpa ? OUTER : INNER;
+    }
+
+    /**
+     * A sensor's role, from where it is: the chamber's if it's in the zone on a door's chamber side,
+     * or the inner or outer side's if it's in that door's far side, open counting as one place.
+     *
+     * @param sensor the key where the sensor is
+     * @param chamber the key on the chamber side of the inner and of the outer door, {@link #UNKNOWN}
+     *     where it isn't known
+     * @param far the key on the far side of each, {@link #UNKNOWN} where it isn't known
+     * @return {@link #INNER}, {@link #OUTER}, {@link #CHAMBER}, or {@link #NONE} if it fits none or
+     *     more than one
+     */
+    public static int sensorGuess(long sensor, long[] chamber, long[] far) {
+        if (sensor == UNKNOWN) {
+            return NONE;
+        }
+        boolean[] fits = {sensor == far[INNER], sensor == far[OUTER], sensor == chamber[0] || sensor == chamber[1]};
+        int role = NONE;
+        for (int r = 0; r < fits.length; r++) {
+            if (fits[r]) {
+                if (role != NONE) {
+                    return NONE;
+                }
+                role = r;
+            }
+        }
+        return role;
     }
 }
