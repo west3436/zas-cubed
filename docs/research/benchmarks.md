@@ -827,6 +827,69 @@ another commit:
   `StationBench.script`, `Run.worker`, `Run.server` and `Stats.meanMs` by
   reflection, so changing their shape stops the check with an exception until then.
 
+## A valve at a chunk's edge (#341, 2026-11-07)
+
+_Run 2026-11-07 with the GameTest
+`StationSaveTests.s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`,
+three times, on the same machine while other builds and GameTest servers were
+running on it._ Since [#341](https://github.com/west3436/zas-cubed/pull/341)
+(CONT-003's note of 2026-11-06), a pipe node on a chunk's edge rejoins a
+connected neighbour in another network at its step. A valve on the edge that
+opens is such a node. At its step it rejoins the far side, which builds the
+joined network, and its own turn then rebuilds it. A valve away from an edge
+builds it once. The owner kept this as built, to be measured with S-09.
+
+Each rig is a run of pipes from x = 1 to 30 across a chunk border at 15 | 16:
+either one row of 30 nodes, or seven rows joined end to end, 216 nodes. A manual
+valve takes the place of the first row's pipe, on the edge at x = 15 or
+mid-chunk at x = 8, so every rig has the same nodes on chunk edges. The test
+steps only the rig's own devices, in the schedule's order, as one atmos tick,
+timed with `System.nanoTime()`.
+
+- **The cycle:** the valve opens for one atmos tick and shuts for two, 150 times
+  after 40 cycles of warm-up, with the four rigs taking turns. Then it stays open
+  for 150 more.
+- **Counting rebuilds:** the test watches the valve's own gas store, which a
+  build empties into the new network. It checks the counts and only logs the
+  times.
+
+Median time per atmos tick for the rig's devices, in each of the three runs. The
+first run had a busier machine.
+
+| Network | Valve | Rebuilds as it opens | Opening | Shutting | Open |
+|---|---|---|---|---|---|
+| 30 nodes | On the edge | 2 | 93.7, 61.1, 60.7 µs | 41.3, 28.1, 27.8 µs | 24.9, 15.1, 15.8 µs |
+| | Mid-chunk | 1 | 64.7, 41.4, 41.1 µs | 49.3, 33.0, 32.9 µs | 25.2, 15.5, 16.0 µs |
+| 216 nodes | On the edge | 2 | 581.2, 376.4, 379.1 µs | 344.3, 231.1, 234.7 µs | 155.1, 100.3, 104.7 µs |
+| | Mid-chunk | 1 | 375.7, 249.6, 248.0 µs | 356.3, 242.1, 235.2 µs | 159.5, 100.3, 104.6 µs |
+
+Every valve rebuilds its network once as it shuts and never while it stays open.
+
+- **The second rebuild costs about what the first does.** It adds 20 to 29 µs at
+  30 nodes and 127 to 206 µs at 216, about 0.6 to 1 µs per node, on the atmos
+  tick the valve opens only. On the edge, opening takes about 1.5 times as long
+  as mid-chunk in every run. Shutting costs the same wherever the valve is, and
+  so does a valve that stays open.
+- **The cost is negligible.** A valve's networks follow it at most once per
+  atmos tick, so it opens at most every other atmos tick, however fast it's
+  turned. At that rate, the 216-node valve's extra rebuild adds at most 0.21 ms
+  every 2 s at the default period. That's about 5 µs per game tick on average,
+  against NFR-001's 2 ms. One opening adds 0.21 ms to one game tick, against
+  NFR-002's 10 ms.
+- **A valve turned every atmos tick builds twice as it opens anywhere.** That
+  was the test's first version, and it isn't from #341. The nodes that stepped
+  before the valve shut have no network until their next step. The first of
+  them to step builds across the reopened valve, and the valve's own step then
+  rebuilds that network. The cycle above leaves the valve shut for a second
+  atmos tick, so those nodes build first, as they do in play unless the valve
+  is turned that fast. The cost is the same extra rebuild as on an edge, and
+  the two don't add up: the valve finds the far side already joined.
+- **Not measured:** a valve turned by a player or by redstone in a running
+  server, with the rest of the device schedule around it; networks of more than
+  216 nodes; and the reference hardware (D-40). These rigs are all pipes. A real
+  network's devices also do their own work as they step, which the valve's
+  place doesn't change.
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall

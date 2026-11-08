@@ -472,6 +472,18 @@ the block state, so a real unload and reload keeps it, and the gas on each side
 `PipeNetworkTest.cont_075_*` (Unit) turns a valve 1,000 times and checks moles
 and energy.*
 
+*2026-11-07: Note: "at most once per atmos tick" counts the valve's own rebuild.
+A valve on a chunk's edge builds its network twice as it opens, once as it
+rejoins the far side (CONT-003's note of 2026-11-06) and once at its own turn.
+The owner kept this as built. Measured with S-09
+(`StationSaveTests.s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`,
+GameTest): the extra rebuild costs about 0.6 to 1 µs per node, on the atmos
+tick it opens only, which is negligible
+([benchmarks](../research/benchmarks.md#a-valve-at-a-chunks-edge-341-2026-11-07)).
+A valve turned every atmos tick also builds twice as it opens, wherever it is,
+because the nodes that stepped before it shut build across it first. That's
+the same cost.*
+
 #### CONT-011 · Pressure pump
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
 

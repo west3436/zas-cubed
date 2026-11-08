@@ -654,7 +654,7 @@ public final class ScenarioTests {
      * resumes unchanged. The restart is {@code AtmosService#stopForTest} and {@code startForTest}
      * (see {@code PersistenceTests}); the unloaded chunk is {@link DimensionAtmos#simulateUnload}.
      * Pipes and canisters are {@code zas_atmos}'s, which this mod can't name, so S-09's part with them
-     * belongs to that mod's GameTests (DATA-016).
+     * belongs to that mod's GameTests ({@code StationSaveTests}, DATA-016).
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
     public static void s_09_restart_keeps_zones_and_paused_zone_resumes(GameTestHelper h) {
