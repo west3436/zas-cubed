@@ -979,7 +979,8 @@ controller's parts. The script, all on the server thread:
   operations, the pipeline's tables and the undo point to the zone graph.
   The platform's objects go to the platform's part, as the engine bench
   leaves its harness's alone, and a snapshot goes to the published snapshots
-  however it's reached, in both benches.
+  however it's reached, in both benches. The other dimensions' atmos is left
+  out: a pending operation's callback that holds the service reached it.
 - *Bytes (DATA-006, DATA-014, DATA-015).* Each player is a real
   `ServerPlayer` on the server's lists and in the level, so chunks load and
   track around it and every sync treats it as a client with the mods. Its

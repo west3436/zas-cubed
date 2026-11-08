@@ -44,7 +44,8 @@ import net.neoforged.neoforge.attachment.AttachmentHolder;
  * <p>Left out, besides what the engine bench leaves out (threads, executors, classes, enum
  * constants, the gas registry and settings, the geometry palette): everything of Minecraft's,
  * NeoForge's or Mojang's, such as levels, block states, registries and entities themselves, except
- * the small value objects the mods keep in their own tables (block and chunk positions, vectors).
+ * the small value objects the mods keep in their own tables (block and chunk positions, vectors);
+ * and the other dimensions' atmos, which a callback holding the service reaches.
  */
 @SuppressWarnings({"deprecation", "removal"})
 final class AtmosHeap {
@@ -118,6 +119,8 @@ final class AtmosHeap {
     private final IdentityHashMap<Object, Boolean> excluded = new IdentityHashMap<>();
     /** Whether the engine's parts are being walked, which leave the platform's objects alone. */
     private boolean inEngine;
+    /** The station's dimension; the walk leaves the others' alone. */
+    private DimensionAtmos station;
 
     AtmosHeap() {
         for (Part p : Part.values()) {
@@ -157,6 +160,7 @@ final class AtmosHeap {
 
     /** The platform's dimension state. Server thread, after {@link #engine}. */
     AtmosHeap dimension(DimensionAtmos d) {
+        station = d;
         walk(d, Part.DIMENSION);
         return this;
     }
@@ -336,6 +340,9 @@ final class AtmosHeap {
         }
         if (inEngine && n.startsWith(BusTiming.ZAS) && !n.startsWith(ENGINE)) {
             return true; // the platform's, reached through a callback it gave the engine
+        }
+        if (o instanceof DimensionAtmos && o != station) {
+            return true; // another dimension's
         }
         return n.startsWith(BusTiming.BENCH)
                 || n.equals(ENGINE + "gas.GasRegistry")
