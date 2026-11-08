@@ -7,6 +7,7 @@ import net.createmod.ponder.api.scene.SceneBuildingUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * What the player does in a scene, shown as Ponder's mouse button over the block, with the item in
@@ -40,6 +41,19 @@ public final class Hand {
     public static void sneakUse(
             SceneBuilder scene, SceneBuildingUtil util, BlockPos pos, Direction face, ItemStack held) {
         input(scene, util, pos, face, held).whileSneaking();
+        scene.idle(PAUSE);
+    }
+
+    /**
+     * A use on nothing, at a spot in the air, such as an analyzer reading the air or an extinguisher
+     * spraying.
+     *
+     * @param scene the scene
+     * @param at the spot
+     * @param held what's in hand
+     */
+    public static void useAt(SceneBuilder scene, Vec3 at, ItemStack held) {
+        scene.overlay().showControls(at, Pointing.DOWN, SHOW).rightClick().withItem(held);
         scene.idle(PAUSE);
     }
 

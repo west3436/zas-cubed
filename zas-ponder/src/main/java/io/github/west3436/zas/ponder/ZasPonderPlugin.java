@@ -2,12 +2,19 @@ package io.github.west3436.zas.ponder;
 
 import io.github.west3436.zas.ponder.scene.Stage;
 import io.github.west3436.zas.ponder.scenes.AreaAirControllerScenes;
+import io.github.west3436.zas.ponder.scenes.CanisterScenes;
+import io.github.west3436.zas.ponder.scenes.CentralControllerScenes;
+import io.github.west3436.zas.ponder.scenes.ElectrolyzerScenes;
 import io.github.west3436.zas.ponder.scenes.FireScenes;
 import io.github.west3436.zas.ponder.scenes.HeaterScenes;
 import io.github.west3436.zas.ponder.scenes.PipeScenes;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
+import io.github.west3436.zas.ponder.scenes.PortableScenes;
+import io.github.west3436.zas.ponder.scenes.PowerScenes;
 import io.github.west3436.zas.ponder.scenes.PumpScenes;
 import io.github.west3436.zas.ponder.scenes.SidePortScenes;
+import io.github.west3436.zas.ponder.scenes.ToolScenes;
+import io.github.west3436.zas.ponder.scenes.TransferValveScenes;
 import io.github.west3436.zas.ponder.scenes.ValveScenes;
 import io.github.west3436.zas.ponder.scenes.VentScenes;
 import java.util.List;
@@ -47,7 +54,21 @@ final class ZasPonderPlugin implements PonderPlugin {
             "air_conditioner",
             "fire_alarm",
             "firelock",
-            "igniter");
+            "igniter",
+            // Portables, power, the electrolyzer, the central controller and the handheld tools.
+            "canister",
+            "portable_scrubber",
+            "portable_pump",
+            "generator",
+            "recharger",
+            "electrolyzer",
+            "central_atmos_controller",
+            "multitool",
+            "crowbar",
+            "fire_extinguisher",
+            "tank_transfer_valve",
+            "atmos_analyzer",
+            "wrench");
 
     @Override
     public String getModId() {
@@ -79,6 +100,23 @@ final class ZasPonderPlugin implements PonderPlugin {
         helper.forComponents(atmos("fire_alarm")).addStoryBoard(Stage.MEDIUM, FireScenes::fireAlarm, TAG);
         helper.forComponents(atmos("firelock")).addStoryBoard(Stage.MEDIUM, FireScenes::firelock, TAG);
         helper.forComponents(atmos("igniter")).addStoryBoard(Stage.MEDIUM, FireScenes::igniter, TAG);
+
+        // Portables, power, the electrolyzer, the central controller and the handheld tools.
+        helper.forComponents(atmos("canister")).addStoryBoard(Stage.MEDIUM, CanisterScenes::canister, TAG);
+        helper.forComponents(atmos("portable_scrubber")).addStoryBoard(Stage.MEDIUM, PortableScenes::scrubber, TAG);
+        helper.forComponents(atmos("portable_pump")).addStoryBoard(Stage.MEDIUM, PortableScenes::pump, TAG);
+        helper.forComponents(atmos("generator")).addStoryBoard(Stage.MEDIUM, PowerScenes::generator, TAG);
+        helper.forComponents(atmos("recharger")).addStoryBoard(Stage.MEDIUM, PowerScenes::recharger, TAG);
+        helper.forComponents(atmos("electrolyzer")).addStoryBoard(Stage.MEDIUM, ElectrolyzerScenes::electrolyzer, TAG);
+        helper.forComponents(atmos("central_atmos_controller"))
+                .addStoryBoard(Stage.LARGE, CentralControllerScenes::central, TAG);
+        helper.forComponents(atmos("multitool")).addStoryBoard(Stage.LARGE, ToolScenes::multitool, TAG);
+        helper.forComponents(atmos("crowbar")).addStoryBoard(Stage.MEDIUM, ToolScenes::crowbar, TAG);
+        helper.forComponents(atmos("fire_extinguisher")).addStoryBoard(Stage.MEDIUM, ToolScenes::fireExtinguisher, TAG);
+        helper.forComponents(atmos("tank_transfer_valve"))
+                .addStoryBoard(Stage.SMALL, TransferValveScenes::transferValve, TAG);
+        helper.forComponents(atmos("atmos_analyzer")).addStoryBoard(Stage.MEDIUM, ToolScenes::analyzer, TAG);
+        helper.forComponents(atmos("wrench")).addStoryBoard(Stage.MEDIUM, ToolScenes::wrench, TAG);
     }
 
     /**
