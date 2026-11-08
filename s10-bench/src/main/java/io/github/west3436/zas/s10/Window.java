@@ -21,6 +21,12 @@ final class Window {
     final Series wall = new Series();
     /** Each server tick's start, {@link System#nanoTime}. */
     final Series starts = new Series();
+    /**
+     * Where the window keeps them (the enclosure cap step's), each tick of at least 1 ms's timed
+     * calls, as start and end pairs ({@link Clock#lastCalls}), by the tick's index: a collector
+     * pause inside them is inside zas's time.
+     */
+    final Map<Integer, long[]> calls = new java.util.HashMap<>();
     /** Each server tick's time by part, indexed by {@link Clock.Part#index}. */
     final List<Series> parts = new ArrayList<>();
     /** The station's batch closes and applies, on the ticks they happened. */

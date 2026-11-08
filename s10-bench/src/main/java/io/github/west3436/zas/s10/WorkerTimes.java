@@ -15,9 +15,11 @@ final class WorkerTimes implements Phase.Listener {
     static final Phase[] PHASES = Phase.values();
     /** Index of the whole tick in a row, after the phases. */
     static final int WHOLE = PHASES.length;
+    /** Index of the tick's start, {@link System#nanoTime}, after the whole tick. */
+    static final int START = WHOLE + 1;
 
     private final Phase.Listener inner;
-    private final long[] scratch = new long[WHOLE + 1];
+    private final long[] scratch = new long[START + 1];
     private Phase current;
     private long phaseStart;
     private long tickStart;
@@ -33,6 +35,7 @@ final class WorkerTimes implements Phase.Listener {
         if (current == null) {
             java.util.Arrays.fill(scratch, 0);
             tickStart = now;
+            scratch[START] = now;
         } else {
             scratch[current.ordinal()] = now - phaseStart;
         }

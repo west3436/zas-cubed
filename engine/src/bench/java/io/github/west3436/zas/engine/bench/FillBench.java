@@ -48,6 +48,9 @@ final class FillBench {
         w.box(100, 0, 0, 163, 15, 63, BenchWorld.AIR).set(164, 0, 0, BenchWorld.AIR); // 65,537 cells
         w.box(200, 0, 0, 219, 19, 19, BenchWorld.AIR); // 8,000 cells
         w.box(300, 0, 0, 302, 2, 2, BenchWorld.AIR); // 27 cells
+        // The largest hall the S-10 bench's enclosure cap step tests (owner, 2026-11-08): 80 × 80 × 16.
+        w.box(400, 0, 0, 479, 15, 79, BenchWorld.AIR); // 102,400 cells
+        w.box(600, 0, 0, 679, 15, 79, BenchWorld.AIR).set(680, 0, 0, BenchWorld.AIR); // 102,401 cells
         Map<Long, SectionSnapshot> cache = new HashMap<>();
         SectionTopology topology =
                 new SectionTopology(BenchWorld.PALETTE, key -> cache.computeIfAbsent(key, w::snapshot));
@@ -56,6 +59,9 @@ final class FillBench {
         row("Hall of 65,537 cells: open at the cap", fill, topology, CellIds.of(110, 5, 10), warm, runs);
         row("S-10's largest zone, 8,000 cells", fill, topology, CellIds.of(210, 5, 10), warm, runs);
         row("3 × 3 × 3 room, 27 cells", fill, topology, CellIds.of(301, 1, 1), warm, runs);
+        EnclosureFill raised = new EnclosureFill(102_400);
+        row("Sealed hall, 102,400 cells, at a cap of 102,400", raised, topology, CellIds.of(410, 5, 10), warm, runs);
+        row("Hall of 102,401 cells: open at a cap of 102,400", raised, topology, CellIds.of(610, 5, 10), warm, runs);
         System.out.println();
     }
 

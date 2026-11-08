@@ -53,6 +53,7 @@ final class Report {
         heap();
         blast();
         survey();
+        capStep();
         wholeTicks();
         notes();
         String text = md.toString();
@@ -507,6 +508,529 @@ final class Report {
         line();
         line("There's no sample of real player bases, so how often players build shapes like these is unknown.");
         line();
+    }
+
+    // ---- The enclosure cap step ----------------------------------------------------------------
+
+    /** A row of a hall's table. {@code pass} is false for a budget missed, or met without the margin. */
+    private record CapRow(
+            String step,
+            String what,
+            String figure,
+            String budget,
+            String margin,
+            String verdict,
+            String pauses,
+            boolean pass) {}
+
+    private static final String[] CAP_STEPS = {
+        "a. Zoning", "b. Open fill", "c. Breach and reseal", "d. Split and merge", "e. Running cost", "f. Memory"
+    };
+
+    private void capStep() {
+        line("## Enclosure cap step (owner, 2026-11-08; GEO-020, D-23)");
+        line();
+        CapStep c = b.cap;
+        if (c == null) {
+            line("Not run.");
+            line();
+            return;
+        }
+        line("How far `[atmos] enclosure_max_cells` can go. The scenario and the survey above ran at the default cap of"
+                + String.format(
+                        " %,d. Then the station was let go (its players left and its chunks unloaded),",
+                        c.configuredCap)
+                + " and each hall below was built in `zas_s10:halls`, a void dimension of its own with a vacuum"
+                + " ambient, with the cap set to the hall's cells and one player by it, in ticking chunks. Server"
+                + " ticks are the bench's whole count of `zas` and `zas_atmos` on the server thread; worker ticks"
+                + " are the halls' dimension's own.");
+        line();
+        line("- a. One add in the middle of a fresh sealed hall zones it. Time to zone runs from the add to its"
+                + " result's apply; atmos ticks are the batches from the one that carried the add.");
+        line("- b. A twin of the hall with a notch in one wall, so one cell over the cap, roofed so the column"
+                + " check can't answer: an add inside it must come out open, after a fill to the cap and one cell"
+                + " more. Each repeat adds at a cell no add used before, which isn't cached (GEO-027).");
+        line("- c. A 3 × 3 hole in the middle of the roof opens the hall to the vacuum; it vents for a while, the"
+                + " hole is filled, and the hall must read sealed again (or zone again from an add, if it went).");
+        line("- d. A wall across the middle is built with one block missing; placing that block splits the hall"
+                + " (CORE-024), taking it out again merges the halves (CORE-023). Times are to the next server tick"
+                + " that reads the change.");
+        line("- e. The server's atmos time per tick with the hall built but not zoned (the baseline), zoned and"
+                + " idle with the player outside it, and active: a generator, an area air controller and a vent in"
+                + " the hall, below the controller's target so the vent blows, its network topped up each second,"
+                + " and the player inside, breathing. The hall's share is the difference from the baseline.");
+        line("- f. The halls' engine and platform walked before and after the hall zones: bytes per zoned cell are"
+                + " what the parts that scale with cells grew by, over the hall's cells.");
+        line();
+        line("Time budgets need a margin of " + REQUIRED_MARGIN + "; memory needs none. NFR-002 is judged on zas's own"
+                + " time: a collector pause inside zas's calls in that tick is taken out, and given in the last"
+                + " column with the tick's other pauses. Ticks over 10 ms are listed after each table, with where"
+                + " their time went, so a stall that isn't the work shows.");
+        line();
+        for (Map.Entry<String, String> e : c.notes.entrySet()) {
+            line("- " + e.getValue());
+        }
+        if (!c.notes.isEmpty()) {
+            line();
+        }
+        List<String> summary = new ArrayList<>();
+        CapStep.Hall best = null;
+        boolean smallerFailed = false;
+        for (CapStep.Hall h : c.halls) {
+            List<CapRow> rows = capRows(h);
+            line(String.format("### %s: %,d cells, the cap at %,d", h.label(), h.cells(), h.cells()));
+            line();
+            line("| Step | What | Figure | Budget | Margin | Verdict | GC pauses and stalls |");
+            line("|---|---|---|---|---|---|---|");
+            for (CapRow r : rows) {
+                line(String.format(
+                        "| %s | %s | %s | %s | %s | %s | %s |",
+                        r.step(), r.what(), r.figure(), r.budget(), r.margin(), r.verdict(), r.pauses()));
+            }
+            line();
+            capFacts(h);
+            StringBuilder s = new StringBuilder(String.format("| %s | %,d |", h.label(), h.cells()));
+            boolean all = true;
+            for (String step : CAP_STEPS) {
+                boolean ok = rows.stream().filter(r -> r.step().equals(step)).allMatch(CapRow::pass);
+                all &= ok;
+                s.append(ok ? " met |" : " **no** |");
+            }
+            s.append(all ? " **yes** |" : " no |");
+            summary.add(s.toString());
+            if (all) {
+                best = h;
+            } else if (best == null) {
+                smallerFailed = true;
+            }
+        }
+        line("### Every size");
+        line();
+        StringBuilder head = new StringBuilder("| Hall | Cells |");
+        StringBuilder rule = new StringBuilder("|---|---|");
+        for (String step : CAP_STEPS) {
+            head.append(' ').append(step).append(" |");
+            rule.append("---|");
+        }
+        line(head + " Every budget |");
+        line(rule + "---|");
+        summary.forEach(this::line);
+        line();
+        String answer = best == null ? "none of them" : String.format("%s, %,d cells", best.label(), best.cells());
+        line("The largest hall that passes every budget: **" + answer + "**."
+                + (best != null && smallerFailed ? " A smaller one didn't, so read the tables." : ""));
+        line();
+        verdicts.put(
+                "GEO-020 cap",
+                "| GEO-020 enclosure cap step: the largest hall that passes every budget | " + answer + " | | "
+                        + (best == null ? "**none passes**" : "see the step") + " |");
+    }
+
+    private List<CapRow> capRows(CapStep.Hall h) {
+        List<CapRow> rows = new ArrayList<>();
+        String zoning = CAP_STEPS[0];
+        if (h.zoning == null) {
+            rows.add(must(zoning, "Outcome", "not run", "ZONE, the whole hall", false));
+        } else {
+            CapStep.Event e = h.zoning;
+            rows.add(must(
+                    zoning,
+                    "Outcome",
+                    String.format("%s, %,d cells", e.outcome, h.zoneCells),
+                    "ZONE, the whole hall",
+                    e.outcome.equals("ZONE") && h.zoneCells == h.cells()));
+            rows.add(workerRow(zoning, List.of(e)));
+            rows.add(serverRow(zoning, List.of(e)));
+            rows.add(info(zoning, "Time to zone", String.format("%,.0f ms, %s", e.msToDone(), rounds(e.rounds()))));
+        }
+        String openFill = CAP_STEPS[1];
+        if (h.openFills.isEmpty()) {
+            rows.add(must(openFill, "Outcome", "not run", "open (AMBIENT)", false));
+        } else {
+            List<String> outcomes = h.openFills.stream().map(e -> e.outcome).toList();
+            rows.add(must(
+                    openFill,
+                    "Outcome of each repeat",
+                    String.join(", ", outcomes),
+                    "open (AMBIENT)",
+                    outcomes.stream().allMatch("AMBIENT"::equals)));
+            rows.add(workerRow(openFill, h.openFills));
+            rows.add(serverRow(openFill, h.openFills));
+            rows.add(info(
+                    openFill,
+                    "Time to the outcome, each repeat",
+                    String.join(
+                            "; ",
+                            h.openFills.stream()
+                                    .map(e -> String.format("%,.0f ms, %s", e.msToDone(), rounds(e.rounds())))
+                                    .toList())));
+        }
+        String breach = CAP_STEPS[2];
+        if (h.breach == null) {
+            rows.add(must(breach, "Outcome", "not run", "sealed again", false));
+        } else {
+            CapStep.Event e = h.breach;
+            rows.add(must(
+                    breach,
+                    "Outcome",
+                    e.outcome,
+                    "sealed again",
+                    e.outcome.startsWith("sealed again") || e.outcome.equals("zoned again: ZONE")));
+            rows.add(workerRow(breach, List.of(e)));
+            rows.add(serverRow(breach, List.of(e)));
+            rows.add(info(breach, "Time from the reseal to sealed", String.format("%,.0f ms", e.msToDone())));
+        }
+        String splitMerge = CAP_STEPS[3];
+        List<CapStep.Event> both = new ArrayList<>(h.splits);
+        both.addAll(h.merges);
+        if (both.isEmpty()) {
+            rows.add(must(splitMerge, "Outcome", "not run", "each splits and merges", false));
+        } else {
+            long split = h.splits.stream().filter(CapStep.Event::done).count();
+            long merged = h.merges.stream().filter(CapStep.Event::done).count();
+            rows.add(must(
+                    splitMerge,
+                    "Outcome",
+                    String.format("split %d of %d, merged %d of %d", split, h.splits.size(), merged, h.merges.size()),
+                    "each splits and merges",
+                    split == h.splits.size() && merged == h.merges.size()));
+            rows.add(workerRow(splitMerge, both));
+            rows.add(serverRow(splitMerge, both));
+            rows.add(info(
+                    splitMerge,
+                    "Time to split, and to merge, the slowest",
+                    String.format(
+                            "%,.0f ms, %,.0f ms",
+                            h.splits.stream()
+                                    .mapToDouble(CapStep.Event::msToDone)
+                                    .max()
+                                    .orElse(Double.NaN),
+                            h.merges.stream()
+                                    .mapToDouble(CapStep.Event::msToDone)
+                                    .max()
+                                    .orElse(Double.NaN))));
+        }
+        String running = CAP_STEPS[4];
+        if (h.baseline == null || h.idle == null || h.active == null) {
+            rows.add(must(running, "Windows", "not all run", "baseline, idle and active", false));
+        } else {
+            double base = h.baseline.atmos.average() / MS;
+            rows.add(info(running, "Baseline, not zoned: average per server tick", String.format("%.3f ms", base)));
+            for (Window w : new Window[] {h.idle, h.active}) {
+                String which = w == h.idle ? "Idle" : "Active";
+                double avg = w.atmos.average() / MS;
+                rows.add(judged(
+                        running,
+                        String.format("%s: average per server tick (the hall's share %+.3f ms)", which, avg - base),
+                        avg,
+                        2,
+                        "ms",
+                        "NFR-001",
+                        ""));
+            }
+            rows.add(judged(
+                    running,
+                    "Active: 99th percentile per server tick",
+                    h.active.atmos.quantile(0.99) / MS,
+                    5,
+                    "ms",
+                    "NFR-001",
+                    ""));
+            CapRow worker = workerRow(running, List.of(), h.idle, h.active);
+            rows.add(new CapRow(
+                    worker.step(),
+                    "Largest worker tick, idle and active",
+                    worker.figure(),
+                    worker.budget(),
+                    worker.margin(),
+                    worker.verdict(),
+                    worker.pauses(),
+                    worker.pass()));
+            rows.add(info(
+                    running,
+                    "Worker ticks' average, idle and active",
+                    String.format("%.2f ms, %.2f ms", workerAverage(h.idle) / MS, workerAverage(h.active) / MS)));
+            rows.add(info(
+                    running,
+                    "The halls' batch close and apply, per server tick, active",
+                    String.format(
+                            "%.4f ms",
+                            (h.active.close.sum() + h.active.apply.sum())
+                                    / (double) Math.max(1, h.active.ticks)
+                                    / MS)));
+            rows.add(info(running, "The vent at the end", h.vent));
+        }
+        String memory = CAP_STEPS[5];
+        if (h.heapBefore == null || h.heapAfter == null || h.zoneCells == 0) {
+            rows.add(must(memory, "Heap", "not walked", "before and after zoning", false));
+        } else {
+            long cellParts = h.heapAfter.total(AtmosHeap.Scale.CELL) - h.heapBefore.total(AtmosHeap.Scale.CELL);
+            rows.add(judged(
+                    memory,
+                    "Bytes per zoned cell, in the parts that scale with cells",
+                    (double) cellParts / h.zoneCells,
+                    256,
+                    "B",
+                    "NFR-004",
+                    ""));
+            long added = h.heapAfter.total(false) - h.heapBefore.total(false);
+            rows.add(info(
+                    memory,
+                    "The hall's total",
+                    String.format(
+                            "%.2f MiB added by zoning it (%.0f B per cell); the dimension's atmos %.2f MiB with it",
+                            added / 1048576.0, (double) added / h.zoneCells, h.heapAfter.total(false) / 1048576.0)));
+        }
+        return rows;
+    }
+
+    /** The hall's facts, notes, and where the largest ticks' time went. */
+    private void capFacts(CapStep.Hall h) {
+        List<String> facts = new ArrayList<>(h.notes);
+        if (h.breach != null) {
+            h.breach.facts.forEach(x -> facts.add("Breach: " + x));
+        }
+        if (h.heapAfter != null && h.heapBefore != null) {
+            List<String> grew = new ArrayList<>();
+            for (AtmosHeap.Part p : AtmosHeap.Part.values()) {
+                long d = h.heapAfter.bytes(p) - h.heapBefore.bytes(p);
+                if (Math.abs(d) >= 64 * 1024) {
+                    grew.add(String.format("%s %+.2f MiB", p.name(), d / 1048576.0));
+                }
+            }
+            if (!grew.isEmpty()) {
+                facts.add("What zoning the hall added to the heap: " + String.join(", ", grew));
+            }
+            List<String> held = new ArrayList<>();
+            for (AtmosHeap.Part p : AtmosHeap.Part.values()) {
+                if (h.heapBefore.bytes(p) >= 256 * 1024) {
+                    held.add(String.format(
+                            "%s %.2f MiB (%s)",
+                            p.name(),
+                            h.heapBefore.bytes(p) / 1048576.0,
+                            String.join("; ", h.heapBefore.topClasses(p, 2))));
+                }
+            }
+            facts.add(String.format(
+                    "The halls' dimension before the hall zoned: %.2f MiB%s",
+                    h.heapBefore.total(false) / 1048576.0,
+                    held.isEmpty() ? "" : ", of which " + String.join(", ", held)));
+        }
+        List<String> slow = new ArrayList<>();
+        List<Window> windows = new ArrayList<>();
+        for (Window w : new Window[] {h.baseline, h.idle, h.active}) {
+            if (w != null) {
+                windows.add(w);
+            }
+        }
+        List<CapStep.Event> events = new ArrayList<>(h.openFills);
+        if (h.zoning != null) {
+            events.add(h.zoning);
+        }
+        events.addAll(h.splits);
+        events.addAll(h.merges);
+        if (h.breach != null) {
+            events.add(h.breach);
+        }
+        events.forEach(e -> windows.add(e.window));
+        for (Window w : windows) {
+            for (int i = 0; i < w.ticks; i++) {
+                if (w.atmos.get(i) > 10_000_000L) {
+                    slow.add(String.format(
+                            "%s, tick %d: %.3f ms, zas's own %.3f ms%s; %s",
+                            w.name,
+                            i,
+                            w.atmos.get(i) / MS,
+                            own(w, i) / MS,
+                            tickPause(w, i) > 0
+                                    ? String.format(", a %.1f ms pause in the tick", tickPause(w, i) / MS)
+                                    : "",
+                            topParts(w, i, 3)));
+                }
+            }
+        }
+        for (CapStep.Event e : events) {
+            long[] r = largestWorker(List.of(e.window));
+            if (r != null) {
+                facts.add(String.format(
+                        "%s: largest worker tick %.1f ms, mostly %s", e.name, r[WorkerTimes.WHOLE] / MS, topPhases(r)));
+            }
+        }
+        for (Window w : new Window[] {h.idle, h.active}) {
+            if (w != null && w.ticks > 0) {
+                facts.add((w == h.idle ? "Idle" : "Active") + ", the 3 slowest server ticks: " + slowest(w, 3));
+            }
+        }
+        if (!slow.isEmpty()) {
+            facts.add("Server ticks over 10 ms: " + String.join("; ", slow.subList(0, Math.min(12, slow.size())))
+                    + (slow.size() > 12 ? String.format("; and %d more", slow.size() - 12) : ""));
+        }
+        for (String x : facts) {
+            line("- " + x);
+        }
+        if (!facts.isEmpty()) {
+            line();
+        }
+    }
+
+    private CapRow judged(
+            String step, String what, double figure, double budget, String unit, String id, String pauses) {
+        double margin = figure <= 0 ? Double.POSITIVE_INFINITY : budget / figure;
+        boolean time = unit.equals("ms");
+        boolean pass = figure <= budget && (!time || margin >= REQUIRED_MARGIN);
+        String v = figure > budget ? "**fails**" : pass ? "met" : "**met here, but not with the margin**";
+        return new CapRow(
+                step,
+                what,
+                num(figure) + " " + unit,
+                id + " ≤ " + num(budget) + " " + unit,
+                margin == Double.POSITIVE_INFINITY ? "∞" : String.format("%.2f", margin),
+                v,
+                pauses,
+                pass);
+    }
+
+    private static CapRow info(String step, String what, String figure) {
+        return new CapRow(step, what, figure, "", "", "", "", true);
+    }
+
+    private static CapRow must(String step, String what, String figure, String expected, boolean ok) {
+        return new CapRow(step, what, figure, expected, "", ok ? "met" : "**fails**", "", ok);
+    }
+
+    private static String rounds(long n) {
+        return n < 0 ? "rounds unknown" : n == 1 ? "1 atmos tick" : n + " atmos ticks";
+    }
+
+    /** The largest server tick by zas's own time over the events' windows, judged on NFR-002. */
+    private CapRow serverRow(String step, List<CapStep.Event> events) {
+        Window worst = null;
+        int at = -1;
+        long best = -1;
+        long withPauses = 0;
+        for (CapStep.Event e : events) {
+            Window w = e.window;
+            for (int i = 0; i < w.ticks; i++) {
+                long own = own(w, i);
+                if (own > best) {
+                    best = own;
+                    worst = w;
+                    at = i;
+                }
+                withPauses = Math.max(withPauses, w.atmos.get(i));
+            }
+        }
+        if (worst == null) {
+            return must(step, "Largest server tick, zas's own time", "none recorded", "NFR-002 ≤ 10 ms", false);
+        }
+        long pause = tickPause(worst, at);
+        long inZas = zasPause(worst, at);
+        String pauses = pause == 0
+                ? "none in that tick"
+                : String.format("a %.1f ms pause in that tick, %.1f ms of it in zas's calls", pause / MS, inZas / MS);
+        if (withPauses > worst.atmos.get(at)) {
+            pauses += String.format("; the largest tick with its pauses: %.3f ms", withPauses / MS);
+        }
+        return judged(step, "Largest server tick, zas's own time", best / MS, 10, "ms", "NFR-002", pauses);
+    }
+
+    private CapRow workerRow(String step, List<CapStep.Event> events, Window... more) {
+        List<Window> windows = new ArrayList<>();
+        events.forEach(e -> windows.add(e.window));
+        windows.addAll(List.of(more));
+        long[] r = largestWorker(windows);
+        if (r == null) {
+            return must(step, "Largest worker tick", "none recorded", "NFR-005 ≤ 250 ms", false);
+        }
+        long pause = GcPauses.within(r[WorkerTimes.START], r[WorkerTimes.START] + r[WorkerTimes.WHOLE]);
+        return judged(
+                step,
+                "Largest worker tick",
+                r[WorkerTimes.WHOLE] / MS,
+                250,
+                "ms",
+                "NFR-005",
+                pause == 0 ? "none in that tick" : String.format("a %.1f ms pause in that tick", pause / MS));
+    }
+
+    private static long[] largestWorker(List<Window> windows) {
+        long[] best = null;
+        for (Window w : windows) {
+            for (long[] r : w.worker) {
+                if (best == null || r[WorkerTimes.WHOLE] > best[WorkerTimes.WHOLE]) {
+                    best = r;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static double workerAverage(Window w) {
+        long sum = 0;
+        for (long[] r : w.worker) {
+            sum += r[WorkerTimes.WHOLE];
+        }
+        return w.worker.isEmpty() ? 0 : (double) sum / w.worker.size();
+    }
+
+    /** A tick's atmos time less any collector pause inside zas's calls. */
+    private static long own(Window w, int i) {
+        return Math.max(0, w.atmos.get(i) - zasPause(w, i));
+    }
+
+    /** Collector pause time inside a tick's timed calls. */
+    private static long zasPause(Window w, int i) {
+        long[] calls = w.calls.get(i);
+        if (calls == null) {
+            return 0;
+        }
+        long sum = 0;
+        for (int k = 0; k + 1 < calls.length; k += 2) {
+            sum += GcPauses.within(calls[k], calls[k + 1]);
+        }
+        return sum;
+    }
+
+    /** Collector pause time anywhere in a tick. */
+    private static long tickPause(Window w, int i) {
+        return GcPauses.within(w.starts.get(i), w.starts.get(i) + w.wall.get(i));
+    }
+
+    private static String topParts(Window w, int i, int n) {
+        List<String> top = new ArrayList<>();
+        Clock.parts().stream()
+                .filter(p -> p.index < w.parts.size() && w.parts.get(p.index).get(i) > 0)
+                .sorted(Comparator.comparingLong(
+                                (Clock.Part p) -> w.parts.get(p.index).get(i))
+                        .reversed())
+                .limit(n)
+                .forEach(p -> top.add(
+                        String.format("%s %.2f", p.name, w.parts.get(p.index).get(i) / MS)));
+        return top.isEmpty() ? "no part" : String.join(", ", top);
+    }
+
+    /** A window's slowest ticks by atmos time, each with where its time went. */
+    private static String slowest(Window w, int n) {
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < w.ticks; i++) {
+            order.add(i);
+        }
+        order.sort((x, y) -> Long.compare(w.atmos.get(y), w.atmos.get(x)));
+        List<String> out = new ArrayList<>();
+        for (int i : order.subList(0, Math.min(n, order.size()))) {
+            out.add(String.format("%.3f ms (%s)", w.atmos.get(i) / MS, topParts(w, i, 3)));
+        }
+        return String.join("; ", out);
+    }
+
+    private static String topPhases(long[] r) {
+        List<String> top = new ArrayList<>();
+        java.util.stream.IntStream.range(0, WorkerTimes.PHASES.length)
+                .boxed()
+                .sorted((x, y) -> Long.compare(r[y], r[x]))
+                .limit(2)
+                .forEach(i -> top.add(String.format("%s %.1f ms", WorkerTimes.PHASES[i].name(), r[i] / MS)));
+        return String.join(", ", top);
     }
 
     private void wholeTicks() {
