@@ -58,6 +58,8 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
     in hand, then pause before the scene shows what the use does. A button stays
     up for `Hand.SHOW` ticks, and two on blocks side by side cover each other, so
     wait until one goes before showing the next, as `PipeScenes` does.
+  - `useAt` does the same at a spot in the air, for a use on nothing, such as an
+    analyzer reading the air or an extinguisher spraying.
 - `Power`
   - `controller` puts up a station wall with an area air controller, turns the
     device on and says the controller powers it.
