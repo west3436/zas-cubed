@@ -27,6 +27,7 @@
     "zas_atmos:electrolyzer",
     "zas_atmos:station_wall",
     "zas_atmos:reinforced_station_wall",
-    "zas_atmos:reinforced_glass_block"
+    "zas_atmos:reinforced_glass_block",
+    "zas_atmos:tank_holder"
   ]
 }

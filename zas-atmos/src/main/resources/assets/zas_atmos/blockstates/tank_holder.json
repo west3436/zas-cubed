@@ -1,0 +1,169 @@
+{
+  "variants": {
+    "facing=north,tanks=0": {
+      "model": "zas_atmos:block/tank_holder"
+    },
+    "facing=east,tanks=0": {
+      "model": "zas_atmos:block/tank_holder",
+      "y": 90
+    },
+    "facing=south,tanks=0": {
+      "model": "zas_atmos:block/tank_holder",
+      "y": 180
+    },
+    "facing=west,tanks=0": {
+      "model": "zas_atmos:block/tank_holder",
+      "y": 270
+    },
+    "facing=north,tanks=1": {
+      "model": "zas_atmos:block/tank_holder_1"
+    },
+    "facing=east,tanks=1": {
+      "model": "zas_atmos:block/tank_holder_1",
+      "y": 90
+    },
+    "facing=south,tanks=1": {
+      "model": "zas_atmos:block/tank_holder_1",
+      "y": 180
+    },
+    "facing=west,tanks=1": {
+      "model": "zas_atmos:block/tank_holder_1",
+      "y": 270
+    },
+    "facing=north,tanks=2": {
+      "model": "zas_atmos:block/tank_holder_2"
+    },
+    "facing=east,tanks=2": {
+      "model": "zas_atmos:block/tank_holder_2",
+      "y": 90
+    },
+    "facing=south,tanks=2": {
+      "model": "zas_atmos:block/tank_holder_2",
+      "y": 180
+    },
+    "facing=west,tanks=2": {
+      "model": "zas_atmos:block/tank_holder_2",
+      "y": 270
+    },
+    "facing=north,tanks=3": {
+      "model": "zas_atmos:block/tank_holder_3"
+    },
+    "facing=east,tanks=3": {
+      "model": "zas_atmos:block/tank_holder_3",
+      "y": 90
+    },
+    "facing=south,tanks=3": {
+      "model": "zas_atmos:block/tank_holder_3",
+      "y": 180
+    },
+    "facing=west,tanks=3": {
+      "model": "zas_atmos:block/tank_holder_3",
+      "y": 270
+    },
+    "facing=north,tanks=4": {
+      "model": "zas_atmos:block/tank_holder_4"
+    },
+    "facing=east,tanks=4": {
+      "model": "zas_atmos:block/tank_holder_4",
+      "y": 90
+    },
+    "facing=south,tanks=4": {
+      "model": "zas_atmos:block/tank_holder_4",
+      "y": 180
+    },
+    "facing=west,tanks=4": {
+      "model": "zas_atmos:block/tank_holder_4",
+      "y": 270
+    },
+    "facing=north,tanks=5": {
+      "model": "zas_atmos:block/tank_holder_5"
+    },
+    "facing=east,tanks=5": {
+      "model": "zas_atmos:block/tank_holder_5",
+      "y": 90
+    },
+    "facing=south,tanks=5": {
+      "model": "zas_atmos:block/tank_holder_5",
+      "y": 180
+    },
+    "facing=west,tanks=5": {
+      "model": "zas_atmos:block/tank_holder_5",
+      "y": 270
+    },
+    "facing=north,tanks=6": {
+      "model": "zas_atmos:block/tank_holder_6"
+    },
+    "facing=east,tanks=6": {
+      "model": "zas_atmos:block/tank_holder_6",
+      "y": 90
+    },
+    "facing=south,tanks=6": {
+      "model": "zas_atmos:block/tank_holder_6",
+      "y": 180
+    },
+    "facing=west,tanks=6": {
+      "model": "zas_atmos:block/tank_holder_6",
+      "y": 270
+    },
+    "facing=north,tanks=7": {
+      "model": "zas_atmos:block/tank_holder_7"
+    },
+    "facing=east,tanks=7": {
+      "model": "zas_atmos:block/tank_holder_7",
+      "y": 90
+    },
+    "facing=south,tanks=7": {
+      "model": "zas_atmos:block/tank_holder_7",
+      "y": 180
+    },
+    "facing=west,tanks=7": {
+      "model": "zas_atmos:block/tank_holder_7",
+      "y": 270
+    },
+    "facing=north,tanks=8": {
+      "model": "zas_atmos:block/tank_holder_8"
+    },
+    "facing=east,tanks=8": {
+      "model": "zas_atmos:block/tank_holder_8",
+      "y": 90
+    },
+    "facing=south,tanks=8": {
+      "model": "zas_atmos:block/tank_holder_8",
+      "y": 180
+    },
+    "facing=west,tanks=8": {
+      "model": "zas_atmos:block/tank_holder_8",
+      "y": 270
+    },
+    "facing=north,tanks=9": {
+      "model": "zas_atmos:block/tank_holder_9"
+    },
+    "facing=east,tanks=9": {
+      "model": "zas_atmos:block/tank_holder_9",
+      "y": 90
+    },
+    "facing=south,tanks=9": {
+      "model": "zas_atmos:block/tank_holder_9",
+      "y": 180
+    },
+    "facing=west,tanks=9": {
+      "model": "zas_atmos:block/tank_holder_9",
+      "y": 270
+    },
+    "facing=north,tanks=10": {
+      "model": "zas_atmos:block/tank_holder_10"
+    },
+    "facing=east,tanks=10": {
+      "model": "zas_atmos:block/tank_holder_10",
+      "y": 90
+    },
+    "facing=south,tanks=10": {
+      "model": "zas_atmos:block/tank_holder_10",
+      "y": 180
+    },
+    "facing=west,tanks=10": {
+      "model": "zas_atmos:block/tank_holder_10",
+      "y": 270
+    }
+  }
+}

@@ -2461,12 +2461,13 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firelock` | The firelock and its lockdown (§11.8) |
 | `firealarm` | The fire alarm (§11.6) |
 | `tool` | The multitool (§11.6), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
-| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `TankKind` (a tank's kind, which tints it on a TTV and a tank holder), `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
+| `holder` | The tank holder (§11.9): `TankHolderBlock` and `TankHolderBlockEntity` |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
 | `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
@@ -3504,7 +3505,7 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   | In a suit's tank slot, worn or carried | The suit's `inventoryTick`, which works on a copy of the tank and writes it back if it changed |
   | Dropped, alone or in a suit | `onEntityItemUpdate`, NeoForge's per-tick call for a dropped item |
   | In a tank transfer valve | The valve, as a suit does; its primed entity in its own tick (CONT-103) |
-  | In a chest, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
+  | In a chest or a tank holder, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
 
   A mined canister's item (`CanisterItem`) reacts in the same places, with its
   1,000 L. Reaching a chest would mean scanning every container each second,
@@ -3558,6 +3559,18 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
     it is a vanilla `BLOCK` explosion, which follows the
     `blockExplosionDropDecay` game rule; if not, `NONE`, which keeps every block
     and still hurts entities.
+- **Tank holder** (CONT-149 to CONT-151, D-84), in `.holder`. A full block
+  whose `TankHolderBlockEntity` keeps ten places in an `ItemStackHandler` that
+  takes one tank each and nothing else, saved as a chest's. Using a tank on it
+  puts the tank in the first free place, and an empty hand takes out the last
+  one put in, so the tanks always fill the first places; a save or a command
+  that leaves a gap is closed up when read. There is no window, item handler or
+  comparator output, and nothing ticks the tanks there (the table above). The
+  block state's `tanks`, 0 to 10, picks the model for that count. Each tank's
+  faces carry their own tint index, 1 to 10. Clients are sent only each tank's
+  `TankKind`, in the update tag, and the colour handler reads it from the block
+  entity. A block whose count is wrong after a load settles at its next block
+  tick. Broken, it drops its tanks.
 
 ### 11.10 The fire extinguisher (CONT-037)
 

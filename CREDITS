@@ -2195,6 +2195,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/tank_holder.json
 origin: original
 notes: The tank holder's item: the empty block model.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/tank_holder.json
+origin: original
+notes: The tank holder's four facings, holding 0 to 10 tanks, with the existing tank_holder and tank_holder_1 to tank_holder_10 models.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/airlock.png
 origin: vgstation13
 source: icons/obj/doors/Doorext.dmi
