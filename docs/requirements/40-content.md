@@ -3433,9 +3433,9 @@ those vents.
 #### CONT-142 · Air sensor
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-047
 
-An air sensor shall be a wall panel that reads the pressure at its own block and shows alert
-while that is below 81 kPa or above 122 kPa, cycling while a controller it's linked to cycles,
-and standby otherwise.
+An air sensor shall be a wall panel that reads the pressure at its own block and shows cycling
+while a controller it's linked to cycles, otherwise alert while that pressure is below 81 kPa or
+above 122 kPa, and otherwise standby.
 
 - **Rationale:** Decision: D-84, with its three states from the art notes
   ([textures](../textures.md)). 81 and 122 kPa are the Human preset's pressure min2 and max2
