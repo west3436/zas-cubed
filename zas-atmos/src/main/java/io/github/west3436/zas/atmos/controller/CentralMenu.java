@@ -32,7 +32,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  *
  * <ul>
  *   <li>{@code 0}, {@code 1}: lower or raise the range by a chunk, from 1 to the server's maximum;
- *   <li>{@code 1000 + row}: open that area air controller's own GUI, if it is loaded (CONT-124);
+ *   <li>{@code 1000 + row}: open that area air controller's own GUI, if it is in contact (CONT-124);
  *   <li>{@code 100000 + row * 3 + p}: set that area air controller's zone power priority to {@link
  *       ZonePriority} {@code p} (CONT-121).
  * </ul>
@@ -117,14 +117,14 @@ public class CentralMenu extends AbstractContainerMenu {
     /**
      * Opens a claimed area air controller's own GUI for the player, as if they stood at it
      * (CONT-124): the same menu, whose every button the server checks as it does there. Refused if it
-     * isn't loaded.
+     * is out of contact: not loaded, or waiting in a chunk that doesn't tick.
      */
     private boolean open(ServerLevel level, Player player, BlockPos controller) {
         if (!(player instanceof ServerPlayer sp)
                 || !mine(level, controller)
                 || !level.isLoaded(controller)
                 || !(level.getBlockEntity(controller) instanceof AreaAirControllerBlockEntity c)
-                || c.isRemoved()) {
+                || !c.stepping()) {
             return false;
         }
         sp.openMenu(

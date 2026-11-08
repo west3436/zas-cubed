@@ -356,19 +356,17 @@ public final class AtmosSnapshot {
         return i < 0 || membership == null ? 0 : membership.zoneVolume(i);
     }
 
-    /** A zone's volume in a chunk, as {@link #shares} scales by it; 0 if it has no cells there. */
+    /**
+     * A zone's volume in a chunk, as {@link #shares} scales by it; 0 if it has no cells there. Reads
+     * the chunk's palettes only, without listing cells, since a chunk's unload asks it of each other
+     * chunk of the zone that has unloaded.
+     */
     double zoneVolumeIn(long zone, long chunk) {
         if (isRejected(zone)) {
             return previous.zoneVolumeIn(zone, chunk);
         }
-        if (membership != null) {
-            for (Membership.Part part : membership.parts(chunk)) {
-                if (zones[part.zone()].id() == zone) {
-                    return part.volume();
-                }
-            }
-        }
-        return 0;
+        int i = ownIndex(zone);
+        return i < 0 || membership == null ? 0 : membership.volumeIn(i, chunk);
     }
 
     /** Every chunk some zone of this table spans, ascending. */

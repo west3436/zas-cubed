@@ -290,6 +290,31 @@ final class Membership {
         return out;
     }
 
+    /**
+     * The volume of the zone at an index in a chunk, as {@link #parts} sums it, without listing its
+     * cells; 0 if it has none there. Costs a pass over the chunk's sections' palettes only.
+     */
+    double volumeIn(int index, long chunk) {
+        long id = zoneIds[index];
+        int x = SectionKeys.chunkX(chunk);
+        int z = SectionKeys.chunkZ(chunk);
+        long prefix = SectionKeys.section(x, 0, z) >> 20;
+        int from = Arrays.binarySearch(sectionKeys, prefix << 20);
+        if (from < 0) {
+            from = -from - 1;
+        }
+        double volume = 0;
+        for (int k = from; k < sectionKeys.length && (sectionKeys[k] >> 20) == prefix; k++) {
+            SectionMembers s = sections[k];
+            for (int e = 1; e < s.paletteSize(); e++) {
+                if (s.zoneOfEntry(e) == id) {
+                    volume += s.volumeOfEntry(e);
+                }
+            }
+        }
+        return volume;
+    }
+
     private static long[] append(long[] a, int at, long v) {
         if (at == a.length) {
             a = Arrays.copyOf(a, a.length * 2);

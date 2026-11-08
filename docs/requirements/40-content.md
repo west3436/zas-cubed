@@ -19,6 +19,8 @@ as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
 CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
+CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
+added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
@@ -157,6 +159,16 @@ A node on a chunk's edge, and any port, now rejoins a connected neighbour in
 another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
 `cont_003_ports_away_in_turn_join_when_both_return`).*
 
+*2026-11-07: Note: still Implemented. Devices and nodes now step only in chunks that
+tick (CONT-006), and a chunk next to a ticking one is always loaded in full, so in
+play a network's near side steps while its far chunk is away only through a member
+further along, in a ticking chunk. The chunk tests above, `ValveTests`' chunk tests
+and `GasHandlerTests.api_026_a_handler_in_a_chunk_that_is_away_is_left_alone` now
+step the near side's devices directly while the far chunk is away, standing for that
+member, and hold both chunks ticking once they return. Each test's Javadoc says what
+play state it stands for. `PipeSaveTests` holds its chunks ticking where it needs
+steps, and `StationSaveTests` steps its station's devices itself.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -286,6 +298,23 @@ entities, which wait until it returns.
 `PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
 checks a vent there.*
 
+*2026-11-07: Note: still Implemented, with the note above changed. A device
+now steps only while its chunk ticks block entities, as vanilla's do: near a
+player, or held by a ticking ticket such as a central controller's. A chunk at
+the edge of what is loaded, in full only because a ticking neighbour is,
+doesn't tick, and a device there waits as it is, keeping its power. The S-10
+bench found that steps there kept those chunks loaded after every player had
+gone: reading a block through the level adds a ticket to its chunk, so each
+step ticketed its own chunk and its neighbours again, and a wing with a device
+due in every game tick never unloaded ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_a_member_that_is_not_ticking_is_passed_over_and_keeps_its_phase`
+(Unit) checks the schedule passes such a device over;
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_doesnt_tick` (GameTest,
+renamed from the test above) checks a vent at the edge and away, and
+`cont_006_a_chunk_at_the_edge_unloads_with_its_devices` that a chunk at the
+edge unloads with its neighbour.*
+
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Implemented` · Verify: Manual
 
@@ -375,6 +404,101 @@ tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 alone, with no pipe in it, reacts the same way
 (`PumpTests.cont_100_a_network_of_ports_alone_reacts_once_per_atmos_tick`,
 GameTest).*
+
+## Radiators and heat exchangers
+
+Decided in D-84. How their heat moves is in [HEAT](12-heat.md#pipe-gas) (HEAT-020 to
+HEAT-022). The art is the owner's from batch 5
+([textures](../textures.md#content-mod-zas_atmos-blocks)).
+
+#### CONT-143 · Radiator pipe
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-007, [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+
+A radiator pipe shall be a 70 L pipe-network segment that connects only to radiator pipe and
+to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
+
+- **Rationale:** Decision: D-84, with the owner's art: a finned tube with no flanges, which
+  joins only radiator pipe and the adaptor. vg's heat-exchange pipes meet ordinary pipe only
+  at junctions ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest places radiator pipe beside a pipe, a vent and more radiator pipe,
+  and checks it joins only the radiator pipe, adding 70 L a segment to the network.
+
+*2026-11-07: Added for review.*
+
+#### CONT-144 · Radiator pipe ends are closed
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
+
+A radiator pipe with fewer than two connections shall keep its gas: unlike a pipe's
+(CONT-004), its end is closed.
+
+- **Rationale:** Inferred: its art has no open mouth and no cap fits it, so a radiator run
+  can end without one.
+- **Verify:** A GameTest fills a lone radiator pipe and a dead-end run in a room and checks
+  no gas leaves either.
+
+*2026-11-07: Added for review.*
+
+#### CONT-145 · Radiator adaptor
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
+
+A radiator adaptor shall be one 70 L pipe-network node, placed facing any of six ways, with a
+pipe end and a radiator end on opposite faces. Its pipe end connects as a pipe does, and its
+radiator end only to radiator pipe.
+
+- **Rationale:** Decision: D-84, with the owner's art: inline, a pipe's flange and tube at one
+  end and the finned tube at the other.
+- **Verify:** A GameTest checks a pipe, an adaptor and radiator pipe in line share one
+  network, with the adaptor's 70 L, and that turning the adaptor round parts them.
+
+*2026-11-07: Added for review.*
+
+#### CONT-146 · Radiator pipe bursts
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
+
+Radiator pipe and radiator adaptors shall be segments that burst as pipe does (CONT-108).
+
+- **Rationale:** Inferred: they are pipe, so a radiator run shouldn't hold more than pipe
+  can. vg's don't burst, but no vg pipe does ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest raises a network of radiator pipe and an adaptor to more than
+  100 atm over its room and checks one of them bursts.
+
+*2026-11-07: Added for review.*
+
+#### CONT-147 · Heat exchanger
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
+
+A heat exchanger shall be a 200 L pipe-network node, half a block deep against one face of
+its block, placed facing any of six ways, with a pipe connection only on the opposite face.
+
+- **Rationale:** Decision: D-84, with the owner's art: vg's box, half a block deep, so a pair
+  stands back to back. vg's buffer is 200 L ([vg §2](../research/vg-atmos-content.md#2-devices)).
+- **Verify:** A GameTest checks a pipe joins a heat exchanger only on the face opposite its
+  box, adding 200 L to the network.
+
+*2026-11-07: Added for review.*
+
+#### CONT-148 · Heat exchanger's colour
+`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
+
+A heat exchanger's coil and pipe shall show the temperature of its network's gas, blending
+between these colours, and its item shall show copper:
+
+| Temperature | Colour |
+|---|---|
+| 213 K (−60 °C) or colder | Frost blue, `#8ec5ff` |
+| 293 K (20 °C) | Copper, `#c07a45` |
+| 473 K (200 °C) | Dark red, `#9c4a32` |
+| 873 K (600 °C) | Red, `#e8341c` |
+| 1,273 K (1,000 °C) | Orange, `#ff8c1a` |
+| 1,773 K (1,500 °C) or hotter | Yellow-white, `#ffe8b0` |
+
+- **Rationale:** Decision: D-84, with the owner's ask in the batch 5 art review that its coil
+  glows as vg's heat-exchange pipes do ([texture procurement
+  §6](../texture-procurement.md#6-sources-for-each-row)).
+- **Verify:** A Unit test checks the colour at each temperature in the table and halfway
+  between two. Manual: a heat exchanger on a cold network and on a hot one, and its item.
+
+*2026-11-07: Added for review.*
 
 ## Devices (R1 set)
 
@@ -1876,6 +2000,16 @@ firelock (CONT-043).*
 the controller's buffer, follows its orders, and is listed as linked, not in
 the zone.*
 
+*2026-11-07: Note: still Implemented, and a controller covers the same parts. It
+now finds them in an index of each loaded part's zone, asked again only when it
+may have changed, instead of asking every loaded part at every step, which took
+most of the S-10 bench's device time ([architecture
+§11.6](../architecture.md#116-the-area-air-controller)).
+`ControllerTests.cont_042_coverage_follows_its_zone_and_its_parts` (GameTest)
+merges two rooms' zones and splits them again, grows one into a room that had
+none, and places and breaks a part, and at each step checks the controller lists
+what asking every loaded part then finds.*
+
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
 
@@ -3032,6 +3166,14 @@ range. `cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloade
 (GameTest) checks that an unloaded controller's row is out of contact with its last
 readings. This stays Accepted until the owner has checked the window.*
 
+*2026-11-08: Note: still Accepted, text unchanged. Since devices step only in
+chunks that tick (CONT-006), a controller in a chunk loaded in full that doesn't
+tick, at the edge of what is loaded, waits as an unloaded one does, so it is
+shown as out of contact too, with its last readings, and gets no FE. Before, the
+console counted it in contact and showed its frozen readings as live.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
+(GameTest) checks its row.*
+
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
@@ -3056,6 +3198,12 @@ from a player out of reach of the central controller is refused. Once the contro
 chunk unloads, it won't open. The menu is the controller's own, with its own checks. It
 stays open only while the player is in reach of the central controller, the controller
 is loaded and still claimed. Its Back button reopens the central controller's window.*
+
+*2026-11-08: Note: still Implemented. A loaded controller here is one in contact (CONT-123):
+one waiting in a chunk loaded in full that doesn't tick won't open from the central
+controller, and its menu opened from there closes when it goes out of contact.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact` (GameTest)
+checks both.*
 
 ## Device sounds
 

@@ -379,6 +379,7 @@ public final class DimensionEngine {
         phases.enter(Phase.RESTORE);
         graph.setSettings(batch.settings().exchange());
         graph.setZoneSettings(batch.settings().zones());
+        classifier.fillBound(batch.settings().enclosureMaxCells());
         dimensionPaused = batch.settings().dimensionPaused();
         if (!batch.ambient().equals(ambient)) {
             ambient = batch.ambient();
