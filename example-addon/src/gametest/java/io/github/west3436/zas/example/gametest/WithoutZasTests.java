@@ -165,6 +165,14 @@ public final class WithoutZasTests {
         });
     }
 
+    /** With no config, the near-vacuum density is HEAT-008's default, 1 % of standard air's (API-064). */
+    @GameTest(template = "empty")
+    public static void s_12_near_vacuum_is_1_percent_of_standard_air(GameTestHelper h) {
+        h.assertValueEqual(
+                Atmospheres.nearVacuumDensity(), Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY, "nearVacuumDensity");
+        h.succeed();
+    }
+
     /** With no preset, a container's explosion breaks no blocks (API-059). */
     @GameTest(template = "empty")
     public static void s_12_container_explosions_break_no_blocks(GameTestHelper h) {

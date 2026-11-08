@@ -19,6 +19,8 @@ as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
 CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
+CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
+added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
@@ -375,6 +377,101 @@ tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 alone, with no pipe in it, reacts the same way
 (`PumpTests.cont_100_a_network_of_ports_alone_reacts_once_per_atmos_tick`,
 GameTest).*
+
+## Radiators and heat exchangers
+
+Decided in D-84. How their heat moves is in [HEAT](12-heat.md#pipe-gas) (HEAT-020 to
+HEAT-022). The art is the owner's from batch 5
+([textures](../textures.md#content-mod-zas_atmos-blocks)).
+
+#### CONT-143 · Radiator pipe
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-007, [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+
+A radiator pipe shall be a 70 L pipe-network segment that connects only to radiator pipe and
+to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
+
+- **Rationale:** Decision: D-84, with the owner's art: a finned tube with no flanges, which
+  joins only radiator pipe and the adaptor. vg's heat-exchange pipes meet ordinary pipe only
+  at junctions ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest places radiator pipe beside a pipe, a vent and more radiator pipe,
+  and checks it joins only the radiator pipe, adding 70 L a segment to the network.
+
+*2026-11-07: Added for review.*
+
+#### CONT-144 · Radiator pipe ends are closed
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
+
+A radiator pipe with fewer than two connections shall keep its gas: unlike a pipe's
+(CONT-004), its end is closed.
+
+- **Rationale:** Inferred: its art has no open mouth and no cap fits it, so a radiator run
+  can end without one.
+- **Verify:** A GameTest fills a lone radiator pipe and a dead-end run in a room and checks
+  no gas leaves either.
+
+*2026-11-07: Added for review.*
+
+#### CONT-145 · Radiator adaptor
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
+
+A radiator adaptor shall be one 70 L pipe-network node, placed facing any of six ways, with a
+pipe end and a radiator end on opposite faces. Its pipe end connects as a pipe does, and its
+radiator end only to radiator pipe.
+
+- **Rationale:** Decision: D-84, with the owner's art: inline, a pipe's flange and tube at one
+  end and the finned tube at the other.
+- **Verify:** A GameTest checks a pipe, an adaptor and radiator pipe in line share one
+  network, with the adaptor's 70 L, and that turning the adaptor round parts them.
+
+*2026-11-07: Added for review.*
+
+#### CONT-146 · Radiator pipe bursts
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
+
+Radiator pipe and radiator adaptors shall be segments that burst as pipe does (CONT-108).
+
+- **Rationale:** Inferred: they are pipe, so a radiator run shouldn't hold more than pipe
+  can. vg's don't burst, but no vg pipe does ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest raises a network of radiator pipe and an adaptor to more than
+  100 atm over its room and checks one of them bursts.
+
+*2026-11-07: Added for review.*
+
+#### CONT-147 · Heat exchanger
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
+
+A heat exchanger shall be a 200 L pipe-network node, half a block deep against one face of
+its block, placed facing any of six ways, with a pipe connection only on the opposite face.
+
+- **Rationale:** Decision: D-84, with the owner's art: vg's box, half a block deep, so a pair
+  stands back to back. vg's buffer is 200 L ([vg §2](../research/vg-atmos-content.md#2-devices)).
+- **Verify:** A GameTest checks a pipe joins a heat exchanger only on the face opposite its
+  box, adding 200 L to the network.
+
+*2026-11-07: Added for review.*
+
+#### CONT-148 · Heat exchanger's colour
+`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
+
+A heat exchanger's coil and pipe shall show the temperature of its network's gas, blending
+between these colours, and its item shall show copper:
+
+| Temperature | Colour |
+|---|---|
+| 213 K (−60 °C) or colder | Frost blue, `#8ec5ff` |
+| 293 K (20 °C) | Copper, `#c07a45` |
+| 473 K (200 °C) | Dark red, `#9c4a32` |
+| 873 K (600 °C) | Red, `#e8341c` |
+| 1,273 K (1,000 °C) | Orange, `#ff8c1a` |
+| 1,773 K (1,500 °C) or hotter | Yellow-white, `#ffe8b0` |
+
+- **Rationale:** Decision: D-84, with the owner's ask in the batch 5 art review that its coil
+  glows as vg's heat-exchange pipes do ([texture procurement
+  §6](../texture-procurement.md#6-sources-for-each-row)).
+- **Verify:** A Unit test checks the colour at each temperature in the table and halfway
+  between two. Manual: a heat exchanger on a cold network and on a hot one, and its item.
+
+*2026-11-07: Added for review.*
 
 ## Devices (R1 set)
 

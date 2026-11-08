@@ -338,6 +338,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.get();
     }
 
+    /** The configured near-vacuum density (API-064, HEAT-008), or a GameTest's override; the default before the config loads. */
+    @Override
+    public double nearVacuumDensity() {
+        return ZasServerConfig.heat().nearVacuumDensity();
+    }
+
     /**
      * The running server's reactions on a standalone mixture (API-019, FIRE-031), with the
      * configured fire oxygen threshold; unchanged when no server runs in this JVM.
