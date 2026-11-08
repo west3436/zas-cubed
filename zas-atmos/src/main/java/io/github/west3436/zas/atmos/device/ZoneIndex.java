@@ -41,8 +41,9 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li>a part's, when it joins its level's schedule, and when its block changes in place, as when it
  *       is turned;
- *   <li>every part's, after a zone of its level is created, merged, split, breached, sealed,
- *       dissolved, paused or resumed (API-030);
+ *   <li>the parts in each zone a lifecycle event names, and those in none, after a zone of its
+ *       level is created, merged, split, breached, sealed, dissolved, paused or resumed (API-030);
+ *       an event names every zone whose cells it changes, both of them for a merge or a split;
  *   <li>the parts in a zone and those in none, when a controller finds that zone's cell count has
  *       changed since it last looked: a zone that grows into a room that had none, or loses a cell,
  *       fires no event;
@@ -81,7 +82,9 @@ public final class ZoneIndex {
     /** Each zone's cell count when a controller last looked it up. */
     private final Map<ZoneId, Integer> cells = new HashMap<>();
 
-    private boolean allStale;
+    /** The zones lifecycle events have named since the last lookup. */
+    private final Set<ZoneId> changed = new HashSet<>();
+
     private long joined;
 
     private ZoneIndex() {}
@@ -89,8 +92,8 @@ public final class ZoneIndex {
     /** Registers the zone event listeners. Called once, from {@link DeviceTicker#register}. */
     static void register(IEventBus gameBus) {
         gameBus.addListener((ZoneCreatedEvent e) -> zonesChanged(e));
-        gameBus.addListener((ZoneMergedEvent e) -> zonesChanged(e));
-        gameBus.addListener((ZoneSplitEvent e) -> zonesChanged(e));
+        gameBus.addListener((ZoneMergedEvent e) -> zonesChanged(e, e.absorbed()));
+        gameBus.addListener((ZoneSplitEvent e) -> zonesChanged(e, e.remnant()));
         gameBus.addListener((ZoneBreachedEvent e) -> zonesChanged(e));
         gameBus.addListener((ZoneSealedEvent e) -> zonesChanged(e));
         gameBus.addListener((ZoneDissolvedEvent e) -> zonesChanged(e));
@@ -98,10 +101,12 @@ public final class ZoneIndex {
         gameBus.addListener((ZoneResumedEvent e) -> zonesChanged(e));
     }
 
-    private static void zonesChanged(ZoneLifecycleEvent e) {
+    /** Notes the zones a lifecycle event names: its own, and the other a merge or a split names. */
+    private static void zonesChanged(ZoneLifecycleEvent e, ZoneId... others) {
         ZoneIndex index = LEVELS.get(e.level().dimension());
         if (index != null) {
-            index.allStale = true;
+            index.changed.add(e.zone());
+            index.changed.addAll(List.of(others));
         }
     }
 
@@ -210,14 +215,15 @@ public final class ZoneIndex {
 
     /** Asks again every part whose zone may have changed since the last lookup. */
     private void refresh(ServerLevel level, @Nullable ZoneId zone) {
-        if (allStale) {
-            allStale = false;
-            cells.clear();
-            stale.addAll(entries.values());
-            if (zone != null) {
-                cells.put(zone, cellCount(level, zone));
+        if (!changed.isEmpty()) {
+            for (ZoneId z : changed) {
+                stale.addAll(byZone.getOrDefault(z, Set.of()));
+                cells.remove(z);
             }
-        } else if (zone != null) {
+            stale.addAll(unzoned);
+            changed.clear();
+        }
+        if (zone != null) {
             int now = cellCount(level, zone);
             Integer was = cells.put(zone, now);
             if (was == null || was != now) {

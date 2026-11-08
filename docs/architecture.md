@@ -3248,10 +3248,11 @@ tick, in order:
    whose air point is in its zone, and every part linked to it with the
    multitool (CONT-042). It finds them in `ZoneIndex`, which keeps each loaded
    part's zone by level and asks again only when it may have changed: when the
-   part joins the schedule, is turned or steps; for every part, after any zone
-   lifecycle event in its level (API-030); for the parts in a zone and those in
-   none, when a controller finds that zone's cell count changed, as when it
-   grows into a room or loses a cell, which fire no event; and at each lookup,
+   part joins the schedule, is turned or steps; for the parts in each zone a
+   lifecycle event names (API-030), and those in none, after that event; for
+   the parts in a zone and those in none, when a controller finds that zone's
+   cell count changed, as when it grows into a room or loses a cell, which
+   fire no event; and at each lookup,
    for a part whose air read as unresolved while its chunk is loaded in full.
    Asking every loaded part's zone at every controller's step was most of the
    S-10 bench's device time (2026-11-07). It gives each `VentControl` the mode's `VentOrder`
