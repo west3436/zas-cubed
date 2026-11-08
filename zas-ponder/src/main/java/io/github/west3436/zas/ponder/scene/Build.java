@@ -86,6 +86,74 @@ public final class Build {
     }
 
     /**
+     * Sets blocks into the floor, level with it, as vents and scrubbers go: the floor blocks where they
+     * go lift out, then they drop into the holes. A pipe joins a block set this way from {@link #under}
+     * the floor.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param blocks where, in the floor's layer, and what
+     */
+    public static void sink(SceneBuilder scene, SceneBuildingUtil util, Map<BlockPos, BlockState> blocks) {
+        remove(scene, util, blocks.keySet().toArray(BlockPos[]::new));
+        revealAll(scene, util, blocks, Direction.DOWN);
+    }
+
+    /** Sets one block into the floor, level with it, as {@link #sink(SceneBuilder, SceneBuildingUtil, Map)}. */
+    public static void sink(SceneBuilder scene, SceneBuildingUtil util, BlockPos pos, BlockState state) {
+        sink(scene, util, Map.of(pos, state));
+    }
+
+    /**
+     * Places blocks under the floor, such as the pipe a vent in the floor stands on, and shows them.
+     * They're out of sight but for what shows through a hole in the floor.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param blocks where, below the floor's layer, and what
+     */
+    public static void under(SceneBuilder scene, SceneBuildingUtil util, Map<BlockPos, BlockState> blocks) {
+        // Ponder's own placing skips a block outside the floor's bounds. The level's own grows them.
+        Map<BlockPos, BlockState> copy = Map.copyOf(blocks);
+        scene.addInstruction(
+                ponder -> copy.forEach((pos, state) -> ponder.getWorld().setBlock(pos, state, 0)));
+        Selection all = null;
+        for (BlockPos pos : blocks.keySet()) {
+            Selection one = util.select().position(pos);
+            all = all == null ? one : all.add(one);
+        }
+        settle(scene);
+        scene.world().showSection(all, Direction.UP);
+    }
+
+    /**
+     * Takes floor blocks out of sight a while, leaving them in the world, to show through the gap what's
+     * {@link #under} the floor. Cut the blocks between the viewer and it: those north and west of it.
+     * {@link #mend} puts them back.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param floor the floor blocks
+     * @return the blocks, for {@link #mend}
+     */
+    public static Selection cut(SceneBuilder scene, SceneBuildingUtil util, BlockPos... floor) {
+        Selection all = null;
+        for (BlockPos pos : floor) {
+            Selection one = util.select().position(pos);
+            all = all == null ? one : all.add(one);
+        }
+        scene.world().hideSection(all, Direction.UP);
+        scene.idle(SHOW);
+        return all;
+    }
+
+    /** Puts back floor blocks {@link #cut} took out of sight, and waits until they're in. */
+    public static void mend(SceneBuilder scene, Selection cut) {
+        scene.world().showSection(cut, Direction.DOWN);
+        scene.idle(SHOW);
+    }
+
+    /**
      * Changes a shown block's state, as a player's use, a wrench or a signal would, and joins
      * everything to its neighbours again: a valve opening, a device turning on, a part turning.
      *

@@ -56,6 +56,17 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
     without telling their neighbours, so call it after placing.
   - `lift` and `lower` move a shown block aside and back, to show the pipe that
     joins it from below or behind.
+  - `sink` sets a block into the floor, level with it, as vents, scrubbers and
+    passive vents go: the floor block lifts out and the device drops in. Never
+    stand one on the floor.
+  - `under` places blocks below the floor, such as the pipe under a vent. Ponder's
+    own placing skips them, being outside the floor's bounds, so it places them
+    itself. Run a pipe in the floor's layer as far as it can go, then dip it under
+    the device.
+  - `cut` and `mend` take floor blocks out of sight and back, to show what's
+    under the floor through the gap. Cut the blocks north and west of what's
+    under it, so set the device one block in from the floor's north and west
+    edges.
 - `Hand`
   - `use` and `sneakUse` show the mouse button over a block's face, with the item
     in hand, then pause before the scene shows what the use does. A button stays

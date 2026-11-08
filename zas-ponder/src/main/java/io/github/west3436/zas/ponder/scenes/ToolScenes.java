@@ -60,8 +60,8 @@ public final class ToolScenes {
                         .setValue(AreaAirControllerBlock.FACING, Direction.WEST)
                         .setValue(AreaAirControllerBlock.STATUS, ControllerStatus.SAFE),
                 Direction.EAST);
-        BlockPos vent = util.grid().at(5, 1, 3);
-        Build.drop(
+        BlockPos vent = util.grid().at(5, 0, 3);
+        Build.sink(
                 scene, util, vent, AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.UP));
 
         ItemStack multitool = new ItemStack(AtmosItems.MULTITOOL.get());
