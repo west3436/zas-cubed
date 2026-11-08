@@ -18,10 +18,10 @@ import io.github.west3436.zas.ponder.scene.Stage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.UnaryOperator;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
+import net.createmod.ponder.api.scene.Selection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -93,7 +93,7 @@ public final class ToolScenes {
 
         // A wall along z with a firelock in it, its passage running east to west.
         BlockPos lower = util.grid().at(2, 1, 2);
-        List<BlockPos> firelock = List.of(lower, lower.above());
+        Selection firelock = util.select().fromTo(lower, lower.above());
         BlockState closed = AtmosBlocks.FIRELOCK
                 .get()
                 .defaultBlockState()
@@ -116,12 +116,12 @@ public final class ToolScenes {
 
         ItemStack crowbar = new ItemStack(AtmosItems.CROWBAR.get());
         Hand.use(scene, util, lower, Direction.WEST, crowbar);
-        changeAll(scene, firelock, s -> s.setValue(FirelockBlock.OPEN, true));
+        Build.change(scene, firelock, s -> s.setValue(FirelockBlock.OPEN, true));
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.WEST), "crowbar.open");
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.WEST), "crowbar.locked");
 
         Hand.use(scene, util, lower, Direction.WEST, crowbar);
-        changeAll(scene, firelock, s -> s.setValue(FirelockBlock.OPEN, false));
+        Build.change(scene, firelock, s -> s.setValue(FirelockBlock.OPEN, false));
         Say.at(scene, util.vector().blockSurface(lower.above(), Direction.WEST), "crowbar.shut");
         scene.markAsFinished();
     }
@@ -257,16 +257,4 @@ public final class ToolScenes {
 
     /** The ticks a wrench's turn stays before the next. */
     private static final int TURN = 25;
-
-    /**
-     * Changes every part of a block in parts at once, then settles: settling one part at a time would
-     * have it copy its partner's old state. A stand-in until the shared {@code Build.change} for a
-     * selection reaches this branch.
-     */
-    private static void changeAll(SceneBuilder scene, List<BlockPos> parts, UnaryOperator<BlockState> change) {
-        for (BlockPos part : parts) {
-            scene.world().modifyBlock(part, change, false);
-        }
-        Build.settle(scene);
-    }
 }

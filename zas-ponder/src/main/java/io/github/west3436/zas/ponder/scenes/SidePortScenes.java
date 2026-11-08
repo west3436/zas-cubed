@@ -95,7 +95,7 @@ public final class SidePortScenes {
             frontCap = util.grid().at(4, 1, 2);
             side = util.grid().at(2, 1, 3);
             sideCap = util.grid().at(2, 1, 4);
-            controller = util.grid().at(0, 2, 3);
+            controller = util.grid().at(3, 2, 3);
         }
     }
 

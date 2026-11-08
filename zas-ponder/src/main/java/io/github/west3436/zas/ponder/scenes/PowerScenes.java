@@ -73,7 +73,7 @@ public final class PowerScenes {
                 util,
                 recharger,
                 AtmosBlocks.RECHARGER.get().defaultBlockState().setValue(RechargerBlock.FACING, Direction.NORTH));
-        Power.controller(scene, util, util.grid().at(1, 2, 3), Direction.NORTH, recharger, s -> s);
+        Power.controller(scene, util, util.grid().at(3, 2, 3), Direction.NORTH, recharger, s -> s);
         Power.multitool(scene, util, recharger);
 
         // A battery goes in, and its gauge fills while the line is up.

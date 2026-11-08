@@ -10,7 +10,7 @@
 
   "zas_ponder.ponder.connector_port.header": "Attaching a canister",
   "zas_ponder.ponder.shared.connector_port.pipe_below": "A pipe joins it only from below",
-  "zas_ponder.ponder.shared.connector_port.canister_on_top": "Stand a canister on it to join the pipes",
+  "zas_ponder.ponder.shared.connector_port.canister_on_top": "A canister on top joins the pipes",
   "zas_ponder.ponder.shared.connector_port.vent_power": "An area air controller powers the vent",
   "zas_ponder.ponder.shared.connector_port.gas_flows": "Gas flows from the canister to the vent",
   "zas_ponder.ponder.shared.inline.ends": "Pipes join only its two ends",
