@@ -2001,6 +2001,10 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/radiator_pipe.js
 origin: original
 notes: The radiator pipe's item: the straight block model, turned and scaled for the slot.
 
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/radiator_pipe.json
+origin: original
+notes: Picks the radiator pipe's models by the faces it joins: the straight piece along an axis when it joins just that axis's two faces, and otherwise the joint with an arm to each face it joins.
+
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/radiator_adaptor.json
 origin: original
 notes: Inline from ordinary pipe to radiator pipe: an undyed pipe's flange and tube at the north end into a steel collar, then the finned tube to the south edge. It uses pipe_fitting.png and radiator_pipe.png, after vg's junction (icons/obj/pipes/junction.dmi).
@@ -2008,6 +2012,10 @@ notes: Inline from ordinary pipe to radiator pipe: an undyed pipe's flange and t
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/radiator_adaptor.json
 origin: original
 notes: The radiator adaptor's item: its block model, turned and scaled for the slot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/radiator_adaptor.json
+origin: original
+notes: Turns the radiator adaptor's model six ways, by the way its radiator end faces.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/heat_exchanger.png
 origin: vgstation13
@@ -2023,6 +2031,10 @@ notes: vg's half-block box, 14 x 12 x 8, 1 px short of the face toward its partn
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/heat_exchanger.json
 origin: original
 notes: The heat exchanger's item: its block model.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/heat_exchanger.json
+origin: original
+notes: Turns the heat exchanger's model six ways, by the way its box faces; its temperature band only tints it.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/passive_vent_front.png
 origin: vgstation13

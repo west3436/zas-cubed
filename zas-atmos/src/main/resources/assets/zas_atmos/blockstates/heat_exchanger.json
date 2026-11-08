@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "zas_atmos:block/heat_exchanger",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "zas_atmos:block/heat_exchanger",
+      "y": 270
+    },
+    "facing=south": {
+      "model": "zas_atmos:block/heat_exchanger"
+    },
+    "facing=west": {
+      "model": "zas_atmos:block/heat_exchanger",
+      "y": 90
+    },
+    "facing=up": {
+      "model": "zas_atmos:block/heat_exchanger",
+      "x": 90
+    },
+    "facing=down": {
+      "model": "zas_atmos:block/heat_exchanger",
+      "x": 270
+    }
+  }
+}

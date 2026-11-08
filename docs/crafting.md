@@ -130,6 +130,8 @@ in any arrangement.
 |---|---|---|---|
 | 8 × Pipe | Workshop | `CCC` | `C` copper ingot |
 | Pipe end cap | Workshop | Shapeless | pipe, iron nugget |
+| Radiator pipe | Workshop | Shapeless | pipe, iron bars |
+| Radiator adaptor | Workshop | Shapeless | pipe, radiator pipe, iron ingot |
 | Manual valve | Workshop | `.L.` / `PIP` | `L` lever, `P` pipe, `I` iron ingot |
 | Redstone valve | Workshop | Shapeless | manual valve, micro-manipulator, redstone dust |
 | Connector port | Workshop | `IPI` / `.H.` | `I` iron ingot, `P` pipe, `H` heavy weighted pressure plate |
@@ -149,6 +151,7 @@ in any arrangement.
 | Vent | Workshop | `XXX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `M` micro-manipulator |
 | Scrubber | Workshop | `XSX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `S` scanning module, `M` micro-manipulator |
 | Passive vent | Workshop | `XXX` / `IPI` | `X` iron bars, `I` iron ingot, `P` pipe |
+| 2 × Heat exchanger | Workshop | `CPC` / `CRC` / `CCC` | `C` copper ingot, `P` pipe, `R` radiator pipe |
 | Igniter | Workshop | Shapeless | igniter assembly, heavy weighted pressure plate, cable coil |
 
 ### Portables
@@ -217,9 +220,6 @@ in any arrangement.
 
 | Makes | Stage | Grid | Ingredients |
 |---|---|---|---|
-| Radiator pipe | Workshop | Shapeless | pipe, iron bars |
-| Radiator adaptor | Workshop | Shapeless | pipe, radiator pipe, iron ingot |
-| 2 × Heat exchanger | Workshop | `CPC` / `CRC` / `CCC` | `C` copper ingot, `P` pipe, `R` radiator pipe |
 | Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
 | Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
 | Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |

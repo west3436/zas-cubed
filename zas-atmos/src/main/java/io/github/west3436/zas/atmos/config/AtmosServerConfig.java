@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.config;
 
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -103,6 +104,12 @@ public final class AtmosServerConfig {
     /** The share of movement speed each hardsuit piece worn takes away (CONT-089). */
     public static final ModConfigSpec.DoubleValue HARDSUIT_SLOWDOWN;
 
+    /** A radiator pipe segment's conductance to the gas around it, in W/K (HEAT-020). */
+    public static final ModConfigSpec.DoubleValue RADIATOR_CONDUCTANCE;
+
+    /** A radiator pipe segment's emissivity in a vacuum (HEAT-021). */
+    public static final ModConfigSpec.DoubleValue RADIATOR_EMISSIVITY;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Power: what each device draws while it runs, in FE/t (CONT-065), and the power sources.")
@@ -192,6 +199,16 @@ public final class AtmosServerConfig {
                         "The share of movement speed each hardsuit piece worn takes away (CONT-089): 0.1 is 10 %,",
                         "so the full suit leaves 60 %.")
                 .defineInRange("hardsuit_slowdown", 0.1, 0.0, 0.25);
+        builder.pop();
+
+        builder.comment("Radiator pipe (HEAT-020, HEAT-021).").push("radiators");
+        RADIATOR_CONDUCTANCE = builder.comment(
+                        "Each segment's conductance to the gas of its cell, in W/K (HEAT-020). 0 stops it exchanging",
+                        "heat with gas; it still radiates in a vacuum.")
+                .defineInRange("conductance", RadiatorMath.DEFAULT_CONDUCTANCE, 0.0, 10_000.0);
+        RADIATOR_EMISSIVITY = builder.comment(
+                        "Each segment's emissivity in the open air of a vacuum, over 1 m² (HEAT-021). 0 stops it radiating.")
+                .defineInRange("emissivity", RadiatorMath.DEFAULT_EMISSIVITY, 0.0, 1.0);
         builder.pop();
         SPEC = builder.build();
     }

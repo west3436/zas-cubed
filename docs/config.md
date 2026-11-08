@@ -258,6 +258,8 @@ nothing (CONT-065), so it has no key. Every key is live
 | `[central_controller] force_load` | `true` | Whether a central atmospherics controller keeps its own chunk and the 8 around it loaded, as `/forceload` does. Turned off, each lets its chunks go at its next step (CONT-122) |
 | `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
 | `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
+| `[radiators] conductance` | `20.0` | Each radiator pipe segment's conductance to the gas of its cell, in W/K, 0 to 10,000 (HEAT-020). 0 stops radiator pipe exchanging heat with gas; it still radiates in a vacuum |
+| `[radiators] emissivity` | `0.9` | Each radiator pipe segment's emissivity in the open air of a vacuum, over 1 m², 0 to 1 (HEAT-021). 0 stops it radiating |
 
 ## Common: `zas-common.toml`
 

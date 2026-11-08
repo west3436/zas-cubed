@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "zas_atmos:block/radiator_adaptor",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "zas_atmos:block/radiator_adaptor",
+      "y": 270
+    },
+    "facing=south": {
+      "model": "zas_atmos:block/radiator_adaptor"
+    },
+    "facing=west": {
+      "model": "zas_atmos:block/radiator_adaptor",
+      "y": 90
+    },
+    "facing=up": {
+      "model": "zas_atmos:block/radiator_adaptor",
+      "x": 90
+    },
+    "facing=down": {
+      "model": "zas_atmos:block/radiator_adaptor",
+      "x": 270
+    }
+  }
+}

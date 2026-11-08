@@ -372,6 +372,9 @@
   "block.zas_atmos.station_wall": "Station Wall",
   "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
   "block.zas_atmos.reinforced_glass_block": "Reinforced Glass",
+  "block.zas_atmos.radiator_pipe": "Radiator Pipe",
+  "block.zas_atmos.radiator_adaptor": "Radiator Adaptor",
+  "block.zas_atmos.heat_exchanger": "Heat Exchanger",
   "pack.zas_atmos.fusion_connected": "ZAS³ Connected Textures",
   "pack.zas_atmos.fusion_connected.description": "Joined station walls and glass"
 }
