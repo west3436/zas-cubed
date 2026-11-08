@@ -550,8 +550,11 @@ final class Report {
         line("- b. A twin of the hall with a notch in one wall, so one cell over the cap, roofed so the column"
                 + " check can't answer: an add inside it must come out open, after a fill to the cap and one cell"
                 + " more. Each repeat adds at a cell no add used before, which isn't cached (GEO-027).");
-        line("- c. A 3 × 3 hole in the middle of the roof opens the hall to the vacuum; it vents for a while, the"
-                + " hole is filled, and the hall must read sealed again (or zone again from an add, if it went).");
+        line("- c. Under ZAS's venting (`venting = \"FAITHFUL\"`), so the hall empties: a 3 × 3 hole in the middle"
+                + " of the roof opens it to the vacuum, it vents until its zone dissolves (CORE-076), the hole is"
+                + " filled, and an add must zone the whole hall again. The dissolve's ticks are given on their own:"
+                + " the worker tick that dissolved the zone and the server tick that applied it. The venting"
+                + " setting goes back afterwards.");
         line("- d. A wall across the middle is built with one block missing; placing that block splits the hall"
                 + " (CORE-024), taking it out again merges the halves (CORE-023). Times are to the next server tick"
                 + " that reads the change.");
@@ -560,12 +563,14 @@ final class Report {
                 + " the hall, below the controller's target so the vent blows, its network topped up each second,"
                 + " and the player inside, breathing. The hall's share is the difference from the baseline.");
         line("- f. The halls' engine and platform walked before and after the hall zones: bytes per zoned cell are"
-                + " what the parts that scale with cells grew by, over the hall's cells.");
+                + " what the parts that scale with cells grew by, over the hall's cells; NFR-004's 64 MiB is judged"
+                + " on the halls dimension's whole atmos heap with the hall zoned, what it held before plus what"
+                + " zoning added.");
         line();
         line("Time budgets need a margin of " + REQUIRED_MARGIN + "; memory needs none. NFR-002 is judged on zas's own"
                 + " time: a collector pause inside zas's calls in that tick is taken out, and given in the last"
                 + " column with the tick's other pauses. Ticks over 10 ms are listed after each table, with where"
-                + " their time went, so a stall that isn't the work shows.");
+                + " their time went and the batch close and apply in them, so a stall that isn't the work shows.");
         line();
         for (Map.Entry<String, String> e : c.notes.entrySet()) {
             line("- " + e.getValue());
@@ -666,19 +671,34 @@ final class Report {
                                     .toList())));
         }
         String breach = CAP_STEPS[2];
+        String expected = "dissolved, then zoned again whole";
         if (h.breach == null) {
-            rows.add(must(breach, "Outcome", "not run", "sealed again", false));
+            rows.add(must(breach, "Outcome", "not run", expected, false));
         } else {
             CapStep.Event e = h.breach;
+            boolean dissolved = h.dissolveTick >= 0;
             rows.add(must(
                     breach,
                     "Outcome",
-                    e.outcome,
-                    "sealed again",
-                    e.outcome.startsWith("sealed again") || e.outcome.equals("zoned again: ZONE")));
+                    String.format(
+                            "%s, %s, %,d cells", dissolved ? "dissolved" : "not dissolved", e.outcome, h.rezoneCells),
+                    expected,
+                    dissolved && e.outcome.equals("zoned again: ZONE") && h.rezoneCells == h.cells()));
+            rows.add(workerTick(
+                    breach,
+                    "Dissolve: the worker tick that dissolved the zone",
+                    dissolved && h.dissolveWorker >= 0 ? e.window.worker.get(h.dissolveWorker) : null));
+            rows.add(serverTick(
+                    breach,
+                    "Dissolve: the server tick that applied it, zas's own time",
+                    e.window,
+                    dissolved ? h.dissolveTick : -1));
             rows.add(workerRow(breach, List.of(e)));
             rows.add(serverRow(breach, List.of(e)));
-            rows.add(info(breach, "Time from the reseal to sealed", String.format("%,.0f ms", e.msToDone())));
+            rows.add(info(
+                    breach,
+                    "Time from the hole to the dissolve; from the add after the reseal to zoned",
+                    String.format("%.1f s; %,.0f ms, %s", h.dissolveSeconds, e.msToDone(), rounds(e.rounds()))));
         }
         String splitMerge = CAP_STEPS[3];
         List<CapStep.Event> both = new ArrayList<>(h.splits);
@@ -773,13 +793,24 @@ final class Report {
                     "B",
                     "NFR-004",
                     ""));
-            long added = h.heapAfter.total(false) - h.heapBefore.total(false);
+            long before = h.heapBefore.total(false);
+            long after = h.heapAfter.total(false);
             rows.add(info(
                     memory,
-                    "The hall's total",
+                    "What zoning the hall added, and what the dimension held before",
                     String.format(
-                            "%.2f MiB added by zoning it (%.0f B per cell); the dimension's atmos %.2f MiB with it",
-                            added / 1048576.0, (double) added / h.zoneCells, h.heapAfter.total(false) / 1048576.0)));
+                            "%.2f MiB (%.0f B per cell), on %.2f MiB",
+                            (after - before) / 1048576.0,
+                            (double) (after - before) / h.zoneCells,
+                            before / 1048576.0)));
+            rows.add(judged(
+                    memory,
+                    "The halls dimension's whole atmos heap, the hall zoned",
+                    after / 1048576.0,
+                    64,
+                    "MiB",
+                    "NFR-004",
+                    ""));
         }
         return rows;
     }
@@ -837,7 +868,7 @@ final class Report {
             for (int i = 0; i < w.ticks; i++) {
                 if (w.atmos.get(i) > 10_000_000L) {
                     slow.add(String.format(
-                            "%s, tick %d: %.3f ms, zas's own %.3f ms%s; %s",
+                            "%s, tick %d: %.3f ms, zas's own %.3f ms%s; %s; %s",
                             w.name,
                             i,
                             w.atmos.get(i) / MS,
@@ -845,7 +876,8 @@ final class Report {
                             tickPause(w, i) > 0
                                     ? String.format(", a %.1f ms pause in the tick", tickPause(w, i) / MS)
                                     : "",
-                            topParts(w, i, 3)));
+                            topParts(w, i, 3),
+                            batchWork(w, i)));
                 }
             }
         }
@@ -855,6 +887,18 @@ final class Report {
                 facts.add(String.format(
                         "%s: largest worker tick %.1f ms, mostly %s", e.name, r[WorkerTimes.WHOLE] / MS, topPhases(r)));
             }
+        }
+        if (h.breach != null && h.dissolveTick >= 0) {
+            Window w = h.breach.window;
+            String worker = h.dissolveWorker < 0
+                    ? "no worker tick recorded"
+                    : String.format(
+                            "its worker tick %.1f ms, mostly %s",
+                            w.worker.get(h.dissolveWorker)[WorkerTimes.WHOLE] / MS,
+                            topPhases(w.worker.get(h.dissolveWorker)));
+            facts.add(String.format(
+                    "Dissolve: %s; the server tick that applied it %.3f ms (%s)",
+                    worker, w.atmos.get(h.dissolveTick) / MS, topParts(w, h.dissolveTick, 3)));
         }
         for (Window w : new Window[] {h.idle, h.active}) {
             if (w != null && w.ticks > 0) {
@@ -923,29 +967,62 @@ final class Report {
         if (worst == null) {
             return must(step, "Largest server tick, zas's own time", "none recorded", "NFR-002 ≤ 10 ms", false);
         }
-        long pause = tickPause(worst, at);
-        long inZas = zasPause(worst, at);
-        String pauses = pause == 0
-                ? "none in that tick"
-                : String.format("a %.1f ms pause in that tick, %.1f ms of it in zas's calls", pause / MS, inZas / MS);
+        String pauses = pauses(worst, at);
         if (withPauses > worst.atmos.get(at)) {
             pauses += String.format("; the largest tick with its pauses: %.3f ms", withPauses / MS);
         }
         return judged(step, "Largest server tick, zas's own time", best / MS, 10, "ms", "NFR-002", pauses);
     }
 
+    /** One server tick, judged on NFR-002 by zas's own time; {@code at} -1 for none. */
+    private CapRow serverTick(String step, String what, Window w, int at) {
+        if (at < 0 || at >= w.ticks) {
+            return must(step, what, "none recorded", "NFR-002 ≤ 10 ms", false);
+        }
+        return judged(step, what, own(w, at) / MS, 10, "ms", "NFR-002", pauses(w, at));
+    }
+
+    /** What a tick's batch close and apply took, inside {@code AtmosService}'s time, if it had either. */
+    private static String batchWork(Window w, int i) {
+        long[] b = w.batchWork.get(i);
+        if (b == null) {
+            return "no batch closed or applied in it";
+        }
+        List<String> out = new ArrayList<>();
+        if (b[0] >= 0) {
+            out.add(String.format("its batch close %.3f ms", b[0] / MS));
+        }
+        if (b[1] >= 0) {
+            out.add(String.format("its batch apply %.3f ms", b[1] / MS));
+        }
+        return String.join(", ", out);
+    }
+
+    /** A tick's collector pauses, and how much of them fell in zas's calls. */
+    private static String pauses(Window w, int at) {
+        long pause = tickPause(w, at);
+        return pause == 0
+                ? "none in that tick"
+                : String.format(
+                        "a %.1f ms pause in that tick, %.1f ms of it in zas's calls", pause / MS, zasPause(w, at) / MS);
+    }
+
     private CapRow workerRow(String step, List<CapStep.Event> events, Window... more) {
         List<Window> windows = new ArrayList<>();
         events.forEach(e -> windows.add(e.window));
         windows.addAll(List.of(more));
-        long[] r = largestWorker(windows);
+        return workerTick(step, "Largest worker tick", largestWorker(windows));
+    }
+
+    /** One worker tick, judged on NFR-005; null for none. */
+    private CapRow workerTick(String step, String what, long[] r) {
         if (r == null) {
-            return must(step, "Largest worker tick", "none recorded", "NFR-005 ≤ 250 ms", false);
+            return must(step, what, "none recorded", "NFR-005 ≤ 250 ms", false);
         }
         long pause = GcPauses.within(r[WorkerTimes.START], r[WorkerTimes.START] + r[WorkerTimes.WHOLE]);
         return judged(
                 step,
-                "Largest worker tick",
+                what,
                 r[WorkerTimes.WHOLE] / MS,
                 250,
                 "ms",

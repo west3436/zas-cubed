@@ -80,7 +80,7 @@ public final class ZasServerConfig {
     public static final ModConfigSpec.IntValue ENCLOSURE_MAX_CELLS;
 
     /** The most {@link #ENCLOSURE_MAX_CELLS} can be: a hall 5 × 5 chunks wide and 16 blocks high. */
-    public static final int ENCLOSURE_MAX_CELLS_LIMIT = 102_400;
+    public static final int ENCLOSURE_MAX_CELLS_LIMIT = EnclosureFill.SETTABLE_MAX_CELLS;
 
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;

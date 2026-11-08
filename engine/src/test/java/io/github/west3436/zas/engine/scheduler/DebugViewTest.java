@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.classify.EnclosureFill;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,25 @@ class DebugViewTest {
         }
         assertTrue(view.faces().isEmpty(), "faces out of a sealed room");
         assertTrue(view.unresolved().isEmpty());
+        assertFalse(view.truncated());
+    }
+
+    /**
+     * A zone as large as the enclosure cap can be set (GEO-020) is listed whole: of an 80 × 80 × 16
+     * hall, the 65 × 65 × 16 cells within 2 chunks of its middle, more than the old cap of 65,536
+     * (CLIENT-005).
+     */
+    @Test
+    void client_005_a_hall_at_the_largest_cap_is_listed_whole() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        sim.settings = sim.settings.withEnclosureMaxCells(EnclosureFill.SETTABLE_MAX_CELLS);
+        sim.world.room(0, 64, 0, 79, 79, 79);
+        sim.scheduler.setDebugRegions(List.of(DebugRegion.around(40, 72, 40, 32)));
+        sim.add(40, 72, 40, 0, 10);
+        sim.step();
+        assertEquals(EnclosureFill.SETTABLE_MAX_CELLS, sim.zoneAt(40, 72, 40).cellCount());
+        DebugView view = sim.scheduler.debugView();
+        assertEquals(65 * 65 * 16, view.cells().size());
         assertFalse(view.truncated());
     }
 
