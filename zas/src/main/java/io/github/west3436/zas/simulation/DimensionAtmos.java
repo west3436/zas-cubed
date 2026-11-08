@@ -176,6 +176,12 @@ public final class DimensionAtmos {
     private final Set<Long> simulatedUnloaded = ConcurrentHashMap.newKeySet();
     /** What each simulated-unloaded chunk saved at its unload, which its saves keep writing. */
     private final Map<Long, byte[]> simulatedSaved = new ConcurrentHashMap<>();
+    // The record an unloading chunk just saved and the pipeline that built it, kept until that
+    // pipeline's own unload of the chunk takes it (AtmosPersistence's unload listener runs first).
+    // unloadingPipeline is null when there is none.
+    private DimensionPipeline unloadingPipeline;
+    private long unloadingChunk;
+    private ChunkRecord unloadingRecord;
 
     private final AtmosPersistence.Store store = new AtmosPersistence.Store() {
         @Override
@@ -185,12 +191,23 @@ public final class DimensionAtmos {
                 byte[] saved = simulatedSaved.get(chunk);
                 return saved == null ? null : saved.clone();
             }
-            return saveBytes(chunk, new long[0]);
+            DimensionPipeline p = pipeline;
+            return p == null ? null : encode(chunk, p.recordFor(chunk, stopping), new long[0]);
         }
 
         @Override
         public byte[] unloading(long chunk) {
-            return saveBytes(chunk, unseenChanges(chunk));
+            DimensionPipeline p = pipeline;
+            if (p == null) {
+                return null;
+            }
+            long[] unseen = unseenChanges(chunk);
+            ChunkRecord record = p.recordFor(chunk, stopping);
+            // The pipeline's unload, a moment later, takes this record rather than building it again.
+            unloadingPipeline = p;
+            unloadingChunk = chunk;
+            unloadingRecord = record;
+            return encode(chunk, record, unseen);
         }
 
         @Override
@@ -591,6 +608,8 @@ public final class DimensionAtmos {
 
     void chunkLoaded(long chunk) {
         DimensionPipeline p = pipeline;
+        unloadingPipeline = null;
+        unloadingRecord = null;
         if (p != null && !stopping) {
             byte[] saved = AtmosPersistence.take(level, chunk);
             if (saved != null) {
@@ -604,6 +623,22 @@ public final class DimensionAtmos {
     void chunkUnloaded(long chunk) {
         DimensionPipeline p = pipeline;
         if (p != null && !stopping) {
+            unloaded(p, chunk);
+        } else {
+            unloadingPipeline = null;
+            unloadingRecord = null;
+        }
+    }
+
+    /** The pipeline's unload of a chunk, from the record its save just built if it has one. */
+    private void unloaded(DimensionPipeline p, long chunk) {
+        boolean saved = unloadingPipeline == p && unloadingChunk == chunk;
+        ChunkRecord record = unloadingRecord;
+        unloadingPipeline = null;
+        unloadingRecord = null;
+        if (saved) {
+            p.chunkUnloaded(chunk, record);
+        } else {
             p.chunkUnloaded(chunk);
         }
     }
@@ -651,13 +686,11 @@ public final class DimensionAtmos {
         }
     }
 
-    /** What a chunk saves, with extra held positions, encoded; null if nothing (DATA-002). */
-    private byte[] saveBytes(long chunk, long[] extraHeld) {
-        DimensionPipeline p = pipeline;
-        if (p == null) {
-            return null;
-        }
-        ChunkRecord r = p.recordFor(chunk, stopping);
+    /**
+     * What a chunk saves, encoded: its record from the pipeline, or null, with extra held positions;
+     * null if nothing (DATA-002).
+     */
+    private byte[] encode(long chunk, ChunkRecord r, long[] extraHeld) {
         if (extraHeld.length > 0) {
             ChunkRecord base = r != null ? r : ChunkRecord.empty(chunk);
             long[] held = Arrays.copyOf(base.heldBlocks(), base.heldBlocks().length + extraHeld.length);
@@ -680,11 +713,9 @@ public final class DimensionAtmos {
         int z = SectionKeys.chunkZ(chunk) * 16;
         BoundingBox box =
                 new BoundingBox(x, level.getMinBuildHeight(), z, x + 15, level.getMaxBuildHeight() - 1, z + 15);
-        long[] mirrored = p.mirroredSections();
-        Arrays.sort(mirrored);
         List<Long> out = new ArrayList<>();
         for (DirtySection d : ChangeTracker.drainWithin(level, box)) {
-            if (Arrays.binarySearch(mirrored, d.key()) < 0) {
+            if (!p.mirrors(d.key())) {
                 continue;
             }
             d.forEachIndex(i -> out.add(SectionKeys.block(
@@ -765,7 +796,7 @@ public final class DimensionAtmos {
         }
         DimensionPipeline p = pipeline;
         if (p != null) {
-            p.chunkUnloaded(chunk);
+            unloaded(p, chunk);
         }
         return saved;
     }

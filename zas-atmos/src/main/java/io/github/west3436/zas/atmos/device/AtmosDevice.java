@@ -147,16 +147,30 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
      */
     @Override
     public final boolean ticking() {
-        if (isRemoved() || !(level instanceof ServerLevel server)) {
+        if (isRemoved() || !(level instanceof ServerLevel)) {
             return true; // the step does nothing
         }
-        if (LoadedBlocks.ticking(server, worldPosition) && !providerWaits()) {
+        if (stepping()) {
             return true;
         }
         if (this instanceof PoweredDevice part) {
             part.power().hold();
         }
         return false;
+    }
+
+    /**
+     * Whether the device is working now: it is in a server level, and the schedule steps it when it
+     * is due, as {@link #ticking} decides, without holding a waiting part's power. What needs to know
+     * whether a device works, rather than whether its block can be read, asks this: a device in a
+     * chunk loaded in full that doesn't tick is there to read, but waits (architecture §11.2).
+     * Asking loads nothing.
+     */
+    public final boolean stepping() {
+        return !isRemoved()
+                && level instanceof ServerLevel server
+                && LoadedBlocks.ticking(server, worldPosition)
+                && !providerWaits();
     }
 
     /** Whether the device that last powered this one is loaded and waiting. */

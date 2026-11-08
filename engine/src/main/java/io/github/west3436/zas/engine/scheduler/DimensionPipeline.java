@@ -436,8 +436,22 @@ public final class DimensionPipeline {
      * that hasn't gone to the worker yet is dropped here.
      */
     public void chunkUnloaded(long chunk) {
+        chunkUnloaded(chunk, recordFor(chunk, false));
+    }
+
+    /**
+     * A chunk unloaded, having saved {@code record}: what {@link #recordFor} gave for it just now,
+     * with nothing changed since, or null if it saved nothing. Its shares are what later unloads of
+     * the same zones make up the rest from (DATA-008), so a caller that has just built the record to
+     * save it needn't build it twice.
+     *
+     * @throws IllegalArgumentException if the record is of another chunk
+     */
+    public void chunkUnloaded(long chunk, ChunkRecord record) {
+        if (record != null && record.chunk() != chunk) {
+            throw new IllegalArgumentException("the record is of another chunk: " + record);
+        }
         Map<Long, double[]> saved = new HashMap<>();
-        ChunkRecord record = recordFor(chunk, false);
         if (record != null) {
             for (ZoneShare share : record.zones()) {
                 saved.put(share.zoneId(), share.moles());
@@ -636,7 +650,8 @@ public final class DimensionPipeline {
         generations.computeIfAbsent(chunk, world::lifecycleGeneration);
     }
 
-    private boolean mirrors(long section) {
+    /** Whether the worker mirrors a section, as of the last apply; {@link #mirroredSections} without the copy. */
+    public boolean mirrors(long section) {
         return Arrays.binarySearch(mirrored, section) >= 0;
     }
 

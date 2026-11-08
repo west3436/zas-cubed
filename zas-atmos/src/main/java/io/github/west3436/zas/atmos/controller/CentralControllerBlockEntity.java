@@ -48,8 +48,9 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  *
  * <p>It is the console's lower left block ({@link CentralControllerBlock}).
  *
- * <p>An area air controller is in contact while its chunk is loaded in full and its block entity is
- * stepping. One that isn't keeps its claim, gets no FE, and is listed with its last readings.
+ * <p>An area air controller is in contact while its block entity is loaded and stepping: its chunk
+ * ticks block entities (architecture §11.2). One that isn't, unloaded or waiting in a chunk that
+ * doesn't tick, keeps its claim, gets no FE, and is listed with its last readings.
  */
 public class CentralControllerBlockEntity extends AtmosDevice implements MenuProvider {
     private final EnergyStore buffer = new EnergyStore(
@@ -245,11 +246,15 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         setStatus(level, powered ? ControllerStatus.of(worst) : ControllerStatus.UNPOWERED);
     }
 
-    /** A claimed area air controller if it is in contact: loaded in full, and stepping. */
+    /**
+     * A claimed area air controller if it is in contact: loaded, and stepping ({@link
+     * AtmosDevice#stepping}). One loaded in full in a chunk that doesn't tick waits, so it is out of
+     * contact, as an unloaded one is.
+     */
     static AreaAirControllerBlockEntity inContact(
             ServerLevel level, Map<BlockPos, AreaAirControllerBlockEntity> loaded, BlockPos p) {
         AreaAirControllerBlockEntity c = loaded.get(p);
-        return c != null && level.isLoaded(p) ? c : null;
+        return c != null && c.stepping() ? c : null;
     }
 
     private static CentralClaims.Readings readings(AreaAirControllerBlockEntity c) {
