@@ -48,6 +48,9 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
   - `change` sets a shown block's state, as a use, a wrench or a signal would: a
     valve opening, a device turning on, a part turning. `remove` takes one away.
     Both join the neighbours again, so a pipe left beside a gap gets an open end.
+  - `change` over a selection changes several blocks at once. Use it for both
+    halves of a two-block block, such as a firelock: changed one at a time, each
+    half takes back the other's old state.
   - `settle` joins pipes, ports and walls to their neighbours. Ponder sets blocks
     without telling their neighbours, so call it after placing.
   - `lift` and `lower` move a shown block aside and back, to show the pipe that
@@ -55,11 +58,16 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
 - `Hand`
   - `use` and `sneakUse` show the mouse button over a block's face, with the item
     in hand, then pause before the scene shows what the use does.
+  - `show` shows an item over a block with no click, for what goes in its
+    window, such as a portable's battery.
 - `Power`
   - `controller` puts up a station wall with an area air controller, turns the
     device on and says the controller powers it.
   - `multitool` shows a multitool used on the device and says it links the device
     to a controller elsewhere.
+  - `panel` is a spot on the front of a controller's or fire alarm's panel. The
+    panel is thin and sits against the wall, so its block's face is in the air
+    in front of it. Point lines about the panel here.
 - `Say`
   - `at` shows a line pointing at a spot, with a keyframe, and waits while it's
     read.
@@ -68,6 +76,8 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
   - `plain` shows a line with no target.
 - `Gas`
   - `puff` sends particles out of a face.
+  - `draw` pulls particles in low over a face from its four sides, as gas going
+    in. Particles coming straight down onto a face look like gas leaving it.
   - `flow` runs an outline along a path of blocks, again and again, as gas
     moving through pipes.
   - `pressure` formats a pressure in the player's units.

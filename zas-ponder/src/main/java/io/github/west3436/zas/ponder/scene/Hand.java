@@ -43,6 +43,23 @@ public final class Hand {
         scene.idle(PAUSE);
     }
 
+    /**
+     * An item shown over a block's face with no click, for what goes in the block's window, such as a
+     * portable's battery.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param pos the block
+     * @param face the face it's shown over
+     * @param item the item
+     */
+    public static void show(SceneBuilder scene, SceneBuildingUtil util, BlockPos pos, Direction face, ItemStack item) {
+        scene.overlay()
+                .showControls(util.vector().blockSurface(pos, face), Pointing.DOWN, SHOW)
+                .withItem(item);
+        scene.idle(PAUSE);
+    }
+
     private static InputElementBuilder input(
             SceneBuilder scene, SceneBuildingUtil util, BlockPos pos, Direction face, ItemStack held) {
         InputElementBuilder input = scene.overlay()

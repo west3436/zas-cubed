@@ -1,8 +1,12 @@
 package io.github.west3436.zas.ponder;
 
 import io.github.west3436.zas.ponder.scene.Stage;
+import io.github.west3436.zas.ponder.scenes.AreaAirControllerScenes;
+import io.github.west3436.zas.ponder.scenes.FireScenes;
+import io.github.west3436.zas.ponder.scenes.HeaterScenes;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
 import io.github.west3436.zas.ponder.scenes.PumpScenes;
+import io.github.west3436.zas.ponder.scenes.VentScenes;
 import java.util.List;
 import net.createmod.ponder.api.registration.PonderPlugin;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
@@ -19,7 +23,20 @@ final class ZasPonderPlugin implements PonderPlugin {
     private static final ResourceLocation TAG = ZasPonderMod.id("atmospherics");
 
     /** Every item with a scene, in the index's order. */
-    private static final List<String> ITEMS = List.of("connector_port", "pressure_pump", "volume_pump");
+    private static final List<String> ITEMS = List.of(
+            "connector_port",
+            "pressure_pump",
+            "volume_pump",
+            // Room air and fire.
+            "vent",
+            "scrubber",
+            "passive_vent",
+            "area_air_controller",
+            "heater",
+            "air_conditioner",
+            "fire_alarm",
+            "firelock",
+            "igniter");
 
     @Override
     public String getModId() {
@@ -31,6 +48,18 @@ final class ZasPonderPlugin implements PonderPlugin {
         helper.forComponents(atmos("connector_port")).addStoryBoard(Stage.MEDIUM, PortScenes::connectorPort, TAG);
         helper.forComponents(atmos("pressure_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::pressure, TAG);
         helper.forComponents(atmos("volume_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::volume, TAG);
+
+        // Room air and fire.
+        helper.forComponents(atmos("vent")).addStoryBoard(Stage.MEDIUM, VentScenes::vent, TAG);
+        helper.forComponents(atmos("scrubber")).addStoryBoard(Stage.MEDIUM, VentScenes::scrubber, TAG);
+        helper.forComponents(atmos("passive_vent")).addStoryBoard(Stage.MEDIUM, VentScenes::passive, TAG);
+        helper.forComponents(atmos("area_air_controller"))
+                .addStoryBoard(Stage.MEDIUM, AreaAirControllerScenes::controller, TAG);
+        helper.forComponents(atmos("heater")).addStoryBoard(Stage.SMALL, HeaterScenes::heater, TAG);
+        helper.forComponents(atmos("air_conditioner")).addStoryBoard(Stage.SMALL, HeaterScenes::airConditioner, TAG);
+        helper.forComponents(atmos("fire_alarm")).addStoryBoard(Stage.MEDIUM, FireScenes::fireAlarm, TAG);
+        helper.forComponents(atmos("firelock")).addStoryBoard(Stage.MEDIUM, FireScenes::firelock, TAG);
+        helper.forComponents(atmos("igniter")).addStoryBoard(Stage.MEDIUM, FireScenes::igniter, TAG);
     }
 
     /**

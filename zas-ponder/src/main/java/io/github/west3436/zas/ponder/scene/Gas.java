@@ -1,6 +1,7 @@
 package io.github.west3436.zas.ponder.scene;
 
 import io.github.west3436.zas.atmos.client.tgui.Readout;
+import java.util.ArrayList;
 import java.util.List;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.scene.SceneBuilder;
@@ -39,6 +40,53 @@ public final class Gas {
                         1,
                         cycles);
     }
+
+    /**
+     * Puffs of gas drawn into a block's face, like a siphoning vent's or a scrubber's. They come in
+     * low over the face from its four sides and meet over its middle, since puffs coming straight
+     * down onto a face look like gas leaving it.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param pos the block
+     * @param face the face the gas goes in by
+     * @param cycles how many puffs, about one a tick
+     */
+    public static void draw(SceneBuilder scene, SceneBuildingUtil util, BlockPos pos, Direction face, int cycles) {
+        Vec3 normal = Vec3.atLowerCornerOf(face.getNormal());
+        // The four ways across the face, toward its sides.
+        List<Vec3> sides = new ArrayList<>();
+        for (Direction side : Direction.values()) {
+            if (side.getAxis() != face.getAxis()) {
+                sides.add(Vec3.atLowerCornerOf(side.getNormal()));
+            }
+        }
+        scene.effects()
+                .emitParticles(
+                        util.vector().blockSurface(pos, face).add(normal.scale(DRAW_OVER)),
+                        (level, x, y, z) -> {
+                            // POOF rises as it fades, which looks like gas leaving, so this is CLOUD.
+                            Vec3 side = sides.get(level.random.nextInt(sides.size()));
+                            Vec3 spread = side.cross(normal).scale((level.random.nextDouble() - 0.5) * 0.6);
+                            Vec3 at = side.scale(DRAW_FROM).add(spread).add(x, y, z);
+                            Vec3 in = side.scale(-DRAW_SPEED).add(normal.scale(-DRAW_SPEED / 8));
+                            level.addParticle(ParticleTypes.CLOUD, at.x, at.y, at.z, in.x, in.y, in.z);
+                        },
+                        1,
+                        cycles);
+    }
+
+    /** How far over a face {@link #draw}'s puffs move, in blocks. */
+    private static final double DRAW_OVER = 0.2;
+
+    /** How far out from a face's middle {@link #draw} starts its puffs, in blocks. */
+    private static final double DRAW_FROM = 0.75;
+
+    /**
+     * How fast {@link #draw}'s puffs move in, in blocks a tick. A CLOUD slows by 4 % a tick, so one
+     * that lasts travels 25 times this: to about the face's middle.
+     */
+    private static final double DRAW_SPEED = 0.03;
 
     /**
      * Outlines gliding through blocks one after another, again and again, as gas moves through pipes.
