@@ -73,7 +73,7 @@ The heater and air conditioner are now portables (below).
 | `zas_atmos:portable_scrubber` | Portable scrubber | Should | CONT-018 | Block model | On and off. In one block, shorter than the canister (the owner's choice of 2026-11-02). |
 | `zas_atmos:heater` | Heater | Should | CONT-019 | Block model | On and off. A portable on a battery that heats the room, not piped gas (D-73). 14 px wide, the generator's size (the owner's choice of 2026-11-02). |
 | `zas_atmos:air_conditioner` | Air conditioner | Should | CONT-019 | Block model | On and off. A portable that cools the room. It should look different from the heater. The heater's size, in white. |
-| `zas_atmos:tank_holder` | Tank holder | Not set | None yet | Block model | Holds up to 10 personal tanks and keeps their contents. It shows the tanks it holds, standing on two shelves of five, each tinted by its kind (the owner's choices of 2026-11-02). |
+| `zas_atmos:tank_holder` | Tank holder | Must | CONT-149 to CONT-151 | Block model | Holds up to 10 personal tanks and keeps their contents. It shows the tanks it holds, standing on two shelves of five, each tinted by its kind (the owner's choices of 2026-11-02). |
 
 Portables connect to and disconnect from connector ports with the wrench.
 

@@ -408,6 +408,13 @@ context (GEO-041).
    takes vanilla to about 60 ms and 303 geometries. Each reload only reapplies
    overrides. The lookup is `GeometryTable#geometryId(BlockState)` from
    `Geometries.table()` in `io.github.west3436.zas.geometry`, about 20 ns.
+   *Measured in a large pack
+   ([#79](https://github.com/west3436/zas-cubed/issues/79)):* BMC5, with
+   668,034 states and 49,965 distinct shapes, derives in 2–5 s cold on the
+   background thread, and the server waited 0–0.54 s for it once started
+   ([spikes · S2](research/spikes.md#follow-up-a-large-modpack-2026-11-07)).
+   `-Dzas.geometry.profile=true` logs where the time goes
+   ([config](config.md#jvm-system-properties)).
 2. **Rasterization.** The shape is rasterized to 16³ voxels. Each face's
    coverage is its 16×16 boundary layer (GEO-003). Free space reaching a face
    is split into 6-connected components, the sub-cells (GEO-004), each with its
@@ -2404,13 +2411,13 @@ The test names include requirement IDs (README rule 5).
 | O-2 | ~~**S0 on a real dedicated server.**~~ **Done** 2026-10-31. | [#77](https://github.com/west3436/zas-cubed/issues/77). On an installer-built 21.1.265 server, one API copy loads and the newest wins (0.1.1 over 0.1.0), the addon starts without `zas`, and no client classes load ([spikes · S0](research/spikes.md#follow-up-real-dedicated-server-2026-10-31)). The fallback and provider are rechecked once the API has content (API-048). |
 | O-3 | ~~**Piston coverage in S1** not exercised~~ **Done.** | [#25](https://github.com/west3436/zas-cubed/issues/25). The `geo_010_piston` GameTest sees both the pushed-into and the vacated position. |
 | O-4 | ~~**Memory** (NFR-004) estimated, not measured~~ **Done** 2026-11-01. | [#78](https://github.com/west3436/zas-cubed/issues/78). The R0 bench counts retained heap part by part: 10.85 MiB for S-10, about 1 KiB per zone, 222 B per zoned cell in the parts that scale with cells, of which the palettes are 11 B, the section mirror 22 B and the zone graph's cells 189 B (§4.4). NFR-004's per-cell budget is revised from 64 to 256 B, which the owner accepted on 2026-11-01. |
-| O-5 | **Large-pack geometry derivation** (state counts of 10⁵+) | [#79](https://github.com/west3436/zas-cubed/issues/79). Measure in a real pack before R1. The per-`VoxelShape` cache should keep it about 1 s. |
+| O-5 | ~~**Large-pack geometry derivation** (state counts of 10⁵+)~~ **Done** 2026-11-07. | [#79](https://github.com/west3436/zas-cubed/issues/79). In BMC5 (668,034 states, 237 mods) the derivation takes 2–5 s cold, not 1 s, but it runs on a background thread during the server's own start, which waited 0–0.54 s for it on this machine. No failures; 889 states are worked out per position. Diagonal panes and fences reach O-11's 4-cell limit. The options if the wait must go are in [spikes · S2](research/spikes.md#follow-up-a-large-modpack-2026-11-07). |
 | O-6 | **Classification that needs more sections** adds an atmos tick per round | [#80](https://github.com/west3436/zas-cubed/issues/80). Measure how often enclosures escape the 3-section prefetch, and widen it if needed. |
 | O-7 | ~~**Apply delay and period** must satisfy D < T~~ **Done.** | [#23](https://github.com/west3436/zas-cubed/issues/23). `SchedulerSettings` rejects D ≥ T, and the server config falls back to the defaults. |
 | O-8 | ~~**Cell ids name x and z only within ±8,388,608**~~ **Done** 2026-10-31. | [#105](https://github.com/west3436/zas-cubed/issues/105). Ids now pack 26 bits of x and z, 10 of y and 2 of sub-cell index, reaching the whole world past the border (§4.3); chunk records are format 3 and older ones are converted. The `data_002_zone_near_the_*_world_border` GameTests form, save, reload and vent a zone at x = z = ±29,999,008. What the layout gives up is O-11. |
 | O-9 | **Geometry in the tick a chunk unloads.** A block change applied by the tick in flight when a chunk of its zone unloads isn't in that chunk's share, which was saved from the previous snapshot. Mixtures are rejected and restored (§3.3), but geometry effects aren't, so the zone's shares can differ from the zone in memory by that change | Rare: it needs a change to the zone within about a second of the unload. A rebuilt zone re-classifies its surface (§4.5), which picks up openings; record the zone's volume with its shares if it matters in practice. |
 | O-10 | ~~**A geometry palette change drops every zone**~~ **Done** 2026-10-31. | [#104](https://github.com/west3436/zas-cubed/issues/104). The zones are rebuilt from the loaded chunks' records, as after a restart, and classified again with the new geometry; unloaded chunks keep their saved records, and outstanding operations carry over (§4.5). |
-| O-11 | **Cell ids name y only from −512 to 511, and 4 cells per block** (`CellIds`, §4.3). A datapack dimension taller than that can't be zoned above 511 or below −512 (those faces count as open), and a modded shape that splits a block into more than 4 cells loses the rest, which act as solid | Every vanilla dimension and block fits. If a pack needs more, give each engine its own y window (an offset from the dimension's lowest y) or move to wider ids; both cost more than the gain today (§4.3). |
+| O-11 | **Cell ids name y only from −512 to 511, and 4 cells per block** (`CellIds`, §4.3). A datapack dimension taller than that can't be zoned above 511 or below −512 (those faces count as open), and a modded shape that splits a block into more than 4 cells loses the rest, which act as solid | Every vanilla dimension and block fits. If a pack needs more, give each engine its own y window (an offset from the dimension's lowest y) or move to wider ids; both cost more than the gain today (§4.3). *2026-11-07:* a large pack reaches the cell limit: Diagonal Windows and Diagonal Fences give 27,621 states more than 4 cells ([spikes · S2](research/spikes.md#follow-up-a-large-modpack-2026-11-07)). |
 
 ## 10. Requirement coverage
 

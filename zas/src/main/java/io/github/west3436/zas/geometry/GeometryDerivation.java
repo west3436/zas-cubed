@@ -5,13 +5,17 @@ import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryDeriver;
 import io.github.west3436.zas.engine.GeometryPalette;
+import io.github.west3436.zas.engine.classify.CellIds;
 import io.github.west3436.zas.hotspot.GasFireBlock;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
@@ -55,6 +59,13 @@ public final class GeometryDerivation {
     private static final BlockPos[] PROBES = {
         new BlockPos(1, 0, 0), new BlockPos(0, 0, 1), new BlockPos(5, 64, -3), new BlockPos(-11, -7, 13)
     };
+
+    /**
+     * Debug: {@code -Dzas.geometry.profile=true} logs where the derivation's time goes, and once the
+     * server has started, times it again warm, as at start and once per state without the cache
+     * (docs/config.md).
+     */
+    static final boolean PROFILE = Boolean.getBoolean("zas.geometry.profile");
 
     private static volatile GeometryTable derived;
 
@@ -173,6 +184,16 @@ public final class GeometryDerivation {
     }
 
     private static GeometryTable deriveAll() {
+        return deriveAll(true);
+    }
+
+    /**
+     * Derives the table.
+     *
+     * @param report whether to log the result, and with {@link #PROFILE} where the time went; false
+     *     for the profile's warm rerun
+     */
+    private static GeometryTable deriveAll(boolean report) {
         long start = System.nanoTime();
         int maxId = -1;
         for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
@@ -183,12 +204,21 @@ public final class GeometryDerivation {
         Map<VoxelShape, Integer> byShape = new IdentityHashMap<>();
         // Distinct shape instances often rasterize to the same voxels; derive each grid once.
         Map<BitSet, Integer> byVoxels = new HashMap<>();
+        boolean profile = PROFILE && report;
+        Profile p = profile ? new Profile() : null;
         int failures = 0;
+        int perPosition = 0;
         for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
             int id;
             boolean positional = false;
+            long t0 = profile ? System.nanoTime() : 0;
+            long t1 = t0;
+            long t2 = t0;
+            String step = "shape";
             try {
                 VoxelShape shape = collisionShape(state);
+                t1 = profile ? System.nanoTime() : 0;
+                step = "derive";
                 Integer known = byShape.get(shape);
                 if (known == null) {
                     BitSet voxels = rasterize(shape);
@@ -196,13 +226,35 @@ public final class GeometryDerivation {
                     byShape.put(shape, known);
                 }
                 id = known;
+                t2 = profile ? System.nanoTime() : 0;
+                step = "probe";
                 positional = positional(state, shape);
             } catch (RuntimeException e) {
                 // A broken modded shape mustn't stop the server; treat the block as solid.
-                if (failures++ == 0) {
+                if (failures++ == 0 && report) {
                     LOGGER.warn("Couldn't derive the geometry of {}; treating it as solid", state, e);
                 }
+                if (profile) {
+                    p.failed.merge(
+                            BuiltInRegistries.BLOCK.getKey(state.getBlock()) + " (" + step + ")", 1, Integer::sum);
+                }
                 id = GeometryPalette.SOLID_ID;
+            }
+            if (profile) {
+                long t3 = System.nanoTime();
+                p.fetchNs += t1 - t0;
+                p.deriveNs += t2 - t1;
+                p.probeNs += t3 - t2;
+                if (state.getBlock().hasDynamicShape()) {
+                    p.dynamic++;
+                }
+                if (positional) {
+                    p.perPosition.merge(
+                            BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace(), 1, Integer::sum);
+                }
+            }
+            if (positional) {
+                perPosition++;
             }
             int fire = fireFlags(state);
             if (fire != 0) {
@@ -219,16 +271,107 @@ public final class GeometryDerivation {
             }
             byStateId[Block.getId(state)] = id;
         }
+        if (!report) {
+            return new GeometryTable(palette.build(), byStateId, byShape.size(), 0, 0);
+        }
         if (failures > 1) {
             LOGGER.warn("Couldn't derive the geometry of {} block states; treated them as solid", failures);
         }
         GeometryTable table = new GeometryTable(palette.build(), byStateId, byShape.size(), 0, 0);
         LOGGER.info(
-                "Derived gas geometry for {} block states from {} distinct shapes: {} geometries in {} ms",
+                "Derived gas geometry for {} block states from {} distinct shapes: {} geometries in {} ms; {} worked"
+                        + " out per position, {} failed",
                 byStateId.length,
                 byShape.size(),
                 table.palette().size(),
-                (System.nanoTime() - start) / 1_000_000);
+                (System.nanoTime() - start) / 1_000_000,
+                perPosition,
+                failures);
+        if (profile) {
+            LOGGER.info(
+                    "Gas geometry profile: shapes fetched in {} ms; {} voxel grids rasterized and derived into {}"
+                            + " geometries in {} ms; positions probed in {} ms; {} states declare a dynamic shape;"
+                            + " the table holds {} KiB of ids and per-position bits",
+                    p.fetchNs / 1_000_000,
+                    byVoxels.size(),
+                    new HashSet<>(byVoxels.values()).size(),
+                    p.deriveNs / 1_000_000,
+                    p.probeNs / 1_000_000,
+                    p.dynamic,
+                    (4L * byStateId.length + (byStateId.length + 63) / 64 * 8L) / 1024);
+            // A cell id names only so many cells per position (architecture O-11); the rest act as solid.
+            int beyond = 0;
+            for (int i = 0; i < table.palette().size(); i++) {
+                if (table.palette().geometry(i).cells().size() > CellIds.MAX_SUB_CELLS) {
+                    beyond++;
+                }
+            }
+            Map<String, Integer> beyondStates = new HashMap<>();
+            for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
+                if (table.geometry(state).cells().size() > CellIds.MAX_SUB_CELLS) {
+                    beyondStates.merge(
+                            BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace(), 1, Integer::sum);
+                }
+            }
+            LOGGER.info(
+                    "Gas geometry profile: {} geometries have more than the {} cells a cell id can name; their states, by"
+                            + " namespace: {}",
+                    beyond,
+                    CellIds.MAX_SUB_CELLS,
+                    sorted(beyondStates));
+            LOGGER.info("Gas geometry profile: worked out per position, by namespace: {}", sorted(p.perPosition));
+            LOGGER.info(
+                    "Gas geometry profile: failed states, by block and step (shape, derive or probe): {}",
+                    sorted(p.failed));
+        }
         return table;
+    }
+
+    /** The profile's tallies for one derivation. */
+    private static final class Profile {
+        long fetchNs;
+        long deriveNs;
+        long probeNs;
+        int dynamic;
+        final Map<String, Integer> perPosition = new HashMap<>();
+        final Map<String, Integer> failed = new HashMap<>();
+    }
+
+    private static String sorted(Map<String, Integer> counts) {
+        return counts.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue()
+                        .reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .map(e -> e.getKey() + " " + e.getValue())
+                .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    /**
+     * For {@link #PROFILE}: times the derivation again, now that the server is warm, as it runs at
+     * start and once per state without the per-shape cache, and logs both. Any thread.
+     */
+    static void profileWarm() {
+        long start = System.nanoTime();
+        deriveAll(false);
+        long cached = System.nanoTime() - start;
+        start = System.nanoTime();
+        int states = 0;
+        int cells = 0;
+        for (BlockState state : Block.BLOCK_STATE_REGISTRY) {
+            states++;
+            try {
+                cells += derive(collisionShape(state)).cells().size();
+            } catch (RuntimeException e) {
+                // Counted at start.
+            }
+        }
+        long uncached = System.nanoTime() - start;
+        LOGGER.info(
+                "Gas geometry profile, warm: {} ms as derived at start; {} ms deriving each of {} states without"
+                        + " the cache ({} cells)",
+                cached / 1_000_000,
+                uncached / 1_000_000,
+                states,
+                cells);
     }
 }
