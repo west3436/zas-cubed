@@ -22,6 +22,11 @@ import java.util.PriorityQueue;
  * place in the period. API mutations complete when the framework applies an atmos tick, so a
  * device that waits settles just after that point and stops waiting.
  *
+ * <p><b>Passing over.</b> A member that isn't {@linkplain Member#ticking() ticking} when it is due,
+ * because its chunk doesn't tick block entities now, isn't stepped or asked whether it is ready. It is
+ * due again one period later, so it keeps its place in the period, and steps at the first of those
+ * after it ticks again.
+ *
  * <p><b>Order.</b> Members due at the same game tick step in the order they became due, then in
  * the order they were added, so a run is deterministic (CORE-044).
  *
@@ -37,6 +42,16 @@ public final class DeviceSchedule<M extends DeviceSchedule.Member> {
          * @return true to step now, false to be asked again next game tick
          */
         default boolean readyToStep() {
+            return true;
+        }
+
+        /**
+         * Whether the member steps at all now. A device whose chunk doesn't tick block entities
+         * returns false, and is passed over until a period after it does.
+         *
+         * @return true to be stepped when due, false to be passed over for this period
+         */
+        default boolean ticking() {
             return true;
         }
 
@@ -125,8 +140,9 @@ public final class DeviceSchedule<M extends DeviceSchedule.Member> {
     }
 
     /**
-     * Steps every member due at or before a game tick that is ready, and asks the rest again next
-     * game tick. Call it once per game tick.
+     * Steps every member due at or before a game tick that is ticking and ready, asks those that
+     * aren't ready again next game tick, and passes over those that aren't ticking until a period
+     * later. Call it once per game tick.
      *
      * @param now the current game tick
      */
@@ -134,6 +150,11 @@ public final class DeviceSchedule<M extends DeviceSchedule.Member> {
         while (!queue.isEmpty() && queue.peek().due <= now) {
             Entry<M> e = queue.poll();
             if (e.removed) {
+                continue;
+            }
+            if (!e.member.ticking()) {
+                e.due += period; // its phase stays
+                queue.add(e);
                 continue;
             }
             boolean ready = e.member.readyToStep();
@@ -146,8 +167,8 @@ public final class DeviceSchedule<M extends DeviceSchedule.Member> {
     }
 
     /**
-     * Steps every ready member once now, in the order they were added, without changing when they
-     * are next due. For GameTests that drive atmos ticks themselves.
+     * Steps every ready member once now, in the order they were added, ticking or not, without
+     * changing when they are next due. For GameTests that drive atmos ticks themselves.
      */
     public void stepAll() {
         for (M member : members()) {

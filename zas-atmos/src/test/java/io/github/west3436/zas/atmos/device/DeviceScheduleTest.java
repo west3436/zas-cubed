@@ -17,6 +17,8 @@ class DeviceScheduleTest {
         final List<Long> steps = new ArrayList<>();
         final long[] clock;
         boolean ready = true;
+        boolean ticking = true;
+        int asked;
 
         Probe(long[] clock) {
             this.clock = clock;
@@ -24,7 +26,13 @@ class DeviceScheduleTest {
 
         @Override
         public boolean readyToStep() {
+            asked++;
             return ready;
+        }
+
+        @Override
+        public boolean ticking() {
+            return ticking;
         }
 
         @Override
@@ -114,6 +122,33 @@ class DeviceScheduleTest {
         assertEquals(List.of(1L, 31L), p.steps, "steps on the first game tick it is ready");
         run(s, clock, 31 + 3 * PERIOD);
         assertEquals(List.of(1L, 31L, 51L, 71L, 91L), p.steps, "keeps its new phase");
+    }
+
+    /**
+     * A member whose chunk doesn't tick is passed over, without being asked whether it is ready, and
+     * keeps its phase: it steps at the first of its due ticks after it ticks again.
+     */
+    @Test
+    void cont_006_a_member_that_is_not_ticking_is_passed_over_and_keeps_its_phase() {
+        long[] clock = {0};
+        DeviceSchedule<Probe> s = new DeviceSchedule<>(PERIOD);
+        Probe p = new Probe(clock);
+        s.add(p, 0);
+        run(s, clock, PERIOD);
+        assertEquals(List.of(1L), p.steps);
+        p.ticking = false;
+        int asked = p.asked;
+        run(s, clock, 90);
+        assertEquals(List.of(1L), p.steps, "stepped while not ticking");
+        assertEquals(asked, p.asked, "asked whether it was ready while not ticking");
+        p.ticking = true;
+        run(s, clock, 100);
+        assertEquals(List.of(1L), p.steps, "stepped before its phase came round");
+        run(s, clock, 141);
+        assertEquals(List.of(1L, 101L, 121L, 141L), p.steps, "keeps its phase");
+        p.ticking = false;
+        s.stepAll();
+        assertEquals(5, p.steps.size(), "stepAll steps it, ticking or not");
     }
 
     @Test

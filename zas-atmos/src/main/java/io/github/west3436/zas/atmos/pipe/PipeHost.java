@@ -1,7 +1,9 @@
 package io.github.west3436.zas.atmos.pipe;
 
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -37,7 +39,8 @@ public interface PipeHost {
     /**
      * The node across a face of a block, if gas passes between the two blocks there ({@link
      * PipeConnector#joined}, so not through a shut valve) and the neighbour is loaded. A neighbour in
-     * an unloaded chunk isn't reached, and that chunk keeps its share saved.
+     * an unloaded chunk isn't reached, and that chunk keeps its share saved. On a server it reads the
+     * neighbour without loading its chunk or keeping it loaded ({@link LoadedBlocks}).
      *
      * @param level the level
      * @param pos the block's position
@@ -47,6 +50,16 @@ public interface PipeHost {
      */
     static PipeNode across(Level level, BlockPos pos, BlockState self, Direction face) {
         BlockPos next = pos.relative(face);
+        if (level instanceof ServerLevel server) {
+            BlockState there = LoadedBlocks.state(server, next);
+            if (there == null || !PipeConnector.joined(self, face, there)) {
+                return null;
+            }
+            BlockEntity neighbour = LoadedBlocks.entity(server, next);
+            return neighbour instanceof PipeHost host && !neighbour.isRemoved()
+                    ? host.nodeOn(face.getOpposite())
+                    : null;
+        }
         if (!level.isLoaded(next) || !PipeConnector.joined(self, face, level.getBlockState(next))) {
             return null;
         }
