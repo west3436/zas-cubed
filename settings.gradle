@@ -20,3 +20,6 @@ include 'engine', 'zas-api', 'zas', 'compat-adastra', 'zas-atmos', 'example-addo
 
 // The Ponder scenes, a client addon of their own that nests Ponder and Flywheel (D-83).
 include 'zas-ponder'
+
+// The in-game S-10 bench: a dev-only mod and server run, never published (docs/research/benchmarks.md).
+include 's10-bench'

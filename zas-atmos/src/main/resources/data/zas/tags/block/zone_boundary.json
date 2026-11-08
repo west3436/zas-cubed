@@ -1,5 +1,8 @@
 {
   "values": [
-    "zas_atmos:firelock"
+    "zas_atmos:firelock",
+    "zas_atmos:airlock",
+    "zas_atmos:large_airlock",
+    "zas_atmos:firelock_door"
   ]
 }

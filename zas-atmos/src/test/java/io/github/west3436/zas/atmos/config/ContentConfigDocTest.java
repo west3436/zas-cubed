@@ -35,7 +35,8 @@ class ContentConfigDocTest {
             Map.entry("power.electrolyzer", 80),
             Map.entry("power.area_air_controller", 5),
             Map.entry("power.central_controller", 5),
-            Map.entry("power.fire_alarm", 1));
+            Map.entry("power.fire_alarm", 1),
+            Map.entry("power.airlock_controller", 1));
 
     /** A row of the page's tables: its key in backticks, then its default in backticks. */
     private static final Pattern ROW = Pattern.compile("^\\| `\\[([a-z_.]+)\\] ([a-z_]+)` \\| `([^`]*)` \\|");

@@ -31,6 +31,11 @@
     "zas_atmos:tank_holder",
     "zas_atmos:radiator_pipe",
     "zas_atmos:radiator_adaptor",
-    "zas_atmos:heat_exchanger"
+    "zas_atmos:heat_exchanger",
+    "zas_atmos:airlock",
+    "zas_atmos:large_airlock",
+    "zas_atmos:airlock_controller",
+    "zas_atmos:air_sensor",
+    "zas_atmos:firelock_door"
   ]
 }

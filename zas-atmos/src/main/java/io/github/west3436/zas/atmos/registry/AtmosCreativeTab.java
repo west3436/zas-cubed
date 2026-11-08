@@ -85,6 +85,10 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.PORTABLE_PUMP.get());
         out.accept(AtmosItems.TANK_HOLDER.get());
         out.accept(AtmosItems.FIRELOCK.get());
+        out.accept(AtmosItems.AIRLOCK.get());
+        out.accept(AtmosItems.LARGE_AIRLOCK.get());
+        out.accept(AtmosItems.AIRLOCK_CONTROLLER.get());
+        out.accept(AtmosItems.AIR_SENSOR.get());
         out.accept(AtmosItems.RECHARGER.get());
         out.accept(AtmosItems.IGNITER.get());
         AtmosItems.batteries().forEach(b -> {

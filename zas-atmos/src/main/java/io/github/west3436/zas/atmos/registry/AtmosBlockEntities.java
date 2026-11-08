@@ -1,6 +1,9 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.airlock.AirSensorBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
@@ -9,6 +12,7 @@ import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
+import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
@@ -105,6 +109,31 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<FirelockBlockEntity>> FIRELOCK = BLOCK_ENTITIES.register(
             "firelock",
             () -> BlockEntityType.Builder.of(FirelockBlockEntity::new, AtmosBlocks.FIRELOCK.get())
+                    .build(null));
+
+    // Airlocks (CONT-133 to CONT-142, D-84): one type for both sizes, on each airlock's origin
+    public static final Supplier<BlockEntityType<AirlockBlockEntity>> AIRLOCK = BLOCK_ENTITIES.register(
+            "airlock",
+            () -> BlockEntityType.Builder.of(
+                            AirlockBlockEntity::new, AtmosBlocks.AIRLOCK.get(), AtmosBlocks.LARGE_AIRLOCK.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<AirlockControllerBlockEntity>> AIRLOCK_CONTROLLER =
+            BLOCK_ENTITIES.register(
+                    "airlock_controller",
+                    () -> BlockEntityType.Builder.of(
+                                    AirlockControllerBlockEntity::new, AtmosBlocks.AIRLOCK_CONTROLLER.get())
+                            .build(null));
+
+    public static final Supplier<BlockEntityType<AirSensorBlockEntity>> AIR_SENSOR = BLOCK_ENTITIES.register(
+            "air_sensor",
+            () -> BlockEntityType.Builder.of(AirSensorBlockEntity::new, AtmosBlocks.AIR_SENSOR.get())
+                    .build(null));
+
+    /** On both halves of a door with a firelock (CONT-137). */
+    public static final Supplier<BlockEntityType<FirelockDoorBlockEntity>> FIRELOCK_DOOR = BLOCK_ENTITIES.register(
+            "firelock_door",
+            () -> BlockEntityType.Builder.of(FirelockDoorBlockEntity::new, AtmosBlocks.FIRELOCK_DOOR.get())
                     .build(null));
 
     public static final Supplier<BlockEntityType<HeaterBlockEntity>> HEATER = BLOCK_ENTITIES.register(

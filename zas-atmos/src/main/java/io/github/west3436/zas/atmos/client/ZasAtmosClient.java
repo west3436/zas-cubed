@@ -77,6 +77,7 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveModels);
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
         modBus.addListener(ConnectedTextures::addPack);
+        modBus.addListener(FirelockDoorModel::wrap);
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
@@ -190,6 +191,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.ELECTROLYZER.get(), ElectrolyzerScreen::new);
         event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
         event.register(AtmosMenus.ANALYZER.get(), AnalyzerScreen::new);
+        event.register(AtmosMenus.AIRLOCK_CONTROLLER.get(), AirlockControllerScreen::new);
     }
 
     /**

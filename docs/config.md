@@ -247,6 +247,7 @@ nothing (CONT-065), so it has no key. Every key is live
 | `[power] electrolyzer` | `80` | What a water electrolyzer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] fire_alarm` | `1` | A fire alarm's draw from the controller that covers it, in FE/t, 0 to 100,000 (CONT-044, CONT-065) |
+| `[power] airlock_controller` | `1` | An airlock controller's own draw from its area air controller, in FE/t, 0 to 100,000; the draws of the vents linked to it add to it (CONT-065, CONT-141) |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
 | `[power] central_controller` | `5` | The central atmospherics controller's own draw, in FE/t, 0 to 100,000 (CONT-115). It pays this before any area air controller's shortfall; without it, it is unpowered and pays nothing |
 | `[power] central_controller_buffer` | `100000` | The central atmospherics controller's buffer, in FE, 1,000 to 10,000,000 (CONT-115) |
