@@ -372,6 +372,19 @@ intact. The Manual playtest is still to come.*
 *2026-11-05: the owner played it on a client, which settles the Manual playtest, and
 accepted the blast's strength as it is.*
 
+*2026-11-07: S-09's R1 plan passes as
+`StationSaveTests.s_09_a_station_saved_to_disk_comes_back_with_every_amount` in
+`zas_atmos`. A station across three chunks holds zones, two pipe networks, a
+block entity of every kind the mod has, canisters, tanks and a primed TTV. Its
+chunks really unload and load again, standing in for a restart, and every amount
+comes back within 1e-9 (DATA-016's note says what only a real restart covers).
+The zone across the chunk that loads last comes back paused, with that chunk's
+share of its gas gone and its pressure, temperature and mixture unchanged. It
+resumes with all of its gas when the chunk loads. The station's manual valve sits
+on a chunk's edge, and `s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`
+measures the extra rebuild that position costs as it opens (#341): negligible
+([benchmarks](../research/benchmarks.md#a-valve-at-a-chunks-edge-341-2026-11-07)).*
+
 ## Questions
 
 ### Resolved (2026-10-30)
