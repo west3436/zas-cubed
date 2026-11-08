@@ -65,7 +65,8 @@ public final class PortableScenes {
 
     /**
      * Puffs of gas drawn in from all round a block, low down, so they don't look like the puffs a
-     * release sends up from its top. A stand-in until the shared {@code Gas.draw} reaches this branch.
+     * release sends up from its top. Not {@link Gas#draw}: that draws over the top of a portable's
+     * block space, which is well above its low model, so its puffs hang over the block like a release.
      */
     private static void draw(SceneBuilder scene, BlockPos pos, int cycles) {
         Vec3 centre = Vec3.atBottomCenterOf(pos).add(0, 0.2, 0);

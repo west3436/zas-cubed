@@ -69,7 +69,7 @@ public final class PumpScenes {
         Power.controller(
                 scene,
                 util,
-                util.grid().at(1, 2, 3),
+                util.grid().at(3, 2, 3),
                 Direction.NORTH,
                 pump,
                 s -> s.setValue(InlineDeviceBlock.ON, true));

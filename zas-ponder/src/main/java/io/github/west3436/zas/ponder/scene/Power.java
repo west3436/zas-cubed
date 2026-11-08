@@ -13,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * What powers a device: an area air controller in its room, or one a multitool links it to (D-68,
@@ -57,7 +58,21 @@ public final class Power {
                         .setValue(AreaAirControllerBlock.STATUS, ControllerStatus.SAFE),
                 facing.getOpposite());
         Build.change(scene, device, on);
-        Say.at(scene, util.vector().blockSurface(controller, facing), "power.controller");
+        Say.at(scene, panel(util, controller, facing), "power.controller");
+    }
+
+    /**
+     * The front of a panel on a wall, such as an area air controller's or a fire alarm's. The panel is
+     * thin and sits at the back of its block, so its block's face is in the air in front of it.
+     *
+     * @param util the scene's helpers
+     * @param pos the panel's block
+     * @param facing the way the panel faces
+     * @return a point on the panel's front
+     */
+    public static Vec3 panel(SceneBuildingUtil util, BlockPos pos, Direction facing) {
+        Vec3 back = Vec3.atLowerCornerOf(facing.getOpposite().getNormal());
+        return util.vector().centerOf(pos).add(0, 0.1, 0).add(back.scale(0.375));
     }
 
     /**

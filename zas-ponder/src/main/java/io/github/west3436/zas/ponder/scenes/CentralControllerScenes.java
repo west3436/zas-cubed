@@ -14,10 +14,10 @@ import io.github.west3436.zas.ponder.scene.Stage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.UnaryOperator;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
+import net.createmod.ponder.api.scene.Selection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
@@ -57,7 +57,7 @@ public final class CentralControllerScenes {
                         .defaultBlockState()
                         .setValue(GeneratorBlock.FACING, front)
                         .setValue(GeneratorBlock.LIT, true));
-        screen(scene, console, ConsoleScreen.NORMAL);
+        screen(scene, util, console, ConsoleScreen.NORMAL);
         Say.at(scene, util.vector().topOf(generator), "central.power");
 
         // Area air controllers on the walls of rooms around it.
@@ -98,7 +98,7 @@ public final class CentralControllerScenes {
         // One room's air turns dangerous, and the console shows it.
         BlockPos alarmed = controllers.get(2);
         Build.change(scene, alarmed, s -> s.setValue(AreaAirControllerBlock.STATUS, ControllerStatus.DANGER2));
-        screen(scene, console, ConsoleScreen.DANGER2);
+        screen(scene, util, console, ConsoleScreen.DANGER2);
         Say.at(scene, util.vector().blockSurface(origin.above(), front), "central.screen");
 
         // A multitool takes an area air controller, then the console.
@@ -119,20 +119,13 @@ public final class CentralControllerScenes {
                 .setValue(AreaAirControllerBlock.STATUS, status);
     }
 
-    /** Sets what all four of the console's blocks show. */
-    private static void screen(SceneBuilder scene, List<BlockPos> console, ConsoleScreen screen) {
-        changeAll(scene, console, s -> s.setValue(CentralControllerBlock.SCREEN, screen));
-    }
-
-    /**
-     * Changes every part of a block in parts at once, then settles: settling one part at a time would
-     * have it copy its partner's old state. A stand-in until the shared {@code Build.change} for a
-     * selection reaches this branch.
-     */
-    private static void changeAll(SceneBuilder scene, List<BlockPos> parts, UnaryOperator<BlockState> change) {
-        for (BlockPos part : parts) {
-            scene.world().modifyBlock(part, change, false);
+    /** Sets what all four of the console's blocks show, together. */
+    private static void screen(
+            SceneBuilder scene, SceneBuildingUtil util, List<BlockPos> console, ConsoleScreen screen) {
+        Selection all = util.select().position(console.get(0));
+        for (BlockPos part : console.subList(1, console.size())) {
+            all = all.add(util.select().position(part));
         }
-        Build.settle(scene);
+        Build.change(scene, all, s -> s.setValue(CentralControllerBlock.SCREEN, screen));
     }
 }

@@ -1,9 +1,12 @@
 package io.github.west3436.zas.ponder;
 
 import io.github.west3436.zas.ponder.scene.Stage;
+import io.github.west3436.zas.ponder.scenes.AreaAirControllerScenes;
 import io.github.west3436.zas.ponder.scenes.CanisterScenes;
 import io.github.west3436.zas.ponder.scenes.CentralControllerScenes;
 import io.github.west3436.zas.ponder.scenes.ElectrolyzerScenes;
+import io.github.west3436.zas.ponder.scenes.FireScenes;
+import io.github.west3436.zas.ponder.scenes.HeaterScenes;
 import io.github.west3436.zas.ponder.scenes.PipeScenes;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
 import io.github.west3436.zas.ponder.scenes.PortableScenes;
@@ -13,6 +16,7 @@ import io.github.west3436.zas.ponder.scenes.SidePortScenes;
 import io.github.west3436.zas.ponder.scenes.ToolScenes;
 import io.github.west3436.zas.ponder.scenes.TransferValveScenes;
 import io.github.west3436.zas.ponder.scenes.ValveScenes;
+import io.github.west3436.zas.ponder.scenes.VentScenes;
 import java.util.List;
 import net.createmod.ponder.api.registration.PonderPlugin;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
@@ -41,6 +45,16 @@ final class ZasPonderPlugin implements PonderPlugin {
             "filter_mirrored",
             "mixer",
             "mixer_mirrored",
+            // Room air and fire.
+            "vent",
+            "scrubber",
+            "passive_vent",
+            "area_air_controller",
+            "heater",
+            "air_conditioner",
+            "fire_alarm",
+            "firelock",
+            "igniter",
             // Portables, power, the electrolyzer, the central controller and the handheld tools.
             "canister",
             "portable_scrubber",
@@ -74,6 +88,18 @@ final class ZasPonderPlugin implements PonderPlugin {
                 .addStoryBoard(Stage.MEDIUM, SidePortScenes::filter, TAG);
         helper.forComponents(atmos("mixer"), atmos("mixer_mirrored"))
                 .addStoryBoard(Stage.MEDIUM, SidePortScenes::mixer, TAG);
+
+        // Room air and fire.
+        helper.forComponents(atmos("vent")).addStoryBoard(Stage.MEDIUM, VentScenes::vent, TAG);
+        helper.forComponents(atmos("scrubber")).addStoryBoard(Stage.MEDIUM, VentScenes::scrubber, TAG);
+        helper.forComponents(atmos("passive_vent")).addStoryBoard(Stage.MEDIUM, VentScenes::passive, TAG);
+        helper.forComponents(atmos("area_air_controller"))
+                .addStoryBoard(Stage.MEDIUM, AreaAirControllerScenes::controller, TAG);
+        helper.forComponents(atmos("heater")).addStoryBoard(Stage.SMALL, HeaterScenes::heater, TAG);
+        helper.forComponents(atmos("air_conditioner")).addStoryBoard(Stage.SMALL, HeaterScenes::airConditioner, TAG);
+        helper.forComponents(atmos("fire_alarm")).addStoryBoard(Stage.MEDIUM, FireScenes::fireAlarm, TAG);
+        helper.forComponents(atmos("firelock")).addStoryBoard(Stage.MEDIUM, FireScenes::firelock, TAG);
+        helper.forComponents(atmos("igniter")).addStoryBoard(Stage.MEDIUM, FireScenes::igniter, TAG);
 
         // Portables, power, the electrolyzer, the central controller and the handheld tools.
         helper.forComponents(atmos("canister")).addStoryBoard(Stage.MEDIUM, CanisterScenes::canister, TAG);

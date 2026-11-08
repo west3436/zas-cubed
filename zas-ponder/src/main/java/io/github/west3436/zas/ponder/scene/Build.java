@@ -99,6 +99,20 @@ public final class Build {
     }
 
     /**
+     * Changes several shown blocks' states at once, and joins everything to its neighbours again: both
+     * halves of a two-block block, such as a firelock closing, which would each take back the other's
+     * old state if changed one at a time.
+     *
+     * @param scene the scene
+     * @param blocks the blocks
+     * @param change what each becomes, from what it is
+     */
+    public static void change(SceneBuilder scene, Selection blocks, UnaryOperator<BlockState> change) {
+        scene.world().modifyBlocks(blocks, change, false);
+        settle(scene);
+    }
+
+    /**
      * Takes shown blocks away together, as a wrench or a player would, lifting them out of sight, and
      * joins their neighbours to what's left: a pipe beside a gap gets an open end.
      *
