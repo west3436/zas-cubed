@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.west3436.zas.s10.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlockEntityTickMixin",
+    "ChangeTrackerMixin",
+    "DeviceStepMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

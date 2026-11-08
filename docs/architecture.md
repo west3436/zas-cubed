@@ -2357,7 +2357,9 @@ All mixins are injection-only, with no `@Overwrite` (NFR-021). Each class's
 javadoc names its purpose and requirement, and each has a row here (NFR-024):
 **a new mixin adds both, with the same requirements**. They are declared in
 `zas.mixins.json` through `[[mixins]]` in `neoforge.mods.toml`, the only mixin
-config in the repository. All of them are common: none is client-only. Behaviour
+config of a shipped mod. The in-game S-10 bench's dev-only mod has its own,
+`zas_s10.mixins.json`, for B1 to B3 below, which only time code and never ship
+(§8). All of them are common: none is client-only. Behaviour
 toggles are checked at runtime inside the injection, not by skipping mixins,
 because STARTUP config is too late for block classes.
 
@@ -2369,6 +2371,9 @@ because STARTUP config is too late for block classes.
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020, FIRE-030 | applied; no GameTest of its own |
 | M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
 | M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
+| B1 | `LevelChunk$BoundTickingBlockEntity#tick`, its call to `BlockEntityTicker#tick` | `@WrapOperation` (`BlockEntityTickMixin`, S-10 bench only) | Times the mods' block entity tickers, such as the generator's and the fire alarm's | NFR-001 | The S-10 bench's report |
+| B2 | `ChangeTracker#onBlockWrite` (M1's handler) | `@WrapMethod` (`ChangeTrackerMixin`, S-10 bench only) | Times the change hook, whatever wrote the block | NFR-001 | The S-10 bench's report |
+| B3 | `DeviceSchedule#tick`, its call to `DeviceSchedule.Member#step` | `@WrapOperation` (`DeviceStepMixin`, S-10 bench only) | Times each device's step by device type, out of the device ticker's listener that runs it | NFR-001 | The S-10 bench's report |
 
 Not mixins:
 
@@ -2398,6 +2403,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 |---|---|---|
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check (`./gradlew :engine:benchCheck`) runs a recorded commit's engine beside this one, with a 10 % tolerance |
+| In-game S-10 bench | `s10-bench`, a dev-only mod and dedicated-server run (`./gradlew :s10-bench:s10Bench`), never in a jar | S-10 with both mods in a real server: server-thread time by part (NFR-001, NFR-002), worker ticks (NFR-005), heap (NFR-004), bytes sent to each player (DATA-006, DATA-014, DATA-015) and spike #80's prefetch survey ([how](research/benchmarks.md#the-in-game-s-10-bench)) |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
 | Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048) |
 
