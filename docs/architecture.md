@@ -2126,7 +2126,7 @@ sound, and nothing here runs for it.*
 |---|---|
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, the `ServerThreads` check, and `ThirdPartyFaults`, the limit on logging another mod's faults (API-062) |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
-| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
+| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`; settings: `periodTicks()`, `containerExplosionsBreakBlocks()`, `nearVacuumDensity()`; API-052, API-059, API-064), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `BlockGeometry` (`markDirty(level, pos)`; GEO-014), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided; built, with its `BLOCK` capability: `contents`, and `fill` and `drain` that simulate or execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block; built, with its `BLOCK` capability and the `SealGeometry` it answers with: sealed faces, zone-boundary faces and volume; API-023, API-028), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
@@ -2172,7 +2172,9 @@ sound, and nothing here runs for it.*
   `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`), and
   `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`),
   `oxygenMinimum` to 16 kPa, `molarHeatCapacity` to the shipped values for
-  N₂ and O₂ and nothing for other gases, and `atmosPeriodTicks` to 20.
+  N₂ and O₂ and nothing for other gases, `atmosPeriodTicks` to 20,
+  `containerExplosionsBreakBlocks` to false, and `nearVacuumDensity` to 1 % of
+  standard air's.
 - **The client's sound service is separate.** `ClientSounds` holds a
   `ClientSoundProvider` that only the physical client installs, from `ZasClient`.
   A dedicated server, like a game without `zas`, keeps the defaults: every
@@ -2476,6 +2478,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
+| `radiator` | Radiator pipe, the radiator adaptor and the heat exchanger (§11.17): their blocks and block entities, `RadiatorExchange` (a network's radiator pipe each atmos tick), `RadiatorMath` and `HeatExchangerTint`, which hold no game classes |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
 | `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
 
@@ -3957,3 +3960,81 @@ no valve; the stack has already checked that the player may build there.
   server doesn't know the player's units.
 - **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
   part, with the block's own breaking sound on a removal.
+
+### 11.17 Radiators and heat exchangers (CONT-143 to CONT-148, HEAT-020 to HEAT-022)
+
+The `radiator` package. All three blocks are pipe-network nodes (§11.4), so they share,
+save and release gas as pipes do. They are the only ways heat leaves or enters a
+network other than with gas.
+
+- **Radiator pipe** (`RadiatorPipeBlock`, `RadiatorPipeBlockEntity`) is a 70 L segment
+  with pipe's six `CONNECTIONS` properties. Its `pipeConnects` takes only radiator pipe
+  and an adaptor, and both sides must agree (`PipeConnector.connected`), so it never
+  joins pipe, a device, or, since a gas handler's face needs `pipeConnects` too, a gas
+  handler (CONT-143). Its arms come from `updateShape`, so `Block.updateFromNeighbourShapes`
+  joins it as placement does. It has no open end, so a free end keeps its gas (CONT-144).
+  It is a segment, so it bursts as pipe does (CONT-146). Its blockstate picks the straight
+  model when it joins just one axis's two faces, and otherwise the joint with an arm to
+  each face it joins.
+- **The radiator adaptor** (`RadiatorAdaptorBlock`) is one 70 L segment with a `facing`:
+  its radiator end. That end takes only radiator pipe, and the opposite, pipe end anything
+  but radiator pipe, as a pipe's end would (CONT-145). Placed against radiator pipe its
+  radiator end faces it, and otherwise its pipe end faces the block clicked.
+- **The heat exchanger** (`HeatExchangerBlock`) is a 200 L node, not a segment, with a
+  `facing`, the way its box faces, and its pipe only on the opposite face (CONT-147). It
+  needs no power. Placed against another's box it faces back, which makes a pair;
+  otherwise its pipe faces the block clicked. The wrench turns an adaptor or an
+  exchanger as it does any part with a `facing` (§11.16).
+
+**A network's radiator pipe** (`RadiatorExchange`) runs in the network's own atmos tick,
+after its reaction (`PipeNodeEntity.atmosTurn`). `PipeNetwork.radiators()` lists the
+members that radiate, so a network without radiator pipe pays one empty-list check.
+Each segment reads its cell through the API, through its `CellWatch` (§11.5), and
+couples the network to what is there:
+
+- **Gas at least as dense as the near-vacuum line**, `Atmospheres.nearVacuumDensity()`
+  (HEAT-008, API-064), read each tick: the configured 20 W/K × the step, in series with
+  the cell's share of the zone's or the open air's heat capacity by volume, so it never
+  takes more than the cell can (HEAT-020).
+- **The open air thinner than that, or a vacuum's**: radiation to the ambient's
+  temperature, εσA(T² + T_bg²)(T + T_bg) × the step, so that coupling × (T − T_bg) is
+  εσA(T⁴ − T_bg⁴) (HEAT-021).
+- **A zone thinner than the line, a paused zone or an unresolved cell**: nothing.
+
+The network's new temperature is the backward (implicit) step over all of them at once,
+T' = (C·T + Σ aᵢTᵢ) / (C + Σ aᵢ). That lies between the network's temperature and the
+bodies', so no step overshoots, however thin the gas or long the period. Each body gains
+aᵢ(T' − Tᵢ), and together they gain what the network loses. Where both capacities are
+large next to 20 J/K, that is 20 W/K × ΔT; a small network moves less in a step than an
+explicit step would. The heat goes through API-013 (CONT-095): one heat mutation per zone
+per tick, summed over its segments, and one per open-air segment, of 1 J or more, so a
+sealed room with no zone yet forms one (CORE-055); the ambient takes it unchanged
+(HEAT-010). Radiation leaves the world, so it sends nothing. A draw from a zone is taken
+at once, and what the zone doesn't deliver, at its temperature floor, goes back out of
+the network when the result comes. Only heat moves, so the conservation ledger, which
+counts moles, has nothing to explain (CORE-073).
+
+**A pair** (HEAT-022) is two exchangers facing each other from neighbouring blocks. The
+one facing south, east or up leads, so each pair runs once per tick. In its own step it
+moves ΔT × C₁C₂ / (C₁ + C₂) between the two networks directly, Cᵢ being each exchanger's
+share of its network's heat capacity by volume. Nothing goes through the API, as no zone
+is involved. Two on one network move nothing.
+
+**The tint** (CONT-148). The exchanger's block state has `heat`, 0 to 30: six bands
+between each pair of the six colour stops (`HeatExchangerTint`). The block entity sets it
+from its network's temperature each step, with `UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE`, which
+changes neither its shape nor its zone geometry, and only when the band changes. An
+exchanger with no gas shows copper. The client's block colour handler tints tint index 0,
+the coil and the pipe, by the band, and its item by copper. A Ponder scene sets `heat` in
+the block state.
+
+**Cost.** Measured on 2026-11-07, on a GameTest server on the development machine, with
+a hot network of 512 segments in a 32 × 16 grid:
+
+| Where | `RadiatorExchange.step` | Its mutations, applied |
+|---|---|---|
+| In one sealed room | 215 µs a tick, 0.42 µs a segment | One heat mutation |
+| In the open air | 245 µs a tick, 0.48 µs a segment | 512 heat mutations: the framework's tick took about 380 µs longer |
+
+That is once per atmos tick. Most of a segment's cost is its `Atmospheres.at` read. A run in
+the open air sends nothing once it is within about 1 J a segment of the ambient.

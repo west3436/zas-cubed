@@ -2,6 +2,8 @@ package io.github.west3436.zas.api.atmosphere;
 
 import io.github.west3436.zas.api.AnyThread;
 import io.github.west3436.zas.api.ZasApi;
+import io.github.west3436.zas.api.gas.GasMixture;
+import io.github.west3436.zas.api.gas.StandardAir;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -10,8 +12,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Atmosphere and zone queries (API-010, API-011, API-015), and the atmos
- * period (API-052).
+ * Atmosphere and zone queries (API-010, API-011, API-015), the atmos
+ * period (API-052) and the near-vacuum density (API-064).
  *
  * <p><b>Threads:</b> every query may be called from any thread. Queries read
  * the published, immutable snapshot of the last applied atmos tick and return
@@ -37,6 +39,13 @@ import net.minecraft.world.phys.Vec3;
 public final class Atmospheres {
     /** CORE-041's default atmos period: 20 game ticks, 1 s. */
     public static final int DEFAULT_PERIOD_TICKS = 20;
+
+    /**
+     * HEAT-008's default near-vacuum density, in mol/L: 1 % of standard air's molar density,
+     * 101.325 kPa at 293.15 K (ENV-011).
+     */
+    public static final double DEFAULT_NEAR_VACUUM_DENSITY =
+            0.01 * (StandardAir.PRESSURE / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE));
 
     private Atmospheres() {}
 
@@ -72,6 +81,24 @@ public final class Atmospheres {
     @AnyThread
     public static boolean containerExplosionsBreakBlocks() {
         return ZasApi.provider().containerExplosionsBreakBlocks();
+    }
+
+    /**
+     * The molar density below which gas is too thin to carry heat (API-064, HEAT-008), in mol/L: a
+     * zone with fewer moles than this times its volume neither conducts nor radiates. A mod that
+     * moves heat between its own gas and a zone, or the open air, can treat gas that thin the same
+     * way. It is the server's {@code near_vacuum_percent} of standard air's density, so ask each
+     * time, since a config edit applies from the next read. Without ZAS³, {@link
+     * #DEFAULT_NEAR_VACUUM_DENSITY}.
+     *
+     * <p>Thread: any.
+     *
+     * @return the density in mol/L, 0 or more
+     */
+    @AnyThread
+    public static double nearVacuumDensity() {
+        double density = ZasApi.provider().nearVacuumDensity();
+        return density >= 0 && Double.isFinite(density) ? density : DEFAULT_NEAR_VACUUM_DENSITY;
     }
 
     /**

@@ -13,6 +13,8 @@ import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerTint;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -119,6 +121,12 @@ public final class ZasAtmosClient {
                         ? holder.tint(tintIndex - 1)
                         : -1,
                 AtmosBlocks.TANK_HOLDER.get());
+        // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
+        event.register(
+                (state, level, pos, tintIndex) -> tintIndex == 0
+                        ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
+                        : -1,
+                AtmosBlocks.HEAT_EXCHANGER.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */
@@ -128,6 +136,11 @@ public final class ZasAtmosClient {
                         tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get());
+        // A heat exchanger's item shows copper (CONT-148).
+        event.register(
+                (stack, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | HeatExchangerTint.colour(HeatExchangerTint.COPPER) : -1,
+                AtmosItems.HEAT_EXCHANGER.get());
     }
 
     /** A TTV item's tanks are tinted by their kinds: layer 1 its first tank, or a lone tank, and layer 2 its second. */

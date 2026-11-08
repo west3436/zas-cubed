@@ -37,6 +37,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
  */
 public final class PipeNetwork {
     private final List<PipeNode> members;
+    private final List<PipeNode> radiators;
     private final GasStore gas;
     private final Set<PipeNode> steppedThisTick = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<LevelChunk> chunks = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -46,12 +47,17 @@ public final class PipeNetwork {
     private PipeNetwork(List<PipeNode> members, GasStore gas) {
         this.members = members;
         this.gas = gas;
+        List<PipeNode> radiating = new ArrayList<>();
         for (PipeNode m : members) {
+            if (m.radiates()) {
+                radiating.add(m);
+            }
             LevelChunk chunk = m.savedIn();
             if (chunk != null) {
                 chunks.add(chunk);
             }
         }
+        this.radiators = radiating.isEmpty() ? List.of() : List.copyOf(radiating);
         builtAway = chunkAway();
         gas.watch(this::tellChunks);
         if (!gas.isEmpty()) {
@@ -133,6 +139,14 @@ public final class PipeNetwork {
     /** The members, in the order they were reached. */
     public List<PipeNode> members() {
         return members;
+    }
+
+    /**
+     * The members that are radiator pipe (HEAT-020), in the order they were reached: none for most
+     * networks, so a network with no radiator pipe pays nothing for them.
+     */
+    public List<PipeNode> radiators() {
+        return radiators;
     }
 
     /** Whether the network is still in use: false once it has dissolved. */
