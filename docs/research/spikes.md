@@ -16,7 +16,7 @@ GameTest servers started by ModDevGradle 2.0.148.
 |---|---|---|---|
 | S0 | Packaging | **Yes,** with three rules: name the API project `zas-api`, declare its jar-in-jar range through module coordinates, and keep it out of the mod's `mods {}` source sets. FML keeps one copy (the newest) and the fallback works. | Done in dev, in a jar-in-jar harness and on a real dedicated server ([#77](https://github.com/west3436/zas-cubed/issues/77)). |
 | S1 | Change hook | `LevelChunk#setBlockState` sees everything `onBlockStateChange` sees, **plus** direct chunk writes. The enqueue cost is below measurement noise. | Done. The piston case was not exercised. |
-| S2 | Seal masks for every state | 26,684 vanilla states in 0.62 s, or **0.12 s** when cached per `VoxelShape` instance. Only **287 unique geometries**, about 180 KiB. Panes and walls come out as sub-cells. | Done (vanilla only, no large pack) |
+| S2 | Seal masks for every state | 26,684 vanilla states in 0.62 s, or **0.12 s** when cached per `VoxelShape` instance. Only **287 unique geometries**, about 180 KiB. Panes and walls come out as sub-cells. A large pack (668,034 states) takes **2–5 s** on a background thread; the server waited at most 0.54 s for it. | Done, in vanilla and in a large pack ([#79](https://github.com/west3436/zas-cubed/issues/79)) |
 | S3 | Bounded fills | A 65,536-cell fill takes **5.5 ms**, about 12 M cells/s. With zone creation, 5.6 ms. | Done (headless) |
 | S4 | Merge, split, local split | A connected edit costs **2 µs** (6 visits). A real 50k split takes 6.7 ms and a merge 0.15 ms. The worst-case detour is 4.9 ms. | Done (headless) |
 | S5 | Off-thread pipeline | The protocol works. Threaded and inline runs are **bit-identical**, and conservation is exact (3e-14), but **only with** reject-on-unload (1.7e-3 drift without it). Server-thread cost is µs per atmos tick. | Done (headless, plus the in-game snapshot cost) |
@@ -256,8 +256,107 @@ on chunk load (GEO-013) uses the snapshot path measured in S5.
 - Masks at 16×16 resolution are exact for shapes on the 1/16 grid. A sub-cell
   needs its own per-face footprint when a geometry has more than one sub-cell,
   so stacked panes connect sub-cell to sub-cell.
-- Not measured: a large modpack ([#79](https://github.com/west3436/zas-cubed/issues/79)). The per-shape cost suggests it scales
-  with distinct shapes, not with states.
+- A large modpack is measured in the follow-up below
+  ([#79](https://github.com/west3436/zas-cubed/issues/79)). The cost scales
+  with states as well as with distinct shapes: every state's shape is fetched,
+  and the fetch is about 40 % of the time.
+
+### Follow-up: a large modpack (2026-11-07)
+
+[#79](https://github.com/west3436/zas-cubed/issues/79), run on the R1 code
+from `main` (the derivation from #24 and #65, not the spike code), with the
+`-Dzas.geometry.profile=true` switch added for it ([config](../config.md#jvm-system-properties)).
+
+**Method.**
+
+- Pack: Better MC [NEOFORGE] BMC5 v31 from Modrinth, for NeoForge 1.21.1. Its
+  index lists 250 mods, all on `cdn.modrinth.com`, none marked
+  server-unsupported. Each was downloaded from there and checked against the
+  index's SHA-512 and SHA-1. The 19 jars in the pack's overrides folder, which
+  aren't in the index, weren't used.
+- Server: a ModDevGradle dev server, `zas` and `zas_atmos` from source on
+  NeoForge 21.1.264, in its own folder with the pack's jars in `mods/`,
+  `-Xmx8G`, JDK 21.0.6. 237 of the 250 jars loaded. The 13 removed, the fewest
+  that let it start:
+  - Moonlight, with the five mods that need it (Amendments, Dummmmmmy, Fast
+    Paintings, Sawmill, Smarter Farmers): one of its mixins targets a method
+    the dev environment's recompiled Minecraft doesn't have.
+  - Formations, with its two structure packs: a dev-only mixin needs a
+    library the pack lacks.
+  - Climate Rivers: its worldgen mixin runs in the command check that only
+    dev runs make.
+  - BetterGrassify and Distraction Free Recipes: client-only, and they fail on
+    any server.
+  - Wetland Whimsy: it registers a pottery pattern twice.
+- Runs: the first start generated the world. Three restarts with the switch
+  (the first also took a `jcmd GC.class_histogram` after start) and two
+  without it, then three runs of the same build with an empty `mods/` for
+  comparison. Other tracks' builds and GameTest servers shared the machine,
+  which shows in the spread.
+
+**Results.** Times are cold, as the derivation runs at start, unless marked
+warm. "No pack" is vanilla with `zas` and `zas_atmos`.
+
+| Measure | No pack | BMC5 |
+|---|---|---|
+| States | 28,405 | **668,034** (23.5×) |
+| Distinct `VoxelShape` instances | 4,962 | 49,965 |
+| Distinct voxel grids, derived | 427 | 6,620 |
+| Unique geometries, derived | 418 | 6,611 |
+| Palette: derived, then with overrides, boundaries, heat and fire | 431, then 708 | 6,639, then 7,044 |
+| **Derivation at start** (background thread), with the switch | 140–299 ms | **2.0–4.9 s** (2,115, 4,877, 3,257, 1,997 ms) |
+| The same, without the switch | not run | 2.1–2.2 s (2,112, 2,173 ms) |
+| Of which: fetching every state's shape | 2–3 ms | 0.77–2.08 s |
+| Of which: rasterizing and deriving | 103–262 ms | 0.88–2.20 s |
+| Of which: probing positions (GEO-043) | 3–4 ms | 75–132 ms |
+| The same, warm, after start | 117–193 ms | 1.0–1.4 s |
+| **Every state without the per-shape cache**, warm | 1.3–1.8 s | **32–37 s** (48–55 µs per state) |
+| Table built (derivation plus overrides and flags) | 161–309 ms | 2.2–5.0 s |
+| Data load's own work on the main thread (tags, ignition sources, flammability) | 24–30 ms | 218–314 ms |
+| **Server's wait for the table** once started | 0 ms | **0–536 ms** (0, 536, 0, 0; none in the two runs without the switch, whose tables were ready 1.4 s before `Done`) |
+| Server start (`Done`) | 0.8–2.9 s | 7.7 s new world; 2.5–3.7 s restarting |
+| Ids and per-position bits | 114 KiB | 2.6 MiB, held twice (derived and current table) |
+| Palette objects (histogram) | not taken | 10.8 MB, plus an estimated 3 MB of lists |
+| Failures | 0 | **0** |
+| Worked out per position (GEO-043) | 45 | 889: Cataclysm 372, Chipped 260, My Nether's Delight 144, vanilla 44, Snow! Real Magic! 40, Ender's Delight 20, others 9 |
+| Declaring `dynamicShape` | 180 | 1,024 |
+| More cells than a cell id can name (4, O-11) | 0 | **744 geometries, 27,621 states**: Diagonal Windows 22,041, Diagonal Fences 5,580 |
+
+The palette's measured objects are 7,044 `Geometry` (0.45 MB), 16,351 cells
+(0.52 MB), 11,601 partitions (0.28 MB) and 149,887 face masks with their
+words (9.6 MB). The lists that hold them are shared with the rest of the
+heap in a histogram, so they are estimated.
+
+**Conclusions.**
+
+- **Server start: within the target.** The table is built on a background
+  thread from the data load, so it overlaps the server's own start. In three
+  of four starts the server never waited; in the slowest, under load, it
+  waited 0.54 s. On a fast restart the margin was about 0.7 s, so on D-40's
+  slower reference machine expect a wait of up to about 1 s.
+- **The derivation itself is over the 1 s estimate**: 2–5 s cold, 1–1.4 s
+  warm. A pack this size has 23× vanilla's states, not 10×, and the time goes
+  about equally to fetching every state's shape and to rasterizing and
+  deriving 50,000 shapes into 6,620 grids. The fetch costs 1–3 µs a state,
+  against 0.1 µs in vanilla, probably because many modded blocks build their
+  shape on each call. The per-shape cache still matters: without it, the
+  derivation would take over 30 s.
+- If the wait ever needs to go, three changes, none made here:
+  1. Fetch shapes through the state's own shape cache
+     (`getCollisionShape(level, pos)`), which Minecraft fills with this same
+     empty-context shape at the origin. That would remove most of the fetch,
+     but ModernFix, in this pack, can build that cache lazily, so measure it.
+  2. Derive the distinct grids in parallel: they are independent.
+  3. Don't hold up `ServerStartedEvent`. The change hook already treats a
+     table in progress as a change, so the first atmos tick would wait
+     instead; the other readers would need checking.
+- **Memory:** about 19 MB in all, small beside a 4 GB heap.
+- **No failures.** Every state's shape came out of an empty context, at the
+  origin and at the four probe positions.
+- **O-11 is reached.** Diagonal Windows and Diagonal Fences split some blocks
+  into more than 4 cells; cells past the fourth act as solid. Fences are
+  permeable anyway when they are in `#minecraft:fences` (GEO-009); whether
+  these are wasn't checked. Diagonal panes keep their first four cells.
 
 ## S3 · Bounded fills
 
