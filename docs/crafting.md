@@ -180,6 +180,10 @@ in any arrangement.
 | Central atmospherics controller | Workshop | `TTT` / `AFX` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `T` console screen, `A` subspace ansible, `X` subspace transmitter |
 | Fire alarm | Workshop | Shapeless | electronics, scanning module, note block, red dye |
 | Firelock | Hardened | `SE` / `SM` / `SS` | `S` plasteel sheet, `E` electronics, `M` micro-manipulator |
+| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
+| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
+| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
+| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 ### Station walls and glass
 
@@ -221,9 +225,5 @@ in any arrangement.
 | Radiator adaptor | Workshop | Shapeless | pipe, radiator pipe, iron ingot |
 | 2 × Heat exchanger | Workshop | `CPC` / `CRC` / `CCC` | `C` copper ingot, `P` pipe, `R` radiator pipe |
 | Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
-| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
-| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
-| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
-| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 <!-- END GENERATED: recipes -->

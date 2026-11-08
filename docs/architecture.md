@@ -2458,9 +2458,10 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
-| `firelock` | The firelock and its lockdown (§11.8) |
+| `firelock` | The firelock and its lockdown (§11.8), the work it shares with a firelock on an airlock or a door (`FirelockLogic`), the firelock item, and the door with a firelock (§11.17) |
+| `airlock` | The airlocks, the airlock controller with its menu, the air sensor, and the rules of a cycle (`AirlockCycle`, `SensorStatus`), which hold no game classes (§11.17) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
+| `tool` | The multitool (§11.6, §11.17), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
@@ -2472,7 +2473,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.17) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -3421,8 +3422,8 @@ readings.
 ### 11.8 Firelocks
 
 *Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
-`.firelock`: the standalone firelock only. A firelock over a door or an
-airlock is not built.*
+`.firelock`. A firelock fitted to an airlock or a vanilla door does the same
+work through `FirelockLogic` (§11.17).*
 
 - **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
   placed and broken as a door is: the item places both halves, either half
@@ -3940,3 +3941,91 @@ no valve; the stack has already checked that the player may build there.
   server doesn't know the player's units.
 - **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
   part, with the block's own breaking sound on a removal.
+
+### 11.17 Airlocks (CONT-133 to CONT-142)
+
+In `.airlock`, with the firelock on a door in `.firelock`. Nothing is added to
+the API. Every visible state is a block-state property, so a resource pack, or
+a Ponder scene that ticks no block entity, can show each one; none needs a
+block-entity renderer.
+
+- **The airlocks** (`AirlockBlock`, CONT-133; `LargeAirlockBlock`, CONT-134).
+  The airlock is one block wide and two high, the large airlock two by two, and
+  both are in `#zas:zone_boundary`. Their properties are `facing` (the way the
+  passage runs), `half`, `open`, `bolted`, `powered` and `firelock` (`none`,
+  `open`, `closed`, `locked`), and the large airlock's `side` (`left`,
+  `right`). The lower (left) block is the origin, which holds the block entity
+  and the state; changing it changes the rest through `updateShape`. The item
+  places the origin and the rest grow up and to the placer's right, only if
+  every space is free and the lower row stands on sturdy blocks. Breaking any
+  block takes the rest, and only the origin drops the item, with a firelock if
+  one is fitted (loot tables). The geometry is the firelock's (§11.8): closed,
+  the collision leaf fills the passage from the face it looks to, which is its
+  boundary in both states, so its cells join the room behind it and a toggle
+  never splits a zone.
+- **Opening** (CONT-135). Use opens or closes it unless it's bolted, and a
+  redstone signal at any of its blocks opens it and holds it open. Opening
+  schedules a block tick `AUTO_CLOSE_TICKS` (100) later, and a signal ending
+  schedules one again; the block entity keeps the time as `CloseAt`. The tick
+  closes it unless it's still powered or anything but a spectator stands in its
+  passage, when it tries again `DOORWAY_WAIT_TICKS` (20) later. It needs no FE.
+- **Bolts** (CONT-136). `bolted` is set only by an airlock controller, which
+  closes the airlock first. A bolted airlock ignores the hand, the crowbar and
+  redstone. Using one that a controller links asks it to cycle toward that
+  airlock (CONT-140); if it can't, the airlock buzzes (`device.airlock.denied`)
+  and the action bar says it's bolted.
+- **Firelocks** (CONT-137, `FirelockLogic`). The standalone firelock's work
+  (§11.8) is now `FirelockLogic`, shared through `FirelockLogic.Holder` by the
+  firelock, the airlock's block entity and the door with a firelock. Each gives
+  it a `Door`: the cells in front and behind, how to open, close and lock it
+  down, and where a controller links it. The firelock item (`FirelockItem`)
+  acts in `onItemUseFirst`, so it fits before a door would open, sneaking or
+  not. The crowbar forces any of the three, and the multitool links any of them
+  to an area air controller.
+  - **On an airlock** the firelock is the `firelock` property on every block of
+    the airlock. Closing it closes the airlock; while it's shut the airlock
+    doesn't open, and it stays closed when the firelock reopens. The model is a
+    multipart, with the firelock's airlock-sized overlay over the airlock.
+  - **On a vanilla door** the firelock replaces the door with
+    `zas_atmos:firelock_door` (`FirelockDoorBlock`, a `DoorBlock`), keeping its
+    facing, hinge, half and open. Its own state is `firelock` (`open`,
+    `closed`, `locked`). The door it wraps is block-entity data, `Door` (a
+    block id), synced to the client, and an iron door if it's missing. A
+    wrapping baked model (`client.FirelockDoorModel`, from
+    `ModelEvent.ModifyBakingResult`) draws that door's model for the same state
+    through `ModelData`, with the `firelock_door_*` overlay on top, so it needs
+    no block-entity renderer. Its shapes and geometry are the vanilla door's.
+    It opens as the door it wraps did: an iron door only by redstone. Broken,
+    it drops the door and the firelock, and pick-block gives the door.
+- **The controller** (`AirlockControllerBlock`, `AirlockControllerBlockEntity`,
+  CONT-138 to CONT-140). A wall panel with `facing` and `cycling`. The
+  multitool links at most two airlocks, one air sensor and any number of vents
+  to it, as to an area air controller (`MultitoolItem`). Each atmos tick it
+  drops links that are no longer their kind, and reads the chamber at its
+  sensor's block and the pressure beyond each airlock: of the cells in front of
+  an airlock and behind it, the one in the sensor's zone is the chamber's, or
+  the nearer one if that doesn't decide (`AirlockCycle.frontIsChamber`). A
+  cycle closes and bolts both airlocks, then each step siphons or blows
+  (`AirlockCycle.next`) toward the pressure beyond the airlock it's heading
+  for, and once within 5.07 kPa of it unbolts and opens that one. Saved: its
+  links, the cycle and its power lease.
+- **Its power** (CONT-141). It is a `PoweredDevice` part of an area air
+  controller, at `LIFE_SUPPORT` priority, drawing `[power] airlock_controller`
+  (1 FE/t) plus what its loaded vents draw. While powered it supplies its vents
+  each step, as a controller does its parts (§11.7). Unpowered, a cycle waits
+  where it is.
+- **Its vents** (CONT-152). Each step it sends every linked vent
+  `VentBlockEntity.airlockOrder`, off while idle. For `LEASE_TICKS` after one,
+  the vent ignores area air controllers' `ventOrder`s. The vents siphon into
+  and blow from their own pipe network.
+- **The air sensor** (`AirSensorBlock`, `AirSensorBlockEntity`, CONT-142). A
+  wall panel with `facing` and `status` (`standby`, `cycling`, `alert`), set
+  from `SensorStatus.of`: cycling while a controller has marked it within
+  `LEASE_TICKS`, otherwise alert outside 81 to 122 kPa at its own block. It
+  needs no FE.
+- **The window** (`AirlockControllerMenu`, `client.AirlockControllerScreen`,
+  CONT-153). A TGUI window (D-76) synced by data slots: whether it's cycling
+  and its step, power, its links, the chamber's pressure and the pressure
+  beyond each airlock, and each airlock's open and bolted bits. Its buttons go
+  through `clickMenuButton`: Cycle toward either airlock, and Stop.
+- **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.

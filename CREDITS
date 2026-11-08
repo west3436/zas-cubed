@@ -2407,6 +2407,29 @@ path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/firelock_large_
 origin: original
 notes: A firelock on a 2 by 2 airlock's top east block, locked down (firelock_large_locked.png).
 
+# Airlocks in the game (CONT-133 to CONT-142, D-84): their blockstates. Their block models and
+# textures are above, with their art.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/airlock.json
+origin: original
+notes: The airlock's four facings and two halves: closed, open or bolted, with a fitted firelock's open, closed or locked-down overlay over it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/large_airlock.json
+origin: original
+notes: The large airlock's four facings, two halves and two sides: closed, open or bolted, with a fitted firelock's open, closed or locked-down overlay over it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/airlock_controller.json
+origin: original
+notes: The airlock controller's four facings, idle and cycling.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/air_sensor.json
+origin: original
+notes: The air sensor's four facings: standby, cycling and alert.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/firelock_door.json
+origin: original
+notes: A vanilla door with a firelock: the firelock_door overlays, open, closed and locked down, for each facing and half. The door under it is drawn from the door it was.
+
 # Station walls and reinforced glass (D-80, D-81).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/station_wall.png

@@ -279,6 +279,26 @@
     "subtitle": "subtitles.zas_atmos.device.firelock.force",
     "sounds": [{ "name": "zas_atmos:device/bang", "pitch": 0.8, "volume": 0.4 }]
   },
+  "device.airlock.open": {
+    "subtitle": "subtitles.zas_atmos.device.airlock.open",
+    "sounds": [{ "name": "zas_atmos:device/door", "pitch": 1.1, "volume": 0.5 }]
+  },
+  "device.airlock.close": {
+    "subtitle": "subtitles.zas_atmos.device.airlock.close",
+    "sounds": [{ "name": "zas_atmos:device/door", "volume": 0.5 }]
+  },
+  "device.airlock.bolt": {
+    "subtitle": "subtitles.zas_atmos.device.airlock.bolt",
+    "sounds": [{ "name": "zas_atmos:device/bolt", "volume": 0.5 }]
+  },
+  "device.airlock.unbolt": {
+    "subtitle": "subtitles.zas_atmos.device.airlock.unbolt",
+    "sounds": [{ "name": "zas_atmos:device/unbolt", "volume": 0.5 }]
+  },
+  "device.airlock.denied": {
+    "subtitle": "subtitles.zas_atmos.device.airlock.denied",
+    "sounds": [{ "name": "zas_atmos:device/buzzer", "pitch": 1.2, "volume": 0.3 }]
+  },
   "device.recharger.done": {
     "subtitle": "subtitles.zas_atmos.device.recharger.done",
     "sounds": [{ "name": "zas_atmos:device/charge_finish", "volume": 0.3 }]

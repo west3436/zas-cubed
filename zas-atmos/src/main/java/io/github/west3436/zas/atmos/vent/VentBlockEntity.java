@@ -49,7 +49,9 @@ import net.minecraft.world.phys.Vec3;
  * <p>An area air controller that covers it orders it every atmos tick ({@link #ventOrder},
  * CONT-041, which calls {@link #control}). While
  * those orders keep coming, the vent is controlled: its GUI shows the controller and its order, and
- * refuses hand settings ({@link #setByHand}). A vent no controller orders is set by hand.
+ * refuses hand settings ({@link #setByHand}). A vent no controller orders is set by hand. A vent
+ * linked to an airlock controller takes that controller's orders alone ({@link #airlockOrder},
+ * CONT-152).
  *
  * <p>Its GUI also shows its network's pressure, which the internal bound is compared with, and
  * its {@link VentStatus}: whether it moved gas at its last atmos tick, or why not.
@@ -68,6 +70,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     private final DevicePower power = new DevicePower(PowerPriority.LIFE_SUPPORT, this::currentDraw, this::now);
     private VentSettings settings = VentSettings.OFF;
     private long controlledUntil = Long.MIN_VALUE;
+    private long airlockUntil = Long.MIN_VALUE;
     private BlockPos controller;
     private VentStatus status = VentStatus.OFF;
 
@@ -151,6 +154,9 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
      */
     @Override
     public void ventOrder(VentOrder order) {
+        if (airlockControlled()) {
+            return; // an airlock controller's orders win (CONT-152)
+        }
         // An area air controller names itself on every order, the first included. An order with
         // no sender falls back to the controller that paid for the vent last, if any.
         BlockPos from = order.sender() != null
@@ -179,6 +185,24 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
         this.controller = controller == null ? null : controller.immutable();
         controlledUntil = now() + DevicePower.LEASE_TICKS;
         command(order);
+    }
+
+    /**
+     * An airlock controller's order (CONT-139, CONT-152): as {@link #control}, and for the next {@link
+     * DevicePower#LEASE_TICKS} game ticks the vent ignores area air controllers' orders, so the airlock
+     * controller it's linked to runs it alone. It sends one every atmos tick, off between cycles.
+     *
+     * @param controller where the airlock controller is
+     * @param order the settings it orders
+     */
+    public void airlockOrder(BlockPos controller, VentSettings order) {
+        airlockUntil = now() + DevicePower.LEASE_TICKS;
+        control(controller, order);
+    }
+
+    /** Whether an airlock controller has ordered the vent within the last {@link DevicePower#LEASE_TICKS} game ticks. */
+    public boolean airlockControlled() {
+        return now() < airlockUntil;
     }
 
     /** Whether an area air controller has ordered the vent within the last {@link DevicePower#LEASE_TICKS} game ticks. */

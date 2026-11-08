@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "cycling=false,facing=north": {
+      "model": "zas_atmos:block/airlock_controller"
+    },
+    "cycling=true,facing=north": {
+      "model": "zas_atmos:block/airlock_controller_cycling"
+    },
+    "cycling=false,facing=east": {
+      "model": "zas_atmos:block/airlock_controller",
+      "y": 90
+    },
+    "cycling=true,facing=east": {
+      "model": "zas_atmos:block/airlock_controller_cycling",
+      "y": 90
+    },
+    "cycling=false,facing=south": {
+      "model": "zas_atmos:block/airlock_controller",
+      "y": 180
+    },
+    "cycling=true,facing=south": {
+      "model": "zas_atmos:block/airlock_controller_cycling",
+      "y": 180
+    },
+    "cycling=false,facing=west": {
+      "model": "zas_atmos:block/airlock_controller",
+      "y": 270
+    },
+    "cycling=true,facing=west": {
+      "model": "zas_atmos:block/airlock_controller_cycling",
+      "y": 270
+    }
+  }
+}

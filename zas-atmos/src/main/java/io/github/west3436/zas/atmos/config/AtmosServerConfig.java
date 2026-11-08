@@ -70,6 +70,8 @@ public final class AtmosServerConfig {
     /** The fire alarm's draw, in FE/t (CONT-044, CONT-065). */
     public static final ModConfigSpec.IntValue FIRE_ALARM_DRAW;
 
+    public static final ModConfigSpec.IntValue AIRLOCK_CONTROLLER_DRAW;
+
     /** The area air controller's buffer, in FE (CONT-062). */
     public static final ModConfigSpec.IntValue CONTROLLER_BUFFER;
 
@@ -145,6 +147,9 @@ public final class AtmosServerConfig {
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
                 .defineInRange("fire_alarm", 1, 0, 100_000);
+        AIRLOCK_CONTROLLER_DRAW = builder.comment(
+                        "Airlock controller, its own draw, from its controller; its vents' draws add to it (CONT-141)")
+                .defineInRange("airlock_controller", 1, 0, 100_000);
         CONTROLLER_BUFFER = builder.comment(
                         "The area air controller's buffer, in FE (CONT-062). It fills from FE blocks next to it.")
                 .defineInRange("area_air_controller_buffer", 10_000, 1_000, 1_000_000);

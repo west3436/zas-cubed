@@ -2408,6 +2408,7 @@ Devices shall draw these amounts by default:
 | Area air controller (base) | 5 |
 | Central atmospherics controller (base) | 5 |
 | Fire alarm | 1 |
+| Airlock controller | 1 |
 | Firelock | 0 |
 
 - **Rationale:** Decision: D-37 and D-59; starting values for playtesting.
@@ -2432,6 +2433,11 @@ every device's draw is.*
 its controller while it is on, in the gas production group (CONT-064). It is
 checked in `ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`.
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-07: added the airlock controller (CONT-141, D-84): `[power]
+airlock_controller`, 1 FE/t, drawn from the area air controller that powers it,
+with its linked vents' draws on top. CONT-141 is Draft, so the row is for
+review with it.*
 
 *2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing
@@ -3393,16 +3399,26 @@ together, dropping one item.
 #### CONT-135 · Opening an airlock
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133, CONT-134
 
-An airlock that isn't bolted shall open or close when a player uses it, and open while it
-receives a redstone signal, closing when the signal ends.
+An airlock that isn't bolted shall open or close when a player uses it and open while it
+receives a redstone signal, and once open shall close itself 5 s after it opened or after the
+signal holding it open ended, waiting while anything stands in its doorway.
 
-- **Rationale:** Inferred: a wooden door opens by hand and an iron door by redstone; an
-  airlock does both, so a player can walk through it or wire it into a build. It needs no
-  power. vg's airlocks do, but here FE reaches parts only through area air controllers
-  (D-68), and an airlock that needed one would shut players in or out when a station lost
-  power.
-- **Verify:** A GameTest uses each size by hand and powers it with redstone, and checks each
-  opens and closes it.
+- **Rationale:** Decision: the owner's answer of 2026-11-07 that an airlock closes itself
+  about 5 s after it's opened, as vg's do. Inferred: a wooden door opens by hand and an iron
+  door by redstone; an airlock does both, so a player can walk through it or wire it into a
+  build. It needs no power. vg's airlocks do, but here FE reaches parts only through area air
+  controllers (D-68), and an airlock that needed one would shut players in or out when a
+  station lost power.
+- **Verify:** GameTests use each size by hand and power it with redstone and check each opens
+  and closes it, and a timed GameTest checks it closes itself 5 s after the hand opens it and 5
+  s after a signal ends, but not on something in the doorway.
+
+*2026-11-07: Changed by the owner: an airlock opened by hand closes itself after about 5 s,
+and bolts still keep out the hand, the crowbar and redstone (CONT-136). Mine, for review: a
+redstone signal holds it open and it closes 5 s after the signal ends; one the controller
+opens at the end of a cycle closes itself the same way; and it checks again each second while
+anything but a spectator stands in its doorway, so it doesn't shut on a player. The test is
+`AirlockTests.cont_135_an_airlock_closes_itself_5_s_after_it_opens_or_its_signal_ends`.*
 
 #### CONT-136 · Bolts
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-135
@@ -3419,21 +3435,29 @@ redstone signal don't open it. Only an airlock controller bolts or unbolts an ai
 - **Verify:** A GameTest bolts an airlock of each size and checks a hand, the crowbar and a
   redstone signal leave it closed.
 
-#### CONT-137 · Firelock on an airlock
+#### CONT-137 · Firelock on an airlock or a door
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-043 · Depends: CONT-133, CONT-134
 
-A firelock used on an airlock of either size that has none shall fit to it and then work as a
-firelock in that doorway (CONT-043, CONT-092 to CONT-094): while it's closed the doorway is
-sealed and the airlock doesn't open.
+A firelock used on an airlock of either size or on a vanilla door that has none shall fit to
+it and then work as a firelock in that doorway (CONT-043, CONT-092 to CONT-094): closing, it
+closes the door and seals the doorway, and the door doesn't open while it's closed and stays
+closed when it opens again.
 
 - **Rationale:** Decision: the owner's choice of 2026-11-01 that a firelock can be placed on a
   door and drawn over it ([texture
-  procurement](../texture-procurement.md#firelocks-on-doors)). Its airlock-sized art ships
-  (D-84).
-- **Verify:** GameTests fit a firelock to each size, raise a controller covering it to danger
-  2 and check the firelock closes over the open airlock and seals the doorway, that the
-  airlock doesn't open while it's closed, that lockdown refuses a hand and the crowbar forces
-  it, and that breaking the airlock drops both items.
+  procurement](../texture-procurement.md#firelocks-on-doors)), and of 2026-11-07 that vanilla
+  doors take one too. Its airlock-sized and door-sized art ships (D-84).
+- **Verify:** GameTests fit a firelock to each size of airlock and to an oak and an iron door,
+  raise a controller covering it to danger 2 and check the firelock closes the open door and
+  seals the doorway, that the door doesn't open while it's closed or when it reopens, that
+  lockdown refuses a hand and the crowbar forces it, and that breaking it drops both items.
+
+*2026-11-07: Changed by the owner: a firelock fits vanilla doors too, with the
+`firelock_door_*` art. That a closed firelock leaves the door closed when it reopens was my
+default, which the owner kept. A firelock on a door replaces it with a door with a firelock,
+`zas_atmos:firelock_door`, which keeps the door's type, opens as that door did (an iron door
+only by redstone) and drops the door and the firelock when broken
+([architecture §11.17](../architecture.md#1117-airlocks-cont-133-to-cont-142)).*
 
 #### CONT-138 · Airlock controller links
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
@@ -3491,6 +3515,10 @@ those vents.
   checks a linked vent in the chamber runs during a cycle, and that cutting the area air
   controller's power stops both (CONT-060).
 
+*2026-11-07: The owner kept my default, that the controller is a part of an area air
+controller and powers its vents. A cycle that loses power stays where it is, with both
+airlocks bolted, until the power comes back or a player stops it.*
+
 #### CONT-142 · Air sensor
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-047
 
@@ -3504,6 +3532,10 @@ above 122 kPa, and otherwise standby.
   power.
 - **Verify:** A GameTest steps the pressure at a sensor through both bounds and checks its
   state, and links it to a controller and checks it shows cycling during a cycle.
+
+*2026-11-07: The owner kept my defaults: the sensor shows only its light, with no window or
+readout, and needs no power. Its state is a block-state property, `status`, so a scene or a
+resource pack can show each one. Cycling shows over alert.*
 
 #### CONT-152 · Vents under an airlock controller
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
@@ -3529,6 +3561,12 @@ offer a button that stops a cycle, leaving both airlocks bolted and its vents of
 - **Verify:** A GameTest presses each button through the menu and checks the server starts and
   stops cycles and refuses a cycle toward an airlock that isn't linked (CONT-074); Manual: the
   window is looked at in game.
+
+*2026-11-07: The owner chose a TGUI window, as the other machines have. It shows the state and
+a Stop button on one row, then the pressures beyond airlock 1, in the chamber and beyond
+airlock 2, with a bar for each airlock between them (bolted, open or closed) and its Cycle
+button under each side. A Cycle button works only while the controller is powered, idle and
+has both airlocks and its sensor.*
 
 ## R1 / R2 split
 
