@@ -972,7 +972,14 @@ controller's parts. The script, all on the server thread:
   reaches it), from the engine and pipeline; then the platform's
   `DimensionAtmos`, the mods' static tables, their block entities in the
   station and their attachments on its entities. Minecraft's own objects are
-  left out.
+  left out. The engine's parts don't go into the mods' own objects
+  (2026-11-08). The log the platform gives the engine names the dimension,
+  so it holds the `DimensionAtmos`, and through it the pipeline and the
+  engine; walked from the zone graph's ledger, that charged the pending
+  operations, the pipeline's tables and the undo point to the zone graph.
+  The platform's objects go to the platform's part, as the engine bench
+  leaves its harness's alone, and a snapshot goes to the published snapshots
+  however it's reached, in both benches.
 - *Bytes (DATA-006, DATA-014, DATA-015).* Each player is a real
   `ServerPlayer` on the server's lists and in the level, so chunks load and
   track around it and every sync treats it as a client with the mods. Its

@@ -30,6 +30,17 @@ import net.neoforged.neoforge.attachment.AttachmentHolder;
  * block entities in the station (the devices, pipes and their networks) and the mods' attachments
  * on its entities.
  *
+ * <p>The engine's parts hold only the engine's objects. The callbacks the platform gives the engine
+ * lead back to the platform's state: the profiler's phase listener to the profiler, and the log,
+ * which names the dimension, to the {@code DimensionAtmos} and through it to the pipeline and the
+ * engine again. The engine bench's callbacks lead to its own classes, which it doesn't walk; here
+ * the walk of the engine's parts doesn't go into the mods' objects outside the engine either, and
+ * the platform's parts count them. Otherwise the dimension's pending operations, the pipeline's
+ * tables and the undo point were charged to the zone graph, whose ledger holds the log.
+ *
+ * <p>A snapshot is charged to the published snapshots however it is reached, as in the engine bench:
+ * the section mirror reaches the last tick's first, through the fragile blocks' lookup.
+ *
  * <p>Left out, besides what the engine bench leaves out (threads, executors, classes, enum
  * constants, the gas registry and settings, the geometry palette): everything of Minecraft's,
  * NeoForge's or Mojang's, such as levels, block states, registries and entities themselves, except
@@ -105,6 +116,8 @@ final class AtmosHeap {
     private final EnumMap<Part, Map<String, long[]>> byClass = new EnumMap<>(Part.class);
     private final Map<Class<?>, Layout> layouts = new HashMap<>();
     private final IdentityHashMap<Object, Boolean> excluded = new IdentityHashMap<>();
+    /** Whether the engine's parts are being walked, which leave the platform's objects alone. */
+    private boolean inEngine;
 
     AtmosHeap() {
         for (Part p : Part.values()) {
@@ -121,19 +134,24 @@ final class AtmosHeap {
 
     /** The engine's and pipeline's parts, as the engine bench walks them. On the engine's thread. */
     AtmosHeap engine(DimensionEngine engine, DimensionPipeline pipeline) {
-        walk(engine.mirror(), Part.MIRROR);
-        walkField(engine, "membership", Part.MEMBERSHIP);
-        walkField(engine, "undoMembership", Part.MEMBERSHIP);
-        walkField(engine, "conduction", Part.HEAT);
-        walk(engine.graph(), Part.ZONES);
-        walk(pipeline.published(), Part.SNAPSHOT);
-        walk(engine.lastSnapshot(), Part.SNAPSHOT);
-        for (String f : new String[] {"undoMixtures", "undoPinned", "lastComponents", "lastZoneOps"}) {
-            walkField(engine, f, Part.UNDO);
+        inEngine = true;
+        try {
+            walk(engine.mirror(), Part.MIRROR);
+            walkField(engine, "membership", Part.MEMBERSHIP);
+            walkField(engine, "undoMembership", Part.MEMBERSHIP);
+            walkField(engine, "conduction", Part.HEAT);
+            walk(engine.graph(), Part.ZONES);
+            walk(pipeline.published(), Part.SNAPSHOT);
+            walk(engine.lastSnapshot(), Part.SNAPSHOT);
+            for (String f : new String[] {"undoMixtures", "undoPinned", "lastComponents", "lastZoneOps"}) {
+                walkField(engine, f, Part.UNDO);
+            }
+            walk(engine, Part.OTHER);
+            walk(pipeline.scheduler(), Part.OTHER);
+            walk(pipeline, Part.OTHER);
+        } finally {
+            inEngine = false;
         }
-        walk(engine, Part.OTHER);
-        walk(pipeline.scheduler(), Part.OTHER);
-        walk(pipeline, Part.OTHER);
         return this;
     }
 
@@ -316,6 +334,9 @@ final class AtmosHeap {
         if (n.startsWith("net.minecraft.") || n.startsWith("com.mojang.") || n.startsWith("net.neoforged.")) {
             return !VALUES.contains(n);
         }
+        if (inEngine && n.startsWith(BusTiming.ZAS) && !n.startsWith(ENGINE)) {
+            return true; // the platform's, reached through a callback it gave the engine
+        }
         return n.startsWith(BusTiming.BENCH)
                 || n.equals(ENGINE + "gas.GasRegistry")
                 || n.equals(ENGINE + "gas.GasConfig")
@@ -345,6 +366,9 @@ final class AtmosHeap {
         }
         if (n.equals(ENGINE + "scheduler.Membership$ZoneSections")) {
             return Part.ZONE_SECTIONS;
+        }
+        if (n.equals(ENGINE + "scheduler.AtmosSnapshot")) {
+            return Part.SNAPSHOT;
         }
         if (n.equals(ENGINE + "SectionSnapshot")) {
             return Part.MIRROR;
