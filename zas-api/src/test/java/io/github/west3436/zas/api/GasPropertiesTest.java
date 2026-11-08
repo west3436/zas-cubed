@@ -15,7 +15,10 @@ import java.util.OptionalDouble;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
-/** Gases' heat capacities (API-051) and the atmos period (API-052), with their fallbacks. */
+/**
+ * Gases' heat capacities (API-051), the atmos period (API-052), whether container explosions break
+ * blocks (API-059) and the near-vacuum density (API-064), with their fallbacks.
+ */
 class GasPropertiesTest {
     private static final ResourceLocation N2 = StandardAir.NITROGEN;
     private static final ResourceLocation O2 = StandardAir.OXYGEN;
@@ -107,5 +110,19 @@ class GasPropertiesTest {
         assertTrue(
                 ZasApiProvider.class.getMethod("containerExplosionsBreakBlocks").isDefault());
         assertEquals(false, older().containerExplosionsBreakBlocks());
+    }
+
+    /**
+     * Without ZAS³ the near-vacuum density is HEAT-008's default, 1 % of standard air's, and an older
+     * provider says the same.
+     */
+    @Test
+    void api_064_fallback_near_vacuum_is_1_percent_of_standard_air() throws NoSuchMethodException {
+        double standard = 101.325 / (8.314462618 * 293.15);
+        assertEquals(0.01 * standard, Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY, 1e-15);
+        assertEquals(Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY, FallbackProvider.INSTANCE.nearVacuumDensity());
+        assertEquals(Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY, Atmospheres.nearVacuumDensity());
+        assertTrue(ZasApiProvider.class.getMethod("nearVacuumDensity").isDefault());
+        assertEquals(Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY, older().nearVacuumDensity());
     }
 }
