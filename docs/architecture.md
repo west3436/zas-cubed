@@ -569,7 +569,11 @@ section, S-10's station needs about 1–2 MiB.
    a section the mirror lacks before anything seals it, a fill could only say
    open or unresolved, so the operation waits for the rest of the column.
 3. **The fill** runs on the mirror (GEO-022): the bounded fill (*spike (S3):*
-   5.5 ms at the cap). Possible outcomes:
+   5.5 ms at the cap). The bound is `[atmos] enclosure_max_cells` (GEO-020,
+   default 65,536), which each batch's settings carry: a new bound applies from
+   the next atmos tick, a higher one also forgets the cells found open (step 4)
+   and puts them in doubt, and zones that formed under another stay as they
+   are. Possible outcomes:
    - **Enclosed:** the zone is created in phase 3 and the buffered operations
      apply (GEO-028).
    - **Open:** the gas goes to the ambient and is reported (CORE-053).

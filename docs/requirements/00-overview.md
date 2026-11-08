@@ -66,7 +66,7 @@ decision that supersedes it.
 | D-20 | 2026-10-30 | **Atmos tick defaults to 1 s.** Rates are defined per second, so the period can be tuned without changing real-time behaviour. | Q-04 |
 | D-21 | 2026-10-30 | **Venting is volume-aware by default.** Large spaces drain proportionally slower. The faithful ZAS model, where drain rate ignores size, is a config option. | Q-05. A deliberate deviation from D-03. |
 | D-22 | 2026-10-30 | **A partial block holds gas in proportion to its free space** (a bottom slab holds 500 L) | Q-06 |
-| D-23 | 2026-10-30 | **An enclosure can be at most 65,536 cells when a zone forms** (configurable). Larger regions count as open to ambient. | Q-07 |
+| D-23 | 2026-10-30 | **An enclosure can be at most 65,536 cells when a zone forms** (configurable). Larger regions count as open to ambient. *2026-11-08: configurable in game by `[atmos] enclosure_max_cells`, 1 to 102,400 for now; the S-10 bench measures how far it can go.* | Q-07 |
 | D-24 | 2026-10-30 | **Unloaded chunks:** a zone freezes until all its chunks are loaded. Chunks are never force-loaded. | Q-08 |
 | D-25 | 2026-10-30 | **Power:** devices need Forge Energy (FE), and ZAS³ ships its own generator. An air alarm powers every device in its zone; devices outside an alarmed zone need their own power. A new cable type can share a block with pipes, for compact builds. | Q-09. Details in D-34 to D-37. Changed by D-68: there is no cable, and an area air controller is the only power source for atmospherics parts. |
 | D-26 | 2026-10-30 | **Art: 3D models built (with a Blender MCP workflow) from vgstation13's 2D sprites.** vg's assets are CC BY-SA 3.0 US, not NonCommercial (verified). Derived assets are licensed CC BY-SA with attribution. Goonstation-ported `goon/` assets (CC BY-NC-SA) are excluded. RE:SS3D (assets CC BY-NC-SA 4.0) and Stationeers (proprietary) are reference and inspiration only. | Q-10. Supersedes D-01's asset clause; code stays MIT and clean-room. License version in D-39. The Blender MCP workflow is superseded by D-67. |
@@ -189,7 +189,7 @@ least one.
 | ~~S-07~~ | ~~**Mekanism bridge.**~~ Deferred with D-11. It returns when the Mekanism reference integration is scheduled. |
 | S-08 | **Breathing gear.** A player in a ZAS³ softsuit with an O₂ tank survives in vacuum and toxic zones while the supply lasts. The suit's pressure and thermal ratings protect them. |
 | S-09 | **Persistence.** Saving and reloading keeps zone compositions, temperatures and pipe contents. Zones frozen by unloaded chunks resume correctly. |
-| S-10 | **Scale.** In a vacuum datapack dimension under the Hardcore preset, a station of 100 zones holding 40,000 zoned cells (the largest 8,000) runs 20 pipe networks with 300 powered devices, with 8 players and 100 breathing mobs inside zones, 2 hotspots burning, one breach-and-reseal every 60 s, and one player leaving and re-entering view distance every 2 minutes so part of the station pauses and resumes. It stays within the NFR-001 and NFR-005 budgets. |
+| S-10 | **Scale.** In a vacuum datapack dimension under the Hardcore preset, a station of 100 zones holding 40,000 zoned cells (the largest 8,000) runs 20 pipe networks with 300 powered devices, with 8 players and 100 breathing mobs inside zones, 2 hotspots burning, one breach-and-reseal every 60 s, and one player leaving and re-entering view distance every 2 minutes so part of the station pauses and resumes. It stays within the NFR-001 and NFR-005 budgets. *Enclosure cap step (owner, 2026-11-08): after the scenario, which runs at the default cap, sealed halls 16 blocks high with interiors of 64, 68, 72, 76 and 80 blocks square (65,536 to 102,400 cells) are each tested with `[atmos] enclosure_max_cells` set to their size, with a player present: zoning from one trigger, a covered region one cell over the cap classifying as open, a breach to vacuum and reseal, a wall splitting the hall and its removal merging it (CORE-023, CORE-024), the hall's running cost idle and with a player breathing and a vent running, and its memory per zoned cell. The largest size that passes NFR-001, NFR-002, NFR-004 and NFR-005 informs the cap's final range.* |
 | S-11 | **Hardcore greenhouse.** In Hardcore, planting crops in a sealed greenhouse forms a zone, and under light the plants turn CO₂ into O₂. In Normal, plants only do this inside existing zones. |
 | S-12 | **API without ZAS³.** A mod that bundles the ZAS³ API, running without ZAS³ installed, gets safe vanilla defaults and doesn't crash (D-17). |
 | S-13 | **Toxins lab.** A player lights an H₂ burn chamber with a redstone-triggered igniter, pumps the hot O₂-rich exhaust into a tank, and loads it into a tank transfer valve with an H₂ tank. The exhaust is hot enough that the mix stays above H₂'s 858 K autoignition point. When the timer opens the valve, the mixture autoignites in the tank, the pressure passes 50 atm, and the tank explodes. Under Normal the blast hurts entities but breaks no blocks. |
@@ -229,7 +229,10 @@ R1 end-to-end test plan (NFR-032).
   the paused zone resumes when its chunk loads.
 - **S-10:** Bench runs the scripted scenario on reference hardware against
   NFR-001, NFR-002, NFR-004 and NFR-005; CI runs its headless engine version
-  (NFR-034).
+  (NFR-034). *2026-11-08 (owner): the bench then runs the enclosure cap step,
+  with a table per hall size of each budget's verdict (the 1.4 margin on time
+  budgets only; GC pauses and stalls in their own column, NFR-002 judged on
+  zas's own time) and the largest size that passes them all.*
 - **S-11:** A GameTest checks that under Hardcore planting crops in a sealed
   glass greenhouse forms a zone and lit crops turn CO₂ into O₂, and that under
   Normal the same greenhouse stays unzoned.

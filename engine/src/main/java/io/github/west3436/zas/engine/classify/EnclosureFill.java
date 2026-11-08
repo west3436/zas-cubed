@@ -28,7 +28,7 @@ public final class EnclosureFill {
     /** The default bound, in cells (D-23). */
     public static final int DEFAULT_MAX_CELLS = 65_536;
 
-    private final int maxCells;
+    private int maxCells;
     private final Visitor visitor = new Visitor();
 
     // Visited set: open addressing, a slot is used when its stamp equals the current epoch.
@@ -59,10 +59,7 @@ public final class EnclosureFill {
      * @param maxCells the most cells an enclosed region can have, at least 1
      */
     public EnclosureFill(int maxCells) {
-        if (maxCells < 1 || maxCells > (1 << 28)) {
-            throw new IllegalArgumentException("maxCells must be 1 to 2^28, got " + maxCells);
-        }
-        this.maxCells = maxCells;
+        this.maxCells = checked(maxCells);
         int initial = Math.min(Integer.highestOneBit(maxCells + 1) << 1, 4096);
         keys = new long[Math.max(initial, 16)];
         stamps = new int[keys.length];
@@ -70,6 +67,23 @@ public final class EnclosureFill {
     }
 
     public int maxCells() {
+        return maxCells;
+    }
+
+    /**
+     * Changes the bound for the fills from now on (GEO-020, D-23). The tables grow as fills need them,
+     * as before.
+     *
+     * @param maxCells the most cells an enclosed region can have, at least 1
+     */
+    public void setMaxCells(int maxCells) {
+        this.maxCells = checked(maxCells);
+    }
+
+    private static int checked(int maxCells) {
+        if (maxCells < 1 || maxCells > (1 << 28)) {
+            throw new IllegalArgumentException("maxCells must be 1 to 2^28, got " + maxCells);
+        }
         return maxCells;
     }
 

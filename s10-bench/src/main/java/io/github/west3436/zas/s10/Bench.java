@@ -52,7 +52,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The S-10 script (00-overview): builds the station, fills it, brings in the players and mobs,
  * lights the fires, runs the scenario while measuring, then the heap, the explosion breach
- * (NFR-002) and spike #80's survey, writes the report and stops the server.
+ * (NFR-002), spike #80's survey and the enclosure cap step ({@link CapStep}), writes the report
+ * and stops the server.
  *
  * <p>The scenario while it runs: one breach a minute, in turn in the 7 player rooms of row 0,
  * resealed after 10 s; the wing's player leaves for a minute every 2 minutes, so the wing's chunks
@@ -82,6 +83,7 @@ final class Bench {
         BLAST_START,
         BLAST,
         SURVEY,
+        CAP,
         REPORT,
         DONE
     }
@@ -96,6 +98,7 @@ final class Bench {
     BenchPlayers players;
     WorkerTimes worker;
     EscapeSurvey survey;
+    CapStep cap;
     AtmosHeap heap;
 
     Stage stage = Stage.WAIT;
@@ -170,6 +173,9 @@ final class Bench {
         DimensionPipeline p = atmos == null ? null : atmos.pipeline();
         closedBefore = p == null ? Long.MIN_VALUE : p.closedTick();
         inFlightBefore = atmos != null && atmos.isInFlight();
+        if (cap != null && stage == Stage.CAP) {
+            cap.before();
+        }
         try {
             step();
         } catch (RuntimeException e) {
@@ -216,6 +222,9 @@ final class Bench {
         }
         if (survey != null && stage == Stage.SURVEY) {
             survey.after(closed, applied, requested, workerTicks);
+        }
+        if (cap != null && stage == Stage.CAP) {
+            cap.after(atmosNanos, tickStartNanos, wall, partBuf, Clock.partCount());
         }
         if (players != null) {
             players.count(w);
@@ -338,6 +347,13 @@ final class Bench {
                 if (survey.done()) {
                     surveyWindow.endNanos = System.nanoTime();
                     window = null;
+                    cap = new CapStep(this);
+                    enter(Stage.CAP);
+                }
+            }
+            case CAP -> {
+                cap.tick(now());
+                if (cap.finished()) {
                     enter(Stage.REPORT);
                 }
             }

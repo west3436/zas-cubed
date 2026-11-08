@@ -103,6 +103,30 @@ class OpenClassificationTest {
     }
 
     /**
+     * The tick's settings set the fill's bound (GEO-020, D-23). Over it the room is open and its cells
+     * are cached as open; raising the bound puts the cache in doubt, so the next add fills and zones.
+     */
+    @Test
+    void geo_020_the_bound_comes_from_the_tick_settings() {
+        Sim sim = sim();
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        sim.settings = sim.settings.withEnclosureMaxCells(26);
+        assertEquals(AMBIENT, add(sim, 1, 65, 1), "27 cells over a bound of 26");
+        assertEquals(1, fills.size());
+        assertEquals(AMBIENT, add(sim, 1, 65, 1), "found open before");
+        assertEquals(1, fills.size(), "the cache answers");
+
+        sim.settings = sim.settings.withEnclosureMaxCells(27);
+        assertEquals(ZONE, add(sim, 1, 65, 1), "27 cells at a bound of 27");
+        assertEquals(2, fills.size(), "the raised bound fills again");
+        assertEquals(27, sim.zoneAt(1, 65, 1).cellCount());
+
+        sim.settings = sim.settings.withEnclosureMaxCells(26);
+        sim.step();
+        assertEquals(27, sim.zoneAt(1, 65, 1).cellCount(), "a zone stays when the bound goes down");
+    }
+
+    /**
      * A zone's mirror reaches one section past it, so a cell beside the zone may not see the top of its
      * column. The add waits for the sections rather than starting a fill.
      */
