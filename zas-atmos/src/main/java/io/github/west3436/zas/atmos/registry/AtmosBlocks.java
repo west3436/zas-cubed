@@ -11,6 +11,7 @@ import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
+import io.github.west3436.zas.atmos.holder.TankHolderBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
@@ -169,6 +170,12 @@ public final class AtmosBlocks {
                     .isRedstoneConductor((state, level, pos) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false));
+
+    // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
+
+    /** The tank holder, a rack of ten personal tanks. */
+    public static final DeferredBlock<TankHolderBlock> TANK_HOLDER =
+            BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
 
     private AtmosBlocks() {}
 

@@ -1499,24 +1499,38 @@ each tank back with the item data it went in with, its gas to a relative error o
   went in.
 - **Verify:** A GameTest fills a holder with tanks of each kind, checks it refuses an eleventh
   tank and another item, saves and reloads it, takes some tanks out and breaks it, and
-  compares each tank with what went in.
+  compares each tank with what went in. Another checks a tank above the leak pressure is
+  unchanged after three seconds in it.
 
 *2026-11-07: added for review (D-84). The `Must` follows the owner's "All are R1 blockers".*
 
+*2026-11-07: built. `cont_149_it_holds_ten_tanks_and_nothing_else`,
+`cont_149_tanks_come_back_as_they_went_in_after_a_save`,
+`cont_149_tanks_come_back_as_they_went_in_taken_out_or_dropped` and
+`cont_149_tanks_in_it_dont_change` check it, counting every tank and mole after each step.
+The holder moves no gas, so the exploit to rule out is a tank made or lost (NFR-012).*
+
 #### CONT-150 · Moving tanks in and out of a tank holder
-`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-149
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-113 · Depends: CONT-149
 
-A player shall put a tank into a tank holder by using the tank on it or through the holder's
-window, and take any of its tanks out through that window, which shows each tank's pressure.
+A player shall put a tank into a tank holder by using the tank on it, and take out the last
+tank put in by using the holder with an empty hand. A tank used on a full holder shall stay
+in the hand.
 
-- **Rationale:** Decision: D-84, and D-76 for the window. Tanks move through slots, as on the
-  tank transfer valve's window (CONT-103), and using a tank on the block puts it in, as a battery
-  on the recharger (CONT-113).
-- **Verify:** GameTests put a tank in by use and through the window's slots, take one from the
-  middle, and check the slots refuse what the holder refuses and the server refuses a player
-  out of reach (CONT-074). Manual: the window's look.
+- **Rationale:** Decision: D-84, and the owner's choice of 2026-11-07: no window. Using a tank
+  on the block puts it in, as a battery on the recharger (CONT-113). Taking out the last one put
+  in keeps the tanks in the first places, as the model for each count shows them (CONT-151).
+- **Verify:** GameTests put tanks in by use, in survival and in creative, take them out with an
+  empty hand in the reverse order, and check that a hand holding anything else, or a tank on a
+  full holder, moves no tank.
 
 *2026-11-07: added for review (D-84).*
+
+*2026-11-07: changed by the owner before review: no window. It read: in by use or through the
+holder's window, and any tank out through that window, which shows each tank's pressure. With
+no window, a tank's pressure shows once it's in hand, in its tooltip. Verify was GameTest and
+Manual. `cont_150_using_a_tank_puts_it_in` and
+`cont_150_an_empty_hand_takes_out_the_last_tank_put_in` check it.*
 
 #### CONT-151 · A tank holder's shelves
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
@@ -1529,10 +1543,16 @@ blue, air tanks yellow and the rest grey.
   ([texture procurement](../texture-procurement.md)), which has a model for each count from 0
   to 10.
 - **Verify:** A GameTest checks the block shows as many tanks as it holds as tanks go in and
-  out. Manual: the tanks and their tints in game.
+  out, and that clients are sent each tank's kind in order. Manual: the tanks and their tints
+  in game.
 
 *2026-11-07: added for review (D-84). With a model for each count, the tanks always fill the
-first places, so taking one from the middle moves the tanks after it down a place.*
+first places.*
+
+*2026-11-07: since tanks come out last in, first out (CONT-150), play leaves no gap. A save
+or a command that leaves one is closed up when it's read.
+`cont_151_the_block_shows_as_many_tanks_as_it_holds` checks every count from 0 to 10 and
+the kinds sent.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
