@@ -4,12 +4,15 @@ import io.github.west3436.zas.ponder.scene.Stage;
 import io.github.west3436.zas.ponder.scenes.CanisterScenes;
 import io.github.west3436.zas.ponder.scenes.CentralControllerScenes;
 import io.github.west3436.zas.ponder.scenes.ElectrolyzerScenes;
+import io.github.west3436.zas.ponder.scenes.PipeScenes;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
 import io.github.west3436.zas.ponder.scenes.PortableScenes;
 import io.github.west3436.zas.ponder.scenes.PowerScenes;
 import io.github.west3436.zas.ponder.scenes.PumpScenes;
+import io.github.west3436.zas.ponder.scenes.SidePortScenes;
 import io.github.west3436.zas.ponder.scenes.ToolScenes;
 import io.github.west3436.zas.ponder.scenes.TransferValveScenes;
+import io.github.west3436.zas.ponder.scenes.ValveScenes;
 import java.util.List;
 import net.createmod.ponder.api.registration.PonderPlugin;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
@@ -27,9 +30,17 @@ final class ZasPonderPlugin implements PonderPlugin {
 
     /** Every item with a scene, in the index's order. */
     private static final List<String> ITEMS = List.of(
+            "pipe",
+            "pipe_cap",
             "connector_port",
+            "manual_valve",
+            "redstone_valve",
             "pressure_pump",
             "volume_pump",
+            "filter",
+            "filter_mirrored",
+            "mixer",
+            "mixer_mirrored",
             // Portables, power, the electrolyzer, the central controller and the handheld tools.
             "canister",
             "portable_scrubber",
@@ -52,9 +63,17 @@ final class ZasPonderPlugin implements PonderPlugin {
 
     @Override
     public void registerScenes(PonderSceneRegistrationHelper<ResourceLocation> helper) {
+        helper.forComponents(atmos("pipe"), atmos("pipe_cap")).addStoryBoard(Stage.MEDIUM, PipeScenes::pipes, TAG);
         helper.forComponents(atmos("connector_port")).addStoryBoard(Stage.MEDIUM, PortScenes::connectorPort, TAG);
+        helper.forComponents(atmos("manual_valve")).addStoryBoard(Stage.MEDIUM, ValveScenes::manual, TAG);
+        helper.forComponents(atmos("redstone_valve")).addStoryBoard(Stage.MEDIUM, ValveScenes::redstone, TAG);
         helper.forComponents(atmos("pressure_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::pressure, TAG);
         helper.forComponents(atmos("volume_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::volume, TAG);
+        // A mirrored item places the same block, with its side port on the left (D-77).
+        helper.forComponents(atmos("filter"), atmos("filter_mirrored"))
+                .addStoryBoard(Stage.MEDIUM, SidePortScenes::filter, TAG);
+        helper.forComponents(atmos("mixer"), atmos("mixer_mirrored"))
+                .addStoryBoard(Stage.MEDIUM, SidePortScenes::mixer, TAG);
 
         // Portables, power, the electrolyzer, the central controller and the handheld tools.
         helper.forComponents(atmos("canister")).addStoryBoard(Stage.MEDIUM, CanisterScenes::canister, TAG);
