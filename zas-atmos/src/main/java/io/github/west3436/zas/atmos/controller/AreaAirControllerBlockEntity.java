@@ -16,7 +16,7 @@ import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
-import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
+import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
@@ -186,7 +186,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         setStatus(level, ControllerStatus.of(danger.level()));
         if (!wasAlarming && alarming()) {
             // The firelocks it covers close now, not at their own steps up to an atmos tick later.
-            FirelockBlockEntity.alarmRaised(level, this);
+            FirelockLogic.alarmRaised(level, this);
         }
     }
 
@@ -285,7 +285,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /** What can be linked with the multitool: a powered part (CONT-042) or a firelock (CONT-043). */
     public static boolean linkable(BlockEntity be) {
-        return be instanceof PoweredDevice || be instanceof FirelockBlockEntity;
+        return be instanceof PoweredDevice || (be instanceof FirelockLogic.Holder f && f.hasFirelock());
     }
 
     /** Records the zone the controller covers for firelocks (CONT-043): its own, as of this step. */

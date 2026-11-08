@@ -3,9 +3,6 @@
 **Status:** approved by the owner, 2026-11-02. The fire extinguisher's recipe was
 proposed on 2026-11-04 and approved on 2026-11-05, and those of the central
 atmospherics controller, the station walls and reinforced glass on 2026-11-07.
-Eight recipes for blocks that aren't in the mod yet are already shipped, and
-load once their block exists. They're listed last, under
-[Not in the mod yet](#not-in-the-mod-yet).
 
 This page lists how every ZAS³ Atmospherics block and item is crafted, and
 the order a survival player gets them in (CONT-058). Every recipe uses
@@ -184,6 +181,10 @@ in any arrangement.
 | Central atmospherics controller | Workshop | `TTT` / `AFX` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `T` console screen, `A` subspace ansible, `X` subspace transmitter |
 | Fire alarm | Workshop | Shapeless | electronics, scanning module, note block, red dye |
 | Firelock | Hardened | `SE` / `SM` / `SS` | `S` plasteel sheet, `E` electronics, `M` micro-manipulator |
+| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
+| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
+| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
+| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 ### Station walls and glass
 
@@ -216,14 +217,5 @@ in any arrangement.
 | Crowbar | Workshop | `.II` / `.I.` / `I..` | `I` iron ingot |
 | Multitool | Workshop | Shapeless | ansible crystal, circuit board, iron ingot |
 | Fire extinguisher | Workshop | `.L.` / `IRI` / `IWI` | `L` lever, `I` iron ingot, `R` red dye, `W` water bucket |
-
-### Not in the mod yet
-
-| Makes | Stage | Grid | Ingredients |
-|---|---|---|---|
-| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
-| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
-| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
-| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 <!-- END GENERATED: recipes -->

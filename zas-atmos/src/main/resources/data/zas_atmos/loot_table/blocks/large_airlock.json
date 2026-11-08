@@ -1,0 +1,63 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "zas_atmos:large_airlock",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "zas_atmos:large_airlock",
+              "properties": {
+                "half": "lower",
+                "side": "left"
+              }
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "zas_atmos:firelock",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "zas_atmos:large_airlock",
+              "properties": {
+                "half": "lower",
+                "side": "left"
+              }
+            },
+            {
+              "condition": "minecraft:inverted",
+              "term": {
+                "condition": "minecraft:block_state_property",
+                "block": "zas_atmos:large_airlock",
+                "properties": {
+                  "firelock": "none"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ]
+}

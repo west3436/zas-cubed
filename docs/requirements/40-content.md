@@ -2587,6 +2587,7 @@ Devices shall draw these amounts by default:
 | Area air controller (base) | 5 |
 | Central atmospherics controller (base) | 5 |
 | Fire alarm | 1 |
+| Airlock controller | 1 |
 | Firelock | 0 |
 
 - **Rationale:** Decision: D-37 and D-59; starting values for playtesting.
@@ -2611,6 +2612,11 @@ every device's draw is.*
 its controller while it is on, in the gas production group (CONT-064). It is
 checked in `ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`.
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-07: added the airlock controller (CONT-141, D-84): `[power]
+airlock_controller`, 1 FE/t, drawn from the area air controller that powers it,
+with its linked vents' draws on top. CONT-141 is Draft, so the row is for
+review with it.*
 
 *2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing
@@ -3586,16 +3592,26 @@ together, dropping one item.
 #### CONT-135 · Opening an airlock
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133, CONT-134
 
-An airlock that isn't bolted shall open or close when a player uses it, and open while it
-receives a redstone signal, closing when the signal ends.
+An airlock that isn't bolted shall open or close when a player uses it and open while it
+receives a redstone signal, and once open shall close itself 5 s after it opened or after the
+signal holding it open ended, waiting while anything stands in its doorway.
 
-- **Rationale:** Inferred: a wooden door opens by hand and an iron door by redstone; an
-  airlock does both, so a player can walk through it or wire it into a build. It needs no
-  power. vg's airlocks do, but here FE reaches parts only through area air controllers
-  (D-68), and an airlock that needed one would shut players in or out when a station lost
-  power.
-- **Verify:** A GameTest uses each size by hand and powers it with redstone, and checks each
-  opens and closes it.
+- **Rationale:** Decision: the owner's answer of 2026-11-07 that an airlock closes itself
+  about 5 s after it's opened, as vg's do. Inferred: a wooden door opens by hand and an iron
+  door by redstone; an airlock does both, so a player can walk through it or wire it into a
+  build. It needs no power. vg's airlocks do, but here FE reaches parts only through area air
+  controllers (D-68), and an airlock that needed one would shut players in or out when a
+  station lost power.
+- **Verify:** GameTests use each size by hand and power it with redstone and check each opens
+  and closes it, and a timed GameTest checks it closes itself 5 s after the hand opens it and 5
+  s after a signal ends, but not on something in the doorway.
+
+*2026-11-07: Changed by the owner: an airlock opened by hand closes itself after about 5 s,
+and bolts still keep out the hand, the crowbar and redstone (CONT-136). Mine, for review: a
+redstone signal holds it open and it closes 5 s after the signal ends; one the controller
+opens at the end of a cycle closes itself the same way; and it checks again each second while
+anything but a spectator stands in its doorway, so it doesn't shut on a player. The test is
+`AirlockTests.cont_135_an_airlock_closes_itself_5_s_after_it_opens_or_its_signal_ends`.*
 
 #### CONT-136 · Bolts
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-135
@@ -3612,42 +3628,77 @@ redstone signal don't open it. Only an airlock controller bolts or unbolts an ai
 - **Verify:** A GameTest bolts an airlock of each size and checks a hand, the crowbar and a
   redstone signal leave it closed.
 
-#### CONT-137 · Firelock on an airlock
+#### CONT-137 · Firelock on an airlock or a door
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-043 · Depends: CONT-133, CONT-134
 
-A firelock used on an airlock of either size that has none shall fit to it and then work as a
-firelock in that doorway (CONT-043, CONT-092 to CONT-094): while it's closed the doorway is
-sealed and the airlock doesn't open.
+A firelock used on an airlock of either size or on a vanilla door that has none shall fit to
+it and then work as a firelock in that doorway (CONT-043, CONT-092 to CONT-094): closing, it
+closes the door and seals the doorway, and the door doesn't open while it's closed and stays
+closed when it opens again.
 
 - **Rationale:** Decision: the owner's choice of 2026-11-01 that a firelock can be placed on a
   door and drawn over it ([texture
-  procurement](../texture-procurement.md#firelocks-on-doors)). Its airlock-sized art ships
-  (D-84).
-- **Verify:** GameTests fit a firelock to each size, raise a controller covering it to danger
-  2 and check the firelock closes over the open airlock and seals the doorway, that the
-  airlock doesn't open while it's closed, that lockdown refuses a hand and the crowbar forces
-  it, and that breaking the airlock drops both items.
+  procurement](../texture-procurement.md#firelocks-on-doors)), and of 2026-11-07 that vanilla
+  doors take one too. Its airlock-sized and door-sized art ships (D-84).
+- **Verify:** GameTests fit a firelock to each size of airlock and to an oak and an iron door,
+  raise a controller covering it to danger 2 and check the firelock closes the open door and
+  seals the doorway, that the door doesn't open while it's closed or when it reopens, that
+  lockdown refuses a hand and the crowbar forces it, and that breaking it drops both items.
+
+*2026-11-07: Changed by the owner: a firelock fits vanilla doors too, with the
+`firelock_door_*` art. That a closed firelock leaves the door closed when it reopens was my
+default, which the owner kept. A firelock on a door replaces it with a door with a firelock,
+`zas_atmos:firelock_door`, which keeps the door's type, opens as that door did (an iron door
+only by redstone) and drops the door and the firelock when broken
+([architecture §11.18](../architecture.md#1118-airlocks-cont-133-to-cont-142)).*
 
 #### CONT-138 · Airlock controller links
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
 
-An airlock controller shall be a wall panel that the multitool links to at most two airlocks,
-at most one air sensor and any number of vents.
+An airlock controller shall be a wall panel with five slots, an inner and an outer door that
+take airlocks and an inner, an outer and a chamber sensor that take air sensors, which the
+multitool fills, and shall link any number of vents. Its window shall arm a slot, which the next
+airlock or sensor linked fills, refusing the other kind, and clear one. With no slot armed, a
+link shall go to the slot guessed from the zones around it, or else to the first empty slot of
+its kind.
 
 - **Rationale:** Decision: D-84, as the art notes describe the controller
   ([textures](../textures.md)). It links as an area air controller does (CONT-042): select the
-  controller, then use the multitool on each part.
-- **Verify:** A GameTest links two airlocks, a sensor and two vents, checks a third airlock and
-  a second sensor are refused, and checks using the multitool on a linked part again unlinks
-  it.
+  controller, then use the multitool on each part. The owner's choice of 2026-11-08 that each
+  zone bordering an airlock has a sensor, as the chamber does, and that the player sets each
+  part's slot in the window, the controller guessing it first.
+- **Verify:** A GameTest links two airlocks, three sensors and two vents with the multitool and
+  checks each goes to its slot, a third airlock and a fourth sensor are refused, and using the
+  multitool on a linked part again unlinks it. Others arm and fill each slot through the window,
+  check the wrong kind is refused and a cleared slot is empty, move a part between slots, and
+  check the guess: the door onto open air or the lower pressure is the outer, a sensor's slot
+  comes from its zone, and with no guess or its slot set a link goes to the first empty slot.
+  Another checks each sensor reads its own side, with the airlocks shut and with one open.
+
+*2026-11-08: the owner, in the test world: both zones bordering an airlock need sensors as well
+as the chamber.*
+
+*The player sets the slots in the window, and the controller guesses them first (owner,
+2026-11-08). The window has five slots: Inner door, Outer door, Inner sensor, Outer sensor and
+Chamber sensor. A slot's button arms it, and the next airlock or sensor linked fills it. The
+wrong kind buzzes and isn't linked, and the slot stays armed, with the window closed too.
+Linking a part that's in another slot moves it to the armed one, swapping the two, which
+corrects a wrong guess. With no slot armed, a link goes to the slot the zones say. A sensor in
+the chamber's zone is the chamber sensor, and one past a door is that side's. The door onto open
+air or a vacuum is the outer, and between two rooms it's the one onto the lower pressure, by
+more than 5.07 kPa. Where the zones don't say, or that slot is taken, it's the first empty slot
+of its kind, and a part put there with no guess makes way for a later guess. The guess is made
+at the link only. How the doors are told apart, the swap and the making way are my choices, for
+review.*
 
 #### CONT-139 · Cycling
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
 
-Cycling toward one of its airlocks, an airlock controller shall close and bolt both, run its
-vents until the pressure its air sensor reads is within 5.07 kPa (5 % of 1 atm) of the
-pressure beyond that airlock, siphoning above it and blowing below it, and then unbolt and
-open that airlock, leaving the other bolted.
+Cycling toward its inner or outer door, an airlock controller shall close and bolt both, run
+its vents until the pressure its chamber sensor reads is within 5.07 kPa (5 % of 1 atm) of the
+pressure the sensor past that door reads, siphoning above it and blowing below it, and then
+unbolt and open that door, leaving the other bolted. Without both doors, the chamber sensor or
+the sensor past that door, a cycle shall not start.
 
 - **Rationale:** Decision: D-84, as the art notes describe the controller
   ([textures](../textures.md)). The vents siphon into their own pipe network and blow from it
@@ -3655,19 +3706,45 @@ open that airlock, leaving the other bolted.
   air controller's Cycle mode stops emptying a room (CONT-041).
 - **Verify:** GameTests cycle a chamber toward a vacuum and toward a room at 1 atm, and check
   both airlocks bolt, the vents siphon or blow, the far airlock opens only once the chamber is
-  within 5.07 kPa, and the other stays bolted.
+  within 5.07 kPa, and the other stays bolted. Another clears each slot in turn and checks a
+  cycle that needs it doesn't start, from the controller, its window, a bolted airlock or a
+  sensor, while one that doesn't need it does, and that a cycle that loses the sensor it reads
+  stops.
+
+*2026-11-08: the owner, in the test world: each side has its own sensor, and a cycle toward a
+side reads that side's pressure there. It no longer reads the cell beyond the airlock. A cycle
+without the sensors it needs buzzes, and the window says which is missing.*
+
+*The sensors a cycle reads are the slots the player sets (owner, 2026-11-08): the Chamber
+sensor and the sensor on the side it cycles toward. With one empty it buzzes, and the window
+shows the slot empty and "No sensor" in place of that pressure.*
 
 #### CONT-140 · Asking for a cycle
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
 
 Using a bolted airlock that's linked to a controller shall ask that controller to cycle toward
-it, unless it's already cycling.
+it, unless it's already cycling. Pressing any air sensor in a controller's slot shall ask it to
+cycle toward the side opposite the one the airlock is accessing: the side whose door alone is
+unbolted, or else the door opened last. With neither, it cycles away from the pressed sensor's
+side, or toward the inner door from the chamber sensor.
 
 - **Rationale:** Inferred: the player at a bolted door is on the side they want to reach, and
   vg's airlocks are asked to cycle from beside each door. The controller's window asks too
-  (CONT-153).
+  (CONT-153). Decision: the owner's choice of 2026-11-08 that pressing any sensor cycles the
+  airlock to the side opposite the one it's accessing.
 - **Verify:** A GameTest uses each bolted, linked airlock in turn and checks the controller
-  cycles toward it, and that a use during a cycle changes nothing.
+  cycles toward it, and that a use during a cycle changes nothing. Another presses sensors from
+  each starting state: neither airlock bolted with one opened by hand, no history, one airlock
+  alone unbolted, and both bolted after one opened. It checks the side each press cycles
+  toward, and that a press during a cycle or of an unlinked sensor starts nothing.
+
+*2026-11-08: the owner, in the test world: pressing any sensor cycles the airlock to the side
+opposite the one it's accessing. Which side that is when nothing says, as on a new controller
+or after Stop before anything opened, is the coordinator's rule, for review: away from the
+pressed outer sensor's side, so a player outside presses it twice, or toward airlock 1 from the
+chamber. An airlock opened by hand counts as opened.*
+
+*A sensor's side is its slot (owner, 2026-11-08), and airlock 1 is now the inner door.*
 
 #### CONT-141 · Airlock controller power
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, D-68, CONT-060 · Depends: CONT-138
@@ -3684,19 +3761,33 @@ those vents.
   checks a linked vent in the chamber runs during a cycle, and that cutting the area air
   controller's power stops both (CONT-060).
 
+*2026-11-07: The owner kept my default, that the controller is a part of an area air
+controller and powers its vents. A cycle that loses power stays where it is, with both
+airlocks bolted, until the power comes back or a player stops it.*
+
 #### CONT-142 · Air sensor
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-047
 
 An air sensor shall be a wall panel that reads the pressure at its own block and shows cycling
 while a controller it's linked to cycles, otherwise alert while that pressure is below 81 kPa or
-above 122 kPa, and otherwise standby.
+above 122 kPa, and otherwise standby, in the chamber or past an airlock alike.
 
 - **Rationale:** Decision: D-84, with its three states from the art notes
   ([textures](../textures.md)). 81 and 122 kPa are the Human preset's pressure min2 and max2
   (CONT-047), so it alerts where an area air controller would be at danger 2. It needs no
   power.
 - **Verify:** A GameTest steps the pressure at a sensor through both bounds and checks its
-  state, and links it to a controller and checks it shows cycling during a cycle.
+  state, and links it to a controller and checks it shows cycling during a cycle. Another
+  checks the sensors past each airlock show standby or alert at their own pressure, and that
+  all three show cycling during a cycle.
+
+*2026-11-07: The owner kept my defaults: the sensor shows only its light, with no window or
+readout, and needs no power. Its state is a block-state property, `status`, so a scene or a
+resource pack can show each one. Cycling shows over alert.*
+
+*2026-11-08: the owner, in the test world: the zones on both sides need sensors too, and
+pressing any sensor cycles the airlock (CONT-140). Each one's light works as the chamber's
+does.*
 
 #### CONT-152 · Vents under an airlock controller
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
@@ -3712,16 +3803,34 @@ be off while the controller isn't cycling.
 #### CONT-153 · Airlock controller window
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139
 
-An airlock controller's window shall show whether it's cycling, the pressure its air sensor
-reads, and the pressure beyond each linked airlock with a button that cycles toward it, and
-offer a button that stops a cycle, leaving both airlocks bolted and its vents off.
+An airlock controller's window shall show whether it's cycling, the pressure its chamber
+sensor reads, and the pressure the sensor past each door reads with a button that cycles toward
+it, or that a sensor is missing, and offer a button that stops a cycle, leaving both airlocks
+bolted and its vents off. It shall show its five slots (CONT-138), each filled, with its part's
+position, or empty, and which is armed, each with a button that arms it and one that clears it.
 
 - **Rationale:** Decision: D-76: machines get TGUI windows. The pressures are what a player
   needs to choose a side, and stopping lets a player end a cycle that can't finish, such as
   one whose vents have no gas to blow.
 - **Verify:** A GameTest presses each button through the menu and checks the server starts and
-  stops cycles and refuses a cycle toward an airlock that isn't linked (CONT-074); Manual: the
-  window is looked at in game.
+  stops cycles and refuses a cycle toward a door that isn't set (CONT-074). Others arm and clear
+  each slot through the menu and check what it shows. Manual: the window is looked at in game.
+
+*2026-11-07: The owner chose a TGUI window, as the other machines have. It shows the state and
+a Stop button on one row, then the pressures beyond airlock 1, in the chamber and beyond
+airlock 2, with a bar for each airlock between them (bolted, open or closed) and its Cycle
+button under each side. A Cycle button works only while the controller is powered, idle and
+has both airlocks and its sensor.*
+
+*2026-11-08: the owner, in the test world: each side has its own sensor (CONT-138). Where one is
+missing, the window shows "No sensor" in red in place of that pressure, and greys out the Cycle
+buttons that need it. The notice it showed with no sensor is gone.*
+
+*The window shows the slots (owner, 2026-11-08), under the airlock, in the order Inner door,
+Outer door, Inner sensor, Outer sensor, Chamber sensor. Each row is the slot's button, lit green
+while armed; a dot, green filled, orange armed and grey empty; the position or a dash; and a red
+✕ that clears it. A guessed slot and a set one look the same. The sides are labelled Inner
+and Outer.*
 
 ## R1 / R2 split
 

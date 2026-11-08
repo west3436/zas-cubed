@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerMenu;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.canister.CanisterMenu;
 import io.github.west3436.zas.atmos.controller.CentralMenu;
@@ -103,6 +104,10 @@ public final class AtmosMenus {
     /** A held analyzer's reading of what it was used on, or of a tank in the other hand (CONT-034). */
     public static final Supplier<MenuType<AnalyzerMenu>> ANALYZER =
             MENUS.register("analyzer", () -> IMenuTypeExtension.create(AnalyzerMenu::new));
+
+    /** An airlock controller's cycle, chamber and airlocks (CONT-153). */
+    public static final Supplier<MenuType<AirlockControllerMenu>> AIRLOCK_CONTROLLER = MENUS.register(
+            "airlock_controller", () -> new MenuType<>(AirlockControllerMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
     private AtmosMenus() {}
 
