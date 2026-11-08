@@ -2460,7 +2460,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
 | `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, `zas_atmos:tank_low` and `zas_atmos:leaking`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
-| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `LoadedBlocks`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); the powered parts by zone, for the area air controllers (`ZoneIndex`, §11.6); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
@@ -2496,18 +2496,57 @@ jar, so providers can be tested before real devices exist.
   leaves in `setRemoved` and `onChunkUnloaded`, so a device in an unloaded
   chunk never steps. Its `atmosTick(ServerLevel)` runs one atmos tick of work
   on the server thread.
-- **Chunks out of full status.** Ticket levels fall by one per chunk, so a
-  chunk next to a loaded one never unloads. It drops out of full status, and
-  its block entities stay in memory, still scheduled. A device steps only
-  while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
-  step that read the device's own block, as a pipe rebuilding its network
-  does, would load the chunk again. A pipe network ends the next time a member
-  uses it, and is rebuilt without that chunk's nodes, which keep their shares
-  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`). The
-  game tells nobody when such a chunk returns, so two sides can both hold valid
+- **Chunks that don't tick.** A device steps only while its chunk ticks
+  block entities, as vanilla decides for its own (`LoadedBlocks.ticking`): in
+  block-ticking range of a player or of a ticking ticket, such as a central
+  controller's (§11.7), at block-ticking status. Vanilla also waits for the
+  chunk's entities to load, which has nothing to do with devices, and a device
+  doesn't. The schedule passes over one that doesn't (`DeviceSchedule.Member.ticking`): it
+  keeps its state and its place in the period, and steps at its first due tick
+  after its chunk ticks again. A chunk next to a ticking one is always loaded
+  in full, at the edge of what is loaded, but doesn't tick, and a device there
+  waits. Ticket levels fall by one per chunk, so a chunk next to a loaded one
+  never unloads: it drops out of full status, and its block entities stay in
+  memory, still scheduled, and wait too. `AtmosDevice.step` itself still runs
+  only while the chunk is loaded in full (`ServerLevel.isLoaded`), for what
+  steps a device directly: GameTests (`DeviceTicker.stepNow`) and a fire
+  alarm closing firelocks (§11.8).
+
+  *2026-11-07: rewritten (S-10). This said a device steps while its chunk is
+  loaded in full. The S-10 bench found that kept chunks at the edge loaded
+  after every player had gone: a read through the level (`getBlockState`,
+  `getBlockEntity`, `getCapability`) asks the chunk source for the chunk, and on
+  the server thread that adds a ticket whenever the read misses its four-chunk
+  cache. Each step at the edge ticketed its own chunk and its neighbours again,
+  and a wing with a device due in every game tick never unloaded. Stepping only
+  where vanilla ticks block entities removes that by design: a ticking chunk is
+  held by a player or a ticking ticket anyway, and its neighbours are loaded in
+  full. Reads that can reach further go through `LoadedBlocks`, which reads only
+  a chunk the game already holds in full and adds no ticket: a pipe's or
+  device's neighbours (`PipeHost.across`, `GasHandlers`), the FE sources beside
+  a controller, an area air controller's links and a central controller's
+  claims, which can be in any chunk. The GameTest
+  `cont_006_a_chunk_at_the_edge_unloads_with_its_devices` checks a chunk at the
+  edge, with 35 nodes and a vent, unloads with its neighbour, and the S-10
+  bench still reports any ticket on its wing's chunks while its player is
+  away.*
+- **Waiting loses nothing.** Nothing reads a wait as a change. A powered part
+  whose last provider is loaded and waiting waits too, as the provider powers
+  nothing while it waits; a part that waits holds its lease (`DevicePower.hold`,
+  §11.3), so it resumes powered, and a wait is never a power cut. A part at the
+  edge whose provider ticks is paid each atmos tick as before, and resumes with
+  its lease. A pipe network across a ticking chunk and one at the edge stays
+  one network, whose ticking members run its atmos tick (§11.4): it ends only
+  when a chunk it spans leaves full status. Then it ends the next time a member
+  uses it, and is rebuilt without that chunk's nodes, which keep their shares.
+  They rejoin when the chunk returns and they step (`PipeChunkTests`). The game
+  tells nobody when such a chunk returns, so two sides can both hold valid
   networks: each built its own while the other's chunk was away. A node on a
   chunk's edge, and any port, checks at each step that the nodes connected to it
   share its network, and rebuilds if not (`PipeNode.apart`, `PipeGapChunkTests`).
+  Those tests step the near side's devices directly while the far chunk is away,
+  standing for a member further along in a ticking chunk, since a chunk next to
+  a ticking one is never away.
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2530,9 +2569,10 @@ jar, so providers can be tested before real devices exist.
   (`ZonePort.untaken`).
 - **Order.** Devices due in the same game tick step in the order they became
   due, then the order they joined. Removal during a step is safe.
-- **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once, for
-  GameTests that drive atmos ticks themselves with the framework's
-  `tickNow`.
+- **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once,
+  whether its chunk ticks or not, for GameTests that drive atmos ticks
+  themselves with the framework's `tickNow`. A GameTest that waits in real time
+  for devices to step holds their chunks at a ticking level.
 - **Activity** (DATA-017, DATA-018; Draft until the owner's review). A device that
   moves gas calls `reportMoved(moles)` in its step, and `reportStopped()` when it
   is off, or for an open end or passive vent when its flow is too small to show.
@@ -2576,7 +2616,7 @@ the cell in front of its grille).
 |---|---|---|
 | Device | `new DevicePower(priority, drawSupplier, this::now)` | Its priority group (`PowerPriority`: `LIFE_SUPPORT`, `GAS_HANDLING`, `AUXILIARY`, CONT-064) and what it draws now, in FE/t, 0 while it is off (CONT-065) |
 | Device | `power.isPowered()` | Checked at the start of each `atmosTick`; unpowered, the device does nothing (CONT-060) |
-| Provider | `DeviceTicker.loaded(level)`, then `instanceof PoweredDevice` and `Atmospheres.at(level, d.airPoint()).zone()` | Finds the parts it covers |
+| Provider | `ZoneIndex.covered(level, zone, links)` | Finds the parts it covers: the loaded `PoweredDevice`s whose air point is in its zone, and those at its links (§11.6) |
 | Provider | `power.drawPerAtmosTick()`, then `power.supply(this)` | Pays draw × 20 FE from its own store for one atmos tick, then powers the device for `DevicePower.LEASE_TICKS` (40) game ticks |
 | Provider | `power.suppliedThisAtmosTick()` | True if another provider (or this one, through a link) already paid this atmos tick |
 | Device | `power.paidFor()` | True while a lease supplied at a draw above 0 lasts, or under test power. A device whose draw rises mid-lease, such as a recharger given a battery, does work only on paid-for power |
@@ -2587,6 +2627,12 @@ the cell in front of its grille).
   removed or no longer covers it, the lease runs out and the device stops.
   Nothing has to switch it off, and nothing is saved: after a reload a device
   has no power until its provider steps.
+- **Waiting keeps power.** A part that the schedule passes over, because its
+  chunk doesn't tick or its provider's doesn't (§11.2), calls `power.hold()`.
+  While its lease lasts, that keeps it until two atmos ticks after the last
+  hold, so it resumes powered, however long it waited. A hold never starts a
+  lease, and `suppliedThisAtmosTick` ignores it, so a provider pays a part that
+  has resumed as usual.
 - **No provider, no power** (CONT-069). Devices expose no FE capability, so
   an FE source beside one does nothing.
 - **Test power.** `power.setTestPowered(true)` powers a device with no
@@ -2698,7 +2744,7 @@ the cell in front of its grille).
 - **Reactions** (CONT-100). A network has no step of its own, so the first
   member to step runs its atmos tick for all of them, and the next one starts
   when a member steps again (`PipeNetwork.startsAtmosTick`). A member that
-  isn't stepping, because its chunk has left full status, holds nothing up. It
+  isn't stepping, because its chunk doesn't tick (§11.2), holds nothing up. It
   runs in `PipeNodeEntity.beforeAtmosTick`, which comes before the node's own
   `atmosTick`, so every kind of node takes part without doing anything, and a
   device's step sees the pressure the reaction left. An inline device does the
@@ -2894,7 +2940,8 @@ the cell in front of its grille).
     every node's network dissolves at load anyway.
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
-    the two rejoin at the next step of either node at the border (§11.2,
+    the two rejoin at the next step of either node at the border, once its chunk
+    ticks (§11.2,
     `cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
     a valve updates no neighbour's shape, since its flanges and shape are the same
     open or shut. That update's read of the next block would bring such a chunk
@@ -3199,7 +3246,15 @@ tick, in order:
    target.
 7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
    whose air point is in its zone, and every part linked to it with the
-   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`
+   multitool (CONT-042). It finds them in `ZoneIndex`, which keeps each loaded
+   part's zone by level and asks again only when it may have changed: when the
+   part joins the schedule, is turned or steps; for every part, after any zone
+   lifecycle event in its level (API-030); for the parts in a zone and those in
+   none, when a controller finds that zone's cell count changed, as when it
+   grows into a room or loses a cell, which fire no event; and at each lookup,
+   for a part whose air read as unresolved while its chunk is loaded in full.
+   Asking every loaded part's zone at every controller's step was most of the
+   S-10 bench's device time (2026-11-07). It gives each `VentControl` the mode's `VentOrder`
    and each `ScrubberControl` the mode's `ScrubberOrder`, with its own position
    as the order's `sender`, then powers them (§11.7), every tick. Orders come
    first because a part's draw follows its order.

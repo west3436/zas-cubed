@@ -159,6 +159,16 @@ A node on a chunk's edge, and any port, now rejoins a connected neighbour in
 another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
 `cont_003_ports_away_in_turn_join_when_both_return`).*
 
+*2026-11-07: Note: still Implemented. Devices and nodes now step only in chunks that
+tick (CONT-006), and a chunk next to a ticking one is always loaded in full, so in
+play a network's near side steps while its far chunk is away only through a member
+further along, in a ticking chunk. The chunk tests above, `ValveTests`' chunk tests
+and `GasHandlerTests.api_026_a_handler_in_a_chunk_that_is_away_is_left_alone` now
+step the near side's devices directly while the far chunk is away, standing for that
+member, and hold both chunks ticking once they return. Each test's Javadoc says what
+play state it stands for. `PipeSaveTests` holds its chunks ticking where it needs
+steps, and `StationSaveTests` steps its station's devices itself.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -287,6 +297,23 @@ chunk next to a loaded one that drops out of full status keeps its block
 entities, which wait until it returns.
 `PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
 checks a vent there.*
+
+*2026-11-07: Note: still Implemented, with the note above changed. A device
+now steps only while its chunk ticks block entities, as vanilla's do: near a
+player, or held by a ticking ticket such as a central controller's. A chunk at
+the edge of what is loaded, in full only because a ticking neighbour is,
+doesn't tick, and a device there waits as it is, keeping its power. The S-10
+bench found that steps there kept those chunks loaded after every player had
+gone: reading a block through the level adds a ticket to its chunk, so each
+step ticketed its own chunk and its neighbours again, and a wing with a device
+due in every game tick never unloaded ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_a_member_that_is_not_ticking_is_passed_over_and_keeps_its_phase`
+(Unit) checks the schedule passes such a device over;
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_doesnt_tick` (GameTest,
+renamed from the test above) checks a vent at the edge and away, and
+`cont_006_a_chunk_at_the_edge_unloads_with_its_devices` that a chunk at the
+edge unloads with its neighbour.*
 
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Implemented` · Verify: Manual
@@ -1952,6 +1979,16 @@ firelock (CONT-043).*
 (GameTest) links a real vent in the room across a firelock: it is powered from
 the controller's buffer, follows its orders, and is listed as linked, not in
 the zone.*
+
+*2026-11-07: Note: still Implemented, and a controller covers the same parts. It
+now finds them in an index of each loaded part's zone, asked again only when it
+may have changed, instead of asking every loaded part at every step, which took
+most of the S-10 bench's device time ([architecture
+§11.6](../architecture.md#116-the-area-air-controller)).
+`ControllerTests.cont_042_coverage_follows_its_zone_and_its_parts` (GameTest)
+merges two rooms' zones and splits them again, grows one into a room that had
+none, and places and breaks a part, and at each step checks the controller lists
+what asking every loaded part then finds.*
 
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042

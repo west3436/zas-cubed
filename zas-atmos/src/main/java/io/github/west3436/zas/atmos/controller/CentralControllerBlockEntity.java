@@ -4,6 +4,7 @@ import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
@@ -160,7 +161,8 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         if (owner == null) {
             return true;
         }
-        if (level.isLoaded(owner) && !(level.getBlockEntity(owner) instanceof CentralControllerBlockEntity)) {
+        if (LoadedBlocks.chunk(level, owner) != null
+                && !(LoadedBlocks.entity(level, owner) instanceof CentralControllerBlockEntity)) {
             claims.release(controller);
             return true;
         }
@@ -172,8 +174,8 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         for (BlockPos p : claims.claimedBy(getBlockPos())) {
             if (!reaches(p)
                     || (!loaded.containsKey(p)
-                            && level.isLoaded(p)
-                            && !(level.getBlockEntity(p) instanceof AreaAirControllerBlockEntity))) {
+                            && LoadedBlocks.chunk(level, p) != null
+                            && !(LoadedBlocks.entity(level, p) instanceof AreaAirControllerBlockEntity))) {
                 claims.release(p);
             }
         }
@@ -284,10 +286,11 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
                     return got;
                 }
                 BlockPos next = part.relative(dir);
-                if (parts.contains(next) || !level.isLoaded(next)) {
+                if (parts.contains(next)) {
                     continue;
                 }
-                IEnergyStorage source = level.getCapability(Capabilities.EnergyStorage.BLOCK, next, dir.getOpposite());
+                IEnergyStorage source =
+                        LoadedBlocks.capability(level, Capabilities.EnergyStorage.BLOCK, next, dir.getOpposite());
                 if (source != null && source.canExtract()) {
                     got += Math.max(0, source.extractEnergy((int) Math.min(Integer.MAX_VALUE, want), false));
                 }

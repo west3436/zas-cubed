@@ -16,7 +16,9 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * Steps the loaded {@link AtmosDevice}s of each level once per atmos tick, spread across game
  * ticks (D-31, CONT-006, architecture §11.2). It runs at the end of every server tick, on the
  * server thread, after the framework's own tick, so mutations the framework completed in a game
- * tick are seen by devices stepping in that tick.
+ * tick are seen by devices stepping in that tick. A device whose chunk doesn't tick block entities
+ * is passed over ({@link AtmosDevice#ticking()}). It keeps each level's {@link ZoneIndex} of powered
+ * parts as they join and leave.
  *
  * <p>Every method is for the server thread only.
  */
@@ -28,12 +30,17 @@ public final class DeviceTicker {
     /** Registers the tick and lifecycle listeners. Called once, from the mod constructor. */
     public static void register(IEventBus gameBus) {
         gameBus.addListener((ServerTickEvent.Post e) -> tick(e.getServer()));
-        gameBus.addListener((ServerStoppedEvent e) -> SCHEDULES.clear());
+        gameBus.addListener((ServerStoppedEvent e) -> {
+            SCHEDULES.clear();
+            ZoneIndex.clear();
+        });
         gameBus.addListener((LevelEvent.Unload e) -> {
             if (e.getLevel() instanceof ServerLevel level) {
                 SCHEDULES.remove(level.dimension());
+                ZoneIndex.forget(level.dimension());
             }
         });
+        ZoneIndex.register(gameBus);
     }
 
     private static void tick(MinecraftServer server) {
@@ -50,6 +57,7 @@ public final class DeviceTicker {
         SCHEDULES
                 .computeIfAbsent(level.dimension(), k -> new DeviceSchedule<>(AtmosTicks.PERIOD))
                 .add(device, AtmosTicks.now(level));
+        ZoneIndex.join(level, device);
     }
 
     static void remove(ServerLevel level, AtmosDevice device) {
@@ -57,11 +65,13 @@ public final class DeviceTicker {
         if (schedule != null) {
             schedule.remove(device);
         }
+        ZoneIndex.leave(level, device);
     }
 
     /**
-     * The devices loaded in a level, in the order they joined. An area air controller looks here
-     * for the parts it powers (architecture §11.3).
+     * The devices loaded in a level, in the order they joined. A firelock and a central controller
+     * look here for the area air controllers; an area air controller finds its parts through the
+     * {@link ZoneIndex} (architecture §11.3).
      *
      * @param level the level
      * @return a new list; empty if the level has no devices
@@ -86,8 +96,8 @@ public final class DeviceTicker {
     }
 
     /**
-     * Steps every ready device of a level once now, without changing when each is next due. For
-     * GameTests, which drive atmos ticks themselves, and only those.
+     * Steps every ready device of a level once now, whether its chunk ticks or not, without changing
+     * when each is next due. For GameTests, which drive atmos ticks themselves, and only those.
      *
      * @param level the level
      */

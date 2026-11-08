@@ -21,6 +21,10 @@ import net.minecraft.nbt.CompoundTag;
  * Nothing needs to switch a device off: when no provider supplies it any more, because the
  * provider ran short, was removed or no longer covers it, its lease runs out and it stops.
  *
+ * <p><b>Waiting.</b> A device the schedule passes over, because its chunk or its provider's doesn't
+ * tick now, does no work, and its lease is {@linkplain #hold() held} meanwhile, so it comes back
+ * powered rather than reading the wait as a power cut (architecture §11.2).
+ *
  * <p><b>Without a provider</b> a device has no power, even beside an FE source (CONT-069). There
  * is no FE capability on devices.
  *
@@ -40,6 +44,7 @@ public final class DevicePower {
     private final IntSupplier draw;
     private final LongSupplier clock;
     private long poweredUntil = Long.MIN_VALUE;
+    private long heldUntil = Long.MIN_VALUE;
     private Object source;
     private int suppliedDraw;
     private boolean testPowered;
@@ -82,9 +87,31 @@ public final class DevicePower {
         poweredUntil = clock.getAsLong() + LEASE_TICKS;
     }
 
-    /** Whether the device has power now: a supply's lease hasn't run out, or it is test-powered. */
+    /**
+     * Keeps the power the device has now while it waits: the schedule calls this each time it passes
+     * the device over, and a lease that hasn't run out lasts {@link #LEASE_TICKS} from then. A held
+     * lease pays for nothing, since the device does no work while it waits, so {@link
+     * #suppliedThisAtmosTick} doesn't count it: a provider that steps pays for the next one as
+     * before. A device with no power keeps none.
+     */
+    public void hold() {
+        long now = clock.getAsLong();
+        if (now < leaseEnd()) {
+            heldUntil = Math.max(heldUntil, now + LEASE_TICKS);
+        }
+    }
+
+    /** The end of the lease, held or supplied. */
+    private long leaseEnd() {
+        return Math.max(poweredUntil, heldUntil);
+    }
+
+    /**
+     * Whether the device has power now: a supply's lease hasn't run out, or is {@linkplain #hold()
+     * held}, or it is test-powered.
+     */
     public boolean isPowered() {
-        return testPowered || clock.getAsLong() < poweredUntil;
+        return testPowered || clock.getAsLong() < leaseEnd();
     }
 
     /**
@@ -101,12 +128,12 @@ public final class DevicePower {
      * no cost, such as a recharger given a battery, waits for a paid one before it does work.
      */
     public boolean paidFor() {
-        return testPowered || (clock.getAsLong() < poweredUntil && suppliedDraw > 0);
+        return testPowered || (clock.getAsLong() < leaseEnd() && suppliedDraw > 0);
     }
 
     /** Who supplied the device last, while its lease lasts; null otherwise, and when test-powered alone. */
     public Object source() {
-        return clock.getAsLong() < poweredUntil ? source : null;
+        return clock.getAsLong() < leaseEnd() ? source : null;
     }
 
     /** Powers the device with no provider, for GameTests and test worlds only. */
