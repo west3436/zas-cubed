@@ -60,5 +60,34 @@
   "zas_ponder.ponder.shared.firelock.multitool": "A multitool links it to a controller",
   "zas_ponder.ponder.igniter.header": "Igniting gas",
   "zas_ponder.ponder.shared.igniter.sparks": "A redstone signal makes it spark",
-  "zas_ponder.ponder.shared.igniter.lights": "It lights flammable gas in its room"
+  "zas_ponder.ponder.shared.igniter.lights": "It lights flammable gas in its room",
+
+  "zas_ponder.ponder.pipe.header": "Running pipes",
+  "zas_ponder.ponder.shared.pipe.joins": "Pipes join the parts beside them",
+  "zas_ponder.ponder.shared.pipe.open_end": "An open end leaks into the room",
+  "zas_ponder.ponder.shared.pipe.cap": "An end cap closes it",
+  "zas_ponder.ponder.shared.pipe.dye": "Use a dye on a pipe to colour it",
+  "zas_ponder.ponder.shared.wrench.remove": "Sneak and use a wrench to take it off",
+  "zas_ponder.ponder.shared.wrench.pressure": "Over 2 atm above the room, it stays on",
+
+  "zas_ponder.ponder.shared.valve.ends": "Pipes join both its ends",
+  "zas_ponder.ponder.shared.valve.open": "Open, it joins both sides",
+  "zas_ponder.ponder.shared.valve.shut": "Shut, gas stops at the valve",
+  "zas_ponder.ponder.manual_valve.header": "Opening a valve by hand",
+  "zas_ponder.ponder.shared.manual_valve.use": "Use it to open or shut it",
+  "zas_ponder.ponder.redstone_valve.header": "Opening a valve with redstone",
+  "zas_ponder.ponder.shared.redstone_valve.signal": "A redstone signal opens it",
+  "zas_ponder.ponder.shared.redstone_valve.no_signal": "It shuts when the signal stops",
+  "zas_ponder.ponder.shared.redstone_valve.hand": "A hand doesn't turn it",
+
+  "zas_ponder.ponder.shared.side_port.back": "Gas comes in at the back",
+  "zas_ponder.ponder.shared.side_port.mirrored": "Mirrored, the side port is on the left",
+  "zas_ponder.ponder.filter.header": "Filtering gases",
+  "zas_ponder.ponder.shared.filter.side": "Gases you pick leave by the side",
+  "zas_ponder.ponder.shared.filter.front": "The rest goes out the front",
+  "zas_ponder.ponder.shared.filter.use": "Use it to pick the gases",
+  "zas_ponder.ponder.mixer.header": "Mixing gases",
+  "zas_ponder.ponder.shared.mixer.inputs": "Gas comes in at the back and side",
+  "zas_ponder.ponder.shared.mixer.front": "The mix leaves by the front",
+  "zas_ponder.ponder.shared.mixer.use": "Use it to set each input's share"
 }
