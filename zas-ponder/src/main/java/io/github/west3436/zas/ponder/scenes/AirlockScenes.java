@@ -156,7 +156,7 @@ public final class AirlockScenes {
         // The passage runs east and west: space at x 0, the chamber at x 2 and 3, the station past x 4.
         BlockPos outer = util.grid().at(1, 1, 3);
         BlockPos inner = util.grid().at(4, 1, 3);
-        BlockPos vent = util.grid().at(2, 1, 3);
+        BlockPos vent = util.grid().at(2, 0, 3);
         BlockPos sensor = util.grid().at(3, 2, 3);
         BlockPos controller = util.grid().at(5, 2, 3);
         BlockPos area = util.grid().at(6, 2, 3);
@@ -178,20 +178,19 @@ public final class AirlockScenes {
         walls.putAll(innerAirlock);
         Build.revealAll(scene, util, walls, Direction.DOWN);
 
-        // A vent in the chamber, on pipe that runs out under the floor to a cap.
-        List<BlockPos> run = List.of(
-                vent,
-                util.grid().at(2, 0, 3),
-                util.grid().at(2, 0, 2),
-                util.grid().at(2, 0, 1));
+        // A vent in the chamber's floor, on pipe that runs in the floor from a cap and dips under it.
+        BlockPos dip = util.grid().at(2, 0, 2);
+        List<BlockPos> run = List.of(util.grid().at(2, 0, 1), dip, dip.below(), vent.below(), vent);
         BlockState pipe = AtmosBlocks.PIPE.get().defaultBlockState();
-        for (BlockPos pos : run.subList(1, run.size())) {
-            Build.place(scene, pos, pipe);
-        }
         Build.place(scene, util.grid().at(2, 0, 0), PumpScenes.cap(Direction.SOUTH));
-        Build.settle(scene);
+        Build.place(scene, run.get(0), pipe);
+        Build.place(scene, dip, pipe);
+        Map<BlockPos, BlockState> under = new LinkedHashMap<>();
+        under.put(dip.below(), pipe);
+        under.put(vent.below(), pipe);
+        Build.under(scene, util, under);
         scene.idle(Build.SHOW);
-        Build.drop(
+        Build.sink(
                 scene,
                 util,
                 vent,
@@ -233,8 +232,9 @@ public final class AirlockScenes {
         Hand.use(scene, util, controller, Direction.NORTH, ItemStack.EMPTY);
         Say.at(scene, panel, "airlock_controller.window");
         start(scene, controller, sensor, both, vent, VentMode.SIPHON);
+        // Up level with the airlock's top, so it clears the vent's line below.
         Say.line(scene, CYCLE, "reading.pressure", Gas.pressure(0))
-                .pointAt(util.vector().centerOf(util.grid().at(0, 1, 3)))
+                .pointAt(util.vector().centerOf(util.grid().at(0, 2, 3)))
                 .placeNearTarget();
         Gas.draw(scene, util, vent, Direction.UP, CYCLE);
         Say.over(scene, CYCLE, util.vector().topOf(vent), "airlock_controller.siphon");
