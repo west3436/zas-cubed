@@ -56,6 +56,8 @@ public final class AtmosCreativeTab {
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
         out.accept(AtmosItems.PIPE_CAP.get());
+        out.accept(AtmosItems.RADIATOR_PIPE.get());
+        out.accept(AtmosItems.RADIATOR_ADAPTOR.get());
         out.accept(AtmosItems.MANUAL_VALVE.get());
         out.accept(AtmosItems.REDSTONE_VALVE.get());
         out.accept(AtmosItems.CONNECTOR_PORT.get());
@@ -68,6 +70,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.MIXER_MIRRORED.get());
         out.accept(AtmosItems.SCRUBBER.get());
         out.accept(AtmosItems.PASSIVE_VENT.get());
+        out.accept(AtmosItems.HEAT_EXCHANGER.get());
         out.accept(AtmosItems.CANISTER.get());
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));

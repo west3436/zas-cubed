@@ -22,6 +22,9 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlockEntity;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlockEntity;
+import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlockEntity;
+import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
@@ -165,6 +168,25 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<ElectrolyzerBlockEntity>> ELECTROLYZER = BLOCK_ENTITIES.register(
             "electrolyzer",
             () -> BlockEntityType.Builder.of(ElectrolyzerBlockEntity::new, AtmosBlocks.ELECTROLYZER.get())
+                    .build(null));
+
+    // Radiators and heat exchangers (CONT-143 to CONT-148).
+
+    public static final Supplier<BlockEntityType<RadiatorPipeBlockEntity>> RADIATOR_PIPE = BLOCK_ENTITIES.register(
+            "radiator_pipe",
+            () -> BlockEntityType.Builder.of(RadiatorPipeBlockEntity::new, AtmosBlocks.RADIATOR_PIPE.get())
+                    .build(null));
+
+    public static final Supplier<BlockEntityType<RadiatorAdaptorBlockEntity>> RADIATOR_ADAPTOR =
+            BLOCK_ENTITIES.register(
+                    "radiator_adaptor",
+                    () -> BlockEntityType.Builder.of(
+                                    RadiatorAdaptorBlockEntity::new, AtmosBlocks.RADIATOR_ADAPTOR.get())
+                            .build(null));
+
+    public static final Supplier<BlockEntityType<HeatExchangerBlockEntity>> HEAT_EXCHANGER = BLOCK_ENTITIES.register(
+            "heat_exchanger",
+            () -> BlockEntityType.Builder.of(HeatExchangerBlockEntity::new, AtmosBlocks.HEAT_EXCHANGER.get())
                     .build(null));
 
     // The tank holder (CONT-149 to CONT-151, D-84).

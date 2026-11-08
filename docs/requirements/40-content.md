@@ -425,6 +425,10 @@ to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
 
 *2026-11-07: Added for review.*
 
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. A gas handler and
+a heat exchanger's pipe face are checked too. Checked by
+`cont_143_radiator_pipe_joins_only_radiator_pipe` (GameTest).*
+
 #### CONT-144 · Radiator pipe ends are closed
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
 
@@ -437,6 +441,9 @@ A radiator pipe with fewer than two connections shall keep its gas: unlike a pip
   no gas leaves either.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_144_radiator_pipe_ends_keep_their_gas` (GameTest).*
 
 #### CONT-145 · Radiator adaptor
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
@@ -452,6 +459,10 @@ radiator end only to radiator pipe.
 
 *2026-11-07: Added for review.*
 
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Placed against
+radiator pipe its radiator end faces it, and otherwise its pipe end faces the block clicked.
+Checked by `cont_145_an_adaptor_joins_pipe_to_radiator_pipe` (GameTest).*
+
 #### CONT-146 · Radiator pipe bursts
 `Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
 
@@ -463,6 +474,9 @@ Radiator pipe and radiator adaptors shall be segments that burst as pipe does (C
   100 atm over its room and checks one of them bursts.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_146_radiator_pipe_bursts_above_100_atm` (GameTest).*
 
 #### CONT-147 · Heat exchanger
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
@@ -476,6 +490,11 @@ its block, placed facing any of six ways, with a pipe connection only on the opp
   box, adding 200 L to the network.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes, in all six facings; it stays Draft for the
+owner. Placed against another's box it faces back, making a pair; otherwise its pipe faces
+the block clicked. Checked by `cont_147_a_heat_exchanger_takes_pipe_opposite_its_box`
+(GameTest).*
 
 #### CONT-148 · Heat exchanger's colour
 `Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
@@ -499,6 +518,12 @@ between these colours, and its item shall show copper:
   between two. Manual: a heat exchanger on a cold network and on a hot one, and its item.
 
 *2026-11-07: Added for review.*
+
+*2026-11-07: Built; it stays Draft for the owner. Its Unit test passes:
+`HeatExchangerTintTest`, with six bands between each pair of stops. The server sets the band
+in the block state, and `heat_022_a_pair_shares_one_temperature` (GameTest) checks it follows
+the network and shows copper with no gas. The Manual check, how it looks, is in the round's
+combined test world.*
 
 ## Devices (R1 set)
 

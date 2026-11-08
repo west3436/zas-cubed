@@ -12,6 +12,7 @@ import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.ContainerReactions;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.particle.JetPlan;
+import io.github.west3436.zas.atmos.radiator.RadiatorExchange;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -142,10 +143,14 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      */
     protected void followHandlers(ServerLevel level, int faces) {}
 
-    /** A member's turn in its network's atmos tick: the first to step runs it for them all. */
+    /**
+     * A member's turn in its network's atmos tick: the first to step runs it for them all. After the
+     * reaction, its radiator pipe exchanges heat with the gas around it (HEAT-020, HEAT-021).
+     */
     static void atmosTurn(ServerLevel level, PipeNetwork net, PipeNode node) {
         if (net.startsAtmosTick(node) && !PipeBurst.check(level, net)) {
             ContainerReactions.react(net.gas());
+            RadiatorExchange.step(level, net);
         }
     }
 

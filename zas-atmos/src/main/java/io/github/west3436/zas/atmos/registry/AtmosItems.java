@@ -91,6 +91,15 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);
 
+    // Radiators and heat exchangers (CONT-143 to CONT-148).
+
+    public static final DeferredItem<BlockItem> RADIATOR_PIPE =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_PIPE);
+    public static final DeferredItem<BlockItem> RADIATOR_ADAPTOR =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_ADAPTOR);
+    public static final DeferredItem<BlockItem> HEAT_EXCHANGER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
+
     // The station blocks (CONT-129 to CONT-131).
 
     public static final DeferredItem<BlockItem> STATION_WALL = ITEMS.registerSimpleBlockItem(AtmosBlocks.STATION_WALL);

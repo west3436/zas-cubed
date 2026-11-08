@@ -22,6 +22,9 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlock;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
+import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
+import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
@@ -170,6 +173,20 @@ public final class AtmosBlocks {
                     .isRedstoneConductor((state, level, pos) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false));
+
+    // ---- Radiators and heat exchangers (CONT-143 to CONT-148, D-84) ----
+
+    /** Radiator pipe, which exchanges heat with the gas around it (CONT-143, HEAT-020). */
+    public static final DeferredBlock<RadiatorPipeBlock> RADIATOR_PIPE =
+            BLOCKS.registerBlock("radiator_pipe", RadiatorPipeBlock::new, metal());
+
+    /** The radiator adaptor, which joins pipe to radiator pipe (CONT-145). */
+    public static final DeferredBlock<RadiatorAdaptorBlock> RADIATOR_ADAPTOR =
+            BLOCKS.registerBlock("radiator_adaptor", RadiatorAdaptorBlock::new, metal());
+
+    /** The heat exchanger, which works in pairs (CONT-147, HEAT-022). */
+    public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
+            BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
 
     // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
 
