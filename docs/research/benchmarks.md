@@ -985,7 +985,12 @@ controller's parts. The script, all on the server thread:
   exchange model gives for those faces and its volume, toward the vacuum
   ambient (`ExchangeSettings.ambientRatio`, CORE-032, CORE-035).
 - *Worker (NFR-005).* A phase listener beside the profiler's keeps every
-  atmos tick's time, whole and by phase.
+  atmos tick's time, whole and by phase, and its thread's CPU time. NFR-005 is
+  judged on the whole tick's wall time. The CPU time is given beside it, in the
+  worker table, the list of ticks over the budget with the margin, and the
+  enclosure cap step's rows. A tick well above its CPU time was slowed by other
+  work on the machine, not by more work. Windows counts CPU time in steps of
+  about 15.6 ms, fine against 250 ms.
 - *Heap (NFR-004).* Retained size, counted as the engine bench counts it (each
   object once, at HotSpot's shallow size, charged to the first part that
   reaches it), from the engine and pipeline; then the platform's

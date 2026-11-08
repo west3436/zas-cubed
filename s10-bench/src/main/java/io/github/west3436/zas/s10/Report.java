@@ -294,12 +294,16 @@ final class Report {
                 + " phase. The other three dimensions share the thread; they hold no zones.");
         line();
         Window.Series whole = new Window.Series();
+        Window.Series cpu = new Window.Series();
         List<Window.Series> phases = new ArrayList<>();
         for (int i = 0; i < WorkerTimes.PHASES.length; i++) {
             phases.add(new Window.Series());
         }
         for (long[] r : w.worker) {
             whole.add(r[WorkerTimes.WHOLE]);
+            if (r[WorkerTimes.CPU] >= 0) {
+                cpu.add(r[WorkerTimes.CPU]);
+            }
             for (int i = 0; i < WorkerTimes.PHASES.length; i++) {
                 phases.get(i).add(r[i]);
             }
@@ -307,11 +311,57 @@ final class Report {
         line("| | Ticks | Average ms | 99th pct ms | Largest ms |");
         line("|---|---|---|---|---|");
         line(row("Whole tick", whole));
+        if (cpu.size() > 0) {
+            line(row("Whole tick, on the CPU", cpu));
+        }
         for (int i = 0; i < WorkerTimes.PHASES.length; i++) {
             line(row(WorkerTimes.PHASES[i].name(), phases.get(i)));
         }
         line();
+        line("NFR-005 is judged on the whole tick's wall time. Its time on the CPU, which Windows counts in steps"
+                + " of about 15.6 ms, is beside it, so a tick slowed by other work on the machine can be told from"
+                + " one that did more work.");
+        line();
+        List<String> over = workerOver(w.name, w.worker);
+        line(
+                over.isEmpty()
+                        ? String.format(
+                                "No worker tick over %.0f ms, NFR-005's 250 ms over the margin.", WORKER_LIMIT_MS)
+                        : String.format(
+                                        "Worker ticks over %.0f ms, NFR-005's 250 ms over the margin: ",
+                                        WORKER_LIMIT_MS)
+                                + String.join("; ", over));
+        line();
         verdict("NFR-005", "largest worker tick", whole.max() / MS, 250, "ms");
+    }
+
+    /** NFR-005's budget over the margin: a worker tick above it doesn't meet the budget with the margin. */
+    private static final double WORKER_LIMIT_MS = 250 / REQUIRED_MARGIN;
+
+    /** The worker ticks above {@link #WORKER_LIMIT_MS}, each with its time on the CPU, at most 12. */
+    private static List<String> workerOver(String where, List<long[]> rows) {
+        List<String> out = new ArrayList<>();
+        int more = 0;
+        for (long[] r : rows) {
+            if (r[WorkerTimes.WHOLE] / MS > WORKER_LIMIT_MS) {
+                if (out.size() < 12) {
+                    out.add(String.format(
+                            "%s: %.1f ms, %s, mostly %s", where, r[WorkerTimes.WHOLE] / MS, cpu(r), topPhases(r)));
+                } else {
+                    more++;
+                }
+            }
+        }
+        if (more > 0) {
+            out.add(String.format("and %d more", more));
+        }
+        return out;
+    }
+
+    /** A worker tick's time on its thread's CPU, beside its wall time. */
+    private static String cpu(long[] r) {
+        long c = r[WorkerTimes.CPU];
+        return c < 0 ? "CPU time not measured" : String.format("%.0f ms of it on the CPU", c / MS);
     }
 
     private void sync(Window w) {
@@ -570,7 +620,9 @@ final class Report {
         line("Time budgets need a margin of " + REQUIRED_MARGIN + "; memory needs none. NFR-002 is judged on zas's own"
                 + " time: a collector pause inside zas's calls in that tick is taken out, and given in the last"
                 + " column with the tick's other pauses. Ticks over 10 ms are listed after each table, with where"
-                + " their time went and the batch close and apply in them, so a stall that isn't the work shows.");
+                + " their time went and the batch close and apply in them, so a stall that isn't the work shows."
+                + " Worker ticks (NFR-005) are judged on wall time, with their time on the CPU in the last column:"
+                + " a tick well above its CPU time was slowed by other work on the machine.");
         line();
         for (Map.Entry<String, String> e : c.notes.entrySet()) {
             line("- " + e.getValue());
@@ -885,16 +937,25 @@ final class Report {
             long[] r = largestWorker(List.of(e.window));
             if (r != null) {
                 facts.add(String.format(
-                        "%s: largest worker tick %.1f ms, mostly %s", e.name, r[WorkerTimes.WHOLE] / MS, topPhases(r)));
+                        "%s: largest worker tick %.1f ms, %s, mostly %s",
+                        e.name, r[WorkerTimes.WHOLE] / MS, cpu(r), topPhases(r)));
             }
+        }
+        List<String> overWorker = new ArrayList<>();
+        for (Window w : windows) {
+            overWorker.addAll(workerOver(w.name, w.worker));
+        }
+        if (!overWorker.isEmpty()) {
+            facts.add(String.format("Worker ticks over %.0f ms: ", WORKER_LIMIT_MS) + String.join("; ", overWorker));
         }
         if (h.breach != null && h.dissolveTick >= 0) {
             Window w = h.breach.window;
             String worker = h.dissolveWorker < 0
                     ? "no worker tick recorded"
                     : String.format(
-                            "its worker tick %.1f ms, mostly %s",
+                            "its worker tick %.1f ms, %s, mostly %s",
                             w.worker.get(h.dissolveWorker)[WorkerTimes.WHOLE] / MS,
+                            cpu(w.worker.get(h.dissolveWorker)),
                             topPhases(w.worker.get(h.dissolveWorker)));
             facts.add(String.format(
                     "Dissolve: %s; the server tick that applied it %.3f ms (%s)",
@@ -1027,7 +1088,8 @@ final class Report {
                 250,
                 "ms",
                 "NFR-005",
-                pause == 0 ? "none in that tick" : String.format("a %.1f ms pause in that tick", pause / MS));
+                cpu(r) + "; "
+                        + (pause == 0 ? "no pause in that tick" : String.format("a %.1f ms pause in it", pause / MS)));
     }
 
     private static long[] largestWorker(List<Window> windows) {
