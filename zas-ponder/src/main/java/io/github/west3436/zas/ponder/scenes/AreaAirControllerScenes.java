@@ -39,8 +39,8 @@ public final class AreaAirControllerScenes {
         BlockPos controller = util.grid().at(2, 2, 3);
         BlockPos generator = controller.below();
         BlockPos lamp = util.grid().at(2, 3, 4);
-        BlockPos vent = util.grid().at(3, 1, 1);
-        BlockPos scrubber = util.grid().at(1, 1, 1);
+        BlockPos vent = util.grid().at(3, 0, 1);
+        BlockPos scrubber = util.grid().at(1, 0, 1);
         Vec3 panel = Power.panel(util, controller, Direction.NORTH);
 
         // The wall, with a lamp on it, and the controller on it, unpowered.
@@ -71,13 +71,13 @@ public final class AreaAirControllerScenes {
         Build.change(scene, controller, s -> s.setValue(AreaAirControllerBlock.STATUS, ControllerStatus.SAFE));
         Say.at(scene, util.vector().blockSurface(generator, Direction.NORTH), "controller.fe");
 
-        // The parts in its room.
+        // The parts in its room, in its floor.
         Map<BlockPos, BlockState> parts = new LinkedHashMap<>();
         parts.put(vent, AtmosBlocks.VENT.get().defaultBlockState().setValue(BlockStateProperties.FACING, Direction.UP));
         parts.put(
                 scrubber,
                 AtmosBlocks.SCRUBBER.get().defaultBlockState().setValue(BlockStateProperties.FACING, Direction.UP));
-        Build.revealAll(scene, util, parts, Direction.DOWN);
+        Build.sink(scene, util, parts);
         Build.change(scene, vent, s -> s.setValue(VentMode.PROPERTY, VentMode.BLOW));
         Build.change(scene, scrubber, s -> s.setValue(ScrubberMode.PROPERTY, ScrubberMode.SCRUB));
         Say.at(scene, panel, "controller.powers");

@@ -12,7 +12,9 @@ import io.github.west3436.zas.ponder.scene.Build;
 import io.github.west3436.zas.ponder.scene.Gas;
 import io.github.west3436.zas.ponder.scene.Say;
 import io.github.west3436.zas.ponder.scene.Stage;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
@@ -30,15 +32,18 @@ public final class PortScenes {
 
         BlockPos port = util.grid().at(2, 1, 1);
         BlockPos canister = port.above();
-        BlockPos vent = util.grid().at(2, 1, 3);
-        List<BlockPos> run = List.of(port.below(), util.grid().at(2, 0, 2), vent.below());
+        BlockPos vent = util.grid().at(2, 0, 3);
+        BlockPos dip = util.grid().at(2, 0, 2);
+        List<BlockPos> run = List.of(port.below(), dip, dip.below(), vent.below());
 
-        // The pipe runs under the floor.
+        // The pipe runs in the floor, then dips under the vent's place in it.
         BlockState pipe = AtmosBlocks.PIPE.get().defaultBlockState().setValue(PipeColor.PROPERTY, PipeColor.BLUE);
-        for (BlockPos pos : run) {
-            Build.place(scene, pos, pipe);
-        }
-        Build.settle(scene);
+        Build.place(scene, port.below(), pipe);
+        Build.place(scene, dip, pipe);
+        Map<BlockPos, BlockState> under = new LinkedHashMap<>();
+        under.put(dip.below(), pipe);
+        under.put(vent.below(), pipe);
+        Build.under(scene, util, under);
         scene.idle(Build.SHOW);
 
         Build.drop(scene, util, port, AtmosBlocks.CONNECTOR_PORT.get().defaultBlockState());
@@ -58,8 +63,9 @@ public final class PortScenes {
                         .setValue(CanisterColor.PROPERTY, CanisterColor.BLUE));
         Say.at(scene, util.vector().topOf(port), "connector_port.canister_on_top");
 
-        // A vent at the pipe's other end, powered by an area air controller on the wall beside it.
-        Build.drop(
+        // A vent in the floor at the pipe's other end, powered by an area air controller on the wall
+        // beside it.
+        Build.sink(
                 scene, util, vent, AtmosBlocks.VENT.get().defaultBlockState().setValue(VentBlock.FACING, Direction.UP));
         BlockState wall = AtmosBlocks.STATION_WALL.get().defaultBlockState();
         for (BlockPos pos :
@@ -88,7 +94,7 @@ public final class PortScenes {
         scene.world().modifyBlock(vent, s -> s.setValue(VentMode.PROPERTY, VentMode.BLOW), false);
         Gas.puff(scene, util, vent, Direction.UP, flowing);
         Say.over(scene, flowing, util.vector().topOf(vent), "connector_port.gas_flows");
-        Gas.flow(scene, flowing, List.of(canister, port, run.get(0), run.get(1), run.get(2), vent));
+        Gas.flow(scene, flowing, List.of(canister, port, run.get(0), run.get(1), run.get(2), run.get(3), vent));
         scene.markAsFinished();
     }
 }
