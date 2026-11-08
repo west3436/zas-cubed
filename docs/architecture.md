@@ -2460,10 +2460,10 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
-| `firelock` | The firelock and its lockdown (§11.8), the work it shares with a firelock on an airlock or a door (`FirelockLogic`), the firelock item, and the door with a firelock (§11.17) |
-| `airlock` | The airlocks, the airlock controller with its menu, the air sensor, and the rules of a cycle (`AirlockCycle`, `SensorStatus`), which hold no game classes (§11.17) |
+| `firelock` | The firelock and its lockdown (§11.8), the work it shares with a firelock on an airlock or a door (`FirelockLogic`), the firelock item, and the door with a firelock (§11.18) |
+| `airlock` | The airlocks, the airlock controller with its menu, the air sensor, and the rules of a cycle (`AirlockCycle`, `SensorStatus`), which hold no game classes (§11.18) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6, §11.17), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
+| `tool` | The multitool (§11.6, §11.18), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
@@ -2475,7 +2475,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.17) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.18) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -3425,7 +3425,7 @@ readings.
 
 *Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
 `.firelock`. A firelock fitted to an airlock or a vanilla door does the same
-work through `FirelockLogic` (§11.17).*
+work through `FirelockLogic` (§11.18).*
 
 - **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
   placed and broken as a door is: the item places both halves, either half
@@ -3944,7 +3944,7 @@ no valve; the stack has already checked that the player may build there.
 - **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
   part, with the block's own breaking sound on a removal.
 
-### 11.17 Airlocks (CONT-133 to CONT-142)
+### 11.18 Airlocks (CONT-133 to CONT-142)
 
 In `.airlock`, with the firelock on a door in `.firelock`. Nothing is added to
 the API. Every visible state is a block-state property, so a resource pack, or

@@ -3554,7 +3554,7 @@ closed when it opens again.
 default, which the owner kept. A firelock on a door replaces it with a door with a firelock,
 `zas_atmos:firelock_door`, which keeps the door's type, opens as that door did (an iron door
 only by redstone) and drops the door and the firelock when broken
-([architecture §11.17](../architecture.md#1117-airlocks-cont-133-to-cont-142)).*
+([architecture §11.18](../architecture.md#1118-airlocks-cont-133-to-cont-142)).*
 
 #### CONT-138 · Airlock controller links
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133

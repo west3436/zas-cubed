@@ -35,7 +35,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * An airlock controller's work, once per atmos tick (CONT-138 to CONT-141, CONT-152, CONT-153,
- * architecture §11.17).
+ * architecture §11.18).
  *
  * <p><b>Links.</b> The multitool links at most two airlocks, at most one air sensor and any number of
  * vents ({@link #toggleLink}). A link whose loaded block is no longer of its kind is dropped.
