@@ -26,7 +26,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -34,60 +34,25 @@ public final class RecipeTests {
     private RecipeTests() {}
 
     /**
-     * Blocks whose recipes ship before the blocks do: the central atmospherics controller and the
-     * station walls and glass (CONT-129 to CONT-131). {@link #craftable} checks each once it's
-     * registered.
+     * The content mod's items with no recipe: the O2 and air tanks, made by filling an empty tank
+     * from a canister (CONT-039).
      */
-    private static final List<String> RECIPES_AHEAD =
-            List.of("central_atmos_controller", "station_wall", "reinforced_station_wall", "reinforced_glass_block");
+    private static Set<Item> filledOnly() {
+        return Set.of(AtmosItems.OXYGEN_TANK.get(), AtmosItems.AIR_TANK.get());
+    }
 
     /**
-     * The items {@code cont_051_recipes_use_vanilla_materials} checks by name, and those of {@link
-     * #RECIPES_AHEAD} that are registered. It isn't every item the content mod registers: the O2 and
-     * air tanks have no recipe, as they're made by filling an empty tank (CONT-039).
+     * Every item the content mod registers but those of {@link #filledOnly}; not the test items the
+     * GameTests add. A variant that is only a model or data on its item, such as a battery's charge,
+     * the magnetic boots switched on, a transfer valve's tanks or a filled canister, is the same
+     * item, so needs no recipe of its own.
      */
     private static List<Item> craftable() {
-        List<Item> items = new ArrayList<>(List.of(
-                AtmosItems.FILTER.get(),
-                AtmosItems.FILTER_MIRRORED.get(),
-                AtmosItems.MIXER.get(),
-                AtmosItems.MIXER_MIRRORED.get(),
-                AtmosItems.PRESSURE_PUMP.get(),
-                AtmosItems.VOLUME_PUMP.get(),
-                AtmosItems.PIPE.get(),
-                AtmosItems.PIPE_CAP.get(),
-                AtmosItems.MANUAL_VALVE.get(),
-                AtmosItems.REDSTONE_VALVE.get(),
-                AtmosItems.CONNECTOR_PORT.get(),
-                AtmosItems.CANISTER.get(),
-                AtmosItems.VENT.get(),
-                AtmosItems.SCRUBBER.get(),
-                AtmosItems.PASSIVE_VENT.get(),
-                AtmosItems.AREA_AIR_CONTROLLER.get(),
-                AtmosItems.GENERATOR.get(),
-                AtmosItems.FIRELOCK.get(),
-                AtmosItems.FIRE_ALARM.get(),
-                AtmosItems.IGNITER.get(),
-                AtmosItems.HEATER.get(),
-                AtmosItems.AIR_CONDITIONER.get(),
-                AtmosItems.PORTABLE_PUMP.get(),
-                AtmosItems.PORTABLE_SCRUBBER.get(),
-                AtmosItems.RECHARGER.get(),
-                AtmosItems.ELECTROLYZER.get(),
-                AtmosItems.MULTITOOL.get(),
-                AtmosItems.CROWBAR.get(),
-                AtmosItems.FIRE_EXTINGUISHER.get(),
-                AtmosItems.EMPTY_TANK.get(),
-                AtmosItems.TANK_TRANSFER_VALVE.get(),
-                AtmosItems.ATMOS_ANALYZER.get(),
-                AtmosItems.EMERGENCY_OXYGEN_TANK.get()));
-        AtmosItems.gear().stream().map(DeferredItem::get).forEach(items::add);
-        AtmosItems.batteries().stream().map(DeferredItem::get).forEach(items::add);
-        AtmosItems.components().stream().map(DeferredItem::get).forEach(items::add);
-        for (String id : RECIPES_AHEAD) {
-            BuiltInRegistries.ITEM
-                    .getOptional(ResourceLocation.fromNamespaceAndPath(ZasAtmosMod.MOD_ID, id))
-                    .ifPresent(items::add);
+        List<Item> items = new ArrayList<>();
+        for (DeferredHolder<Item, ? extends Item> entry : AtmosItems.ITEMS.getEntries()) {
+            if (!filledOnly().contains(entry.get())) {
+                items.add(entry.get());
+            }
         }
         return items;
     }
@@ -101,7 +66,8 @@ public final class RecipeTests {
     /**
      * The content is craftable from vanilla materials (CONT-051): each recipe's ingredients are
      * vanilla items or the mod's own, and each of the mod's own has a recipe too, so every chain
-     * ends in vanilla materials. Each item in {@link #craftable} has a recipe.
+     * ends in vanilla materials. Every item of the mod has a recipe that loads, but the O2 and air
+     * tanks, which have none.
      */
     @GameTest(template = "empty")
     public static void cont_051_recipes_use_vanilla_materials(GameTestHelper h) {
@@ -124,8 +90,13 @@ public final class RecipeTests {
                 }
             }
         }
-        for (Item item : craftable()) {
+        List<Item> craftable = craftable();
+        h.assertTrue(craftable.size() > 60, "only " + craftable.size() + " items of the mod");
+        for (Item item : craftable) {
             h.assertTrue(made.contains(item), BuiltInRegistries.ITEM.getKey(item) + " has no recipe");
+        }
+        for (Item item : filledOnly()) {
+            h.assertFalse(made.contains(item), BuiltInRegistries.ITEM.getKey(item) + " has a recipe");
         }
         h.succeed();
     }

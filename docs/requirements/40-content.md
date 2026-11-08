@@ -19,6 +19,7 @@ as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
 CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
+CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -1349,6 +1350,54 @@ takes the kind of what it holds: at least 95 % O₂ is an O₂ tank, N₂ and O�
 holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
 canister's loss and the kinds.*
 
+#### CONT-149 · Tank holder
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-030, DATA-016
+
+A tank holder shall hold up to 10 personal tanks (CONT-030) and no other item, and shall give
+each tank back with the item data it went in with, its gas to a relative error of 1e-9 per gas
+(DATA-016): taken out, dropped when the holder is broken, or after a save and reload.
+
+- **Rationale:** Decision: D-84, and the owner's choices of 2026-11-02 that it holds 10 tanks
+  and keeps their contents ([textures](../textures.md)). Its tanks are stored as in a chest:
+  their gas doesn't react, leak or fail there (CONT-038, CONT-100), so each comes back as it
+  went in.
+- **Verify:** A GameTest fills a holder with tanks of each kind, checks it refuses an eleventh
+  tank and another item, saves and reloads it, takes some tanks out and breaks it, and
+  compares each tank with what went in.
+
+*2026-11-07: added for review (D-84). The `Must` follows the owner's "All are R1 blockers".*
+
+#### CONT-150 · Moving tanks in and out of a tank holder
+`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-149
+
+A player shall put a tank into a tank holder by using the tank on it or through the holder's
+window, and take any of its tanks out through that window, which shows each tank's pressure.
+
+- **Rationale:** Decision: D-84, and D-76 for the window. Tanks move through slots, as on the
+  tank transfer valve's window (CONT-103), and using a tank on the block puts it in, as a battery
+  on the recharger (CONT-113).
+- **Verify:** GameTests put a tank in by use and through the window's slots, take one from the
+  middle, and check the slots refuse what the holder refuses and the server refuses a player
+  out of reach (CONT-074). Manual: the window's look.
+
+*2026-11-07: added for review (D-84).*
+
+#### CONT-151 · A tank holder's shelves
+`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
+
+A tank holder shall show the tanks it holds standing on two shelves of five, the lower shelf
+filled first, each tinted by its kind as on a tank transfer valve: O₂ and emergency O₂ tanks
+blue, air tanks yellow and the rest grey.
+
+- **Rationale:** Decision: the owner's choices of 2026-11-02 in the batch 5 art
+  ([texture procurement](../texture-procurement.md)), which has a model for each count from 0
+  to 10.
+- **Verify:** A GameTest checks the block shows as many tanks as it holds as tanks go in and
+  out. Manual: the tanks and their tints in game.
+
+*2026-11-07: added for review (D-84). With a model for each count, the tanks always fill the
+first places, so taking one from the middle moves the tanks after it down a place.*
+
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
 
@@ -2157,7 +2206,7 @@ checks the table in the world for wheat, a sapling and leaves. Leaves dim their 
 position, so they count the brightest of it and its neighbours.*
 
 #### CONT-051 · Craftable from vanilla materials
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 All R1 content shall be craftable from vanilla materials.
 
@@ -2170,8 +2219,18 @@ vanilla materials (D-72), so every chain ends in vanilla materials. The
 GameTest `cont_051_recipes_use_vanilla_materials` checks it for the recipes
 that load.*
 
+*2026-11-07: Implemented. Every recipe's ingredients are vanilla or the mod's
+own, and every chain ends in vanilla materials. Of the mod's 73 items, all but
+the O2 and air tanks have a recipe that loads; those two are made by filling an
+empty tank (CONT-039). `cont_051_recipes_use_vanilla_materials` (GameTest) now takes the
+items from the mod's registry, not a list, so a new item without a recipe
+fails it. `CraftingDocTest` (unit test) checks the chains of all 81 recipe
+files, including the 8 whose blocks aren't in the mod. A battery's charge, the
+magnetic boots switched on and a transfer valve's tanks are models of one item,
+not items of their own.*
+
 #### CONT-058 · Documented progression
-`Must` · `R1` · `Accepted` · Verify: Inspect
+`Must` · `R1` · `Implemented` · Verify: Inspect
 
 The content's crafting progression shall be documented.
 
@@ -2181,6 +2240,14 @@ The content's crafting progression shall be documented.
 
 *2026-11-02: the progression and every recipe are in
 [docs/crafting.md](../crafting.md).*
+
+*2026-11-07: Implemented. [docs/crafting.md](../crafting.md) matches all 81
+recipe files. `CraftingDocTest` (unit test) fails when a row of its recipe
+tables and a recipe file differ in name, count, stage, grid or ingredients, or
+when the components table's stages and uses don't follow from the recipes.
+The page now uses the names the game shows (the pipe end cap and the emergency
+oxygen tank), and lists the 8 recipes whose blocks aren't in the mod yet under
+a heading of their own.*
 
 #### CONT-059 · Data-driven recipes
 `Must` · `R1` · `Implemented` · Verify: Inspect
@@ -2247,7 +2314,7 @@ only power source for atmospherics parts, and portables run on batteries. All
 FE values below are configurable starting points, tuned in playtesting.
 
 #### CONT-060 · FE-powered devices
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: D-25, D-37
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-37
 
 Active devices shall consume Forge Energy (FE). A device without power stops.
 
@@ -2292,8 +2359,28 @@ are removed and the buffer spent; once its lease runs out, it makes nothing,
 uses no water and shows off, and stays switched on. This stays Accepted until
 each device exists to check.*
 
+*2026-11-07: Implemented. Every device that uses FE has a GameTest that cuts
+its power and sees it stop. Two are new.
+`PowerCutTests.cont_060_an_igniter_a_recharger_and_a_fire_alarm_stop_when_their_power_is_cut`:
+a generator-powered controller runs a sparking igniter, a charging recharger
+and a fire alarm; the generator is removed and the buffer spent, and once the
+leases run out the igniter goes out with its signal still on, the recharger
+charges nothing and the alarm shows unpowered.
+`CentralControllerTests.cont_060_a_central_controller_stops_when_its_power_is_cut`:
+with its generator removed and the buffers spent, the central controller has
+no power and pays nothing, so the area air controller it ran has none. The
+scrubber and the area air controller stop in
+`ScrubberStationTests.cont_064_a_starved_controller_keeps_a_real_vent_and_scrubber_running`,
+and the other devices on a controller in the tests named above. The heater, air
+conditioner and portables run on batteries (D-73) and stop when the battery
+runs out: `HeatStationTests.s_05_heater_holds_a_room_at_its_setpoint`,
+`AirConditionerTests.cont_019_air_conditioner_holds_a_room_at_its_setpoint`,
+`PortablePumpTests.cont_018_portable_pump_works_on_its_room_on_its_battery` and
+`PortableScrubberTests.cont_018_portable_scrubber_scrubs_its_room_on_its_battery`.
+A firelock uses no FE (CONT-065).*
+
 #### CONT-065 · Device draws
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: D-37
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-37
 
 Devices shall draw these amounts by default:
 
@@ -2371,6 +2458,12 @@ key (`[power] air_conditioner`, D-73). The meaning doesn't change.*
 `cont_115_it_fills_from_a_generator_to_100000_fe_and_pays_5_fe_per_tick` (GameTest) checks
 it pays 100 FE per atmos tick. This stays Accepted until every device's draw is in the
 config.*
+
+*2026-11-07: Implemented. Each draw in the table is the default of a `[power]` key
+in `zas_atmos-server.toml` ([config.md](../config.md)), but the firelock's 0: a firelock
+uses no FE, so it has no key, which config.md now says. `ContentConfigDocTest` (unit
+test) checks each key's default against the table, and that config.md lists every key
+of `zas_atmos-server.toml` with its default.*
 
 #### CONT-061 · Built-in generator
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-25, D-35, D-37, A-01
@@ -3266,3 +3359,8 @@ and the recharger are added (D-69).*
 *2026-11-03: the central atmospherics controller is added (D-75).*
 
 *2026-11-06: station walls and reinforced glass are added (D-80, D-81).*
+
+*2026-11-07: batch 5's eight blocks are added (D-84): the airlock and the large airlock, the
+airlock controller, the air sensor, the radiator pipe, the radiator adaptor, the heat exchanger and the
+tank holder. Heat-exchange pipes and radiators, and air sensors, leave the R2 column; meters, the
+thermoelectric cooler and the rest of it stay.*
