@@ -99,17 +99,24 @@ public final class Build {
     }
 
     /**
-     * Takes a shown block away, as a wrench or a player would, lifting it out of sight, and joins its
-     * neighbours to what's left: a pipe beside it gets an open end.
+     * Takes shown blocks away together, as a wrench or a player would, lifting them out of sight, and
+     * joins their neighbours to what's left: a pipe beside a gap gets an open end.
      *
      * @param scene the scene
      * @param util the scene's helpers
-     * @param pos the block
+     * @param positions the blocks
      */
-    public static void remove(SceneBuilder scene, SceneBuildingUtil util, BlockPos pos) {
-        scene.world().hideSection(util.select().position(pos), Direction.UP);
+    public static void remove(SceneBuilder scene, SceneBuildingUtil util, BlockPos... positions) {
+        Selection all = null;
+        for (BlockPos pos : positions) {
+            Selection one = util.select().position(pos);
+            all = all == null ? one : all.add(one);
+        }
+        scene.world().hideSection(all, Direction.UP);
         scene.idle(SHOW);
-        place(scene, pos, Blocks.AIR.defaultBlockState());
+        for (BlockPos pos : positions) {
+            place(scene, pos, Blocks.AIR.defaultBlockState());
+        }
         settle(scene);
     }
 
