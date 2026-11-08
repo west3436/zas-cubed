@@ -38,6 +38,9 @@ import net.minecraft.world.phys.Vec3;
  *       watch doesn't trust</b>: nothing.
  * </ul>
  *
+ * <p>"Too thin" is the line below which zones stop conducting, read from the API each atmos tick
+ * (HEAT-008, API-064).
+ *
  * <p>Heat leaves or enters the network at once. Heat added to a zone leaves the caller when it is
  * sent; heat drawn from a zone arrives later, and the API may deliver less than asked at the
  * temperature floor, so the network gives back the difference when the result comes (API-013). Only
@@ -73,6 +76,7 @@ public final class RadiatorExchange {
         double seconds = AtmosTicks.SECONDS;
         double conductance = AtmosServerConfig.get(AtmosServerConfig.RADIATOR_CONDUCTANCE);
         double emissivity = AtmosServerConfig.get(AtmosServerConfig.RADIATOR_EMISSIVITY);
+        double nearVacuum = Atmospheres.nearVacuumDensity();
         int n = radiators.size();
         double[] coupling = new double[n];
         double[] body = new double[n];
@@ -90,7 +94,7 @@ public final class RadiatorExchange {
                 continue;
             }
             GasMixture air = cell.mixture();
-            boolean thin = RadiatorMath.nearVacuum(air.totalMoles(), air.volume());
+            boolean thin = RadiatorMath.nearVacuum(air.totalMoles(), air.volume(), nearVacuum);
             double a;
             if (!thin && (cell.state() == AtmosphereState.ZONED || cell.state() == AtmosphereState.AMBIENT)) {
                 a = RadiatorMath.convection(

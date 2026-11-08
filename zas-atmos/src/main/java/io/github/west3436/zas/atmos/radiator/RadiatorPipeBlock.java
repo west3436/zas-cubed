@@ -79,7 +79,8 @@ public class RadiatorPipeBlock extends BaseEntityBlock implements PipeConnector 
     /** Only radiator pipe and an adaptor, which takes it only on its radiator end. */
     @Override
     public boolean pipeConnects(BlockState self, Direction face, BlockState neighbour) {
-        return neighbour.getBlock() instanceof RadiatorPipeBlock || neighbour.getBlock() instanceof RadiatorAdaptorBlock;
+        return neighbour.getBlock() instanceof RadiatorPipeBlock
+                || neighbour.getBlock() instanceof RadiatorAdaptorBlock;
     }
 
     private BlockState connect(BlockState state, Level level, BlockPos pos) {

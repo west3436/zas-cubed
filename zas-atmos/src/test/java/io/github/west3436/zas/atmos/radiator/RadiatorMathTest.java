@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +45,8 @@ class RadiatorMathTest {
             assertEquals(20 * 100 * dt, s.heat()[0], 20 * 100 * dt * 1e-6, "a step of " + dt + " s");
         }
         double a = RadiatorMath.convection(50, 1, 1e12);
-        assertEquals(50 * 100, step(1e9, 400, new double[] {a}, new double[] {300}).heat()[0], 5e-3, "50 W/K");
+        assertEquals(
+                50 * 100, step(1e9, 400, new double[] {a}, new double[] {300}).heat()[0], 5e-3, "50 W/K");
         assertEquals(0, RadiatorMath.convection(0, 1, 1e12), "no conductance");
         assertEquals(0, RadiatorMath.convection(G, 1, 0), "no gas");
     }
@@ -73,16 +75,24 @@ class RadiatorMathTest {
         assertEquals(270, RadiatorMath.cellCapacity(270, 500), 0, "less than a cell");
     }
 
-    /** HEAT-020: a cell thinner than 1 % of standard air's density takes no part. */
+    /**
+     * HEAT-020: a cell thinner than the near-vacuum density, 1 % of standard air's by default
+     * (HEAT-008, API-064), takes no part, and one at it or denser does, as with zones.
+     */
     @Test
     void heat_020_near_vacuum_is_below_1_percent_of_standard_air() {
         double standard = 101.325 / (8.314462618 * 293.15);
-        assertEquals(standard, RadiatorMath.STANDARD_DENSITY, standard * 1e-6);
-        assertTrue(RadiatorMath.nearVacuum(0, 1000), "a vacuum");
-        assertTrue(RadiatorMath.nearVacuum(0.009 * standard * 1000, 1000), "0.9 %");
-        assertFalse(RadiatorMath.nearVacuum(0.011 * standard * 1000, 1000), "1.1 %");
-        assertFalse(RadiatorMath.nearVacuum(standard * 1000, 1000), "standard air");
-        assertTrue(RadiatorMath.nearVacuum(1, 0), "no volume");
+        double line = Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY;
+        assertEquals(0.01 * standard, line, 1e-15, "the API's default");
+        assertTrue(RadiatorMath.nearVacuum(0, 1000, line), "a vacuum");
+        assertTrue(RadiatorMath.nearVacuum(0.009 * standard * 1000, 1000, line), "0.9 %");
+        assertFalse(RadiatorMath.nearVacuum(0.011 * standard * 1000, 1000, line), "1.1 %");
+        assertFalse(RadiatorMath.nearVacuum(line * 27_000, 27_000, line), "exactly at the line");
+        assertFalse(RadiatorMath.nearVacuum(standard * 1000, 1000, line), "standard air");
+        assertTrue(RadiatorMath.nearVacuum(1, 0, line), "no volume");
+        assertTrue(RadiatorMath.nearVacuum(0.02 * standard * 1000, 1000, 0.025 * standard), "a server's 2.5 %");
+        assertFalse(RadiatorMath.nearVacuum(1e-9, 1000, 0), "a server's 0 %: any gas takes part");
+        assertTrue(RadiatorMath.nearVacuum(0, 1000, 0), "a server's 0 %: a vacuum still radiates");
     }
 
     /**
@@ -109,7 +119,8 @@ class RadiatorMathTest {
                     a[k] = RadiatorMath.radiation(E * random.nextDouble(), 0.05 + 3 * random.nextDouble(), t, tb[k]);
                 } else {
                     cells[k] = Math.pow(10, -3 + 9 * random.nextDouble());
-                    a[k] = RadiatorMath.convection(1000 * random.nextDouble(), 0.05 + 3 * random.nextDouble(), cells[k]);
+                    a[k] = RadiatorMath.convection(
+                            1000 * random.nextDouble(), 0.05 + 3 * random.nextDouble(), cells[k]);
                 }
                 lo = Math.min(lo, tb[k]);
                 hi = Math.max(hi, tb[k]);
@@ -149,10 +160,7 @@ class RadiatorMathTest {
             assertEquals(formula, q, formula * 1e-6, "a large network at " + t + " K");
         }
         assertEquals(
-                0.5 * RadiatorMath.radiation(1, 1, 600, 2.7),
-                RadiatorMath.radiation(0.5, 1, 600, 2.7),
-                1e-12,
-                "ε 0.5");
+                0.5 * RadiatorMath.radiation(1, 1, 600, 2.7), RadiatorMath.radiation(0.5, 1, 600, 2.7), 1e-12, "ε 0.5");
         assertEquals(0, RadiatorMath.radiation(0, 1, 600, 2.7), "ε 0");
         assertEquals(1, RadiatorMath.AREA, "1 m²");
         assertEquals(0.9, E, "ε 0.9 by default");

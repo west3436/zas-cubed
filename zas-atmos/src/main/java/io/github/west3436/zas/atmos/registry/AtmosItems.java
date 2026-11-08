@@ -93,10 +93,12 @@ public final class AtmosItems {
 
     // Radiators and heat exchangers (CONT-143 to CONT-148).
 
-    public static final DeferredItem<BlockItem> RADIATOR_PIPE = ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_PIPE);
+    public static final DeferredItem<BlockItem> RADIATOR_PIPE =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_PIPE);
     public static final DeferredItem<BlockItem> RADIATOR_ADAPTOR =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_ADAPTOR);
-    public static final DeferredItem<BlockItem> HEAT_EXCHANGER = ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
+    public static final DeferredItem<BlockItem> HEAT_EXCHANGER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
 
     // The station blocks (CONT-129 to CONT-131).
 

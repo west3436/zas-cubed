@@ -1,6 +1,5 @@
 package io.github.west3436.zas.atmos.radiator;
 
-import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 
 /**
@@ -31,27 +30,21 @@ public final class RadiatorMath {
     /** One cell's volume, L: a segment exchanges with this much of the gas around it. */
     public static final double CELL_VOLUME = StandardAir.CELL_VOLUME;
 
-    /** Standard air's molar density, mol/L. */
-    public static final double STANDARD_DENSITY =
-            StandardAir.PRESSURE / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
-
-    /**
-     * The molar density below which gas is too thin to carry heat, mol/L: 1 % of standard air's, as a
-     * near-vacuum zone conducts nothing (HEAT-008).
-     */
-    public static final double NEAR_VACUUM_DENSITY = 0.01 * STANDARD_DENSITY;
-
     private RadiatorMath() {}
 
     /**
-     * Whether gas is too thin to carry heat to or from a segment (HEAT-008).
+     * Whether gas is too thin to carry heat to or from a segment: below the density at which a zone
+     * stops conducting (HEAT-008), which the API gives ({@code Atmospheres.nearVacuumDensity()},
+     * API-064). It is the zones' own test, at least that many moles per litre carry heat, except that
+     * no gas at all never does, even on a server whose line is 0.
      *
      * @param moles its moles
      * @param volume its volume, L
-     * @return true below {@link #NEAR_VACUUM_DENSITY}, or with no volume
+     * @param nearVacuum the near-vacuum density, mol/L
+     * @return true below it, with no gas, or with no volume
      */
-    public static boolean nearVacuum(double moles, double volume) {
-        return !(volume > 0) || !(moles / volume >= NEAR_VACUUM_DENSITY);
+    public static boolean nearVacuum(double moles, double volume, double nearVacuum) {
+        return !(volume > 0) || !(moles > 0) || !(moles >= nearVacuum * volume);
     }
 
     /**
