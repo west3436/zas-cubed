@@ -199,13 +199,6 @@ public final class AtmosBlockEntities {
             () -> BlockEntityType.Builder.of(ElectrolyzerBlockEntity::new, AtmosBlocks.ELECTROLYZER.get())
                     .build(null));
 
-    // The tank holder (CONT-149 to CONT-151, D-84).
-
-    public static final Supplier<BlockEntityType<TankHolderBlockEntity>> TANK_HOLDER = BLOCK_ENTITIES.register(
-            "tank_holder",
-            () -> BlockEntityType.Builder.of(TankHolderBlockEntity::new, AtmosBlocks.TANK_HOLDER.get())
-                    .build(null));
-
     // Radiators and heat exchangers (CONT-143 to CONT-148).
 
     public static final Supplier<BlockEntityType<RadiatorPipeBlockEntity>> RADIATOR_PIPE = BLOCK_ENTITIES.register(
@@ -223,6 +216,13 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<HeatExchangerBlockEntity>> HEAT_EXCHANGER = BLOCK_ENTITIES.register(
             "heat_exchanger",
             () -> BlockEntityType.Builder.of(HeatExchangerBlockEntity::new, AtmosBlocks.HEAT_EXCHANGER.get())
+                    .build(null));
+
+    // The tank holder (CONT-149 to CONT-151, D-84).
+
+    public static final Supplier<BlockEntityType<TankHolderBlockEntity>> TANK_HOLDER = BLOCK_ENTITIES.register(
+            "tank_holder",
+            () -> BlockEntityType.Builder.of(TankHolderBlockEntity::new, AtmosBlocks.TANK_HOLDER.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

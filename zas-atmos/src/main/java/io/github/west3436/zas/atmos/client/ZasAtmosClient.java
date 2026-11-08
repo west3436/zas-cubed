@@ -114,6 +114,13 @@ public final class ZasAtmosClient {
                         : -1,
                 AtmosBlocks.PIPE.get(),
                 AtmosBlocks.PIPE_CAP.get());
+        // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
+        event.register(
+                (state, level, pos, tintIndex) -> tintIndex == 0
+                        ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
+                        : -1,
+                AtmosBlocks.HEAT_EXCHANGER.get());
+
         // A tank holder's tanks are tinted by their kinds: tint index n is the tank in place n (CONT-151).
         event.register(
                 (state, level, pos, tintIndex) -> level != null
@@ -122,12 +129,6 @@ public final class ZasAtmosClient {
                         ? holder.tint(tintIndex - 1)
                         : -1,
                 AtmosBlocks.TANK_HOLDER.get());
-        // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
-        event.register(
-                (state, level, pos, tintIndex) -> tintIndex == 0
-                        ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
-                        : -1,
-                AtmosBlocks.HEAT_EXCHANGER.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */

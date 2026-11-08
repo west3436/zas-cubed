@@ -1,5 +1,6 @@
 package io.github.west3436.zas.engine.scheduler;
 
+import io.github.west3436.zas.engine.classify.EnclosureFill;
 import io.github.west3436.zas.engine.fire.BlockIgnitionSettings;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.engine.flow.FragileSettings;
@@ -28,6 +29,8 @@ import java.util.Objects;
  * @param dimensionPaused whether the whole dimension is paused (OPS-005): every zone behaves as a
  *     paused zone, and nothing is classified, so no zone forms, until a batch says otherwise
  * @param zones what happens to a zone's gas when its cells fill (CORE-029)
+ * @param enclosureMaxCells the most cells an enclosure can have when a zone forms (GEO-020, D-23); a
+ *     region with more is open
  */
 public record EngineSettings(
         ExchangeSettings exchange,
@@ -40,10 +43,12 @@ public record EngineSettings(
         BlockIgnitionSettings blockIgnition,
         FragileSettings fragile,
         boolean dimensionPaused,
-        ZoneSettings zones) {
+        ZoneSettings zones,
+        int enclosureMaxCells) {
     /**
-     * The default exchange, heat, fire threshold, hotspot spread and block ignition at a 1 s period,
-     * with the checker, airflow, reactions and block pressure damage off, and the dimension running.
+     * The default exchange, heat, fire threshold, hotspot spread, block ignition and enclosure bound
+     * at a 1 s period, with the checker, airflow, reactions and block pressure damage off, and the
+     * dimension running.
      */
     public static final EngineSettings DEFAULT = new EngineSettings(
             ExchangeSettings.DEFAULT,
@@ -56,7 +61,8 @@ public record EngineSettings(
             BlockIgnitionSettings.DEFAULT,
             FragileSettings.OFF,
             false,
-            ZoneSettings.DEFAULT);
+            ZoneSettings.DEFAULT,
+            EnclosureFill.DEFAULT_MAX_CELLS);
 
     public EngineSettings {
         Objects.requireNonNull(exchange, "exchange");
@@ -70,9 +76,12 @@ public record EngineSettings(
         if (Double.isNaN(airflowKpa) || airflowKpa < 0) {
             throw new IllegalArgumentException("airflowKpa must be >= 0: " + airflowKpa);
         }
+        if (enclosureMaxCells < 1 || enclosureMaxCells > (1 << 28)) {
+            throw new IllegalArgumentException("enclosureMaxCells must be 1 to 2^28: " + enclosureMaxCells);
+        }
     }
 
-    /** Settings for a dimension that is running, with block pressure damage off. */
+    /** Settings for a dimension that is running, with block pressure damage off and the default enclosure bound. */
     public EngineSettings(
             ExchangeSettings exchange,
             boolean checkConservation,
@@ -93,7 +102,8 @@ public record EngineSettings(
                 blockIgnition,
                 FragileSettings.OFF,
                 false,
-                ZoneSettings.DEFAULT);
+                ZoneSettings.DEFAULT,
+                EnclosureFill.DEFAULT_MAX_CELLS);
     }
 
     /** Settings with the default block ignition. */
@@ -157,7 +167,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     public EngineSettings withConservationCheck(boolean on) {
@@ -172,7 +183,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     public EngineSettings withHeat(HeatSettings settings) {
@@ -187,7 +199,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings exporting the openings of edges at or above {@code kpa} (FLOW-001). */
@@ -203,7 +216,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with a fire oxygen threshold (FIRE-030). */
@@ -219,7 +233,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with a set of reactions (FIRE-001). */
@@ -235,7 +250,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with hotspot spread settings (FIRE-016). */
@@ -251,7 +267,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with block ignition settings (FIRE-033, FIRE-034). */
@@ -267,7 +284,8 @@ public record EngineSettings(
                 settings,
                 fragile,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with block pressure damage's threshold and cap (FLOW-007, FLOW-015). */
@@ -283,7 +301,8 @@ public record EngineSettings(
                 blockIgnition,
                 settings,
                 dimensionPaused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with the whole dimension paused or running (OPS-005). */
@@ -299,7 +318,8 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 paused,
-                zones);
+                zones,
+                enclosureMaxCells);
     }
 
     /** These settings with what happens to a zone's gas when its cells fill (CORE-029). */
@@ -315,6 +335,24 @@ public record EngineSettings(
                 blockIgnition,
                 fragile,
                 dimensionPaused,
-                settings);
+                settings,
+                enclosureMaxCells);
+    }
+
+    /** These settings with the most cells an enclosure can have (GEO-020, D-23). */
+    public EngineSettings withEnclosureMaxCells(int maxCells) {
+        return new EngineSettings(
+                exchange,
+                checkConservation,
+                heat,
+                airflowKpa,
+                fire,
+                reactions,
+                hotspots,
+                blockIgnition,
+                fragile,
+                dimensionPaused,
+                zones,
+                maxCells);
     }
 }

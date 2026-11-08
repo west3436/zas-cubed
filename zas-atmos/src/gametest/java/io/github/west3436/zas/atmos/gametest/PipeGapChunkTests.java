@@ -7,7 +7,10 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.pipe.PipeNetwork;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -24,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.InteractionHand;
@@ -44,6 +48,11 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * simply returns; here each side may hold a network of its own that is still valid, which only a
  * rebuild can join to the other. As there, a chunk next to a loaded one drops only out of full
  * status, and the tests wait in real time, in a batch of their own.
+ *
+ * <p>As there too, devices and nodes step only in chunks that tick block entities (architecture
+ * §11.2), and a chunk next to a ticking one is always loaded in full. So while one side's chunk is
+ * away, the other side's devices are stepped directly, standing for a member of the line further
+ * along, in a ticking chunk, that steps the network in play; once both chunks are back, both tick.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -101,17 +110,57 @@ public final class PipeGapChunkTests {
             return nodes;
         }
 
+        /** Holds a chunk loaded in full, without ticking, or lets it go. */
         void hold(ChunkPos chunk, boolean on) {
+            hold(chunk, 0, on);
+        }
+
+        /**
+         * Holds a chunk where its block entities tick, as a player near it would, or lets it go. Its
+         * neighbours are then loaded in full.
+         */
+        void holdTicking(ChunkPos chunk, boolean on) {
+            hold(chunk, 1, on);
+        }
+
+        private void hold(ChunkPos chunk, int distance, boolean on) {
             if (on) {
-                a.level.getChunkSource().addRegionTicket(HOLD, chunk, 0, chunk);
+                a.level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
             } else {
-                a.level.getChunkSource().removeRegionTicket(HOLD, chunk, 0, chunk);
+                a.level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
             }
         }
 
         /** Whether a chunk is loaded in full: asking loads nothing. */
         boolean full(ChunkPos chunk) {
             return a.level.getChunkSource().hasChunk(chunk.x, chunk.z);
+        }
+
+        /** Whether a chunk ticks its block entities, so that the schedule steps them. */
+        boolean ticking(ChunkPos chunk) {
+            return LoadedBlocks.ticking(a.level, chunk.getWorldPosition());
+        }
+
+        /** Holds both chunks where they tick, and waits until they do. */
+        void bothTicking(GameTestSequence seq) {
+            seq.thenExecute(() -> {
+                        holdTicking(chunkA, true);
+                        holdTicking(chunkB, true);
+                    })
+                    .thenWaitUntil(() -> h.assertTrue(
+                            ticking(chunkA) && ticking(chunkB), "the chunks don't tick their block entities"));
+        }
+
+        /**
+         * Steps the devices in a chunk once, as a member of their network further along, in a ticking
+         * chunk, would step their network.
+         */
+        void step(ChunkPos chunk) {
+            for (AtmosDevice d : DeviceTicker.loaded(a.level)) {
+                if (new ChunkPos(d.getBlockPos()).equals(chunk)) {
+                    d.step();
+                }
+            }
         }
 
         PipeNetwork net(int x) {
@@ -146,9 +195,13 @@ public final class PipeGapChunkTests {
         }
 
         void done() {
+            hold(chunkA, true);
+            hold(chunkB, true);
             a.clear(WEST - 1, Z - 2, EAST + 1, Z + 2);
-            hold(chunkA, false);
-            hold(chunkB, false);
+            for (ChunkPos c : List.of(chunkA, chunkB)) {
+                hold(c, false);
+                holdTicking(c, false);
+            }
         }
     }
 
@@ -161,13 +214,20 @@ public final class PipeGapChunkTests {
      * and ends it. A node that steps in those two ticks builds a network across the border, so the
      * outcome could turn on where they fall in the atmos period: the test places the pipe at each of
      * the period's game ticks in turn.
+     *
+     * <p>A player places a pipe well inside the chunks that tick, so this stands for a pipe placed by
+     * a machine or a command at the edge of what is loaded, in chunk A, with the line's near side
+     * stepped by a member further along in a ticking chunk. Chunk A's devices are stepped directly in
+     * both of those game ticks and after them, which is when a node could build across the border.
+     * Both chunks tick once chunk B returns.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void cont_003_a_pipe_placed_beside_a_chunk_away_joins_it_when_it_returns(GameTestHelper h) {
         Border b = new Border(h, 3000);
         b.a.set(GAP, Y - 1, Z, Area.STONE); // to click on when placing the pipe
         List<PipeNode> sides = b.line();
-        var seq = h.startSequence().thenIdle(2); // the game's own onLoad calls dissolve the networks built above
+        GameTestSequence seq =
+                h.startSequence().thenIdle(2); // the game's own onLoad calls dissolve the networks built above
         for (int i = 0; i < AtmosTicks.PERIOD; i++) {
             int phase = i;
             double[] n2 = new double[1];
@@ -192,28 +252,35 @@ public final class PipeGapChunkTests {
                         h.assertFalse(b.full(b.chunkB), "chunk B returned before the pipe was placed");
                         h.assertTrue(east[0].valid(), "chunk B's network ended while it was away");
                         all.add(placePipe(b));
+                        b.step(b.chunkA); // in the first of the two game ticks with chunk B back
                     })
+                    .thenIdle(1)
+                    .thenExecute(() -> b.step(b.chunkA))
                     .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkB), "chunk B hasn't left again"))
-                    .thenIdle(2 * AtmosTicks.PERIOD)
+                    .thenExecute(() -> b.step(b.chunkA))
+                    .thenIdle(AtmosTicks.PERIOD)
+                    .thenExecute(() -> b.step(b.chunkA))
+                    .thenIdle(AtmosTicks.PERIOD)
                     .thenExecute(() -> {
                         h.assertFalse(b.full(b.chunkB), "chunk B came back by itself");
                         b.a.close(b.moles(N2, all), n2[0], "the line's N2 with chunk B away, at " + phase);
                         b.a.close(b.moles(O2, all), o2[0], "the line's O2 with chunk B away, at " + phase);
                         b.hold(b.chunkB, true);
-                    })
-                    .thenWaitUntil(() -> h.assertTrue(b.full(b.chunkB), "chunk B hasn't returned"))
-                    .thenIdle(2 * AtmosTicks.PERIOD)
-                    .thenExecute(() -> {
-                        b.assertJoined(
-                                b.a.<PipeNodeEntity>entity(WEST, Y, Z),
-                                b.a.<PipeNodeEntity>entity(EAST, Y, Z),
-                                LINE_NODES,
-                                LINE_NODES * PipeVolumes.PIPE,
-                                n2[0],
-                                o2[0],
-                                "placing at " + phase);
-                        b.a.set(GAP, Y, Z, AIR); // its share goes to the air, and the sides part
                     });
+            b.bothTicking(seq);
+            seq.thenIdle(2 * AtmosTicks.PERIOD).thenExecute(() -> {
+                b.assertJoined(
+                        b.a.<PipeNodeEntity>entity(WEST, Y, Z),
+                        b.a.<PipeNodeEntity>entity(EAST, Y, Z),
+                        LINE_NODES,
+                        LINE_NODES * PipeVolumes.PIPE,
+                        n2[0],
+                        o2[0],
+                        "placing at " + phase);
+                b.a.set(GAP, Y, Z, AIR); // its share goes to the air, and the sides part
+                b.holdTicking(b.chunkA, false); // held in full again, as at the start
+                b.holdTicking(b.chunkB, false);
+            });
         }
         seq.thenExecute(b::done).thenSucceed();
     }
@@ -266,6 +333,11 @@ public final class PipeGapChunkTests {
      * and each has the other connected beside it. They join, with no gas lost. A held chunk beyond
      * each end keeps its neighbour in memory, as a player nearby does a chunk just out of full status.
      *
+     * <p>It stands for a player walking from one end of a long line to the other and back, with the
+     * side nearer them stepped by a member further along, in a ticking chunk: chunk A's devices are
+     * stepped directly while chunk B is away, and chunk B's while chunk A is away. Both chunks tick
+     * while the sides first join and once both are back.
+     *
      * @param b the border
      * @param west a node in chunk A, on the border
      * @param east the node it connects to in chunk B
@@ -278,37 +350,44 @@ public final class PipeGapChunkTests {
         ChunkPos beyondB = new ChunkPos(b.chunkB.x + 1, b.chunkB.z);
         b.hold(beyondA, true);
         b.hold(beyondB, true);
-        h.startSequence()
-                .thenIdle(2) // the game's own onLoad calls dissolve the networks built by the test
-                .thenWaitUntil(() -> h.assertTrue(
+        GameTestSequence seq =
+                h.startSequence().thenIdle(2); // the game's own onLoad calls dissolve the test's networks
+        b.bothTicking(seq);
+        seq.thenWaitUntil(() -> h.assertTrue(
                         west.currentNetwork() != null && west.currentNetwork() == east.currentNetwork(),
                         "the sides haven't joined"))
                 .thenExecute(() -> {
                     west.currentNetwork().gas().add(new GasParcel(Map.of(N2, 70.0, O2, 35.0), T));
+                    b.holdTicking(b.chunkA, false);
+                    b.holdTicking(b.chunkB, false);
                     b.hold(b.chunkB, false);
                 })
                 .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkB), "chunk B is still loaded"))
-                .thenWaitUntil(() -> {
+                .thenExecute(() -> b.step(b.chunkA))
+                .thenIdle(AtmosTicks.PERIOD)
+                .thenExecute(() -> b.step(b.chunkA))
+                .thenExecute(() -> {
                     PipeNetwork net = west.currentNetwork();
                     h.assertTrue(net != null && !net.members().contains(east), "chunk A's side hasn't parted");
+                    b.hold(b.chunkA, false);
                 })
-                .thenExecute(() -> b.hold(b.chunkA, false))
                 .thenWaitUntil(() -> h.assertFalse(b.full(b.chunkA), "chunk A is still loaded"))
                 .thenExecute(() -> b.hold(b.chunkB, true))
                 .thenWaitUntil(() -> h.assertTrue(b.full(b.chunkB), "chunk B hasn't returned"))
-                .thenWaitUntil(() -> {
+                .thenExecute(() -> b.step(b.chunkB))
+                .thenIdle(AtmosTicks.PERIOD)
+                .thenExecute(() -> b.step(b.chunkB))
+                .thenExecute(() -> {
                     PipeNetwork net = east.currentNetwork();
                     h.assertTrue(net != null && !net.members().contains(west), "chunk B's side hasn't built its own");
-                })
-                .thenExecute(() -> {
                     h.assertFalse(b.full(b.chunkA), "chunk A came back by itself");
                     h.assertTrue(west.currentNetwork() != null, "chunk A's network ended while it was away");
                     b.a.close(b.moles(N2, all), 70.0, "the N2 with chunk A away");
                     b.a.close(b.moles(O2, all), 35.0, "the O2 with chunk A away");
                     b.hold(b.chunkA, true);
-                })
-                .thenWaitUntil(() -> h.assertTrue(b.full(b.chunkA), "chunk A hasn't returned"))
-                .thenIdle(2 * AtmosTicks.PERIOD)
+                });
+        b.bothTicking(seq);
+        seq.thenIdle(2 * AtmosTicks.PERIOD)
                 .thenExecute(() -> {
                     b.assertJoined(west, east, all.size(), volume, 70.0, 35.0, "after both returned");
                     b.done();

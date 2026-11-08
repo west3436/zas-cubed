@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.gametest;
 
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.PinOutcome;
@@ -15,13 +16,19 @@ import io.github.west3436.zas.atmos.controller.ControllerStatus;
 import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.controller.Thresholds;
 import io.github.west3436.zas.atmos.controller.VentOrder;
+import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.environment.Ambients;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -491,6 +498,118 @@ public final class ControllerTests {
             h.assertValueEqual(
                     c.buffer().getEnergyStored(), 10_000 - own - ventCost, "the buffer after the switch-on tick");
         });
+    }
+
+    /**
+     * A controller's parts follow its zone as it changes, and parts as they come and go (CONT-042):
+     * two rooms whose controllers pinned their zones merge through a hole in the wall between them
+     * and split when it is filled again; a third room with no zone of its own joins one of them
+     * through another hole; and a part placed in a room, then broken, comes and goes. At each step
+     * the controller lists what asking every loaded part's zone then finds, as it did before parts
+     * were indexed by zone. Only the controllers step, so only the index's own triggers can find a
+     * part's new zone.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_042_coverage_follows_its_zone_and_its_parts(GameTestHelper h) {
+        Site s = new Site(h, 28);
+        run(h, s, () -> {
+            s.clear();
+            AreaAirControllerBlockEntity west = poweredRoom(s, 0);
+            s.room(4, 8);
+            s.set(6, 2, 0, TestParts.battery().defaultBlockState());
+            AreaAirControllerBlockEntity east = s.controller(6);
+            s.room(8, 12);
+            TestParts.Part inWest = part(s, 2, 1, 3);
+            TestParts.Part inEast = part(s, 6, 1, 3);
+            TestParts.Part inThird = part(s, 10, 1, 3);
+            stepUntil(h, s, () -> s.zoned(2, 2, 2) && s.zoned(6, 2, 2), "the rooms have no zones", west, east);
+            h.assertFalse(s.zoned(10, 2, 2), "the third room has a zone");
+            h.assertValueEqual(positions(west), List.of(inWest.getBlockPos()), "the west room's parts");
+            h.assertValueEqual(positions(east), List.of(inEast.getBlockPos()), "the east room's parts");
+
+            s.set(4, 2, 2, Site.AIR); // the rooms' zones merge
+            stepUntil(h, s, () -> sameZone(s, 2, 6), "the rooms' zones didn't merge", west, east);
+            h.assertValueEqual(
+                    positions(west), List.of(inWest.getBlockPos(), inEast.getBlockPos()), "the merged zone's parts");
+
+            s.set(4, 2, 2, Site.STONE); // and split
+            stepUntil(h, s, () -> !sameZone(s, 2, 6), "the rooms' zones didn't split", west, east);
+            h.assertValueEqual(positions(west), List.of(inWest.getBlockPos()), "the west room's parts after the split");
+            h.assertValueEqual(positions(east), List.of(inEast.getBlockPos()), "the east room's parts after the split");
+
+            s.set(8, 2, 2, Site.AIR); // the east room's zone takes in the third room, which had none
+            stepUntil(h, s, () -> sameZone(s, 6, 10), "the east room's zone didn't reach the third", west, east);
+            h.assertValueEqual(
+                    positions(east),
+                    List.of(inEast.getBlockPos(), inThird.getBlockPos()),
+                    "the east zone's parts once it took in the third room");
+
+            TestParts.Part placed = part(s, 1, 1, 3);
+            stepAsAsked(h, s, west, east);
+            h.assertValueEqual(
+                    positions(west), List.of(inWest.getBlockPos(), placed.getBlockPos()), "after a part was placed");
+            s.set(1, 1, 3, Site.AIR);
+            h.assertTrue(placed.isRemoved(), "the placed part wasn't removed");
+            stepAsAsked(h, s, west, east);
+            h.assertValueEqual(positions(west), List.of(inWest.getBlockPos()), "after the part was broken");
+        });
+    }
+
+    private static TestParts.Part part(Site s, int x, int y, int z) {
+        return s.place(x, y, z, TestParts.Kind.PUMP.block().defaultBlockState(), TestParts.Part.class);
+    }
+
+    /** Whether the cells at (x, 2, 2) for two x are zoned, in one zone. */
+    private static boolean sameZone(Site s, int x1, int x2) {
+        return s.zoned(x1, 2, 2)
+                && s.zoned(x2, 2, 2)
+                && s.zone(x1, 2, 2).id().equals(s.zone(x2, 2, 2).id());
+    }
+
+    /**
+     * Steps the controllers as {@link #stepAsAsked} does until a change shows in the published
+     * zones, then once more, so that they have stepped since.
+     */
+    private static void stepUntil(
+            GameTestHelper h, Site s, BooleanSupplier done, String failure, AreaAirControllerBlockEntity... cs) {
+        for (int i = 0; i < 4 && !done.getAsBoolean(); i++) {
+            stepAsAsked(h, s, cs);
+        }
+        h.assertTrue(done.getAsBoolean(), failure);
+        stepAsAsked(h, s, cs);
+    }
+
+    /**
+     * Steps each controller, checks it lists what asking every loaded part then finds, and applies
+     * the atmos tick.
+     */
+    private static void stepAsAsked(GameTestHelper h, Site s, AreaAirControllerBlockEntity... controllers) {
+        for (AreaAirControllerBlockEntity c : controllers) {
+            c.step();
+            h.assertValueEqual(positions(c), asked(s, c), "the parts of the controller at " + c.getBlockPos());
+        }
+        s.tick();
+    }
+
+    private static List<BlockPos> positions(AreaAirControllerBlockEntity c) {
+        return c.parts().stream().map(AreaAirControllerBlockEntity.Part::pos).toList();
+    }
+
+    /** What asking each loaded part's zone now finds a controller covers, in the order they joined. */
+    private static List<BlockPos> asked(Site s, AreaAirControllerBlockEntity c) {
+        Optional<ZoneId> zone = Atmospheres.at(s.level, c.airPoint()).zone();
+        List<BlockPos> out = new ArrayList<>();
+        for (AtmosDevice d : DeviceTicker.loaded(s.level)) {
+            if (d instanceof PoweredDevice p
+                    && (c.links().contains(d.getBlockPos())
+                            || (zone.isPresent()
+                                    && Atmospheres.at(s.level, p.airPoint())
+                                            .zone()
+                                            .equals(zone)))) {
+                out.add(d.getBlockPos());
+            }
+        }
+        return out;
     }
 
     // ---- CONT-062, CONT-064 ---------------------------------------------------------------

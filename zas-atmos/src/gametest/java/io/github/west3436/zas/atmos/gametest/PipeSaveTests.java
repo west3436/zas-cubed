@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -82,17 +84,40 @@ public final class PipeSaveTests {
         return AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, facing);
     }
 
+    /** Holds a chunk loaded in full, without ticking, or lets it go. */
     static void hold(Area a, ChunkPos chunk, boolean on) {
+        hold(a, chunk, 0, on);
+    }
+
+    /**
+     * Holds a chunk where its block entities tick, as a player near it would, or lets it go. Devices
+     * step only there (architecture §11.2). Its neighbours are loaded in full.
+     */
+    static void holdTicking(Area a, ChunkPos chunk, boolean on) {
+        hold(a, chunk, 1, on);
+    }
+
+    private static void hold(Area a, ChunkPos chunk, int distance, boolean on) {
         if (on) {
-            a.level.getChunkSource().addRegionTicket(HOLD, chunk, 0, chunk);
+            a.level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
         } else {
-            a.level.getChunkSource().removeRegionTicket(HOLD, chunk, 0, chunk);
+            a.level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
         }
     }
 
     /** Whether a chunk is loaded in full: asking loads nothing. */
     private static boolean full(Area a, ChunkPos chunk) {
         return a.level.getChunkSource().hasChunk(chunk.x, chunk.z);
+    }
+
+    /** Whether each of some chunks ticks its block entities, so that the schedule steps them. */
+    private static boolean ticking(Area a, ChunkPos... chunks) {
+        for (ChunkPos c : chunks) {
+            if (!LoadedBlocks.ticking(a.level, c.getWorldPosition())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Saves every chunk there is something new to save in and flushes, as a save-all or a stop does. */
@@ -157,12 +182,23 @@ public final class PipeSaveTests {
             return PipeSaveTests.written(a, chunkA) + PipeSaveTests.written(a, chunkB);
         }
 
+        /** Holds both chunks where they tick, and waits until they do. */
+        void bothTicking(GameTestHelper h, GameTestSequence seq) {
+            seq.thenExecute(() -> {
+                        holdTicking(a, chunkA, true);
+                        holdTicking(a, chunkB, true);
+                    })
+                    .thenWaitUntil(() -> h.assertTrue(ticking(a, chunkA, chunkB), "the row's chunks don't tick"));
+        }
+
         void done() {
             hold(a, chunkA, true);
             hold(a, chunkB, true);
             a.clear(WEST - 1, Z - 1, EAST + 1, Z + 1);
-            hold(a, chunkA, false);
-            hold(a, chunkB, false);
+            for (ChunkPos c : List.of(chunkA, chunkB)) {
+                hold(a, c, false);
+                holdTicking(a, c, false);
+            }
         }
     }
 
@@ -170,13 +206,13 @@ public final class PipeSaveTests {
      * A row in one chunk with no zone near it settles and is saved, then loses half its gas as a vent
      * elsewhere on it would take it. Nothing else in the chunk changes, so only the network can say it
      * has something new to save. The row comes back from an unload with what it had left, not what it
-     * had.
+     * had. The chunk ticks while it is held, as near a player, so the row's nodes step.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_network_keeps_what_it_lost_since_its_chunk_last_saved(GameTestHelper h) {
         Area a = new Area(h, 2004);
         ChunkPos chunk = new ChunkPos(a.abs(0, 0, 0));
-        hold(a, chunk, true);
+        holdTicking(a, chunk, true);
         a.clear(0, 0, 12, 4);
         a.place(1, Y, Z, cap(Direction.EAST));
         for (int x = 2; x < 8; x++) {
@@ -186,24 +222,25 @@ public final class PipeSaveTests {
         PipeNodeEntity[] node = {a.entity(4, Y, Z)};
         node[0].network().gas().add(new GasParcel(Map.of(GAS, MOLES), T));
         h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(ticking(a, chunk), "the chunk doesn't tick"))
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
                     saveAll(a);
                     a.close(written(a, chunk), MOLES, "what the save wrote");
                     h.assertFalse(a.level.getChunk(chunk.x, chunk.z).isUnsaved(), "the chunk didn't save");
                     node[0].network().gas().takeFraction(0.5);
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenWaitUntil(() -> h.assertTrue(node[0].isRemoved(), "the row hasn't unloaded"))
                 .thenExecute(() -> {
                     a.close(written(a, chunk), MOLES / 2, "what the unload wrote");
-                    hold(a, chunk, true);
+                    holdTicking(a, chunk, true);
                 })
                 .thenWaitUntil(() -> h.assertTrue(full(a, chunk), "the row hasn't come back"))
                 .thenExecute(() -> {
                     a.close(a.<PipeNodeEntity>entity(4, Y, Z).network().gas().totalMoles(), MOLES / 2, "the row");
                     a.clear(0, 0, 12, 4);
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenSucceed();
     }
@@ -211,14 +248,16 @@ public final class PipeSaveTests {
     /**
      * Both of a row's chunks are told of a change, once it has saved. One save-all later, what they
      * wrote adds up to what the row holds. A network that sits idle tells neither, so it costs no saves.
+     * Both chunks tick, as near a player, so the idle network's nodes step.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_save_writes_both_sides_of_a_network_as_it_is_now(GameTestHelper h) {
         Row r = new Row(h, 2005);
         Area a = r.a;
         LevelChunk[] chunks = new LevelChunk[2];
-        h.startSequence()
-                .thenIdle(SETTLE)
+        GameTestSequence seq = h.startSequence();
+        r.bothTicking(h, seq);
+        seq.thenIdle(SETTLE)
                 .thenExecute(() -> {
                     saveAll(a);
                     a.close(r.written(), MOLES, "what the first save wrote");
@@ -244,7 +283,9 @@ public final class PipeSaveTests {
      * The far chunk leaves full status, and a save-all writes it. The game won't write it in a later
      * one, as it is no longer in play: only its unload will. So gas taken at the near end must leave
      * the far chunk's share alone, and what the world's files hold stays what the row holds. Nothing
-     * here loads the far chunk.
+     * here loads the far chunk. It stands for a row whose far end a player has left behind; both
+     * chunks tick once the far one returns, as when the player comes back, so the row's nodes step
+     * and rejoin.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_network_stops_changing_a_chunk_that_has_left_full_status(GameTestHelper h) {
@@ -252,7 +293,7 @@ public final class PipeSaveTests {
         Area a = r.a;
         double[] far = new double[1];
         double[] left = new double[1];
-        h.startSequence()
+        GameTestSequence seq = h.startSequence()
                 .thenExecute(() -> hold(a, r.chunkB, false))
                 .thenWaitUntil(() -> h.assertFalse(full(a, r.chunkB), "chunk B is still loaded"))
                 .thenExecute(() -> {
@@ -269,10 +310,9 @@ public final class PipeSaveTests {
                     a.close(written(a, r.chunkA), left[0], "what chunk A wrote");
                     a.close(written(a, r.chunkB), far[0], "what chunk B wrote");
                     a.close(r.heldInB(), far[0], "what chunk B holds");
-                    hold(a, r.chunkB, true);
-                })
-                .thenWaitUntil(() -> h.assertTrue(full(a, r.chunkB), "chunk B hasn't returned"))
-                .thenIdle(60)
+                });
+        r.bothTicking(h, seq);
+        seq.thenIdle(60)
                 .thenExecute(() -> {
                     h.assertTrue(r.west.network() == r.east.network(), "chunk B didn't rejoin the row");
                     a.close(r.west.network().gas().totalMoles(), left[0] + far[0], "the row");
@@ -284,14 +324,15 @@ public final class PipeSaveTests {
     /**
      * Gas reaches a node whose chunk has left full status, as a removal on its way when the chunk left
      * would. The node keeps it, that doesn't load the chunk, and the chunk saves it when it unloads,
-     * though the level no longer hands the chunk out.
+     * though the level no longer hands the chunk out. Both chunks tick once they load again, as when
+     * a player comes back, so the row's new nodes step.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_gas_reaching_a_chunk_that_has_left_full_status_is_saved(GameTestHelper h) {
         Row r = new Row(h, 2007);
         Area a = r.a;
         double expected = MOLES + 100.0;
-        h.startSequence()
+        GameTestSequence seq = h.startSequence()
                 .thenExecute(() -> hold(a, r.chunkB, false))
                 .thenWaitUntil(() -> h.assertFalse(full(a, r.chunkB), "chunk B is still loaded"))
                 .thenExecute(() -> {
@@ -306,13 +347,9 @@ public final class PipeSaveTests {
                     h.assertTrue(r.west.isRemoved(), "chunk A hasn't unloaded");
                     h.assertTrue(r.east.isRemoved(), "chunk B hasn't unloaded");
                 })
-                .thenExecute(() -> {
-                    a.close(r.written(), expected, "what the unloads wrote");
-                    hold(a, r.chunkA, true);
-                    hold(a, r.chunkB, true);
-                })
-                .thenWaitUntil(() -> h.assertTrue(full(a, r.chunkA) && full(a, r.chunkB), "the row hasn't come back"))
-                .thenIdle(60)
+                .thenExecute(() -> a.close(r.written(), expected, "what the unloads wrote"));
+        r.bothTicking(h, seq);
+        seq.thenIdle(60)
                 .thenExecute(() -> {
                     PipeNodeEntity back = a.entity(WEST + 1, Y, Z);
                     a.close(back.network().gas().totalMoles(), expected, "the row");
@@ -321,42 +358,49 @@ public final class PipeSaveTests {
                 .thenSucceed();
     }
 
-    /** A canister saved, emptied by half, and unloaded comes back with the half that's left. */
+    /**
+     * A canister saved, emptied by half, and unloaded comes back with the half that's left. Its chunk
+     * ticks while it is held, as near a player.
+     */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_canister_keeps_what_it_lost_since_its_chunk_last_saved(GameTestHelper h) {
         Area a = new Area(h, 2008);
         ChunkPos chunk = new ChunkPos(a.abs(0, 0, 0));
-        hold(a, chunk, true);
+        holdTicking(a, chunk, true);
         a.clear(0, 0, 12, 4);
         a.place(2, Y, Z, GasDeviceTests.canister());
         CanisterBlockEntity[] canister = {a.entity(2, Y, Z)};
         canister[0].network().gas().add(new GasParcel(Map.of(GAS, MOLES), T));
         h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(ticking(a, chunk), "the chunk doesn't tick"))
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
                     saveAll(a);
                     a.close(written(a, chunk), MOLES, "what the save wrote");
                     canister[0].network().gas().takeFraction(0.5); // what its valve does
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenWaitUntil(() -> h.assertTrue(canister[0].isRemoved(), "the canister hasn't unloaded"))
-                .thenExecute(() -> hold(a, chunk, true))
+                .thenExecute(() -> holdTicking(a, chunk, true))
                 .thenWaitUntil(() -> h.assertTrue(full(a, chunk), "the canister hasn't come back"))
                 .thenExecute(() -> {
                     CanisterBlockEntity back = a.entity(2, Y, Z);
                     a.close(back.network().gas().totalMoles(), MOLES / 2, "the canister");
                     a.clear(0, 0, 12, 4);
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenSucceed();
     }
 
-    /** An inline device's port saved, emptied by half, and unloaded comes back with the half that's left. */
+    /**
+     * An inline device's port saved, emptied by half, and unloaded comes back with the half that's
+     * left. Its chunk ticks while it is held, as near a player.
+     */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_device_port_keeps_what_it_lost_since_its_chunk_last_saved(GameTestHelper h) {
         Area a = new Area(h, 2010);
         ChunkPos chunk = new ChunkPos(a.abs(0, 0, 0));
-        hold(a, chunk, true);
+        holdTicking(a, chunk, true);
         a.clear(0, 0, 12, 4);
         a.place(
                 2,
@@ -366,21 +410,22 @@ public final class PipeSaveTests {
         PressurePumpBlockEntity[] pump = {a.entity(2, Y, Z)};
         pump[0].port(0).network().gas().add(new GasParcel(Map.of(GAS, MOLES), T));
         h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(ticking(a, chunk), "the chunk doesn't tick"))
                 .thenIdle(SETTLE)
                 .thenExecute(() -> {
                     saveAll(a);
                     pump[0].port(0).network().gas().takeFraction(0.5);
                     h.assertTrue(pump[0].savedIn().isUnsaved(), "the port's chunk wasn't told");
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenWaitUntil(() -> h.assertTrue(pump[0].isRemoved(), "the pump hasn't unloaded"))
-                .thenExecute(() -> hold(a, chunk, true))
+                .thenExecute(() -> holdTicking(a, chunk, true))
                 .thenWaitUntil(() -> h.assertTrue(full(a, chunk), "the pump hasn't come back"))
                 .thenExecute(() -> {
                     PressurePumpBlockEntity back = a.entity(2, Y, Z);
                     a.close(back.port(0).network().gas().totalMoles(), MOLES / 2, "the port");
                     a.clear(0, 0, 12, 4);
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenSucceed();
     }
@@ -388,13 +433,13 @@ public final class PipeSaveTests {
     /**
      * A portable pump pumps from its store into a held tank, with no zone to mark its chunk. Saved and
      * pumping on, then unloaded, it wrote what it had left, and it comes back with no more gas than
-     * went in.
+     * went in. Its chunk ticks while it is held, as near a player, so the pump steps.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_a_portable_keeps_what_it_lost_since_its_chunk_last_saved(GameTestHelper h) {
         Area a = new Area(h, 2009);
         ChunkPos chunk = new ChunkPos(a.abs(0, 0, 0));
-        hold(a, chunk, true);
+        holdTicking(a, chunk, true);
         a.clear(0, 0, 12, 4);
         a.place(
                 2,
@@ -416,11 +461,11 @@ public final class PipeSaveTests {
                     a.close(written(a, chunk), saved[0], "what the save wrote");
                 })
                 .thenWaitUntil(() -> h.assertTrue(pump[0].store().moles(GAS) < saved[0], "the pump hasn't gone on"))
-                .thenExecute(() -> hold(a, chunk, false))
+                .thenExecute(() -> holdTicking(a, chunk, false))
                 .thenWaitUntil(() -> h.assertTrue(pump[0].isRemoved(), "the pump hasn't unloaded"))
                 .thenExecute(() -> {
                     a.close(written(a, chunk), pump[0].store().moles(GAS), "what the unload wrote");
-                    hold(a, chunk, true);
+                    holdTicking(a, chunk, true);
                 })
                 .thenWaitUntil(() -> h.assertTrue(full(a, chunk), "the pump hasn't come back"))
                 .thenExecute(() -> {
@@ -432,7 +477,7 @@ public final class PipeSaveTests {
                             "the store and the tank");
                     back.setOn(false);
                     a.clear(0, 0, 12, 4);
-                    hold(a, chunk, false);
+                    holdTicking(a, chunk, false);
                 })
                 .thenSucceed();
     }
@@ -469,8 +514,18 @@ public final class PipeSaveTests {
             PipeSaveTests.hold(a, chunkB, on);
         }
 
+        /** Holds both chunks where they tick, as near a player, or lets them go. */
+        void holdTicking(boolean on) {
+            PipeSaveTests.holdTicking(a, chunkA, on);
+            PipeSaveTests.holdTicking(a, chunkB, on);
+        }
+
         boolean loaded() {
             return full(a, chunkA) && full(a, chunkB);
+        }
+
+        boolean ticking() {
+            return PipeSaveTests.ticking(a, chunkA, chunkB);
         }
 
         /** The row's gas, wherever it is in the two chunks, once nothing is in flight. */
@@ -483,6 +538,7 @@ public final class PipeSaveTests {
             vent.power().setTestPowered(false);
             a.clear(WEST - 1, Z - 1, EAST + 5, Z + 3);
             hold(false);
+            holdTicking(false);
         }
     }
 
@@ -491,13 +547,15 @@ public final class PipeSaveTests {
      * the row and the room hold what they held, and no atmos tick reported an unexplained change. Gas
      * that was on its way to the room as it paused is voided (GEO-036), so what the ledger says it
      * voided counts as held, and anything it says was supplied (GEO-038) doesn't. So gas may be lost
-     * this way, by design, but can't be made.
+     * this way, by design, but can't be made. The chunks tick while they are held, as near a player,
+     * so the vent steps; they unload when a player would have left.
      */
     @GameTest(template = "empty", batch = TRANSFER, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void nfr_012_chunks_unloading_during_a_transfer_make_no_gas(GameTestHelper h) {
         boolean was = ZasServerConfig.CONSERVATION_CHECKER.get();
         ZasServerConfig.CONSERVATION_CHECKER.set(true);
         VentRig r = new VentRig(h, 2001);
+        r.holdTicking(true);
         Area a = r.a;
         double[] start = new double[1];
         VentBlockEntity[] old = new VentBlockEntity[1];
@@ -506,6 +564,7 @@ public final class PipeSaveTests {
         GasCensus.Ledger ledger = new GasCensus.Ledger(a, GAS);
         h.onEachTick(ledger::read);
         var sequence = h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(r.ticking(), "the chunks don't tick"))
                 .thenWaitUntil(() -> h.assertTrue(formed.isDone(), "the room's zone hasn't formed"))
                 .thenWaitUntil(() -> h.assertTrue(
                         Atmospheres.zoneAt(a.level, a.abs(ROOM, Y, Z)).isPresent(), "no zone is published"))
@@ -519,11 +578,12 @@ public final class PipeSaveTests {
             sequence = sequence.thenExecute(() -> {
                         old[0] = r.vent;
                         r.hold(false);
+                        r.holdTicking(false);
                     })
                     .thenWaitUntil(() -> h.assertTrue(old[0].isRemoved(), "the row hasn't unloaded"))
                     .thenIdle(40) // two atmos ticks away
-                    .thenExecute(() -> r.hold(true))
-                    .thenWaitUntil(() -> h.assertTrue(r.loaded(), "the chunks haven't loaded"))
+                    .thenExecute(() -> r.holdTicking(true))
+                    .thenWaitUntil(() -> h.assertTrue(r.loaded() && r.ticking(), "the chunks haven't loaded"))
                     .thenWaitUntil(() -> h.assertTrue(
                             Atmospheres.zoneAt(a.level, a.abs(ROOM, Y, Z)).isPresent(), "the zone hasn't returned"))
                     .thenExecute(() -> {

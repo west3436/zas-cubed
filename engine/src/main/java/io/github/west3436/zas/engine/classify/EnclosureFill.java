@@ -28,7 +28,14 @@ public final class EnclosureFill {
     /** The default bound, in cells (D-23). */
     public static final int DEFAULT_MAX_CELLS = 65_536;
 
-    private final int maxCells;
+    /**
+     * The most the game lets the bound be set to (GEO-020): a hall 5 × 5 chunks wide and 16 blocks
+     * high, the largest the S-10 bench's enclosure cap step tests. The listings that must hold a
+     * whole enclosure are sized from it.
+     */
+    public static final int SETTABLE_MAX_CELLS = 102_400;
+
+    private int maxCells;
     private final Visitor visitor = new Visitor();
 
     // Visited set: open addressing, a slot is used when its stamp equals the current epoch.
@@ -59,10 +66,7 @@ public final class EnclosureFill {
      * @param maxCells the most cells an enclosed region can have, at least 1
      */
     public EnclosureFill(int maxCells) {
-        if (maxCells < 1 || maxCells > (1 << 28)) {
-            throw new IllegalArgumentException("maxCells must be 1 to 2^28, got " + maxCells);
-        }
-        this.maxCells = maxCells;
+        this.maxCells = checked(maxCells);
         int initial = Math.min(Integer.highestOneBit(maxCells + 1) << 1, 4096);
         keys = new long[Math.max(initial, 16)];
         stamps = new int[keys.length];
@@ -70,6 +74,23 @@ public final class EnclosureFill {
     }
 
     public int maxCells() {
+        return maxCells;
+    }
+
+    /**
+     * Changes the bound for the fills from now on (GEO-020, D-23). The tables grow as fills need them,
+     * as before.
+     *
+     * @param maxCells the most cells an enclosed region can have, at least 1
+     */
+    public void setMaxCells(int maxCells) {
+        this.maxCells = checked(maxCells);
+    }
+
+    private static int checked(int maxCells) {
+        if (maxCells < 1 || maxCells > (1 << 28)) {
+            throw new IllegalArgumentException("maxCells must be 1 to 2^28, got " + maxCells);
+        }
         return maxCells;
     }
 

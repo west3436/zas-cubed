@@ -304,4 +304,34 @@ class SchedulerTest {
             assertTrue(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS));
         }
     }
+
+    /**
+     * Worker threads run at normal priority, not the raised priority of the server thread that
+     * starts them, so a worker woken for a tick doesn't hold the server thread off its processor
+     * (CORE-045, NFR-002).
+     */
+    @Test
+    void core_045_workers_run_at_normal_priority_whoever_starts_them() throws Exception {
+        java.util.concurrent.ExecutorService pool = AtmosWorkers.create(1);
+        java.util.concurrent.atomic.AtomicInteger priority = new java.util.concurrent.atomic.AtomicInteger(-1);
+        Thread server = new Thread(
+                () -> {
+                    try {
+                        priority.set(pool.submit(() -> Thread.currentThread().getPriority())
+                                .get());
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                },
+                "Server thread");
+        server.setPriority(8);
+        try {
+            server.start();
+            server.join(10_000);
+            assertEquals(Thread.NORM_PRIORITY, priority.get(), "the worker's priority");
+        } finally {
+            pool.shutdownNow();
+            assertTrue(pool.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS));
+        }
+    }
 }

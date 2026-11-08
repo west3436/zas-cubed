@@ -250,7 +250,8 @@ public class ControllerMenu extends AbstractContainerMenu {
 
     /**
      * At the controller: the player is within reach of it. From a central controller: the player is
-     * within reach of that, this controller is loaded, and that central controller still has it.
+     * within reach of that, this controller is in contact (loaded and stepping), and that central
+     * controller still has it.
      */
     @Override
     public boolean stillValid(Player player) {
@@ -258,9 +259,7 @@ public class ControllerMenu extends AbstractContainerMenu {
             return stillValid(access, player, AtmosBlocks.AREA_AIR_CONTROLLER.get());
         }
         return controller != null
-                && !controller.isRemoved()
-                && controller.getLevel() instanceof ServerLevel level
-                && level.isLoaded(pos)
+                && controller.stepping()
                 && via.equals(central())
                 && stillValid(access, player, AtmosBlocks.CENTRAL_ATMOS_CONTROLLER.get());
     }

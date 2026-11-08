@@ -179,6 +179,19 @@ final class BenchPlayers {
         players.clear();
     }
 
+    /** Takes some of the players off the server's lists, as {@link #leave()} takes them all. */
+    void leave(List<ServerPlayer> going) {
+        for (ServerPlayer p : List.copyOf(going)) {
+            try {
+                server.getPlayerList().remove(p);
+            } catch (RuntimeException e) {
+                S10Mod.LOGGER.warn(
+                        "[S-10] removing {} failed", p.getGameProfile().getName(), e);
+            }
+            players.remove(p);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T field(PlayerList list, String name) {
         try {

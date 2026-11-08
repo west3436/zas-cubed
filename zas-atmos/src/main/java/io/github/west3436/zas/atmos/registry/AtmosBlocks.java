@@ -205,12 +205,6 @@ public final class AtmosBlocks {
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false));
 
-    // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
-
-    /** The tank holder, a rack of ten personal tanks. */
-    public static final DeferredBlock<TankHolderBlock> TANK_HOLDER =
-            BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
-
     // ---- Radiators and heat exchangers (CONT-143 to CONT-148, D-84) ----
 
     /** Radiator pipe, which exchanges heat with the gas around it (CONT-143, HEAT-020). */
@@ -224,6 +218,12 @@ public final class AtmosBlocks {
     /** The heat exchanger, which works in pairs (CONT-147, HEAT-022). */
     public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
             BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
+
+    // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
+
+    /** The tank holder, a rack of ten personal tanks. */
+    public static final DeferredBlock<TankHolderBlock> TANK_HOLDER =
+            BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
 
     private AtmosBlocks() {}
 

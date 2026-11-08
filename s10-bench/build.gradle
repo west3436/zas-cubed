@@ -70,6 +70,16 @@ dependencies {
     compileOnly project(':zas-atmos')
     runtimeOnly project(':zas')
     runtimeOnly project(':zas-atmos')
+
+    // Unit tests of the bench's own bookkeeping, such as WorkerTimes; no game.
+    testImplementation project(':engine')
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
 
 // Never a jar: the bench runs from its classes in the dev run.
