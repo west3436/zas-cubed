@@ -2,6 +2,7 @@ package io.github.west3436.zas.ponder;
 
 import io.github.west3436.zas.ponder.scene.Stage;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
+import io.github.west3436.zas.ponder.scenes.PumpScenes;
 import java.util.List;
 import net.createmod.ponder.api.registration.PonderPlugin;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
@@ -18,7 +19,7 @@ final class ZasPonderPlugin implements PonderPlugin {
     private static final ResourceLocation TAG = ZasPonderMod.id("atmospherics");
 
     /** Every item with a scene, in the index's order. */
-    private static final List<String> ITEMS = List.of("connector_port");
+    private static final List<String> ITEMS = List.of("connector_port", "pressure_pump", "volume_pump");
 
     @Override
     public String getModId() {
@@ -28,6 +29,8 @@ final class ZasPonderPlugin implements PonderPlugin {
     @Override
     public void registerScenes(PonderSceneRegistrationHelper<ResourceLocation> helper) {
         helper.forComponents(atmos("connector_port")).addStoryBoard(Stage.MEDIUM, PortScenes::connectorPort, TAG);
+        helper.forComponents(atmos("pressure_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::pressure, TAG);
+        helper.forComponents(atmos("volume_pump")).addStoryBoard(Stage.MEDIUM, PumpScenes::volume, TAG);
     }
 
     /**

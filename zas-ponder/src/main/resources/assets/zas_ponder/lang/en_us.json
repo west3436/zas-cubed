@@ -5,10 +5,20 @@
   "zas_ponder.ponder.tag.atmospherics.description": "Pipes, devices and tools that move gas",
 
   "zas_ponder.ponder.shared.reading.oxygen": "O₂ %1$s",
+  "zas_ponder.ponder.shared.power.controller": "An area air controller powers it",
+  "zas_ponder.ponder.shared.power.multitool": "Or link it to one with a multitool",
 
   "zas_ponder.ponder.connector_port.header": "Attaching a canister",
   "zas_ponder.ponder.shared.connector_port.pipe_below": "A pipe joins it only from below",
   "zas_ponder.ponder.shared.connector_port.canister_on_top": "Stand a canister on it to join the pipes",
   "zas_ponder.ponder.shared.connector_port.vent_power": "An area air controller powers the vent",
-  "zas_ponder.ponder.shared.connector_port.gas_flows": "Gas flows from the canister to the vent"
+  "zas_ponder.ponder.shared.connector_port.gas_flows": "Gas flows from the canister to the vent",
+  "zas_ponder.ponder.shared.inline.ends": "Pipes join only its two ends",
+  "zas_ponder.ponder.shared.wrench.turn": "A wrench turns it a quarter turn",
+  "zas_ponder.ponder.pressure_pump.header": "Pumping to a pressure",
+  "zas_ponder.ponder.shared.pump.arrows": "Gas goes the way its arrows point",
+  "zas_ponder.ponder.shared.pressure_pump.use": "Use it to set its target pressure",
+  "zas_ponder.ponder.volume_pump.header": "Pumping a set volume",
+  "zas_ponder.ponder.shared.volume_pump.lamp": "Gas goes the way its lamp runs",
+  "zas_ponder.ponder.shared.volume_pump.use": "Use it to set the volume it moves"
 }

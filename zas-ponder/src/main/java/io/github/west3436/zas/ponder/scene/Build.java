@@ -2,14 +2,17 @@ package io.github.west3436.zas.ponder.scene;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 import net.createmod.ponder.api.element.ElementLink;
 import net.createmod.ponder.api.element.WorldSectionElement;
 import net.createmod.ponder.api.level.PonderLevel;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
+import net.createmod.ponder.api.scene.Selection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -59,6 +62,56 @@ public final class Build {
 
     /** The ticks Ponder takes to show a section. */
     public static final int SHOW = 15;
+
+    /**
+     * Places several blocks, joins everything to its neighbours, shows them coming in together from
+     * one side, and waits until they're in.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param blocks where and what, in any order
+     * @param from the way they come from, such as {@link Direction#DOWN} to drop them from above
+     */
+    public static void revealAll(
+            SceneBuilder scene, SceneBuildingUtil util, Map<BlockPos, BlockState> blocks, Direction from) {
+        Selection all = null;
+        for (Map.Entry<BlockPos, BlockState> block : blocks.entrySet()) {
+            place(scene, block.getKey(), block.getValue());
+            Selection one = util.select().position(block.getKey());
+            all = all == null ? one : all.add(one);
+        }
+        settle(scene);
+        scene.world().showSection(all, from);
+        scene.idle(SHOW);
+    }
+
+    /**
+     * Changes a shown block's state, as a player's use, a wrench or a signal would, and joins
+     * everything to its neighbours again: a valve opening, a device turning on, a part turning.
+     *
+     * @param scene the scene
+     * @param pos the block
+     * @param change what it becomes, from what it is
+     */
+    public static void change(SceneBuilder scene, BlockPos pos, UnaryOperator<BlockState> change) {
+        scene.world().modifyBlock(pos, change, false);
+        settle(scene);
+    }
+
+    /**
+     * Takes a shown block away, as a wrench or a player would, lifting it out of sight, and joins its
+     * neighbours to what's left: a pipe beside it gets an open end.
+     *
+     * @param scene the scene
+     * @param util the scene's helpers
+     * @param pos the block
+     */
+    public static void remove(SceneBuilder scene, SceneBuildingUtil util, BlockPos pos) {
+        scene.world().hideSection(util.select().position(pos), Direction.UP);
+        scene.idle(SHOW);
+        place(scene, pos, Blocks.AIR.defaultBlockState());
+        settle(scene);
+    }
 
     /**
      * Lifts a shown block a little way out of place, to show what joins it from below or behind, and

@@ -43,11 +43,23 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
 - `Build`
   - `place` sets a block out of sight.
   - `drop` and `reveal` place a block, join it to its neighbours, show it and wait
-    until it's in.
+    until it's in. `revealAll` does the same for several blocks at once, such as
+    a run of pipe.
+  - `change` sets a shown block's state, as a use, a wrench or a signal would: a
+    valve opening, a device turning on, a part turning. `remove` takes one away.
+    Both join the neighbours again, so a pipe left beside a gap gets an open end.
   - `settle` joins pipes, ports and walls to their neighbours. Ponder sets blocks
     without telling their neighbours, so call it after placing.
   - `lift` and `lower` move a shown block aside and back, to show the pipe that
     joins it from below or behind.
+- `Hand`
+  - `use` and `sneakUse` show the mouse button over a block's face, with the item
+    in hand, then pause before the scene shows what the use does.
+- `Power`
+  - `controller` puts up a station wall with an area air controller, turns the
+    device on and says the controller powers it.
+  - `multitool` shows a multitool used on the device and says it links the device
+    to a controller elsewhere.
 - `Say`
   - `at` shows a line pointing at a spot, with a keyframe, and waits while it's
     read.
@@ -63,9 +75,21 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
 ## What a device's scene shows (CLIENT-026)
 
 - **The faces that take a pipe.** Set the device on its pipe, `lift` it, and
-  outline the pipe's end.
-- **What powers it.** An area air controller (D-68) shown in the scene, on a wall.
-- **What the wrench or multitool does,** where it matters.
+  outline the pipe's end. For an inline device, outline the pipes at its ends.
+- **What powers it.** `Power.controller`, then `Power.multitool`.
+- **What the wrench or multitool does,** where it matters: `Hand.use` with the
+  tool, then `Build.change` or `Build.remove`. `PumpScenes` turns a pump with a
+  wrench.
+
+## The batch 5 blocks
+
+The owner's answers so far (D-84):
+
+- **An airlock closes itself** about 5 s after it's opened, so its scene can show
+  it opening and then closing by itself.
+- **The tank holder has no window.** A tank in hand goes in, and an empty hand
+  takes out the last one put in: `Hand.use` with the tank, then with an empty
+  hand.
 
 ## What Ponder's world doesn't do
 

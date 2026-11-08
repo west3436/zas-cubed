@@ -41,21 +41,35 @@ public final class Gas {
     }
 
     /**
-     * An outline gliding through blocks one after another, again and again, as gas moves through
-     * pipes. The scene waits while it runs, so show its line first with {@link Say#over}.
+     * Outlines gliding through blocks one after another, again and again, as gas moves through pipes.
+     * Several paths run side by side, such as a mixer's two inputs, each starting together. The scene
+     * waits while they run, so show their line first with {@link Say#over}.
      *
      * @param scene the scene
      * @param ticks how long it runs
-     * @param path the blocks in order, each next to the last
+     * @param paths the blocks of each path in order, each next to the last
      */
-    public static void flow(SceneBuilder scene, int ticks, List<BlockPos> path) {
+    @SafeVarargs
+    public static void flow(SceneBuilder scene, int ticks, List<BlockPos>... paths) {
+        int longest = 0;
+        for (List<BlockPos> path : paths) {
+            longest = Math.max(longest, path.size());
+        }
         int done = 0;
         while (done < ticks) {
-            // A new outline each pass, so it starts again at the first block, not sliding back to it.
-            Object slot = new Object();
-            for (int i = 0; i < path.size() && done < ticks; i++) {
-                int stay = i == path.size() - 1 ? STEP + REST : STEP;
-                scene.overlay().chaseBoundingBoxOutline(FLOW, slot, new AABB(path.get(i)).inflate(1 / 32d), stay);
+            // New outlines each pass, so each starts again at its first block, not sliding back to it.
+            Object[] slots = new Object[paths.length];
+            for (int p = 0; p < paths.length; p++) {
+                slots[p] = new Object();
+            }
+            for (int i = 0; i < longest && done < ticks; i++) {
+                int stay = i == longest - 1 ? STEP + REST : STEP;
+                for (int p = 0; p < paths.length; p++) {
+                    List<BlockPos> path = paths[p];
+                    // A shorter path waits on its last block for the longest.
+                    BlockPos at = path.get(Math.min(i, path.size() - 1));
+                    scene.overlay().chaseBoundingBoxOutline(FLOW, slots[p], new AABB(at).inflate(1 / 32d), stay);
+                }
                 scene.idle(stay);
                 done += stay;
             }
