@@ -278,3 +278,12 @@ shows values. Gas overlays, the HUD and their visual settings arrive in R1.
 They apply to the HUD, debug overlay, device windows and item tooltips. Operator
 commands ([commands.md](commands.md)) and other messages the server sends always
 report kPa and K.
+
+## JVM system properties
+
+Debug switches that act before any config is read. Add them to the server's
+Java command line.
+
+| Property | Meaning |
+|---|---|
+| `-Dzas.geometry.profile=true` | Debug: logs where the gas geometry derivation's time goes at start (fetching shapes, deriving them, probing positions, reading tags) and how long the started server waited for the table. It also lists the states worked out per position, by namespace, and the states whose shape failed, by block. Once the server has started, it times the derivation again, warm, with and without the per-shape cache ([spikes · S2](research/spikes.md#s2--seal-masks-and-volumes-for-every-block-state)). Off by default |

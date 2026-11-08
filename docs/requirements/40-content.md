@@ -19,6 +19,7 @@ as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
 CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
+CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -470,6 +471,18 @@ the block state, so a real unload and reload keeps it, and the gas on each side
 `cont_075_an_open_valve_stays_open_through_a_reload`).
 `PipeNetworkTest.cont_075_*` (Unit) turns a valve 1,000 times and checks moles
 and energy.*
+
+*2026-11-07: Note: "at most once per atmos tick" counts the valve's own rebuild.
+A valve on a chunk's edge builds its network twice as it opens, once as it
+rejoins the far side (CONT-003's note of 2026-11-06) and once at its own turn.
+The owner kept this as built. Measured with S-09
+(`StationSaveTests.s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`,
+GameTest): the extra rebuild costs about 0.6 to 1 µs per node, on the atmos
+tick it opens only, which is negligible
+([benchmarks](../research/benchmarks.md#a-valve-at-a-chunks-edge-341-2026-11-07)).
+A valve turned every atmos tick also builds twice as it opens, wherever it is,
+because the nodes that stepped before it shut build across it first. That's
+the same cost.*
 
 #### CONT-011 · Pressure pump
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
@@ -1348,6 +1361,54 @@ takes the kind of what it holds: at least 95 % O₂ is an O₂ tank, N₂ and O�
 19–23 % O₂ an air tank, anything else the plain tank, named "Gas Tank" while it
 holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
 canister's loss and the kinds.*
+
+#### CONT-149 · Tank holder
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-030, DATA-016
+
+A tank holder shall hold up to 10 personal tanks (CONT-030) and no other item, and shall give
+each tank back with the item data it went in with, its gas to a relative error of 1e-9 per gas
+(DATA-016): taken out, dropped when the holder is broken, or after a save and reload.
+
+- **Rationale:** Decision: D-84, and the owner's choices of 2026-11-02 that it holds 10 tanks
+  and keeps their contents ([textures](../textures.md)). Its tanks are stored as in a chest:
+  their gas doesn't react, leak or fail there (CONT-038, CONT-100), so each comes back as it
+  went in.
+- **Verify:** A GameTest fills a holder with tanks of each kind, checks it refuses an eleventh
+  tank and another item, saves and reloads it, takes some tanks out and breaks it, and
+  compares each tank with what went in.
+
+*2026-11-07: added for review (D-84). The `Must` follows the owner's "All are R1 blockers".*
+
+#### CONT-150 · Moving tanks in and out of a tank holder
+`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-149
+
+A player shall put a tank into a tank holder by using the tank on it or through the holder's
+window, and take any of its tanks out through that window, which shows each tank's pressure.
+
+- **Rationale:** Decision: D-84, and D-76 for the window. Tanks move through slots, as on the
+  tank transfer valve's window (CONT-103), and using a tank on the block puts it in, as a battery
+  on the recharger (CONT-113).
+- **Verify:** GameTests put a tank in by use and through the window's slots, take one from the
+  middle, and check the slots refuse what the holder refuses and the server refuses a player
+  out of reach (CONT-074). Manual: the window's look.
+
+*2026-11-07: added for review (D-84).*
+
+#### CONT-151 · A tank holder's shelves
+`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
+
+A tank holder shall show the tanks it holds standing on two shelves of five, the lower shelf
+filled first, each tinted by its kind as on a tank transfer valve: O₂ and emergency O₂ tanks
+blue, air tanks yellow and the rest grey.
+
+- **Rationale:** Decision: the owner's choices of 2026-11-02 in the batch 5 art
+  ([texture procurement](../texture-procurement.md)), which has a model for each count from 0
+  to 10.
+- **Verify:** A GameTest checks the block shows as many tanks as it holds as tanks go in and
+  out. Manual: the tanks and their tints in game.
+
+*2026-11-07: added for review (D-84). With a model for each count, the tanks always fill the
+first places, so taking one from the middle moves the tanks after it down a place.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
