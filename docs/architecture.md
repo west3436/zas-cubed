@@ -4098,7 +4098,10 @@ block-entity renderer.
     wrapping baked model (`client.FirelockDoorModel`, from
     `ModelEvent.ModifyBakingResult`) draws that door's model for the same state
     through `ModelData`, with the `firelock_door_*` overlay on top, so it needs
-    no block-entity renderer. Its shapes and geometry are the vanilla door's.
+    no block-entity renderer. A renderer that brings no model data, as Ponder's
+    doesn't, gets the door from the block entity through the model's
+    `getModelData`; with no door known yet, it draws an iron door. Its shapes
+    and geometry are the vanilla door's.
     It opens as the door it wraps did: an iron door only by redstone. Broken,
     it drops the door and the firelock, and pick-block gives the door.
 - **The controller** (`AirlockControllerBlock`, `AirlockControllerBlockEntity`,
