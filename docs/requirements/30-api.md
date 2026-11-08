@@ -12,7 +12,8 @@ five the same day. API-059, whether container explosions break blocks, was added
 as Draft on 2026-11-04 for CONT-107. API-060 and API-061, the client's sound API,
 were added as Draft on 2026-11-05 for CLIENT-015 and CLIENT-016. The owner
 accepted all three on 2026-11-05. API-063, display units, was added as Draft on
-2026-11-06, and the owner accepted it the same day.
+2026-11-06, and the owner accepted it the same day. API-064, the near-vacuum
+density, was added as Draft on 2026-11-07 for HEAT-020 and HEAT-021.
 
 **Scope.** The contract that consumer mods depend on: its packaging,
 versioning, threading, queries and mutations, extension points and events.
@@ -691,6 +692,26 @@ kPa and °C.
 
 *2026-11-06: accepted by the owner, and Implemented: `DisplayUnitsTest` (Unit) passes,
 and the owner saw a vent and a heater change units in the game.*
+
+#### API-064 · Near-vacuum density
+`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: HEAT-008, HEAT-020, HEAT-021, CONT-095 · Depends: API-009
+
+The API shall give the molar density below which a zone neither conducts nor radiates
+heat, from any thread: the server's `near_vacuum_percent` of standard air's density,
+read on each call, or 1 % of it without ZAS³.
+
+- **Rationale:** Inferred: the content mod may use only the API (CONT-095), and its
+  radiator pipe takes no part in gas too thin to carry heat (HEAT-020, HEAT-021). The
+  line should be the one zones use (HEAT-008), including on a server that changes it.
+- **Verify:** A Unit test checks the fallback's 1 % and an older provider's default; a
+  GameTest checks the API follows the configured percentage; a GameTest without ZAS³
+  (S-12) checks the 1 %.
+
+*2026-11-07: added for review, with the behaviour built.
+`Atmospheres.nearVacuumDensity()`, in mol/L, with `DEFAULT_NEAR_VACUUM_DENSITY`.
+Checked by `api_064_fallback_near_vacuum_is_1_percent_of_standard_air` (Unit),
+`api_064_near_vacuum_follows_the_config` (GameTest) and
+`s_12_near_vacuum_is_1_percent_of_standard_air` (GameTest, without ZAS³).*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009

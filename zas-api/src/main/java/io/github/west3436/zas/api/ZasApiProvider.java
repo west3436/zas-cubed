@@ -307,6 +307,22 @@ public interface ZasApiProvider {
     }
 
     /**
+     * The molar density below which a zone neither conducts nor radiates (API-064, HEAT-008), in
+     * mol/L, for {@link Atmospheres#nearVacuumDensity()}.
+     *
+     * <p>The default is the fallback's answer, {@link Atmospheres#DEFAULT_NEAR_VACUUM_DENSITY}. It is
+     * there for the same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return the density, 0 or more
+     */
+    @AnyThread
+    default double nearVacuumDensity() {
+        return Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY;
+    }
+
+    /**
      * Applies the server's reactions to a standalone mixture (API-019, FIRE-031), for {@link
      * io.github.west3436.zas.api.reaction.Reactions#applyStandalone}.
      *

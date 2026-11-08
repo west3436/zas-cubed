@@ -17,6 +17,7 @@ import io.github.west3436.zas.data.DatapackErrors;
 import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasPhaseData;
 import io.github.west3436.zas.engine.gas.GasRegistry;
+import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.gas.ClientGasRegistry;
 import io.github.west3436.zas.gas.GasDefinitionCodecs;
 import io.github.west3436.zas.gas.GasDefinitionsPayload;
@@ -363,6 +364,30 @@ public final class GasRegistryTests {
     public static void api_052_period_is_the_servers(GameTestHelper h) {
         h.assertValueEqual(
                 Atmospheres.periodTicks(), ZasServerConfig.scheduler().periodTicks(), "the configured period");
+        h.succeed();
+    }
+
+    /**
+     * The API answers the configured near-vacuum density (API-064, HEAT-008): {@code
+     * near_vacuum_percent} of standard air's, read on each call, and a GameTest's heat override.
+     */
+    @GameTest(template = "empty")
+    public static void api_064_near_vacuum_follows_the_config(GameTestHelper h) {
+        double before = ZasServerConfig.NEAR_VACUUM_PERCENT.get();
+        try {
+            for (double percent : new double[] {1.0, 2.5, 0.0}) {
+                ZasServerConfig.NEAR_VACUUM_PERCENT.set(percent);
+                double expected = percent / 100 * HeatSettings.STANDARD_AIR_DENSITY;
+                double got = Atmospheres.nearVacuumDensity();
+                h.assertTrue(
+                        Math.abs(got - expected) <= 1e-15, percent + " %: expected " + expected + " mol/L, got " + got);
+            }
+            ZasServerConfig.overrideHeatForTest(HeatSettings.DEFAULT.withNearVacuumDensity(0.5));
+            h.assertValueEqual(Atmospheres.nearVacuumDensity(), 0.5, "under a GameTest's override");
+        } finally {
+            ZasServerConfig.overrideHeatForTest(null);
+            ZasServerConfig.NEAR_VACUUM_PERCENT.set(before);
+        }
         h.succeed();
     }
 
