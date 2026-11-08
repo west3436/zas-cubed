@@ -46,15 +46,18 @@ Everything in `scene/` is shared, so a new scene needs little of Ponder's own AP
     until it's in. `revealAll` does the same for several blocks at once, such as
     a run of pipe.
   - `change` sets a shown block's state, as a use, a wrench or a signal would: a
-    valve opening, a device turning on, a part turning. `remove` takes one away.
-    Both join the neighbours again, so a pipe left beside a gap gets an open end.
+    valve opening, a device turning on, a part turning. `remove` takes blocks
+    away, one or several together. Both join the neighbours again, so a pipe left
+    beside a gap gets an open end.
   - `settle` joins pipes, ports and walls to their neighbours. Ponder sets blocks
     without telling their neighbours, so call it after placing.
   - `lift` and `lower` move a shown block aside and back, to show the pipe that
     joins it from below or behind.
 - `Hand`
   - `use` and `sneakUse` show the mouse button over a block's face, with the item
-    in hand, then pause before the scene shows what the use does.
+    in hand, then pause before the scene shows what the use does. A button stays
+    up for `Hand.SHOW` ticks, and two on blocks side by side cover each other, so
+    wait until one goes before showing the next, as `PipeScenes` does.
 - `Power`
   - `controller` puts up a station wall with an area air controller, turns the
     device on and says the controller powers it.
