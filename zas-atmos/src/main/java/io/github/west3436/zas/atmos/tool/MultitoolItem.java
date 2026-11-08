@@ -39,7 +39,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * controller to that one, if it is in range (CONT-118). Use it on nothing while sneaking to clear the
  * selection. The selection is kept on the stack, as the controller's position and dimension.
  *
- * <p>It selects an airlock controller too, and then links airlocks, an air sensor and vents to it
+ * <p>It selects an airlock controller too, and then links airlocks, air sensors and vents to it
  * (CONT-138). Used sneaking on an airlock controller, it links that controller to the selected area
  * air controller as a part instead (CONT-141). With an area air controller selected, it links a
  * firelock fitted to an airlock or a door (CONT-137).

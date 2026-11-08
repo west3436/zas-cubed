@@ -3560,22 +3560,32 @@ only by redstone) and drops the door and the firelock when broken
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
 
 An airlock controller shall be a wall panel that the multitool links to at most two airlocks,
-at most one air sensor and any number of vents.
+at most three air sensors and any number of vents. It shall take each sensor's role from its
+zone: the chamber's, in the zone both airlocks border, or a side's, in the zone past one
+airlock.
 
 - **Rationale:** Decision: D-84, as the art notes describe the controller
   ([textures](../textures.md)). It links as an area air controller does (CONT-042): select the
-  controller, then use the multitool on each part.
-- **Verify:** A GameTest links two airlocks, a sensor and two vents, checks a third airlock and
-  a second sensor are refused, and checks using the multitool on a linked part again unlinks
-  it.
+  controller, then use the multitool on each part. The owner's choice of 2026-11-08 that each
+  zone bordering an airlock has a sensor, as the chamber does.
+- **Verify:** A GameTest links two airlocks, three sensors and two vents, checks a third
+  airlock and a fourth sensor are refused, and checks using the multitool on a linked part
+  again unlinks it. Another links the sensors out of order and checks each reads its own side,
+  with the airlocks shut and with one open.
+
+*2026-11-08: the owner, in the test world: both zones bordering an airlock need sensors as well
+as the chamber. A sensor's role comes from its zone, not the order it was linked in. Where its
+zone fits no role, as in open air or a vacuum, or two, as when both airlocks open onto one
+room, the side of each airlock the sensor is on decides. That's my choice, for review.*
 
 #### CONT-139 · Cycling
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
 
 Cycling toward one of its airlocks, an airlock controller shall close and bolt both, run its
-vents until the pressure its air sensor reads is within 5.07 kPa (5 % of 1 atm) of the
-pressure beyond that airlock, siphoning above it and blowing below it, and then unbolt and
-open that airlock, leaving the other bolted.
+vents until the pressure its chamber's sensor reads is within 5.07 kPa (5 % of 1 atm) of the
+pressure the sensor past that airlock reads, siphoning above it and blowing below it, and then
+unbolt and open that airlock, leaving the other bolted. Without the chamber's sensor or the
+sensor past that airlock, a cycle shall not start.
 
 - **Rationale:** Decision: D-84, as the art notes describe the controller
   ([textures](../textures.md)). The vents siphon into their own pipe network and blow from it
@@ -3583,19 +3593,38 @@ open that airlock, leaving the other bolted.
   air controller's Cycle mode stops emptying a room (CONT-041).
 - **Verify:** GameTests cycle a chamber toward a vacuum and toward a room at 1 atm, and check
   both airlocks bolt, the vents siphon or blow, the far airlock opens only once the chamber is
-  within 5.07 kPa, and the other stays bolted.
+  within 5.07 kPa, and the other stays bolted. Another unlinks each sensor in turn and checks
+  a cycle that needs it doesn't start, from the controller, its window, a bolted airlock or a
+  sensor, and that a cycle that loses the sensor it reads stops.
+
+*2026-11-08: the owner, in the test world: each side has its own sensor, and a cycle toward a
+side reads that side's pressure there. It no longer reads the cell beyond the airlock. A cycle
+without the sensors it needs buzzes, and the window says which is missing.*
 
 #### CONT-140 · Asking for a cycle
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
 
 Using a bolted airlock that's linked to a controller shall ask that controller to cycle toward
-it, unless it's already cycling.
+it, unless it's already cycling. Pressing any air sensor linked to a controller shall ask it to
+cycle toward the side opposite the one the airlock is accessing: the side whose airlock alone
+is unbolted, or else the airlock opened last. With neither, it cycles away from the pressed
+sensor's side, or toward airlock 1 from the chamber's sensor.
 
 - **Rationale:** Inferred: the player at a bolted door is on the side they want to reach, and
   vg's airlocks are asked to cycle from beside each door. The controller's window asks too
-  (CONT-153).
+  (CONT-153). Decision: the owner's choice of 2026-11-08 that pressing any sensor cycles the
+  airlock to the side opposite the one it's accessing.
 - **Verify:** A GameTest uses each bolted, linked airlock in turn and checks the controller
-  cycles toward it, and that a use during a cycle changes nothing.
+  cycles toward it, and that a use during a cycle changes nothing. Another presses sensors from
+  each starting state: neither airlock bolted with one opened by hand, no history, one airlock
+  alone unbolted, and both bolted after one opened. It checks the side each press cycles
+  toward, and that a press during a cycle or of an unlinked sensor starts nothing.
+
+*2026-11-08: the owner, in the test world: pressing any sensor cycles the airlock to the side
+opposite the one it's accessing. Which side that is when nothing says, as on a new controller
+or after Stop before anything opened, is the coordinator's rule, for review: away from the
+pressed outer sensor's side, so a player outside presses it twice, or toward airlock 1 from the
+chamber. An airlock opened by hand counts as opened.*
 
 #### CONT-141 · Airlock controller power
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, D-68, CONT-060 · Depends: CONT-138
@@ -3621,18 +3650,24 @@ airlocks bolted, until the power comes back or a player stops it.*
 
 An air sensor shall be a wall panel that reads the pressure at its own block and shows cycling
 while a controller it's linked to cycles, otherwise alert while that pressure is below 81 kPa or
-above 122 kPa, and otherwise standby.
+above 122 kPa, and otherwise standby, in the chamber or past an airlock alike.
 
 - **Rationale:** Decision: D-84, with its three states from the art notes
   ([textures](../textures.md)). 81 and 122 kPa are the Human preset's pressure min2 and max2
   (CONT-047), so it alerts where an area air controller would be at danger 2. It needs no
   power.
 - **Verify:** A GameTest steps the pressure at a sensor through both bounds and checks its
-  state, and links it to a controller and checks it shows cycling during a cycle.
+  state, and links it to a controller and checks it shows cycling during a cycle. Another
+  checks the sensors past each airlock show standby or alert at their own pressure, and that
+  all three show cycling during a cycle.
 
 *2026-11-07: The owner kept my defaults: the sensor shows only its light, with no window or
 readout, and needs no power. Its state is a block-state property, `status`, so a scene or a
 resource pack can show each one. Cycling shows over alert.*
+
+*2026-11-08: the owner, in the test world: the zones on both sides need sensors too, and
+pressing any sensor cycles the airlock (CONT-140). Each one's light works as the chamber's
+does.*
 
 #### CONT-152 · Vents under an airlock controller
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
@@ -3648,9 +3683,10 @@ be off while the controller isn't cycling.
 #### CONT-153 · Airlock controller window
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139
 
-An airlock controller's window shall show whether it's cycling, the pressure its air sensor
-reads, and the pressure beyond each linked airlock with a button that cycles toward it, and
-offer a button that stops a cycle, leaving both airlocks bolted and its vents off.
+An airlock controller's window shall show whether it's cycling, the pressure its chamber's
+sensor reads, and the pressure the sensor past each linked airlock reads with a button that
+cycles toward it, or that a sensor is missing, and offer a button that stops a cycle, leaving
+both airlocks bolted and its vents off.
 
 - **Rationale:** Decision: D-76: machines get TGUI windows. The pressures are what a player
   needs to choose a side, and stopping lets a player end a cycle that can't finish, such as
@@ -3664,6 +3700,10 @@ a Stop button on one row, then the pressures beyond airlock 1, in the chamber an
 airlock 2, with a bar for each airlock between them (bolted, open or closed) and its Cycle
 button under each side. A Cycle button works only while the controller is powered, idle and
 has both airlocks and its sensor.*
+
+*2026-11-08: the owner, in the test world: each side has its own sensor (CONT-138). Where one is
+missing, the window shows "No sensor" in red in place of that pressure, and greys out the Cycle
+buttons that need it. The notice it showed with no sensor is gone.*
 
 ## R1 / R2 split
 

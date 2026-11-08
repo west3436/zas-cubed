@@ -4010,16 +4010,32 @@ block-entity renderer.
     it drops the door and the firelock, and pick-block gives the door.
 - **The controller** (`AirlockControllerBlock`, `AirlockControllerBlockEntity`,
   CONT-138 to CONT-140). A wall panel with `facing` and `cycling`. The
-  multitool links at most two airlocks, one air sensor and any number of vents
-  to it, as to an area air controller (`MultitoolItem`). Each atmos tick it
-  drops links that are no longer their kind, and reads the chamber at its
-  sensor's block and the pressure beyond each airlock: of the cells in front of
-  an airlock and behind it, the one in the sensor's zone is the chamber's, or
-  the nearer one if that doesn't decide (`AirlockCycle.frontIsChamber`). A
-  cycle closes and bolts both airlocks, then each step siphons or blows
-  (`AirlockCycle.next`) toward the pressure beyond the airlock it's heading
-  for, and once within 5.07 kPa of it unbolts and opens that one. Saved: its
-  links, the cycle and its power lease.
+  multitool links at most two airlocks, three air sensors and any number of
+  vents to it, as to an area air controller (`MultitoolItem`). Each atmos tick
+  it drops links that are no longer their kind and gives each sensor a role.
+  - **Roles.** Of the cells in front of an airlock and behind it, the chamber's
+    is the one whose zone the other airlock also borders, or the one nearer
+    the other airlock if that doesn't decide, as when both airlocks open onto
+    one room (`AirlockCycle.frontIsChamber`). An open airlock passes gas but
+    keeps its two zones apart, so opening one changes no role. A sensor in the
+    chamber's zone is the chamber's, and one in the zone past an airlock is
+    that side's. Where its zone fits none, as in open air or a vacuum, or
+    several, where it is decides: past the airlock whose far cell it's nearer
+    than its chamber cell, or the chamber's (`AirlockCycle.role`). The first
+    sensor in a role has it; the link order decides nothing else.
+  - **A cycle** needs both airlocks, the chamber's sensor and the sensor past
+    the airlock it's heading for. It closes and bolts both airlocks, then each
+    step siphons or blows (`AirlockCycle.next`) from the chamber's reading
+    toward that side's, and once within 5.07 kPa of it unbolts and opens that
+    airlock. Losing a sensor it reads stops it.
+  - **A press** of a linked sensor (`AirSensorBlock.useWithoutItem`,
+    `pressSensor`) cycles toward the airlock opposite the side the airlock is
+    accessing: the side whose airlock alone is unbolted, or else the airlock
+    opened last, which `AirlockBlock.setOpen` reports through `opened`. With
+    neither, it cycles away from the pressed sensor's side, or toward airlock
+    1 from the chamber's (`AirlockCycle.pressTarget`). A refused press buzzes.
+  - **Saved:** its links, the cycle, the airlock opened last and its power
+    lease. The roles aren't saved: each step works them out again.
 - **Its power** (CONT-141). It is a `PoweredDevice` part of an area air
   controller, at `LIFE_SUPPORT` priority, drawing `[power] airlock_controller`
   (1 FE/t) plus what its loaded vents draw. While powered it supplies its vents
@@ -4032,11 +4048,12 @@ block-entity renderer.
 - **The air sensor** (`AirSensorBlock`, `AirSensorBlockEntity`, CONT-142). A
   wall panel with `facing` and `status` (`standby`, `cycling`, `alert`), set
   from `SensorStatus.of`: cycling while a controller has marked it within
-  `LEASE_TICKS`, otherwise alert outside 81 to 122 kPa at its own block. It
-  needs no FE.
+  `LEASE_TICKS`, otherwise alert outside 81 to 122 kPa at its own block. A
+  cycling controller marks all of its sensors. It needs no FE.
 - **The window** (`AirlockControllerMenu`, `client.AirlockControllerScreen`,
   CONT-153). A TGUI window (D-76) synced by data slots: whether it's cycling
-  and its step, power, its links, the chamber's pressure and the pressure
-  beyond each airlock, and each airlock's open and bolted bits. Its buttons go
+  and its step, power, its airlocks and which roles have a sensor, the
+  pressure at each sensor, and each airlock's open and bolted bits. A role
+  with no sensor shows "No sensor" where its pressure would be. Its buttons go
   through `clickMenuButton`: Cycle toward either airlock, and Stop.
 - **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.

@@ -12,10 +12,11 @@ import net.minecraft.world.entity.player.Inventory;
 
 /**
  * An airlock controller's window (CONT-153): its state with a Stop button, and the airlock drawn
- * from side to side, the pressure beyond airlock 1, the chamber's at the air sensor, and the pressure
- * beyond airlock 2, with each airlock's door between them, green open, grey closed and red bolted.
- * Under each side, a button cycles toward it; the one it's cycling toward is lit. A part that isn't
- * linked shows a dash and greys out its button, as the server refuses it.
+ * from side to side, the pressure at the sensor beyond airlock 1, the chamber's sensor and the
+ * sensor beyond airlock 2, with each airlock's door between them, green open, grey closed and red
+ * bolted. Under each side, a button cycles toward it; the one it's cycling toward is lit. A side or
+ * chamber with no sensor says so, and a part that isn't linked shows a dash. A Cycle button is grey
+ * where the server would refuse it.
  */
 final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
     private static final int WIDTH = 216;
@@ -44,13 +45,14 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
         return menu.value(AirlockControllerMenu.DATA_CYCLING) - 1;
     }
 
-    private boolean sensor() {
-        return linked(2);
+    /** Whether there's a sensor beyond airlock 1 (0), in the chamber (1) or beyond airlock 2 (2). */
+    private boolean sensor(int column) {
+        return linked(column == 0 ? 3 : column == 1 ? 2 : 4);
     }
 
     @Override
     protected int windowHeight() {
-        return HEIGHT + DeviceParts.noticesHeight(powered(), false) + (sensor() ? 0 : Ui.NOTICE_HEIGHT + Ui.PAD);
+        return HEIGHT + DeviceParts.noticesHeight(powered(), false);
     }
 
     @Override
@@ -61,9 +63,6 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
     @Override
     protected void draw(Ui ui, int x, int y, int w, int h) {
         y = DeviceParts.notices(ui, x, y, w, powered(), false, Optional.empty());
-        if (!sensor()) {
-            y += ui.notice(x, y, w, Ui.NOTICE, Ui.BLACK, text("no_sensor")) + Ui.PAD;
-        }
         ui.section(x, y, w, SECTION_HEIGHT, null);
         int labelX = x + Ui.PAD;
         int row = y + 2;
@@ -99,17 +98,18 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
             menu.pressure(AirlockControllerMenu.DATA_BEYOND + 2)
         };
         Component[] names = {text("airlock_1"), text("chamber"), text("airlock_2")};
-        boolean[] known = {linked(0), sensor(), linked(1)};
+        boolean both = linked(0) && linked(1);
         for (int i = 0; i < 3; i++) {
             ui.lineCentred(names[i], cols[i], col, row, Ui.ROW, Ui.LABEL, Face.BODY);
-            boolean show = known[i] && !Double.isNaN(kpa[i]);
+            boolean missing = both && !sensor(i);
+            boolean show = both && sensor(i) && !Double.isNaN(kpa[i]);
             ui.lineCentred(
-                    Component.literal(show ? Readout.pressure(kpa[i]) : "—"),
+                    missing ? text("no_sensor") : Component.literal(show ? Readout.pressure(kpa[i]) : "—"),
                     cols[i],
                     col,
                     row + Ui.ROW,
                     Ui.ROW,
-                    show ? Ui.WHITE : Ui.DIM,
+                    missing ? Ui.BAD : show ? Ui.WHITE : Ui.DIM,
                     Face.BODY);
         }
         for (int i = 0; i < 2; i++) {
@@ -119,10 +119,10 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
         row += 2 * Ui.ROW + 2;
 
         // A cycle toward each side.
-        boolean ready = powered() && cycling() < 0 && linked(0) && linked(1) && sensor();
         for (int i = 0; i < 2; i++) {
             int index = i;
             int bx = cols[i == 0 ? 0 : 2];
+            boolean ready = powered() && cycling() < 0 && both && sensor(1) && sensor(i == 0 ? 0 : 2);
             ui.button(
                     bx,
                     row,

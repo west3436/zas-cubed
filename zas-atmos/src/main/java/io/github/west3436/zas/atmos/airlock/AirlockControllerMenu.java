@@ -15,10 +15,11 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * An airlock controller's window (CONT-153, CONT-074): whether it's cycling and toward which
- * airlock, its power, what's linked, the chamber's pressure and the pressure beyond each airlock.
- * The client sends only button ids: cycle toward airlock 1 or 2, or stop. The server checks each,
- * and {@link AirlockControllerBlockEntity#requestCycle(int)} refuses a cycle toward an airlock that
- * isn't linked, as it does one with no power, no sensor, or one already running.
+ * airlock, its power, what's linked, and the pressure at the chamber's sensor and at the sensor
+ * beyond each airlock. The client sends only button ids: cycle toward airlock 1 or 2, or stop. The
+ * server checks each, and {@link AirlockControllerBlockEntity#requestCycle(int)} refuses a cycle
+ * toward an airlock that isn't linked, as it does one with no power, without the sensors it needs,
+ * or one already running.
  */
 public class AirlockControllerMenu extends AbstractContainerMenu {
     /** Cycle toward airlock 1 (id 0) or 2 (id 1). */
@@ -31,7 +32,10 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
     public static final int DATA_CYCLING = 0;
 
     public static final int DATA_POWERED = 1;
-    /** Bit 0 and bit 1: each airlock is linked; bit 2: the sensor is. */
+    /**
+     * Bit 0 and bit 1: each airlock is linked; bit 2: the chamber has a sensor; bits 3 and 4: the
+     * side beyond airlock 1 and 2 has one.
+     */
     public static final int DATA_LINKS = 2;
 
     public static final int DATA_VENTS = 3;
@@ -73,7 +77,9 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
                     case DATA_LINKS ->
                         (controller.airlocks()[0] != null ? 1 : 0)
                                 | (controller.airlocks()[1] != null ? 2 : 0)
-                                | (controller.sensor() != null ? 4 : 0);
+                                | (controller.sensor(AirlockCycle.CHAMBER) != null ? 4 : 0)
+                                | (controller.sensor(AirlockCycle.SIDE_1) != null ? 8 : 0)
+                                | (controller.sensor(AirlockCycle.SIDE_2) != null ? 16 : 0);
                     case DATA_VENTS ->
                         Math.min(Short.MAX_VALUE, controller.linkedVents().size());
                     case DATA_CHAMBER, DATA_CHAMBER + 1 -> half(controller.chamberKpa(), index - DATA_CHAMBER);

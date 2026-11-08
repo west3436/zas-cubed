@@ -87,8 +87,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * controller on its north wall; a chamber one block wide and three high at x = 5, z = 2; and room B
  * (x 6–10), or in the vacuum test nothing, past it. The inner airlock is in A's east wall facing
  * west, the outer in B's west wall facing east, so both seal the face away from the chamber and the
- * chamber holds their cells. Its vents are in its floor and ceiling, and its air sensor on its north
- * wall.
+ * chamber holds their cells. Its vents are in its floor and ceiling. It has three air sensors: the
+ * chamber's on its north wall, A's on A's north wall at x = 1, and B's at x = 8, on B's north wall
+ * or, in the vacuum, on a block of stone.
  *
  * <p>Each test but the timed ones drives the atmos ticks itself within one game tick, as {@link
  * FirelockTests} does.
@@ -221,25 +222,43 @@ public final class AirlockTests {
         return c.getContents() instanceof TranslatableContents t ? t.getKey() : c.getString();
     }
 
-    /** The parts of {@link #lock}. */
+    /** The parts of {@link #lock}: {@code sensor} is the chamber's. */
     private record Lock(
             AreaAirControllerBlockEntity area,
             AirlockControllerBlockEntity controller,
             AirlockBlockEntity inner,
             AirlockBlockEntity outer,
             AirSensorBlockEntity sensor,
+            AirSensorBlockEntity sensorA,
+            AirSensorBlockEntity sensorB,
             List<VentBlockEntity> vents) {
         AtmosDevice[] devices() {
-            List<AtmosDevice> all = new ArrayList<>(List.of(area, controller, inner, outer, sensor));
+            List<AtmosDevice> all = new ArrayList<>(List.of(area, controller, inner, outer, sensor, sensorA, sensorB));
             all.addAll(vents);
             return all.toArray(AtmosDevice[]::new);
         }
+
+        /** The sensors beyond airlock 1, in the chamber and beyond airlock 2. */
+        List<AirSensorBlockEntity> sensors() {
+            return List.of(sensorA, sensor, sensorB);
+        }
+    }
+
+    /** An air sensor at (x, y, z) on a wall to its north. */
+    private static AirSensorBlockEntity sensor(Site s, int x, int y, int z) {
+        return s.place(
+                x,
+                y,
+                z,
+                AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.SOUTH),
+                AirSensorBlockEntity.class);
     }
 
     /**
-     * The airlock described above, all linked. A holds air at 100 kPa; with {@code roomB}, B is a
-     * room. B and the chamber keep the air they were sealed around, 1 atm in the Overworld and
-     * nearly none in the vacuum test, with a little N₂ added so each is a zone either way.
+     * The airlock described above, all linked, its sensors out of order: a sensor's role comes from
+     * its zone. A holds air at 100 kPa; with {@code roomB}, B is a room. B and the chamber keep the
+     * air they were sealed around, 1 atm in the Overworld and nearly none in the vacuum test, with a
+     * little N₂ added so each is a zone either way.
      *
      * @param roomB whether B is a room; without, the outer airlock opens onto the outside
      * @param ceilingVent whether the chamber has a second vent, in its ceiling
@@ -269,12 +288,12 @@ public final class AirlockTests {
         }
         AirlockBlockEntity inner = airlock(s, 4, 2, Direction.WEST, false);
         AirlockBlockEntity outer = airlock(s, 6, 2, Direction.EAST, false);
-        AirSensorBlockEntity sensor = s.place(
-                5,
-                2,
-                2,
-                AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.SOUTH),
-                AirSensorBlockEntity.class);
+        AirSensorBlockEntity sensor = sensor(s, 5, 2, 2);
+        AirSensorBlockEntity sensorA = sensor(s, 1, 2, 1);
+        if (!roomB) {
+            s.set(8, 2, 0, Site.STONE);
+        }
+        AirSensorBlockEntity sensorB = sensor(s, 8, 2, 1);
         s.set(2, 2, 0, TestParts.battery().defaultBlockState());
         AreaAirControllerBlockEntity area = s.controller(2);
         AirlockControllerBlockEntity controller = s.place(
@@ -292,13 +311,18 @@ public final class AirlockTests {
             s.settle(GasMutations.add(s.level, s.point(8, 2, 2), new GasParcel(Map.of(N2, 0.01), 293.15), Site.SOURCE));
         }
         fill(s, 2, 2, 2, 79, 21);
-        for (BlockPos p : List.of(inner.getBlockPos(), outer.getBlockPos(), sensor.getBlockPos())) {
+        for (BlockPos p : List.of(
+                inner.getBlockPos(),
+                sensorB.getBlockPos(),
+                outer.getBlockPos(),
+                sensor.getBlockPos(),
+                sensorA.getBlockPos())) {
             controller.toggleLink(s.level, p);
         }
         for (VentBlockEntity v : vents) {
             controller.toggleLink(s.level, v.getBlockPos());
         }
-        Lock lock = new Lock(area, controller, inner, outer, sensor, vents);
+        Lock lock = new Lock(area, controller, inner, outer, sensor, sensorA, sensorB, vents);
         // The area air controller pins its zone and pays for the airlock controller, which pays its vents.
         for (int i = 0; i < 4 && !controller.power().isPowered(); i++) {
             s.cycle(lock.devices());
@@ -800,14 +824,14 @@ public final class AirlockTests {
     // ---- CONT-138, CONT-141: links -------------------------------------------------------------
 
     /**
-     * The multitool selects an airlock controller and links two airlocks, from either block, one
-     * sensor and two vents; it refuses a third airlock and a second sensor, and using it on a linked
+     * The multitool selects an airlock controller and links two airlocks, from either block, three
+     * sensors and two vents; it refuses a third airlock and a fourth sensor, and using it on a linked
      * part again unlinks it, unbolting an airlock. Sneaking, it links the airlock controller to the
      * selected area air controller instead (CONT-141). Removing the controller unbolts its airlocks
      * (CONT-138).
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_138_the_multitool_links_two_airlocks_one_sensor_and_vents(GameTestHelper h) {
+    public static void cont_138_the_multitool_links_two_airlocks_three_sensors_and_vents(GameTestHelper h) {
         Site s = new Site(h, 1336);
         run(h, s, () -> {
             Lock lock = lock(s, true, true);
@@ -816,11 +840,17 @@ public final class AirlockTests {
                     lock.inner().getBlockPos(),
                     lock.outer().getBlockPos(),
                     lock.sensor().getBlockPos(),
+                    lock.sensorA().getBlockPos(),
+                    lock.sensorB().getBlockPos(),
                     lock.vents().get(0).getBlockPos(),
                     lock.vents().get(1).getBlockPos())) {
                 ac.toggleLink(s.level, p); // unlink what lock() linked
             }
-            h.assertTrue(ac.airlocks()[0] == null && ac.airlocks()[1] == null && ac.sensor() == null, "links left");
+            h.assertTrue(
+                    ac.airlocks()[0] == null
+                            && ac.airlocks()[1] == null
+                            && ac.sensors().isEmpty(),
+                    "links left");
 
             Player player = h.makeMockPlayer(GameType.SURVIVAL);
             ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
@@ -831,7 +861,15 @@ public final class AirlockTests {
             h.assertValueEqual(ac.airlocks()[0], lock.inner().getBlockPos(), "airlock 1");
             h.assertValueEqual(ac.airlocks()[1], lock.outer().getBlockPos(), "airlock 2");
             useItem(s, player, tool, 5, 2, 2);
-            h.assertValueEqual(ac.sensor(), lock.sensor().getBlockPos(), "the sensor");
+            useItem(s, player, tool, 8, 2, 1);
+            useItem(s, player, tool, 1, 2, 1);
+            h.assertValueEqual(
+                    ac.sensors(),
+                    List.of(
+                            lock.sensor().getBlockPos(),
+                            lock.sensorB().getBlockPos(),
+                            lock.sensorA().getBlockPos()),
+                    "the sensors");
             useItem(s, player, tool, 5, 0, 2);
             useItem(s, player, tool, 5, 4, 2);
             h.assertValueEqual(ac.linkedVents().size(), 2, "the vents linked");
@@ -841,16 +879,11 @@ public final class AirlockTests {
                     key(MultitoolItem.link(tool, s.level, third.getBlockPos())),
                     "item.zas_atmos.multitool.airlocks_full",
                     "a third airlock");
-            AirSensorBlockEntity second = s.place(
-                    8,
-                    2,
-                    1,
-                    AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.SOUTH),
-                    AirSensorBlockEntity.class);
+            AirSensorBlockEntity fourth = sensor(s, 1, 3, 1);
             h.assertValueEqual(
-                    key(MultitoolItem.link(tool, s.level, second.getBlockPos())),
+                    key(MultitoolItem.link(tool, s.level, fourth.getBlockPos())),
                     "item.zas_atmos.multitool.sensor_full",
-                    "a second sensor");
+                    "a fourth sensor");
             h.assertValueEqual(
                     ac.toggleLink(s.level, s.abs(8, 0, 2)),
                     AirlockControllerBlockEntity.LinkResult.NOT_LINKABLE,
@@ -949,8 +982,8 @@ public final class AirlockTests {
 
     /**
      * Runs a cycle toward airlock {@code toward} to its end, checking at each step that the vents do
-     * {@code mode}, powered by the controller, that the sensor shows cycling, and that the airlock
-     * opens only on a reading within 5.07 kPa of the pressure beyond it.
+     * {@code mode}, powered by the controller, that all three sensors show cycling, and that the
+     * airlock opens only on a reading within 5.07 kPa of the pressure at the sensor beyond it.
      */
     private static void cycle(GameTestHelper h, Site s, Lock lock, int toward, VentMode mode) {
         AirlockControllerBlockEntity ac = lock.controller();
@@ -965,10 +998,12 @@ public final class AirlockTests {
                         h.assertTrue(v.power().source() == ac, "a vent isn't powered by the airlock controller");
                     }
                 }
-                h.assertValueEqual(
-                        lock.sensor().getBlockState().getValue(AirSensorBlock.STATUS),
-                        SensorStatus.CYCLING,
-                        "the sensor during the cycle");
+                for (AirSensorBlockEntity sensor : lock.sensors()) {
+                    h.assertValueEqual(
+                            sensor.getBlockState().getValue(AirSensorBlock.STATUS),
+                            SensorStatus.CYCLING,
+                            "a sensor during the cycle");
+                }
             }
         }
         h.assertValueEqual(ac.cycling(), -1, "the cycle didn't end in 200 s");
@@ -1048,12 +1083,12 @@ public final class AirlockTests {
             AirlockControllerBlockEntity ac = lock.controller();
             AirlockControllerMenu menu = new AirlockControllerMenu(0, ac, ac.getBlockPos());
             Player player = h.makeMockPlayer(GameType.SURVIVAL);
-            h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_LINKS), 7, "the links shown");
+            h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_LINKS), 0b11111, "the links shown");
             h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_POWERED), 1, "the power shown");
             h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_VENTS), 1, "the vents shown");
             s.close(menu.pressure(AirlockControllerMenu.DATA_CHAMBER), ac.chamberKpa(), 0.01, "the chamber shown");
             s.close(menu.pressure(AirlockControllerMenu.DATA_BEYOND), ac.beyondKpa(0), 0.01, "A shown");
-            h.assertTrue(ac.beyondKpa(0) > 95, "the pressure beyond the inner airlock isn't A's: " + ac.beyondKpa(0));
+            h.assertTrue(ac.beyondKpa(0) > 95, "the pressure at A's sensor isn't A's: " + ac.beyondKpa(0));
 
             h.assertFalse(menu.clickMenuButton(player, AirlockControllerMenu.STOP), "stop while idle");
             h.assertTrue(menu.clickMenuButton(player, AirlockControllerMenu.CYCLE), "cycle toward airlock 1");
@@ -1116,6 +1151,183 @@ public final class AirlockTests {
             h.assertValueEqual(
                     sensor.getBlockState().getValue(AirSensorBlock.STATUS), SensorStatus.CYCLING, "marked, at 0.1 kPa");
         });
+    }
+
+    // ---- CONT-138 to CONT-140, CONT-142: three sensors --------------------------------------------------
+
+    /**
+     * Each sensor's role comes from its zone, not the order it was linked in: the controller reads A
+     * at A's sensor, the chamber at the chamber's and B at B's, with the inner airlock shut or open.
+     * Each sensor's light shows standby or alert at its own pressure, and all three show cycling
+     * during a cycle (CONT-138, CONT-142).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_138_each_sensor_reads_its_own_side_whatever_order_it_was_linked_in(GameTestHelper h) {
+        Site s = new Site(h, 1343);
+        run(h, s, () -> {
+            Lock lock = lock(s, true, false);
+            AirlockControllerBlockEntity ac = lock.controller();
+            fill(s, 5, 2, 2, 90, 0);
+            fill(s, 8, 2, 2, 60, 0);
+            s.cycle(lock.devices());
+            assertRoles(h, lock, "the airlocks shut");
+            s.close(ac.beyondKpa(0), 100, 0.5, "A, at A's sensor");
+            s.close(ac.chamberKpa(), 90, 0.5, "the chamber, at its sensor");
+            s.close(ac.beyondKpa(1), 60, 0.5, "B, at B's sensor");
+            SensorStatus[] lights = {SensorStatus.STANDBY, SensorStatus.STANDBY, SensorStatus.ALERT};
+            for (int i = 0; i < 3; i++) {
+                h.assertValueEqual(
+                        lock.sensors().get(i).getBlockState().getValue(AirSensorBlock.STATUS),
+                        lights[i],
+                        "sensor " + i + "'s light, idle");
+            }
+
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            use(s, player, 4, 1, 2); // the inner airlock open passes gas, and A and the chamber stay two zones
+            h.assertTrue(open(s, 4, 2), "the inner airlock didn't open");
+            s.cycle(lock.devices());
+            assertRoles(h, lock, "the inner airlock open");
+
+            h.assertTrue(ac.requestCycle(1), "the cycle toward B was refused");
+            s.cycle(lock.devices());
+            for (AirSensorBlockEntity sensor : lock.sensors()) {
+                h.assertValueEqual(
+                        sensor.getBlockState().getValue(AirSensorBlock.STATUS),
+                        SensorStatus.CYCLING,
+                        "a sensor during the cycle");
+            }
+            player.discard();
+        });
+    }
+
+    private static void assertRoles(GameTestHelper h, Lock lock, String when) {
+        AirlockControllerBlockEntity ac = lock.controller();
+        h.assertValueEqual(ac.sensor(AirlockCycle.SIDE_1), lock.sensorA().getBlockPos(), "A's sensor, " + when);
+        h.assertValueEqual(
+                ac.sensor(AirlockCycle.CHAMBER), lock.sensor().getBlockPos(), "the chamber's sensor, " + when);
+        h.assertValueEqual(ac.sensor(AirlockCycle.SIDE_2), lock.sensorB().getBlockPos(), "B's sensor, " + when);
+    }
+
+    /**
+     * A cycle needs the chamber's sensor and the sensor beyond the airlock it cycles toward. Without
+     * them it doesn't start, from the controller, the window, a bolted airlock or a sensor, and the
+     * window shows which is missing. A cycle that loses the sensor it reads stops (CONT-139,
+     * CONT-140, CONT-153).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_139_a_cycle_needs_the_chambers_sensor_and_the_far_sides(GameTestHelper h) {
+        Site s = new Site(h, 1344);
+        run(h, s, () -> {
+            Lock lock = lock(s, true, false);
+            AirlockControllerBlockEntity ac = lock.controller();
+            AirlockControllerMenu menu = new AirlockControllerMenu(0, ac, ac.getBlockPos());
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+
+            ac.toggleLink(s.level, lock.sensorA().getBlockPos());
+            s.cycle(lock.devices());
+            h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_LINKS), 0b10111, "the links, A's sensor gone");
+            h.assertTrue(Double.isNaN(ac.beyondKpa(0)), "a reading beyond airlock 1 with no sensor there");
+            h.assertFalse(ac.requestCycle(0), "a cycle toward airlock 1 with no sensor beyond it");
+            h.assertFalse(menu.clickMenuButton(player, AirlockControllerMenu.CYCLE), "the window's cycle toward 1");
+            h.assertFalse(bolted(s, 4, 2) || bolted(s, 6, 2), "a refused cycle bolted an airlock");
+            h.assertTrue(menu.clickMenuButton(player, AirlockControllerMenu.CYCLE + 1), "a cycle toward 2");
+            h.assertTrue(ac.stop(), "stop");
+            use(s, player, 4, 2, 2); // the bolted inner airlock asks for a cycle toward it
+            h.assertValueEqual(ac.cycling(), -1, "the bolted airlock with no sensor beyond it started a cycle");
+
+            ac.toggleLink(s.level, lock.sensorA().getBlockPos());
+            ac.toggleLink(s.level, lock.sensor().getBlockPos());
+            s.cycle(lock.devices());
+            h.assertValueEqual(menu.value(AirlockControllerMenu.DATA_LINKS), 0b11011, "the links, the chamber's gone");
+            h.assertFalse(ac.requestCycle(0) || ac.requestCycle(1), "a cycle with no chamber sensor");
+            use(s, player, 1, 2, 1); // A's sensor
+            use(s, player, 6, 2, 2); // the bolted outer airlock
+            h.assertValueEqual(ac.cycling(), -1, "a press with no chamber sensor started a cycle");
+
+            ac.toggleLink(s.level, lock.sensor().getBlockPos());
+            h.assertTrue(ac.requestCycle(1), "a cycle toward 2 with all three sensors");
+            ac.toggleLink(s.level, lock.sensorA().getBlockPos());
+            h.assertValueEqual(ac.cycling(), 1, "losing a sensor the cycle doesn't read stopped it");
+            ac.toggleLink(s.level, lock.sensorB().getBlockPos());
+            h.assertValueEqual(ac.cycling(), -1, "losing the sensor the cycle reads didn't stop it");
+            player.discard();
+        });
+    }
+
+    /**
+     * Pressing any linked sensor cycles toward the side opposite the one the airlock is accessing:
+     * the side whose airlock alone is unbolted, or else the airlock opened last. With no history, it
+     * cycles away from the pressed sensor's side, or toward airlock 1 from the chamber's. A press
+     * during a cycle, or of an unlinked sensor, starts nothing; a bolted airlock still asks for a
+     * cycle toward itself (CONT-140).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_140_pressing_a_sensor_cycles_away_from_the_side_the_airlock_is_at(GameTestHelper h) {
+        Site s = new Site(h, 1345);
+        run(h, s, () -> {
+            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            // Neither bolted, airlock 2 opened by hand: A's sensor cycles toward airlock 1.
+            Lock lock = lock(s, true, false);
+            AirlockControllerBlockEntity ac = lock.controller();
+            h.assertValueEqual(ac.lastOpened(), -1, "a new controller's history");
+            use(s, player, 6, 1, 2);
+            h.assertValueEqual(ac.lastOpened(), 1, "the airlock opened by hand");
+            press(h, s, player, lock, 1, 2, 1, 0, "A's sensor, airlock 2 opened last");
+            h.assertTrue(ac.stop(), "stop");
+
+            // No history: away from the pressed sensor's side, or toward airlock 1 from the chamber's.
+            lock = lock(s, true, false);
+            ac = lock.controller();
+            press(h, s, player, lock, 1, 2, 1, 1, "A's sensor, no history");
+            press(h, s, player, lock, 8, 2, 1, 1, "B's sensor during the cycle");
+            h.assertTrue(ac.stop(), "stop");
+            h.assertTrue(bolted(s, 4, 2) && bolted(s, 6, 2), "stopping unbolted an airlock");
+            press(h, s, player, lock, 8, 2, 1, 0, "B's sensor, both bolted, no history");
+            h.assertTrue(ac.stop(), "stop");
+            press(h, s, player, lock, 5, 2, 2, 0, "the chamber's sensor, no history");
+            finish(h, s, lock);
+            h.assertTrue(open(s, 4, 2) && !bolted(s, 4, 2) && bolted(s, 6, 2), "airlock 1 isn't the one open");
+            h.assertValueEqual(ac.lastOpened(), 0, "the airlock the cycle opened");
+
+            // Airlock 1 alone unbolted: toward airlock 2, from B's own sensor too.
+            press(h, s, player, lock, 8, 2, 1, 1, "B's sensor, airlock 1 alone unbolted");
+            h.assertTrue(ac.stop(), "stop");
+            // Both bolted, airlock 1 opened last: toward airlock 2.
+            press(h, s, player, lock, 5, 2, 2, 1, "the chamber's sensor, airlock 1 opened last");
+            finish(h, s, lock);
+            h.assertTrue(open(s, 6, 2) && !bolted(s, 6, 2) && bolted(s, 4, 2), "airlock 2 isn't the one open");
+            // Airlock 2 alone unbolted: toward airlock 1, from A's own sensor too.
+            press(h, s, player, lock, 1, 2, 1, 0, "A's sensor, airlock 2 alone unbolted");
+            h.assertTrue(ac.stop(), "stop");
+            // Both bolted, airlock 2 opened last: toward airlock 1.
+            press(h, s, player, lock, 1, 2, 1, 0, "A's sensor, airlock 2 opened last");
+            finish(h, s, lock);
+
+            // A bolted airlock still asks for a cycle toward itself.
+            use(s, player, 6, 2, 2);
+            h.assertValueEqual(ac.cycling(), 1, "using the bolted outer airlock didn't cycle toward it");
+            h.assertTrue(ac.stop(), "stop");
+            // An unlinked sensor starts nothing.
+            sensor(s, 1, 3, 1);
+            use(s, player, 1, 3, 1);
+            h.assertValueEqual(ac.cycling(), -1, "an unlinked sensor started a cycle");
+            player.discard();
+        });
+    }
+
+    /** Presses the sensor at (x, y, z) and checks the controller cycles toward airlock {@code toward}. */
+    private static void press(
+            GameTestHelper h, Site s, Player player, Lock lock, int x, int y, int z, int toward, String what) {
+        use(s, player, x, y, z);
+        h.assertValueEqual(lock.controller().cycling(), toward, what);
+    }
+
+    /** Steps a cycle to its end. */
+    private static void finish(GameTestHelper h, Site s, Lock lock) {
+        for (int i = 0; i < 50 && lock.controller().cycling() >= 0; i++) {
+            s.cycle(lock.devices());
+        }
+        h.assertValueEqual(lock.controller().cycling(), -1, "the cycle didn't end in 50 s");
     }
 
     // ---- CONT-141: power, in real time ---------------------------------------------------------------

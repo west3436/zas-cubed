@@ -535,6 +535,7 @@ public class AirlockBlock extends HorizontalDirectionalBlock implements EntityBl
         level.setBlock(origin, state.setValue(OPEN, open), Block.UPDATE_ALL);
         if (open) {
             closeIn(level, origin, AUTO_CLOSE_TICKS);
+            AirlockControllerBlockEntity.linking(level, origin).ifPresent(c -> c.opened(origin));
         } else if (level.getBlockEntity(origin) instanceof AirlockBlockEntity be) {
             be.setCloseAt(-1);
         }
