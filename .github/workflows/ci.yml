@@ -100,6 +100,19 @@ jobs:
             echo "::error::Expected the built jars' GameTest server to report that its tests passed, but $passed did."
             exit 1
           fi
+      # CLIENT-025 (NFR-022): the built Ponder addon, which nests Ponder and
+      # Flywheel, on a dedicated server with zas and zas_atmos.
+      - name: CLIENT-025 dedicated server with the Ponder addon (built jars)
+        if: steps.gradle.outputs.present == 'true'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          ./gradlew :zas-ponder:runServerCheckGameTestServer --stacktrace | tee ponder-gametests.log
+          passed=$(grep -cE "All [0-9]+ required tests passed" ponder-gametests.log || true)
+          if [ "$passed" -ne 1 ]; then
+            echo "::error::Expected the Ponder addon's GameTest server to report that its tests passed, but $passed did."
+            exit 1
+          fi
 
   # Snapshot of the API on the Central Portal (API-008, D-18), after a green
   # build on main. Never on PRs: they don't get the secrets.

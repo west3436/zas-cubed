@@ -1,0 +1,43 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT; assets CC BY-SA 4.0. Nests Ponder and Flywheel, both MIT; see META-INF/licenses"
+issueTrackerURL = "https://github.com/west3436/zas-cubed/issues"
+
+[[mods]]
+modId = "zas_ponder"
+version = "${mod_version}"
+displayName = "ZAS³ Ponder"
+authors = "west3436"
+description = '''
+Ponder scenes for ZAS³ Atmospherics. Nests Ponder and Flywheel.
+'''
+# Client only: a server with it or without it is the same to a client (CLIENT-025).
+displayTest = "IGNORE_ALL_VERSION"
+
+[[dependencies.zas_ponder]]
+modId = "zas_atmos"
+type = "required"
+versionRange = "[${mod_version}]"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.zas_ponder]]
+modId = "ponder"
+type = "required"
+versionRange = "[1.0.82,)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.zas_ponder]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neo_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.zas_ponder]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version}]"
+ordering = "NONE"
+side = "BOTH"

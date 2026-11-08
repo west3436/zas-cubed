@@ -3211,3 +3211,10 @@ notes: The reinforced station wall item: the block model.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/reinforced_glass_block.json
 origin: original
 notes: The reinforced glass block item: the block model.
+
+# The Ponder addon (CLIENT-023, D-83). Its scenes show zas_atmos's own blocks and add
+# no art; their floors are built from vanilla blocks when the addon is built. Its jar
+# also nests Ponder (MIT, The Create Team) and Flywheel (MIT, Jozufozu). They're code,
+# not assets, and their licences ship in the jar's META-INF/licenses.
+path: zas-ponder/src/main/resources/assets/zas_ponder/lang/en_us.json
+origin: original

@@ -117,12 +117,20 @@ tasks.named('test', Test) {
     useJUnitPlatform()
     // The shipped sounds, which tests read as files.
     systemProperty 'zas_atmos.resources', file('src/main/resources').absolutePath
-    // CLIENT-007 reads both mods' compiled classes and language files, and prints what it finds.
+    // CLIENT-007 reads the mods' compiled classes and language files, and prints what it finds.
     def zasMain = project(':zas').sourceSets.main
     inputs.files(zasMain.output.classesDirs, sourceSets.main.output.classesDirs)
     systemProperty 'zas.resources', project(':zas').file('src/main/resources').absolutePath
     systemProperty 'zas.mainClasses', zasMain.java.destinationDirectory.get().asFile.absolutePath
     systemProperty 'zas_atmos.mainClasses', sourceSets.main.java.destinationDirectory.get().asFile.absolutePath
+    // And the Ponder addon's. It requires this mod, so it's named by path here, not evaluated first.
+    def ponder = project(':zas-ponder')
+    def ponderClasses = ponder.layout.buildDirectory.dir('classes/java/main')
+    dependsOn ':zas-ponder:compileJava'
+    inputs.files(ponderClasses)
+    inputs.dir(ponder.file('src/main/resources/assets/zas_ponder/lang'))
+    systemProperty 'zas_ponder.resources', ponder.file('src/main/resources').absolutePath
+    systemProperty 'zas_ponder.mainClasses', ponderClasses.get().asFile.absolutePath
     testLogging.exceptionFormat = 'full'
 }
 

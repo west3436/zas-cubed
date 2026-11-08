@@ -42,3 +42,8 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
   under compatible licenses. Each asset file's source, license and
   attribution are listed in [CREDITS](CREDITS). No NonCommercial-licensed
   assets are used.
+- **Bundled libraries:** the Ponder addon (`zas_ponder`) nests
+  [Ponder](https://github.com/Creators-of-Create/Ponder) and
+  [Flywheel](https://github.com/Engine-Room/Flywheel), both under the MIT
+  License, for its scenes. Their licences ship in its jar. `zas` and
+  `zas_atmos` bundle neither.

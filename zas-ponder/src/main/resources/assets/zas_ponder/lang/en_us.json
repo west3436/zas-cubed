@@ -1,0 +1,14 @@
+{
+  "fml.menu.mods.info.description.zas_ponder": "Ponder scenes for ZAS³ Atmospherics. Nests Ponder and Flywheel.\n",
+
+  "zas_ponder.ponder.tag.atmospherics": "ZAS³ Atmospherics",
+  "zas_ponder.ponder.tag.atmospherics.description": "Pipes, devices and tools that move gas",
+
+  "zas_ponder.ponder.shared.reading.oxygen": "O₂ %1$s",
+
+  "zas_ponder.ponder.connector_port.header": "Attaching a canister",
+  "zas_ponder.ponder.shared.connector_port.pipe_below": "A pipe joins it only from below",
+  "zas_ponder.ponder.shared.connector_port.canister_on_top": "Stand a canister on it to join the pipes",
+  "zas_ponder.ponder.shared.connector_port.vent_power": "An area air controller powers the vent",
+  "zas_ponder.ponder.shared.connector_port.gas_flows": "Gas flows from the canister to the vent"
+}

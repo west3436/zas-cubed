@@ -1,0 +1,159 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Ponder scenes (CLIENT-023, D-83): a client addon that requires zas_atmos and nests Ponder and
+// Flywheel, which no site publishes on their own for 1.21.1. zas_atmos itself never names either, so a
+// player can leave them out (NFR-022).
+base { archivesName = 'zas_ponder' }
+
+evaluationDependsOn(':zas-atmos')
+
+// What the jar nests, and the least it accepts. The ranges start at the copies Create 6.0.10 nests, so
+// with Create installed FML may load Create's copies instead, and the scenes must work on them: they
+// use nothing newer.
+def ponderVersion = '1.0.87+mc1.21.1'
+def ponderRange = '[1.0.82+mc1.21.1,)'
+def flywheelVersion = '1.0.7'
+def flywheelRange = '[1.0.6,2.0)'
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.createmod.net' }
+        }
+        filter {
+            includeGroup 'net.createmod.ponder'
+            includeGroup 'dev.engine-room.flywheel'
+        }
+    }
+}
+
+sourceSets {
+    // CLIENT-025: a GameTest that runs inside the built addon, on a dedicated server.
+    serverCheck {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: the addon, zas and zas_atmos come in as built jars, so
+    // FML's jar-in-jar locator takes Ponder and Flywheel out of the addon's, as in production.
+    serverCheckRun
+}
+
+def zasMod = project(':zas').neoForge.mods.zas
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.serverCheckRun)
+    runs {
+        // ./gradlew :zas-ponder:runClient: a dev client with zas, zas_atmos and the scenes.
+        client {
+            client()
+        }
+        serverCheckGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.serverCheckRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('serverCheckRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas_ponder'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    mods {
+        zas {
+            zasMod.modSourceSets.get().each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet project(':zas-atmos').sourceSets.main
+        }
+        zas_ponder {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// A fresh world for each check, as in the other GameTest runs.
+tasks.matching { it.name == 'runServerCheckGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('serverCheckRun/world')
+    }
+}
+
+dependencies {
+    implementation project(':zas-atmos')
+    implementation "net.createmod.ponder:ponder-neoforge:${ponderVersion}"
+    runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-1.21.1:${flywheelVersion}"
+
+    jarJar('net.createmod.ponder:ponder-neoforge') {
+        version {
+            strictly ponderRange
+            prefer ponderVersion
+        }
+    }
+    jarJar('dev.engine-room.flywheel:flywheel-neoforge-1.21.1') {
+        version {
+            strictly flywheelRange
+            prefer flywheelVersion
+        }
+    }
+}
+
+// The 3 × 3 to 9 × 9 floors the scenes stand on, Ponder's usual white concrete and snow, written as
+// structure files so no binary is kept in the repository. Each scene builds the rest itself. Ponder
+// changes no block outside what the structure placed, so one block of air in the top corner makes
+// each stage a cube.
+def ponderStages = tasks.register('generatePonderStages') {
+    def out = layout.buildDirectory.dir('generated/ponderStages')
+    outputs.dir(out)
+    doLast {
+        [3, 5, 7, 9].each { size ->
+            def file = out.get().file("assets/zas_ponder/ponder/stage_${size}.nbt").asFile
+            file.parentFile.mkdirs()
+            file.withOutputStream { raw ->
+                def nbt = new DataOutputStream(new java.util.zip.GZIPOutputStream(raw))
+                def name = { String s -> nbt.writeShort(s.getBytes('UTF-8').length); nbt.write(s.getBytes('UTF-8')) }
+                def ints = { String key, List<Integer> values ->
+                    nbt.writeByte(9); name(key); nbt.writeByte(3); nbt.writeInt(values.size())
+                    values.each { nbt.writeInt(it) }
+                }
+                def block = { List<Integer> pos, int state ->
+                    ints('pos', pos)
+                    nbt.writeByte(3); name('state'); nbt.writeInt(state)
+                    nbt.writeByte(0)
+                }
+                nbt.writeByte(10); name('')
+                ints('size', [size, size, size])
+                def palette = ['minecraft:white_concrete', 'minecraft:snow_block', 'minecraft:air']
+                nbt.writeByte(9); name('palette'); nbt.writeByte(10); nbt.writeInt(palette.size())
+                palette.each {
+                    nbt.writeByte(8); name('Name'); name(it); nbt.writeByte(0)
+                }
+                nbt.writeByte(9); name('blocks'); nbt.writeByte(10); nbt.writeInt(size * size + 1)
+                for (int x = 0; x < size; x++) {
+                    for (int z = 0; z < size; z++) {
+                        block([x, 0, z], (x + z) % 2)
+                    }
+                }
+                block([size - 1, size - 1, size - 1], 2)
+                nbt.writeByte(9); name('entities'); nbt.writeByte(10); nbt.writeInt(0)
+                // 1.21.1's data version.
+                nbt.writeByte(3); name('DataVersion'); nbt.writeInt(3955)
+                nbt.writeByte(0)
+                nbt.close()
+            }
+        }
+    }
+}
+sourceSets.main.resources.srcDir(ponderStages)
+
+// The addon as it ships, nested jars included, plus the CLIENT-025 test.
+def serverCheckJar = tasks.register('serverCheckJar', Jar) {
+    archiveClassifier = 'server-check'
+    from sourceSets.main.output
+    from sourceSets.serverCheck.output
+    from tasks.named('jarJar')
+}
+
+dependencies {
+    serverCheckRunRuntimeOnly(project(':zas')) { transitive = false }
+    serverCheckRunRuntimeOnly(project(':zas-atmos')) { transitive = false }
+    serverCheckRunRuntimeOnly files(serverCheckJar)
+}
