@@ -10,6 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * a shared executor (architecture §3.1). Dimensions are independent, so with more than one thread
  * they run in parallel; each dimension's ticks still run one at a time ({@link
  * DimensionScheduler}).
+ *
+ * <p>Its threads run at normal priority. A thread otherwise takes the priority of the thread that
+ * starts it, which is the server thread, raised to 8 on a machine with more than four processors;
+ * at the server thread's priority, Windows often runs a worker just woken for a tick on the server
+ * thread's own processor and holds the server thread off until it yields, so handing over a 10 ms
+ * tick stalled the server thread about 10 ms.
  */
 public final class AtmosWorkers {
     private AtmosWorkers() {}
@@ -30,6 +36,7 @@ public final class AtmosWorkers {
         ThreadFactory factory = r -> {
             Thread t = new Thread(r, THREAD_PREFIX + next.getAndIncrement());
             t.setDaemon(true);
+            t.setPriority(Thread.NORM_PRIORITY);
             return t;
         };
         return Executors.newFixedThreadPool(threads, factory);

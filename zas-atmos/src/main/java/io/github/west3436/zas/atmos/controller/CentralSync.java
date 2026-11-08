@@ -38,7 +38,8 @@ public record CentralSync(
      * @param danger its danger level, 0 to 2
      * @param powered whether it paid its own draw at its last step
      * @param priority its {@link ZonePriority} ordinal
-     * @param contact whether it is loaded, so these are its readings now rather than its last
+     * @param contact whether it is in contact, loaded and stepping, so these are its readings now
+     *     rather than its last
      */
     public record Row(
             BlockPos pos,

@@ -3146,6 +3146,14 @@ range. `cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloade
 (GameTest) checks that an unloaded controller's row is out of contact with its last
 readings. This stays Accepted until the owner has checked the window.*
 
+*2026-11-08: Note: still Accepted, text unchanged. Since devices step only in
+chunks that tick (CONT-006), a controller in a chunk loaded in full that doesn't
+tick, at the edge of what is loaded, waits as an unloaded one does, so it is
+shown as out of contact too, with its last readings, and gets no FE. Before, the
+console counted it in contact and showed its frozen readings as live.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
+(GameTest) checks its row.*
+
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
@@ -3170,6 +3178,12 @@ from a player out of reach of the central controller is refused. Once the contro
 chunk unloads, it won't open. The menu is the controller's own, with its own checks. It
 stays open only while the player is in reach of the central controller, the controller
 is loaded and still claimed. Its Back button reopens the central controller's window.*
+
+*2026-11-08: Note: still Implemented. A loaded controller here is one in contact (CONT-123):
+one waiting in a chunk loaded in full that doesn't tick won't open from the central
+controller, and its menu opened from there closes when it goes out of contact.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact` (GameTest)
+checks both.*
 
 ## Device sounds
 

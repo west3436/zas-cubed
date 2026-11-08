@@ -140,7 +140,12 @@ NFR-022.
   is a COMMON config option, default 1 thread (NFR-005 is set against one).
   Dimensions are independent, so with more threads they run in parallel.
 - *Implemented (#23):* `AtmosWorkers.create(n)` makes the pool;
-  `worker_threads` in `zas-common.toml` sets n.
+  `worker_threads` in `zas-common.toml` sets n. Its threads run at normal
+  priority, set explicitly: a thread otherwise takes the priority of the one
+  that starts it, the server thread, which Minecraft raises to 8. At the
+  server thread's priority, Windows often ran a worker woken for a tick on the
+  server thread's own processor and held the server thread off for the
+  tick's length, so a 10 ms tick could stall a batch close by 10 ms.
 - **Ownership is exclusive:**
 
 | State | Owner | Others get |
@@ -945,6 +950,14 @@ restart the server, so they use `DimensionAtmos.simulateUnload`,
 `startForTest`, which run the same save code and byte format; the real chunk
 events run whenever the test server saves or unloads, and at its shutdown. The GameTest server starts from a
 fresh world each run, since saved zones would otherwise come back.
+
+*Implemented (S-10 follow-up):* an unloading chunk's record is built once.
+`AtmosPersistence`'s unload listener, at `HIGH` priority, has it built and
+encoded, and `DimensionPipeline.chunkUnloaded(chunk, record)` keeps its shares
+from that same record. A share of a zone whose other chunks have unloaded is
+what they left (DATA-008), so each unload asks the zone's volume in every one
+of them; `Membership.volumeIn` reads that from the sections' palettes, not
+their cell lists.
 
 *Implemented (#104):* the palette-change rebuild is `DimensionAtmos.rebuild`,
 using `DimensionPipeline.recordChunks` and `resubmit`. The records go through
@@ -2510,7 +2523,11 @@ jar, so providers can be tested before real devices exist.
   memory, still scheduled, and wait too. `AtmosDevice.step` itself still runs
   only while the chunk is loaded in full (`ServerLevel.isLoaded`), for what
   steps a device directly: GameTests (`DeviceTicker.stepNow`) and a fire
-  alarm closing firelocks (§11.8).
+  alarm closing firelocks (§11.8). Whatever needs to know whether a device is
+  working, rather than whether its block can be read, asks
+  `AtmosDevice.stepping()`, which answers as the schedule's gate does: a central
+  controller's contact with an area air controller (§11.7) and the remote GUI
+  it opens. `ServerLevel.isLoaded` only says a block can be read.
 
   *2026-11-07: rewritten (S-10). This said a device steps while its chunk is
   loaded in full. The S-10 bench found that kept chunks at the edge loaded
@@ -3450,9 +3467,10 @@ air controllers, not parts. Each atmos tick it:
 4. Records each claimed controller's readings (pressure, temperature, danger, power) for its
    GUI (CONT-123), and sets its `screen`.
 
-An area air controller is in contact while its chunk is loaded in full and its block entity is
-in the schedule. One that isn't keeps its claim, gets nothing, and is listed with its last
-readings.
+An area air controller is in contact while its block entity is in the schedule and stepping
+(`AtmosDevice.stepping`, §11.2): its chunk ticks block entities. One that isn't, unloaded or
+waiting in a chunk loaded in full that doesn't tick, keeps its claim, gets nothing, and is
+listed with its last readings.
 
 - **Claims** (`CentralClaims`) are one `SavedData` per level, `data/zas_atmos_central_claims.dat`,
   keyed by the area air controller: its central controller, its zone priority (`ZonePriority`),
@@ -3467,7 +3485,8 @@ readings.
 - **GUI** (`CentralMenu`, `CentralSync`). The menu has no slots. Twice a second the server sends
   its status, buffer, range and maximum, and a row per claimed controller: position, readings,
   priority and whether it is in contact. Buttons `0` and `1` lower and raise the range; `1000 +
-  row` opens that row's area air controller's own menu (§11.6) if it is loaded (CONT-124);
+  row` opens that row's area air controller's own menu (§11.6) if it is in contact (CONT-124),
+  and that menu closes when it goes out of contact;
   `100000 + row × 3 + p` sets its priority. A row's button names its place in the list the server
   last sent that player, so it can only reach a controller this one has claimed. The screen is
   `client.CentralScreen`, on the TGUI kit: status, power and range above a scrolling list, each
