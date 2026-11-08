@@ -7,6 +7,7 @@ import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.SectionSnapshot;
+import io.github.west3436.zas.engine.classify.EnclosureFill;
 import io.github.west3436.zas.engine.classify.WorldLimits;
 import io.github.west3436.zas.engine.conservation.ConservationLedger;
 import io.github.west3436.zas.engine.conservation.ConservationReport;
@@ -1766,8 +1767,8 @@ public final class DimensionEngine {
         return AtmosSnapshot.of(tick, registry, views, table, chunks, heldCells(table));
     }
 
-    /** The most cells {@link #heldCells} lists. */
-    static final int HELD_MAX_CELLS = 65_536;
+    /** The most cells {@link #heldCells} lists: the largest enclosure the game allows (GEO-020). */
+    static final int HELD_MAX_CELLS = EnclosureFill.SETTABLE_MAX_CELLS;
 
     /**
      * The unzoned cells of the regions whose breaches pause zones because they reach unloaded
@@ -1847,8 +1848,11 @@ public final class DimensionEngine {
 
     // ---- Debug export (CLIENT-005, CLIENT-011) ------------------------------------------
 
-    /** The most cells a {@link #debugView} lists. */
-    public static final int DEBUG_MAX_CELLS = 65_536;
+    /**
+     * The most cells a {@link #debugView} lists: the largest enclosure the game allows (GEO-020), so
+     * a zone of any size it can form is listed whole.
+     */
+    public static final int DEBUG_MAX_CELLS = EnclosureFill.SETTABLE_MAX_CELLS;
 
     /** The most faces a {@link #debugView} lists. */
     public static final int DEBUG_MAX_FACES = 32_768;

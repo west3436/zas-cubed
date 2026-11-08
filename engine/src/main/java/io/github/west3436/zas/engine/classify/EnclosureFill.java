@@ -28,6 +28,13 @@ public final class EnclosureFill {
     /** The default bound, in cells (D-23). */
     public static final int DEFAULT_MAX_CELLS = 65_536;
 
+    /**
+     * The most the game lets the bound be set to (GEO-020): a hall 5 × 5 chunks wide and 16 blocks
+     * high, the largest the S-10 bench's enclosure cap step tests. The listings that must hold a
+     * whole enclosure are sized from it.
+     */
+    public static final int SETTABLE_MAX_CELLS = 102_400;
+
     private int maxCells;
     private final Visitor visitor = new Visitor();
 

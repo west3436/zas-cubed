@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.scheduler.DimensionPipeline;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
+import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.simulation.AtmosService;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.ArrayDeque;
@@ -59,9 +60,10 @@ import net.minecraft.world.phys.Vec3;
  *   <li>f. The heap again, with the hall zoned.
  *   <li>d. Split and merge: a wall across the middle, built with one block missing; placing that
  *       block splits the hall (CORE-024), taking it out again merges the halves (CORE-023).
- *   <li>c. Breach and reseal: a 3 × 3 hole in the middle of the roof opens the hall to the vacuum;
- *       it vents, the hole is filled, and the hall must read sealed again, or zone again from an
- *       add if it went.
+ *   <li>c. Breach and reseal, under ZAS's venting (owner, 2026-11-08), so the hall empties: a 3 × 3
+ *       hole in the middle of the roof opens it to the vacuum; it vents until its zone dissolves
+ *       (CORE-076), the hole is filled, and an add must zone the whole hall again. The venting
+ *       setting goes back afterwards.
  *   <li>e. Active: a generator, an area air controller and a vent go in, the hall is below the
  *       controller's target so the vent blows throughout, and the player stands inside, breathing.
  * </ol>
@@ -80,6 +82,9 @@ final class CapStep {
     static final int TAIL = 40;
 
     private static final int TIMEOUT = 60 * 20;
+    /** How long a breached hall may take to empty and dissolve: about 30 s under ZAS's venting. */
+    private static final int DISSOLVE_TIMEOUT = 180 * 20;
+
     private static final int SITE_SPACING = 1024;
     private static final int OVER_CAP_Z = 512;
     private static final int PLAYER = 9;
@@ -137,6 +142,18 @@ final class CapStep {
         final List<Event> splits = new ArrayList<>();
         final List<Event> merges = new ArrayList<>();
         Event breach;
+        /**
+         * The breach window's server tick that applied the dissolve, and its worker tick (the last
+         * to finish before it): indexes into the window's ticks and worker rows, or -1.
+         */
+        int dissolveTick = -1;
+
+        int dissolveWorker = -1;
+        /** Seconds from the hole to the dissolve, or NaN. */
+        double dissolveSeconds = Double.NaN;
+        /** The cells the hall zoned again with after the reseal. */
+        int rezoneCells;
+
         AtmosHeap heapBefore;
         AtmosHeap heapAfter;
         int zoneCells;
@@ -183,9 +200,9 @@ final class CapStep {
     private final int window;
     private final int settle;
     private final int repeats;
-    private final int venting;
     final List<Hall> halls = new ArrayList<>();
     final int configuredCap;
+    final ExchangeSettings.Venting configuredVenting;
     final Map<String, String> notes = new java.util.LinkedHashMap<>();
     ServerLevel level;
     DimensionAtmos atmos;
@@ -209,8 +226,8 @@ final class CapStep {
         this.window = quick ? 5 * 20 : 30 * 20;
         this.settle = quick ? 5 * 20 : 20 * 20;
         this.repeats = quick ? 1 : 3;
-        this.venting = quick ? 5 * 20 : 10 * 20;
         this.configuredCap = ZasServerConfig.ENCLOSURE_MAX_CELLS.get();
+        this.configuredVenting = ZasServerConfig.VENTING.get();
         List<Integer> sides = sides(quick);
         for (int i = 0; i < sides.size(); i++) {
             halls.add(new Hall(i, sides.get(i)));
@@ -220,8 +237,9 @@ final class CapStep {
         for (Hall h : halls) {
             plan(h);
         }
-        steps.add(always(null, "put the cap back", () -> {
+        steps.add(always(null, "put the cap and the venting back", () -> {
             ZasServerConfig.ENCLOSURE_MAX_CELLS.set(configuredCap);
+            ZasServerConfig.VENTING.set(configuredVenting);
             Clock.keepCalls = false;
         }));
     }
@@ -273,6 +291,7 @@ final class CapStep {
         steps.add(until(h, "the hall whole again", () -> cells(left(h)) == h.cells(), TIMEOUT));
         steps.add(pause(h, "settle", 100));
         steps.add(breach(h));
+        steps.add(always(h, "put the venting back", () -> ZasServerConfig.VENTING.set(configuredVenting)));
         steps.add(pause(h, "settle", 100));
         steps.add(once(h, "devices and the player in", () -> devicesIn(h)));
         steps.add(pause(h, "settle", settle));
@@ -363,6 +382,11 @@ final class CapStep {
         }
         if (applied) {
             w.apply.add(atmos.lastApplyNanos());
+        }
+        if (closed || applied) {
+            w.batchWork.put(
+                    w.ticks - 1,
+                    new long[] {closed ? atmos.lastCloseNanos() : -1, applied ? atmos.lastApplyNanos() : -1});
         }
         w.worker.addAll(ticks);
     }
@@ -515,25 +539,39 @@ final class CapStep {
     }
 
     /**
-     * Breach and reseal: the hole, until the hall reads breached, venting, the hole filled, until
-     * it reads sealed (or, if it went, an add zones it again), then {@link #TAIL} ticks more.
+     * Breach and reseal, under ZAS's venting so the hall empties (owner, 2026-11-08): the hole,
+     * until the hall reads breached; venting until its zone dissolves (CORE-076); the hole filled;
+     * once a batch has carried the fill, an add, until the hall zones again; then {@link #TAIL}
+     * ticks more. A zone that doesn't dissolve has the hole filled anyway and must read sealed. The
+     * step after it puts the venting back.
      */
     private Step breach(Hall h) {
         return new Step(h, "breach and reseal", false) {
+            private static final int BREACHED = 0;
+            private static final int VENTING = 1;
+            private static final int RESEALED = 2;
+            private static final int ZONING = 3;
+            private static final int TAILING = 4;
+
             private Event e;
-            private int phase;
+            private int phase = BREACHED;
             private long phaseAt;
+            private long holeNanos;
             private double molesBefore;
+            private ZoneView last;
+            private long resealBatch;
 
             @Override
             void begin() {
+                ZasServerConfig.VENTING.set(ExchangeSettings.Venting.FAITHFUL);
                 e = new Event("breach and reseal", now);
                 h.breach = e;
                 recording = e.window;
                 event = e;
                 ZoneView z = zone(left(h));
                 molesBefore = z == null ? Double.NaN : z.totalMoles();
-                e.actionNanos = System.nanoTime();
+                holeNanos = System.nanoTime();
+                e.actionNanos = holeNanos;
                 hole(h, true);
             }
 
@@ -541,7 +579,7 @@ final class CapStep {
             boolean poll(long t) {
                 ZoneView z = zone(left(h));
                 switch (phase) {
-                    case 0 -> {
+                    case BREACHED -> {
                         if (z == null || z.breached() || t >= TIMEOUT) {
                             e.facts.add(
                                     z == null
@@ -549,45 +587,63 @@ final class CapStep {
                                             : z.breached()
                                                     ? String.format("read breached %.1f s after the hole", t / 20.0)
                                                     : "never read breached");
-                            next(t);
+                            to(VENTING, t);
                         }
                     }
-                    case 1 -> {
-                        if (t - phaseAt >= venting) {
-                            double moles = z == null ? 0 : z.totalMoles();
+                    case VENTING -> {
+                        if (z != null) {
+                            last = z;
+                        }
+                        if (z == null) {
+                            // This tick reads what the last one applied; the last worker tick to
+                            // finish before that apply is the one that dissolved the zone.
+                            h.dissolveTick = e.window.ticks - 1;
+                            h.dissolveWorker = e.window.worker.size() - 1;
+                            h.dissolveSeconds = (System.nanoTime() - holeNanos) / 1e9;
                             e.facts.add(String.format(
-                                    "lost %.3f %% of its moles in %.0f s of venting, %d open faces",
-                                    100 * (1 - moles / molesBefore), venting / 20.0, z == null ? 0 : z.openFaces()));
-                            // From here, the event's time to done is the reseal's.
-                            e.actionNanos = System.nanoTime();
-                            hole(h, false);
-                            next(t);
+                                    "dissolved %.1f s after the hole%s",
+                                    h.dissolveSeconds,
+                                    last == null
+                                            ? ""
+                                            : String.format(
+                                                    "; last read at %.3f kPa, %.4f %% of its moles, %d open faces",
+                                                    last.pressure(),
+                                                    100 * last.totalMoles() / molesBefore,
+                                                    last.openFaces())));
+                            reseal(t);
+                        } else if (t - phaseAt >= DISSOLVE_TIMEOUT) {
+                            e.facts.add(String.format(
+                                    "not dissolved after %.0f s of venting: %.3f kPa, %.4f %% of its moles",
+                                    DISSOLVE_TIMEOUT / 20.0, z.pressure(), 100 * z.totalMoles() / molesBefore));
+                            reseal(t);
                         }
                     }
-                    case 2 -> {
-                        if (z != null && !z.breached()) {
+                    case RESEALED -> {
+                        if (z == null) {
+                            if (atmos.pipeline().closedTick() > resealBatch) {
+                                // From here, the event's time to done is the zoning's.
+                                e.actionNanos = System.nanoTime();
+                                addNow(e, middle(h), air(h.cells(), FILL_FRACTION));
+                                to(ZONING, t);
+                            }
+                        } else if (!z.breached()) {
                             e.doneNanos = System.nanoTime();
-                            e.outcome = String.format("sealed again, %,d cells", z.cellCount());
-                            phase = 4;
-                            phaseAt = t;
-                        } else if (z == null) {
-                            e.facts.add("the zone had gone: an add zones the hall again");
-                            addNow(e, middle(h), air(h.cells(), FILL_FRACTION));
-                            next(t);
+                            e.outcome = String.format("sealed again without dissolving, %,d cells", z.cellCount());
+                            to(TAILING, t);
                         } else if (t - phaseAt >= TIMEOUT) {
                             e.outcome = "still breached after the reseal";
-                            phase = 4;
-                            phaseAt = t;
+                            to(TAILING, t);
                         }
                     }
-                    case 3 -> {
+                    case ZONING -> {
                         if (e.done() || t - phaseAt >= TIMEOUT) {
                             e.outcome = "zoned again: " + e.outcome;
-                            next(t);
+                            to(TAILING, t);
                         }
                     }
                     default -> {
                         if (t - phaseAt >= TAIL) {
+                            h.rezoneCells = cells(left(h));
                             e.window.endNanos = System.nanoTime();
                             recording = null;
                             event = null;
@@ -598,8 +654,16 @@ final class CapStep {
                 return false;
             }
 
-            private void next(long t) {
-                phase++;
+            /** Fills the hole, and notes the batch that will carry it, so the add comes after. */
+            private void reseal(long t) {
+                e.actionNanos = System.nanoTime();
+                hole(h, false);
+                resealBatch = atmos.pipeline().closedTick();
+                to(RESEALED, t);
+            }
+
+            private void to(int next, long t) {
+                phase = next;
                 phaseAt = t;
             }
         };

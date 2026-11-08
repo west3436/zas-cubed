@@ -904,8 +904,8 @@ platform around close and apply.
 ./gradlew :s10-bench:s10Bench
 ```
 
-It isn't part of `build`, though `build` compiles it. It takes about 40 minutes
-(the enclosure cap step about 20 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
+It isn't part of `build`, though `build` compiles it. It takes about 45 minutes
+(the enclosure cap step about 25 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
 `s10-bench/run` and `s10-bench/build/s10`. Options, as `-P` properties:
 
 | Property | Default | What it does |
@@ -954,9 +954,11 @@ controller's parts. The script, all on the server thread:
    dimension of their own with a vacuum ambient, with the cap set to the
    hall's cells and one player by it, in ticking chunks. For each hall: (a) one
    add zones it; (b) a twin with one cell more, roofed so the column check
-   can't answer, must classify as open, after a fill to the cap; (c) a 3 × 3
-   hole in its roof vents it to the vacuum for 10 s, and once filled the hall
-   must read sealed again; (d) placing the last block of a wall across its
+   can't answer, must classify as open, after a fill to the cap; (c) under
+   ZAS's venting (`venting = "FAITHFUL"`, owner, 2026-11-08), so the hall
+   empties, a 3 × 3 hole in its roof vents it to the vacuum until its zone
+   dissolves (CORE-076), about 30 s, and once the hole is filled an add must
+   zone the whole hall again; the venting setting then goes back; (d) placing the last block of a wall across its
    middle splits it (CORE-024), and taking that block out merges it again
    (CORE-023); (e) the server's atmos time per tick before it zones, zoned and
    idle, and active, with a vent blowing under an area air controller and the
@@ -1017,14 +1019,18 @@ controller's parts. The script, all on the server thread:
 - *Enclosure cap step.* Each hall gets a table with each budget's verdict:
   NFR-005 for the largest worker tick of zoning, the open fill, the breach and
   reseal, and the split and merge; NFR-002 for their largest server tick;
-  NFR-001 for the average and 99th percentile while the hall is idle and
-  active; NFR-004 for the bytes per zoned cell, which are what the parts that
-  scale with cells grew by when the hall zoned, over its cells. NFR-002 is
+  both again for the dissolve on its own, the worker tick that dissolved the
+  zone and the server tick that applied it; NFR-001 for the average and 99th
+  percentile while the hall is idle and active; NFR-004 for the bytes per
+  zoned cell, which are what the parts that scale with cells grew by when the
+  hall zoned, over its cells, and for the 64 MiB total, on the halls
+  dimension's whole atmos heap with the hall zoned. NFR-002 is
   judged on zas's own time, the owner's call for the final run: while the step
   runs, the clock keeps each timed call's start and end, so a collector pause
   inside zas's calls is taken out, and the table gives it beside the verdict
   with the tick's other pauses. Ticks over 10 ms are listed with where their
-  time went, so a stall that isn't the work shows. The report ends the step
+  time went and what the batch close and apply in them took, so a stall that
+  isn't the work shows. The report ends the step
   with the largest hall that passes every budget, for the owner to set the
   key's final range from.
 
