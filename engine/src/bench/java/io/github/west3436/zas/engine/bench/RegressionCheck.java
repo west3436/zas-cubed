@@ -25,7 +25,7 @@ import java.util.Locale;
  * shares the other's classes or their JIT profiles. Each pair gives a ratio, and the result is the
  * median over the pairs, after warm-up pairs that let the JIT settle. The archived benchmarks note
  * has the measurements:
- * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06
  *
  * <p>A run over the limit runs once more, in a new JVM, and the check fails only if that one is over
  * too. A JVM's pairs agree with each other more than with another JVM's, and one with no change has

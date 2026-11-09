@@ -100,7 +100,7 @@ tasks.named('check') { dependsOn checkApiPackages, checkApiDependencies, tasks.n
 // a release becomes a Portal deployment that is published by hand. Credentials
 // come from the mavenCentralUsername and mavenCentralPassword Gradle
 // properties (a Portal user token). The archived API guide has the details:
-// https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/api-consumers.md#publishing-maintainers
+// https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#publishing-maintainers
 mavenPublishing {
     configure(new JavaLibrary(new JavadocJar.Javadoc(), new SourcesJar.Sources()))
     coordinates('io.github.west3436', 'zas-api', project.version.toString())
@@ -149,7 +149,7 @@ mavenPublishing {
 // API binary-compatibility check (API-043, NFR-033), run by `check`. It
 // compares this jar with the released API named by api_baseline_version, using
 // japicmp. The version policy is in the archived API guide
-// (https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/api-consumers.md#versioning-and-the-compatibility-check): a binary-
+// (https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check): a binary-
 // incompatible change needs a new major version, or, while the API is 0.x
 // (API-041), a new minor version.
 def baselineVersion = providers.gradleProperty('api_baseline_version').getOrElse('').trim()

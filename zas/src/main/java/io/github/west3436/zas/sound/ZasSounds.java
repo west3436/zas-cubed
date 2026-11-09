@@ -12,7 +12,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * The framework's sound events, named for what happens. The files, pitches and volumes behind them
  * are in {@code assets/zas/sounds.json}, so a sound can be swapped with no code change; which vg
  * file each one is and why are in the archived sounds note:
- * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/vg-sounds.md
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/vg-sounds.md
  */
 public final class ZasSounds {
     private static final DeferredRegister<SoundEvent> SOUNDS =

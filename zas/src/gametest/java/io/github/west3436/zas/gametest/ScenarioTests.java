@@ -78,7 +78,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * {@code env_007}, which excludes the End mid-batch) never meet them.
  *
  * <p><b>R0 adaptations</b> ("Scenario verification" in the archived requirements overview,
- * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/requirements/00-overview.md#scenario-verification):
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/requirements/00-overview.md#scenario-verification):
  * R0 has no devices, pipes, canisters, alarms, firelocks, breathing, hazards or airflow forces. S-01 fills
  * the room with the {@code /zas gas} commands instead of canisters and a vent, and skips the
  * helmet check; S-02 checks the breach, the volume-aware venting (D-21) and zone splits and merges,

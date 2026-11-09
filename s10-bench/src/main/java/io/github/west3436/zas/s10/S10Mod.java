@@ -17,7 +17,7 @@ import org.slf4j.Logger;
  * halves of DATA-014 and DATA-015, spike #80). It only runs on the dedicated server that {@code
  * ./gradlew :s10-bench:s10Bench} starts, and stops that server when it has written its report.
  * Development only: no jar of it is ever built. The archived benchmarks note says how to read it:
- * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#the-in-game-s-10-bench
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#the-in-game-s-10-bench
  */
 @Mod(S10Mod.MOD_ID)
 public final class S10Mod {

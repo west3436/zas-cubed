@@ -2968,7 +2968,7 @@ state: internal2_old, internal0
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, to flash between the two states.
 
-# Sounds (the archived sounds note: https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/vg-sounds.md)
+# Sounds (the archived sounds note: https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/vg-sounds.md)
 
 path: zas/src/main/resources/assets/zas/sounds/airflow/hiss.ogg
 origin: vgstation13

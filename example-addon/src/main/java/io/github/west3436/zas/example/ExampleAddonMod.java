@@ -24,7 +24,7 @@ import org.slf4j.Logger;
  * here (D-17).
  *
  * <p>The archived API guide lists the extension points and which class here shows each:
- * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/api-consumers.md#the-example-addon
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#the-example-addon
  */
 @Mod(ExampleAddonMod.MOD_ID)
 public final class ExampleAddonMod {

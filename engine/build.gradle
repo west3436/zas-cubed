@@ -40,7 +40,7 @@ tasks.named('jacocoTestReport') {
 // `./gradlew :engine:bench` runs them all; `-Pbench.args="s10 fill"` picks
 // cases and `-Pbench.args=--quick` shortens every run. Not part of build, but
 // check compiles them so they can't rot. Their results are in the archived
-// https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md
+// https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md
 sourceSets {
     bench {
         compileClasspath += main.output
@@ -66,7 +66,7 @@ tasks.register('bench', JavaExec) {
 // NFR-034: CI's check against the recorded baseline, a commit whose engine it
 // builds and runs beside this one. Not part of build, as it takes a minute or two
 // of steady CPU. See "Regression check" in the archived benchmarks note:
-// https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06
+// https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06
 def s10Baseline = new Properties()
 file('s10-baseline.properties').withReader { s10Baseline.load(it) }
 def s10Commit = s10Baseline.getProperty('commit')

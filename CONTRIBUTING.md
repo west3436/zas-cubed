@@ -11,7 +11,7 @@ copied or translated** (D-01, NFR-040).
 
 - **Allowed:** vg's *behaviour*, its algorithms described in your own words,
   and physical constants. The archived
-  [research notes](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research)
+  [research notes](https://github.com/west3436/zas-cubed/tree/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research)
   describe vg in prose for exactly this reason.
 - **Not allowed:** pasting DM code, porting it line by line into Java, or
   keeping its structure, names and comments while changing the syntax. A
@@ -59,7 +59,7 @@ and its `origin`; blank lines separate entries:
   repository), `state` (the icon state) and `commit` (the vg commit hash). A
   sound's `source` is its path under vg's `sound/`, with no `state`, and
   `adapted` says how the file was changed (the archived
-  [sounds note](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/vg-sounds.md)). Use
+  [sounds note](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/vg-sounds.md)). Use
   only vg's CC BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder
   (NFR-041).
 - **`origin: other`:** `source` (a URL, or a description), `license` (an
@@ -107,9 +107,9 @@ mods itself.
 | `./gradlew :dist:jar` | Builds the release jar, `dist/build/libs/zas-<ver>.jar`: `zas` and `zas_atmos` as two mods in one file (D-88). The Ponder addon's jar is `zas-ponder/build/libs/zas_ponder-<ver>.jar` |
 | `./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer` | Loads the built release jar on a GameTest server, once with the content on and once with `zas_atmos-startup.toml` turning it off, and checks what loads (CONT-052, CONT-155); not part of `build` or `runGameTestServer` |
 | `./gradlew :example-addon:runOneCopyGameTestServer` | Loads the built release jar and a built copy of the example addon, each nesting the API, on one GameTest server, and checks only one copy of the API loads (API-007); not part of `build` or `runGameTestServer` |
-| `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md), archived); not part of `build` |
-| `./gradlew :s10-bench:s10Bench` | Runs S-10 in a dedicated server with both mods, about 20 minutes, and writes `s10-report.md` (NFR-001, NFR-002, NFR-004, NFR-005, DATA-006; [how](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#the-in-game-s-10-bench), archived); `-Ps10.quick=true` checks the harness in a few minutes; not part of `build` |
-| `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06), archived); not part of `build` |
+| `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md), archived); not part of `build` |
+| `./gradlew :s10-bench:s10Bench` | Runs S-10 in a dedicated server with both mods, about 20 minutes, and writes `s10-report.md` (NFR-001, NFR-002, NFR-004, NFR-005, DATA-006; [how](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#the-in-game-s-10-bench), archived); `-Ps10.quick=true` checks the harness in a few minutes; not part of `build` |
+| `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06), archived); not part of `build` |
 | `./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed=S` | Replays one seed of the integrity fuzz (NFR-010), which `build` runs on one seed; add `-Pfuzz.seeds=N` to run N seeds from it |
 | `./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed=S` | Replays one seed of the fuzz's half with pipes, among the rest of those GameTests; takes `-Pfuzz.seeds=N` as well |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
@@ -122,13 +122,13 @@ mods itself.
 | `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
 
 The projects and the rules for what may depend on what are in the archived
-[architecture §2](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/architecture.md#2-modules-and-packaging). In short: the
+[architecture §2](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/architecture.md#2-modules-and-packaging). In short: the
 `engine` never imports Minecraft, NeoForge or Mojang classes, and `zas-atmos`
 uses only the public API at compile time.
 
 How mods depend on the API is in the wiki's [API guide](https://github.com/west3436/zas-cubed/wiki/API-Guide).
 The version policy and the compatibility check are in the
-[archived one](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/api-consumers.md#versioning-and-the-compatibility-check).
+[archived one](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check).
 
 To inspect a running simulation, the `/zas` operator commands
 ([Commands](https://github.com/west3436/zas-cubed/wiki/Commands)) report zones and atmospheres, edit gas,
@@ -172,4 +172,4 @@ the code, such as unit symbols, are listed at the top of `PlayerTextTest`.
 Guides for players, server owners, pack makers and mod developers are on the
 [wiki](https://github.com/west3436/zas-cubed/wiki). The requirements, plan,
 design notes and research were retired before the first release, and are
-[archived](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs).
+[archived](https://github.com/west3436/zas-cubed/tree/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs).
