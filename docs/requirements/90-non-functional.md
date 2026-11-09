@@ -58,7 +58,7 @@ NFR-001). The enclosure cap step's
 largest, zoning an 80 × 80 × 16 hall of 102,400 cells, took 153 ms, a margin of 1.63.*
 
 #### NFR-002 · No spikes
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: CORE-047, GEO-022
+`Must` · `R1` · `Implemented` · Verify: Bench · Trace: CORE-047, GEO-022
 
 No server tick shall spend more than the CORE-047 budget (default 10 ms) on
 atmos server-thread work. Work beyond it is deferred to the next tick. Verified
@@ -77,6 +77,13 @@ does, that shows what needs gating.*
 
 *(owner, 2026-11-08) S-10's final run had 6 of 12,000 ticks over 10 ms; the owner judged that a
 pass, and no further verification is needed.*
+
+*2026-11-08: Implemented, on that ruling. In
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
+the explosion's breach of the 8,000-cell zone took 3.7 ms at most in a tick, and the zone lost
+1.235 % of its moles in 59 s against the model's 1.222 %. While the scenario ran, the 6 ticks
+were 11 to 37.3 ms, each one call to a part that usually takes well under 1 ms. The statement
+isn't reworded: the 2026-11-06 note above still says how the built budget differs from it.*
 
 #### NFR-003 · Cost scales with activity
 `Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011
