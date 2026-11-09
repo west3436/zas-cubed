@@ -150,8 +150,12 @@ if (compatMatrix || fusion) {
 }
 
 // The compatibility matrix (NFR-025, the wiki's Release-Checklist page). Only -Pcompat.matrix=true adds these
-// mods, and only to this project's runs, so no jar and no ordinary run ever holds them. Sodium is left
-// out of the GameTest server, where it isn't loaded and all its mixins are client mixins.
+// mods, and only to this project's runs, so no jar and no ordinary run ever holds them.
+//
+// Sodium (mc1.21.1-0.8.13-neoforge) isn't here. Its NeoForge jar is a wrapper with the real mod nested
+// inside, and on a dev classpath the wrapper is picked in its place, so Sodium never loads. The client
+// launch takes all four mods from run/mods instead, as a player installs them. A dedicated server
+// wouldn't load Sodium anyway: all its mixins are client mixins.
 if (compatMatrix) {
     neoForge.runs.gameTestServer.systemProperty 'zas.compatMatrix', 'true'
     dependencies {
@@ -159,7 +163,6 @@ if (compatMatrix) {
             runtimeOnly "maven.modrinth:$it"
             gametestRuntimeOnly "maven.modrinth:$it"
         }
-        runtimeOnly 'maven.modrinth:sodium:mc1.21.1-0.8.13-neoforge'
     }
 }
 
