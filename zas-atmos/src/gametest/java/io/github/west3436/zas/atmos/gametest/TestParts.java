@@ -108,6 +108,9 @@ public final class TestParts {
 
     @SubscribeEvent
     static void register(RegisterEvent event) {
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         event.register(Registries.BLOCK, helper -> {
             for (Kind k : Kind.values()) {
                 k.block = new PartBlock(k);
@@ -135,6 +138,9 @@ public final class TestParts {
 
     @SubscribeEvent
     static void capabilities(RegisterCapabilitiesEvent event) {
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, batteryType, (be, side) -> be.store);
         event.registerItem(
                 Capabilities.EnergyStorage.ITEM,

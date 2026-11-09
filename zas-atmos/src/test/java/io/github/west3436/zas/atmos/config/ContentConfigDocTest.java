@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import java.io.IOException;
@@ -49,10 +50,27 @@ class ContentConfigDocTest {
 
     @Test
     void cont_065_config_md_lists_every_content_key_with_its_default() throws IOException {
+        assertDocumented(AtmosServerConfig.SPEC, "zas_atmos-server.toml");
+    }
+
+    /** The content switch is on unless a pack turns it off (CONT-155). */
+    @Test
+    void cont_155_the_content_is_on_by_default() {
+        assertEquals(Map.of("content.enabled", true), defaults(AtmosStartupConfig.SPEC));
+    }
+
+    @Test
+    void cont_155_config_md_lists_the_startup_key_with_its_default() throws IOException {
+        assertDocumented(AtmosStartupConfig.SPEC, "zas_atmos-startup.toml");
+    }
+
+    /** docs/config.md's table under "## Content mod: `<file>`" lists every key of the spec with its default. */
+    private static void assertDocumented(ModConfigSpec spec, String file) throws IOException {
         Map<String, String> expected = new TreeMap<>();
-        defaults().forEach((key, value) -> expected.put(key, String.valueOf(value)));
+        defaults(spec).forEach((key, value) -> expected.put(key, String.valueOf(value)));
         List<String> lines = Files.readAllLines(Path.of(System.getProperty("zas.configDoc")));
-        int start = lines.indexOf("## Content mod: `zas_atmos-server.toml`");
+        int start = lines.indexOf("## Content mod: `" + file + "`");
+        assertTrue(start >= 0, "docs/config.md has no section for " + file);
         Map<String, String> documented = new TreeMap<>();
         for (String line : lines.subList(start + 1, lines.size())) {
             if (line.startsWith("## ")) {
@@ -63,13 +81,17 @@ class ContentConfigDocTest {
                 documented.put(m.group(1) + "." + m.group(2), m.group(3));
             }
         }
-        assertEquals(expected, documented, "docs/config.md's zas_atmos-server.toml table");
+        assertEquals(expected, documented, "docs/config.md's " + file + " table");
     }
 
-    /** Every key of the config, as {@code section.key}, with its default. */
     private static Map<String, Object> defaults() {
+        return defaults(AtmosServerConfig.SPEC);
+    }
+
+    /** Every key of a config, as {@code section.key}, with its default. */
+    private static Map<String, Object> defaults(ModConfigSpec spec) {
         Map<String, Object> out = new TreeMap<>();
-        collect(AtmosServerConfig.SPEC.getValues(), out);
+        collect(spec.getValues(), out);
         return out;
     }
 

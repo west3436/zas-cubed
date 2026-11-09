@@ -76,7 +76,8 @@ class CraftingDocTest {
         lang = json(resources.resolve("assets/zas_atmos/lang/en_us.json"));
         doc = Files.readAllLines(Path.of(System.getProperty("zas.craftingDoc")));
         recipes = new ArrayList<>();
-        try (Stream<Path> files = Files.list(resources.resolve("data/zas_atmos/recipe"))) {
+        // The content's data is in its built-in data pack (CONT-155).
+        try (Stream<Path> files = Files.list(resources.resolve("datapacks/content/data/zas_atmos/recipe"))) {
             for (Path file : files.sorted().toList()) {
                 recipes.add(recipe(file));
             }

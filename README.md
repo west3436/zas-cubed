@@ -20,9 +20,9 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
   first-class support for space-like environments: vacuum and exotic
   per-dimension atmospheres, and life support. Mods can bundle the API and
   still run when ZAS³ isn't installed.
-- **SS13-style atmospherics content,** shipped as a separate companion mod:
+- **SS13-style atmospherics content,** a companion mod in the same jar:
   pipes, pumps, vents, scrubbers, canisters, area air controllers, firelocks,
-  suits and power.
+  suits and power. A pack can turn it off and keep only the simulation.
 - **Integrations, after R1.** Mekanism and Ad Astra, as reference
   integrations built only on the public API.
 
@@ -43,5 +43,5 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 - **Bundled libraries:** the Ponder addon (`zas_ponder`) nests
   [Ponder](https://github.com/Creators-of-Create/Ponder) and
   [Flywheel](https://github.com/Engine-Room/Flywheel), both under the MIT
-  License, for its scenes. Their licences ship in its jar. `zas` and
-  `zas_atmos` bundle neither.
+  License, for its scenes. Their licences ship in its jar. The ZAS³ jar,
+  which holds `zas` and `zas_atmos`, bundles neither.

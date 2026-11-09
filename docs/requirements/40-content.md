@@ -26,6 +26,8 @@ On 2026-11-09 the owner made the tank transfer valve placeable (D-86), changing
 CONT-103 and CONT-104.
 CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-87). The owner accepted it the
 same day.
+On 2026-11-09 the owner put `zas` and `zas_atmos` in one jar, with a switch that turns the
+content off (D-88), changing CONT-052 and CONT-096; CONT-155, the switch, was added as Draft.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -2544,18 +2546,26 @@ cap's recipe and checks that its version wins.*
 which is all the Verify asks.*
 
 #### CONT-052 · Packaging
-`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-38
+`Must` · `R1` · `Implemented` · Verify: Inspect, GameTest · Trace: D-16, D-38, D-88
 
-All SS13 content shall ship as a separate mod from the same repository, with
-the ID `zas_atmos` and display name "ZAS³ Atmospherics" (D-38). It depends on
-the framework mod `zas`.
+All SS13 content shall be a separate mod from the same repository, with the ID
+`zas_atmos` and display name "ZAS³ Atmospherics" (D-38), shipped in one jar
+with the framework mod `zas`, which it depends on (D-88).
 
-- **Rationale:** Decision: D-16 and D-38.
-- **Verify:** Inspect the build: two jars, with the content mod's metadata
-  depending on `zas`.
+- **Rationale:** Decision: D-16, D-38 and D-88.
+- **Verify:** Inspect the build: one release jar whose metadata lists both
+  mods, the content mod depending on `zas`. A GameTest inside the built jar
+  checks both mods load from it.
 
 *2026-11-05: Implemented. The build makes two jars, `zas` and `zas_atmos`. The
 second's metadata gives that ID and display name, and requires `zas`.*
+
+*2026-11-09: the owner put both mods in one jar (D-88). The `dist` project packs
+the `zas` and `zas_atmos` jars into `zas-<ver>.jar`, with one
+`neoforge.mods.toml` that holds both `[[mods]]` entries, `zas_atmos` still
+requiring `zas`, and the API nested once. The two stay separate projects, built
+and tested apart (CONT-095, CONT-096). `ReleaseJarTests.cont_052_both_mods_load_from_the_release_jar`
+runs inside the built jar in CI. Still Implemented.*
 
 #### CONT-095 · Public API only
 `Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-16, D-50, API-001
@@ -2574,16 +2584,61 @@ compiles against `zas-api` alone, with `zas` only at run time
 GameTests may use the framework's test hooks.*
 
 #### CONT-096 · Framework works alone
-`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-16
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-16, D-88
 
-The framework mod shall be fully usable without the content mod.
+The framework mod shall be fully usable without the content mod, and with the
+content mod's content turned off (CONT-155).
 
-- **Rationale:** Decision: D-16.
-- **Verify:** GameTests for the framework run without the content mod.
+- **Rationale:** Decision: D-16 and D-88.
+- **Verify:** GameTests for the framework run without the content mod. A
+  GameTest in the release jar, with the content off, checks the framework's
+  own data loads.
 
 *2026-11-05: Implemented. `:zas:runGameTestServer`, which CI runs on every PR, runs
 the framework's GameTests without `zas_atmos`. The `zas` build has no dependency on
 it.*
+
+*2026-11-09: the owner put both mods in one jar with a switch for the content
+(D-88), so "without the content mod" now also means with it turned off.
+`:zas:runGameTestServer` still runs without `zas_atmos`, and
+`ReleaseJarTests.cont_155_the_content_loads_only_while_its_config_has_it_on` checks,
+with the content off, that vanilla's doors are still in `#zas:zone_boundary`.
+Still Implemented.*
+
+#### CONT-155 · Content switch
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-88
+
+The content mod shall have a startup config, `zas_atmos-startup.toml`, with
+`[content] enabled`, `true` by default. Set to `false`, the content mod shall
+register nothing (no block, item, block entity, menu, sound, data component,
+entity or creative tab) and its data (recipes, loot tables, loot modifiers and
+its additions to tags) shall not load, so the framework runs as it does
+without the content mod (CONT-096). The Ponder addon shall then add no scenes.
+Every installation that plays together sets the same value.
+
+- **Rationale:** Decision: D-88, the owner's request of 2026-11-09 for a config
+  that lets a pack use the atmosphere simulation without the content. Inferred:
+  a startup config, since what registers is settled before any other config
+  loads; its file and key names; the data moving into a built-in data pack so
+  it can be left out.
+- **Verify:** GameTests inside the built release jar, once with the switch on
+  and once off. On: the content has registry entries, recipes and loot tables,
+  its data pack is selected, and its doors are in `#zas:zone_boundary`. Off: no
+  registry entry, recipe or loot table is in the `zas_atmos` namespace, its
+  data pack isn't offered, and vanilla's doors are still in
+  `#zas:zone_boundary`.
+
+*2026-11-09: added for review (D-88). The owner asked for the switch. These are
+mine, for review: a startup config read once at launch, the file name, the key
+`[content] enabled` and its default of `true`, and the Ponder addon showing
+nothing with it off. The content's data moved to a built-in data pack,
+`datapacks/content` in the `zas_atmos` resources, always on and at the bottom
+of the pack list so any data pack still overrides it; the mod adds the pack
+only with the content on. `ReleaseJarTests.cont_155_the_content_loads_only_while_its_config_has_it_on`
+runs in CI with the switch on (`:dist:runReleaseCheckGameTestServer`) and off
+(`:dist:runContentOffGameTestServer`), and passes both ways; with it off, the
+server log has no warning or error the run with it on lacks. It stays Draft
+until the owner's review.*
 
 ## Power
 

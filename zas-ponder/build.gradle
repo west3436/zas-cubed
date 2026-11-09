@@ -32,7 +32,7 @@ sourceSets {
     serverCheck {
         compileClasspath += main.output + main.compileClasspath
     }
-    // That run's classpath, empty on purpose: the addon, zas and zas_atmos come in as built jars, so
+    // That run's classpath, empty on purpose: the addon and the release jar come in as built jars, so
     // FML's jar-in-jar locator takes Ponder and Flywheel out of the addon's, as in production.
     serverCheckRun
 }
@@ -153,7 +153,7 @@ def serverCheckJar = tasks.register('serverCheckJar', Jar) {
 }
 
 dependencies {
-    serverCheckRunRuntimeOnly(project(':zas')) { transitive = false }
-    serverCheckRunRuntimeOnly(project(':zas-atmos')) { transitive = false }
+    // The release jar, which holds zas and zas_atmos (D-88).
+    serverCheckRunRuntimeOnly(project(':dist')) { transitive = false }
     serverCheckRunRuntimeOnly files(serverCheckJar)
 }

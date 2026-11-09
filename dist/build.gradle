@@ -1,0 +1,114 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The jar players install (D-88): the framework zas and the content mod zas_atmos, two mods in one
+// file, with the API nested once as zas nests it. Both are still built and tested as projects of their
+// own; this one only packs their jars together. The Ponder addon stays a jar of its own.
+base { archivesName = 'zas' }
+
+evaluationDependsOn(':zas')
+evaluationDependsOn(':zas-atmos')
+
+def parts = [project(':zas'), project(':zas-atmos')]
+
+// One neoforge.mods.toml for both: the content mod's file-level keys, whose license covers the
+// framework's assets as well, then each file's tables. TOML lets an array of tables such as [[mods]]
+// be split, so each mod keeps its own [[mods]], [[mixins]] and [[dependencies.<id>]] as written.
+def modsToml = tasks.register('mergeModsToml') {
+    def tomls = parts.collect { new File(it.sourceSets.main.output.resourcesDir, 'META-INF/neoforge.mods.toml') }
+    def out = layout.buildDirectory.file('generated/modsToml/neoforge.mods.toml')
+    dependsOn parts.collect { it.tasks.named('processResources') }
+    inputs.files(tomls)
+    outputs.file(out)
+    doLast {
+        def split = { File f ->
+            String text = f.getText('UTF-8').replace('\r\n', '\n')
+            int tables = text.indexOf('\n[[')
+            [text.substring(0, tables + 1), text.substring(tables + 1)]
+        }
+        def (zasHead, zasTables) = split(tomls[0])
+        def (atmosHead, atmosTables) = split(tomls[1])
+        def keys = { String head -> head.readLines().findAll { !it.startsWith('license') && !it.isBlank() } }
+        if (keys(zasHead) != keys(atmosHead)) {
+            throw new GradleException("zas's and zas_atmos's neoforge.mods.toml differ in a file-level key other "
+                    + "than license, so the release jar can't have one: ${keys(zasHead)} and ${keys(atmosHead)}")
+        }
+        // UTF-8 whatever the platform's default: the display names hold "³".
+        def merged = [atmosHead, zasTables, atmosTables].collect { it.trim() }.join('\n\n') + '\n'
+        out.get().asFile.setText(merged, 'UTF-8')
+    }
+}
+
+tasks.named('jar', Jar) {
+    parts.each { part ->
+        def partJar = part.tasks.named('jar', Jar)
+        dependsOn partJar
+        from({ zipTree(partJar.get().archiveFile) }) {
+            exclude 'META-INF/MANIFEST.MF', 'META-INF/neoforge.mods.toml'
+        }
+    }
+    from(modsToml) { into 'META-INF' }
+    // The two mods share no file but the ones above; a second would mean one hides the other.
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+sourceSets {
+    // CONT-052 and CONT-155: GameTests that run inside the release jar on a dedicated server, once with
+    // the content on and once with it off.
+    releaseCheck {
+        compileClasspath += main.compileClasspath
+    }
+    // Those runs' classpath, empty on purpose: everything comes in as the built jar, as in production.
+    releaseCheckRun
+}
+
+dependencies {
+    releaseCheckCompileOnly project(':zas-atmos')
+}
+
+def checkRuns = [releaseCheck: false, contentOff: true]
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.releaseCheck)
+    addModdingDependenciesTo(sourceSets.releaseCheckRun)
+    runs {
+        checkRuns.each { name, off ->
+            create("${name}GameTestServer") {
+                type = 'gameTestServer'
+                sourceSet = sourceSets.releaseCheckRun
+                loadedMods = []
+                gameDirectory = layout.buildDirectory.dir("${name}Run")
+                systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+                systemProperty 'zas.releaseCheck.contentOff', String.valueOf(off)
+            }
+        }
+    }
+}
+
+// The release jar plus the checks, and the framework's empty GameTest structure for them to run in.
+def releaseCheckJar = tasks.register('releaseCheckJar', Jar) {
+    archiveClassifier = 'release-check'
+    def releaseJar = tasks.named('jar', Jar)
+    dependsOn releaseJar
+    from({ zipTree(releaseJar.get().archiveFile) })
+    from sourceSets.releaseCheck.output
+    from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+        into 'data/zas/structure'
+    }
+}
+
+dependencies {
+    releaseCheckRunRuntimeOnly files(releaseCheckJar)
+}
+
+// Each check starts from a fresh world, with the content mod's startup config set for it (CONT-155).
+checkRuns.each { name, off ->
+    tasks.matching { it.name == "run${name.capitalize()}GameTestServer" }.configureEach {
+        doFirst {
+            def dir = layout.buildDirectory.dir("${name}Run").get()
+            delete dir.dir('world')
+            def config = dir.file('config/zas_atmos-startup.toml').asFile
+            config.parentFile.mkdirs()
+            config.setText("[content]\nenabled = ${!off}\n", 'UTF-8')
+        }
+    }
+}

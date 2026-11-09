@@ -87,8 +87,8 @@ jobs:
             echo "::error::Expected the example addon's GameTest server to report that its tests passed, but $passed did."
             exit 1
           fi
-      # API-007: the built zas jar and a built copy of the example addon, each
-      # nesting the API, on one server. They must share one copy.
+      # API-007: the built release jar and a built copy of the example addon,
+      # each nesting the API, on one server. They must share one copy.
       - name: API-007 one copy of the API (built jars)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 5
@@ -101,7 +101,7 @@ jobs:
             exit 1
           fi
       # CLIENT-025 (NFR-022): the built Ponder addon, which nests Ponder and
-      # Flywheel, on a dedicated server with zas and zas_atmos.
+      # Flywheel, on a dedicated server with the release jar.
       - name: CLIENT-025 dedicated server with the Ponder addon (built jars)
         if: steps.gradle.outputs.present == 'true'
         timeout-minutes: 5
@@ -111,6 +111,19 @@ jobs:
           passed=$(grep -cE "All [0-9]+ required tests passed" ponder-gametests.log || true)
           if [ "$passed" -ne 1 ]; then
             echo "::error::Expected the Ponder addon's GameTest server to report that its tests passed, but $passed did."
+            exit 1
+          fi
+      # CONT-052 and CONT-155: the release jar, which holds zas and zas_atmos,
+      # on a dedicated server with the content on, then on another with it off.
+      - name: CONT-155 release jar with the content on and off (built jar)
+        if: steps.gradle.outputs.present == 'true'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          ./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer --stacktrace | tee release-gametests.log
+          passed=$(grep -cE "All [0-9]+ required tests passed" release-gametests.log || true)
+          if [ "$passed" -ne 2 ]; then
+            echo "::error::Expected the release jar's 2 GameTest servers to report that their tests passed, but $passed did."
             exit 1
           fi
 

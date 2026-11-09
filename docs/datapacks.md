@@ -1070,6 +1070,13 @@ vanilla materials and the mod's own crafting components (CONT-051); the
 components, the recipes and their progression are in
 [crafting.md](crafting.md).
 
+The content mod's recipes, loot tables and tags ship in a built-in data pack,
+"ZAS³ Atmospherics", not in the mod's own `data/` (CONT-155). It's always on
+and starts at the bottom of the pack list, so any data pack overrides it. With
+the content turned off in
+[`zas_atmos-startup.toml`](config.md#content-mod-zas_atmos-startuptoml), the
+pack isn't loaded.
+
 ## Invalid files
 
 An invalid entry in any format is logged as an error naming the file and the

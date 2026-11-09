@@ -12,8 +12,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * CLIENT-025: a dedicated server runs with the Ponder addon installed. The server loads the built
- * addon, with the Ponder and Flywheel it nests, beside the built {@code zas} and {@code zas_atmos}, and
- * these tests run inside it. A server that got this far has loaded every mod and its world; the test
+ * addon, with the Ponder and Flywheel it nests, beside the release jar that holds {@code zas} and {@code
+ * zas_atmos} (D-88), and these tests run inside it. A server that got this far has loaded every mod and its world; the test
  * checks it is a dedicated server and that each mod is there.
  */
 @GameTestHolder(ZasPonderMod.MOD_ID)

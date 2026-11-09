@@ -47,6 +47,9 @@ public final class TestDevice {
 
     @SubscribeEvent
     static void register(RegisterEvent event) {
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         event.register(Registries.BLOCK, helper -> {
             block = new DeviceBlock(BlockBehaviour.Properties.of().strength(1.0f));
             helper.register(ID, block);

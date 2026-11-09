@@ -23,7 +23,7 @@ public final class BatteryTestPack {
 
     @SubscribeEvent
     static void addPack(AddPackFindersEvent event) {
-        if (!GameTestHooks.isGametestServer()) {
+        if (!GameTestHooks.isGametestServer() || !ZasAtmosMod.contentEnabled()) {
             return;
         }
         event.addPackFinders(

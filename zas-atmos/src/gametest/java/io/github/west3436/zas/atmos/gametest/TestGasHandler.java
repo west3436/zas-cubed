@@ -53,6 +53,9 @@ public final class TestGasHandler {
 
     @SubscribeEvent
     static void register(RegisterEvent event) {
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         event.register(Registries.BLOCK, helper -> {
             block = new HandlerBlock(BlockBehaviour.Properties.of().strength(1.0f));
             helper.register(ID, block);
@@ -65,6 +68,9 @@ public final class TestGasHandler {
 
     @SubscribeEvent
     static void capabilities(RegisterCapabilitiesEvent event) {
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         event.registerBlockEntity(IGasHandler.BLOCK, type, (be, side) -> be.on(side));
     }
 

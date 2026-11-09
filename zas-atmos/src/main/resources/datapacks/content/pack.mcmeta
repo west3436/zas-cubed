@@ -1,0 +1,8 @@
+{
+  "pack": {
+    "description": {
+      "translate": "pack.zas_atmos.content.description"
+    },
+    "pack_format": 48
+  }
+}

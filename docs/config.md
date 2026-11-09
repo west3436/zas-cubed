@@ -1,7 +1,8 @@
 # Configuration
 
 ZAS³'s settings come in three tiers (OPS-001), NeoForge's server, common and
-client configs, split by who owns each setting. Data that pack makers tune,
+client configs, split by who owns each setting. The content mod also has a
+startup config, with one switch that turns its content off (CONT-155). Data that pack makers tune,
 such as gases and ambients, lives in datapacks instead
 ([datapacks.md](datapacks.md)).
 
@@ -10,6 +11,7 @@ such as gases and ambients, lives in datapacks instead
 | Server | `config/zas-server.toml`; a copy in `<world>/serverconfig/` overrides it for that world | The server operator | Simulation tuning, the preset, admin settings |
 | Common | `config/zas-common.toml` | The installation | Settings shared by client and server, such as thread counts |
 | Client | `config/zas-client.toml` | Each player | Visuals and display units |
+| Startup | `config/zas_atmos-startup.toml` | The installation, the same on the server and every client | Whether the content mod's content loads ([below](#content-mod-zas_atmos-startuptoml)) |
 
 A dedicated server has no client config. A singleplayer world has all three.
 The server config is per world: NeoForge reads `<world>/serverconfig/zas-server.toml`
@@ -93,7 +95,9 @@ reads a setting gets the new one the next time it runs:
 **Restart-only** settings keep the value they had when the server started, and
 a reload doesn't change them: the two that choose the threads, `[atmos]
 single_threaded` and the common config's `worker_threads`. In singleplayer,
-leaving the world and loading it again counts as a restart.
+leaving the world and loading it again counts as a restart. The content switch
+in [`zas_atmos-startup.toml`](#content-mod-zas_atmos-startuptoml) is read
+once when the game starts, so it needs the game itself restarted.
 
 A value the config wouldn't accept takes its default when the file is read,
 with a warning in the log. A file that doesn't parse leaves the values as they
@@ -262,6 +266,24 @@ nothing (CONT-065), so it has no key. Every key is live
 | `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
 | `[radiators] conductance` | `20.0` | Each radiator pipe segment's conductance to the gas of its cell, in W/K, 0 to 10,000 (HEAT-020). 0 stops radiator pipe exchanging heat with gas; it still radiates in a vacuum |
 | `[radiators] emissivity` | `0.9` | Each radiator pipe segment's emissivity in the open air of a vacuum, over 1 m², 0 to 1 (HEAT-021). 0 stops it radiating |
+
+## Content mod: `zas_atmos-startup.toml`
+
+ZAS³ ships as one jar that holds the framework, `zas`, and the content mod,
+`zas_atmos` (D-88). This file turns the content off, for a pack that wants the
+atmosphere simulation alone (CONT-155). With it off, `zas_atmos` registers no
+block, item, menu or sound, and its data pack (recipes, loot and its additions
+to the framework's tags) isn't loaded; `zas` runs as it does without the
+content mod (CONT-096). The Ponder addon, if installed, then shows nothing.
+
+NeoForge reads it once, at startup, before anything registers, so a change
+needs a restart. It isn't synced: set the same value on the server and every
+client. Turning the content off in a world that has its blocks and items
+removes them from that world.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `[content] enabled` | `true` | **Restart-only.** Whether ZAS³ Atmospherics' blocks, items, recipes and loot load. `false` leaves the atmosphere simulation alone (CONT-155) |
 
 ## Common: `zas-common.toml`
 

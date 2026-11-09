@@ -1,5 +1,6 @@
 package io.github.west3436.zas.ponder;
 
+import io.github.west3436.zas.atmos.ZasAtmosMod;
 import net.createmod.ponder.foundation.PonderIndex;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -15,7 +16,10 @@ public final class ZasPonderMod {
     public static final String MOD_ID = "zas_ponder";
 
     public ZasPonderMod() {
-        PonderIndex.addPlugin(new ZasPonderPlugin());
+        // Every scene shows zas_atmos's blocks, so with its content off there is nothing to show (CONT-155).
+        if (ZasAtmosMod.contentEnabled()) {
+            PonderIndex.addPlugin(new ZasPonderPlugin());
+        }
     }
 
     /** An id in this addon's namespace. */
