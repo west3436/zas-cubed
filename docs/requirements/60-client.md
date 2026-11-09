@@ -704,6 +704,12 @@ the command package has no exemption. The mods' descriptions in the mods list ha
 NeoForge shows a mod's display name as written, so that can't. The example addon is never
 published, so it isn't scanned.*
 
+*2026-11-07: `PlayerTextTest` reads the Ponder addon's classes and `en_us.json` too
+(CLIENT-024). Ponder builds a scene's keys from ids: a line's from
+`zas_ponder.ponder.shared.<id>`, a scene's title from `zas_ponder.ponder.<scene>.header`, and
+the ZAS³ tag's name and description from `zas_ponder.ponder.tag.<id>`. The scan builds the
+same keys and checks each is in the addon's `en_us.json`.*
+
 ## Player guides
 
 #### CLIENT-023 · A Ponder scene for each device and tool
@@ -732,6 +738,12 @@ Create nests.
 
 *2026-11-07: added for review.*
 
+*2026-11-07: Built in `zas-ponder`. The jar nests Ponder 1.0.87 in the range
+`[1.0.82+mc1.21.1,)` and Flywheel 1.0.7 in `[1.0.6,2.0)`. Create 6.0.10 nests Ponder 1.0.82
+and Flywheel 1.0.6 in the same ranges, so FML can load either copy, and the scenes compile
+against Create's. The mod metadata requires `zas_atmos` of the same version and Ponder on the
+client. It stays Draft until it's accepted.*
+
 #### CLIENT-025 · A dedicated server with the Ponder addon
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: NFR-022, [#270](https://github.com/west3436/zas-cubed/issues/270)
 
@@ -743,6 +755,13 @@ A dedicated server with the Ponder addon installed shall start and run normally.
   with what it nests, beside `zas` and `zas_atmos`, and passes its tests.
 
 *2026-11-07: added for review.*
+
+*2026-11-07: `./gradlew :zas-ponder:runServerCheckGameTestServer` builds the addon's jar
+with its nested jars and loads it on a GameTest server with `zas` and `zas_atmos`.
+`client_025_a_dedicated_server_runs_with_the_ponder_addon` checks that it's a dedicated
+server and that all five mods, Ponder and Flywheel among them, are loaded. CI runs it on every
+PR. The addon has no entry point on a server, since its mod class is client only. It stays
+Draft until it's accepted.*
 
 #### CLIENT-026 · What a device's scene shows
 `Must` · `R1` · `Draft` · Verify: Manual · Trace: D-68, CONT-014, CONT-015, CONT-016, CONT-083 · Depends: CLIENT-023

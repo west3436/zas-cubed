@@ -20,9 +20,10 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /**
- * No player-facing text in {@code zas} or {@code zas_atmos} is written in the code, and every key the
- * code spells out is in {@code en_us.json} (CLIENT-007). It lives here because {@code zas_atmos} may
- * look at {@code zas}, and {@code zas} never names {@code zas_atmos}.
+ * No player-facing text in {@code zas}, {@code zas_atmos} or {@code zas_ponder} is written in the code,
+ * and every key the code spells out is in {@code en_us.json} (CLIENT-007). It lives here because
+ * {@code zas_atmos} may look at {@code zas}, and {@code zas} never names {@code zas_atmos}. The Ponder
+ * addon, which requires {@code zas_atmos}, is read from its build.
  *
  * <p>Text with no letters, such as "●", "—" or a number, is never flagged. Everything else that's
  * allowed is in the three lists below, and each entry is an exact match.
@@ -48,7 +49,8 @@ class PlayerTextTest {
     @Test
     void client_007_no_hard_coded_player_text() {
         List<String> problems = new ArrayList<>();
-        for (Path classes : List.of(classes("zas.mainClasses"), classes("zas_atmos.mainClasses"))) {
+        for (Path classes : List.of(
+                classes("zas.mainClasses"), classes("zas_atmos.mainClasses"), classes("zas_ponder.mainClasses"))) {
             hardCoded(PlayerTextScan.of(classes, OPERATOR_LINES)).forEach(found -> problems.add(found.toString()));
         }
         assertTrue(
@@ -63,9 +65,13 @@ class PlayerTextTest {
         // zas_atmos requires zas, so it can name zas's keys too. zas can't name zas_atmos's.
         Set<String> atmos = new HashSet<>(zas);
         atmos.addAll(lang("zas_atmos.resources", "zas_atmos"));
+        // The Ponder addon requires zas_atmos, so it can name the keys of both.
+        Set<String> ponder = new HashSet<>(atmos);
+        ponder.addAll(lang("zas_ponder.resources", "zas_ponder"));
         List<String> problems = new ArrayList<>();
         problems.addAll(missing(classes("zas.mainClasses"), zas));
         problems.addAll(missing(classes("zas_atmos.mainClasses"), atmos));
+        problems.addAll(missing(classes("zas_ponder.mainClasses"), ponder));
         assertTrue(problems.isEmpty(), "Translation keys missing from en_us.json:\n  " + String.join("\n  ", problems));
     }
 
@@ -74,6 +80,7 @@ class PlayerTextTest {
     void client_007_each_mods_description_has_a_key() throws IOException {
         assertTrue(lang("zas.resources", "zas").contains("fml.menu.mods.info.description.zas"));
         assertTrue(lang("zas_atmos.resources", "zas_atmos").contains("fml.menu.mods.info.description.zas_atmos"));
+        assertTrue(lang("zas_ponder.resources", "zas_ponder").contains("fml.menu.mods.info.description.zas_ponder"));
     }
 
     @Test

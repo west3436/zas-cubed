@@ -17,5 +17,9 @@ rootProject.name = 'zas-cubed'
 // as group:<project name>, and a mismatch makes FML treat consumers' copies
 // and ours as one library and keep whichever it saw first.
 include 'engine', 'zas-api', 'zas', 'compat-adastra', 'zas-atmos', 'example-addon'
+
+// The Ponder scenes, a client addon of their own that nests Ponder and Flywheel (D-83).
+include 'zas-ponder'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published (docs/research/benchmarks.md).
 include 's10-bench'

@@ -38,8 +38,8 @@ import org.objectweb.asm.tree.analysis.SourceValue;
  * Finds the strings in compiled classes that can reach a player as text (CLIENT-007).
  *
  * <p>Everything that shows text takes a {@code Component}, apart from a few draw calls, so a string
- * only becomes text at the calls in {@link #TEXT} and {@link #TRANSLATED}. From each of those the scan
- * follows the string back through locals, parameters, return values, fields, arrays, lambdas'
+ * only becomes text at the calls in {@link #TEXT}, {@link #TRANSLATED} and {@link #PONDER_KEYS}. From
+ * each of those the scan follows the string back through locals, parameters, return values, fields, arrays, lambdas'
  * captures, concatenation and {@code String.format}, as far as the scanned classes go, and collects
  * the string constants it ends at. It reads classes rather than sources because the compiler has
  * already settled which {@code append} is a component's, and has put constants in place.
@@ -75,13 +75,33 @@ final class PlayerTextScan {
             "net/minecraft/client/gui/GuiGraphics.drawCenteredString",
             "net/minecraft/client/gui/Font.drawInBatch",
             "net/minecraft/client/renderer/debug/DebugRenderer.renderFloatingText",
-            "com/mojang/brigadier/LiteralMessage.<init>");
+            "com/mojang/brigadier/LiteralMessage.<init>",
+            // Ponder's text in the code, which zas_ponder never writes: its text is keyed.
+            "net/createmod/ponder/api/element/TextElementBuilder.text",
+            "net/createmod/ponder/api/registration/TagBuilder.title",
+            "net/createmod/ponder/api/registration/TagBuilder.description");
 
     /** The calls whose first argument is a translation key, with any others shown as text. */
     private static final Set<String> TRANSLATED = Set.of(
             COMPONENT + ".translatable",
             COMPONENT + ".translatableWithFallback",
             "net/minecraft/client/resources/language/I18n.get");
+
+    /**
+     * Ponder's calls whose first argument becomes translation keys, as the prefix and suffix Ponder puts
+     * around it (CLIENT-023). Ponder puts the plugin's mod id first, and only {@code zas_ponder} has one.
+     * Any other argument is shown as text, as with {@link #TRANSLATED}, so a scene's title in the code,
+     * which {@code en_us.json}'s replaces, is left empty.
+     */
+    private static final Map<String, List<String[]>> PONDER_KEYS = Map.of(
+            "net/createmod/ponder/api/element/TextElementBuilder.sharedText",
+            List.<String[]>of(new String[] {"zas_ponder.ponder.shared.", ""}),
+            "net/createmod/ponder/api/scene/SceneBuilder.title",
+            List.<String[]>of(new String[] {"zas_ponder.ponder.", ".header"}),
+            "net/createmod/ponder/api/registration/PonderTagRegistrationHelper.registerTag",
+            List.<String[]>of(
+                    new String[] {"zas_ponder.ponder.tag.", ""},
+                    new String[] {"zas_ponder.ponder.tag.", ".description"}));
 
     /** A conversion in a format string, such as {@code %,.1f}, which isn't language. */
     private static final Pattern FORMAT_CONVERSION =
@@ -253,14 +273,23 @@ final class PlayerTextScan {
         if (site.insn() instanceof MethodInsnNode call) {
             String name = call.owner + "." + call.name;
             Type[] args = Type.getArgumentTypes(call.desc);
-            boolean translated = TRANSLATED.contains(name);
+            List<String[]> forms = TRANSLATED.contains(name)
+                    ? List.<String[]>of(new String[] {"", ""})
+                    : args.length > 0 && isString(args[0]) ? PONDER_KEYS.get(name) : null;
+            boolean translated = forms != null;
             if (!translated && !TEXT.contains(name)) {
                 return;
             }
             for (int i = 0; i < args.length; i++) {
                 SourceValue arg = site.stack(args.length - 1 - i);
                 if (translated && i == 0) {
-                    origins(site, arg).forEach(origin -> keys.addAll(constants(origin, new HashSet<>())));
+                    for (Site origin : origins(site, arg)) {
+                        for (Found key : constants(origin, new HashSet<>())) {
+                            for (String[] form : forms) {
+                                keys.add(new Found(form[0] + key.text() + form[1], key.where()));
+                            }
+                        }
+                    }
                 } else if (isString(args[i]) || args[i].getDescriptor().equals("[Ljava/lang/Object;")) {
                     origins(site, arg).forEach(origin -> addText(origin, new HashSet<>()));
                 }

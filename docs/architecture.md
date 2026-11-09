@@ -56,6 +56,7 @@ Requirements: D-30, CORE-045, CORE-049, CORE-069.
 | `compat-adastra` | ModDevGradle source set or project | `io.github.west3436.zas.compat.adastra` | classes inside the `zas` jar, loaded only when Ad Astra is present | zas-api, Ad Astra (compile-only) |
 | `zas-atmos` | ModDevGradle mod `zas_atmos` | `io.github.west3436.zas.atmos` | `zas_atmos-<ver>.jar` | zas-api, `zas` (required at runtime) |
 | `example-addon` | ModDevGradle mod | `io.github.west3436.zas.example` | not published; CI only (API-047, API-048) | zas-api only |
+| `zas-ponder` | ModDevGradle mod `zas_ponder`, client only | `io.github.west3436.zas.ponder` | `zas_ponder-<ver>.jar`, nesting Ponder and Flywheel (D-83) | `zas_atmos` (required), Ponder, Flywheel |
 
 **Rules from S0** (*spike*):
 
@@ -92,6 +93,7 @@ project so its unit tests and benchmarks need no Minecraft.
 engine  ◄── zas ──► zas-api ◄── zas-atmos
                        ▲   ◄── compat-adastra (inside zas)
                        └────── example-addon, third-party mods
+zas-atmos ◄── zas-ponder ──► Ponder, Flywheel (nested)
 ```
 
 - `zas-api` never references `zas`, `engine` or any optional mod (API-003,
@@ -100,6 +102,8 @@ engine  ◄── zas ──► zas-api ◄── zas-atmos
   a required runtime dependency, which proves the API is enough for tech mods.
 - `engine` never imports `net.minecraft`, `net.neoforged` or
   `com.mojang`. An ArchUnit-style check in CI enforces this (CORE-043).
+- `zas-ponder` compiles against `zas-atmos`. Nothing else names Ponder or
+  Flywheel, so a player can leave the addon out (NFR-022, D-83).
 
 ### 2.3 The engine/platform boundary
 
@@ -2424,7 +2428,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check (`./gradlew :engine:benchCheck`) runs a recorded commit's engine beside this one, with a 10 % tolerance |
 | In-game S-10 bench | `s10-bench`, a dev-only mod and dedicated-server run (`./gradlew :s10-bench:s10Bench`), never in a jar | S-10 with both mods in a real server: server-thread time by part (NFR-001, NFR-002), worker ticks (NFR-005), heap (NFR-004), bytes sent to each player (DATA-006, DATA-014, DATA-015) and spike #80's prefetch survey ([how](research/benchmarks.md#the-in-game-s-10-bench)) |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
-| Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048) |
+| Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048). The built Ponder addon, with the Ponder and Flywheel it nests, beside `zas` and `zas_atmos` (CLIENT-025, `:zas-ponder:runServerCheckGameTestServer`) |
 
 The test names include requirement IDs (README rule 5).
 

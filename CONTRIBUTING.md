@@ -114,6 +114,8 @@ mods itself.
 | `./gradlew :zas-atmos:runClient` | Starts a dev client with `zas` and `zas_atmos` |
 | `./gradlew :zas-atmos:runClient -Pfusion=true` | The same, with Fusion, to see the station blocks' connected textures (CONT-132); no jar or CI run holds it |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
+| `./gradlew :zas-ponder:runClient` | Starts a dev client with both mods and the Ponder addon, to see its scenes; [zas-ponder/README.md](zas-ponder/README.md) says how to add one |
+| `./gradlew :zas-ponder:runServerCheckGameTestServer` | Loads the built Ponder addon, with the Ponder and Flywheel it nests, on a GameTest server beside both mods (CLIENT-025); not part of `build` or `runGameTestServer` |
 | `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
 | `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
 

@@ -499,6 +499,11 @@ only required dependencies, and `zas.mixins.json` is the one mixin config, with 
 `requiredMods`, and targets only game classes. The adapter, when it comes, needs this
 inspected again.*
 
+*2026-11-07: The Ponder scenes are a separate addon, `zas_ponder`, that nests Ponder and
+Flywheel (D-83, CLIENT-024). `zas` and `zas_atmos` name neither, and their GameTest servers
+still load neither, so a player can leave the addon out. The addon has its own server check
+(CLIENT-025).*
+
 ## Quality and process
 
 #### NFR-030 · Engine coverage
