@@ -3,6 +3,8 @@ package io.github.west3436.zas.ponder.scenes;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlock;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockCycle;
 import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
 import io.github.west3436.zas.atmos.airlock.SensorStatus;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
@@ -21,6 +23,7 @@ import io.github.west3436.zas.ponder.scene.Stage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
@@ -28,6 +31,7 @@ import net.createmod.ponder.api.scene.Selection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
@@ -148,122 +152,185 @@ public final class AirlockScenes {
     }
 
     /**
-     * A chamber between two airlocks, cycled by a controller on the station side: out to the vacuum,
-     * its air siphoned into its vent's pipes, then back in.
+     * A chamber between two airlocks, with a sensor in it and one past each airlock, run by a controller
+     * on the station side. The multitool links each part into the slot the controller guesses. Opened
+     * last from the station, a press of the outer sensor cycles the chamber out to the vacuum, its air
+     * siphoned into its vent's pipes; the bolted inner airlock cycles it back.
      */
     public static void controller(SceneBuilder scene, SceneBuildingUtil util) {
         Stage.open(scene, "airlock_controller");
-        // The passage runs east and west: space at x 0, the chamber at x 2 and 3, the station past x 4.
-        BlockPos outer = util.grid().at(1, 1, 3);
-        BlockPos inner = util.grid().at(4, 1, 3);
-        BlockPos vent = util.grid().at(2, 0, 3);
-        BlockPos sensor = util.grid().at(3, 2, 3);
-        BlockPos controller = util.grid().at(5, 2, 3);
-        BlockPos area = util.grid().at(6, 2, 3);
-        Map<BlockPos, BlockState> outerAirlock = airlock(AtmosBlocks.AIRLOCK.get(), outer, Direction.WEST);
-        Map<BlockPos, BlockState> innerAirlock = airlock(AtmosBlocks.AIRLOCK.get(), inner, Direction.WEST);
-        Selection outerDoors = select(util, outerAirlock);
-        Selection innerDoors = select(util, innerAirlock);
+        Chamber chamber = chamber(util);
+        BlockPos outer = chamber.outer();
+        BlockPos inner = chamber.inner();
+        BlockPos vent = chamber.vent();
+        BlockPos outerSensor = chamber.outerSensor();
+        BlockPos chamberSensor = chamber.chamberSensor();
+        BlockPos innerSensor = chamber.innerSensor();
+        BlockPos controller = chamber.controller();
+        List<BlockPos> run = chamber.run();
+        Selection outerDoors = select(util, chamber.outerAirlock());
+        Selection innerDoors = select(util, chamber.innerAirlock());
         Selection both = outerDoors.copy().add(innerDoors);
+        Selection sensors = chamber.sensors(util);
         Vec3 panel = Power.panel(util, controller, Direction.NORTH);
-        Vec3 sensorPanel = Power.panel(util, sensor, Direction.NORTH);
+        Vec3 outerPanel = Power.panel(util, outerSensor, Direction.NORTH);
+        Vec3 chamberPanel = Power.panel(util, chamberSensor, Direction.NORTH);
+        Vec3 innerPanel = Power.panel(util, innerSensor, Direction.NORTH);
+        Vec3 outerFront = util.vector().blockSurface(outer.above(), Direction.NORTH);
+        Vec3 innerFront = util.vector().blockSurface(inner.above(), Direction.NORTH);
 
-        // A wall behind the chamber and its two airlocks.
-        Map<BlockPos, BlockState> walls = new LinkedHashMap<>();
-        for (BlockPos pos :
-                BlockPos.betweenClosed(util.grid().at(1, 1, 4), util.grid().at(6, 2, 4))) {
-            walls.put(pos.immutable(), AtmosBlocks.STATION_WALL.get().defaultBlockState());
-        }
-        walls.putAll(outerAirlock);
-        walls.putAll(innerAirlock);
-        Build.revealAll(scene, util, walls, Direction.DOWN);
+        // A wall behind the passage, with the two airlocks across it, and a vent in the chamber's floor.
+        Build.revealAll(scene, util, chamber.walls(util), Direction.DOWN);
+        pipe(scene, util, chamber);
 
-        // A vent in the chamber's floor, on pipe that runs in the floor from a cap and dips under it.
-        BlockPos dip = util.grid().at(2, 0, 2);
-        List<BlockPos> run = List.of(util.grid().at(2, 0, 1), dip, dip.below(), vent.below(), vent);
-        BlockState pipe = AtmosBlocks.PIPE.get().defaultBlockState();
-        Build.place(scene, util.grid().at(2, 0, 0), PumpScenes.cap(Direction.SOUTH));
-        Build.place(scene, run.get(0), pipe);
-        Build.place(scene, dip, pipe);
-        Map<BlockPos, BlockState> under = new LinkedHashMap<>();
-        under.put(dip.below(), pipe);
-        under.put(vent.below(), pipe);
-        Build.under(scene, util, under);
-        scene.idle(Build.SHOW);
-        Build.sink(
+        // The sensors, each showing its own side's pressure: the vacuum's alerts. On the station side, the
+        // controller, with an area air controller beside it.
+        Build.revealAll(
                 scene,
                 util,
-                vent,
-                AtmosBlocks.VENT.get().defaultBlockState().setValue(BlockStateProperties.FACING, Direction.UP));
-
-        // The sensor in the chamber, and on the station side the controller and an area air controller.
-        Build.reveal(
-                scene,
-                util,
-                sensor,
-                AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.NORTH),
+                chamber.panels(SensorStatus.ALERT, SensorStatus.STANDBY, SensorStatus.STANDBY),
                 Direction.SOUTH);
-        Map<BlockPos, BlockState> panels = new LinkedHashMap<>();
-        panels.put(
-                controller,
-                AtmosBlocks.AIRLOCK_CONTROLLER
-                        .get()
-                        .defaultBlockState()
-                        .setValue(AirlockControllerBlock.FACING, Direction.NORTH));
-        panels.put(
-                area,
-                AtmosBlocks.AREA_AIR_CONTROLLER
-                        .get()
-                        .defaultBlockState()
-                        .setValue(AreaAirControllerBlock.FACING, Direction.NORTH)
-                        .setValue(AreaAirControllerBlock.STATUS, ControllerStatus.SAFE));
-        Build.revealAll(scene, util, panels, Direction.SOUTH);
         Say.at(scene, panel, "power.controller");
 
-        // The multitool links its airlocks, its sensor and its vents.
+        // The multitool links each part, which takes the slot the controller guesses from the zones
+        // around it, and then the vent, which takes none.
         Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
-        Selection parts = both.copy()
-                .add(util.select().position(sensor))
-                .add(util.select().position(vent));
-        scene.overlay().showOutline(PonderPalette.GREEN, "parts", parts, Say.LINE);
         Say.at(scene, panel, "airlock_controller.links");
+        link(
+                scene,
+                util,
+                controller,
+                inner.above(),
+                innerDoors,
+                innerFront,
+                "airlock_controller.inner_door",
+                "Airlock0",
+                inner,
+                0);
+        link(
+                scene,
+                util,
+                controller,
+                innerSensor,
+                util.select().position(innerSensor),
+                innerPanel,
+                "airlock_controller.inner_sensor",
+                "InnerSensor",
+                innerSensor,
+                2);
+        link(
+                scene,
+                util,
+                controller,
+                chamberSensor,
+                util.select().position(chamberSensor),
+                chamberPanel,
+                "airlock_controller.chamber_sensor",
+                "ChamberSensor",
+                chamberSensor,
+                4);
+        link(
+                scene,
+                util,
+                controller,
+                outer.above(),
+                outerDoors,
+                outerFront,
+                "airlock_controller.outer_door",
+                "Airlock1",
+                outer,
+                1);
+        link(
+                scene,
+                util,
+                controller,
+                outerSensor,
+                util.select().position(outerSensor),
+                outerPanel,
+                "airlock_controller.outer_sensor",
+                "OuterSensor",
+                outerSensor,
+                3);
+        Hand.use(scene, util, vent, Direction.UP, new ItemStack(AtmosItems.MULTITOOL.get()));
+        scene.overlay().showOutline(PonderPalette.GREEN, "vent", util.select().position(vent), ROLE);
+        prime(scene, util, controller, tag -> tag.putLongArray("Vents", new long[] {vent.asLong()}));
+        scene.idle(ROLE);
 
-        // Its window cycles toward the vacuum: both airlocks bolt, and the vent siphons the chamber.
+        // Its window: a slot armed there takes the next part linked, and each side has a Cycle button.
         Hand.use(scene, util, controller, Direction.NORTH, ItemStack.EMPTY);
+        Say.at(scene, panel, "airlock_controller.slots");
         Say.at(scene, panel, "airlock_controller.window");
-        start(scene, controller, sensor, both, vent, VentMode.SIPHON);
-        // Up level with the airlock's top, so it clears the vent's line below.
+
+        // Someone comes in from the station. The inner airlock, opened last, closes itself 5 s later.
+        Hand.use(scene, util, inner.above(), Direction.NORTH, ItemStack.EMPTY);
+        Build.change(scene, innerDoors, s -> s.setValue(AirlockBlock.OPEN, true));
+        prime(scene, util, controller, tag -> tag.putInt("LastOpened", AirlockCycle.INNER));
+        Say.over(scene, AUTO_CLOSE, innerFront, "airlock.closes");
+        scene.idle(AUTO_CLOSE);
+        Build.change(scene, innerDoors, s -> s.setValue(AirlockBlock.OPEN, false));
+        scene.idle(20);
+
+        // From outside, a press of the outer sensor cycles toward it, away from the side opened last:
+        // both airlocks bolt, every sensor shows the cycle, and the vent siphons the chamber.
+        Hand.use(scene, util, outerSensor, Direction.NORTH, ItemStack.EMPTY);
+        start(scene, util, controller, sensors, both, vent, VentMode.SIPHON, AirlockCycle.OUTER);
+        Say.at(scene, outerPanel, "airlock_controller.press");
         Say.line(scene, CYCLE, "reading.pressure", Gas.pressure(0))
-                .pointAt(util.vector().centerOf(util.grid().at(0, 2, 3)))
+                .pointAt(outerPanel)
                 .placeNearTarget();
         Gas.draw(scene, util, vent, Direction.UP, CYCLE);
         Say.over(scene, CYCLE, util.vector().topOf(vent), "airlock_controller.siphon");
-        readings(scene, sensorPanel, run.reversed(), 101.325, 60, 25, 4);
+        readings(scene, chamberPanel, run.reversed(), 101.325, 60, 25, 4);
 
-        // Within 5.07 kPa of the vacuum, the outer airlock unbolts and opens; the inner stays bolted.
-        // The sensor, idle again, reads the chamber's near vacuum.
-        end(scene, controller, sensor, vent, SensorStatus.ALERT);
+        // Within 5.07 kPa of the vacuum, the outer airlock unbolts and opens, and closes itself 5 s later;
+        // the inner stays bolted. Each sensor, idle again, shows its own side: the chamber's alerts.
+        end(
+                scene,
+                util,
+                controller,
+                vent,
+                Map.of(
+                        outerSensor,
+                        SensorStatus.ALERT,
+                        chamberSensor,
+                        SensorStatus.ALERT,
+                        innerSensor,
+                        SensorStatus.STANDBY));
         Build.change(
                 scene, outerDoors, s -> s.setValue(AirlockBlock.BOLTED, false).setValue(AirlockBlock.OPEN, true));
-        scene.overlay().showOutline(PonderPalette.GREEN, "outer", outerDoors, Say.LINE);
-        Say.at(scene, util.vector().blockSurface(outer.above(), Direction.NORTH), "airlock_controller.opens");
+        prime(scene, util, controller, tag -> tag.putInt("LastOpened", AirlockCycle.OUTER));
+        scene.overlay().showOutline(PonderPalette.GREEN, "outer", outerDoors, AUTO_CLOSE);
+        Say.over(scene, AUTO_CLOSE, outerFront, "airlock_controller.opens");
+        scene.idle(AUTO_CLOSE);
         Build.change(scene, outerDoors, s -> s.setValue(AirlockBlock.OPEN, false));
         scene.idle(20);
 
-        // From the chamber, using the bolted inner airlock cycles back toward it.
+        // From the chamber, using the bolted inner airlock cycles back toward it, to the station's pressure.
         Hand.use(scene, util, inner.above(), Direction.WEST, ItemStack.EMPTY);
-        start(scene, controller, sensor, both, vent, VentMode.BLOW);
+        start(scene, util, controller, sensors, both, vent, VentMode.BLOW, AirlockCycle.INNER);
         Say.at(scene, util.vector().blockSurface(inner.above(), Direction.WEST), "airlock_controller.ask");
         Say.line(scene, CYCLE, "reading.pressure", Gas.pressure(101.325))
-                .pointAt(util.vector().centerOf(util.grid().at(5, 1, 1)))
+                .pointAt(innerPanel)
                 .placeNearTarget();
         Gas.puff(scene, util, vent, Direction.UP, CYCLE);
         Say.over(scene, CYCLE, util.vector().topOf(vent), "airlock_controller.blow");
-        readings(scene, sensorPanel, run, 4, 45, 80, 98);
+        readings(scene, chamberPanel, run, 4, 45, 80, 98);
 
-        end(scene, controller, sensor, vent, SensorStatus.STANDBY);
+        end(
+                scene,
+                util,
+                controller,
+                vent,
+                Map.of(
+                        outerSensor,
+                        SensorStatus.ALERT,
+                        chamberSensor,
+                        SensorStatus.STANDBY,
+                        innerSensor,
+                        SensorStatus.STANDBY));
         Build.change(
                 scene, innerDoors, s -> s.setValue(AirlockBlock.BOLTED, false).setValue(AirlockBlock.OPEN, true));
+        prime(scene, util, controller, tag -> tag.putInt("LastOpened", AirlockCycle.INNER));
         scene.idle(Say.LINE);
         scene.markAsFinished();
     }
@@ -271,26 +338,207 @@ public final class AirlockScenes {
     /** How long each way of a cycle is shown, in ticks. */
     private static final int CYCLE = 4 * 30;
 
-    /** A cycle starting: the controller and sensor show it, both airlocks close and bolt, the vent runs. */
-    private static void start(
-            SceneBuilder scene,
-            BlockPos controller,
-            BlockPos sensor,
-            Selection airlocks,
+    /** How long a part's slot is shown as it's linked, in ticks. */
+    private static final int ROLE = 40;
+
+    /**
+     * The passage the controller's and the sensor's scenes are set in, on a large stage: space at x 0,
+     * the chamber at x 2 and 3, the station past x 4. On the wall behind it are a sensor past each
+     * airlock and one in the chamber, each clear of the airlock in front of it, and on the station side
+     * the controller, under its sensor, with an area air controller beside it.
+     *
+     * @param outer the outer airlock's origin
+     * @param inner the inner airlock's origin
+     * @param vent the vent, in the chamber's floor
+     * @param run the vent's pipe, from the floor's far end, under the floor to the vent
+     */
+    private record Chamber(
+            BlockPos outer,
+            BlockPos inner,
             BlockPos vent,
-            VentMode mode) {
-        Build.change(scene, controller, s -> s.setValue(AirlockControllerBlock.CYCLING, true));
-        Build.change(scene, sensor, s -> s.setValue(AirSensorBlock.STATUS, SensorStatus.CYCLING));
-        Build.change(scene, airlocks, s -> s.setValue(AirlockBlock.OPEN, false).setValue(AirlockBlock.BOLTED, true));
-        Build.change(scene, vent, s -> s.setValue(VentMode.PROPERTY, mode));
+            BlockPos outerSensor,
+            BlockPos chamberSensor,
+            BlockPos innerSensor,
+            BlockPos controller,
+            BlockPos area,
+            List<BlockPos> run) {
+
+        Map<BlockPos, BlockState> outerAirlock() {
+            return airlock(AtmosBlocks.AIRLOCK.get(), outer, Direction.WEST);
+        }
+
+        Map<BlockPos, BlockState> innerAirlock() {
+            return airlock(AtmosBlocks.AIRLOCK.get(), inner, Direction.WEST);
+        }
+
+        Selection sensors(SceneBuildingUtil util) {
+            return util.select()
+                    .position(outerSensor)
+                    .add(util.select().position(chamberSensor))
+                    .add(util.select().position(innerSensor));
+        }
+
+        /** The wall behind the passage, with both airlocks across it. */
+        Map<BlockPos, BlockState> walls(SceneBuildingUtil util) {
+            Map<BlockPos, BlockState> out = new LinkedHashMap<>();
+            for (BlockPos pos :
+                    BlockPos.betweenClosed(util.grid().at(0, 1, 4), util.grid().at(6, 2, 4))) {
+                out.put(pos.immutable(), AtmosBlocks.STATION_WALL.get().defaultBlockState());
+            }
+            out.putAll(outerAirlock());
+            out.putAll(innerAirlock());
+            return out;
+        }
+
+        /** The sensors, each showing a status, the controller and the area air controller. */
+        Map<BlockPos, BlockState> panels(SensorStatus outerShows, SensorStatus chamberShows, SensorStatus innerShows) {
+            Map<BlockPos, BlockState> out = new LinkedHashMap<>();
+            out.put(outerSensor, sensorState(outerShows));
+            out.put(chamberSensor, sensorState(chamberShows));
+            out.put(innerSensor, sensorState(innerShows));
+            out.put(
+                    controller,
+                    AtmosBlocks.AIRLOCK_CONTROLLER
+                            .get()
+                            .defaultBlockState()
+                            .setValue(AirlockControllerBlock.FACING, Direction.NORTH));
+            out.put(
+                    area,
+                    AtmosBlocks.AREA_AIR_CONTROLLER
+                            .get()
+                            .defaultBlockState()
+                            .setValue(AreaAirControllerBlock.FACING, Direction.NORTH)
+                            .setValue(AreaAirControllerBlock.STATUS, ControllerStatus.SAFE));
+            return out;
+        }
     }
 
-    /** A cycle done: the vent stops, the controller is idle, and the sensor shows what it reads. */
+    private static Chamber chamber(SceneBuildingUtil util) {
+        BlockPos vent = util.grid().at(2, 0, 3);
+        // The pipe runs in the floor from a cap at its edge and dips under it to the vent.
+        BlockPos dip = util.grid().at(2, 0, 2);
+        return new Chamber(
+                util.grid().at(1, 1, 3),
+                util.grid().at(4, 1, 3),
+                vent,
+                util.grid().at(0, 2, 3),
+                util.grid().at(3, 2, 3),
+                util.grid().at(6, 2, 3),
+                util.grid().at(6, 1, 3),
+                util.grid().at(5, 2, 3),
+                List.of(util.grid().at(2, 0, 1), dip, dip.below(), vent.below(), vent));
+    }
+
+    /** The chamber's vent, set into its floor, on pipe from a cap at the floor's edge. */
+    private static void pipe(SceneBuilder scene, SceneBuildingUtil util, Chamber chamber) {
+        List<BlockPos> run = chamber.run();
+        BlockState pipe = AtmosBlocks.PIPE.get().defaultBlockState();
+        Build.place(scene, run.getFirst().north(), PumpScenes.cap(Direction.SOUTH));
+        Build.place(scene, run.get(0), pipe);
+        Build.place(scene, run.get(1), pipe);
+        Map<BlockPos, BlockState> under = new LinkedHashMap<>();
+        under.put(run.get(2), pipe);
+        under.put(run.get(3), pipe);
+        Build.under(scene, util, under);
+        scene.idle(Build.SHOW);
+        Build.sink(
+                scene,
+                util,
+                chamber.vent(),
+                AtmosBlocks.VENT.get().defaultBlockState().setValue(BlockStateProperties.FACING, Direction.UP));
+    }
+
+    /** An air sensor on a wall facing the viewer, showing a status. */
+    private static BlockState sensorState(SensorStatus status) {
+        return AtmosBlocks.AIR_SENSOR
+                .get()
+                .defaultBlockState()
+                .setValue(AirSensorBlock.FACING, Direction.NORTH)
+                .setValue(AirSensorBlock.STATUS, status);
+    }
+
+    /**
+     * The multitool used on a part, which takes the slot the controller guesses: the part is outlined
+     * and labelled with its slot, and the controller saves it there, as the game does.
+     *
+     * @param clicked the block the multitool is used on
+     * @param part the part's blocks, to outline
+     * @param at where its label points
+     * @param role its label's key
+     * @param slot the slot's save key
+     * @param saved what the slot holds: an airlock's origin, or the sensor
+     * @param place the slot's place in the window's order
+     */
+    private static void link(
+            SceneBuilder scene,
+            SceneBuildingUtil util,
+            BlockPos controller,
+            BlockPos clicked,
+            Selection part,
+            Vec3 at,
+            String role,
+            String slot,
+            BlockPos saved,
+            int place) {
+        Hand.use(scene, util, clicked, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        scene.overlay().showOutline(PonderPalette.GREEN, new Object(), part, ROLE);
+        Say.over(scene, ROLE, at, role);
+        prime(scene, util, controller, tag -> {
+            tag.putLong(slot, saved.asLong());
+            // Each slot it filled by a guess.
+            tag.putInt("Sure", tag.getInt("Sure") | 1 << place);
+        });
+        scene.idle(ROLE + 10);
+    }
+
+    /**
+     * Sets what an airlock controller saves, through its save keys, to match what the scene shows. Ponder's
+     * world runs nothing, so it's what the controller would hold by then.
+     */
+    private static void prime(
+            SceneBuilder scene, SceneBuildingUtil util, BlockPos controller, Consumer<CompoundTag> change) {
+        scene.world()
+                .modifyBlockEntityNBT(util.select().position(controller), AirlockControllerBlockEntity.class, change);
+    }
+
+    /**
+     * A cycle starting: the controller and every sensor show it, both airlocks close and bolt, the vent
+     * runs.
+     *
+     * @param toward the door it cycles toward, {@link AirlockCycle#INNER} or {@code OUTER}
+     */
+    private static void start(
+            SceneBuilder scene,
+            SceneBuildingUtil util,
+            BlockPos controller,
+            Selection sensors,
+            Selection airlocks,
+            BlockPos vent,
+            VentMode mode,
+            int toward) {
+        Build.change(scene, controller, s -> s.setValue(AirlockControllerBlock.CYCLING, true));
+        Build.change(scene, sensors, s -> s.setValue(AirSensorBlock.STATUS, SensorStatus.CYCLING));
+        Build.change(scene, airlocks, s -> s.setValue(AirlockBlock.OPEN, false).setValue(AirlockBlock.BOLTED, true));
+        Build.change(scene, vent, s -> s.setValue(VentMode.PROPERTY, mode));
+        prime(scene, util, controller, tag -> tag.putInt("Cycling", toward));
+    }
+
+    /**
+     * A cycle done: the vent stops, the controller is idle, and each sensor shows what its own side
+     * reads.
+     *
+     * @param reads each sensor and what it shows
+     */
     private static void end(
-            SceneBuilder scene, BlockPos controller, BlockPos sensor, BlockPos vent, SensorStatus reads) {
+            SceneBuilder scene,
+            SceneBuildingUtil util,
+            BlockPos controller,
+            BlockPos vent,
+            Map<BlockPos, SensorStatus> reads) {
         Build.change(scene, vent, s -> s.setValue(VentMode.PROPERTY, VentMode.OFF));
         Build.change(scene, controller, s -> s.setValue(AirlockControllerBlock.CYCLING, false));
-        Build.change(scene, sensor, s -> s.setValue(AirSensorBlock.STATUS, reads));
+        prime(scene, util, controller, tag -> tag.putInt("Cycling", -1));
+        reads.forEach((pos, status) -> Build.change(scene, pos, s -> s.setValue(AirSensorBlock.STATUS, status)));
     }
 
     /** The chamber's pressure at the sensor, a reading for each quarter of a way, as gas flows along the run. */
@@ -304,45 +552,113 @@ public final class AirlockScenes {
         }
     }
 
-    /** An air sensor on a wall, alerting at a low pressure, and showing its controller's cycle. */
+    /**
+     * An air sensor on the station side of an airlock whose other parts are linked. Each sensor reads
+     * its own side, the empty chamber's alerting. Linked to the controller, this one's press cycles the
+     * airlock toward it. It needs no power.
+     */
     public static void sensor(SceneBuilder scene, SceneBuildingUtil util) {
         Stage.open(scene, "air_sensor");
-        BlockPos sensor = util.grid().at(1, 2, 1);
+        Chamber chamber = chamber(util);
+        BlockPos sensor = chamber.innerSensor();
+        BlockPos controller = chamber.controller();
+        BlockPos vent = chamber.vent();
+        Selection outerDoors = select(util, chamber.outerAirlock());
+        Selection innerDoors = select(util, chamber.innerAirlock());
         Vec3 panel = Power.panel(util, sensor, Direction.NORTH);
-        Vec3 air = util.vector().centerOf(util.grid().at(1, 1, 1));
+        Vec3 chamberPanel = Power.panel(util, chamber.chamberSensor(), Direction.NORTH);
+        Vec3 chamberAir = util.vector().centerOf(chamber.chamberSensor().below());
+        Vec3 innerFront = util.vector().blockSurface(chamber.inner().above(), Direction.NORTH);
 
-        Map<BlockPos, BlockState> wall = new LinkedHashMap<>();
-        for (BlockPos pos :
-                BlockPos.betweenClosed(util.grid().at(0, 1, 2), util.grid().at(2, 2, 2))) {
-            wall.put(pos.immutable(), AtmosBlocks.STATION_WALL.get().defaultBlockState());
+        // The airlock, last opened to the vacuum: the chamber is empty and the inner airlock bolted. Its
+        // controller has both doors, the outer and chamber sensors, and the vent.
+        Map<BlockPos, BlockState> walls = chamber.walls(util);
+        for (BlockPos pos : chamber.innerAirlock().keySet()) {
+            walls.computeIfPresent(pos, (at, state) -> state.setValue(AirlockBlock.BOLTED, true));
         }
-        Build.revealAll(scene, util, wall, Direction.DOWN);
-        Build.reveal(
+        Build.revealAll(scene, util, walls, Direction.DOWN);
+        pipe(scene, util, chamber);
+        Build.revealAll(
                 scene,
                 util,
-                sensor,
-                AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.NORTH),
+                chamber.panels(SensorStatus.ALERT, SensorStatus.ALERT, SensorStatus.STANDBY),
                 Direction.SOUTH);
+        prime(scene, util, controller, tag -> {
+            tag.putLong("Airlock0", chamber.inner().asLong());
+            tag.putLong("Airlock1", chamber.outer().asLong());
+            tag.putLong("OuterSensor", chamber.outerSensor().asLong());
+            tag.putLong("ChamberSensor", chamber.chamberSensor().asLong());
+            tag.putLongArray("Vents", new long[] {vent.asLong()});
+            // Each slot filled by a guess: both doors, then the outer and chamber sensors.
+            tag.putInt("Sure", 1 | 1 << 1 | 1 << 3 | 1 << 4);
+            tag.putInt("LastOpened", AirlockCycle.OUTER);
+        });
 
+        // It reads the air in front of it, the station's. Below 81 kPa, as in the empty chamber, a sensor
+        // alerts.
         Say.line(scene, 40, "reading.pressure", Gas.pressure(101.325))
-                .pointAt(air)
+                .pointAt(panel)
                 .placeNearTarget();
         scene.idle(50);
-        Say.line(scene, Say.LINE + 10, "reading.pressure", Gas.pressure(60))
-                .pointAt(air)
+        Say.line(scene, Say.LINE + 10, "reading.pressure", Gas.pressure(0))
+                .pointAt(chamberAir)
                 .placeNearTarget();
-        Build.change(scene, sensor, s -> s.setValue(AirSensorBlock.STATUS, SensorStatus.ALERT));
         Say.at(
                 scene,
-                panel,
+                chamberPanel,
                 "air_sensor.alert",
                 Gas.pressure(SensorStatus.ALERT_BELOW_KPA),
                 Gas.pressure(SensorStatus.ALERT_ABOVE_KPA));
 
-        Build.change(scene, sensor, s -> s.setValue(AirSensorBlock.STATUS, SensorStatus.CYCLING));
+        // The multitool links it to the controller, as the station side's sensor.
+        Hand.use(scene, util, controller, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        scene.idle(Hand.SHOW - Hand.PAUSE);
+        Hand.use(scene, util, sensor, Direction.NORTH, new ItemStack(AtmosItems.MULTITOOL.get()));
+        scene.overlay().showOutline(PonderPalette.GREEN, "sensor", util.select().position(sensor), Say.LINE);
+        prime(scene, util, controller, tag -> {
+            tag.putLong("InnerSensor", sensor.asLong());
+            tag.putInt("Sure", tag.getInt("Sure") | 1 << 2);
+        });
+        Say.at(scene, panel, "air_sensor.link");
+
+        // Pressed, it cycles the airlock toward its own side, away from the side opened last: both airlocks
+        // bolt, every sensor shows the cycle, and the vent blows the chamber full.
+        Hand.use(scene, util, sensor, Direction.NORTH, ItemStack.EMPTY);
+        start(
+                scene,
+                util,
+                controller,
+                chamber.sensors(util),
+                outerDoors.copy().add(innerDoors),
+                vent,
+                VentMode.BLOW,
+                AirlockCycle.INNER);
+        Gas.puff(scene, util, vent, Direction.UP, 2 * (Say.LINE + 10));
+        Say.at(scene, panel, "air_sensor.press");
         Say.at(scene, panel, "air_sensor.cycling");
 
-        Build.change(scene, sensor, s -> s.setValue(AirSensorBlock.STATUS, SensorStatus.STANDBY));
+        // The cycle done, the inner airlock unbolts and opens, and closes itself 5 s later.
+        end(
+                scene,
+                util,
+                controller,
+                vent,
+                Map.of(
+                        chamber.outerSensor(),
+                        SensorStatus.ALERT,
+                        chamber.chamberSensor(),
+                        SensorStatus.STANDBY,
+                        sensor,
+                        SensorStatus.STANDBY));
+        Build.change(
+                scene, innerDoors, s -> s.setValue(AirlockBlock.BOLTED, false).setValue(AirlockBlock.OPEN, true));
+        prime(scene, util, controller, tag -> tag.putInt("LastOpened", AirlockCycle.INNER));
+        scene.overlay().showOutline(PonderPalette.GREEN, "door", innerDoors, AUTO_CLOSE);
+        Say.over(scene, AUTO_CLOSE, innerFront, "airlock_controller.opens");
+        scene.idle(AUTO_CLOSE);
+        Build.change(scene, innerDoors, s -> s.setValue(AirlockBlock.OPEN, false));
+        scene.idle(20);
+
         Say.at(scene, panel, "air_sensor.no_power");
         scene.markAsFinished();
     }

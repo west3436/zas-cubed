@@ -138,7 +138,7 @@ final class ZasPonderPlugin implements PonderPlugin {
         helper.forComponents(atmos("airlock")).addStoryBoard(Stage.MEDIUM, AirlockScenes::airlock, TAG);
         helper.forComponents(atmos("large_airlock")).addStoryBoard(Stage.MEDIUM, AirlockScenes::largeAirlock, TAG);
         helper.forComponents(atmos("airlock_controller")).addStoryBoard(Stage.LARGE, AirlockScenes::controller, TAG);
-        helper.forComponents(atmos("air_sensor")).addStoryBoard(Stage.SMALL, AirlockScenes::sensor, TAG);
+        helper.forComponents(atmos("air_sensor")).addStoryBoard(Stage.LARGE, AirlockScenes::sensor, TAG);
         // A second scene for the firelock, and one for each airlock: a firelock fitted to a door.
         helper.forComponents(atmos("firelock"), atmos("airlock"), atmos("large_airlock"))
                 .addStoryBoard(Stage.MEDIUM, AirlockScenes::firelocks, TAG);
