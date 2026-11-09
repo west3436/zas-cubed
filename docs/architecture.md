@@ -2883,7 +2883,9 @@ the cell in front of its grille).
     zone up to the external bound, what brings the network down to the
     internal bound, and half a 400 L buffer of the network a second. Siphoning
     is the reverse, capped at half a 400 L slice of the zone a second. In an
-    open cell the zone is the ambient, one cell's volume.
+    open cell the zone is the ambient, one cell's volume. A vent under an
+    airlock controller moves only its share of what brings the zone to the
+    external bound (§11.18).
   - It runs only while powered (CONT-060), in the life-support group, drawing
     `[power] vent` FE/t whenever it isn't off. Its block state's `mode` shows
     what it is doing: its mode while it runs, else off.
@@ -4257,6 +4259,16 @@ block-entity renderer.
   `VentBlockEntity.airlockOrder`, off while idle. For `LEASE_TICKS` after one,
   the vent ignores area air controllers' `ventOrder`s. The vents siphon into
   and blow from their own pipe network.
+  - **Their shares.** With each order goes the vent's share of what its zone
+    still needs to reach the target (`shares`). The vents whose cells are in
+    one zone split it in proportion to what each could move that step with no
+    bound on the zone (`VentFlow.blowCapacity`, `siphonCapacity`,
+    `VentFlow.shares`). A vent alone on its zone, or on the ambient or a cell
+    it can't read, has all of it. Each vent then moves its share of what
+    brings the zone to the external bound, from its own reading, or its own
+    rate if that's less, so together they reach the target and don't pass it,
+    however many there are. The shares add up to 1, so one a step old still
+    can't overshoot. The share isn't saved: the controller sends it each step.
 - **The air sensor** (`AirSensorBlock`, `AirSensorBlockEntity`, CONT-142). A
   wall panel with `facing` and `status` (`standby`, `cycling`, `alert`), set
   from `SensorStatus.of`: cycling while a controller has marked it within

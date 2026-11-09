@@ -91,7 +91,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * controller on its north wall; a chamber one block wide and three high at x = 5, z = 2; and room B
  * (x 6–10), or in the vacuum test nothing, past it. The inner airlock is in A's east wall facing
  * west, the outer in B's west wall facing east, so both seal the face away from the chamber and the
- * chamber holds their cells. Its vents are in its floor and ceiling. It has three air sensors: the
+ * chamber holds their cells. Its vents are in its floor and ceiling, and for four in its north and
+ * south walls too. It has three air sensors: the
  * chamber's on its north wall, A's on A's north wall at x = 1, and B's at x = 8, on B's north wall
  * or, in the vacuum, on a block of stone. A is the inner side and B the outer.
  *
@@ -288,6 +289,14 @@ public final class AirlockTests {
      * @param ceilingVent whether the chamber has a second vent, in its ceiling
      */
     static Lock lock(Site s, boolean roomB, boolean ceilingVent) {
+        return lock(s, roomB, ceilingVent ? 2 : 1);
+    }
+
+    /**
+     * {@link #lock(Site, boolean, boolean)} with one to four vents, each on its own 400 L network: in
+     * the chamber's floor, its ceiling, its north wall at y = 1 and its south wall at y = 3.
+     */
+    static Lock lock(Site s, boolean roomB, int ventCount) {
         s.clear();
         s.room(0, 4);
         if (roomB) {
@@ -306,9 +315,12 @@ public final class AirlockTests {
         }
         List<VentBlockEntity> vents = new ArrayList<>();
         BlockState vent = AtmosBlocks.VENT.get().defaultBlockState();
-        vents.add(s.place(5, 0, 2, vent.setValue(VentBlock.FACING, Direction.UP), VentBlockEntity.class));
-        if (ceilingVent) {
-            vents.add(s.place(5, 4, 2, vent.setValue(VentBlock.FACING, Direction.DOWN), VentBlockEntity.class));
+        // The floor, the ceiling, the north wall and the south wall, each facing into the chamber.
+        int[] ys = {0, 4, 1, 3};
+        int[] zs = {2, 2, 1, 3};
+        Direction[] facing = {Direction.UP, Direction.DOWN, Direction.SOUTH, Direction.NORTH};
+        for (int i = 0; i < ventCount; i++) {
+            vents.add(s.place(5, ys[i], zs[i], vent.setValue(VentBlock.FACING, facing[i]), VentBlockEntity.class));
         }
         AirlockBlockEntity inner = airlock(s, 4, 2, Direction.WEST, false);
         AirlockBlockEntity outer = airlock(s, 6, 2, Direction.EAST, false);
@@ -1132,34 +1144,28 @@ public final class AirlockTests {
     }
 
     /**
-     * Runs a cycle toward door {@code toward} to its end, checking at each step that the vents
-     * siphon while the chamber reads above the pressure beyond that door and blow while it reads
-     * below, powered by the controller, that they start with {@code mode}, that all three sensors
-     * show cycling, and that the airlock opens only on a reading within 5.07 kPa of the pressure at
-     * the sensor beyond it.
-     *
-     * <p>A vent's blow is bounded by the pressure beyond, but each vent in the chamber is bounded on
-     * its own, so two can overshoot: the cycle back of {@link
-     * #cont_139_a_chamber_cycles_out_to_a_vacuum_and_back_to_1_atm} blows its 5.8 m³ chamber from
-     * 87.6 to 101.4 kPa in one step, toward 95.6 kPa, and then siphons once (CONT-139).
+     * Runs a cycle toward door {@code toward} to its end, checking at each step that every vent runs
+     * in {@code mode}, powered by the controller, so the cycle never turns back; that the chamber
+     * never reads past the pressure beyond that door by more than 5.07 kPa; that all three sensors
+     * show cycling; and that the airlock opens only on a reading within 5.07 kPa of the pressure at
+     * the sensor beyond it (CONT-139, CONT-152).
      */
     static void cycle(GameTestHelper h, Site s, Lock lock, int toward, VentMode mode) {
         AirlockControllerBlockEntity ac = lock.controller();
         int x = toward == 0 ? 4 : 6;
-        boolean started = false;
+        double sign = mode == VentMode.SIPHON ? -1 : 1;
         for (int i = 0; i < 200 && ac.cycling() >= 0; i++) {
             s.cycle(lock.devices());
+            double past = sign * (ac.chamberKpa() - ac.beyondKpa(toward));
+            h.assertFalse(
+                    past > AirlockCycle.TOLERANCE_KPA,
+                    "the chamber read " + ac.chamberKpa() + " kPa, past " + ac.beyondKpa(toward) + " kPa");
             if (ac.cycling() >= 0) {
                 h.assertFalse(open(s, x, 2), "the airlock opened during the cycle");
                 if (ac.cycleStep() != null) {
-                    VentMode due = ac.chamberKpa() > ac.beyondKpa(toward) ? VentMode.SIPHON : VentMode.BLOW;
-                    if (!started) {
-                        h.assertValueEqual(due, mode, "the way the cycle starts");
-                        started = true;
-                    }
                     for (VentBlockEntity v : lock.vents()) {
                         h.assertValueEqual(
-                                v.settings().mode(), due, "a vent at " + ac.chamberKpa() + " kPa during the cycle");
+                                v.settings().mode(), mode, "a vent at " + ac.chamberKpa() + " kPa during the cycle");
                         h.assertTrue(v.power().source() == ac, "a vent isn't powered by the airlock controller");
                     }
                 }
@@ -1230,6 +1236,49 @@ public final class AirlockTests {
             h.assertTrue(bolted(s, 4, 2) && bolted(s, 6, 2), "stopping unbolted an airlock");
             player.discard();
         });
+    }
+
+    /**
+     * With {@code count} vents, the chamber cycles from 450 kPa down to B at 200 kPa, then back up to
+     * A at 300 kPa with the gas the vents kept. The vents split what the chamber still needs, so
+     * together they reach each side and don't pass it: the first cycle siphons all the way and the
+     * second blows all the way ({@link #cycle}, CONT-139, CONT-152). The vents keep the 250 kPa they
+     * siphon, more than the 100 kPa the way back needs, so that without the split two or four of
+     * them blow past A at once.
+     */
+    private static void splitCycles(GameTestHelper h, int site, int count) {
+        Site s = new Site(h, site);
+        run(h, s, () -> {
+            Lock lock = lock(s, true, count);
+            h.assertValueEqual(lock.vents().size(), count, "the chamber's vents");
+            fill(s, 2, 2, 2, 237, 63);
+            fill(s, 8, 2, 2, 200, 0);
+            fill(s, 5, 2, 2, 450, 0);
+            s.cycle(lock.devices());
+            AirlockControllerBlockEntity ac = lock.controller();
+            h.assertTrue(ac.requestCycle(AirlockCycle.OUTER), "the controller refused a cycle toward B");
+            cycle(h, s, lock, AirlockCycle.OUTER, VentMode.SIPHON);
+            h.assertTrue(ac.requestCycle(AirlockCycle.INNER), "the controller refused a cycle toward A");
+            cycle(h, s, lock, AirlockCycle.INNER, VentMode.BLOW);
+        });
+    }
+
+    /** {@link #splitCycles} with the floor vent alone. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_152_one_vent_cycles_down_and_up_without_passing_either_side(GameTestHelper h) {
+        splitCycles(h, 1355, 1);
+    }
+
+    /** {@link #splitCycles} with vents in the floor and the ceiling. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_152_two_vents_cycle_down_and_up_without_passing_either_side(GameTestHelper h) {
+        splitCycles(h, 1356, 2);
+    }
+
+    /** {@link #splitCycles} with vents in the floor, the ceiling and both side walls. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_152_four_vents_cycle_down_and_up_without_passing_either_side(GameTestHelper h) {
+        splitCycles(h, 1357, 4);
     }
 
     // ---- CONT-153: the window --------------------------------------------------------------------
