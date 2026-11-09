@@ -172,7 +172,7 @@ their own and with the invariant checker on (CORE-036).
 | S-02 without hazards | Pass. Breaking a window gives the zone an ambient edge; the 27-cell room keeps 97.9 % of its pressure per second, the 1,000-cell room 99.93 % (D-21), and the small room dissolves into the vacuum after 325 s while the large one still holds 82 kPa. On a two-room station, closing the door splits the zone, a breach vents only its room, the resealed room is pressurised again by command, and opening the door merges the rooms. The "door" is a wall block: doors as zone boundaries are R1 (GEO-007). No items, players, damage or firelock: those are R1 (FLOW, LIFE, CONT). | `s_02_breach_vents_small_room_faster_than_large`, `s_02_station_breach_split_and_merge` |
 | S-09 | Pass, without pipes and canisters (CONT, R1). A restart keeps two zones' compositions and temperatures to 1e-9; a zone paused by an unloaded chunk at the restart stays paused until the chunk loads, then resumes unchanged. | `s_09_restart_keeps_zones_and_paused_zone_resumes`, and the [`PersistenceTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PersistenceTests.java) and [`PausedZoneTests`](../zas/src/gametest/java/io/github/west3436/zas/gametest/PausedZoneTests.java) |
 | S-12 | Pass ([#100](https://github.com/west3436/zas-cubed/pull/100)). | CI's "S-12 API without ZAS³" step |
-| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B, which the owner accepted on 2026-11-01. Re-measured after GEO-007, with S-10's 100 zones and 178 door edges ([#133](https://github.com/west3436/zas-cubed/pull/133)): every verdict holds, NFR-004's included ([S-10 after GEO-007](research/benchmarks.md#s-10-after-geo-007-2026-11-01)). 2026-11-08: the in-game S-10 bench's final run ([the final run](research/benchmarks.md#the-final-run-2026-11-08)) meets NFR-001 (0.347 ms average, 1.158 ms 99th percentile), NFR-004 (229 B per zoned cell, 1,347 B per zone, 12.22 MiB), NFR-005 (24.8 ms) and DATA-006 (4.5 B/s). NFR-002 is met after the explosion (3.7 ms) but fails while the scenario runs: 6 of 12,000 ticks are over 10 ms, the largest 37.3 ms, each one call to a part that usually takes well under 1 ms. The enclosure cap step passes every budget at 80 × 80 × 16, 102,400 cells.* | `./gradlew :engine:bench`, `./gradlew :s10-bench:s10Bench` |
+| Benchmarks | Recorded ([R0 engine benchmarks](research/benchmarks.md)). The engine's share passes NFR-001, NFR-002, NFR-003 and NFR-005; NFR-004's per-cell memory fails ([#78](https://github.com/west3436/zas-cubed/issues/78)). *2026-11-01: re-measured by retained size in #117 (283 B per zoned cell, 10.85 MiB for S-10); NFR-004's per-cell budget is revised to 256 B, which the owner accepted on 2026-11-01. Re-measured after GEO-007, with S-10's 100 zones and 178 door edges ([#133](https://github.com/west3436/zas-cubed/pull/133)): every verdict holds, NFR-004's included ([S-10 after GEO-007](research/benchmarks.md#s-10-after-geo-007-2026-11-01)). 2026-11-08: the in-game S-10 bench's final run ([the final run](research/benchmarks.md#the-final-run-2026-11-08)) meets NFR-001 (0.347 ms average, 1.158 ms 99th percentile), NFR-004 (229 B per zoned cell, 1,347 B per zone, 12.22 MiB), NFR-005 (24.8 ms) and DATA-006 (4.5 B/s). NFR-002 is met after the explosion (3.7 ms) but fails while the scenario runs: 6 of 12,000 ticks are over 10 ms, the largest 37.3 ms, each one call to a part that usually takes well under 1 ms. The enclosure cap step passes every budget at 80 × 80 × 16, 102,400 cells. The owner judged NFR-002's 6 ticks a pass the same day, so every budget is met ([Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done)).* | `./gradlew :engine:bench`, `./gradlew :s10-bench:s10Bench` |
 
 The scenarios also complete CORE-036, CORE-075, GEO-020 and GEO-022, now
 *Implemented*. CORE-025 (R1) stays *Accepted*: its split search is local, but
@@ -664,6 +664,86 @@ HEAT-019 move to *Implemented*, as their Verify plans are headless and pass. CON
 *Accepted*: its tests pass and the panels were checked in a dev client with Fusion, but the
 owner's own look in game is left.
 
+*2026-11-07: the owner said "Finish R1".* The round covers the game and its tests, not the
+release (Phase F waits for the owner). The owner put batch 5's eight blocks in R1 (D-84) and
+had S-10 run on their own PC. The new requirements started as *Draft*, and the owner
+answered the design questions that change the game. The airlock closes itself about 5 s
+after it opens; a firelock goes on vanilla doors as well as airlocks; and the tank holder
+has no window.
+
+| Item | PR | Requirements | Left |
+|---|---|---|---|
+| Ponder has to be bundled, so the scenes ship as an addon | [#395](https://github.com/west3436/zas-cubed/pull/395) | D-83. CLIENT-023 to CLIENT-026, *Draft* | The owner's acceptance |
+| Every item's recipe, and the crafting page against them | [#396](https://github.com/west3436/zas-cubed/pull/396) | CONT-051, CONT-058 | None |
+| Every FE device's power cut and default draw | [#397](https://github.com/west3436/zas-cubed/pull/397) | CONT-060, CONT-065 | None |
+| Batch 5 in R1 | [#398](https://github.com/west3436/zas-cubed/pull/398) | D-84 | None |
+| Gas geometry derivation in a 237-mod pack (spike [#79](https://github.com/west3436/zas-cubed/issues/79)) | [#400](https://github.com/west3436/zas-cubed/pull/400) | None. 2.0 to 4.9 s on its background thread for 668,034 states, and the server waited 0 to 0.54 s at start | None |
+| A whole station through a save and reload (S-09), then with batch 5's blocks and an airlock mid-cycle | [#404](https://github.com/west3436/zas-cubed/pull/404), [#420](https://github.com/west3436/zas-cubed/pull/420) | DATA-016 | None |
+| The Ponder addon and a scene for each device and tool | [#405](https://github.com/west3436/zas-cubed/pull/405), with [#409](https://github.com/west3436/zas-cubed/pull/409), [#411](https://github.com/west3436/zas-cubed/pull/411) and [#413](https://github.com/west3436/zas-cubed/pull/413) merged into its branch | CLIENT-023 to CLIENT-026 stay *Draft* | The owner's acceptance |
+| Tank holder | [#401](https://github.com/west3436/zas-cubed/pull/401), [#406](https://github.com/west3436/zas-cubed/pull/406) | CONT-149 to CONT-151, *Draft* | The owner's acceptance |
+| Radiator pipe, the radiator adaptor and the heat exchanger | [#403](https://github.com/west3436/zas-cubed/pull/403), [#407](https://github.com/west3436/zas-cubed/pull/407), [#408](https://github.com/west3436/zas-cubed/pull/408) | CONT-143 to CONT-148, HEAT-020 to HEAT-022 and API-064, *Draft* | The owner's acceptance |
+| Airlocks, the airlock controller, the air sensor, and firelocks on airlocks and doors | [#402](https://github.com/west3436/zas-cubed/pull/402), [#412](https://github.com/west3436/zas-cubed/pull/412) | CONT-133 to CONT-142, CONT-152 and CONT-153, *Draft* | The owner's acceptance |
+| A door holding the same gas open and closed, and a chamber's need split across its vents | [#423](https://github.com/west3436/zas-cubed/pull/423), [#424](https://github.com/west3436/zas-cubed/pull/424) | GEO-045, *Draft*. Dated notes on GEO-044 and CONT-152 | The owner's acceptance |
+| The in-game S-10 bench, and what its trials found | [#410](https://github.com/west3436/zas-cubed/pull/410), [#414](https://github.com/west3436/zas-cubed/pull/414), [#415](https://github.com/west3436/zas-cubed/pull/415), [#416](https://github.com/west3436/zas-cubed/pull/416), [#419](https://github.com/west3436/zas-cubed/pull/419), [#422](https://github.com/west3436/zas-cubed/pull/422) | Dated notes on CONT-006 and CONT-123. Devices and pipes step only in chunks that tick (architecture §11.2) | None |
+| The enclosure cap as a setting, and S-10's step finding how far it goes | [#417](https://github.com/west3436/zas-cubed/pull/417), [#418](https://github.com/west3436/zas-cubed/pull/418), [#425](https://github.com/west3436/zas-cubed/pull/425) | Dated notes on D-23 and GEO-020 | None |
+| S-10's final run | [#421](https://github.com/west3436/zas-cubed/pull/421) | NFR-001, NFR-002, NFR-004, NFR-005, DATA-006, DATA-014, DATA-015 | None |
+
+Every requirement above moved to *Implemented* unless the table says otherwise. CONT-051,
+CONT-058, CONT-060, CONT-065 and DATA-016 moved with their PRs. The S-10 figures and NFR-032
+moved after the run, and CONT-118, CONT-123 and CONT-132 after the world below.
+
+*2026-11-08: the owner played the round's world.* **ZAS R1 Finish Round Test** was built on a
+local branch at e675e6e6: main at 8da499e plus #405, #406, #408 and #412, the PRs held for
+it. All 14 steps passed, in about 8 minutes against the plan's 17. Those steps were the
+Ponder scenes, a walk through an airlock and its cycle, how the airlocks, firelocks and air
+sensors look, the radiators, the tank holder, the central controller, and the station
+blocks in a client with Fusion. That moves CONT-118, CONT-123 and CONT-132 to
+*Implemented*.
+
+| Note from the world | Result |
+|---|---|
+| In the scenes, vents, scrubbers and passive vents sit flush in the floor, not on top, and the airlock controller scene's vent was in the door's path | Changed in the scenes. The owner approved them from screenshots, with no look in game |
+| Each zone beyond an airlock also gets an air sensor, and using any sensor cycles toward the side opposite the one in use | Built in [#412](https://github.com/west3436/zas-cubed/pull/412): an inner, an outer and a chamber sensor |
+| The airlock controller's window should show how to set it up (the owner's request after the world) | Built in #412: five slots, for the inner and outer doors and the three sensors. The controller guesses each part's role when it's linked, and arming a slot and linking the part again fixes a wrong guess. The owner approved the window from a screenshot |
+
+*2026-11-08: the world's calls.* The owner took each one as built.
+
+| Call | Answer |
+|---|---|
+| A separate Ponder addon (D-83) | Confirmed |
+| Devices and pipes stepping only in chunks that tick | As built |
+| The airlocks' details: redstone holds one open, it closes 5 s after, a lost power supply leaves a cycle waiting with both bolted, and a door with a firelock mines like metal | As built |
+| The start-up wait in a large pack (spike #79) | As built |
+| The 1.4 margin for a faster processor | Time budgets only, not bytes |
+| A held tank's pressure | Not shown before the tank comes out, as built |
+| The final S-10 run | Windows' High performance power plan, with NFR-002 judged on zas's own time and the collector's pauses and stalls listed apart |
+
+*2026-11-08: after the world.* A test of the airlock cycle found that an airlock or a
+firelock held 879 L less gas closed than open (2,051 L for the large airlock). Each time one
+opened and closed, it pumped gas into one side: 22 % in a 4 m³ chamber. Every zone-boundary
+state now holds its open state's volume (GEO-045, #423). With two or more vents, each also
+aimed for the far side's pressure alone, so a cycle overshot (5.8 kPa with two). The
+controller now splits the chamber's need across its vents by capacity (CONT-152, #424).
+
+*2026-11-08: S-10's final run* ([benchmarks](research/benchmarks.md#the-final-run-2026-11-08)).
+It ran for 34 min 44 s on the owner's i7-13700K, on 12 logical CPUs with a 4 GB heap. Time
+budgets needed a margin of 1.4, as this rig is faster than D-40's parts.
+
+| Budget | Figure | Result |
+|---|---|---|
+| NFR-001 | 0.347 ms average, 1.158 ms 99th percentile | Met |
+| NFR-002 | 6 of 12,000 ticks over 10 ms while the scenario ran, the largest 37.3 ms, each one call to a part that usually takes well under 1 ms; 3.7 ms at most after the explosion | Met: the owner judged 6 of 12,000 a pass, with no rerun |
+| NFR-004 | 229 B per zoned cell, 1,347 B per zone, 12.22 MiB | Met |
+| NFR-005 | 24.8 ms | Met |
+| DATA-006, DATA-014, DATA-015 | 4.5 B/s of atmos sync per player | Met |
+| The enclosure cap step | Halls 16 high and 64 to 80 square. The largest within every budget was 80 × 80 × 16, 102,400 cells, the setting's top. The 64 and 68 halls failed only on single ticks spent in listeners that don't touch the hall | The owner made 102,400 the default, and kept it the top ([#425](https://github.com/west3436/zas-cubed/pull/425)) |
+
+The round's *Draft* IDs wait for the owner's acceptance: CONT-133 to CONT-153, HEAT-020 to
+HEAT-022, CLIENT-023 to CLIENT-026, API-064 and GEO-045. Each passes its tests, and the
+owner played the blocks in the world above. What's left of R1 that isn't *Implemented* is
+release work: API-002, API-008, API-041 to API-043, DATA-012, NFR-025, NFR-031, NFR-033,
+NFR-040 and NFR-042.
+
 | Track | Area | Notes |
 |---|---|---|
 | E1 | LIFE plus HUD, Normal/Hardcore preset (OPS-007) | Breathing, hazards, life-support capability, client breathing sync. Internals need E5 tanks and masks. |
@@ -749,7 +829,7 @@ owner's own look in game is left.
 
 ## Immediate next steps
 
-_Updated 2026-11-07._
+_Updated 2026-11-08._
 
 1. **Owner decisions:**
    - ~~NFR-004: accept or reject the per-cell memory budget revised to 256 B in
@@ -787,8 +867,16 @@ _Updated 2026-11-07._
    - ~~Connected textures for the station walls and reinforced glass with Fusion
      ([#391](https://github.com/west3436/zas-cubed/issues/391))~~ *on main 2026-11-07 ([#392](https://github.com/west3436/zas-cubed/pull/392))*. CONT-132 is
      *Accepted*, with the owner's look in game left.
-   - **Now:** whether Ponder has to be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270)).
-   - **Last:** S-09 and S-10.
+   - ~~Whether Ponder has to be bundled ([#270](https://github.com/west3436/zas-cubed/issues/270))~~
+     *it has, 2026-11-07 (D-83, #395)*.
+   - ~~**Finish R1** (owner, 2026-11-07): batch 5's eight blocks (D-84), the Ponder addon and
+     its scenes, then S-09 and S-10~~ *on main 2026-11-08 (#395 to #425; see
+     [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner played
+     its combined test world and took its calls as built the same day.
+   - **Now:** the owner's acceptance of that round's *Draft* IDs: CONT-133 to CONT-153,
+     HEAT-020 to HEAT-022, CLIENT-023 to CLIENT-026, API-064 and GEO-045.
+   - **Then, when the owner calls it:** the release (Phase F). R1's requirements that aren't
+     *Implemented* are all release work.
    - **What each open requirement still needs:** the 2026-11-06 status audit in
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the
      audit round after it built.

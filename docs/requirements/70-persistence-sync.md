@@ -377,7 +377,7 @@ air's state and zone id, and one mixture, as `/zas at` gives them. It holds no z
 geometry or per-cell data, so it keeps to D-53.*
 
 #### DATA-014 · Own-state sync rate
-`Must` · `R1` · `Accepted` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
+`Must` · `R1` · `Implemented` · Verify: GameTest, Bench · Trace: LIFE-023, CLIENT-008 · Depends: DATA-005
 
 A player's own atmosphere state shall be sent to that player only, at most 4
 times a second, and only when a CLIENT-008 threshold is crossed or a displayed
@@ -416,8 +416,12 @@ this replaces "27 to about 46 bytes" above, as a state is 28 to about 47 bytes.
 `client_008_a_held_analyzer_shows_every_reading` and `data_014_payload_round_trips`
 (GameTests) pass.*
 
+*2026-11-08: Implemented. The Bench is
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08):
+each player was sent 0 to 0.8 B/s of its own state, 45 bytes a state.*
+
 #### DATA-015 · Airflow sync
-`Must` · `R1` · `Accepted` · Verify: Unit, GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest, Bench · Trace: FLOW-017, CLIENT-003, CLIENT-010 · Depends: DATA-005
 
 Airflow data shall be sent to a player at most once per atmos tick:
 - what pushes the player (FLOW-017): while the player is near airflow, changed
@@ -469,6 +473,11 @@ Accepted.*
 *2026-11-06: The owner's decision: the statement now says what's built, so FLOW-017's payload is
 no longer an exception to it. With `range_blocks` above 24, that payload reaches past 32 blocks,
 up to 40. There's still no bench, so this stays Accepted.*
+
+*2026-11-08: Implemented. The Bench is
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08):
+each player was sent 0 to 4.8 B/s of airflow. The push payload averaged 98 bytes and the
+effects list 32 bytes.*
 
 #### DATA-019 · Listener pressure sync
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: CLIENT-016, D-53 · Depends: DATA-005
@@ -595,7 +604,7 @@ is now 1,230 B/s rather than 1,164, at 125 changes a second rather than 127.
 *2026-11-05: accepted by the owner, and Implemented: its tests pass.*
 
 #### DATA-006 · Bandwidth budget
-`Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
+`Should` · `R1` · `Implemented` · Verify: Bench · Trace: S-10
 
 In the S-10 scale scenario, atmos sync shall average at most 2 KiB/s per
 player, excluding the debug overlay.
@@ -611,4 +620,10 @@ the station. No Bench has measured this yet.*
 *2026-11-06: Two per-player caps alone add up to about 2.4 KiB/s (1.2 KiB/s and 1,230 B/s). That
 isn't a violation, as this is an average in S-10, but no cap guarantees it. The owner's decision:
 S-10's Bench decides, and only a measured average over 2 KiB/s calls for lower caps.*
+
+*2026-11-08: Implemented. In
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
+atmos sync averaged 4.5 B/s per player, 3.2 to 6.3 B/s each, beside about 50 B/s of
+vanilla's. Bytes are counted as written to the socket, compressed and framed, without TCP and
+IP headers.*
 

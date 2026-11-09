@@ -3049,7 +3049,7 @@ chunk and are refused past 1 or the maximum. A range left at the maximum follows
 server's maximum, and a lower one is cut to a lowered maximum.*
 
 #### CONT-118 · Moving an area air controller to another central controller
-`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
 
 The multitool shall move an area air controller to another central
 controller whose range it's in. The area air controller's GUI shall name the
@@ -3071,6 +3071,9 @@ multitool on an area air controller, then on a second central controller in rang
 checks the second now has it and pays for it. The controller's window shows its central
 controller's position in a "Central" row. This stays Accepted until the owner has seen
 that row.*
+
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world: a
+near area air controller's window named the console in its Central row.*
 
 #### CONT-119 · Removing a central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
@@ -3174,7 +3177,7 @@ with no random ticks or mob spawning. The option is read at each atmos tick, so 
 it off releases them without a restart.*
 
 #### CONT-123 · Central controller GUI
-`Should` · `R1` · `Accepted` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
 
 The central atmospherics controller's GUI shall list each area air controller
 it has claimed, with its position, its zone's pressure and temperature, its
@@ -3204,6 +3207,10 @@ shown as out of contact too, with its last readings, and gets no FE. Before, the
 console counted it in contact and showed its frozen readings as live.
 `cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
 (GameTest) checks its row.*
+
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world:
+the console's window listed its three controllers, and the far one, 20 chunks away and not
+loaded, showed No contact with its last readings dimmed.*
 
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
@@ -3523,7 +3530,7 @@ with a reinforced glass window keeps its temperature, and by
 them. The owner saw it in the R1 items round's world.*
 
 #### CONT-132 · Connected textures with Fusion
-`Could` · `R1` · `Accepted` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
+`Could` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
 
 On a client with Fusion (Connected Textures) installed, station walls, reinforced station
 walls and reinforced glass shall each join with touching blocks of their own kind, showing
@@ -3555,6 +3562,11 @@ approved, the glass stays translucent and the items show a lone block's tile. A 
 can show a one-pixel crack where a block's edge meets the middle of the next block's face,
 from the way Fusion draws a face in quarters. The owner's own look in game (`./gradlew
 :zas-atmos:runClient -Pfusion=true`) is left, so this stays Accepted.*
+
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world, in
+a client run with `-Pfusion=true`: panels of each block, 1 × 1, 3 × 1 and 3 × 3, the glass
+in front of stone, each joining with its own kind, with the rim or frame only on outer
+edges.*
 
 ## Airlocks
 

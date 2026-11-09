@@ -11,7 +11,7 @@ documentation and licensing. The S-10 scale scenario is defined in the
 ## Performance and scalability
 
 #### NFR-001 · Tick budget
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: S-10, D-40
+`Must` · `R1` · `Implemented` · Verify: Bench · Trace: S-10, D-40
 
 In the S-10 scenario on reference hardware (D-40), atmos work on the server
 thread shall average at most 2 ms per server tick, with a 99th percentile of at
@@ -34,8 +34,15 @@ each release; CI tracks regressions (NFR-034).
 
 *2026-11-01: SPACE-018 moved to R2 with the Ad Astra adapter (D-66); its line applies from R2.*
 
+*2026-11-08: Implemented. In
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
+atmos work on the server thread averaged 0.347 ms per server tick, with a 99th percentile of
+1.158 ms. The run was on the owner's i7-13700K pinned to 12 logical CPUs, which is faster per
+core than D-40's parts, so a time budget counts as met only with a margin of 1.4: these
+margins are 5.76 and 4.32. Devices take three quarters of the time.*
+
 #### NFR-005 · Worker keeps up
-`Must` · `R1` · `Accepted` · Verify: Bench · Trace: S-10, D-30, CORE-045
+`Must` · `R1` · `Implemented` · Verify: Bench · Trace: S-10, D-30, CORE-045
 
 In S-10, the off-thread simulation shall finish each atmos tick within 250 ms
 on one worker thread (25 % of the default 1 s period).
@@ -43,6 +50,12 @@ on one worker thread (25 % of the default 1 s period).
 - **Rationale:** Decision: D-30. A quarter of the period leaves headroom for
   bursts.
 - **Verify:** Bench times worker ticks in S-10.
+
+*2026-11-08: Implemented. In
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
+the largest worker tick took 24.8 ms, a margin of 10.07 over 250 ms (1.4 is needed, as for
+NFR-001). The enclosure cap step's
+largest, zoning an 80 × 80 × 16 hall of 102,400 cells, took 153 ms, a margin of 1.63.*
 
 #### NFR-002 · No spikes
 `Must` · `R1` · `Accepted` · Verify: Bench · Trace: CORE-047, GEO-022
@@ -86,7 +99,7 @@ zones aren't quite free: each atmos tick still copies every zone's mixture and
 rebuilds the published table, about 0.4 µs per zone.*
 
 #### NFR-004 · Memory
-`Should` · `R1` · `Accepted` · Verify: Bench · Trace: S-10
+`Should` · `R1` · `Implemented` · Verify: Bench · Trace: S-10
 
 Atmos heap use shall average at most 256 bytes per zoned cell and 4 KiB per
 zone (excluding its cells), and at most 64 MiB in total in S-10.
@@ -119,6 +132,15 @@ per-zone and total limits are unchanged.*
 statement and its echo from the rationale. Those spikes are done
 ([results](../research/spikes.md)), and the one revision came from #78, as above. The
 budgets don't change.*
+
+*2026-11-08: Implemented. In
+[S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
+the atmos heap held 229 bytes per zoned cell, 1,347 bytes per zone and 12.22 MiB in all, for
+36,160 zoned cells in 89 zones. The margin of 1.4 that NFR-001 needs on this rig applies to
+time budgets only, not to bytes (the owner, 2026-11-08). The 64 MiB total counts the
+station's dimension, as the engine bench does; the idle Nether and End add about 0.45 MiB.
+The enclosure cap step's 80 × 80 × 16 hall took 161 bytes per zoned cell and 22.62 MiB for
+its whole dimension.*
 
 ## Reliability
 
@@ -525,7 +547,7 @@ on the run's summary page, with the full JaCoCo report as an artifact, and warns
 80 %. `./gradlew :engine:jacocoTestReport` writes the same report locally.*
 
 #### NFR-032 · Scenario tests
-`Must` · `R1` · `Accepted` · Verify: Inspect · Trace: README rule 5
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: README rule 5
 
 Every R1 scenario (S-xx) shall have a GameTest or a scripted manual test.
 
@@ -536,6 +558,10 @@ Every R1 scenario (S-xx) shall have a GameTest or a scripted manual test.
 
 *2026-11-06: The owner's decision: Verify leaves out S-06 and S-07, which moved to R2, and counts
 S-10's Bench as its test.*
+
+*2026-11-08: Implemented. Every scenario in the Verify plan has its test: a GameTest
+named `s_NN_…` for each of S-01 to S-05, S-08, S-09 and S-11 to S-13, with S-09's whole
+station in `StationSaveTests`, and S-10's in-game bench (`:s10-bench:s10Bench`).*
 
 #### NFR-033 · CI on every PR
 `Must` · `R1` · `Accepted` · Verify: Inspect · Trace: API-043, API-048
