@@ -24,7 +24,8 @@ added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 On 2026-11-09 the owner made the tank transfer valve placeable (D-86), changing
 CONT-103 and CONT-104.
-CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-87).
+CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-87). The owner accepted it the
+same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -3986,7 +3987,7 @@ five setup slots from a screenshot the same day.*
 ## Easter eggs
 
 #### CONT-154 · Bike horn
-`Could` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-87
+`Could` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: D-87
 
 A bike horn shall honk for every player within 16 blocks when used, then refuse uses for 2 s
 (40 ticks), and shall honk at each hit it lands on a mob. It shall stack to 1 and have no recipe:
@@ -4012,6 +4013,11 @@ and its honk vg's `items/bikehorn`, already mono ([vg sounds](../research/vg-sou
 `cont_154_dungeon_and_stronghold_chests_sometimes_hold_one` check it. In 1,000 seeded rolls the
 dungeon chest held 45 horns, and the stronghold's corridor, crossing and library chests 43, 54 and
 49. It stays Draft until the owner's review and the Manual check.*
+
+*2026-11-09: Accepted by the owner, with the choices above as built, and Implemented: its
+GameTests pass, and the owner's Manual check (the sprite in each hand and in the inventory, and
+the honk) passed in the horn and TTV round's test world the same day
+([#429](https://github.com/west3436/zas-cubed/pull/429)).*
 
 ## R1 / R2 split
 
