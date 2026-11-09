@@ -12,11 +12,16 @@ import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentFlow;
+import io.github.west3436.zas.atmos.vent.VentMode;
 import io.github.west3436.zas.atmos.vent.VentSettings;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
@@ -51,7 +56,9 @@ import org.jetbrains.annotations.Nullable;
  * <p><b>A cycle</b> runs toward the inner or outer door, and needs both doors, the chamber sensor and
  * that side's sensor. It starts with both airlocks closed and bolted. Each step it runs its vents
  * for {@link AirlockCycle#next}: siphoning down to that side's pressure, or blowing up to it, into or
- * out of the vents' own pipe network. Once the chamber is within 5.07 kPa of it, it unbolts and opens
+ * out of the vents' own pipe network. The vents on one zone split what it needs to get there, by
+ * what each could move ({@link #shares}), so together they don't pass it, however many there are.
+ * Once the chamber is within 5.07 kPa of it, it unbolts and opens
  * that airlock, leaving the other bolted, and is idle again. A cycle that loses a door or a sensor it
  * needs stops, leaving the airlocks as they are. Pressing a linked sensor cycles away from the side
  * the airlock is accessing ({@link #pressSensor}).
@@ -183,8 +190,9 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
             order = step == AirlockCycle.Step.SIPHON ? VentSettings.siphon(target) : VentSettings.blow(target);
         }
         List<VentBlockEntity> linked = vents(level);
-        for (VentBlockEntity v : linked) {
-            v.airlockOrder(getBlockPos(), order);
+        double[] shares = shares(level, linked, order);
+        for (int i = 0; i < linked.size(); i++) {
+            linked.get(i).airlockOrder(getBlockPos(), order, shares[i]);
         }
         if (powered) {
             for (VentBlockEntity v : linked) {
@@ -283,6 +291,43 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
         for (BlockPos p : vents) {
             if (level.isLoaded(p) && level.getBlockEntity(p) instanceof VentBlockEntity v) {
                 out.add(v);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Each vent's share of what its zone still needs to reach the order's target (CONT-152). The
+     * vents on one zone split it by what each could move this step ({@link VentFlow#shares}), so
+     * together they bring it to the target and not past it, however many there are; each still moves
+     * no more than its own rate. A vent alone on its zone, or on the ambient or a cell it can't read,
+     * has all of it.
+     */
+    private static double[] shares(ServerLevel level, List<VentBlockEntity> linked, VentSettings order) {
+        double[] out = new double[linked.size()];
+        Arrays.fill(out, 1);
+        if (order.mode() == VentMode.OFF) {
+            return out;
+        }
+        Map<Long, List<Integer>> byZone = new HashMap<>();
+        double[] capacity = new double[linked.size()];
+        for (int i = 0; i < linked.size(); i++) {
+            VentBlockEntity v = linked.get(i);
+            AtmosphereSample sample = Atmospheres.at(level, v.airPoint());
+            long zone = key(sample);
+            if (zone != AirlockCycle.OPEN && zone != AirlockCycle.UNKNOWN) {
+                byZone.computeIfAbsent(zone, z -> new ArrayList<>()).add(i);
+                capacity[i] = v.capacity(sample, order);
+            }
+        }
+        for (List<Integer> group : byZone.values()) {
+            double[] caps = new double[group.size()];
+            for (int j = 0; j < caps.length; j++) {
+                caps[j] = capacity[group.get(j)];
+            }
+            double[] split = VentFlow.shares(caps);
+            for (int j = 0; j < caps.length; j++) {
+                out[group.get(j)] = split[j];
             }
         }
         return out;

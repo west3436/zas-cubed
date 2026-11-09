@@ -3803,7 +3803,18 @@ be off while the controller isn't cycling.
 - **Rationale:** Inferred: an area air controller covering the chamber would otherwise order
   the same vent another way each atmos tick (CONT-041).
 - **Verify:** A GameTest sets an area air controller covering the chamber to Siphon and checks
-  the linked vent follows the airlock controller's cycle and is off between cycles.
+  the linked vent follows the airlock controller's cycle and is off between cycles. Others
+  cycle a chamber with one, two and four vents down to one side and up to the other, and check
+  each cycle runs one way to its end without passing the target by more than 5.07 kPa.
+
+*2026-11-08: several vents on one chamber split what it still needs. Each step the controller
+gives each vent a share of it, in proportion to what each could move that step, and each moves
+its share or its own rate (CONT-078), whichever is less. Together they reach the far side's
+pressure and don't pass it, so a cycle siphons all the way down or blows all the way up. Before,
+each vent stopped at the target on its own, so two could overshoot it together: the vacuum
+test's cycle back blew its chamber from 87.6 to 101.4 kPa toward 95.6 kPa, and then siphoned
+once (`AirlockTests.cont_152_*_cycle_down_and_up_without_passing_either_side`,
+`VentFlowTest.cont_152_*`).*
 
 #### CONT-153 · Airlock controller window
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139

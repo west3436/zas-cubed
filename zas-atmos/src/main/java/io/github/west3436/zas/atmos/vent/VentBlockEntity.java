@@ -51,7 +51,8 @@ import net.minecraft.world.phys.Vec3;
  * those orders keep coming, the vent is controlled: its GUI shows the controller and its order, and
  * refuses hand settings ({@link #setByHand}). A vent no controller orders is set by hand. A vent
  * linked to an airlock controller takes that controller's orders alone ({@link #airlockOrder},
- * CONT-152).
+ * CONT-152), and moves only its share of what its zone needs, so that several vents on one chamber
+ * reach the target together and don't pass it.
  *
  * <p>Its GUI also shows its network's pressure, which the internal bound is compared with, and
  * its {@link VentStatus}: whether it moved gas at its last atmos tick, or why not.
@@ -71,6 +72,9 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
     private VentSettings settings = VentSettings.OFF;
     private long controlledUntil = Long.MIN_VALUE;
     private long airlockUntil = Long.MIN_VALUE;
+    /** Its airlock controller's share for it (CONT-152); never saved, as the controller sends it each step. */
+    private double airlockShare = 1;
+
     private BlockPos controller;
     private VentStatus status = VentStatus.OFF;
 
@@ -196,8 +200,55 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
      * @param order the settings it orders
      */
     public void airlockOrder(BlockPos controller, VentSettings order) {
+        airlockOrder(controller, order, 1);
+    }
+
+    /**
+     * An airlock controller's order to one of several vents on one zone: as {@link
+     * #airlockOrder(BlockPos, VentSettings)}, and while the order lasts the vent moves only {@code
+     * share} of what brings the zone to the external bound ({@link VentFlow#shares}).
+     *
+     * @param controller where the airlock controller is
+     * @param order the settings it orders
+     * @param share the vent's share, 0 to 1; NaN is 1
+     */
+    public void airlockOrder(BlockPos controller, VentSettings order, double share) {
         airlockUntil = now() + DevicePower.LEASE_TICKS;
+        airlockShare = Double.isNaN(share) ? 1 : Math.max(0, Math.min(1, share));
         control(controller, order);
+    }
+
+    /** The share of what its zone needs the vent moves: its airlock controller's, or else 1. */
+    public double zoneShare() {
+        return airlockControlled() ? airlockShare : 1;
+    }
+
+    /**
+     * What the vent could move in a second under {@code order} with no bound on the zone, the cell in
+     * front of its grille reading {@code sample}: what its airlock controller splits the zone's need
+     * by ({@link VentFlow#shares}). Server side.
+     *
+     * @return the moles, at least 0; 0 if the order is off
+     */
+    public double capacity(AtmosphereSample sample, VentSettings order) {
+        if (isRemoved()) {
+            return 0;
+        }
+        GasStore net = network().gas();
+        GasMixture zone = sample.mixture();
+        return switch (order.mode()) {
+            case OFF -> 0;
+            case BLOW -> VentFlow.blowCapacity(net.totalMoles(), net.volume(), net.temperature(), order);
+            case SIPHON ->
+                VentFlow.siphonCapacity(
+                        zone.totalMoles(),
+                        zone.volume(),
+                        zone.temperature(),
+                        net.totalMoles(),
+                        net.volume(),
+                        net.temperature(),
+                        order);
+        };
     }
 
     /** Whether an airlock controller has ordered the vent within the last {@link DevicePower#LEASE_TICKS} game ticks. */
@@ -288,6 +339,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
             return;
         }
         GasMixture zone = sample.mixture();
+        double share = zoneShare();
         if (shown == VentMode.BLOW) {
             status = VentFlow.blowIdle(
                     zone.pressure(),
@@ -296,12 +348,13 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                     net.volume(),
                     net.temperature(),
                     settings,
+                    share,
                     PipeBlockEntity.MIN_FLOW);
             if (status != VentStatus.MOVING) {
                 return;
             }
             double n = VentFlow.blow(
-                    zone.pressure(), zone.volume(), net.totalMoles(), net.volume(), net.temperature(), settings);
+                    zone.pressure(), zone.volume(), net.totalMoles(), net.volume(), net.temperature(), settings, share);
             reportMoved(n);
             GasParcel out = net.takeFraction(n / net.totalMoles());
             port.add(level, point, out, r -> deliver(new GasParcel(ZonePort.untaken(out, r), out.temperature())));
@@ -314,6 +367,7 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                     net.volume(),
                     net.temperature(),
                     settings,
+                    share,
                     PipeBlockEntity.MIN_FLOW);
             if (status != VentStatus.MOVING) {
                 return;
@@ -325,7 +379,8 @@ public class VentBlockEntity extends PipeNodeEntity implements PoweredDevice, Ve
                     net.totalMoles(),
                     net.volume(),
                     net.temperature(),
-                    settings);
+                    settings,
+                    share);
             reportMoved(n);
             double total = zone.totalMoles();
             Map<ResourceLocation, Double> want = new TreeMap<>();
