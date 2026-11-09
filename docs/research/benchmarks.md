@@ -892,8 +892,8 @@ Every valve rebuilds its network once as it shuts and never while it stays open.
 
 ## The in-game S-10 bench
 
-_Added 2026-11-07. Its figures come with the final recorded run, on a quiet
-machine; until then only the harness is here._
+_Added 2026-11-07. The final recorded run, 2026-11-08, is
+[below](#the-final-run-2026-11-08)._
 
 The engine bench above runs S-10 headless. The in-game bench runs it in a real
 dedicated server with both mods, so it measures what the headless one can't:
@@ -904,8 +904,8 @@ platform around close and apply.
 ./gradlew :s10-bench:s10Bench
 ```
 
-It isn't part of `build`, though `build` compiles it. It takes about 45 minutes
-(the enclosure cap step about 25 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
+It isn't part of `build`, though `build` compiles it. It takes about 35 minutes
+(the enclosure cap step about 20 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
 `s10-bench/run` and `s10-bench/build/s10`. Options, as `-P` properties:
 
 | Property | Default | What it does |
@@ -1058,6 +1058,152 @@ budget counts as met at its figure.
 **Left out.** Minecraft's own work for the mods' blocks and entities, such as
 block updates and the cows' own ticks; client movement packets (the players
 stand still); and anything a real network thread does.
+
+### The final run (2026-11-08)
+
+Commit `d9d59314`, at full length, on the owner's rig: an i7-13700K pinned to
+logical CPUs 0 to 11 (`FFF`), a 4 GB heap, Java 21.0.6, and Windows 11 on the
+High performance power plan. The run took 34 min 44 s, the cap step 19 of
+them. This rig is faster per core than D-40's reference parts (Ryzen 5 5600,
+i5-12400), so a time budget counts as met only with a margin of 1.4. Bytes
+need none.
+
+**Load.** Before the run, the only other Java processes were an idle Gradle
+daemon and its worker, and the machine was 1.6 % busy over a minute. A watcher
+on the E-cores then sampled every process for the whole run. No other Java
+process started. In the 10 measured minutes only Microsoft Defender, already
+running, took CPU: twice, 10 to 12 % of one logical CPU. In the warm-up the
+Gradle daemon, Defender, the Claude Code client and the Diagnostic Policy
+Service each briefly took 10 to 37 % of one. Nothing new started, so the run
+stands.
+
+**The scenario.**
+
+| Budget | Figure | Margin | Verdict |
+|---|---|---|---|
+| NFR-001 average (≤ 2 ms) | 0.347 ms | 5.76 | met |
+| NFR-001 99th percentile (≤ 5 ms) | 1.158 ms | 4.32 | met |
+| NFR-002 largest tick while the scenario runs (≤ 10 ms) | 37.334 ms | 0.27 | **fails** |
+| NFR-002 largest tick after the explosion (≤ 10 ms) | 3.714 ms | 2.69 | met |
+| NFR-002 the breached zone vents as modelled | lost 1.235 % of its moles in 59 s; the model gives 1.222 % | | met |
+| NFR-005 largest worker tick (≤ 250 ms) | 24.822 ms | 10.07 | met |
+| NFR-004 per zoned cell (≤ 256 B) | 229 B | 1.12 | met |
+| NFR-004 per zone (≤ 4 KiB) | 1,347 B | 3.04 | met |
+| NFR-004 total (≤ 64 MiB) | 12.22 MiB | 5.24 | met |
+| DATA-006 atmos sync per player (≤ 2,048 B/s) | 4.5 B/s on average | 450 | met |
+
+- Devices take three quarters of NFR-001's time, 0.26 ms of the 0.347 ms per
+  tick, a third of that the pipes. Client sync takes 8 %, snapshotting and
+  applying results 5 %.
+- The worker's ticks average 0.594 ms, with a 99th percentile of 10.1 ms. On
+  the CPU they average 0.365 ms and never took more than 15.6 ms, one step of
+  Windows' count.
+- Each player was sent 3.2 to 6.3 B/s of atmos sync, beside about 50 B/s of
+  vanilla's (339 B/s for the wing's player, who travels).
+- The heap walk found 89 zones and 36,160 zoned cells, with the wing's player
+  away. The engine and pipeline hold 10.14 MiB of the 12.22 MiB, the zone
+  graph's cells 6.67 MiB of that.
+- The wing's rooms paused or unloaded in all 25 samples taken while its player
+  was away, and were zoned again in every sample after it came back.
+- Spike #80 in the scenario: none of its 600 batches carried sections the
+  worker had asked for.
+
+**NFR-002 in the scenario.** 6 of the 12,000 ticks went over 10 ms. Each of the
+5 the report lists was one call, to a part that usually takes well under 1 ms:
+
+| Tick | Atmos ms | The call | That part's 99th percentile | Collector pause in the tick |
+|---|---|---|---|---|
+| 3,783 | 37.334 | `AtmosHud`'s player tick, 37.02 ms | 0.036 ms | 15.1 ms |
+| 9,873 | 23.416 | a vent's step, 23.12 ms | 0.072 ms | 1.4 ms |
+| 10,731 | 21.377 | a pipe's step, 21.11 ms | 0.175 ms | none seen |
+| 4,339 | 16.915 | `AtmosService`, in a batch apply of 16.55 ms | 0.873 ms (the apply's) | none seen |
+| 797 | 12.657 | an area air controller's step, 12.39 ms | 0.199 ms | none seen |
+| 519 | 11.026 | not listed: the report names the 5 slowest | | |
+
+The pause in tick 3,783 wasn't taken out. The scenario's NFR-002 figure is the
+tick's whole atmos time. Only the cap step's clock keeps each call's start and
+end (#417), so in the scenario the bench could tell that the pause fell in the
+tick, but not whether it fell inside zas's call. Taking it out wouldn't change
+the verdict. The tick took 38.7 ms in all, 37.02 of them in `AtmosHud`'s call,
+so at least 13.4 ms of the pause fell inside that call. Without the pause,
+zas's own time is still 22 to 24 ms.
+
+What took the rest of these calls isn't known from this run. They are 20 to
+1,000 times their parts' 99th percentiles, they fall in unrelated parts, and
+the machine was quiet. That points to the thread being stopped rather than to work. The run
+can't show it, though. The bench has no CPU time per server tick, and it
+missed some of the collector's pauses (below).
+
+**The enclosure cap step.** Every hall:
+- zoned whole in one atmos tick, about 700 ms from the add;
+- classified its twin as open in each of 3 repeats;
+- dissolved 29.9 s after the breach, and zoned whole again after the reseal;
+- split and merged 3 times out of 3.
+
+In every hall the vent ran, ordered by its controller.
+
+Bold is a time not met with the margin (7.14 ms for NFR-002).
+
+| Hall | Cells | Largest worker tick (margin) | Largest server tick, zas's own time, ms: a / b / c / d | Active: average, 99th percentile | Bytes per zoned cell | Halls dimension's atmos heap | Every budget |
+|---|---|---|---|---|---|---|---|
+| 64 × 64 × 16 | 65,536 | 93.4 ms (2.68) | 3.05 / **7.94** / **9.05** / **14.58** | 0.094, 0.937 ms | 184 B | 13.65 MiB | no |
+| 68 × 68 × 16 | 73,984 | 109 ms (2.29) | **14.45** / 0.21 / 5.80 / 2.94 | 0.049, 0.982 ms | 165 B | 18.34 MiB | no |
+| 72 × 72 × 16 | 82,944 | 122 ms (2.04) | 3.75 / 1.31 / 4.18 / 3.33 | 0.053, 0.840 ms | 163 B | 19.64 MiB | yes |
+| 76 × 76 × 16 | 92,416 | 136 ms (1.84) | 3.99 / 0.20 / 3.79 / 3.74 | 0.058, 0.856 ms | 161 B | 21.02 MiB | yes |
+| 80 × 80 × 16 | 102,400 | 153 ms (1.63) | 4.15 / 0.26 / 4.29 / 4.05 | 0.072, 0.544 ms | 161 B | 22.62 MiB | yes |
+
+The largest hall that passes every budget is **80 × 80 × 16, 102,400 cells**,
+the setting's top value. The 64 and 68 halls failed on server ticks that
+weren't the hall's work. Each was spent in a listener that doesn't touch the
+hall, with no collector pause the bench saw:
+- the 64 hall's third merge: `Airflow`, 14.53 ms;
+- the 68 hall's zoning: `DeviceActivitySync`, 14.40 ms.
+
+The 72 to 80 halls had no tick like these in their steps. The 64 hall's open
+fill (7.94 ms) and breach (9.05 ms) met the budget, but not the margin. The
+other halls' were 0.2 to 5.8 ms.
+
+The halls' own work grows with their cells. Zoning's worker tick, mostly gas
+operations, adds about 1.6 µs per cell, from 92 ms at 65,536 cells to 153 ms
+at 102,400. At that rate it would reach NFR-005's budget over the margin,
+179 ms, at about 118,000 cells. Zoning's server tick, which applies the
+result, stays near 4 ms. The bytes per zoned cell fall a little as the halls
+grow, to 161 B. At 102,400 cells the dimension's whole atmos heap is 22.6 MiB.
+
+**Pauses the bench missed.** The bench's collector listener skips the
+"G1 Concurrent GC" bean, taking it for concurrent work. On Java 21, though,
+that bean reports G1's Remark and Cleanup pauses, which stop every Java
+thread. That was checked on the run's Java, 21.0.6.
+
+Over the run, the beans' own counts give 45 collections and 1,071 ms. The
+listener saw 25 pauses and 986 ms. The 20 it missed are those pauses and any
+collections from before the bench's mod loaded. So "no pause" in the cap
+step's slow ticks, and "none seen" above, don't rule out a Remark pause.
+
+A follow-up to the bench counts those pauses. It also gives each server
+tick's CPU time beside its wall time, so the next run can tell a stall from
+work.
+
+**Spike #80's survey.** Every shape zoned whole. Its first batch carried the
+355 sections of the prefetch cube and closed in 0.19 to 0.36 ms. A fill that
+leaves the cube takes a round more for each batch that asks for sections. A
+corridor filled from its end asks for one section a round, so the 512-long
+one took 30 rounds, about 30 s.
+
+| Shape | Cells | Rounds | Batches asking for sections, sections | Largest worker tick |
+|---|---|---|---|---|
+| station room 8 × 5 × 8, from its middle | 320 | 1 | 0, 0 | 1.9 ms |
+| hall 32 × 8 × 32, from its middle; from a corner | 8,192 | 1; 1 | 0, 0; 0, 0 | 13.5 ms; 13.4 ms |
+| hall 64 × 8 × 64, from its middle; from a corner | 32,768 | 1; 3 | 0, 0; 2, 9 | 53.2 ms; 46.2 ms |
+| hall 100 × 6 × 100, from a corner | 60,000 | 7 | 6, 33 | 82.7 ms |
+| corridor 3 × 3 × 64, from an end | 576 | 2 | 1, 1 | 1.9 ms |
+| corridor 3 × 3 × 128, from its middle; from an end | 1,152 | 2; 6 | 1, 2; 5, 5 | 2.4 ms; 2.3 ms |
+| corridor 3 × 3 × 256, from an end | 2,304 | 14 | 13, 13 | 3.5 ms |
+| corridor 3 × 3 × 512, from an end | 4,608 | 30 | 29, 29 | 6.3 ms |
+| shaft 3 × 128 × 3, from its bottom | 1,152 | 1 | 0, 0 | 2.7 ms |
+
+There's no sample of real player bases, so how often players build shapes
+like these is unknown.
 
 ## Findings
 

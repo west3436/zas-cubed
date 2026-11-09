@@ -3719,6 +3719,11 @@ without the sensors it needs buzzes, and the window says which is missing.*
 sensor and the sensor on the side it cycles toward. With one empty it buzzes, and the window
 shows the slot empty and "No sensor" in place of that pressure.*
 
+*2026-11-08: a cycle outlasts a save. A controller whose chunk unloads and loads again midway
+through a cycle comes back still cycling toward the same door, without power until its area air
+controller pays for it again, and then finishes the cycle
+(`StationSaveTests.s_09_an_airlock_cycle_saved_midway_resumes_and_finishes`, DATA-016).*
+
 #### CONT-140 · Asking for a cycle
 `Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
 
