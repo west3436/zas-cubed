@@ -60,15 +60,21 @@ largest, zoning an 80 × 80 × 16 hall of 102,400 cells, took 153 ms, a margin o
 #### NFR-002 · No spikes
 `Must` · `R1` · `Implemented` · Verify: Bench · Trace: CORE-047, GEO-022
 
-No server tick shall spend more than the CORE-047 budget (default 10 ms) on
-atmos server-thread work. Work beyond it is deferred to the next tick. Verified
-by an explosion breaching S-10's 8,000-cell zone: no tick exceeds the budget,
-and the zone still vents correctly.
+In S-10, at least 99.9 % of server ticks shall spend at most the CORE-047 budget
+(default 10 ms) on atmos server-thread work, both while the scenario runs and after
+an explosion breaches its 8,000-cell zone, and the breached zone shall still vent
+correctly. The budget holds back only a batch close's section prefetch: once a
+tick's atmos work passes it, the rest of the prefetch is skipped and the operations
+it was for fetch their sections a tick later. Applying a result is never split, and
+devices, hazards and sync aren't held back.
 
 - **Rationale:** Decision: D-30. Spikes are more noticeable to players than
-  averages.
-- **Verify:** Bench runs the explosion breach in S-10 and checks every tick's
-  atmos time.
+  averages. The 99.9 % is the owner's (2026-11-08), after S-10's final run, whose
+  few slow ticks were each one call to a part that usually takes well under
+  1 ms.
+- **Verify:** Bench runs S-10 and the explosion breach, takes the 99.9th
+  percentile of each one's ticks' atmos time, and checks the breached zone vents
+  as modelled.
 
 *2026-11-06: This doesn't say what's built. The budget covers closing a tick's work, applying a
 result is never split, and devices, hazards and sync sit outside it. The owner's decision:
@@ -78,12 +84,17 @@ does, that shows what needs gating.*
 *(owner, 2026-11-08) S-10's final run had 6 of 12,000 ticks over 10 ms; the owner judged that a
 pass, and no further verification is needed.*
 
-*2026-11-08: Implemented, on that ruling. In
+*2026-11-08: reworded to what's built, at 99.9 % of ticks (owner, 2026-11-08), which settles
+the 2026-11-06 note above. It said no tick goes over the budget, and that work beyond it is
+deferred to the next tick. The Verify plan follows.*
+
+*2026-11-08: Implemented. In
 [S-10's final run](../research/benchmarks.md#the-final-run-2026-11-08)
-the explosion's breach of the 8,000-cell zone took 3.7 ms at most in a tick, and the zone lost
-1.235 % of its moles in 59 s against the model's 1.222 %. While the scenario ran, the 6 ticks
-were 11 to 37.3 ms, each one call to a part that usually takes well under 1 ms. The statement
-isn't reworded: the 2026-11-06 note above still says how the built budget differs from it.*
+the 99.9th percentile was 4.567 ms while the scenario ran and 3.346 ms after the explosion, so
+it's met with the margin of 1.4 that NFR-001 needs on this rig (7.14 ms). 6 of the scenario's
+12,000 ticks went over 10 ms, 11 to 37.3 ms, each one call to a part that usually takes well
+under 1 ms, and 9 over 7.14 ms; 12 are allowed. None of the 1,200 after the explosion did, and
+the breached zone lost 1.235 % of its moles in 59 s against the model's 1.222 %.*
 
 #### NFR-003 · Cost scales with activity
 `Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011

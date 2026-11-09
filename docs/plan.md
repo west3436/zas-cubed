@@ -732,7 +732,7 @@ budgets needed a margin of 1.4, as this rig is faster than D-40's parts.
 | Budget | Figure | Result |
 |---|---|---|
 | NFR-001 | 0.347 ms average, 1.158 ms 99th percentile | Met |
-| NFR-002 | 6 of 12,000 ticks over 10 ms while the scenario ran, the largest 37.3 ms, each one call to a part that usually takes well under 1 ms; 3.7 ms at most after the explosion | Met: the owner judged 6 of 12,000 a pass, with no rerun |
+| NFR-002 | 6 of 12,000 ticks over 10 ms while the scenario ran, the largest 37.3 ms, each one call to a part that usually takes well under 1 ms; 3.7 ms at most after the explosion | Met: the owner judged 6 of 12,000 a pass, with no rerun, and had NFR-002 reworded to what's built, at 99.9 % of ticks. The 99.9th percentile was 4.567 ms, and 3.346 ms after the explosion |
 | NFR-004 | 229 B per zoned cell, 1,347 B per zone, 12.22 MiB | Met |
 | NFR-005 | 24.8 ms | Met |
 | DATA-006, DATA-014, DATA-015 | 4.5 B/s of atmos sync per player | Met |

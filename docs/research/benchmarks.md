@@ -1190,6 +1190,11 @@ those pauses. It also gives each server tick's CPU time beside its wall time,
 so the next run can tell a stall from work. The owner judged the scenario's
 6 ticks over 10 ms a pass for NFR-002, with no rerun (owner, 2026-11-08).
 
+*2026-11-08: NFR-002 now asks for 99.9 % of ticks within the budget, as built (owner,
+2026-11-08). On this run's ticks the 99.9th percentile is 4.567 ms while the scenario runs
+and 3.346 ms after the explosion, so it's met with the margin. 9 of the scenario's 12,000
+ticks were over 7.14 ms, against the 12 that 99.9 % allows.*
+
 **Spike #80's survey.** Every shape zoned whole. Its first batch carried the
 355 sections of the prefetch cube and closed in 0.19 to 0.36 ms. A fill that
 leaves the cube takes a round more for each batch that asks for sections. A
