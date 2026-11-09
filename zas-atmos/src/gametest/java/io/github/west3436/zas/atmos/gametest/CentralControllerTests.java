@@ -46,7 +46,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -204,10 +203,14 @@ public final class CentralControllerTests {
         return claims(s).centralOf(controller.getBlockPos()).orElse(null);
     }
 
-    /** Uses an item on the top of a block, as a right-click does. */
-    private static InteractionResult use(Player player, ItemStack stack, BlockPos on) {
+    /**
+     * A right-click on the top of a block with what the player holds, through the server's handling of
+     * a client's click, so the block's own use gets its turn.
+     */
+    private static InteractionResult use(ServerPlayer player, BlockPos on) {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(on).add(0, 0.5, 0), Direction.UP, on, false);
-        return stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        return player.gameMode.useItemOn(
+                player, player.serverLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
     }
 
     private static String key(Component c) {
@@ -580,9 +583,10 @@ public final class CentralControllerTests {
     // ---- CONT-118 ---------------------------------------------------------------------------
 
     /**
-     * The multitool moves an area air controller from one central controller to another in range.
-     * From then the new one pays what it needs, and the old one only its own draw, and its GUI names
-     * the new one (CONT-118).
+     * The multitool, right-clicked on an area air controller and then on a central controller in
+     * range, moves the area air controller to it from the one that had it; with no controller
+     * selected, the click opens the console's window. From then the new one pays what it needs, and
+     * the old one only its own draw, and its GUI names the new one (CONT-118).
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_118_the_multitool_moves_a_controller_to_another_central_controller(GameTestHelper h) {
@@ -598,14 +602,22 @@ public final class CentralControllerTests {
             s.cycle(first, second);
             h.assertValueEqual(owner(s, c), first.getBlockPos(), "the first central controller's claim");
 
-            // Used on the controller, then on the second console's upper right block.
-            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            // Right-clicked on the controller, then on the second console's upper right block. With no
+            // controller selected, it has nothing to move, and the console opens its window.
+            ServerPlayer player = player(s, 6, 1, 3);
             ItemStack tool = new ItemStack(AtmosItems.MULTITOOL.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, tool);
-            use(player, tool, c.getBlockPos());
+            use(player, second.parts().get(3));
+            h.assertTrue(
+                    player.containerMenu instanceof CentralMenu m && m.pos().equals(second.getBlockPos()),
+                    "the console, with nothing selected, opened " + player.containerMenu);
+            h.assertValueEqual(owner(s, c), first.getBlockPos(), "the claim, with nothing selected");
+            player.closeContainer();
+            use(player, c.getBlockPos());
             h.assertValueEqual(
                     MultitoolItem.selected(tool, s.level).orElse(null), c.getBlockPos(), "the multitool's selection");
-            use(player, tool, second.parts().get(3));
+            use(player, second.parts().get(3));
+            h.assertTrue(player.containerMenu == player.inventoryMenu, "moving the controller opened a window");
             h.assertValueEqual(owner(s, c), second.getBlockPos(), "the claim after the move");
             h.assertValueEqual(
                     key(MultitoolItem.move(tool, s.level, second)),

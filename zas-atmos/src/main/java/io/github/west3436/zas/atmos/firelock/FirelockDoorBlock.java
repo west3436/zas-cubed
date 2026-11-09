@@ -166,7 +166,10 @@ public class FirelockDoorBlock extends DoorBlock implements EntityBlock {
 
     // ---- Using it -----------------------------------------------------------------------------
 
-    /** The crowbar and the multitool work it in their own useOn (CONT-094, CONT-043): neither opens it. */
+    /**
+     * The crowbar works it in its own useOn (CONT-094), and doesn't open it. The multitool links it
+     * before this is asked ({@link MultitoolItem#onItemUseFirst}, CONT-137).
+     */
     @Override
     protected ItemInteractionResult useItemOn(
             ItemStack stack,
@@ -176,7 +179,7 @@ public class FirelockDoorBlock extends DoorBlock implements EntityBlock {
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
-        if (stack.getItem() instanceof CrowbarItem || stack.getItem() instanceof MultitoolItem) {
+        if (stack.getItem() instanceof CrowbarItem) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
