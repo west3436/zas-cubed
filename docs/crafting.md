@@ -30,6 +30,8 @@ ones the game shows.
 - **A crafted fire extinguisher comes full** (CONT-037). The water bucket in
   its recipe charges it and the empty bucket comes back. After that it refills
   at a water source block, not in the crafting grid.
+- **The bike horn has no recipe** (CONT-154). It turns up in dungeon and
+  stronghold chests.
 
 ## Progression
 

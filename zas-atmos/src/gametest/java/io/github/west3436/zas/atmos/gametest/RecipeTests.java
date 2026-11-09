@@ -35,14 +35,14 @@ public final class RecipeTests {
 
     /**
      * The content mod's items with no recipe: the O2 and air tanks, made by filling an empty tank
-     * from a canister (CONT-039).
+     * from a canister (CONT-039), and the bike horn, found only in chests (CONT-154).
      */
-    private static Set<Item> filledOnly() {
-        return Set.of(AtmosItems.OXYGEN_TANK.get(), AtmosItems.AIR_TANK.get());
+    private static Set<Item> uncrafted() {
+        return Set.of(AtmosItems.OXYGEN_TANK.get(), AtmosItems.AIR_TANK.get(), AtmosItems.BIKE_HORN.get());
     }
 
     /**
-     * Every item the content mod registers but those of {@link #filledOnly}; not the test items the
+     * Every item the content mod registers but those of {@link #uncrafted}; not the test items the
      * GameTests add. A variant that is only a model or data on its item, such as a battery's charge,
      * the magnetic boots switched on, a transfer valve's tanks or a filled canister, is the same
      * item, so needs no recipe of its own.
@@ -50,7 +50,7 @@ public final class RecipeTests {
     private static List<Item> craftable() {
         List<Item> items = new ArrayList<>();
         for (DeferredHolder<Item, ? extends Item> entry : AtmosItems.ITEMS.getEntries()) {
-            if (!filledOnly().contains(entry.get())) {
+            if (!uncrafted().contains(entry.get())) {
                 items.add(entry.get());
             }
         }
@@ -67,7 +67,7 @@ public final class RecipeTests {
      * The content is craftable from vanilla materials (CONT-051): each recipe's ingredients are
      * vanilla items or the mod's own, and each of the mod's own has a recipe too, so every chain
      * ends in vanilla materials. Every item of the mod has a recipe that loads, but the O2 and air
-     * tanks, which have none.
+     * tanks and the bike horn, which have none.
      */
     @GameTest(template = "empty")
     public static void cont_051_recipes_use_vanilla_materials(GameTestHelper h) {
@@ -95,7 +95,7 @@ public final class RecipeTests {
         for (Item item : craftable) {
             h.assertTrue(made.contains(item), BuiltInRegistries.ITEM.getKey(item) + " has no recipe");
         }
-        for (Item item : filledOnly()) {
+        for (Item item : uncrafted()) {
             h.assertFalse(made.contains(item), BuiltInRegistries.ITEM.getKey(item) + " has a recipe");
         }
         h.succeed();

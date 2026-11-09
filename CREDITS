@@ -3257,3 +3257,21 @@ notes: The reinforced glass block item: the block model.
 # not assets, and their licences ship in the jar's META-INF/licenses.
 path: zas-ponder/src/main/resources/assets/zas_ponder/lang/en_us.json
 origin: original
+
+# The bike horn (CONT-154, D-85): vg's sprite and honk.
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/bike_horn.png
+origin: vgstation13
+source: icons/obj/items.dmi
+state: bike_horn
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: Crop: vg's sprite as it is (12 x 12), cut from its 32 px frame and centred in 16 x 16.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/bike_horn.json
+origin: original
+notes: A flat item model for the bike horn sprite.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/item/bike_horn.ogg
+origin: vgstation13
+source: sound/items/bikehorn.ogg
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+adapted: Already mono, levelled to -1 dBFS peak, re-encoded.

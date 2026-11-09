@@ -120,6 +120,9 @@ public final class AtmosSounds {
     // The wrench turning or removing a part (CONT-035)
     public static final DeferredHolder<SoundEvent, SoundEvent> WRENCH = event("device.wrench.use");
 
+    // The bike horn (CONT-154)
+    public static final DeferredHolder<SoundEvent, SoundEvent> BIKE_HORN = event("item.bike_horn.honk");
+
     private AtmosSounds() {}
 
     private static DeferredHolder<SoundEvent, SoundEvent> event(String name) {

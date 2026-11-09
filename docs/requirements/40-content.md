@@ -22,6 +22,7 @@ CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07
 CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
 added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
+CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-85).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -3926,12 +3927,42 @@ and Outer.*
 owner opened the window in the R1 finish round's world, and approved the window with its
 five setup slots from a screenshot the same day.*
 
+## Easter eggs
+
+#### CONT-154 · Bike horn
+`Could` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-85
+
+A bike horn shall honk for every player within 16 blocks when used, then refuse uses for 2 s
+(40 ticks), and shall honk at each hit it lands on a mob. It shall stack to 1 and have no recipe:
+a dungeon chest or a stronghold chest (corridor, crossing or library) shall hold one with a chance
+of 5 %.
+
+- **Rationale:** Decision: D-85, the owner's request of 2026-11-09: a honk on use with a 2 s
+  cooldown, a honk on a hit, and found only in dungeon and stronghold chests. Inferred: the 5 %, all
+  three stronghold chests, the stack of 1, and hits that honk whatever the cooldown, since the
+  owner set the cooldown on use.
+- **Verify:** GameTests check that a use honks for its user and a player nearby and starts a
+  40-tick cooldown, that a use during it plays nothing, that a hit on a mob honks, and that 1,000
+  seeded rolls of each chest's table hold about 5 % horns and a desert pyramid's none. Manual: the
+  sprite in hand and in the inventory, and the honk.
+
+*2026-11-09: added for review (D-85). The owner set what it does and where it's found. These are
+mine, for review: 5 % a chest, all three stronghold chests, a stack of 1, a hit honking whatever
+the cooldown and starting none, the subtitle "Honk", and the honk's volume of 0.5. Its sprite is
+vg's `bike_horn`, cropped to 16×16 ([texture procurement](../texture-procurement.md#63-content-mod-zas_atmos-items)),
+and its honk vg's `items/bikehorn`, already mono ([vg sounds](../research/vg-sounds.md#items)).
+`BikeHornTests.cont_154_using_it_honks_for_everyone_and_starts_a_2_s_cooldown`,
+`cont_154_a_use_during_the_cooldown_does_nothing`, `cont_154_hitting_a_mob_honks` and
+`cont_154_dungeon_and_stronghold_chests_sometimes_hold_one` check it. In 1,000 seeded rolls the
+dungeon chest held 45 horns, and the stronghold's corridor, crossing and library chests 43, 54 and
+49. It stays Draft until the owner's review and the Manual check.*
+
 ## R1 / R2 split
 
 | R1 | R2 |
 |---|---|
 | Pipes, valves, pressure pump, vent, scrubber, connector, canister, tanks, masks, softsuit, hardsuit, area air controller, firelock, analyzer, gas acquisition (electrolyzer, scrubbing), photosynthesis, power (FE devices, generator, area air controllers powering their zones and links), reactions in pipes and containers, pipe burst, tank transfer valve with timer, igniter | Heat-exchange pipes and radiators, thermoelectric cooler, TEG and turbine, cryo cell, dual-port vent, injector, thermostat, pipe leaks and configurable overpressure, meters and air sensors, pipe layers, automation (device redstone and comparator I/O, computer-mod peripherals), gas miner (creative), fire extinguisher, TTV signaler and proximity triggers |
-| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and air conditioner, magnetic boots, fire alarm, passive vent, central atmospherics controller, station walls, reinforced glass | |
+| *Should/Could in R1:* volume pump, filter, mixer, portable pump and scrubber, batteries and recharger, heater and air conditioner, magnetic boots, fire alarm, passive vent, central atmospherics controller, station walls, reinforced glass, bike horn | |
 
 *2026-11-01: the cable sharing a block with pipes is gone (D-68). D-36 had R2's
 pipe layers reuse the multipart block, so they need another design. Batteries
@@ -3945,3 +3976,5 @@ and the recharger are added (D-69).*
 airlock controller, the air sensor, the radiator pipe, the radiator adaptor, the heat exchanger and the
 tank holder. Heat-exchange pipes and radiators, and air sensors, leave the R2 column; meters, the
 thermoelectric cooler and the rest of it stay.*
+
+*2026-11-09: the bike horn is added (D-85).*

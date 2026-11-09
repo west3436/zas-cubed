@@ -96,7 +96,8 @@ message credits sprites but no sounds. Of the rest, `effects/extinguish` and
 `refill` came in `456a9d6da6` (2010), `effects/alert` in `7a4b9e09bc` (2011),
 `machines/pressurehiss` in `ad47dc7a62` (2016), `machines/door_bolt` and
 `door_unbolt` in `c5c5fe9ca0` (2019), and `items/assemblytick2` in `1c313df696`
-(2025).
+(2025). `items/bikehorn` came in the first commit and is unchanged since. It has no
+tags, and its encoder (libVorbis, 2007-06-22) predates that commit (checked 2026-11-09).
 
 ## Airflow
 
@@ -233,6 +234,15 @@ Event sounds. Every event below is in `zas_atmos`:
 | `device.extinguisher.refill` | 1 | 0.5 | `effects/refill` | The fire extinguisher refilling | 1.27 s, 2 ch |
 | `device.extinguisher.empty` | 1.7 | 0.3 | `machines/click` | **Silent** | 0.37 s, 2 ch |
 
+## Items
+
+The bike horn (CONT-154, D-85), in `assets/zas_atmos/sounds/item/`. The server plays it at
+volume 1 and pitch 1, on the Players slider.
+
+| Event | Pitch | Volume | vg file | vg's use | Source |
+|---|---|---|---|---|---|
+| `zas_atmos:item.bike_horn.honk` | 1 | 0.5 | `items/bikehorn` | The bike horn | 0.48 s, 1 ch |
+
 ## How the files are made and used
 
 - **Mono.** Minecraft only attenuates mono sounds with distance, so a stereo file
@@ -265,8 +275,9 @@ Event sounds. Every event below is in `zas_atmos`:
   `device.controller.danger` and `device.fire_alarm.alarm` are registered with the
   range their `sounds.json` sets, and a GameTest checks the two agree.
 - **A loop's range** isn't in `sounds.json`: see [Devices](#devices).
-- **Sliders.** Blocks on Blocks, airflow on Ambient/Environment.
-- **Size.** 35 files, 842 KB in all.
+- **Sliders.** Blocks on Blocks, airflow on Ambient/Environment, and the fire
+  extinguisher and the bike horn on Players.
+- **Size.** 36 files, 850 KB in all.
 - **The game's decoder reads them.** The test `client_021_…decodes…` runs every
   file through Minecraft's own decoder, as nothing here can play one.
 
