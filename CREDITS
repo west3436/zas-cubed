@@ -3268,7 +3268,7 @@ notes: Crop: vg's sprite as it is (12 x 12), cut from its 32 px frame and centre
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/bike_horn.json
 origin: original
-notes: A flat item model for the bike horn sprite.
+notes: A handheld item model for the bike horn sprite, held by its bulb. Its hand poses are item/handheld's turned a quarter clockwise, because the sprite's bulb is at the bottom right, not the bottom left.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/item/bike_horn.ogg
 origin: vgstation13
