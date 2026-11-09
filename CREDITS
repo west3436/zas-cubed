@@ -3291,3 +3291,17 @@ origin: vgstation13
 source: sound/items/bikehorn.ogg
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 adapted: Already mono, levelled to -1 dBFS peak, re-encoded.
+
+# The logo in the mod list (logoFile in each neoforge.mods.toml): one picture, copied
+# into each mod that ships.
+path: zas/src/main/resources/assets/zas/logo.png
+origin: original
+notes: A cube in perspective, #092337, with "ZAS" in white on its three visible faces. The lettering is Arial Black, projected onto each face as outlines.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/logo.png
+origin: original
+notes: The same picture as zas/src/main/resources/assets/zas/logo.png.
+
+path: zas-ponder/src/main/resources/assets/zas_ponder/logo.png
+origin: original
+notes: The same picture as zas/src/main/resources/assets/zas/logo.png.
