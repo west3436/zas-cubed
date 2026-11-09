@@ -277,7 +277,7 @@ notes: vg's sprite as it is, at 32x32 (D-70).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
 origin: original
-notes: A handheld item model for the wrench sprite.
+notes: A handheld item model for the wrench sprite. Its hand poses are item/handheld's turned a quarter clockwise, because the sprite's handle is at the bottom right, not the bottom left.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/fire_extinguisher.png
 origin: vgstation13
