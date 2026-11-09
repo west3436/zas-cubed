@@ -35,6 +35,7 @@
 | Maybe | Sable | 2.0.6, 2026-10-03 | 6.47M | PolyForm Shield 1.0.0 | Below |
 | Maybe | Create: The Factory Must Grow | 1.2.0, 2026-01-07 | 1.94M | "MIT NON-AI" | Its public pack docs list engine, flamethrower and fire extinguisher fuels. Its source wasn't read. |
 | No | Create | 6.0.10, 2026-04-21 | 27.92M | Code MIT, assets ARR | None (COMPAT-120) |
+| D-85 | [EMF] Entity Model Features | 3.3.12-neoforge-1.21, 2026-10-15 | 105.15M | LGPL-3.0-only | `traben.entity_model_features.EMFAnimationApi` (below) |
 
 **No NeoForge 1.21.1 build on Modrinth:** the Thermal series, Valkyrien Skies,
 Tinkers' Construct and Blue Skies. Alex's Caves has only unofficial ports.
@@ -90,6 +91,29 @@ spends tank air and restores breathing, which stops hypoxia. If it runs first, i
 sees "can breathe" and does nothing. This qualifies the
 [space research's](space-mods-and-prior-art.md#a1-available-on-neoforge-1211) claim
 that diving gear works automatically under Cosmonautics.
+
+### Entity Model Features
+
+*Added 2026-11-09 for D-85; Modrinth's figures are from that date.* EMF is client-only
+and needs Entity Texture Features. These notes read its `master` branch, which builds
+every Minecraft version it supports through `//#if MC` blocks (code-read):
+- `registerAnimationHook` takes an `EMFAnimationHook`. Its `onAnimationEnd` is given
+  the model root after the pack's animation has run, so a tumble can be added to a
+  Fresh Animations model without replacing the pack's `.jem` files (COMPAT-131).
+- `registerSingletonAnimationVariable` takes a `BooleanSupplier` or a
+  `Supplier<Float>`. The supplier reads `getCurrentEntity()` to find the entity being
+  drawn (COMPAT-132).
+- `pauseCustomAnimationsForThesePartsOfEntity` can stop a walk cycle while the body
+  is in the air.
+
+Turning the whole body doesn't need EMF, since a pose-stack rotation works on vanilla
+models. What EMF adds is that packs can animate the limbs.
+
+Whether a body was flung can be judged on the client. `HeldFlows` already holds the
+flows within 32 blocks (DATA-015), so nearby entities need no new packet. A flag
+synced from the server would work at any range, but it costs a packet.
+
+Its repository has no contribution policy in its top-level files.
 
 ### Upstream policies
 
