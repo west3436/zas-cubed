@@ -28,6 +28,7 @@ CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-87). The owner acce
 same day.
 On 2026-11-09 the owner put `zas` and `zas_atmos` in one jar, with a switch that turns the
 content off (D-88), changing CONT-052 and CONT-096; CONT-155, the switch, was added as Draft.
+The owner accepted it the same day.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -2606,7 +2607,7 @@ with the content off, that vanilla's doors are still in `#zas:zone_boundary`.
 Still Implemented.*
 
 #### CONT-155 · Content switch
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-88
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-88
 
 The content mod shall have a startup config, `zas_atmos-startup.toml`, with
 `[content] enabled`, `true` by default. Set to `false`, the content mod shall
@@ -2639,6 +2640,10 @@ runs in CI with the switch on (`:dist:runReleaseCheckGameTestServer`) and off
 (`:dist:runContentOffGameTestServer`), and passes both ways; with it off, the
 server log has no warning or error the run with it on lacks. It stays Draft
 until the owner's review.*
+
+*2026-11-09: Accepted by the owner, with the choices above as built, and Implemented: it
+merged in [#438](https://github.com/west3436/zas-cubed/pull/438), whose CI ran its GameTest with
+the switch on and off and passed.*
 
 ## Power
 
