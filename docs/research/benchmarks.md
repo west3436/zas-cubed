@@ -1170,19 +1170,23 @@ at 102,400. At that rate it would reach NFR-005's budget over the margin,
 result, stays near 4 ms. The bytes per zoned cell fall a little as the halls
 grow, to 161 B. At 102,400 cells the dimension's whole atmos heap is 22.6 MiB.
 
-**Pauses the bench missed.** The bench's collector listener skips the
-"G1 Concurrent GC" bean, taking it for concurrent work. On Java 21, though,
+**Pauses the bench missed.** In this run the bench's collector listener
+skipped the "G1 Concurrent GC" bean, taking it for concurrent work. On Java 21, though,
 that bean reports G1's Remark and Cleanup pauses, which stop every Java
 thread. That was checked on the run's Java, 21.0.6.
 
 Over the run, the beans' own counts give 45 collections and 1,071 ms. The
-listener saw 25 pauses and 986 ms. The 20 it missed are those pauses and any
-collections from before the bench's mod loaded. So "no pause" in the cap
-step's slow ticks, and "none seen" above, don't rule out a Remark pause.
+listener saw 25 pauses and 986 ms. The 20 it missed are those pauses and the
+collections from before the bench's mod loaded. A quick run of the fixed
+bench put 16 collections before the mod loaded. It heard 4 Remark and Cleanup
+pauses, 11 ms in all. So most of the 20 were likely from startup, and a
+Remark pause would explain only part of an 11 to 14.6 ms tick. Still, "no
+pause" in the cap step's slow ticks, and "none seen" above, don't rule one
+out.
 
-A follow-up to the bench counts those pauses. It also gives each server
-tick's CPU time beside its wall time, so the next run can tell a stall from
-work.
+[#422](https://github.com/west3436/zas-cubed/pull/422) makes the bench count
+those pauses. It also gives each server tick's CPU time beside its wall time,
+so the next run can tell a stall from work.
 
 **Spike #80's survey.** Every shape zoned whole. Its first batch carried the
 355 sections of the prefetch cube and closed in 0.19 to 0.36 ms. A fill that
