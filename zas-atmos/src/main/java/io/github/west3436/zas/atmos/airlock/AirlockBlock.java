@@ -4,7 +4,6 @@ import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.controller.ConsoleSide;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
-import io.github.west3436.zas.atmos.tool.MultitoolItem;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -471,10 +470,10 @@ public class AirlockBlock extends HorizontalDirectionalBlock implements EntityBl
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
-        // The crowbar forces a fitted firelock in its own useOn (CONT-094), and the multitool links
-        // the airlock in its own (CONT-138): neither opens or closes it by hand. The firelock item
-        // fits a firelock before this is asked (FirelockItem#onItemUseFirst).
-        if (stack.getItem() instanceof CrowbarItem || stack.getItem() instanceof MultitoolItem) {
+        // The crowbar forces a fitted firelock in its own useOn (CONT-094): it doesn't open or close
+        // it by hand. The firelock item fits a firelock, and the multitool links the airlock, before
+        // this is asked (FirelockItem#onItemUseFirst, MultitoolItem#onItemUseFirst; CONT-137, CONT-138).
+        if (stack.getItem() instanceof CrowbarItem) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

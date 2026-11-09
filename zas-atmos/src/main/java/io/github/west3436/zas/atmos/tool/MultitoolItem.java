@@ -44,6 +44,13 @@ import net.minecraft.world.level.block.state.BlockState;
  * and vents, to it (CONT-138). Used sneaking on an airlock controller, it links that controller to the selected area
  * air controller as a part instead (CONT-141). With an area air controller selected, it links a
  * firelock fitted to an airlock or a door (CONT-137).
+ *
+ * <p>It acts before the block's own use, but only where it has something to do: a controller to
+ * select, a part or firelock the selected controller links, or a central controller to move the
+ * selected one to. Anywhere else the block gets the click, as it would from an empty hand: with
+ * nothing to link, a part's window opens, a sensor is pressed and a door opens or closes, and the
+ * controller already selected opens its own window. A sneak-click skips the block's use, so then the
+ * multitool says why it has nothing to do, such as no controller being selected.
  */
 public class MultitoolItem extends Item {
     private static final String CONTROLLER = "Controller";
@@ -60,84 +67,128 @@ public class MultitoolItem extends Item {
         super(properties.stacksTo(1));
     }
 
+    /** Ahead of the block's own use: acts only where it has something to do. */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return use(context, true);
+    }
+
+    /** Once the block's own use has passed, or a sneak-click skipped it: acts, or says why it can't. */
     @Override
     public InteractionResult useOn(UseOnContext context) {
+        return use(context, false);
+    }
+
+    /**
+     * A use on a block: selects a controller, links or unlinks a part, or moves the selected controller
+     * to a central controller. It decides from the stack and the blocks, which the client knows too.
+     *
+     * @param first whether the block's own use is still to come; if so, it passes where it has nothing
+     *     to do, so the block gets the click
+     * @return {@link InteractionResult#PASS} if it took no part
+     */
+    private static InteractionResult use(UseOnContext context, boolean first) {
         Level level = context.getLevel();
-        BlockEntity be = level.getBlockEntity(context.getClickedPos());
+        ItemStack stack = context.getItemInHand();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        BlockEntity be = level.getBlockEntity(pos);
         Player player = context.getPlayer();
         boolean sneaking = player != null && player.isShiftKeyDown();
+        Optional<BlockPos> at = selected(stack, level);
         if (be instanceof AreaAirControllerBlockEntity || (be instanceof AirlockControllerBlockEntity && !sneaking)) {
             // Sneaking, an airlock controller is a part to link to an area air controller (CONT-141).
+            // The controller already selected has nothing to do, so its window opens.
+            if (first && at.filter(pos::equals).isPresent()) {
+                return InteractionResult.PASS;
+            }
             if (level instanceof ServerLevel) {
-                select(context.getItemInHand(), level, context.getClickedPos());
+                select(stack, level, pos);
                 tell(
                         player,
                         Component.translatable(
                                 be instanceof AirlockControllerBlockEntity
                                         ? "item.zas_atmos.multitool.selected_airlock"
                                         : "item.zas_atmos.multitool.selected",
-                                pos(context.getClickedPos())));
+                                pos(pos)));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        BlockState state = level.getBlockState(context.getClickedPos());
+        BlockEntity selected = at.isPresent() && level.isLoaded(at.get()) ? level.getBlockEntity(at.get()) : null;
         if (state.getBlock() instanceof CentralControllerBlock) {
             // Any of the console's four blocks (CONT-118).
-            CentralControllerBlockEntity central = CentralControllerBlock.entity(level, context.getClickedPos(), state);
-            if (central != null && level instanceof ServerLevel server) {
-                tell(player, move(context.getItemInHand(), server, central));
+            CentralControllerBlockEntity central = CentralControllerBlock.entity(level, pos, state);
+            if (central == null) {
+                return InteractionResult.PASS;
+            }
+            if (!(selected instanceof AreaAirControllerBlockEntity)) {
+                return nothingToDo(context, first, noController(at));
+            }
+            if (level instanceof ServerLevel server) {
+                tell(player, move(stack, server, central));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        if (level instanceof ServerLevel server
-                && selectedBlock(context.getItemInHand(), server) instanceof AirlockControllerBlockEntity) {
+        if (selected instanceof AirlockControllerBlockEntity) {
             // Linking to an airlock controller: an airlock by its origin, a sensor or a vent (CONT-138).
             boolean airlock = state.getBlock() instanceof AirlockBlock;
             if (!airlock && !(be instanceof AirSensorBlockEntity) && !(be instanceof VentBlockEntity)) {
                 return InteractionResult.PASS;
             }
-            BlockPos part = airlock ? AirlockBlock.origin(state, context.getClickedPos()) : context.getClickedPos();
-            tell(player, link(context.getItemInHand(), server, part));
-            return InteractionResult.SUCCESS;
+            return linkPart(context, airlock ? AirlockBlock.origin(state, pos) : pos);
         }
+        // Linking to an area air controller: a powered part or a firelock (CONT-042, CONT-043).
+        BlockPos part;
         if (state.getBlock() instanceof AirlockBlock) {
             // A firelock fitted to an airlock, from any of its blocks: the link is its origin (CONT-137).
-            if (level instanceof ServerLevel server) {
-                tell(
-                        player,
-                        state.getValue(AirlockBlock.FIRELOCK).fitted()
-                                ? link(
-                                        context.getItemInHand(),
-                                        server,
-                                        AirlockBlock.origin(state, context.getClickedPos()))
-                                : Component.translatable("item.zas_atmos.multitool.no_firelock"));
+            if (!state.getValue(AirlockBlock.FIRELOCK).fitted()) {
+                return nothingToDo(context, first, Component.translatable("item.zas_atmos.multitool.no_firelock"));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-        if (state.getBlock() instanceof FirelockDoorBlock) {
+            part = AirlockBlock.origin(state, pos);
+        } else if (state.getBlock() instanceof FirelockDoorBlock) {
             // A firelock fitted to a door, from either half: the link is its lower half (CONT-137).
-            if (level instanceof ServerLevel server) {
-                tell(
-                        player,
-                        link(context.getItemInHand(), server, FirelockDoorBlock.lower(state, context.getClickedPos())));
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-        if (state.getBlock() instanceof FirelockBlock) {
+            part = FirelockDoorBlock.lower(state, pos);
+        } else if (state.getBlock() instanceof FirelockBlock) {
             // Either half: the firelock is its lower half (CONT-043).
-            if (level instanceof ServerLevel server) {
-                BlockPos lower = FirelockBlock.lower(state, context.getClickedPos());
-                tell(player, link(context.getItemInHand(), server, lower));
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            part = FirelockBlock.lower(state, pos);
+        } else if (be instanceof PoweredDevice) {
+            part = pos;
+        } else {
+            return InteractionResult.PASS;
         }
-        if (be instanceof PoweredDevice) {
-            if (level instanceof ServerLevel server) {
-                tell(player, link(context.getItemInHand(), server, context.getClickedPos()));
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+        if (!(selected instanceof AreaAirControllerBlockEntity)) {
+            return nothingToDo(context, first, noController(at));
         }
-        return InteractionResult.PASS;
+        return linkPart(context, part);
+    }
+
+    /** Links or unlinks a part, by the position its link is kept at, and says which. */
+    private static InteractionResult linkPart(UseOnContext context, BlockPos part) {
+        if (context.getLevel() instanceof ServerLevel server) {
+            tell(context.getPlayer(), link(context.getItemInHand(), server, part));
+        }
+        return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
+    }
+
+    /**
+     * A use with nothing to do: before the block's own use it passes, so the block gets the click;
+     * after, it says why.
+     */
+    private static InteractionResult nothingToDo(UseOnContext context, boolean first, Component why) {
+        if (first) {
+            return InteractionResult.PASS;
+        }
+        if (!context.getLevel().isClientSide) {
+            tell(context.getPlayer(), why);
+        }
+        return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
+    }
+
+    /** Why there is no area air controller to link to: none is selected, or it's gone. */
+    private static Component noController(Optional<BlockPos> at) {
+        return at.isEmpty()
+                ? Component.translatable("item.zas_atmos.multitool.no_controller")
+                : Component.translatable("item.zas_atmos.multitool.controller_gone", pos(at.get()));
     }
 
     @Override
@@ -174,12 +225,6 @@ public class MultitoolItem extends Item {
         return Optional.of(BlockPos.of(tag.getLong(CONTROLLER)));
     }
 
-    /** The selected controller's block entity, if it is loaded in this level. */
-    private static BlockEntity selectedBlock(ItemStack stack, ServerLevel level) {
-        Optional<BlockPos> at = selected(stack, level);
-        return at.isPresent() && level.isLoaded(at.get()) ? level.getBlockEntity(at.get()) : null;
-    }
-
     /**
      * Links the part at a position to the selected controller, or unlinks it: to an area air
      * controller, a powered part or a firelock (CONT-042, CONT-043); to an airlock controller, an
@@ -189,10 +234,7 @@ public class MultitoolItem extends Item {
      */
     public static Component link(ItemStack stack, ServerLevel level, BlockPos part) {
         Optional<BlockPos> at = selected(stack, level);
-        if (at.isEmpty()) {
-            return Component.translatable("item.zas_atmos.multitool.no_controller");
-        }
-        BlockEntity selected = level.isLoaded(at.get()) ? level.getBlockEntity(at.get()) : null;
+        BlockEntity selected = at.isPresent() && level.isLoaded(at.get()) ? level.getBlockEntity(at.get()) : null;
         if (selected instanceof AirlockControllerBlockEntity airlockController) {
             return switch (airlockController.toggleLink(level, part)) {
                 case LINKED -> {
@@ -219,7 +261,7 @@ public class MultitoolItem extends Item {
             };
         }
         if (!(selected instanceof AreaAirControllerBlockEntity controller)) {
-            return Component.translatable("item.zas_atmos.multitool.controller_gone", pos(at.get()));
+            return noController(at);
         }
         boolean linked = controller.toggleLink(part);
         return Component.translatable(
@@ -236,11 +278,10 @@ public class MultitoolItem extends Item {
      */
     public static Component move(ItemStack stack, ServerLevel level, CentralControllerBlockEntity central) {
         Optional<BlockPos> at = selected(stack, level);
-        if (at.isEmpty()) {
-            return Component.translatable("item.zas_atmos.multitool.no_controller");
-        }
-        if (!level.isLoaded(at.get()) || !(level.getBlockEntity(at.get()) instanceof AreaAirControllerBlockEntity)) {
-            return Component.translatable("item.zas_atmos.multitool.controller_gone", pos(at.get()));
+        if (at.isEmpty()
+                || !level.isLoaded(at.get())
+                || !(level.getBlockEntity(at.get()) instanceof AreaAirControllerBlockEntity)) {
+            return noController(at);
         }
         if (!central.take(at.get())) {
             return Component.translatable("item.zas_atmos.multitool.out_of_range", pos(at.get()));

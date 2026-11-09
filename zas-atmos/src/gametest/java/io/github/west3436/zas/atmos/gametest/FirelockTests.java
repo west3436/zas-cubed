@@ -35,12 +35,11 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -365,22 +364,23 @@ public final class FirelockTests {
             h.assertTrue(vent.power().isPowered(), "the linked vent has no power");
             h.assertTrue(open(s), "C, linked to a vent in B, closed B's firelock");
 
-            // Link the firelock, from its upper half, as a click with the multitool does.
-            Player player = h.makeMockPlayer(GameType.SURVIVAL);
+            // Link the firelock with a right click of the multitool on its upper half, through the
+            // server's handling of a client's click, so the firelock's own use gets its turn.
+            ServerPlayer player = ListeningPlayer.client(s.level, Vec3.atBottomCenterOf(s.abs(3, 1, 2)), false)
+                    .player();
             player.setItemInHand(InteractionHand.MAIN_HAND, tool);
             BlockPos upper = s.abs(4, 2, 2);
             BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(upper), Direction.WEST, upper, false);
-            h.assertValueEqual(
-                    s.level.getBlockState(upper).useItemOn(tool, s.level, player, InteractionHand.MAIN_HAND, hit),
-                    ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION,
-                    "the firelock's answer to the multitool");
-            tool.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+            h.assertTrue(
+                    player.gameMode
+                            .useItemOn(player, s.level, tool, InteractionHand.MAIN_HAND, hit)
+                            .consumesAction(),
+                    "the click on the firelock passed");
             h.assertTrue(c.links().contains(f.getBlockPos()), "the firelock's lower half isn't linked: " + c.links());
             h.assertTrue(open(s), "the multitool opened or closed the firelock");
             s.cycle(c, vent, f);
             h.assertFalse(open(s), "C didn't close the firelock linked to it");
             h.assertTrue(f.closedByAlarm(), "closed, but not by the alarm");
-            player.discard();
         });
     }
 

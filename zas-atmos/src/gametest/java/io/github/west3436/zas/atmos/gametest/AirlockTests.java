@@ -127,7 +127,7 @@ public final class AirlockTests {
     }
 
     /** A 1 by 2 airlock at (x, 1, z), closed or open, facing {@code facing}. */
-    private static AirlockBlockEntity airlock(Site s, int x, int z, Direction facing, boolean open) {
+    static AirlockBlockEntity airlock(Site s, int x, int z, Direction facing, boolean open) {
         BlockState lower = AtmosBlocks.AIRLOCK
                 .get()
                 .defaultBlockState()
@@ -180,7 +180,10 @@ public final class AirlockTests {
         return s.level.getBlockState(pos).useWithoutItem(s.level, player, hit(pos));
     }
 
-    /** Uses an item on a block, as a right click does once the block has passed it on. */
+    /**
+     * Uses an item on a block as a right click does, but without the block's own use: the item's use
+     * ahead of the block's, then its use after. {@link MultitoolTests} clicks through the game's own path.
+     */
     private static InteractionResult useItem(Site s, Player player, ItemStack stack, int x, int y, int z) {
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
         UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND, hit(s.abs(x, y, z)));
@@ -261,7 +264,7 @@ public final class AirlockTests {
     }
 
     /** Checks that each part of a {@link #lock} is in its own slot, and in no other. */
-    private static void assertSlots(GameTestHelper h, Lock lock, String when) {
+    static void assertSlots(GameTestHelper h, Lock lock, String when) {
         BlockPos[] parts = lock.slotted();
         for (Slot slot : Slot.values()) {
             h.assertValueEqual(lock.controller().slot(slot), parts[slot.ordinal()], slot.key() + ", " + when);
@@ -269,7 +272,7 @@ public final class AirlockTests {
     }
 
     /** An air sensor at (x, y, z) on a wall to its north. */
-    private static AirSensorBlockEntity sensor(Site s, int x, int y, int z) {
+    static AirSensorBlockEntity sensor(Site s, int x, int y, int z) {
         return s.place(
                 x,
                 y,
