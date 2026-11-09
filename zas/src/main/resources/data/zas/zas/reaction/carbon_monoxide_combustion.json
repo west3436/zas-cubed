@@ -15,7 +15,7 @@
     "autoignition": 882
   },
   "sources": {
-    "enthalpy": "FIRE-003 (docs/requirements/13-reactions-fire.md): 283 kJ/mol. From standard enthalpies of formation at 298.15 K, CO2(g) -393.522 less CO(g) -110.527 kJ/mol gives -282.995 kJ/mol: NIST-JANAF Thermochemical Tables C-095 and C-093, https://janaf.nist.gov/",
-    "flammability": "FIRE-003 (docs/requirements/13-reactions-fire.md): flammability limits in air 12.5-74 %, autoignition 882 K"
+    "enthalpy": "FIRE-003: 283 kJ/mol. From standard enthalpies of formation at 298.15 K, CO2(g) -393.522 less CO(g) -110.527 kJ/mol gives -282.995 kJ/mol: NIST-JANAF Thermochemical Tables C-095 and C-093, https://janaf.nist.gov/",
+    "flammability": "FIRE-003: flammability limits in air 12.5-74 %, autoignition 882 K"
   }
 }

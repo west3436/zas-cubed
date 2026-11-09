@@ -8,6 +8,12 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 > Guides for players, server owners, pack makers and mod developers are on the
 > [wiki](https://github.com/west3436/zas-cubed/wiki).
 
+The requirements, plan, design notes and research were retired before the
+first release. They're archived in
+[`docs/`](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs),
+with the completed requirements in
+[`docs/requirements`](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/requirements).
+
 ## Goals
 
 - **Faithful ZAS-style simulation.** Sealed spaces become *zones* holding real

@@ -16,7 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * The datapack format of ambient definitions (ENV-001, ENV-010, ENV-003, ENV-007, GEO-031), documented
- * in {@code docs/datapacks.md}. Errors name the field at fault (OPS-008).
+ * on the wiki's Datapack-Ambients page. Errors name the field at fault (OPS-008).
  */
 public final class AmbientFormat {
     /** The datapack folder: {@code data/<namespace>/zas/ambient/<path>.json} defines dimension {@code <namespace>:<path>}. */

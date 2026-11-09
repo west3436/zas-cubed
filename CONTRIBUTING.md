@@ -10,17 +10,16 @@ the licenses apart, **no vgstation13 code enters this repository, whether
 copied or translated** (D-01, NFR-040).
 
 - **Allowed:** vg's *behaviour*, its algorithms described in your own words,
-  and physical constants. The research notes in
-  [`docs/research/`](docs/research/) describe vg in prose for exactly this
-  reason.
+  and physical constants. The archived
+  [research notes](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research)
+  describe vg in prose for exactly this reason.
 - **Not allowed:** pasting DM code, porting it line by line into Java, or
   keeping its structure, names and comments while changing the syntax. A
   translation is still a copy.
-- **How to work:** read the research note or the requirement, close the vg
-  source, then write the code from the description. If a note doesn't say
-  enough, improve the note in prose first, in its own PR.
-- **The same goes for** requirements, docs and comments: never quote vg code
-  (requirements writing rule 4).
+- **How to work:** read a description in prose, such as a research note,
+  close the vg source, then write the code from the description. If none says
+  enough, write one in prose first, in the issue.
+- **The same goes for** the wiki, issues and comments: never quote vg code.
 
 Every PR confirms this with the first checkbox in the
 [PR template](.github/pull_request_template.md) (NFR-043). A reviewer who
@@ -59,7 +58,8 @@ and its `origin`; blank lines separate entries:
 - **`origin: vgstation13`:** `source` (the `.dmi` path in the vg
   repository), `state` (the icon state) and `commit` (the vg commit hash). A
   sound's `source` is its path under vg's `sound/`, with no `state`, and
-  `adapted` says how the file was changed (`docs/research/vg-sounds.md`). Use
+  `adapted` says how the file was changed (the archived
+  [sounds note](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/vg-sounds.md)). Use
   only vg's CC BY-SA 3.0 US assets, never the CC BY-NC-SA `goon/` folder
   (NFR-041).
 - **`origin: other`:** `source` (a URL, or a description), `license` (an
@@ -107,9 +107,9 @@ mods itself.
 | `./gradlew :dist:jar` | Builds the release jar, `dist/build/libs/zas-<ver>.jar`: `zas` and `zas_atmos` as two mods in one file (D-88). The Ponder addon's jar is `zas-ponder/build/libs/zas_ponder-<ver>.jar` |
 | `./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer` | Loads the built release jar on a GameTest server, once with the content on and once with `zas_atmos-startup.toml` turning it off, and checks what loads (CONT-052, CONT-155); not part of `build` or `runGameTestServer` |
 | `./gradlew :example-addon:runOneCopyGameTestServer` | Loads the built release jar and a built copy of the example addon, each nesting the API, on one GameTest server, and checks only one copy of the API loads (API-007); not part of `build` or `runGameTestServer` |
-| `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](docs/research/benchmarks.md)); not part of `build` |
-| `./gradlew :s10-bench:s10Bench` | Runs S-10 in a dedicated server with both mods, about 20 minutes, and writes `s10-report.md` (NFR-001, NFR-002, NFR-004, NFR-005, DATA-006; [how](docs/research/benchmarks.md#the-in-game-s-10-bench)); `-Ps10.quick=true` checks the harness in a few minutes; not part of `build` |
-| `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](docs/research/benchmarks.md)); not part of `build` |
+| `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md), archived); not part of `build` |
+| `./gradlew :s10-bench:s10Bench` | Runs S-10 in a dedicated server with both mods, about 20 minutes, and writes `s10-report.md` (NFR-001, NFR-002, NFR-004, NFR-005, DATA-006; [how](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#the-in-game-s-10-bench), archived); `-Ps10.quick=true` checks the harness in a few minutes; not part of `build` |
+| `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06), archived); not part of `build` |
 | `./gradlew :engine:test --tests '*IntegrityFuzzTest*' -Pfuzz.seed=S` | Replays one seed of the integrity fuzz (NFR-010), which `build` runs on one seed; add `-Pfuzz.seeds=N` to run N seeds from it |
 | `./gradlew :zas-atmos:runGameTestServer -Pfuzz.seed=S` | Replays one seed of the fuzz's half with pipes, among the rest of those GameTests; takes `-Pfuzz.seeds=N` as well |
 | `./gradlew spotlessApply` | Formats the Java sources (palantir-java-format) |
@@ -121,18 +121,20 @@ mods itself.
 | `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
 | `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
 
-The projects and the rules for what may depend on what are in
-[architecture §2](docs/architecture.md#2-modules-and-packaging). In short: the
+The projects and the rules for what may depend on what are in the archived
+[architecture §2](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/architecture.md#2-modules-and-packaging). In short: the
 `engine` never imports Minecraft, NeoForge or Mojang classes, and `zas-atmos`
 uses only the public API at compile time.
 
-The API's version policy, the compatibility check and how mods depend on the
-API are in [docs/api-consumers.md](docs/api-consumers.md).
+How mods depend on the API is in the wiki's [API guide](https://github.com/west3436/zas-cubed/wiki/API-Guide).
+The version policy and the compatibility check are in the
+[archived one](https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/api-consumers.md#versioning-and-the-compatibility-check).
 
 To inspect a running simulation, the `/zas` operator commands
-([docs/commands.md](docs/commands.md)) report zones and atmospheres, edit gas,
+([Commands](https://github.com/west3436/zas-cubed/wiki/Commands)) report zones and atmospheres, edit gas,
 audit zones against the blocks and profile each phase. The config files are in
-[docs/config.md](docs/config.md).
+[Server configuration](https://github.com/west3436/zas-cubed/wiki/Server-Configuration) and
+[Client configuration](https://github.com/west3436/zas-cubed/wiki/Client-Configuration).
 
 ### Tests
 
@@ -141,8 +143,8 @@ audit zones against the blocks and profile each phase. The config files are in
   classes are on that classpath, but the game is never bootstrapped.
 - **Anything in the world** gets a GameTest in the mod's `src/gametest`
   source set, which stays out of the mod jar.
-- **Names trace back** to the requirement they verify (requirements writing
-  rule 5): `core_012_zone_merge`. The same goes for GameTest structure names.
+- **Names trace back** to the requirement they verify, where there is one:
+  `core_012_zone_merge`. The same goes for GameTest structure names.
 
 ### Player-facing text
 
@@ -156,20 +158,18 @@ the code, such as unit symbols, are listed at the top of `PlayerTextTest`.
 ## Pull requests
 
 1. Branch from `main`. Keep a PR to one issue where you can.
-2. Fill in the PR template: link the issue (`Closes #nn`), list the
-   requirement IDs touched, and tick the checklist. For a player-facing
-   change made with AI, include the human testing evidence described in
-   [Using AI](#using-ai).
+2. Fill in the PR template: link the issue (`Closes #nn`) and tick the
+   checklist. For a player-facing change made with AI, include the human
+   testing evidence described in [Using AI](#using-ai).
 3. CI must pass: "Build and test" (asset credits, build, unit tests,
    formatting, the API's javadoc with no comment missing, the S-10 regression
    check, GameTests, and one copy of the API from built jars) and "Docs links".
 4. PRs are squash-merged, so the PR title becomes the commit subject. Write it
    in the imperative: "Add Spotless formatting".
 
-### Changing requirements
+## Documentation
 
-Accepted requirements in [`docs/requirements/`](docs/requirements/) change
-only through a PR, with a dated note under the edited requirement. A material
-change returns it to *Draft* (requirements writing rule 6). New decisions are
-added to the decision log in
-[`00-overview.md`](docs/requirements/00-overview.md).
+Guides for players, server owners, pack makers and mod developers are on the
+[wiki](https://github.com/west3436/zas-cubed/wiki). The requirements, plan,
+design notes and research were retired before the first release, and are
+[archived](https://github.com/west3436/zas-cubed/tree/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs).

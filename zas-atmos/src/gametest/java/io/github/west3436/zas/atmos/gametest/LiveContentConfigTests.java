@@ -15,7 +15,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class LiveContentConfigTests {
     private LiveContentConfigTests() {}
 
-    /** Fails when a key gains the mark, as a reminder to mark it in docs/config.md too. */
+    /** Fails when a key gains the mark, as a reminder to mark it on the wiki's Server-Configuration page. */
     @GameTest(template = "empty", batch = "ops_016_live_content_config")
     public static void ops_016_no_content_setting_is_restart_only(GameTestHelper h) {
         h.assertValueEqual(LiveConfigTests.restartOnly(AtmosServerConfig.SPEC), Set.of(), "the content mod's config");

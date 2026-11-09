@@ -15,7 +15,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * The content mod's sound events, named for what happens. The files, pitches and volumes behind
  * them are in {@code assets/zas_atmos/sounds.json}, so a sound can be swapped with no code change.
  * Devices share vg's few sounds at different pitches there; which file each one is and why are in
- * {@code docs/research/vg-sounds.md}.
+ * the archived sounds note: https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/vg-sounds.md
  */
 public final class AtmosSounds {
     private static final DeferredRegister<SoundEvent> SOUNDS =

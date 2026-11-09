@@ -275,7 +275,7 @@ public final class AtmosItems {
 
     // Crafting components, after vg's stock parts (D-72). Every one is crafted from vanilla
     // materials, so the content they go into still is (CONT-051). The recipes and the progression
-    // are in docs/crafting.md (CONT-058).
+    // are on the wiki's Crafting and Crafting-Components pages (CONT-058).
 
     public static final DeferredItem<Item> CABLE_COIL = ITEMS.registerSimpleItem("cable_coil");
     public static final DeferredItem<Item> CIRCUIT_BOARD = ITEMS.registerSimpleItem("circuit_board");

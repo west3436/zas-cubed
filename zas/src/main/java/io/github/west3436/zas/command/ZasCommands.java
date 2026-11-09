@@ -69,8 +69,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
  * The {@code /zas} operator commands (OPS-003, OPS-004, OPS-005, OPS-009, OPS-010, OPS-011, OPS-017,
- * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented in {@code
- * docs/commands.md}.
+ * GEO-032, and with {@link PresetCommand} OPS-007, OPS-014 and OPS-015), documented on the wiki's
+ * Commands page.
  *
  * <p>Every command needs the permission level in {@code [commands] permission_level} of the server
  * config, 2 by default (OPS-011). Other {@code /zas} subcommands registered elsewhere, such as the

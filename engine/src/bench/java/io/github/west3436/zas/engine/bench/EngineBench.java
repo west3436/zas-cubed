@@ -7,7 +7,8 @@ import java.util.Locale;
 
 /**
  * The headless engine benchmarks (architecture §8): {@code ./gradlew :engine:bench}. Prints
- * Markdown, the tables recorded in {@code docs/research/benchmarks.md}.
+ * Markdown, the tables recorded in the archived benchmarks note:
+ * https://github.com/west3436/zas-cubed/blob/f6931d5b91f839b3835fc6c81b1e69c9e09070e3/docs/research/benchmarks.md
  *
  * <p>Arguments: case names to run ({@code fill}, {@code zones}, {@code s10}, {@code scaling},
  * {@code changes}, {@code toggle}, {@code airflow}, {@code ambient}; all by default), and {@code --quick} for short runs that only check the

@@ -63,7 +63,7 @@ public final class GeometryDerivation {
     /**
      * Debug: {@code -Dzas.geometry.profile=true} logs where the derivation's time goes, and once the
      * server has started, times it again warm, as at start and once per state without the cache
-     * (docs/config.md).
+     * (the wiki's Server-Configuration page).
      */
     static final boolean PROFILE = Boolean.getBoolean("zas.geometry.profile");
 

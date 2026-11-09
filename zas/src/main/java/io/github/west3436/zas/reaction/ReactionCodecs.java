@@ -20,8 +20,8 @@ import java.util.TreeMap;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * The datapack format of reaction definitions (FIRE-001, FIRE-006), documented in {@code
- * docs/datapacks.md}.
+ * The datapack format of reaction definitions (FIRE-001, FIRE-006), documented on the wiki's
+ * Datapack-Fire-and-Reactions page.
  */
 public final class ReactionCodecs {
     /** The datapack folder: {@code data/<namespace>/zas/reaction/<path>.json} defines reaction {@code <namespace>:<path>}. */

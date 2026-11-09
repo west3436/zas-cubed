@@ -23,7 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Draws a primed TTV with its block models (docs/textures.md): no tanks, one or two, with the timer
+ * Draws a primed TTV with its block models: no tanks, one or two, with the timer
  * running or the valve open. Each tank's faces carry a tint index, 1 for the first tank and 2 for the
  * second, and are tinted by the tank's kind.
  */
