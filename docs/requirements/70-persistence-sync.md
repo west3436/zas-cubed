@@ -626,4 +626,3 @@ S-10's Bench decides, and only a measured average over 2 KiB/s calls for lower c
 atmos sync averaged 4.5 B/s per player, 3.2 to 6.3 B/s each, beside about 50 B/s of
 vanilla's. Bytes are counted as written to the socket, compressed and framed, without TCP and
 IP headers.*
-

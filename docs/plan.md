@@ -667,30 +667,31 @@ owner's own look in game is left.
 *2026-11-07: the owner said "Finish R1".* The round covers the game and its tests, not the
 release (Phase F waits for the owner). The owner put batch 5's eight blocks in R1 (D-84) and
 had S-10 run on their own PC. The new requirements started as *Draft*, and the owner
-answered the design questions that change the game. The airlock closes itself about 5 s
-after it opens; a firelock goes on vanilla doors as well as airlocks; and the tank holder
-has no window.
+accepted them at the end. The owner also answered the design questions that change the game.
+The airlock closes itself about 5 s after it opens; a firelock goes on vanilla doors as well
+as airlocks; and the tank holder has no window.
 
 | Item | PR | Requirements | Left |
 |---|---|---|---|
-| Ponder has to be bundled, so the scenes ship as an addon | [#395](https://github.com/west3436/zas-cubed/pull/395) | D-83. CLIENT-023 to CLIENT-026, *Draft* | The owner's acceptance |
+| Ponder has to be bundled, so the scenes ship as an addon | [#395](https://github.com/west3436/zas-cubed/pull/395) | D-83, CLIENT-023 to CLIENT-026 | None |
 | Every item's recipe, and the crafting page against them | [#396](https://github.com/west3436/zas-cubed/pull/396) | CONT-051, CONT-058 | None |
 | Every FE device's power cut and default draw | [#397](https://github.com/west3436/zas-cubed/pull/397) | CONT-060, CONT-065 | None |
 | Batch 5 in R1 | [#398](https://github.com/west3436/zas-cubed/pull/398) | D-84 | None |
 | Gas geometry derivation in a 237-mod pack (spike [#79](https://github.com/west3436/zas-cubed/issues/79)) | [#400](https://github.com/west3436/zas-cubed/pull/400) | None. 2.0 to 4.9 s on its background thread for 668,034 states, and the server waited 0 to 0.54 s at start | None |
 | A whole station through a save and reload (S-09), then with batch 5's blocks and an airlock mid-cycle | [#404](https://github.com/west3436/zas-cubed/pull/404), [#420](https://github.com/west3436/zas-cubed/pull/420) | DATA-016 | None |
-| The Ponder addon and a scene for each device and tool | [#405](https://github.com/west3436/zas-cubed/pull/405), with [#409](https://github.com/west3436/zas-cubed/pull/409), [#411](https://github.com/west3436/zas-cubed/pull/411) and [#413](https://github.com/west3436/zas-cubed/pull/413) merged into its branch | CLIENT-023 to CLIENT-026 stay *Draft* | The owner's acceptance |
-| Tank holder | [#401](https://github.com/west3436/zas-cubed/pull/401), [#406](https://github.com/west3436/zas-cubed/pull/406) | CONT-149 to CONT-151, *Draft* | The owner's acceptance |
-| Radiator pipe, the radiator adaptor and the heat exchanger | [#403](https://github.com/west3436/zas-cubed/pull/403), [#407](https://github.com/west3436/zas-cubed/pull/407), [#408](https://github.com/west3436/zas-cubed/pull/408) | CONT-143 to CONT-148, HEAT-020 to HEAT-022 and API-064, *Draft* | The owner's acceptance |
-| Airlocks, the airlock controller, the air sensor, and firelocks on airlocks and doors | [#402](https://github.com/west3436/zas-cubed/pull/402), [#412](https://github.com/west3436/zas-cubed/pull/412) | CONT-133 to CONT-142, CONT-152 and CONT-153, *Draft* | The owner's acceptance |
-| A door holding the same gas open and closed, and a chamber's need split across its vents | [#423](https://github.com/west3436/zas-cubed/pull/423), [#424](https://github.com/west3436/zas-cubed/pull/424) | GEO-045, *Draft*. Dated notes on GEO-044 and CONT-152 | The owner's acceptance |
+| The Ponder addon and a scene for each device and tool | [#405](https://github.com/west3436/zas-cubed/pull/405), with [#409](https://github.com/west3436/zas-cubed/pull/409), [#411](https://github.com/west3436/zas-cubed/pull/411) and [#413](https://github.com/west3436/zas-cubed/pull/413) merged into its branch | CLIENT-023 to CLIENT-026 | None |
+| Tank holder | [#401](https://github.com/west3436/zas-cubed/pull/401), [#406](https://github.com/west3436/zas-cubed/pull/406) | CONT-149 to CONT-151 | None |
+| Radiator pipe, the radiator adaptor and the heat exchanger | [#403](https://github.com/west3436/zas-cubed/pull/403), [#407](https://github.com/west3436/zas-cubed/pull/407), [#408](https://github.com/west3436/zas-cubed/pull/408) | CONT-143 to CONT-148, HEAT-020 to HEAT-022, API-064 | None |
+| Airlocks, the airlock controller, the air sensor, and firelocks on airlocks and doors | [#402](https://github.com/west3436/zas-cubed/pull/402), [#412](https://github.com/west3436/zas-cubed/pull/412) | CONT-133 to CONT-142, CONT-152, CONT-153 | None |
+| A door holding the same gas open and closed, and a chamber's need split across its vents | [#423](https://github.com/west3436/zas-cubed/pull/423), [#424](https://github.com/west3436/zas-cubed/pull/424) | GEO-045. Dated notes on GEO-044 and CONT-152 | None |
 | The in-game S-10 bench, and what its trials found | [#410](https://github.com/west3436/zas-cubed/pull/410), [#414](https://github.com/west3436/zas-cubed/pull/414), [#415](https://github.com/west3436/zas-cubed/pull/415), [#416](https://github.com/west3436/zas-cubed/pull/416), [#419](https://github.com/west3436/zas-cubed/pull/419), [#422](https://github.com/west3436/zas-cubed/pull/422) | Dated notes on CONT-006 and CONT-123. Devices and pipes step only in chunks that tick (architecture §11.2) | None |
 | The enclosure cap as a setting, and S-10's step finding how far it goes | [#417](https://github.com/west3436/zas-cubed/pull/417), [#418](https://github.com/west3436/zas-cubed/pull/418), [#425](https://github.com/west3436/zas-cubed/pull/425) | Dated notes on D-23 and GEO-020 | None |
 | S-10's final run | [#421](https://github.com/west3436/zas-cubed/pull/421) | NFR-001, NFR-002, NFR-004, NFR-005, DATA-006, DATA-014, DATA-015 | None |
 
-Every requirement above moved to *Implemented* unless the table says otherwise. CONT-051,
-CONT-058, CONT-060, CONT-065 and DATA-016 moved with their PRs. The S-10 figures and NFR-032
-moved after the run, and CONT-118, CONT-123 and CONT-132 after the world below.
+Every requirement above moved to *Implemented*. CONT-051, CONT-058, CONT-060, CONT-065 and
+DATA-016 moved with their PRs. The S-10 figures and NFR-032 moved after the run, CONT-118,
+CONT-123 and CONT-132 after the world below, and the round's new IDs when the owner accepted
+them.
 
 *2026-11-08: the owner played the round's world.* **ZAS R1 Finish Round Test** was built on a
 local branch at e675e6e6: main at 8da499e plus #405, #406, #408 and #412, the PRs held for
@@ -738,11 +739,12 @@ budgets needed a margin of 1.4, as this rig is faster than D-40's parts.
 | DATA-006, DATA-014, DATA-015 | 4.5 B/s of atmos sync per player | Met |
 | The enclosure cap step | Halls 16 high and 64 to 80 square. The largest within every budget was 80 × 80 × 16, 102,400 cells, the setting's top. The 64 and 68 halls failed only on single ticks spent in listeners that don't touch the hall | The owner made 102,400 the default, and kept it the top ([#425](https://github.com/west3436/zas-cubed/pull/425)) |
 
-The round's *Draft* IDs wait for the owner's acceptance: CONT-133 to CONT-153, HEAT-020 to
-HEAT-022, CLIENT-023 to CLIENT-026, API-064 and GEO-045. Each passes its tests, and the
-owner played the blocks in the world above. What's left of R1 that isn't *Implemented* is
-release work: API-002, API-008, API-041 to API-043, DATA-012, NFR-025, NFR-031, NFR-033,
-NFR-040 and NFR-042.
+*2026-11-08: the owner accepted the round's new IDs:* CONT-133 to CONT-153, HEAT-020 to
+HEAT-022, CLIENT-023 to CLIENT-026, API-064 and GEO-045. Each moves to *Implemented*: its
+tests pass, and its Manual checks were made in the world above, from screenshots the owner
+approved, or on the scenes' frames as they were made. What's left of R1 that isn't
+*Implemented* is release work: API-002, API-008, API-041 to API-043, DATA-012, NFR-025,
+NFR-031, NFR-033, NFR-040 and NFR-042.
 
 | Track | Area | Notes |
 |---|---|---|
@@ -873,9 +875,8 @@ _Updated 2026-11-08._
      its scenes, then S-09 and S-10~~ *on main 2026-11-08 (#395 to #425; see
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done))*. The owner played
      its combined test world and took its calls as built the same day.
-   - **Now:** the owner's acceptance of that round's *Draft* IDs: CONT-133 to CONT-153,
-     HEAT-020 to HEAT-022, CLIENT-023 to CLIENT-026, API-064 and GEO-045.
-   - **Then, when the owner calls it:** the release (Phase F). R1's requirements that aren't
+   - ~~The owner's acceptance of that round's *Draft* IDs~~ *accepted 2026-11-08*.
+   - **Next, when the owner calls it:** the release (Phase F). R1's requirements that aren't
      *Implemented* are all release work.
    - **What each open requirement still needs:** the 2026-11-06 status audit in
      [Phase E](#phase-e-r1-feature-tracks-in-parallel-once-r0-is-done), less what the

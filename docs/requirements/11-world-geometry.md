@@ -260,7 +260,7 @@ boundary faces and an edge's connection count, as the note said. Vanilla doors
 and trapdoors were never affected: their cells hold 812.5 L open or closed.*
 
 #### GEO-045 · Boundary toggles keep a zone's volume
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-41, CORE-022 · Depends: GEO-007, GEO-044
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-41, CORE-022 · Depends: GEO-007, GEO-044
 
 Each state of a block tagged `zas:zone_boundary` that has an `open` property
 shall hold the gas volume of the same state with `open=true`, so opening or
@@ -298,6 +298,9 @@ the block's own and aren't resized
 `geo_045_with_volume_resizes_the_cells_and_nothing_else` (Unit),
 `geo_045_every_boundary_state_holds_its_open_volume` and the four
 `geo_045_toggling_…_keeps_both_rooms_at_200_kpa` (GameTests) pass.*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests and
+GameTests pass (see the notes above).*
 
 #### GEO-008 · Dynamic sealing API
 `Must` · `R1` · `Rejected` — duplicate of API-023 (Seal provider), 2026-10-30.

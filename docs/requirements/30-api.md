@@ -694,7 +694,7 @@ kPa and °C.
 and the owner saw a vent and a heater change units in the game.*
 
 #### API-064 · Near-vacuum density
-`Should` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: HEAT-008, HEAT-020, HEAT-021, CONT-095 · Depends: API-009
+`Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: HEAT-008, HEAT-020, HEAT-021, CONT-095 · Depends: API-009
 
 The API shall give the molar density below which a zone neither conducts nor radiates
 heat, from any thread: the server's `near_vacuum_percent` of standard air's density,
@@ -712,6 +712,9 @@ read on each call, or 1 % of it without ZAS³.
 Checked by `api_064_fallback_near_vacuum_is_1_percent_of_standard_air` (Unit),
 `api_064_near_vacuum_follows_the_config` (GameTest) and
 `s_12_near_vacuum_is_1_percent_of_standard_air` (GameTest, without ZAS³).*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests and
+GameTests pass (see the notes above).*
 
 #### API-055 · Hotspot queries
 `Should` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: FIRE-011, FIRE-019, API-046 · Depends: API-009
