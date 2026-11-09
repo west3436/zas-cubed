@@ -976,9 +976,19 @@ controller's parts. The script, all on the server thread:
   API calls. A call made inside another counts once, in the outer one, except
   that a device's step counts by its device type, out of the device ticker's
   listener. The report gives each server tick's total (average, 99th
-  percentile, largest), by NFR-001's list and by part, and the slowest ticks.
+  percentile, largest), by NFR-001's list and by part, and the slowest ticks:
+  every one over 10 ms, and at least 5.
   A garbage collector's pause, or the OS taking the thread away, inside a timed
-  call counts in it; the slowest ticks say when a collector pause fell in them.
+  call counts in its time. NFR-002 is judged on zas's own time: the clock
+  keeps each timed call's start and end, so a collector pause inside zas's
+  calls is taken out. The pauses include G1's Remark and Cleanup, which its
+  "G1 Concurrent GC" bean reports (2026-11-08; before, the bench missed them).
+  Each slow tick also gives the whole tick's wall time and the server thread's
+  CPU time over it. A tick that took much less CPU time than wall time had the
+  thread stopped for the rest, by the JVM or the OS, rather than working.
+  Windows counts CPU time in steps of about 15.6 ms, each charged to the
+  thread running at the step. So a tick under about 16 ms reads 0 or 16 ms,
+  and one tick tells less than several.
 - *Venting (NFR-002).* Each second after the explosion the report takes the
   big room's moles and open faces. It vents correctly if its moles fall every
   second and it loses between three quarters and four thirds of what the
@@ -1030,12 +1040,11 @@ controller's parts. The script, all on the server thread:
   zoned cell, which are what the parts that scale with cells grew by when the
   hall zoned, over its cells, and for the 64 MiB total, on the halls
   dimension's whole atmos heap with the hall zoned. NFR-002 is
-  judged on zas's own time, the owner's call for the final run: while the step
-  runs, the clock keeps each timed call's start and end, so a collector pause
-  inside zas's calls is taken out, and the table gives it beside the verdict
-  with the tick's other pauses. Ticks over 10 ms are listed with where their
-  time went and what the batch close and apply in them took, so a stall that
-  isn't the work shows. The report ends the step
+  judged on zas's own time, as in the scenario, the owner's call for the final
+  run. The table gives the pause taken out beside the verdict, with the
+  tick's other pauses and its wall and CPU time. Ticks over 10 ms are listed
+  with where their time went and what the batch close and apply in them took,
+  so a stall that isn't the work shows. The report ends the step
   with the largest hall that passes every budget, for the owner to set the
   key's final range from.
 
@@ -1161,19 +1170,23 @@ at 102,400. At that rate it would reach NFR-005's budget over the margin,
 result, stays near 4 ms. The bytes per zoned cell fall a little as the halls
 grow, to 161 B. At 102,400 cells the dimension's whole atmos heap is 22.6 MiB.
 
-**Pauses the bench missed.** The bench's collector listener skips the
-"G1 Concurrent GC" bean, taking it for concurrent work. On Java 21, though,
+**Pauses the bench missed.** In this run the bench's collector listener
+skipped the "G1 Concurrent GC" bean, taking it for concurrent work. On Java 21, though,
 that bean reports G1's Remark and Cleanup pauses, which stop every Java
 thread. That was checked on the run's Java, 21.0.6.
 
 Over the run, the beans' own counts give 45 collections and 1,071 ms. The
-listener saw 25 pauses and 986 ms. The 20 it missed are those pauses and any
-collections from before the bench's mod loaded. So "no pause" in the cap
-step's slow ticks, and "none seen" above, don't rule out a Remark pause.
+listener saw 25 pauses and 986 ms. The 20 it missed are those pauses and the
+collections from before the bench's mod loaded. A quick run of the fixed
+bench put 16 collections before the mod loaded. It heard 4 Remark and Cleanup
+pauses, 11 ms in all. So most of the 20 were likely from startup, and a
+Remark pause would explain only part of an 11 to 14.6 ms tick. Still, "no
+pause" in the cap step's slow ticks, and "none seen" above, don't rule one
+out.
 
-A follow-up to the bench counts those pauses. It also gives each server
-tick's CPU time beside its wall time, so the next run can tell a stall from
-work.
+[#422](https://github.com/west3436/zas-cubed/pull/422) makes the bench count
+those pauses. It also gives each server tick's CPU time beside its wall time,
+so the next run can tell a stall from work.
 
 **Spike #80's survey.** Every shape zoned whole. Its first batch carried the
 355 sections of the prefetch cube and closed in 0.19 to 0.36 ms. A fill that

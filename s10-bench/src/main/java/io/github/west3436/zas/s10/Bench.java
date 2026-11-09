@@ -111,7 +111,7 @@ final class Bench {
     Window blast;
     Window surveyWindow;
 
-    private long tickStartNanos;
+    private final TickTimes tick = new TickTimes();
     private long closedBefore;
     private boolean inFlightBefore;
     private long[] partBuf = new long[64];
@@ -169,7 +169,7 @@ final class Bench {
 
     /** The start of a server tick: the first listener of all. */
     void preTick() {
-        tickStartNanos = System.nanoTime();
+        tick.start();
         DimensionPipeline p = atmos == null ? null : atmos.pipeline();
         closedBefore = p == null ? Long.MIN_VALUE : p.closedTick();
         inFlightBefore = atmos != null && atmos.isInFlight();
@@ -191,7 +191,8 @@ final class Bench {
     /** The end of a server tick: the last listener of all. */
     void postTick() {
         long atmosNanos = Clock.endTick(partBuffer());
-        long wall = System.nanoTime() - tickStartNanos;
+        tick.end();
+        long wall = tick.wallNanos();
         boolean closed = false;
         boolean applied = false;
         long[] requested = new long[0];
@@ -206,7 +207,12 @@ final class Bench {
         List<long[]> workerTicks = worker == null ? List.of() : worker.drain();
         Window w = window;
         if (w != null) {
-            w.tick(atmosNanos, tickStartNanos, wall, partBuf, Clock.partCount());
+            w.tick(atmosNanos, tick.startNanos(), wall, tick.cpuNanos(), partBuf, Clock.partCount());
+            if (w == measure || w == blast) {
+                // NFR-002 is judged on these windows' ticks by zas's own time.
+                w.keepCalls(atmosNanos);
+                w.batchWork(closed ? atmos.lastCloseNanos() : -1, applied ? atmos.lastApplyNanos() : -1);
+            }
             if (closed) {
                 w.close.add(atmos.lastCloseNanos());
                 w.batchSections.add(p.lastBatchSections());
@@ -224,7 +230,7 @@ final class Bench {
             survey.after(closed, applied, requested, workerTicks);
         }
         if (cap != null && stage == Stage.CAP) {
-            cap.after(atmosNanos, tickStartNanos, wall, partBuf, Clock.partCount());
+            cap.after(atmosNanos, tick.startNanos(), wall, tick.cpuNanos(), partBuf, Clock.partCount());
         }
         if (players != null) {
             players.count(w);

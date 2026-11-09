@@ -19,17 +19,22 @@ final class Window {
     final Series atmos = new Series();
     /** Each server tick's whole time, from the first listener of its start to the last of its end. */
     final Series wall = new Series();
+    /**
+     * Each server tick's CPU time on the server thread, over the same span as {@link #wall}; -1 where
+     * the JVM doesn't measure it. A tick well above its CPU time had the thread stopped, not working.
+     */
+    final Series cpu = new Series();
     /** Each server tick's start, {@link System#nanoTime}. */
     final Series starts = new Series();
     /**
-     * Where the window keeps them (the enclosure cap step's), each tick of at least 1 ms's timed
-     * calls, as start and end pairs ({@link Clock#lastCalls}), by the tick's index: a collector
-     * pause inside them is inside zas's time.
+     * Each tick of at least 1 ms's timed calls, as start and end pairs ({@link Clock#lastCalls}), by
+     * the tick's index, where the window keeps them ({@link #keepCalls}): a collector pause inside
+     * them is inside zas's time.
      */
     final Map<Integer, long[]> calls = new java.util.HashMap<>();
     /**
-     * Where the window keeps them (the enclosure cap step's), the batch close and apply on the
-     * ticks that had either, as {close, apply} nanoseconds, -1 for none, by the tick's index: a slow
+     * The batch close and apply on the ticks that had either, as {close, apply} nanoseconds, -1 for
+     * none, by the tick's index, where the window keeps them ({@link #batchWork(long, long)}): a slow
      * tick without them, or well beyond them, is a stall, not the batch work.
      */
     final Map<Integer, long[]> batchWork = new java.util.HashMap<>();
@@ -61,11 +66,12 @@ final class Window {
         this.firstTick = firstTick;
     }
 
-    void tick(long atmosNanos, long startNanos, long wallNanos, long[] byPart, int partCount) {
+    void tick(long atmosNanos, long startNanos, long wallNanos, long cpuNanos, long[] byPart, int partCount) {
         ticks++;
         atmos.add(atmosNanos);
         starts.add(startNanos);
         wall.add(wallNanos);
+        cpu.add(cpuNanos);
         while (parts.size() < partCount) {
             Series s = new Series();
             for (int i = 0; i < ticks - 1; i++) {
@@ -75,6 +81,20 @@ final class Window {
         }
         for (int i = 0; i < parts.size(); i++) {
             parts.get(i).add(i < byPart.length ? byPart[i] : 0);
+        }
+    }
+
+    /** Keeps the last tick's timed calls if its atmos time was at least 1 ms. After {@link #tick}. */
+    void keepCalls(long atmosNanos) {
+        if (atmosNanos >= 1_000_000L) {
+            calls.put(ticks - 1, Clock.lastCalls());
+        }
+    }
+
+    /** Keeps the last tick's batch close and apply, in nanoseconds, -1 for none. After {@link #tick}. */
+    void batchWork(long closeNanos, long applyNanos) {
+        if (closeNanos >= 0 || applyNanos >= 0) {
+            batchWork.put(ticks - 1, new long[] {closeNanos, applyNanos});
         }
     }
 

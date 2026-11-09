@@ -240,7 +240,6 @@ final class CapStep {
         steps.add(always(null, "put the cap and the venting back", () -> {
             ZasServerConfig.ENCLOSURE_MAX_CELLS.set(configuredCap);
             ZasServerConfig.VENTING.set(configuredVenting);
-            Clock.keepCalls = false;
         }));
     }
 
@@ -355,7 +354,7 @@ final class CapStep {
     }
 
     /** The end of a server tick: records it into the window or event in progress. */
-    void after(long atmosNanos, long startNanos, long wallNanos, long[] parts, int partCount) {
+    void after(long atmosNanos, long startNanos, long wallNanos, long cpuNanos, long[] parts, int partCount) {
         if (!primed) {
             return;
         }
@@ -372,10 +371,8 @@ final class CapStep {
         if (w == null) {
             return;
         }
-        w.tick(atmosNanos, startNanos, wallNanos, parts, partCount);
-        if (atmosNanos >= 1_000_000L) {
-            w.calls.put(w.ticks - 1, Clock.lastCalls());
-        }
+        w.tick(atmosNanos, startNanos, wallNanos, cpuNanos, parts, partCount);
+        w.keepCalls(atmosNanos);
         if (closed) {
             w.close.add(atmos.lastCloseNanos());
             w.batchSections.add(p.lastBatchSections());
@@ -383,11 +380,7 @@ final class CapStep {
         if (applied) {
             w.apply.add(atmos.lastApplyNanos());
         }
-        if (closed || applied) {
-            w.batchWork.put(
-                    w.ticks - 1,
-                    new long[] {closed ? atmos.lastCloseNanos() : -1, applied ? atmos.lastApplyNanos() : -1});
-        }
+        w.batchWork(closed ? atmos.lastCloseNanos() : -1, applied ? atmos.lastApplyNanos() : -1);
         w.worker.addAll(ticks);
     }
 
@@ -725,7 +718,6 @@ final class CapStep {
             throw new IllegalStateException("no " + HALLS.location() + " dimension: the bench's datapack didn't load");
         }
         atmos = AtmosService.current().dimensionFor(level);
-        Clock.keepCalls = true;
     }
 
     /** Whether the station's dimension holds no chunk any more, so none is left to save and unload. */
