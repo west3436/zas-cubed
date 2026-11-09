@@ -103,6 +103,12 @@ public final class AtmosSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> FIRELOCK_CLOSE = event("device.firelock.close");
     public static final DeferredHolder<SoundEvent, SoundEvent> FIRELOCK_FORCE = event("device.firelock.force");
     public static final DeferredHolder<SoundEvent, SoundEvent> RECHARGER_DONE = event("device.recharger.done");
+    // Airlocks (CONT-133 to CONT-140)
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRLOCK_OPEN = event("device.airlock.open");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRLOCK_CLOSE = event("device.airlock.close");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRLOCK_BOLT = event("device.airlock.bolt");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRLOCK_UNBOLT = event("device.airlock.unbolt");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AIRLOCK_DENIED = event("device.airlock.denied");
     public static final DeferredHolder<SoundEvent, SoundEvent> TTV_ARM = event("device.ttv.arm");
     public static final DeferredHolder<SoundEvent, SoundEvent> TTV_TICK = event("device.ttv.tick");
     public static final DeferredHolder<SoundEvent, SoundEvent> TTV_OPEN = event("device.ttv.open");

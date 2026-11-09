@@ -58,4 +58,12 @@ public interface PipeNode {
     default @Nullable LevelChunk savedIn() {
         return null;
     }
+
+    /**
+     * Whether the node is radiator pipe, which exchanges heat with the gas around it each atmos tick
+     * (HEAT-020, HEAT-021). The default is false.
+     */
+    default boolean radiates() {
+        return false;
+    }
 }

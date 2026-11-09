@@ -827,6 +827,229 @@ another commit:
   `StationBench.script`, `Run.worker`, `Run.server` and `Stats.meanMs` by
   reflection, so changing their shape stops the check with an exception until then.
 
+## A valve at a chunk's edge (#341, 2026-11-07)
+
+_Run 2026-11-07 with the GameTest
+`StationSaveTests.s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`,
+three times, on the same machine while other builds and GameTest servers were
+running on it._ Since [#341](https://github.com/west3436/zas-cubed/pull/341)
+(CONT-003's note of 2026-11-06), a pipe node on a chunk's edge rejoins a
+connected neighbour in another network at its step. A valve on the edge that
+opens is such a node. At its step it rejoins the far side, which builds the
+joined network, and its own turn then rebuilds it. A valve away from an edge
+builds it once. The owner kept this as built, to be measured with S-09.
+
+Each rig is a run of pipes from x = 1 to 30 across a chunk border at 15 | 16:
+either one row of 30 nodes, or seven rows joined end to end, 216 nodes. A manual
+valve takes the place of the first row's pipe, on the edge at x = 15 or
+mid-chunk at x = 8, so every rig has the same nodes on chunk edges. The test
+steps only the rig's own devices, in the schedule's order, as one atmos tick,
+timed with `System.nanoTime()`.
+
+- **The cycle:** the valve opens for one atmos tick and shuts for two, 150 times
+  after 40 cycles of warm-up, with the four rigs taking turns. Then it stays open
+  for 150 more.
+- **Counting rebuilds:** the test watches the valve's own gas store, which a
+  build empties into the new network. It checks the counts and only logs the
+  times.
+
+Median time per atmos tick for the rig's devices, in each of the three runs. The
+first run had a busier machine.
+
+| Network | Valve | Rebuilds as it opens | Opening | Shutting | Open |
+|---|---|---|---|---|---|
+| 30 nodes | On the edge | 2 | 93.7, 61.1, 60.7 µs | 41.3, 28.1, 27.8 µs | 24.9, 15.1, 15.8 µs |
+| | Mid-chunk | 1 | 64.7, 41.4, 41.1 µs | 49.3, 33.0, 32.9 µs | 25.2, 15.5, 16.0 µs |
+| 216 nodes | On the edge | 2 | 581.2, 376.4, 379.1 µs | 344.3, 231.1, 234.7 µs | 155.1, 100.3, 104.7 µs |
+| | Mid-chunk | 1 | 375.7, 249.6, 248.0 µs | 356.3, 242.1, 235.2 µs | 159.5, 100.3, 104.6 µs |
+
+Every valve rebuilds its network once as it shuts and never while it stays open.
+
+- **The second rebuild costs about what the first does.** It adds 20 to 29 µs at
+  30 nodes and 127 to 206 µs at 216, about 0.6 to 1 µs per node, on the atmos
+  tick the valve opens only. On the edge, opening takes about 1.5 times as long
+  as mid-chunk in every run. Shutting costs the same wherever the valve is, and
+  so does a valve that stays open.
+- **The cost is negligible.** A valve's networks follow it at most once per
+  atmos tick, so it opens at most every other atmos tick, however fast it's
+  turned. At that rate, the 216-node valve's extra rebuild adds at most 0.21 ms
+  every 2 s at the default period. That's about 5 µs per game tick on average,
+  against NFR-001's 2 ms. One opening adds 0.21 ms to one game tick, against
+  NFR-002's 10 ms.
+- **A valve turned every atmos tick builds twice as it opens anywhere.** That
+  was the test's first version, and it isn't from #341. The nodes that stepped
+  before the valve shut have no network until their next step. The first of
+  them to step builds across the reopened valve, and the valve's own step then
+  rebuilds that network. The cycle above leaves the valve shut for a second
+  atmos tick, so those nodes build first, as they do in play unless the valve
+  is turned that fast. The cost is the same extra rebuild as on an edge, and
+  the two don't add up: the valve finds the far side already joined.
+- **Not measured:** a valve turned by a player or by redstone in a running
+  server, with the rest of the device schedule around it; networks of more than
+  216 nodes; and the reference hardware (D-40). These rigs are all pipes. A real
+  network's devices also do their own work as they step, which the valve's
+  place doesn't change.
+
+## The in-game S-10 bench
+
+_Added 2026-11-07. Its figures come with the final recorded run, on a quiet
+machine; until then only the harness is here._
+
+The engine bench above runs S-10 headless. The in-game bench runs it in a real
+dedicated server with both mods, so it measures what the headless one can't:
+devices, pipe networks, hazards, airflow, sync, mobs and players, and the
+platform around close and apply.
+
+```
+./gradlew :s10-bench:s10Bench
+```
+
+It isn't part of `build`, though `build` compiles it. It takes about 45 minutes
+(the enclosure cap step about 25 of them) and writes `s10-report.md`, with each window's per-tick times as CSV, into
+`s10-bench/run` and `s10-bench/build/s10`. Options, as `-P` properties:
+
+| Property | Default | What it does |
+|---|---|---|
+| `s10.quick` | `false` | A short script (20 s warm-up, 60 s measured, 2 survey shapes, the cap step's smallest and largest halls with 5 s windows), to check the harness works. Its figures mean nothing |
+| `s10.affinity` | `FFF` | The processors the server may use, as a hex mask, and the JVM is told it has that many (`-XX:ActiveProcessorCount`). `FFF` is the owner's rig: logical CPUs 0 to 11, six P-cores of an i7-13700K with hyperthreading, like D-40's 6-core, 12-thread parts. `none` leaves it alone |
+| `s10.jfr` | `false` | Also records the run with Java Flight Recorder's `profile` settings, into `s10-bench/build/s10/s10.jfr`, to see where time goes. It costs a little time, so a recorded run leaves it off |
+
+Run it on a quiet machine: other work on the same cores shows up in every
+figure.
+
+**What runs.** `s10-bench` is a dev-only mod, `zas_s10`, and a dedicated-server
+run with a 4 GB heap (D-40). Nothing of it goes in a jar. Each run starts from
+a new world with the Hardcore preset and default settings, except
+`[fire] spread_chance = 0`, so the 2 hotspots stay 2, and
+`[power] generator_output = 400`, so each room's generator covers its
+controller's parts. The script, all on the server thread:
+
+1. Builds the station in `zas_s10:station`, a void datapack dimension whose
+   ambient is vacuum: 100 rooms of station wall holding 40,000 cells. The big
+   room is 20 × 20 × 20 inside (8,000 cells); 98 rooms are 8 × 5 × 8 (320) and
+   one is 8 × 10 × 8 (640), in rows of 10 sharing walls. Each room has a
+   generator, an area air controller and a fire alarm on its north wall, a vent
+   in its floor over its row's supply pipe and a scrubber over its row's waste
+   pipe: 100 controllers, 300 powered devices, 20 pipe networks. Rows 8 and 9
+   are a wing 400 blocks away.
+2. Fills every room through the API: air at 20 °C, the big room at 600 K with
+   5 % H₂, one small room with 12 % H₂. Then 100 cows and 8 players go in, and
+   both flammable rooms are lit.
+3. Runs the scenario: one breach a minute, in turn in the 7 player rooms of
+   row 0, resealed after 10 s; the wing's player leaves for 2,000 blocks for a
+   minute every 2 minutes, so the wing should unload and its zones pause, then
+   resume; the report says whether they did, and what held the wing's chunks
+   if they didn't. Every 10 s the supply networks are topped back up to 2,000 kPa
+   through their stores, a stand-in for a real supply, and a fire that went
+   out is lit again. 2 minutes of warm-up, then 10 minutes measured.
+4. Walks the heap, sets off TNT's power inside the big room by its east wall,
+   and measures 60 s more with the scenario running (NFR-002).
+5. Runs spike #80's survey.
+6. Runs the enclosure cap step (owner, 2026-11-08; GEO-020, D-23): how far
+   `[atmos] enclosure_max_cells` can go. Everything before it runs at the
+   default cap of 65,536 cells, so its figures stay comparable with earlier
+   runs. The station is let go (its players leave and its chunks unload), and
+   sealed halls 16 blocks high with insides of 64, 68, 72, 76 and 80 blocks
+   square (65,536 to 102,400 cells) are each built in `zas_s10:halls`, a void
+   dimension of their own with a vacuum ambient, with the cap set to the
+   hall's cells and one player by it, in ticking chunks. For each hall: (a) one
+   add zones it; (b) a twin with one cell more, roofed so the column check
+   can't answer, must classify as open, after a fill to the cap; (c) under
+   ZAS's venting (`venting = "FAITHFUL"`, owner, 2026-11-08), so the hall
+   empties, a 3 × 3 hole in its roof vents it to the vacuum until its zone
+   dissolves (CORE-076), about 30 s, and once the hole is filled an add must
+   zone the whole hall again; the venting setting then goes back; (d) placing the last block of a wall across its
+   middle splits it (CORE-024), and taking that block out merges it again
+   (CORE-023); (e) the server's atmos time per tick before it zones, zoned and
+   idle, and active, with a vent blowing under an area air controller and the
+   player inside breathing; (f) the heap before and after it zones. Then it
+   writes the report and stops the server.
+
+**How it measures.**
+
+- *Server thread (NFR-001, NFR-002).* Every way the server thread goes into
+  `zas` or `zas_atmos` code is timed: their game-bus listeners (the bench swaps
+  each listener's consumer for a timed one in place, so order and priorities
+  don't change), their block entities' tickers, each device's step and the M1
+  change hook (mixins B1 to B3,
+  [architecture §7](../architecture.md#7-mixin-inventory)), and the bench's own
+  API calls. A call made inside another counts once, in the outer one, except
+  that a device's step counts by its device type, out of the device ticker's
+  listener. The report gives each server tick's total (average, 99th
+  percentile, largest), by NFR-001's list and by part, and the slowest ticks.
+  A garbage collector's pause, or the OS taking the thread away, inside a timed
+  call counts in it; the slowest ticks say when a collector pause fell in them.
+- *Venting (NFR-002).* Each second after the explosion the report takes the
+  big room's moles and open faces. It vents correctly if its moles fall every
+  second and it loses between three quarters and four thirds of what the
+  exchange model gives for those faces and its volume, toward the vacuum
+  ambient (`ExchangeSettings.ambientRatio`, CORE-032, CORE-035).
+- *Worker (NFR-005).* A phase listener beside the profiler's keeps every
+  atmos tick's time, whole and by phase, and its thread's CPU time. NFR-005 is
+  judged on the whole tick's wall time. The CPU time is given beside it, in the
+  worker table, the list of ticks over the budget with the margin, and the
+  enclosure cap step's rows. A tick well above its CPU time was slowed by other
+  work on the machine, not by more work. Windows counts CPU time in steps of
+  about 15.6 ms, fine against 250 ms.
+- *Heap (NFR-004).* Retained size, counted as the engine bench counts it (each
+  object once, at HotSpot's shallow size, charged to the first part that
+  reaches it), from the engine and pipeline; then the platform's
+  `DimensionAtmos`, the mods' static tables, their block entities in the
+  station and their attachments on its entities. Minecraft's own objects are
+  left out. The engine's parts don't go into the mods' own objects
+  (2026-11-08). The log the platform gives the engine names the dimension,
+  so it holds the `DimensionAtmos`, and through it the pipeline and the
+  engine; walked from the zone graph's ledger, that charged the pending
+  operations, the pipeline's tables and the undo point to the zone graph.
+  The platform's objects go to the platform's part, as the engine bench
+  leaves its harness's alone, and a snapshot goes to the published snapshots
+  however it's reached, in both benches. The other dimensions' atmos is left
+  out: a pending operation's callback that holds the service reached it.
+- *Bytes (DATA-006, DATA-014, DATA-015).* Each player is a real
+  `ServerPlayer` on the server's lists and in the level, so chunks load and
+  track around it and every sync treats it as a client with the mods. Its
+  connection keeps what the server sends; at the end of each tick, outside the
+  timed parts, each packet is encoded with the play protocol's codec,
+  compressed as the server compresses and framed. That's the bytes Minecraft
+  writes to the socket. It misses TCP and IP headers; encryption adds none.
+  Atmos sync is the mods' payloads and sounds; no player has the debug overlay
+  on. Vanilla's bytes are given beside them.
+- *Spike #80.* Each shape (a station room, halls up to the fill's 65,536-cell
+  cap, corridors up to 512 long, a 128-high shaft) is built on its own far from
+  the station and filled by one API add from its middle, a corner or an end.
+  Its rounds are the atmos ticks from the batch that carried the add to the
+  one that completed it. The report also counts the scenario's own batches
+  that carried sections the worker asked for. There's no sample of real player
+  bases.
+- *Enclosure cap step.* Each hall gets a table with each budget's verdict:
+  NFR-005 for the largest worker tick of zoning, the open fill, the breach and
+  reseal, and the split and merge; NFR-002 for their largest server tick;
+  both again for the dissolve on its own, the worker tick that dissolved the
+  zone and the server tick that applied it; NFR-001 for the average and 99th
+  percentile while the hall is idle and active; NFR-004 for the bytes per
+  zoned cell, which are what the parts that scale with cells grew by when the
+  hall zoned, over its cells, and for the 64 MiB total, on the halls
+  dimension's whole atmos heap with the hall zoned. NFR-002 is
+  judged on zas's own time, the owner's call for the final run: while the step
+  runs, the clock keeps each timed call's start and end, so a collector pause
+  inside zas's calls is taken out, and the table gives it beside the verdict
+  with the tick's other pauses. Ticks over 10 ms are listed with where their
+  time went and what the batch close and apply in them took, so a stall that
+  isn't the work shows. The report ends the step
+  with the largest hall that passes every budget, for the owner to set the
+  key's final range from.
+
+**Margins.** The owner's rig is faster per core than D-40's reference parts,
+so each budget is given with its margin, the budget over the figure. A time
+budget counts as met only with a margin of at least 1.4, about an i7-13700K
+P-core's single-thread speed over a Ryzen 5 5600's, as in the engine bench's
+1.3 to 1.5. Bytes, of heap or sent, don't depend on the processor, so a byte
+budget counts as met at its figure.
+
+**Left out.** Minecraft's own work for the mods' blocks and entities, such as
+block updates and the cows' own ticks; client movement packets (the players
+stand still); and anything a real network thread does.
+
 ## Findings
 
 1. **Zone creation is the worker's biggest cost.** Zoning a 65,536-cell hall

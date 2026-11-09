@@ -1137,6 +1137,12 @@ queued gas operations.
   threads and gives correct results; Bench measures server-thread versus
   worker time.
 
+*2026-11-08: Note: the worker threads now run at normal priority. They took
+the server thread's raised priority before, and on Windows handing a tick to
+one could stall the server thread for the tick's length (architecture §3.1).
+`core_045_workers_run_at_normal_priority_whoever_starts_them` (unit) checks
+it.*
+
 #### CORE-049 · No live-world access off-thread
 `Must` · `R0` · `Implemented` · Verify: Inspect · Trace: D-30 · [neoforge §5](../research/neoforge-1.21.1.md#5-ticking--threading)
 

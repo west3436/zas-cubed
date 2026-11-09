@@ -1,0 +1,536 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_open"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_bolted"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_open"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "lower",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_locked"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_open"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_bolted"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_open"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper"
+      }
+    },
+    {
+      "when": {
+        "facing": "north",
+        "half": "upper",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_locked"
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_bolted",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "lower",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_locked",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_bolted",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "half": "upper",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_locked",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_bolted",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "lower",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_locked",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_bolted",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "half": "upper",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_locked",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_lower_bolted",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "lower",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_lower_locked",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "open": "false",
+        "bolted": "false"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "open": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "open": "false",
+        "bolted": "true"
+      },
+      "apply": {
+        "model": "zas_atmos:block/airlock_upper_bolted",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "firelock": "open"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "firelock": "closed"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "half": "upper",
+        "firelock": "locked"
+      },
+      "apply": {
+        "model": "zas_atmos:block/firelock_airlock_upper_locked",
+        "y": 270
+      }
+    }
+  ]
+}

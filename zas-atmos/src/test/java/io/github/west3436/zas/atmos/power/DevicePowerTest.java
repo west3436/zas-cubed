@@ -38,6 +38,37 @@ class DevicePowerTest {
     }
 
     /**
+     * A device the schedule passes over keeps the power it has: each hold makes its lease last two
+     * atmos ticks from then, without counting as a supply, so a provider still pays for the next one.
+     * A device with no power gets none from a hold.
+     */
+    @Test
+    void cont_006_a_device_that_waits_keeps_its_power() {
+        long[] clock = {1000};
+        DevicePower p = new DevicePower(PowerPriority.LIFE_SUPPORT, () -> 10, () -> clock[0]);
+        p.hold();
+        assertFalse(p.isPowered(), "a hold with no lease");
+
+        Object provider = new Object();
+        p.supply(provider);
+        for (int i = 0; i < 10; i++) {
+            clock[0] += AtmosTicks.PERIOD;
+            p.hold();
+            assertTrue(p.isPowered(), "held, after " + (i + 1) + " atmos ticks");
+            assertTrue(p.paidFor(), "a held paid lease is paid for");
+            assertSame(provider, p.source(), "the provider while held");
+            assertFalse(p.suppliedThisAtmosTick(), "a hold counted as a supply");
+        }
+        clock[0] += DevicePower.LEASE_TICKS - 1;
+        assertTrue(p.isPowered(), "the held lease's last tick");
+        clock[0]++;
+        assertFalse(p.isPowered(), "after the held lease");
+        assertNull(p.source());
+        p.hold();
+        assertFalse(p.isPowered(), "a hold brought back a lease that had run out");
+    }
+
+    /**
      * CONT-113: a lease supplied while the device drew nothing is power, but not paid-for power, so a
      * recharger given a battery mid-lease waits for a paid supply before it charges.
      */

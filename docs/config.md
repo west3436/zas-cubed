@@ -30,6 +30,7 @@ if the world has one, and `config/zas-server.toml` otherwise.
 | `[atmos] venting` | `VOLUME_AWARE` | How fast zones exchange gas through openings (D-21), `VOLUME_AWARE` or `FAITHFUL` ([below](#venting)) |
 | `[atmos] delete_displaced_gas` | `false` | What happens to the gas in a cell a block fills: `false` keeps it in the zone, so the pressure rises (CORE-022), and `true` deletes it, as ZAS does, so the pressure stays as it was (CORE-029) |
 | `[atmos] sealed_zone_dissolve_seconds` | `60` | How long a sealed room's air must match the ambient before its zone is dissolved, in seconds (CORE-052). A pinned zone, such as an air controller's, is never dissolved |
+| `[atmos] enclosure_max_cells` | `65536` | The most cells a sealed space can have and still become a zone, 1 to 102,400 (GEO-020, D-23). A larger one counts as open air. A higher limit costs more worker time whenever a large roofed space or cave is checked, which the S-10 bench measures. Zones that formed under another limit stay as they are |
 | `[heat] enabled` | `true` | Whether zones conduct heat through their walls, to and from heat sources, and radiate it to a vacuum (HEAT-001, HEAT-004) |
 | `[heat] fallback_transmittance` | `1.7` | U in W/(m²·K) per block-thick layer of a block with none in a datapack, 0.001 to 1,000,000 (HEAT-015). 1.7 is stone's |
 | `[heat] wall_thickness` | `3` | How many blocks deep a wall is searched for the space on its far side, 1 to 16 (HEAT-011). Past that, heat goes to the ground at the ambient temperature |
@@ -247,6 +248,7 @@ nothing (CONT-065), so it has no key. Every key is live
 | `[power] electrolyzer` | `80` | What a water electrolyzer draws from its controller while it is on, in FE/t, 0 to 100,000 (CONT-065) |
 | `[power] area_air_controller` | `5` | The area air controller's own draw, in FE/t, 0 to 100,000 (CONT-065). It pays this from its buffer before anything else; without it, it is unpowered |
 | `[power] fire_alarm` | `1` | A fire alarm's draw from the controller that covers it, in FE/t, 0 to 100,000 (CONT-044, CONT-065) |
+| `[power] airlock_controller` | `1` | An airlock controller's own draw from its area air controller, in FE/t, 0 to 100,000; the draws of the vents linked to it add to it (CONT-065, CONT-141) |
 | `[power] area_air_controller_buffer` | `10000` | The controller's buffer, in FE, 1,000 to 1,000,000 (CONT-062) |
 | `[power] central_controller` | `5` | The central atmospherics controller's own draw, in FE/t, 0 to 100,000 (CONT-115). It pays this before any area air controller's shortfall; without it, it is unpowered and pays nothing |
 | `[power] central_controller_buffer` | `100000` | The central atmospherics controller's buffer, in FE, 1,000 to 10,000,000 (CONT-115) |
@@ -258,6 +260,8 @@ nothing (CONT-065), so it has no key. Every key is live
 | `[central_controller] force_load` | `true` | Whether a central atmospherics controller keeps its own chunk and the 8 around it loaded, as `/forceload` does. Turned off, each lets its chunks go at its next step (CONT-122) |
 | `[containers] explosion_power_cap` | `16.0` | The most power a tank's or canister's explosion can have, 0 to 64 (CONT-109). TNT is 4 |
 | `[gear] hardsuit_slowdown` | `0.1` | The share of movement speed each hardsuit piece worn takes away, 0 to 0.25 (CONT-089). At 0.1 the full suit leaves 60 %. 0 turns the slowdown off |
+| `[radiators] conductance` | `20.0` | Each radiator pipe segment's conductance to the gas of its cell, in W/K, 0 to 10,000 (HEAT-020). 0 stops radiator pipe exchanging heat with gas; it still radiates in a vacuum |
+| `[radiators] emissivity` | `0.9` | Each radiator pipe segment's emissivity in the open air of a vacuum, over 1 m², 0 to 1 (HEAT-021). 0 stops it radiating |
 
 ## Common: `zas-common.toml`
 

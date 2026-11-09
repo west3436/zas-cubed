@@ -353,6 +353,21 @@ Exceeding the bound means "open to ambient".
 its halves zone once a wall parts them; the R0 bench records 7.5 ms per fill
 at the cap ([benchmarks](../research/benchmarks.md)).*
 
+*2026-11-08: The bound is set by `[atmos] enclosure_max_cells` in the server
+config, 1 to 102,400 cells, default 65,536 ([config](../config.md)). A change
+applies from the next atmos tick without a restart (OPS-016): a higher bound
+puts the cells found open in doubt, so they are classified again, and zones that
+formed under another bound stay as they are. `geo_020_the_bound_comes_from_the_tick_settings`
+(Unit) and `geo_020_the_enclosure_limit_applies_on_the_next_atmos_tick`
+(GameTest) check a 27-cell room is open at a bound of 26 and zones once it is
+27. The S-10 bench measures halls of 65,536 to 102,400 cells for the owner to
+set the final range from (owner, 2026-11-08). The engine's two listings that
+must hold a whole enclosure, the cells it exports for the debug overlay and the
+cells held for a paused breach (GEO-026), are sized from the range's top, so a
+zone of any size the key allows is listed whole;
+`client_005_a_hall_at_the_largest_cap_is_listed_whole` (Unit) checks it. The
+overlay's packet still carries at most 32,768 cells, as before.*
+
 #### GEO-024 · Fills that reach unloaded chunks
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-24, D-43
 

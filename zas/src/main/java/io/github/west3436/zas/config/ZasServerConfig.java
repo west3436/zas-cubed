@@ -1,6 +1,7 @@
 package io.github.west3436.zas.config;
 
 import io.github.west3436.zas.ZasMod;
+import io.github.west3436.zas.engine.classify.EnclosureFill;
 import io.github.west3436.zas.engine.heat.HeatSettings;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
@@ -74,6 +75,12 @@ public final class ZasServerConfig {
 
     /** How long a sealed zone must match the ambient before it dissolves, in s (CORE-052). */
     public static final ModConfigSpec.DoubleValue SEALED_ZONE_DISSOLVE_SECONDS;
+
+    /** The most cells an enclosure can have when a zone forms (GEO-020, D-23). */
+    public static final ModConfigSpec.IntValue ENCLOSURE_MAX_CELLS;
+
+    /** The most {@link #ENCLOSURE_MAX_CELLS} can be: a hall 5 × 5 chunks wide and 16 blocks high. */
+    public static final int ENCLOSURE_MAX_CELLS_LIMIT = EnclosureFill.SETTABLE_MAX_CELLS;
 
     /** The permission level every {@code /zas} command needs (OPS-011). */
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
@@ -153,6 +160,11 @@ public final class ZasServerConfig {
                         "How long a sealed room's air must match the ambient before its zone is dissolved, in",
                         "seconds. A pinned zone, such as an air controller's, is never dissolved.")
                 .defineInRange("sealed_zone_dissolve_seconds", ZoneSettings.DEFAULT.sealedDissolveSeconds(), 0.0, 1e9);
+        ENCLOSURE_MAX_CELLS = builder.comment(
+                        "The most cells (blocks of air) a sealed space can have and still become a zone. A larger",
+                        "one counts as open air. A higher limit costs more time when a large roofed space or cave",
+                        "is checked. Zones that formed under another limit stay as they are.")
+                .defineInRange("enclosure_max_cells", EnclosureFill.DEFAULT_MAX_CELLS, 1, ENCLOSURE_MAX_CELLS_LIMIT);
         builder.pop();
         builder.push("heat");
         HEAT_ENABLED = builder.comment(
@@ -326,6 +338,11 @@ public final class ZasServerConfig {
         return SPEC.isLoaded()
                 ? new ZoneSettings(DELETE_DISPLACED_GAS.get(), SEALED_ZONE_DISSOLVE_SECONDS.get())
                 : ZoneSettings.DEFAULT;
+    }
+
+    /** The most cells an enclosure can have (GEO-020, D-23); the default while no world's config is loaded. */
+    public static int enclosureMaxCells() {
+        return SPEC.isLoaded() ? ENCLOSURE_MAX_CELLS.get() : EnclosureFill.DEFAULT_MAX_CELLS;
     }
 
     /** The server-thread budget in nanoseconds. */

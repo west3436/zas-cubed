@@ -158,7 +158,7 @@ Operations carried over to a new engine after a geometry palette change had the 
 fault and keep their sub-cell now too.*
 
 #### DATA-016 · Content-mod persistence
-`Must` · `R1` · `Accepted` · Verify: GameTest · Trace: S-09, D-50, CONT-095
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: S-09, D-50, CONT-095
 
 `zas_atmos` shall save, to a relative error of 1e-9 per gas:
 - pipe network contents, stored in the pipe parts that hold them and split by
@@ -170,6 +170,27 @@ fault and keep their sub-cell now too.*
 - **Rationale:** Decision: D-54 (S-09).
 - **Verify:** A GameTest saves and reloads a station with pipes, devices,
   canisters and tanks and compares their contents within 1e-9.
+
+*2026-11-07: Implemented.
+`StationSaveTests.s_09_a_station_saved_to_disk_comes_back_with_every_amount`
+(GameTest) builds a station across three chunks, with a block entity of every
+kind the mod has: pipes, caps, a valve, a port, two canisters, a vent, a passive
+vent, a scrubber, both pumps, a filter, a mixer, an electrolyzer with water, the
+portable pump and scrubber, a heater, an air conditioner, a recharger, a
+generator, both controllers, a fire alarm, a firelock and an igniter. Their
+settings and buffers are set away from their defaults. It also has tanks in a
+chest, in a hardsuit, in a TTV, in a portable's slot and in a primed TTV, and a
+mined canister item. All of it is checked to stay put for three atmos ticks.
+Then the three chunks unload for real, writing to the region files with nothing
+else holding them, and load again. Every block entity's saved data comes back
+within 1e-9, as do each network's gas and the central controllers' claims, which
+go through their saved data's save and load. What each pipe part wrote is
+checked against its share of its network by volume.
+`data_016_tanks_a_player_carries_keep_their_gas` (GameTest) does the same for
+tanks in a player's inventory, off hand, suit and TTV, through the calls the
+game's player files use. A GameTest can't restart the server, so a new JVM,
+saved data read at startup and the final save at a stop are left to the release
+checklist's "Saving and quitting mid-transfer".*
 
 #### DATA-003 · Versioned format
 `Must` · `R0` · `Implemented` · Verify: Unit

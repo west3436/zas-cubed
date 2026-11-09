@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -18,7 +19,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -82,7 +85,7 @@ public final class GasHandlers {
      * since only a block with a provider can run one, and a pipe's arm mustn't go with the fault, which
      * would leave an open end for the gas to escape from (NFR-013).
      */
-    private static boolean provides(Level level, BlockPos next, BlockState neighbour, Direction face) {
+    private static boolean provides(ServerLevel level, BlockPos next, BlockState neighbour, Direction face) {
         try {
             return lookup(level, next, neighbour, face) != null;
         } catch (Exception | LinkageError e) {
@@ -93,7 +96,8 @@ public final class GasHandlers {
 
     /**
      * {@link #connects(LevelAccessor, BlockPos, BlockState, Direction, BlockState)} for a block whose
-     * neighbour isn't known yet. It loads nothing to find out.
+     * neighbour isn't known yet. It loads nothing to find out, and keeps nothing loaded ({@link
+     * LoadedBlocks}).
      *
      * @param level the level
      * @param pos the block's position
@@ -102,8 +106,12 @@ public final class GasHandlers {
      * @return true if it connects
      */
     public static boolean connects(Level level, BlockPos pos, BlockState self, Direction face) {
+        if (!(level instanceof ServerLevel server)) {
+            return false;
+        }
         BlockPos next = pos.relative(face);
-        return level.isLoaded(next) && connects(level, next, self, face, level.getBlockState(next));
+        BlockState neighbour = LoadedBlocks.state(server, next);
+        return neighbour != null && connects(server, next, self, face, neighbour);
     }
 
     /**
@@ -146,12 +154,13 @@ public final class GasHandlers {
     public static void exchange(ServerLevel level, BlockPos pos, BlockState self, Direction face, Buffer buffer) {
         ServerThreads.require(level, "A gas handler transfer");
         BlockPos next = pos.relative(face);
-        if (!(self.getBlock() instanceof PipeConnector block)
-                || !block.carriesGas(self, face)
-                || !level.isLoaded(next)) {
+        if (!(self.getBlock() instanceof PipeConnector block) || !block.carriesGas(self, face)) {
             return;
         }
-        BlockState neighbour = level.getBlockState(next);
+        BlockState neighbour = LoadedBlocks.state(level, next);
+        if (neighbour == null) {
+            return;
+        }
         IGasHandler handler = handler(level, next, neighbour, face);
         if (handler == null) {
             return;
@@ -190,7 +199,7 @@ public final class GasHandlers {
 
     /** The handler on a face, or null if it has none or the lookup throws (NFR-013). */
     @Nullable
-    private static IGasHandler handler(Level level, BlockPos next, BlockState neighbour, Direction face) {
+    private static IGasHandler handler(ServerLevel level, BlockPos next, BlockState neighbour, Direction face) {
         try {
             return lookup(level, next, neighbour, face);
         } catch (Exception | LinkageError e) {
@@ -199,9 +208,19 @@ public final class GasHandlers {
         }
     }
 
+    /**
+     * The capability, with the neighbour's block entity read from its chunk and handed over, so the
+     * lookup reads nothing through the level; none if its chunk isn't loaded in full.
+     */
     @Nullable
-    private static IGasHandler lookup(Level level, BlockPos next, BlockState neighbour, Direction face) {
-        return level.getCapability(IGasHandler.BLOCK, next, neighbour, null, face.getOpposite());
+    private static IGasHandler lookup(ServerLevel level, BlockPos next, BlockState neighbour, Direction face) {
+        LevelChunk chunk = LoadedBlocks.chunk(level, next);
+        if (chunk == null) {
+            return null;
+        }
+        BlockEntity entity =
+                neighbour.hasBlockEntity() ? chunk.getBlockEntity(next, LevelChunk.EntityCreationType.IMMEDIATE) : null;
+        return level.getCapability(IGasHandler.BLOCK, next, neighbour, entity, face.getOpposite());
     }
 
     /** Logs a handler's fault, at most once a minute for each kind of block (NFR-013). */

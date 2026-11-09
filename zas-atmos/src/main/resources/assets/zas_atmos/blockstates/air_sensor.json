@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,status=standby": {
+      "model": "zas_atmos:block/air_sensor"
+    },
+    "facing=north,status=cycling": {
+      "model": "zas_atmos:block/air_sensor_cycling"
+    },
+    "facing=north,status=alert": {
+      "model": "zas_atmos:block/air_sensor_alert"
+    },
+    "facing=east,status=standby": {
+      "model": "zas_atmos:block/air_sensor",
+      "y": 90
+    },
+    "facing=east,status=cycling": {
+      "model": "zas_atmos:block/air_sensor_cycling",
+      "y": 90
+    },
+    "facing=east,status=alert": {
+      "model": "zas_atmos:block/air_sensor_alert",
+      "y": 90
+    },
+    "facing=south,status=standby": {
+      "model": "zas_atmos:block/air_sensor",
+      "y": 180
+    },
+    "facing=south,status=cycling": {
+      "model": "zas_atmos:block/air_sensor_cycling",
+      "y": 180
+    },
+    "facing=south,status=alert": {
+      "model": "zas_atmos:block/air_sensor_alert",
+      "y": 180
+    },
+    "facing=west,status=standby": {
+      "model": "zas_atmos:block/air_sensor",
+      "y": 270
+    },
+    "facing=west,status=cycling": {
+      "model": "zas_atmos:block/air_sensor_cycling",
+      "y": 270
+    },
+    "facing=west,status=alert": {
+      "model": "zas_atmos:block/air_sensor_alert",
+      "y": 270
+    }
+  }
+}

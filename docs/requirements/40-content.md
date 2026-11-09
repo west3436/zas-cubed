@@ -19,6 +19,8 @@ as Draft on 2026-11-05. The owner accepted all four the same day.
 CONT-129 to CONT-131, the station walls and reinforced glass, were added as Draft on
 2026-11-06 (D-80, D-81).
 CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07.
+CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
+added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
@@ -157,6 +159,16 @@ A node on a chunk's edge, and any port, now rejoins a connected neighbour in
 another network at its next step (`cont_003_sides_away_in_turn_join_when_both_return`,
 `cont_003_ports_away_in_turn_join_when_both_return`).*
 
+*2026-11-07: Note: still Implemented. Devices and nodes now step only in chunks that
+tick (CONT-006), and a chunk next to a ticking one is always loaded in full, so in
+play a network's near side steps while its far chunk is away only through a member
+further along, in a ticking chunk. The chunk tests above, `ValveTests`' chunk tests
+and `GasHandlerTests.api_026_a_handler_in_a_chunk_that_is_away_is_left_alone` now
+step the near side's devices directly while the far chunk is away, standing for that
+member, and hold both chunks ticking once they return. Each test's Javadoc says what
+play state it stands for. `PipeSaveTests` holds its chunks ticking where it needs
+steps, and `StationSaveTests` steps its station's devices itself.*
+
 #### CONT-009 · Removed segments release their gas
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: CORE-036
 
@@ -286,6 +298,23 @@ entities, which wait until it returns.
 `PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_is_away` (GameTest)
 checks a vent there.*
 
+*2026-11-07: Note: still Implemented, with the note above changed. A device
+now steps only while its chunk ticks block entities, as vanilla's do: near a
+player, or held by a ticking ticket such as a central controller's. A chunk at
+the edge of what is loaded, in full only because a ticking neighbour is,
+doesn't tick, and a device there waits as it is, keeping its power. The S-10
+bench found that steps there kept those chunks loaded after every player had
+gone: reading a block through the level adds a ticket to its chunk, so each
+step ticketed its own chunk and its neighbours again, and a wing with a device
+due in every game tick never unloaded ([architecture
+§11.2](../architecture.md#112-device-stepping-d-31-cont-006-cont-072)).
+`DeviceScheduleTest.cont_006_a_member_that_is_not_ticking_is_passed_over_and_keeps_its_phase`
+(Unit) checks the schedule passes such a device over;
+`PipeChunkTests.cont_006_a_vent_waits_while_its_chunk_doesnt_tick` (GameTest,
+renamed from the test above) checks a vent at the edge and away, and
+`cont_006_a_chunk_at_the_edge_unloads_with_its_devices` that a chunk at the
+edge unloads with its neighbour.*
+
 #### CONT-070 · Client smoothing
 `Must` · `R1` · `Implemented` · Verify: Manual
 
@@ -375,6 +404,126 @@ tanks; `PipeNetworkTest.cont_100_*` (Unit) checks the once-per-tick rule.*
 alone, with no pipe in it, reacts the same way
 (`PumpTests.cont_100_a_network_of_ports_alone_reacts_once_per_atmos_tick`,
 GameTest).*
+
+## Radiators and heat exchangers
+
+Decided in D-84. How their heat moves is in [HEAT](12-heat.md#pipe-gas) (HEAT-020 to
+HEAT-022). The art is the owner's from batch 5
+([textures](../textures.md#content-mod-zas_atmos-blocks)).
+
+#### CONT-143 · Radiator pipe
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-007, [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+
+A radiator pipe shall be a 70 L pipe-network segment that connects only to radiator pipe and
+to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
+
+- **Rationale:** Decision: D-84, with the owner's art: a finned tube with no flanges, which
+  joins only radiator pipe and the adaptor. vg's heat-exchange pipes meet ordinary pipe only
+  at junctions ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest places radiator pipe beside a pipe, a vent and more radiator pipe,
+  and checks it joins only the radiator pipe, adding 70 L a segment to the network.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. A gas handler and
+a heat exchanger's pipe face are checked too. Checked by
+`cont_143_radiator_pipe_joins_only_radiator_pipe` (GameTest).*
+
+#### CONT-144 · Radiator pipe ends are closed
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
+
+A radiator pipe with fewer than two connections shall keep its gas: unlike a pipe's
+(CONT-004), its end is closed.
+
+- **Rationale:** Inferred: its art has no open mouth and no cap fits it, so a radiator run
+  can end without one.
+- **Verify:** A GameTest fills a lone radiator pipe and a dead-end run in a room and checks
+  no gas leaves either.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_144_radiator_pipe_ends_keep_their_gas` (GameTest).*
+
+#### CONT-145 · Radiator adaptor
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
+
+A radiator adaptor shall be one 70 L pipe-network node, placed facing any of six ways, with a
+pipe end and a radiator end on opposite faces. Its pipe end connects as a pipe does, and its
+radiator end only to radiator pipe.
+
+- **Rationale:** Decision: D-84, with the owner's art: inline, a pipe's flange and tube at one
+  end and the finned tube at the other.
+- **Verify:** A GameTest checks a pipe, an adaptor and radiator pipe in line share one
+  network, with the adaptor's 70 L, and that turning the adaptor round parts them.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Placed against
+radiator pipe its radiator end faces it, and otherwise its pipe end faces the block clicked.
+Checked by `cont_145_an_adaptor_joins_pipe_to_radiator_pipe` (GameTest).*
+
+#### CONT-146 · Radiator pipe bursts
+`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
+
+Radiator pipe and radiator adaptors shall be segments that burst as pipe does (CONT-108).
+
+- **Rationale:** Inferred: they are pipe, so a radiator run shouldn't hold more than pipe
+  can. vg's don't burst, but no vg pipe does ([vg §1](../research/vg-atmos-content.md#1-pipe-networks)).
+- **Verify:** A GameTest raises a network of radiator pipe and an adaptor to more than
+  100 atm over its room and checks one of them bursts.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
+`cont_146_radiator_pipe_bursts_above_100_atm` (GameTest).*
+
+#### CONT-147 · Heat exchanger
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
+
+A heat exchanger shall be a 200 L pipe-network node, half a block deep against one face of
+its block, placed facing any of six ways, with a pipe connection only on the opposite face.
+
+- **Rationale:** Decision: D-84, with the owner's art: vg's box, half a block deep, so a pair
+  stands back to back. vg's buffer is 200 L ([vg §2](../research/vg-atmos-content.md#2-devices)).
+- **Verify:** A GameTest checks a pipe joins a heat exchanger only on the face opposite its
+  box, adding 200 L to the network.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built, and its Verify plan passes, in all six facings; it stays Draft for the
+owner. Placed against another's box it faces back, making a pair; otherwise its pipe faces
+the block clicked. Checked by `cont_147_a_heat_exchanger_takes_pipe_opposite_its_box`
+(GameTest).*
+
+#### CONT-148 · Heat exchanger's colour
+`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
+
+A heat exchanger's coil and pipe shall show the temperature of its network's gas, blending
+between these colours, and its item shall show copper:
+
+| Temperature | Colour |
+|---|---|
+| 213 K (−60 °C) or colder | Frost blue, `#8ec5ff` |
+| 293 K (20 °C) | Copper, `#c07a45` |
+| 473 K (200 °C) | Dark red, `#9c4a32` |
+| 873 K (600 °C) | Red, `#e8341c` |
+| 1,273 K (1,000 °C) | Orange, `#ff8c1a` |
+| 1,773 K (1,500 °C) or hotter | Yellow-white, `#ffe8b0` |
+
+- **Rationale:** Decision: D-84, with the owner's ask in the batch 5 art review that its coil
+  glows as vg's heat-exchange pipes do ([texture procurement
+  §6](../texture-procurement.md#6-sources-for-each-row)).
+- **Verify:** A Unit test checks the colour at each temperature in the table and halfway
+  between two. Manual: a heat exchanger on a cold network and on a hot one, and its item.
+
+*2026-11-07: Added for review.*
+
+*2026-11-07: Built; it stays Draft for the owner. Its Unit test passes:
+`HeatExchangerTintTest`, with six bands between each pair of stops. The server sets the band
+in the block state, and `heat_022_a_pair_shares_one_temperature` (GameTest) checks it follows
+the network and shows copper with no gas. The Manual check, how it looks, is in the round's
+combined test world.*
 
 ## Devices (R1 set)
 
@@ -471,6 +620,18 @@ the block state, so a real unload and reload keeps it, and the gas on each side
 `cont_075_an_open_valve_stays_open_through_a_reload`).
 `PipeNetworkTest.cont_075_*` (Unit) turns a valve 1,000 times and checks moles
 and energy.*
+
+*2026-11-07: Note: "at most once per atmos tick" counts the valve's own rebuild.
+A valve on a chunk's edge builds its network twice as it opens, once as it
+rejoins the far side (CONT-003's note of 2026-11-06) and once at its own turn.
+The owner kept this as built. Measured with S-09
+(`StationSaveTests.s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens`,
+GameTest): the extra rebuild costs about 0.6 to 1 µs per node, on the atmos
+tick it opens only, which is negligible
+([benchmarks](../research/benchmarks.md#a-valve-at-a-chunks-edge-341-2026-11-07)).
+A valve turned every atmos tick also builds twice as it opens, wherever it is,
+because the nodes that stepped before it shut build across it first. That's
+the same cost.*
 
 #### CONT-011 · Pressure pump
 `Must` · `R1` · `Implemented` · Verify: Unit · Trace: [vg §2.1](../research/vg-atmos-content.md#21-pumps-filters-and-mixers)
@@ -1363,24 +1524,38 @@ each tank back with the item data it went in with, its gas to a relative error o
   went in.
 - **Verify:** A GameTest fills a holder with tanks of each kind, checks it refuses an eleventh
   tank and another item, saves and reloads it, takes some tanks out and breaks it, and
-  compares each tank with what went in.
+  compares each tank with what went in. Another checks a tank above the leak pressure is
+  unchanged after three seconds in it.
 
 *2026-11-07: added for review (D-84). The `Must` follows the owner's "All are R1 blockers".*
 
+*2026-11-07: built. `cont_149_it_holds_ten_tanks_and_nothing_else`,
+`cont_149_tanks_come_back_as_they_went_in_after_a_save`,
+`cont_149_tanks_come_back_as_they_went_in_taken_out_or_dropped` and
+`cont_149_tanks_in_it_dont_change` check it, counting every tank and mole after each step.
+The holder moves no gas, so the exploit to rule out is a tank made or lost (NFR-012).*
+
 #### CONT-150 · Moving tanks in and out of a tank holder
-`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-149
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-113 · Depends: CONT-149
 
-A player shall put a tank into a tank holder by using the tank on it or through the holder's
-window, and take any of its tanks out through that window, which shows each tank's pressure.
+A player shall put a tank into a tank holder by using the tank on it, and take out the last
+tank put in by using the holder with an empty hand. A tank used on a full holder shall stay
+in the hand.
 
-- **Rationale:** Decision: D-84, and D-76 for the window. Tanks move through slots, as on the
-  tank transfer valve's window (CONT-103), and using a tank on the block puts it in, as a battery
-  on the recharger (CONT-113).
-- **Verify:** GameTests put a tank in by use and through the window's slots, take one from the
-  middle, and check the slots refuse what the holder refuses and the server refuses a player
-  out of reach (CONT-074). Manual: the window's look.
+- **Rationale:** Decision: D-84, and the owner's choice of 2026-11-07: no window. Using a tank
+  on the block puts it in, as a battery on the recharger (CONT-113). Taking out the last one put
+  in keeps the tanks in the first places, as the model for each count shows them (CONT-151).
+- **Verify:** GameTests put tanks in by use, in survival and in creative, take them out with an
+  empty hand in the reverse order, and check that a hand holding anything else, or a tank on a
+  full holder, moves no tank.
 
 *2026-11-07: added for review (D-84).*
+
+*2026-11-07: changed by the owner before review: no window. It read: in by use or through the
+holder's window, and any tank out through that window, which shows each tank's pressure. With
+no window, a tank's pressure shows once it's in hand, in its tooltip. Verify was GameTest and
+Manual. `cont_150_using_a_tank_puts_it_in` and
+`cont_150_an_empty_hand_takes_out_the_last_tank_put_in` check it.*
 
 #### CONT-151 · A tank holder's shelves
 `Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
@@ -1393,10 +1568,16 @@ blue, air tanks yellow and the rest grey.
   ([texture procurement](../texture-procurement.md)), which has a model for each count from 0
   to 10.
 - **Verify:** A GameTest checks the block shows as many tanks as it holds as tanks go in and
-  out. Manual: the tanks and their tints in game.
+  out, and that clients are sent each tank's kind in order. Manual: the tanks and their tints
+  in game.
 
 *2026-11-07: added for review (D-84). With a model for each count, the tanks always fill the
-first places, so taking one from the middle moves the tanks after it down a place.*
+first places.*
+
+*2026-11-07: since tanks come out last in, first out (CONT-150), play leaves no gap. A save
+or a command that leaves one is closed up when it's read.
+`cont_151_the_block_shows_as_many_tanks_as_it_holds` checks every count from 0 to 10 and
+the kinds sent.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
@@ -1843,6 +2024,16 @@ firelock (CONT-043).*
 (GameTest) links a real vent in the room across a firelock: it is powered from
 the controller's buffer, follows its orders, and is listed as linked, not in
 the zone.*
+
+*2026-11-07: Note: still Implemented, and a controller covers the same parts. It
+now finds them in an index of each loaded part's zone, asked again only when it
+may have changed, instead of asking every loaded part at every step, which took
+most of the S-10 bench's device time ([architecture
+§11.6](../architecture.md#116-the-area-air-controller)).
+`ControllerTests.cont_042_coverage_follows_its_zone_and_its_parts` (GameTest)
+merges two rooms' zones and splits them again, grows one into a room that had
+none, and places and breaks a part, and at each step checks the controller lists
+what asking every loaded part then finds.*
 
 #### CONT-110 · Controller forms its zone
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-68, D-13, S-01 · Depends: API-050, CONT-042
@@ -2396,6 +2587,7 @@ Devices shall draw these amounts by default:
 | Area air controller (base) | 5 |
 | Central atmospherics controller (base) | 5 |
 | Fire alarm | 1 |
+| Airlock controller | 1 |
 | Firelock | 0 |
 
 - **Rationale:** Decision: D-37 and D-59; starting values for playtesting.
@@ -2420,6 +2612,11 @@ every device's draw is.*
 its controller while it is on, in the gas production group (CONT-064). It is
 checked in `ElectrolyzerTests.cont_060_an_electrolyzer_stops_when_its_power_is_cut`.
 This stays Accepted until every device's draw is in the config.*
+
+*2026-11-07: added the airlock controller (CONT-141, D-84): `[power]
+airlock_controller`, 1 FE/t, drawn from the area air controller that powers it,
+with its linked vents' draws on top. CONT-141 is Draft, so the row is for
+review with it.*
 
 *2026-11-02: In `StationTests.cont_069_a_real_vent_runs_only_on_a_controller` ([#160](https://github.com/west3436/zas-cubed/pull/160)),
 a controller pays 100 FE per atmos tick for itself and 200 for a blowing
@@ -3000,6 +3197,14 @@ range. `cont_124_a_claimed_controller_is_run_from_the_central_one_unless_unloade
 (GameTest) checks that an unloaded controller's row is out of contact with its last
 readings. This stays Accepted until the owner has checked the window.*
 
+*2026-11-08: Note: still Accepted, text unchanged. Since devices step only in
+chunks that tick (CONT-006), a controller in a chunk loaded in full that doesn't
+tick, at the edge of what is loaded, waits as an unloaded one does, so it is
+shown as out of contact too, with its last readings, and gets no FE. Before, the
+console counted it in contact and showed its frozen readings as live.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
+(GameTest) checks its row.*
+
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
 
@@ -3024,6 +3229,12 @@ from a player out of reach of the central controller is refused. Once the contro
 chunk unloads, it won't open. The menu is the controller's own, with its own checks. It
 stays open only while the player is in reach of the central controller, the controller
 is loaded and still claimed. Its Back button reopens the central controller's window.*
+
+*2026-11-08: Note: still Implemented. A loaded controller here is one in contact (CONT-123):
+one waiting in a chunk loaded in full that doesn't tick won't open from the central
+controller, and its menu opened from there closes when it goes out of contact.
+`cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact` (GameTest)
+checks both.*
 
 ## Device sounds
 
@@ -3344,6 +3555,282 @@ approved, the glass stays translucent and the items show a lone block's tile. A 
 can show a one-pixel crack where a block's edge meets the middle of the next block's face,
 from the way Fusion draws a face in quarters. The owner's own look in game (`./gradlew
 :zas-atmos:runClient -Pfusion=true`) is left, so this stays Accepted.*
+
+## Airlocks
+
+Decided in D-84. Airlocks are zone-boundary doors (GEO-007) in two sizes. An airlock
+controller cycles the chamber between two of them with its vents, reading the chamber
+through an air sensor. Their art follows the firelock's form ([texture
+procurement](../texture-procurement.md#62-content-mod-zas_atmos-blocks)).
+
+#### CONT-133 · Airlock
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
+
+An airlock shall be a door one block wide and two tall, tagged `zas:zone_boundary`, whose two
+blocks open and close together.
+
+- **Rationale:** Decision: D-84, in the size the owner chose on 2026-11-01. vg: every vg door
+  is a zone boundary, so an open one passes gas but keeps the rooms apart ([vg
+  §3](../research/vg-atmos-content.md#3-air-alarms-fire-alarms-and-firedoors)).
+- **Verify:** A GameTest opens and closes it between two zoned rooms and checks gas passes
+  only while it's open, the rooms stay two zones, and no toggle splits or rebuilds a zone.
+
+#### CONT-134 · Large airlock
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
+
+A large airlock shall be a door two blocks wide and two tall, tagged `zas:zone_boundary`,
+placed only where all four of its spaces are free, whose four blocks open, close and break
+together, dropping one item.
+
+- **Rationale:** Decision: D-84. The owner chose the 2 by 2 size on 2026-11-01 and vg's glass
+  door for it on 2026-11-02. It is placed and broken as the central atmospherics controller's
+  2 by 2 console is (CONT-115).
+- **Verify:** GameTests check placing it needs four free spaces, breaking any of its blocks
+  removes all four and drops one item, and between two zoned rooms it passes gas only while
+  open and keeps them two zones.
+
+#### CONT-135 · Opening an airlock
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133, CONT-134
+
+An airlock that isn't bolted shall open or close when a player uses it and open while it
+receives a redstone signal, and once open shall close itself 5 s after it opened or after the
+signal holding it open ended, waiting while anything stands in its doorway.
+
+- **Rationale:** Decision: the owner's answer of 2026-11-07 that an airlock closes itself
+  about 5 s after it's opened, as vg's do. Inferred: a wooden door opens by hand and an iron
+  door by redstone; an airlock does both, so a player can walk through it or wire it into a
+  build. It needs no power. vg's airlocks do, but here FE reaches parts only through area air
+  controllers (D-68), and an airlock that needed one would shut players in or out when a
+  station lost power.
+- **Verify:** GameTests use each size by hand and power it with redstone and check each opens
+  and closes it, and a timed GameTest checks it closes itself 5 s after the hand opens it and 5
+  s after a signal ends, but not on something in the doorway.
+
+*2026-11-07: Changed by the owner: an airlock opened by hand closes itself after about 5 s,
+and bolts still keep out the hand, the crowbar and redstone (CONT-136). Mine, for review: a
+redstone signal holds it open and it closes 5 s after the signal ends; one the controller
+opens at the end of a cycle closes itself the same way; and it checks again each second while
+anything but a spectator stands in its doorway, so it doesn't shut on a player. The test is
+`AirlockTests.cont_135_an_airlock_closes_itself_5_s_after_it_opens_or_its_signal_ends`.*
+
+#### CONT-136 · Bolts
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-135
+
+A bolted airlock shall stay closed and show its bolted look: a player's hand, the crowbar and a
+redstone signal don't open it. Only an airlock controller bolts or unbolts an airlock
+(CONT-139).
+
+- **Rationale:** vg: a bolted airlock can't be opened, and its bolted look is vg's
+  `door_locked`, drawn in batch 5 ([texture
+  procurement](../texture-procurement.md#62-content-mod-zas_atmos-blocks)). Inferred: the
+  controller sets it while it cycles, which is what the art's bolted state is for
+  ([textures](../textures.md)).
+- **Verify:** A GameTest bolts an airlock of each size and checks a hand, the crowbar and a
+  redstone signal leave it closed.
+
+#### CONT-137 · Firelock on an airlock or a door
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-043 · Depends: CONT-133, CONT-134
+
+A firelock used on an airlock of either size or on a vanilla door that has none shall fit to
+it and then work as a firelock in that doorway (CONT-043, CONT-092 to CONT-094): closing, it
+closes the door and seals the doorway, and the door doesn't open while it's closed and stays
+closed when it opens again.
+
+- **Rationale:** Decision: the owner's choice of 2026-11-01 that a firelock can be placed on a
+  door and drawn over it ([texture
+  procurement](../texture-procurement.md#firelocks-on-doors)), and of 2026-11-07 that vanilla
+  doors take one too. Its airlock-sized and door-sized art ships (D-84).
+- **Verify:** GameTests fit a firelock to each size of airlock and to an oak and an iron door,
+  raise a controller covering it to danger 2 and check the firelock closes the open door and
+  seals the doorway, that the door doesn't open while it's closed or when it reopens, that
+  lockdown refuses a hand and the crowbar forces it, and that breaking it drops both items.
+
+*2026-11-07: Changed by the owner: a firelock fits vanilla doors too, with the
+`firelock_door_*` art. That a closed firelock leaves the door closed when it reopens was my
+default, which the owner kept. A firelock on a door replaces it with a door with a firelock,
+`zas_atmos:firelock_door`, which keeps the door's type, opens as that door did (an iron door
+only by redstone) and drops the door and the firelock when broken
+([architecture §11.18](../architecture.md#1118-airlocks-cont-133-to-cont-142)).*
+
+#### CONT-138 · Airlock controller links
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
+
+An airlock controller shall be a wall panel with five slots, an inner and an outer door that
+take airlocks and an inner, an outer and a chamber sensor that take air sensors, which the
+multitool fills, and shall link any number of vents. Its window shall arm a slot, which the next
+airlock or sensor linked fills, refusing the other kind, and clear one. With no slot armed, a
+link shall go to the slot guessed from the zones around it, or else to the first empty slot of
+its kind.
+
+- **Rationale:** Decision: D-84, as the art notes describe the controller
+  ([textures](../textures.md)). It links as an area air controller does (CONT-042): select the
+  controller, then use the multitool on each part. The owner's choice of 2026-11-08 that each
+  zone bordering an airlock has a sensor, as the chamber does, and that the player sets each
+  part's slot in the window, the controller guessing it first.
+- **Verify:** A GameTest links two airlocks, three sensors and two vents with the multitool and
+  checks each goes to its slot, a third airlock and a fourth sensor are refused, and using the
+  multitool on a linked part again unlinks it. Others arm and fill each slot through the window,
+  check the wrong kind is refused and a cleared slot is empty, move a part between slots, and
+  check the guess: the door onto open air or the lower pressure is the outer, a sensor's slot
+  comes from its zone, and with no guess or its slot set a link goes to the first empty slot.
+  Another checks each sensor reads its own side, with the airlocks shut and with one open.
+
+*2026-11-08: the owner, in the test world: both zones bordering an airlock need sensors as well
+as the chamber.*
+
+*The player sets the slots in the window, and the controller guesses them first (owner,
+2026-11-08). The window has five slots: Inner door, Outer door, Inner sensor, Outer sensor and
+Chamber sensor. A slot's button arms it, and the next airlock or sensor linked fills it. The
+wrong kind buzzes and isn't linked, and the slot stays armed, with the window closed too.
+Linking a part that's in another slot moves it to the armed one, swapping the two, which
+corrects a wrong guess. With no slot armed, a link goes to the slot the zones say. A sensor in
+the chamber's zone is the chamber sensor, and one past a door is that side's. The door onto open
+air or a vacuum is the outer, and between two rooms it's the one onto the lower pressure, by
+more than 5.07 kPa. Where the zones don't say, or that slot is taken, it's the first empty slot
+of its kind, and a part put there with no guess makes way for a later guess. The guess is made
+at the link only. How the doors are told apart, the swap and the making way are my choices, for
+review.*
+
+#### CONT-139 · Cycling
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
+
+Cycling toward its inner or outer door, an airlock controller shall close and bolt both, run
+its vents until the pressure its chamber sensor reads is within 5.07 kPa (5 % of 1 atm) of the
+pressure the sensor past that door reads, siphoning above it and blowing below it, and then
+unbolt and open that door, leaving the other bolted. Without both doors, the chamber sensor or
+the sensor past that door, a cycle shall not start.
+
+- **Rationale:** Decision: D-84, as the art notes describe the controller
+  ([textures](../textures.md)). The vents siphon into their own pipe network and blow from it
+  (CONT-014), so the chamber's air is kept for the next cycle. 5 % of 1 atm is where the area
+  air controller's Cycle mode stops emptying a room (CONT-041).
+- **Verify:** GameTests cycle a chamber toward a vacuum and toward a room at 1 atm, and check
+  both airlocks bolt, the vents siphon or blow, the far airlock opens only once the chamber is
+  within 5.07 kPa, and the other stays bolted. Another clears each slot in turn and checks a
+  cycle that needs it doesn't start, from the controller, its window, a bolted airlock or a
+  sensor, while one that doesn't need it does, and that a cycle that loses the sensor it reads
+  stops.
+
+*2026-11-08: the owner, in the test world: each side has its own sensor, and a cycle toward a
+side reads that side's pressure there. It no longer reads the cell beyond the airlock. A cycle
+without the sensors it needs buzzes, and the window says which is missing.*
+
+*The sensors a cycle reads are the slots the player sets (owner, 2026-11-08): the Chamber
+sensor and the sensor on the side it cycles toward. With one empty it buzzes, and the window
+shows the slot empty and "No sensor" in place of that pressure.*
+
+#### CONT-140 · Asking for a cycle
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
+
+Using a bolted airlock that's linked to a controller shall ask that controller to cycle toward
+it, unless it's already cycling. Pressing any air sensor in a controller's slot shall ask it to
+cycle toward the side opposite the one the airlock is accessing: the side whose door alone is
+unbolted, or else the door opened last. With neither, it cycles away from the pressed sensor's
+side, or toward the inner door from the chamber sensor.
+
+- **Rationale:** Inferred: the player at a bolted door is on the side they want to reach, and
+  vg's airlocks are asked to cycle from beside each door. The controller's window asks too
+  (CONT-153). Decision: the owner's choice of 2026-11-08 that pressing any sensor cycles the
+  airlock to the side opposite the one it's accessing.
+- **Verify:** A GameTest uses each bolted, linked airlock in turn and checks the controller
+  cycles toward it, and that a use during a cycle changes nothing. Another presses sensors from
+  each starting state: neither airlock bolted with one opened by hand, no history, one airlock
+  alone unbolted, and both bolted after one opened. It checks the side each press cycles
+  toward, and that a press during a cycle or of an unlinked sensor starts nothing.
+
+*2026-11-08: the owner, in the test world: pressing any sensor cycles the airlock to the side
+opposite the one it's accessing. Which side that is when nothing says, as on a new controller
+or after Stop before anything opened, is the coordinator's rule, for review: away from the
+pressed outer sensor's side, so a player outside presses it twice, or toward airlock 1 from the
+chamber. An airlock opened by hand counts as opened.*
+
+*A sensor's side is its slot (owner, 2026-11-08), and airlock 1 is now the inner door.*
+
+#### CONT-141 · Airlock controller power
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, D-68, CONT-060 · Depends: CONT-138
+
+An airlock controller shall be powered as a part of an area air controller (CONT-068), drawing
+`[power] airlock_controller` (1 FE/t) and the draw of the vents linked to it, and shall power
+those vents.
+
+- **Rationale:** Decision: D-68: parts take FE through an area air controller. The chamber
+  between two airlocks is a zone of its own, usually with no area air controller in it, so
+  its vents take their power through the airlock controller, which sits in a room that has
+  one. 1 FE/t is the fire alarm's draw (CONT-044).
+- **Verify:** A GameTest powers a controller from an area air controller in its zone and
+  checks a linked vent in the chamber runs during a cycle, and that cutting the area air
+  controller's power stops both (CONT-060).
+
+*2026-11-07: The owner kept my default, that the controller is a part of an area air
+controller and powers its vents. A cycle that loses power stays where it is, with both
+airlocks bolted, until the power comes back or a player stops it.*
+
+#### CONT-142 · Air sensor
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-047
+
+An air sensor shall be a wall panel that reads the pressure at its own block and shows cycling
+while a controller it's linked to cycles, otherwise alert while that pressure is below 81 kPa or
+above 122 kPa, and otherwise standby, in the chamber or past an airlock alike.
+
+- **Rationale:** Decision: D-84, with its three states from the art notes
+  ([textures](../textures.md)). 81 and 122 kPa are the Human preset's pressure min2 and max2
+  (CONT-047), so it alerts where an area air controller would be at danger 2. It needs no
+  power.
+- **Verify:** A GameTest steps the pressure at a sensor through both bounds and checks its
+  state, and links it to a controller and checks it shows cycling during a cycle. Another
+  checks the sensors past each airlock show standby or alert at their own pressure, and that
+  all three show cycling during a cycle.
+
+*2026-11-07: The owner kept my defaults: the sensor shows only its light, with no window or
+readout, and needs no power. Its state is a block-state property, `status`, so a scene or a
+resource pack can show each one. Cycling shows over alert.*
+
+*2026-11-08: the owner, in the test world: the zones on both sides need sensors too, and
+pressing any sensor cycles the airlock (CONT-140). Each one's light works as the chamber's
+does.*
+
+#### CONT-152 · Vents under an airlock controller
+`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
+
+A vent linked to an airlock controller shall take its orders from that controller alone, and
+be off while the controller isn't cycling.
+
+- **Rationale:** Inferred: an area air controller covering the chamber would otherwise order
+  the same vent another way each atmos tick (CONT-041).
+- **Verify:** A GameTest sets an area air controller covering the chamber to Siphon and checks
+  the linked vent follows the airlock controller's cycle and is off between cycles.
+
+#### CONT-153 · Airlock controller window
+`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139
+
+An airlock controller's window shall show whether it's cycling, the pressure its chamber
+sensor reads, and the pressure the sensor past each door reads with a button that cycles toward
+it, or that a sensor is missing, and offer a button that stops a cycle, leaving both airlocks
+bolted and its vents off. It shall show its five slots (CONT-138), each filled, with its part's
+position, or empty, and which is armed, each with a button that arms it and one that clears it.
+
+- **Rationale:** Decision: D-76: machines get TGUI windows. The pressures are what a player
+  needs to choose a side, and stopping lets a player end a cycle that can't finish, such as
+  one whose vents have no gas to blow.
+- **Verify:** A GameTest presses each button through the menu and checks the server starts and
+  stops cycles and refuses a cycle toward a door that isn't set (CONT-074). Others arm and clear
+  each slot through the menu and check what it shows. Manual: the window is looked at in game.
+
+*2026-11-07: The owner chose a TGUI window, as the other machines have. It shows the state and
+a Stop button on one row, then the pressures beyond airlock 1, in the chamber and beyond
+airlock 2, with a bar for each airlock between them (bolted, open or closed) and its Cycle
+button under each side. A Cycle button works only while the controller is powered, idle and
+has both airlocks and its sensor.*
+
+*2026-11-08: the owner, in the test world: each side has its own sensor (CONT-138). Where one is
+missing, the window shows "No sensor" in red in place of that pressure, and greys out the Cycle
+buttons that need it. The notice it showed with no sensor is gone.*
+
+*The window shows the slots (owner, 2026-11-08), under the airlock, in the order Inner door,
+Outer door, Inner sensor, Outer sensor, Chamber sensor. Each row is the slot's button, lit green
+while armed; a dot, green filled, orange armed and grey empty; the position or a dash; and a red
+✕ that clears it. A guessed slot and a set one look the same. The sides are labelled Inner
+and Outer.*
 
 ## R1 / R2 split
 

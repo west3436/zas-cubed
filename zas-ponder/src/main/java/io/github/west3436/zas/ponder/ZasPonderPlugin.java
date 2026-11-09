@@ -1,17 +1,20 @@
 package io.github.west3436.zas.ponder;
 
 import io.github.west3436.zas.ponder.scene.Stage;
+import io.github.west3436.zas.ponder.scenes.AirlockScenes;
 import io.github.west3436.zas.ponder.scenes.AreaAirControllerScenes;
 import io.github.west3436.zas.ponder.scenes.CanisterScenes;
 import io.github.west3436.zas.ponder.scenes.CentralControllerScenes;
 import io.github.west3436.zas.ponder.scenes.ElectrolyzerScenes;
 import io.github.west3436.zas.ponder.scenes.FireScenes;
 import io.github.west3436.zas.ponder.scenes.HeaterScenes;
+import io.github.west3436.zas.ponder.scenes.HolderScenes;
 import io.github.west3436.zas.ponder.scenes.PipeScenes;
 import io.github.west3436.zas.ponder.scenes.PortScenes;
 import io.github.west3436.zas.ponder.scenes.PortableScenes;
 import io.github.west3436.zas.ponder.scenes.PowerScenes;
 import io.github.west3436.zas.ponder.scenes.PumpScenes;
+import io.github.west3436.zas.ponder.scenes.RadiatorScenes;
 import io.github.west3436.zas.ponder.scenes.SidePortScenes;
 import io.github.west3436.zas.ponder.scenes.ToolScenes;
 import io.github.west3436.zas.ponder.scenes.TransferValveScenes;
@@ -68,7 +71,16 @@ final class ZasPonderPlugin implements PonderPlugin {
             "fire_extinguisher",
             "tank_transfer_valve",
             "atmos_analyzer",
-            "wrench");
+            "wrench",
+            // Batch 5: the tank holder, radiators, heat exchangers and airlocks.
+            "tank_holder",
+            "radiator_pipe",
+            "radiator_adaptor",
+            "heat_exchanger",
+            "airlock",
+            "large_airlock",
+            "airlock_controller",
+            "air_sensor");
 
     @Override
     public String getModId() {
@@ -117,6 +129,19 @@ final class ZasPonderPlugin implements PonderPlugin {
                 .addStoryBoard(Stage.SMALL, TransferValveScenes::transferValve, TAG);
         helper.forComponents(atmos("atmos_analyzer")).addStoryBoard(Stage.MEDIUM, ToolScenes::analyzer, TAG);
         helper.forComponents(atmos("wrench")).addStoryBoard(Stage.MEDIUM, ToolScenes::wrench, TAG);
+
+        // Batch 5: the tank holder, radiators, heat exchangers and airlocks.
+        helper.forComponents(atmos("tank_holder")).addStoryBoard(Stage.MEDIUM, HolderScenes::tankHolder, TAG);
+        helper.forComponents(atmos("radiator_pipe"), atmos("radiator_adaptor"))
+                .addStoryBoard(Stage.MEDIUM, RadiatorScenes::radiator, TAG);
+        helper.forComponents(atmos("heat_exchanger")).addStoryBoard(Stage.MEDIUM, RadiatorScenes::exchanger, TAG);
+        helper.forComponents(atmos("airlock")).addStoryBoard(Stage.MEDIUM, AirlockScenes::airlock, TAG);
+        helper.forComponents(atmos("large_airlock")).addStoryBoard(Stage.MEDIUM, AirlockScenes::largeAirlock, TAG);
+        helper.forComponents(atmos("airlock_controller")).addStoryBoard(Stage.LARGE, AirlockScenes::controller, TAG);
+        helper.forComponents(atmos("air_sensor")).addStoryBoard(Stage.LARGE, AirlockScenes::sensor, TAG);
+        // A second scene for the firelock, and one for each airlock: a firelock fitted to a door.
+        helper.forComponents(atmos("firelock"), atmos("airlock"), atmos("large_airlock"))
+                .addStoryBoard(Stage.MEDIUM, AirlockScenes::firelocks, TAG);
     }
 
     /**

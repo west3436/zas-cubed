@@ -144,7 +144,12 @@ NFR-022.
   is a COMMON config option, default 1 thread (NFR-005 is set against one).
   Dimensions are independent, so with more threads they run in parallel.
 - *Implemented (#23):* `AtmosWorkers.create(n)` makes the pool;
-  `worker_threads` in `zas-common.toml` sets n.
+  `worker_threads` in `zas-common.toml` sets n. Its threads run at normal
+  priority, set explicitly: a thread otherwise takes the priority of the one
+  that starts it, the server thread, which Minecraft raises to 8. At the
+  server thread's priority, Windows often ran a worker woken for a tick on the
+  server thread's own processor and held the server thread off for the
+  tick's length, so a 10 ms tick could stall a batch close by 10 ms.
 - **Ownership is exclusive:**
 
 | State | Owner | Others get |
@@ -568,7 +573,11 @@ section, S-10's station needs about 1–2 MiB.
    a section the mirror lacks before anything seals it, a fill could only say
    open or unresolved, so the operation waits for the rest of the column.
 3. **The fill** runs on the mirror (GEO-022): the bounded fill (*spike (S3):*
-   5.5 ms at the cap). Possible outcomes:
+   5.5 ms at the cap). The bound is `[atmos] enclosure_max_cells` (GEO-020,
+   default 65,536), which each batch's settings carry: a new bound applies from
+   the next atmos tick, a higher one also forgets the cells found open (step 4)
+   and puts them in doubt, and zones that formed under another stay as they
+   are. Possible outcomes:
    - **Enclosed:** the zone is created in phase 3 and the buffered operations
      apply (GEO-028).
    - **Open:** the gas goes to the ambient and is reported (CORE-053).
@@ -949,6 +958,14 @@ restart the server, so they use `DimensionAtmos.simulateUnload`,
 `startForTest`, which run the same save code and byte format; the real chunk
 events run whenever the test server saves or unloads, and at its shutdown. The GameTest server starts from a
 fresh world each run, since saved zones would otherwise come back.
+
+*Implemented (S-10 follow-up):* an unloading chunk's record is built once.
+`AtmosPersistence`'s unload listener, at `HIGH` priority, has it built and
+encoded, and `DimensionPipeline.chunkUnloaded(chunk, record)` keeps its shares
+from that same record. A share of a zone whose other chunks have unloaded is
+what they left (DATA-008), so each unload asks the zone's volume in every one
+of them; `Membership.volumeIn` reads that from the sections' palettes, not
+their cell lists.
 
 *Implemented (#104):* the palette-change rebuild is `DimensionAtmos.rebuild`,
 using `DimensionPipeline.recordChunks` and `resubmit`. The records go through
@@ -2126,7 +2143,7 @@ sound, and nothing here runs for it.*
 |---|---|
 | `io.github.west3436.zas.api` | `ZasApi` (entry point, `isPresent()`, `install`), `ZasApiProvider` (the service interface `zas` installs), the package-private fallback, threading annotations `@AnyThread`, `@ServerThread` and `@LevelThread`, the `ServerThreads` check, and `ThirdPartyFaults`, the limit on logging another mod's faults (API-062) |
 | `.api.gas` | `GasMixture` (immutable record: moles per gas id, T, V, with derived P, partial pressures and composition), `GasParcel` (moles and T without a volume: what a mutation moves), `StandardAir` (ENV-011), `GasTag` (a gas tag's id) and `GasTags` (the shipped tags `OXIDIZER`, `FLAMMABLE` and `TOXIC`, and `gases(tag)` and `contains(tag, gas)`, any thread; CORE-012); later `GasType` (registry key, properties) |
-| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
+| `.api.atmosphere` | `Atmospheres` (queries: `at(level, Vec3)`, `at(level, BlockPos)`, `of(entity)`, `zone(level, id)`, `zoneAt`; settings: `periodTicks()`, `containerExplosionsBreakBlocks()`, `nearVacuumDensity()`; API-052, API-059, API-064), `AtmosphereSample` (state: ZONED, AMBIENT, PAUSED, UNRESOLVED; zone id; mixture, with composition, pressures and T), `ZoneId`, `ZoneInfo`, `EdgeSummary` |
 | `.api.mutation` | `GasMutations` (`add`, `remove` with a `SourceId`), `MutationResult` (gas moved, outcome: ZONE, AMBIENT, PAUSED, ABSENT), `HeatMutations` (`add`, `remove` in joules; API-013), `HeatResult` (outcome, joules moved, temperature after), `ZonePins` (`pin(level, point, owner)`, `unpin(level, owner)`; API-017, API-050), `PinResult` (outcome: ZONE with the zone, OPEN, UNRESOLVED, ABSENT), `BlockGeometry` (`markDirty(level, pos)`; GEO-014), `CompletableFuture`-based returns |
 | `.api.capability` | `IGasHandler` (block, sided; built, with its `BLOCK` capability: `contents`, and `fill` and `drain` that simulate or execute), `ILifeSupport` (item and entity; built, with its `ITEM` and `ENTITY` capabilities: pressure and temperature ranges, sealed breathing, gas filtering and airflow resistance, each with a default that gives nothing), `ISealProvider` (block; built, with its `BLOCK` capability and the `SealGeometry` it answers with: sealed faces, zone-boundary faces and volume; API-023, API-028), and their `BlockCapability`/`ItemCapability` constants |
 | `.api.environment` | `AmbientProviders` (`register`, `unregister`, `registered`; the registry stays in the API jar, so a provider registers with or without `zas`; ENV-004, ENV-019), `AmbientProvider`, `AmbientDefinition` (partial pressures and a temperature) |
@@ -2172,7 +2189,9 @@ sound, and nothing here runs for it.*
   `gasesInTag` to standard air's grouping (oxygen in `#zas:oxidizer`), and
   `pin` and `unpin` to the fallback's answers (nothing pinned, `ABSENT`),
   `oxygenMinimum` to 16 kPa, `molarHeatCapacity` to the shipped values for
-  N₂ and O₂ and nothing for other gases, and `atmosPeriodTicks` to 20.
+  N₂ and O₂ and nothing for other gases, `atmosPeriodTicks` to 20,
+  `containerExplosionsBreakBlocks` to false, and `nearVacuumDensity` to 1 % of
+  standard air's.
 - **The client's sound service is separate.** `ClientSounds` holds a
   `ClientSoundProvider` that only the physical client installs, from `ZasClient`.
   A dedicated server, like a game without `zas`, keeps the defaults: every
@@ -2361,7 +2380,9 @@ All mixins are injection-only, with no `@Overwrite` (NFR-021). Each class's
 javadoc names its purpose and requirement, and each has a row here (NFR-024):
 **a new mixin adds both, with the same requirements**. They are declared in
 `zas.mixins.json` through `[[mixins]]` in `neoforge.mods.toml`, the only mixin
-config in the repository. All of them are common: none is client-only. Behaviour
+config of a shipped mod. The in-game S-10 bench's dev-only mod has its own,
+`zas_s10.mixins.json`, for B1 to B3 below, which only time code and never ship
+(§8). All of them are common: none is client-only. Behaviour
 toggles are checked at runtime inside the injection, not by skipping mixins,
 because STARTUP config is too late for block classes.
 
@@ -2373,6 +2394,9 @@ because STARTUP config is too late for block classes.
 | M4 | NeoForge's `FireBlock#checkBurnOut(Level, BlockPos, int, RandomSource, int, Direction)` | `@WrapMethod` (`FireBlockMixin`) | A fire doesn't burn away a neighbouring block whose own cell fails the threshold. `canCatchFire` isn't hooked: a fire spreading into a cell without O₂ goes out on its first tick | FIRE-020, FIRE-030 | applied; no GameTest of its own |
 | M5 | `AbstractFurnaceBlockEntity#serverTick` (static), with `@Shadow` of `litTime` and `items` | `@Inject` HEAD, cancellable (`AbstractFurnaceBlockEntityMixin`) | Furnaces pause without O₂; their O₂ use is the burning service's | FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
 | M6 | `CampfireBlockEntity#cookTick` | `@Inject` HEAD, cancellable (`CampfireBlockEntityMixin`) | Campfires go out (`dowse`) without O₂. `CampfireBlock#canLight` has no position, so it isn't hooked; a campfire lit without O₂ goes out on its next tick | FIRE-020, FIRE-027, FIRE-030 | GameTests (`fire_027_`) |
+| B1 | `LevelChunk$BoundTickingBlockEntity#tick`, its call to `BlockEntityTicker#tick` | `@WrapOperation` (`BlockEntityTickMixin`, S-10 bench only) | Times the mods' block entity tickers, such as the generator's and the fire alarm's | NFR-001 | The S-10 bench's report |
+| B2 | `ChangeTracker#onBlockWrite` (M1's handler) | `@WrapMethod` (`ChangeTrackerMixin`, S-10 bench only) | Times the change hook, whatever wrote the block | NFR-001 | The S-10 bench's report |
+| B3 | `DeviceSchedule#tick`, its call to `DeviceSchedule.Member#step` | `@WrapOperation` (`DeviceStepMixin`, S-10 bench only) | Times each device's step by device type, out of the device ticker's listener that runs it | NFR-001 | The S-10 bench's report |
 
 Not mixins:
 
@@ -2402,6 +2426,7 @@ built in [#43](https://github.com/west3436/zas-cubed/issues/43).
 |---|---|---|
 | Engine | JUnit 5 in `engine` (no Minecraft) | Gas math, zone graph, split and merge, exchange, ledger, fuzz (NFR-010), and the CORE-071 equivalence harness, which runs the same batches inline and threaded and compares hashes |
 | Engine benchmarks | A scripted harness in `engine`'s `bench` source set (`./gradlew :engine:bench`) | The headless S-10 scenario and the R0 Bench checks ([results](research/benchmarks.md)); NFR-034's CI check (`./gradlew :engine:benchCheck`) runs a recorded commit's engine beside this one, with a 10 % tolerance |
+| In-game S-10 bench | `s10-bench`, a dev-only mod and dedicated-server run (`./gradlew :s10-bench:s10Bench`), never in a jar | S-10 with both mods in a real server: server-thread time by part (NFR-001, NFR-002), worker ticks (NFR-005), heap (NFR-004), bytes sent to each player (DATA-006, DATA-014, DATA-015) and spike #80's prefetch survey ([how](research/benchmarks.md#the-in-game-s-10-bench)) |
 | Platform | GameTest server (MDG `gameTestServer`) | Geometry derivation, the change hook, persistence, scenarios S-01 to S-13 (NFR-032), and the dedicated-server boot (NFR-023). On a PR each mod runs its own on its own server. `zas`'s also run with `zas_atmos` loaded: nightly on CI, and in a plain local `runGameTestServer` |
 | Packaging | GameTest servers | `zas` plus example addon as built jars, sharing one nested API (API-007, `:example-addon:runOneCopyGameTestServer`), and the example addon alone, from source (API-048). The built Ponder addon, with the Ponder and Flywheel it nests, beside `zas` and `zas_atmos` (CLIENT-025, `:zas-ponder:runServerCheckGameTestServer`) |
 
@@ -2456,27 +2481,30 @@ content mod and never joins zone gas except through a device (CONT-002).
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
 | `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, `zas_atmos:tank_low` and `zas_atmos:leaking`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
 | `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
-| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
+| `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `LoadedBlocks`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); the powered parts by zone, for the area air controllers (`ZoneIndex`, §11.6); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
 | `pipe` | Pipes, caps and pipe networks (§11.4) |
 | `port`, `canister`, `vent`, `heater` | The connector port, canister, vent and heater, with their menus (§11.5) |
 | `scrubber` | The scrubber, with its menu (§11.5), and what any device that scrubs shares: what it takes from the air (`ScrubberMath`) and the gases it selects (`GasSelection`) |
-| `firelock` | The firelock and its lockdown (§11.8) |
+| `firelock` | The firelock and its lockdown (§11.8), the work it shares with a firelock on an airlock or a door (`FirelockLogic`), the firelock item, and the door with a firelock (§11.18) |
+| `airlock` | The airlocks, the airlock controller with its menu, the air sensor, and the rules of a cycle (`AirlockCycle`, `SensorStatus`), which hold no game classes (§11.18) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
-| `gear` | The breathing gear (§11.9): `GasTankItem`, `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
+| `tool` | The multitool (§11.6, §11.18), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
+| `gear` | The breathing gear (§11.9): `GasTankItem`, `TankKind` (a tank's kind, which tints it on a TTV and a tank holder), `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
 | `igniter` | The igniter (§11.5) |
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
+| `holder` | The tank holder (§11.9): `TankHolderBlock` and `TankHolderBlockEntity` |
 | `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
 | `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
+| `radiator` | Radiator pipe, the radiator adaptor and the heat exchanger (§11.17): their blocks and block entities, `RadiatorExchange` (a network's radiator pipe each atmos tick), `RadiatorMath` and `HeatExchangerTint`, which hold no game classes |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2) and `FireAlarmSounds` (§11.13) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.18) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -2492,18 +2520,61 @@ jar, so providers can be tested before real devices exist.
   leaves in `setRemoved` and `onChunkUnloaded`, so a device in an unloaded
   chunk never steps. Its `atmosTick(ServerLevel)` runs one atmos tick of work
   on the server thread.
-- **Chunks out of full status.** Ticket levels fall by one per chunk, so a
-  chunk next to a loaded one never unloads. It drops out of full status, and
-  its block entities stay in memory, still scheduled. A device steps only
-  while its chunk is loaded in full (`ServerLevel.isLoaded`). Otherwise a
-  step that read the device's own block, as a pipe rebuilding its network
-  does, would load the chunk again. A pipe network ends the next time a member
-  uses it, and is rebuilt without that chunk's nodes, which keep their shares
-  (§11.4). They rejoin when it returns and they step (`PipeChunkTests`). The
-  game tells nobody when such a chunk returns, so two sides can both hold valid
+- **Chunks that don't tick.** A device steps only while its chunk ticks
+  block entities, as vanilla decides for its own (`LoadedBlocks.ticking`): in
+  block-ticking range of a player or of a ticking ticket, such as a central
+  controller's (§11.7), at block-ticking status. Vanilla also waits for the
+  chunk's entities to load, which has nothing to do with devices, and a device
+  doesn't. The schedule passes over one that doesn't (`DeviceSchedule.Member.ticking`): it
+  keeps its state and its place in the period, and steps at its first due tick
+  after its chunk ticks again. A chunk next to a ticking one is always loaded
+  in full, at the edge of what is loaded, but doesn't tick, and a device there
+  waits. Ticket levels fall by one per chunk, so a chunk next to a loaded one
+  never unloads: it drops out of full status, and its block entities stay in
+  memory, still scheduled, and wait too. `AtmosDevice.step` itself still runs
+  only while the chunk is loaded in full (`ServerLevel.isLoaded`), for what
+  steps a device directly: GameTests (`DeviceTicker.stepNow`) and a fire
+  alarm closing firelocks (§11.8). Whatever needs to know whether a device is
+  working, rather than whether its block can be read, asks
+  `AtmosDevice.stepping()`, which answers as the schedule's gate does: a central
+  controller's contact with an area air controller (§11.7) and the remote GUI
+  it opens. `ServerLevel.isLoaded` only says a block can be read.
+
+  *2026-11-07: rewritten (S-10). This said a device steps while its chunk is
+  loaded in full. The S-10 bench found that kept chunks at the edge loaded
+  after every player had gone: a read through the level (`getBlockState`,
+  `getBlockEntity`, `getCapability`) asks the chunk source for the chunk, and on
+  the server thread that adds a ticket whenever the read misses its four-chunk
+  cache. Each step at the edge ticketed its own chunk and its neighbours again,
+  and a wing with a device due in every game tick never unloaded. Stepping only
+  where vanilla ticks block entities removes that by design: a ticking chunk is
+  held by a player or a ticking ticket anyway, and its neighbours are loaded in
+  full. Reads that can reach further go through `LoadedBlocks`, which reads only
+  a chunk the game already holds in full and adds no ticket: a pipe's or
+  device's neighbours (`PipeHost.across`, `GasHandlers`), the FE sources beside
+  a controller, an area air controller's links and a central controller's
+  claims, which can be in any chunk. The GameTest
+  `cont_006_a_chunk_at_the_edge_unloads_with_its_devices` checks a chunk at the
+  edge, with 35 nodes and a vent, unloads with its neighbour, and the S-10
+  bench still reports any ticket on its wing's chunks while its player is
+  away.*
+- **Waiting loses nothing.** Nothing reads a wait as a change. A powered part
+  whose last provider is loaded and waiting waits too, as the provider powers
+  nothing while it waits; a part that waits holds its lease (`DevicePower.hold`,
+  §11.3), so it resumes powered, and a wait is never a power cut. A part at the
+  edge whose provider ticks is paid each atmos tick as before, and resumes with
+  its lease. A pipe network across a ticking chunk and one at the edge stays
+  one network, whose ticking members run its atmos tick (§11.4): it ends only
+  when a chunk it spans leaves full status. Then it ends the next time a member
+  uses it, and is rebuilt without that chunk's nodes, which keep their shares.
+  They rejoin when the chunk returns and they step (`PipeChunkTests`). The game
+  tells nobody when such a chunk returns, so two sides can both hold valid
   networks: each built its own while the other's chunk was away. A node on a
   chunk's edge, and any port, checks at each step that the nodes connected to it
   share its network, and rebuilds if not (`PipeNode.apart`, `PipeGapChunkTests`).
+  Those tests step the near side's devices directly while the far chunk is away,
+  standing for a member further along in a ticking chunk, since a chunk next to
+  a ticking one is never away.
 - **The cadence.** `DeviceTicker` runs each level's `DeviceSchedule` at the
   end of every server tick (`ServerTickEvent.Post`), after the framework's own
   tick, whose listener `zas` registers first. Each device steps once every
@@ -2526,9 +2597,10 @@ jar, so providers can be tested before real devices exist.
   (`ZonePort.untaken`).
 - **Order.** Devices due in the same game tick step in the order they became
   due, then the order they joined. Removal during a step is safe.
-- **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once, for
-  GameTests that drive atmos ticks themselves with the framework's
-  `tickNow`.
+- **Tests.** `DeviceTicker.stepNow(level)` steps every ready device once,
+  whether its chunk ticks or not, for GameTests that drive atmos ticks
+  themselves with the framework's `tickNow`. A GameTest that waits in real time
+  for devices to step holds their chunks at a ticking level.
 - **Activity** (DATA-017, DATA-018; Draft until the owner's review). A device that
   moves gas calls `reportMoved(moles)` in its step, and `reportStopped()` when it
   is off, or for an open end or passive vent when its flow is too small to show.
@@ -2572,7 +2644,7 @@ the cell in front of its grille).
 |---|---|---|
 | Device | `new DevicePower(priority, drawSupplier, this::now)` | Its priority group (`PowerPriority`: `LIFE_SUPPORT`, `GAS_HANDLING`, `AUXILIARY`, CONT-064) and what it draws now, in FE/t, 0 while it is off (CONT-065) |
 | Device | `power.isPowered()` | Checked at the start of each `atmosTick`; unpowered, the device does nothing (CONT-060) |
-| Provider | `DeviceTicker.loaded(level)`, then `instanceof PoweredDevice` and `Atmospheres.at(level, d.airPoint()).zone()` | Finds the parts it covers |
+| Provider | `ZoneIndex.covered(level, zone, links)` | Finds the parts it covers: the loaded `PoweredDevice`s whose air point is in its zone, and those at its links (§11.6) |
 | Provider | `power.drawPerAtmosTick()`, then `power.supply(this)` | Pays draw × 20 FE from its own store for one atmos tick, then powers the device for `DevicePower.LEASE_TICKS` (40) game ticks |
 | Provider | `power.suppliedThisAtmosTick()` | True if another provider (or this one, through a link) already paid this atmos tick |
 | Device | `power.paidFor()` | True while a lease supplied at a draw above 0 lasts, or under test power. A device whose draw rises mid-lease, such as a recharger given a battery, does work only on paid-for power |
@@ -2583,6 +2655,12 @@ the cell in front of its grille).
   removed or no longer covers it, the lease runs out and the device stops.
   Nothing has to switch it off, and nothing is saved: after a reload a device
   has no power until its provider steps.
+- **Waiting keeps power.** A part that the schedule passes over, because its
+  chunk doesn't tick or its provider's doesn't (§11.2), calls `power.hold()`.
+  While its lease lasts, that keeps it until two atmos ticks after the last
+  hold, so it resumes powered, however long it waited. A hold never starts a
+  lease, and `suppliedThisAtmosTick` ignores it, so a provider pays a part that
+  has resumed as usual.
 - **No provider, no power** (CONT-069). Devices expose no FE capability, so
   an FE source beside one does nothing.
 - **Test power.** `power.setTestPowered(true)` powers a device with no
@@ -2694,7 +2772,7 @@ the cell in front of its grille).
 - **Reactions** (CONT-100). A network has no step of its own, so the first
   member to step runs its atmos tick for all of them, and the next one starts
   when a member steps again (`PipeNetwork.startsAtmosTick`). A member that
-  isn't stepping, because its chunk has left full status, holds nothing up. It
+  isn't stepping, because its chunk doesn't tick (§11.2), holds nothing up. It
   runs in `PipeNodeEntity.beforeAtmosTick`, which comes before the node's own
   `atmosTick`, so every kind of node takes part without doing anything, and a
   device's step sees the pressure the reaction left. An inline device does the
@@ -2890,7 +2968,8 @@ the cell in front of its grille).
     every node's network dissolves at load anyway.
   - While a side's chunk is away (out of full status, with its nodes in memory),
     an opened valve can't dissolve that side's network. When the chunk returns,
-    the two rejoin at the next step of either node at the border (§11.2,
+    the two rejoin at the next step of either node at the border, once its chunk
+    ticks (§11.2,
     `cont_075_a_valve_opened_while_its_far_side_is_away_joins_it`). Turning
     a valve updates no neighbour's shape, since its flanges and shape are the same
     open or shut. That update's read of the next block would bring such a chunk
@@ -3195,7 +3274,16 @@ tick, in order:
    target.
 7. **Powers and commands its parts.** It covers every loaded `PoweredDevice`
    whose air point is in its zone, and every part linked to it with the
-   multitool (CONT-042). It gives each `VentControl` the mode's `VentOrder`
+   multitool (CONT-042). It finds them in `ZoneIndex`, which keeps each loaded
+   part's zone by level and asks again only when it may have changed: when the
+   part joins the schedule, is turned or steps; for the parts in each zone a
+   lifecycle event names (API-030), and those in none, after that event; for
+   the parts in a zone and those in none, when a controller finds that zone's
+   cell count changed, as when it grows into a room or loses a cell, which
+   fire no event; and at each lookup,
+   for a part whose air read as unresolved while its chunk is loaded in full.
+   Asking every loaded part's zone at every controller's step was most of the
+   S-10 bench's device time (2026-11-07). It gives each `VentControl` the mode's `VentOrder`
    and each `ScrubberControl` the mode's `ScrubberOrder`, with its own position
    as the order's `sender`, then powers them (§11.7), every tick. Orders come
    first because a part's draw follows its order.
@@ -3390,9 +3478,10 @@ air controllers, not parts. Each atmos tick it:
 4. Records each claimed controller's readings (pressure, temperature, danger, power) for its
    GUI (CONT-123), and sets its `screen`.
 
-An area air controller is in contact while its chunk is loaded in full and its block entity is
-in the schedule. One that isn't keeps its claim, gets nothing, and is listed with its last
-readings.
+An area air controller is in contact while its block entity is in the schedule and stepping
+(`AtmosDevice.stepping`, §11.2): its chunk ticks block entities. One that isn't, unloaded or
+waiting in a chunk loaded in full that doesn't tick, keeps its claim, gets nothing, and is
+listed with its last readings.
 
 - **Claims** (`CentralClaims`) are one `SavedData` per level, `data/zas_atmos_central_claims.dat`,
   keyed by the area air controller: its central controller, its zone priority (`ZonePriority`),
@@ -3407,7 +3496,8 @@ readings.
 - **GUI** (`CentralMenu`, `CentralSync`). The menu has no slots. Twice a second the server sends
   its status, buffer, range and maximum, and a row per claimed controller: position, readings,
   priority and whether it is in contact. Buttons `0` and `1` lower and raise the range; `1000 +
-  row` opens that row's area air controller's own menu (§11.6) if it is loaded (CONT-124);
+  row` opens that row's area air controller's own menu (§11.6) if it is in contact (CONT-124),
+  and that menu closes when it goes out of contact;
   `100000 + row × 3 + p` sets its priority. A row's button names its place in the list the server
   last sent that player, so it can only reach a controller this one has claimed. The screen is
   `client.CentralScreen`, on the TGUI kit: status, power and range above a scrolling list, each
@@ -3425,8 +3515,8 @@ readings.
 ### 11.8 Firelocks
 
 *Implemented ([#50](https://github.com/west3436/zas-cubed/issues/50)), in
-`.firelock`: the standalone firelock only. A firelock over a door or an
-airlock is not built.*
+`.firelock`. A firelock fitted to an airlock or a vanilla door does the same
+work through `FirelockLogic` (§11.18).*
 
 - **The block** (`FirelockBlock`, CONT-043). One block wide and two high,
   placed and broken as a door is: the item places both halves, either half
@@ -3508,7 +3598,7 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   | In a suit's tank slot, worn or carried | The suit's `inventoryTick`, which works on a copy of the tank and writes it back if it changed |
   | Dropped, alone or in a suit | `onEntityItemUpdate`, NeoForge's per-tick call for a dropped item |
   | In a tank transfer valve | The valve, as a suit does; its primed entity in its own tick (CONT-103) |
-  | In a chest, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
+  | In a chest or a tank holder, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
 
   A mined canister's item (`CanisterItem`) reacts in the same places, with its
   1,000 L. Reaching a chest would mean scanning every container each second,
@@ -3562,6 +3652,18 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
     it is a vanilla `BLOCK` explosion, which follows the
     `blockExplosionDropDecay` game rule; if not, `NONE`, which keeps every block
     and still hurts entities.
+- **Tank holder** (CONT-149 to CONT-151, D-84), in `.holder`. A full block
+  whose `TankHolderBlockEntity` keeps ten places in an `ItemStackHandler` that
+  takes one tank each and nothing else, saved as a chest's. Using a tank on it
+  puts the tank in the first free place, and an empty hand takes out the last
+  one put in, so the tanks always fill the first places; a save or a command
+  that leaves a gap is closed up when read. There is no window, item handler or
+  comparator output, and nothing ticks the tanks there (the table above). The
+  block state's `tanks`, 0 to 10, picks the model for that count. Each tank's
+  faces carry their own tint index, 1 to 10. Clients are sent only each tank's
+  `TankKind`, in the update tag, and the colour handler reads it from the block
+  entity. A block whose count is wrong after a load settles at its next block
+  tick. Broken, it drops its tanks.
 
 ### 11.10 The fire extinguisher (CONT-037)
 
@@ -3944,3 +4046,213 @@ no valve; the stack has already checked that the player may build there.
   server doesn't know the player's units.
 - **Sound.** `device.wrench.use`, vg's ratchet, plays as it turns or removes a
   part, with the block's own breaking sound on a removal.
+
+### 11.17 Radiators and heat exchangers (CONT-143 to CONT-148, HEAT-020 to HEAT-022)
+
+The `radiator` package. All three blocks are pipe-network nodes (§11.4), so they share,
+save and release gas as pipes do. They are the only ways heat leaves or enters a
+network other than with gas.
+
+- **Radiator pipe** (`RadiatorPipeBlock`, `RadiatorPipeBlockEntity`) is a 70 L segment
+  with pipe's six `CONNECTIONS` properties. Its `pipeConnects` takes only radiator pipe
+  and an adaptor, and both sides must agree (`PipeConnector.connected`), so it never
+  joins pipe, a device, or, since a gas handler's face needs `pipeConnects` too, a gas
+  handler (CONT-143). Its arms come from `updateShape`, so `Block.updateFromNeighbourShapes`
+  joins it as placement does. It has no open end, so a free end keeps its gas (CONT-144).
+  It is a segment, so it bursts as pipe does (CONT-146). Its blockstate picks the straight
+  model when it joins just one axis's two faces, and otherwise the joint with an arm to
+  each face it joins.
+- **The radiator adaptor** (`RadiatorAdaptorBlock`) is one 70 L segment with a `facing`:
+  its radiator end. That end takes only radiator pipe, and the opposite, pipe end anything
+  but radiator pipe, as a pipe's end would (CONT-145). Placed against radiator pipe its
+  radiator end faces it, and otherwise its pipe end faces the block clicked.
+- **The heat exchanger** (`HeatExchangerBlock`) is a 200 L node, not a segment, with a
+  `facing`, the way its box faces, and its pipe only on the opposite face (CONT-147). It
+  needs no power. Placed against another's box it faces back, which makes a pair;
+  otherwise its pipe faces the block clicked. The wrench turns an adaptor or an
+  exchanger as it does any part with a `facing` (§11.16).
+
+**A network's radiator pipe** (`RadiatorExchange`) runs in the network's own atmos tick,
+after its reaction (`PipeNodeEntity.atmosTurn`). `PipeNetwork.radiators()` lists the
+members that radiate, so a network without radiator pipe pays one empty-list check.
+Each segment reads its cell through the API, through its `CellWatch` (§11.5), and
+couples the network to what is there:
+
+- **Gas at least as dense as the near-vacuum line**, `Atmospheres.nearVacuumDensity()`
+  (HEAT-008, API-064), read each tick: the configured 20 W/K × the step, in series with
+  the cell's share of the zone's or the open air's heat capacity by volume, so it never
+  takes more than the cell can (HEAT-020).
+- **The open air thinner than that, or a vacuum's**: radiation to the ambient's
+  temperature, εσA(T² + T_bg²)(T + T_bg) × the step, so that coupling × (T − T_bg) is
+  εσA(T⁴ − T_bg⁴) (HEAT-021).
+- **A zone thinner than the line, a paused zone or an unresolved cell**: nothing.
+
+The network's new temperature is the backward (implicit) step over all of them at once,
+T' = (C·T + Σ aᵢTᵢ) / (C + Σ aᵢ). That lies between the network's temperature and the
+bodies', so no step overshoots, however thin the gas or long the period. Each body gains
+aᵢ(T' − Tᵢ), and together they gain what the network loses. Where both capacities are
+large next to 20 J/K, that is 20 W/K × ΔT; a small network moves less in a step than an
+explicit step would. The heat goes through API-013 (CONT-095): one heat mutation per zone
+per tick, summed over its segments, and one per open-air segment, of 1 J or more, so a
+sealed room with no zone yet forms one (CORE-055); the ambient takes it unchanged
+(HEAT-010). Radiation leaves the world, so it sends nothing. A draw from a zone is taken
+at once, and what the zone doesn't deliver, at its temperature floor, goes back out of
+the network when the result comes. Only heat moves, so the conservation ledger, which
+counts moles, has nothing to explain (CORE-073).
+
+**A pair** (HEAT-022) is two exchangers facing each other from neighbouring blocks. The
+one facing south, east or up leads, so each pair runs once per tick. In its own step it
+moves ΔT × C₁C₂ / (C₁ + C₂) between the two networks directly, Cᵢ being each exchanger's
+share of its network's heat capacity by volume. Nothing goes through the API, as no zone
+is involved. Two on one network move nothing.
+
+**The tint** (CONT-148). The exchanger's block state has `heat`, 0 to 30: six bands
+between each pair of the six colour stops (`HeatExchangerTint`). The block entity sets it
+from its network's temperature each step, with `UPDATE_CLIENTS | UPDATE_KNOWN_SHAPE`, which
+changes neither its shape nor its zone geometry, and only when the band changes. An
+exchanger with no gas shows copper. The client's block colour handler tints tint index 0,
+the coil and the pipe, by the band, and its item by copper. A Ponder scene sets `heat` in
+the block state.
+
+**Cost.** Measured on 2026-11-07, on a GameTest server on the development machine, with
+a hot network of 512 segments in a 32 × 16 grid:
+
+| Where | `RadiatorExchange.step` | Its mutations, applied |
+|---|---|---|
+| In one sealed room | 215 µs a tick, 0.42 µs a segment | One heat mutation |
+| In the open air | 245 µs a tick, 0.48 µs a segment | 512 heat mutations: the framework's tick took about 380 µs longer |
+
+That is once per atmos tick. Most of a segment's cost is its `Atmospheres.at` read. A run in
+the open air sends nothing once it is within about 1 J a segment of the ambient.
+
+### 11.18 Airlocks (CONT-133 to CONT-142)
+
+In `.airlock`, with the firelock on a door in `.firelock`. Nothing is added to
+the API. Every visible state is a block-state property, so a resource pack, or
+a Ponder scene that ticks no block entity, can show each one; none needs a
+block-entity renderer.
+
+- **The airlocks** (`AirlockBlock`, CONT-133; `LargeAirlockBlock`, CONT-134).
+  The airlock is one block wide and two high, the large airlock two by two, and
+  both are in `#zas:zone_boundary`. Their properties are `facing` (the way the
+  passage runs), `half`, `open`, `bolted`, `powered` and `firelock` (`none`,
+  `open`, `closed`, `locked`), and the large airlock's `side` (`left`,
+  `right`). The lower (left) block is the origin, which holds the block entity
+  and the state; changing it changes the rest through `updateShape`. The item
+  places the origin and the rest grow up and to the placer's right, only if
+  every space is free and the lower row stands on sturdy blocks. Breaking any
+  block takes the rest, and only the origin drops the item, with a firelock if
+  one is fitted (loot tables). The geometry is the firelock's (§11.8): closed,
+  the collision leaf fills the passage from the face it looks to, which is its
+  boundary in both states, so its cells join the room behind it and a toggle
+  never splits a zone.
+- **Opening** (CONT-135). Use opens or closes it unless it's bolted, and a
+  redstone signal at any of its blocks opens it and holds it open. Opening
+  schedules a block tick `AUTO_CLOSE_TICKS` (100) later, and a signal ending
+  schedules one again; the block entity keeps the time as `CloseAt`. The tick
+  closes it unless it's still powered or anything but a spectator stands in its
+  passage, when it tries again `DOORWAY_WAIT_TICKS` (20) later. It needs no FE.
+- **Bolts** (CONT-136). `bolted` is set only by an airlock controller, which
+  closes the airlock first. A bolted airlock ignores the hand, the crowbar and
+  redstone. Using one that a controller links asks it to cycle toward that
+  airlock (CONT-140); if it can't, the airlock buzzes (`device.airlock.denied`)
+  and the action bar says it's bolted.
+- **Firelocks** (CONT-137, `FirelockLogic`). The standalone firelock's work
+  (§11.8) is now `FirelockLogic`, shared through `FirelockLogic.Holder` by the
+  firelock, the airlock's block entity and the door with a firelock. Each gives
+  it a `Door`: the cells in front and behind, how to open, close and lock it
+  down, and where a controller links it. The firelock item (`FirelockItem`)
+  acts in `onItemUseFirst`, so it fits before a door would open, sneaking or
+  not. The crowbar forces any of the three, and the multitool links any of them
+  to an area air controller.
+  - **On an airlock** the firelock is the `firelock` property on every block of
+    the airlock. Closing it closes the airlock; while it's shut the airlock
+    doesn't open, and it stays closed when the firelock reopens. The model is a
+    multipart, with the firelock's airlock-sized overlay over the airlock.
+  - **On a vanilla door** the firelock replaces the door with
+    `zas_atmos:firelock_door` (`FirelockDoorBlock`, a `DoorBlock`), keeping its
+    facing, hinge, half and open. Its own state is `firelock` (`open`,
+    `closed`, `locked`). The door it wraps is block-entity data, `Door` (a
+    block id), synced to the client, and an iron door if it's missing. A
+    wrapping baked model (`client.FirelockDoorModel`, from
+    `ModelEvent.ModifyBakingResult`) draws that door's model for the same state
+    through `ModelData`, with the `firelock_door_*` overlay on top, so it needs
+    no block-entity renderer. A renderer that brings no model data, as Ponder's
+    doesn't, gets the door from the block entity through the model's
+    `getModelData`; with no door known yet, it draws an iron door. Its shapes
+    and geometry are the vanilla door's.
+    It opens as the door it wraps did: an iron door only by redstone. Broken,
+    it drops the door and the firelock, and pick-block gives the door.
+- **The controller** (`AirlockControllerBlock`, `AirlockControllerBlockEntity`,
+  CONT-138 to CONT-140). A wall panel with `facing` and `cycling`. It has five
+  slots (`Slot`), in the window's order: the inner and outer doors, which take
+  airlocks by their origin, and the inner, outer and chamber sensors, which take
+  air sensors. The multitool fills them, and links any number of vents besides
+  (`MultitoolItem`, `toggleLink`). Each atmos tick it empties a slot whose
+  block is no longer its kind.
+  - **Arming.** The window's button for a slot arms it, kept on the controller
+    so the window can close. The next airlock or sensor linked fills it and
+    disarms it; the other kind is refused with a buzz, and the slot stays
+    armed. A part in another slot moves to it, swapping with what was there, so
+    a part is in one slot only; a part not linked replaces what was there.
+    Vents link past an armed slot. The window's clear button empties a slot.
+    Emptying a door unbolts its airlock and stops a cycle; emptying or moving
+    anything a cycle reads stops it.
+  - **The guess.** With no slot armed, a part already in a slot is unlinked,
+    and any other goes to the slot guessed for it at the link, or else to the
+    first empty slot of its kind. The guess reads the cells in front of and
+    behind each door, and the sensor's own cell, as keys: a zone's id, open (the
+    dimension's ambient, open air or a vacuum) or unknown. A door's chamber side
+    is its zone side if the other is open, or the zone it shares with the other
+    door (`AirlockCycle.chamberSide`). A door whose far side is open is the
+    outer door, one whose other door's far side is open is the inner, and
+    otherwise the one onto the lower pressure, by more than 5.07 kPa, is the
+    outer (`doorGuess`). A sensor in a chamber side's zone is the chamber
+    sensor, and one in a door's far side is that side's (`sensorGuess`). Where
+    the guess fits no slot or several, there is none. A guessed slot filled as
+    the first empty slot, with no guess, makes way: what's in it moves to the
+    first empty slot of its kind. One the player set or the guess filled is
+    never changed, and later zone changes move nothing.
+  - **A cycle** needs both doors, the chamber sensor and the sensor past the
+    door it's heading for. It closes and bolts both airlocks, then each step
+    siphons or blows (`AirlockCycle.next`) from the chamber's reading toward
+    that side's, and once within 5.07 kPa of it unbolts and opens that
+    airlock. Losing a part it needs stops it.
+  - **A press** of a sensor in a slot (`AirSensorBlock.useWithoutItem`,
+    `pressSensor`) cycles toward the door opposite the side the airlock is
+    accessing: the side whose airlock alone is unbolted, or else the door
+    opened last, which `AirlockBlock.setOpen` reports through `opened`. With
+    neither, it cycles away from the pressed sensor's side, or toward the inner
+    door from the chamber sensor (`AirlockCycle.pressTarget`). A refused press
+    buzzes.
+  - **Saved:** each slot (`Airlock0` and `Airlock1` for the doors,
+    `InnerSensor`, `OuterSensor`, `ChamberSensor`), which slots the player or
+    the guess filled (`Sure`), the armed slot, the vents, the cycle, the door
+    opened last and its power lease. An older save's one `Sensor` loads as the
+    chamber sensor.
+- **Its power** (CONT-141). It is a `PoweredDevice` part of an area air
+  controller, at `LIFE_SUPPORT` priority, drawing `[power] airlock_controller`
+  (1 FE/t) plus what its loaded vents draw. While powered it supplies its vents
+  each step, as a controller does its parts (§11.7). Unpowered, a cycle waits
+  where it is.
+- **Its vents** (CONT-152). Each step it sends every linked vent
+  `VentBlockEntity.airlockOrder`, off while idle. For `LEASE_TICKS` after one,
+  the vent ignores area air controllers' `ventOrder`s. The vents siphon into
+  and blow from their own pipe network.
+- **The air sensor** (`AirSensorBlock`, `AirSensorBlockEntity`, CONT-142). A
+  wall panel with `facing` and `status` (`standby`, `cycling`, `alert`), set
+  from `SensorStatus.of`: cycling while a controller has marked it within
+  `LEASE_TICKS`, otherwise alert outside 81 to 122 kPa at its own block. A
+  cycling controller marks the sensors in its slots. It needs no FE.
+- **The window** (`AirlockControllerMenu`, `client.AirlockControllerScreen`,
+  CONT-138, CONT-153). A TGUI window (D-76) synced by data slots: whether it's
+  cycling and its step, power, which slots are filled and with what (each
+  position as four shorts), the armed slot, the pressure at each sensor, and
+  each door's open and bolted bits. Its first section draws the airlock from
+  the inner side to the outer, with a Cycle button under each side; a sensor
+  slot that's empty shows "No sensor" where its pressure would be. Its second
+  has a row for each slot: the slot's button, lit while armed; a dot, green
+  filled, orange armed, grey empty; the position; and a clear button. Its
+  buttons go through `clickMenuButton`: Cycle toward either door, Stop, arm a
+  slot and clear one.
+- **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.

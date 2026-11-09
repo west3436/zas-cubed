@@ -140,4 +140,9 @@ final class FallbackProvider implements ZasApiProvider {
     public boolean containerExplosionsBreakBlocks() {
         return false;
     }
+
+    @Override
+    public double nearVacuumDensity() {
+        return Atmospheres.DEFAULT_NEAR_VACUUM_DENSITY;
+    }
 }

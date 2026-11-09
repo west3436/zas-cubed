@@ -1,6 +1,10 @@
 package io.github.west3436.zas.atmos.registry;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
+import io.github.west3436.zas.atmos.airlock.AirlockBlock;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlock;
+import io.github.west3436.zas.atmos.airlock.LargeAirlockBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlock;
@@ -9,8 +13,10 @@ import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlock;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
+import io.github.west3436.zas.atmos.holder.TankHolderBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
@@ -21,6 +27,9 @@ import io.github.west3436.zas.atmos.portable.PortableScrubberBlock;
 import io.github.west3436.zas.atmos.power.GeneratorBlock;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlock;
 import io.github.west3436.zas.atmos.pump.VolumePumpBlock;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
+import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
+import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
@@ -85,6 +94,32 @@ public final class AtmosBlocks {
     /** A standalone firelock, one block wide and two high (CONT-043). As hard as an iron door. */
     public static final DeferredBlock<FirelockBlock> FIRELOCK = BLOCKS.registerBlock(
             "firelock", FirelockBlock::new, metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
+
+    // ---- Airlocks (CONT-133 to CONT-142, D-84) ----
+
+    /** An airlock, one block wide and two high (CONT-133). As hard as the firelock. */
+    public static final DeferredBlock<AirlockBlock> AIRLOCK = BLOCKS.registerBlock(
+            "airlock", AirlockBlock::new, metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
+
+    /** The large airlock, two blocks wide and two high (CONT-134). */
+    public static final DeferredBlock<LargeAirlockBlock> LARGE_AIRLOCK = BLOCKS.registerBlock(
+            "large_airlock",
+            LargeAirlockBlock::new,
+            metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
+
+    /** The airlock controller, a wall panel (CONT-138). As hard as the area air controller. */
+    public static final DeferredBlock<AirlockControllerBlock> AIRLOCK_CONTROLLER =
+            BLOCKS.registerBlock("airlock_controller", AirlockControllerBlock::new, metal().strength(1.5f, 4.8f));
+
+    /** The air sensor, a wall panel (CONT-142). */
+    public static final DeferredBlock<AirSensorBlock> AIR_SENSOR =
+            BLOCKS.registerBlock("air_sensor", AirSensorBlock::new, metal().strength(1.5f, 4.8f));
+
+    /** A vanilla door with a firelock fitted (CONT-137). It has no item: it drops the door and the firelock. */
+    public static final DeferredBlock<FirelockDoorBlock> FIRELOCK_DOOR = BLOCKS.registerBlock(
+            "firelock_door",
+            FirelockDoorBlock::new,
+            metal().strength(5.0f, 6.0f).pushReaction(PushReaction.BLOCK));
 
     /** The heater (CONT-019). */
     public static final DeferredBlock<HeaterBlock> HEATER = BLOCKS.registerBlock("heater", HeaterBlock::new, metal());
@@ -169,6 +204,26 @@ public final class AtmosBlocks {
                     .isRedstoneConductor((state, level, pos) -> false)
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false));
+
+    // ---- Radiators and heat exchangers (CONT-143 to CONT-148, D-84) ----
+
+    /** Radiator pipe, which exchanges heat with the gas around it (CONT-143, HEAT-020). */
+    public static final DeferredBlock<RadiatorPipeBlock> RADIATOR_PIPE =
+            BLOCKS.registerBlock("radiator_pipe", RadiatorPipeBlock::new, metal());
+
+    /** The radiator adaptor, which joins pipe to radiator pipe (CONT-145). */
+    public static final DeferredBlock<RadiatorAdaptorBlock> RADIATOR_ADAPTOR =
+            BLOCKS.registerBlock("radiator_adaptor", RadiatorAdaptorBlock::new, metal());
+
+    /** The heat exchanger, which works in pairs (CONT-147, HEAT-022). */
+    public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
+            BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
+
+    // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
+
+    /** The tank holder, a rack of ten personal tanks. */
+    public static final DeferredBlock<TankHolderBlock> TANK_HOLDER =
+            BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
 
     private AtmosBlocks() {}
 

@@ -6,6 +6,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerItem;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
+import io.github.west3436.zas.atmos.firelock.FirelockItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
@@ -61,8 +62,17 @@ public final class AtmosItems {
     public static final DeferredItem<PortableGasItem> PORTABLE_PUMP =
             ITEMS.registerItem("portable_pump", p -> new PortableGasItem(AtmosBlocks.PORTABLE_PUMP.get(), p));
 
-    public static final DeferredItem<DoubleHighBlockItem> FIRELOCK =
-            ITEMS.registerItem("firelock", p -> new DoubleHighBlockItem(AtmosBlocks.FIRELOCK.get(), p));
+    public static final DeferredItem<FirelockItem> FIRELOCK =
+            ITEMS.registerItem("firelock", p -> new FirelockItem(AtmosBlocks.FIRELOCK.get(), p));
+
+    // Airlocks (CONT-133 to CONT-142, D-84)
+    public static final DeferredItem<DoubleHighBlockItem> AIRLOCK =
+            ITEMS.registerItem("airlock", p -> new DoubleHighBlockItem(AtmosBlocks.AIRLOCK.get(), p));
+    public static final DeferredItem<BlockItem> LARGE_AIRLOCK =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.LARGE_AIRLOCK);
+    public static final DeferredItem<BlockItem> AIRLOCK_CONTROLLER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.AIRLOCK_CONTROLLER);
+    public static final DeferredItem<BlockItem> AIR_SENSOR = ITEMS.registerSimpleBlockItem(AtmosBlocks.AIR_SENSOR);
 
     /** Forces firelocks open or shut (CONT-094). */
     public static final DeferredItem<CrowbarItem> CROWBAR = ITEMS.registerItem("crowbar", CrowbarItem::new);
@@ -90,6 +100,15 @@ public final class AtmosItems {
     public static final DeferredItem<BlockItem> MANUAL_VALVE = ITEMS.registerSimpleBlockItem(AtmosBlocks.MANUAL_VALVE);
     public static final DeferredItem<BlockItem> REDSTONE_VALVE =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.REDSTONE_VALVE);
+
+    // Radiators and heat exchangers (CONT-143 to CONT-148).
+
+    public static final DeferredItem<BlockItem> RADIATOR_PIPE =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_PIPE);
+    public static final DeferredItem<BlockItem> RADIATOR_ADAPTOR =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.RADIATOR_ADAPTOR);
+    public static final DeferredItem<BlockItem> HEAT_EXCHANGER =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.HEAT_EXCHANGER);
 
     // The station blocks (CONT-129 to CONT-131).
 
@@ -300,6 +319,10 @@ public final class AtmosItems {
                 PLASTEEL_SHEET,
                 REINFORCED_GLASS);
     }
+
+    // The tank holder (CONT-149 to CONT-151, D-84).
+
+    public static final DeferredItem<BlockItem> TANK_HOLDER = ITEMS.registerSimpleBlockItem(AtmosBlocks.TANK_HOLDER);
 
     private AtmosItems() {}
 

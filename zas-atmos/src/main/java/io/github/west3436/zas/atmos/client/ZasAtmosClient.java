@@ -9,9 +9,12 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
 import io.github.west3436.zas.atmos.heater.HeaterMenu;
+import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.particle.DeviceJets;
 import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerTint;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -74,6 +77,7 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveModels);
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
         modBus.addListener(ConnectedTextures::addPack);
+        modBus.addListener(FirelockDoorModel::wrap);
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
@@ -110,6 +114,21 @@ public final class ZasAtmosClient {
                         : -1,
                 AtmosBlocks.PIPE.get(),
                 AtmosBlocks.PIPE_CAP.get());
+        // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
+        event.register(
+                (state, level, pos, tintIndex) -> tintIndex == 0
+                        ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
+                        : -1,
+                AtmosBlocks.HEAT_EXCHANGER.get());
+
+        // A tank holder's tanks are tinted by their kinds: tint index n is the tank in place n (CONT-151).
+        event.register(
+                (state, level, pos, tintIndex) -> level != null
+                                && pos != null
+                                && level.getBlockEntity(pos) instanceof TankHolderBlockEntity holder
+                        ? holder.tint(tintIndex - 1)
+                        : -1,
+                AtmosBlocks.TANK_HOLDER.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */
@@ -119,6 +138,11 @@ public final class ZasAtmosClient {
                         tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get());
+        // A heat exchanger's item shows copper (CONT-148).
+        event.register(
+                (stack, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | HeatExchangerTint.colour(HeatExchangerTint.COPPER) : -1,
+                AtmosItems.HEAT_EXCHANGER.get());
     }
 
     /** A TTV item's tanks are tinted by their kinds: layer 1 its first tank, or a lone tank, and layer 2 its second. */
@@ -168,6 +192,7 @@ public final class ZasAtmosClient {
         event.register(AtmosMenus.ELECTROLYZER.get(), ElectrolyzerScreen::new);
         event.register(AtmosMenus.TANK_TRANSFER_VALVE.get(), TransferValveScreen::new);
         event.register(AtmosMenus.ANALYZER.get(), AnalyzerScreen::new);
+        event.register(AtmosMenus.AIRLOCK_CONTROLLER.get(), AirlockControllerScreen::new);
     }
 
     /**

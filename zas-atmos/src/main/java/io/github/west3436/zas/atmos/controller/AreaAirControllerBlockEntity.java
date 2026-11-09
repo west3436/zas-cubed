@@ -13,9 +13,10 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
-import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
+import io.github.west3436.zas.atmos.firelock.FirelockLogic;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
@@ -185,7 +186,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         setStatus(level, ControllerStatus.of(danger.level()));
         if (!wasAlarming && alarming()) {
             // The firelocks it covers close now, not at their own steps up to an atmos tick later.
-            FirelockBlockEntity.alarmRaised(level, this);
+            FirelockLogic.alarmRaised(level, this);
         }
     }
 
@@ -224,8 +225,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
             if (buffer.space() <= 0) {
                 return;
             }
-            IEnergyStorage source = level.getCapability(
-                    Capabilities.EnergyStorage.BLOCK, getBlockPos().relative(dir), dir.getOpposite());
+            IEnergyStorage source = LoadedBlocks.capability(
+                    level, Capabilities.EnergyStorage.BLOCK, getBlockPos().relative(dir), dir.getOpposite());
             if (source != null && source.canExtract()) {
                 int got = source.extractEnergy(buffer.space(), false);
                 buffer.fill(got);
@@ -269,28 +270,22 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         CentralClaims.of(level).release(getBlockPos());
     }
 
-    /** The parts in its zone and those linked to it, in the order they joined the schedule. */
+    /**
+     * The parts in its zone and those linked to it, in the order they joined the schedule, from its
+     * level's {@link ZoneIndex}. A link to a loaded block that is no longer a part or a firelock is
+     * dropped; one in a chunk that isn't loaded in full is kept, and read without loading it.
+     */
     private List<PoweredDevice> covered(ServerLevel level) {
-        links.removeIf(p -> level.isLoaded(p) && !linkable(level.getBlockEntity(p)));
+        links.removeIf(p -> LoadedBlocks.chunk(level, p) != null && !linkable(LoadedBlocks.entity(level, p)));
         Optional<ZoneId> zone = sample.state() == AtmosphereState.ZONED || sample.state() == AtmosphereState.PAUSED
                 ? sample.zone()
                 : Optional.empty();
-        List<PoweredDevice> out = new ArrayList<>();
-        for (AtmosDevice d : DeviceTicker.loaded(level)) {
-            if (d == this || !(d instanceof PoweredDevice p)) {
-                continue;
-            }
-            boolean linked = links.contains(d.getBlockPos());
-            if (linked || (zone.isPresent() && inZone(level, p, zone.get()))) {
-                out.add(p);
-            }
-        }
-        return out;
+        return ZoneIndex.covered(level, zone, links);
     }
 
     /** What can be linked with the multitool: a powered part (CONT-042) or a firelock (CONT-043). */
     public static boolean linkable(BlockEntity be) {
-        return be instanceof PoweredDevice || be instanceof FirelockBlockEntity;
+        return be instanceof PoweredDevice || (be instanceof FirelockLogic.Holder f && f.hasFirelock());
     }
 
     /** Records the zone the controller covers for firelocks (CONT-043): its own, as of this step. */
@@ -345,10 +340,6 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         return powered && danger.level() >= 2;
     }
 
-    private static boolean inZone(ServerLevel level, PoweredDevice d, ZoneId zone) {
-        return Atmospheres.at(level, d.airPoint()).zone().filter(zone::equals).isPresent();
-    }
-
     /**
      * What a step costs with every covered part paid, at what each draws now: its own draw and theirs,
      * including those another provider paid for this time, which may fall to it next time.
@@ -394,7 +385,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
         for (int i = 0; i < covered.size(); i++) {
             BlockEntity be = (BlockEntity) covered.get(i);
             ServerLevel level = (ServerLevel) be.getLevel();
-            boolean in = zone.isPresent() && level != null && inZone(level, covered.get(i), zone.get());
+            boolean in = zone.isPresent() && level != null && ZoneIndex.inZone(level, covered.get(i), zone.get());
             out.add(new Part(
                     BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()),
                     be.getBlockPos(),

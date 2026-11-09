@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.inline;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -127,11 +128,9 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
 
     /** The node across a port's face, if a neighbour is connected there. */
     private List<PipeNode> links(int index) {
-        if (level == null || !level.isLoaded(worldPosition)) { // reading its block would load its chunk
-            return List.of();
-        }
-        BlockState self = level.getBlockState(worldPosition);
-        if (!(self.getBlock() instanceof PortedBlock block)) {
+        // Read from its chunk, if loaded in full: a read through the level would keep the chunk loaded.
+        BlockState self = level instanceof ServerLevel server ? LoadedBlocks.state(server, worldPosition) : null;
+        if (self == null || !(self.getBlock() instanceof PortedBlock block)) {
             return List.of();
         }
         PipeNode n = PipeHost.across(

@@ -61,6 +61,13 @@ public interface Classifier {
      */
     default void limits(WorldLimits limits) {}
 
+    /**
+     * The most cells an enclosure can have (GEO-020, D-23), at the start of every tick, from the tick's
+     * settings. A new bound applies to fills from this tick on; zones that formed under another stay
+     * as they are. The default runs no fills, so has no bound.
+     */
+    default void fillBound(int maxCells) {}
+
     /** Whether a cell lies outside the world or has a face leading out of it. */
     default boolean touchesLimit(long cell) {
         return false;

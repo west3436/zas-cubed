@@ -8,6 +8,7 @@ import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.CellWatch;
+import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.particle.GasJets;
@@ -77,8 +78,8 @@ public class PipeBlockEntity extends PipeNodeEntity {
             BooleanProperty arm = PipeBlock.CONNECTIONS.get(d);
             boolean handler = GasHandlers.has(faces, d);
             if (state.getValue(arm) != handler) {
-                BlockPos next = worldPosition.relative(d);
-                if (level.isLoaded(next) && !(level.getBlockState(next).getBlock() instanceof PipeConnector)) {
+                BlockState next = LoadedBlocks.state(level, worldPosition.relative(d));
+                if (next != null && !(next.getBlock() instanceof PipeConnector)) {
                     arms = arms.setValue(arm, handler);
                 }
             }

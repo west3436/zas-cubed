@@ -3,9 +3,6 @@
 **Status:** approved by the owner, 2026-11-02. The fire extinguisher's recipe was
 proposed on 2026-11-04 and approved on 2026-11-05, and those of the central
 atmospherics controller, the station walls and reinforced glass on 2026-11-07.
-Eight recipes for blocks that aren't in the mod yet are already shipped, and
-load once their block exists. They're listed last, under
-[Not in the mod yet](#not-in-the-mod-yet).
 
 This page lists how every ZAS³ Atmospherics block and item is crafted, and
 the order a survival player gets them in (CONT-058). Every recipe uses
@@ -130,6 +127,8 @@ in any arrangement.
 |---|---|---|---|
 | 8 × Pipe | Workshop | `CCC` | `C` copper ingot |
 | Pipe end cap | Workshop | Shapeless | pipe, iron nugget |
+| Radiator pipe | Workshop | Shapeless | pipe, iron bars |
+| Radiator adaptor | Workshop | Shapeless | pipe, radiator pipe, iron ingot |
 | Manual valve | Workshop | `.L.` / `PIP` | `L` lever, `P` pipe, `I` iron ingot |
 | Redstone valve | Workshop | Shapeless | manual valve, micro-manipulator, redstone dust |
 | Connector port | Workshop | `IPI` / `.H.` | `I` iron ingot, `P` pipe, `H` heavy weighted pressure plate |
@@ -149,6 +148,7 @@ in any arrangement.
 | Vent | Workshop | `XXX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `M` micro-manipulator |
 | Scrubber | Workshop | `XSX` / `PIM` / `WBW` | `I` iron ingot, `W` cable coil, `B` circuit board, `P` pipe, `X` iron bars, `S` scanning module, `M` micro-manipulator |
 | Passive vent | Workshop | `XXX` / `IPI` | `X` iron bars, `I` iron ingot, `P` pipe |
+| 2 × Heat exchanger | Workshop | `CPC` / `CRC` / `CCC` | `C` copper ingot, `P` pipe, `R` radiator pipe |
 | Igniter | Workshop | Shapeless | igniter assembly, heavy weighted pressure plate, cable coil |
 
 ### Portables
@@ -160,6 +160,7 @@ in any arrangement.
 | Portable scrubber | Workshop | Shapeless | canister, scrubber, capacitor, machine frame |
 | Heater | Workshop | `LLL` / `CFT` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `L` micro-laser, `C` copper ingot, `T` console screen |
 | Air conditioner | Workshop | `LLL` / `SFT` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `L` micro-laser, `S` snow block, `T` console screen |
+| Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
 
 ### Gas sources and power
 
@@ -180,6 +181,10 @@ in any arrangement.
 | Central atmospherics controller | Workshop | `TTT` / `AFX` / `WBW` | `F` machine frame, `W` cable coil, `B` circuit board, `T` console screen, `A` subspace ansible, `X` subspace transmitter |
 | Fire alarm | Workshop | Shapeless | electronics, scanning module, note block, red dye |
 | Firelock | Hardened | `SE` / `SM` / `SS` | `S` plasteel sheet, `E` electronics, `M` micro-manipulator |
+| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
+| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
+| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
+| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 ### Station walls and glass
 
@@ -212,18 +217,5 @@ in any arrangement.
 | Crowbar | Workshop | `.II` / `.I.` / `I..` | `I` iron ingot |
 | Multitool | Workshop | Shapeless | ansible crystal, circuit board, iron ingot |
 | Fire extinguisher | Workshop | `.L.` / `IRI` / `IWI` | `L` lever, `I` iron ingot, `R` red dye, `W` water bucket |
-
-### Not in the mod yet
-
-| Makes | Stage | Grid | Ingredients |
-|---|---|---|---|
-| Radiator pipe | Workshop | Shapeless | pipe, iron bars |
-| Radiator adaptor | Workshop | Shapeless | pipe, radiator pipe, iron ingot |
-| 2 × Heat exchanger | Workshop | `CPC` / `CRC` / `CCC` | `C` copper ingot, `P` pipe, `R` radiator pipe |
-| Tank holder | Workshop | `III` / `X.X` / `III` | `I` iron ingot, `X` iron bars |
-| Airlock controller | Workshop | Shapeless | electronics, console screen, subspace ansible, iron ingot |
-| Air sensor | Workshop | Shapeless | electronics, scanning module, ansible crystal |
-| Airlock | Workshop | `IE` / `IM` / `II` | `I` iron ingot, `E` electronics, `M` micro-manipulator |
-| Large airlock | Workshop | `IGI` / `EGM` / `IGI` | `I` iron ingot, `G` reinforced glass sheet, `E` electronics, `M` micro-manipulator |
 
 <!-- END GENERATED: recipes -->

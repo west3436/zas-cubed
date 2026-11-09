@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.config;
 
 import io.github.west3436.zas.atmos.failure.ContainerFailure;
+import io.github.west3436.zas.atmos.radiator.RadiatorMath;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -70,6 +71,8 @@ public final class AtmosServerConfig {
     /** The fire alarm's draw, in FE/t (CONT-044, CONT-065). */
     public static final ModConfigSpec.IntValue FIRE_ALARM_DRAW;
 
+    public static final ModConfigSpec.IntValue AIRLOCK_CONTROLLER_DRAW;
+
     /** The area air controller's buffer, in FE (CONT-062). */
     public static final ModConfigSpec.IntValue CONTROLLER_BUFFER;
 
@@ -102,6 +105,12 @@ public final class AtmosServerConfig {
 
     /** The share of movement speed each hardsuit piece worn takes away (CONT-089). */
     public static final ModConfigSpec.DoubleValue HARDSUIT_SLOWDOWN;
+
+    /** A radiator pipe segment's conductance to the gas around it, in W/K (HEAT-020). */
+    public static final ModConfigSpec.DoubleValue RADIATOR_CONDUCTANCE;
+
+    /** A radiator pipe segment's emissivity in a vacuum (HEAT-021). */
+    public static final ModConfigSpec.DoubleValue RADIATOR_EMISSIVITY;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -145,6 +154,9 @@ public final class AtmosServerConfig {
                 .defineInRange("area_air_controller", 5, 0, 100_000);
         FIRE_ALARM_DRAW = builder.comment("Fire alarm, from its controller (CONT-044)")
                 .defineInRange("fire_alarm", 1, 0, 100_000);
+        AIRLOCK_CONTROLLER_DRAW = builder.comment(
+                        "Airlock controller, its own draw, from its controller; its vents' draws add to it (CONT-141)")
+                .defineInRange("airlock_controller", 1, 0, 100_000);
         CONTROLLER_BUFFER = builder.comment(
                         "The area air controller's buffer, in FE (CONT-062). It fills from FE blocks next to it.")
                 .defineInRange("area_air_controller_buffer", 10_000, 1_000, 1_000_000);
@@ -192,6 +204,16 @@ public final class AtmosServerConfig {
                         "The share of movement speed each hardsuit piece worn takes away (CONT-089): 0.1 is 10 %,",
                         "so the full suit leaves 60 %.")
                 .defineInRange("hardsuit_slowdown", 0.1, 0.0, 0.25);
+        builder.pop();
+
+        builder.comment("Radiator pipe (HEAT-020, HEAT-021).").push("radiators");
+        RADIATOR_CONDUCTANCE = builder.comment(
+                        "Each segment's conductance to the gas of its cell, in W/K (HEAT-020). 0 stops it exchanging",
+                        "heat with gas; it still radiates in a vacuum.")
+                .defineInRange("conductance", RadiatorMath.DEFAULT_CONDUCTANCE, 0.0, 10_000.0);
+        RADIATOR_EMISSIVITY = builder.comment(
+                        "Each segment's emissivity in the open air of a vacuum, over 1 m² (HEAT-021). 0 stops it radiating.")
+                .defineInRange("emissivity", RadiatorMath.DEFAULT_EMISSIVITY, 0.0, 1.0);
         builder.pop();
         SPEC = builder.build();
     }
