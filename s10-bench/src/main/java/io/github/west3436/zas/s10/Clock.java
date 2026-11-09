@@ -30,17 +30,12 @@ final class Clock {
     private static final Map<String, Part> PARTS = new ConcurrentHashMap<>();
     private static final List<Part> ORDER = new ArrayList<>();
 
-    /**
-     * Whether each tick's outer calls are kept, start and end, for {@link #lastCalls}: the enclosure
-     * cap step's, so its report can tell a collector pause inside zas's calls from one outside them.
-     * Off for the scenario. Server thread.
-     */
-    static boolean keepCalls;
-
+    // Each outer call's start and end, in pairs, in the tick in progress and in the last one closed, so
+    // the report can tell a collector pause inside zas's calls from one outside them (NFR-002).
     private static long[] calls = new long[64];
     private static int callEnds;
-    private static final long[] NO_CALLS = new long[0];
-    private static long[] lastCalls = NO_CALLS;
+    private static long[] lastCalls = new long[64];
+    private static int lastCallEnds;
 
     /** The M1 change hook, {@code ChangeTracker.onBlockWrite}. */
     static final Part CHANGE_HOOK = part("ChangeTracker · block write (M1)", "io.github.west3436.zas.change.");
@@ -143,18 +138,16 @@ final class Clock {
         long end = System.nanoTime();
         part.now += end - started - inner;
         inner = 0;
-        if (keepCalls) {
-            if (callEnds + 2 > calls.length) {
-                calls = java.util.Arrays.copyOf(calls, calls.length * 2);
-            }
-            calls[callEnds++] = started;
-            calls[callEnds++] = end;
+        if (callEnds + 2 > calls.length) {
+            calls = java.util.Arrays.copyOf(calls, calls.length * 2);
         }
+        calls[callEnds++] = started;
+        calls[callEnds++] = end;
     }
 
-    /** The last tick's outer calls while {@link #keepCalls} is on: start and end, in pairs. */
+    /** The last closed tick's outer calls, start and end in pairs: a copy, for a window to keep. */
     static long[] lastCalls() {
-        return lastCalls;
+        return java.util.Arrays.copyOf(lastCalls, lastCallEnds);
     }
 
     /**
@@ -203,7 +196,10 @@ final class Clock {
                 p.now = 0;
             }
         }
-        lastCalls = keepCalls ? java.util.Arrays.copyOf(calls, callEnds) : NO_CALLS;
+        long[] spare = lastCalls;
+        lastCalls = calls;
+        lastCallEnds = callEnds;
+        calls = spare;
         callEnds = 0;
         return total;
     }

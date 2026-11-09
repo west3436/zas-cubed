@@ -80,6 +80,9 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // GcPausesTest: G1 as on the bench's server, with System.gc() starting a concurrent cycle, so its
+    // Remark and Cleanup pauses come.
+    jvmArgs '-XX:+UseG1GC', '-XX:+ExplicitGCInvokesConcurrent'
 }
 
 // Never a jar: the bench runs from its classes in the dev run.

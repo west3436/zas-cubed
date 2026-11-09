@@ -976,9 +976,19 @@ controller's parts. The script, all on the server thread:
   API calls. A call made inside another counts once, in the outer one, except
   that a device's step counts by its device type, out of the device ticker's
   listener. The report gives each server tick's total (average, 99th
-  percentile, largest), by NFR-001's list and by part, and the slowest ticks.
+  percentile, largest), by NFR-001's list and by part, and the slowest ticks:
+  every one over 10 ms, and at least 5.
   A garbage collector's pause, or the OS taking the thread away, inside a timed
-  call counts in it; the slowest ticks say when a collector pause fell in them.
+  call counts in its time. NFR-002 is judged on zas's own time: the clock
+  keeps each timed call's start and end, so a collector pause inside zas's
+  calls is taken out. The pauses include G1's Remark and Cleanup, which its
+  "G1 Concurrent GC" bean reports (2026-11-08; before, the bench missed them).
+  Each slow tick also gives the whole tick's wall time and the server thread's
+  CPU time over it. A tick that took much less CPU time than wall time had the
+  thread stopped for the rest, by the JVM or the OS, rather than working.
+  Windows counts CPU time in steps of about 15.6 ms, each charged to the
+  thread running at the step. So a tick under about 16 ms reads 0 or 16 ms,
+  and one tick tells less than several.
 - *Venting (NFR-002).* Each second after the explosion the report takes the
   big room's moles and open faces. It vents correctly if its moles fall every
   second and it loses between three quarters and four thirds of what the
@@ -1030,12 +1040,11 @@ controller's parts. The script, all on the server thread:
   zoned cell, which are what the parts that scale with cells grew by when the
   hall zoned, over its cells, and for the 64 MiB total, on the halls
   dimension's whole atmos heap with the hall zoned. NFR-002 is
-  judged on zas's own time, the owner's call for the final run: while the step
-  runs, the clock keeps each timed call's start and end, so a collector pause
-  inside zas's calls is taken out, and the table gives it beside the verdict
-  with the tick's other pauses. Ticks over 10 ms are listed with where their
-  time went and what the batch close and apply in them took, so a stall that
-  isn't the work shows. The report ends the step
+  judged on zas's own time, as in the scenario, the owner's call for the final
+  run. The table gives the pause taken out beside the verdict, with the
+  tick's other pauses and its wall and CPU time. Ticks over 10 ms are listed
+  with where their time went and what the batch close and apply in them took,
+  so a stall that isn't the work shows. The report ends the step
   with the largest hall that passes every budget, for the owner to set the
   key's final range from.
 

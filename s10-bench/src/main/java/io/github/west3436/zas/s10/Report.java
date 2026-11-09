@@ -183,8 +183,8 @@ final class Report {
             verdict("NFR-001", "average", w.atmos.average() / MS, 2, "ms");
             verdict("NFR-001", "99th percentile", w.atmos.quantile(0.99) / MS, 5, "ms");
             // NFR-002 says no server tick, not only the explosion's; its Verify is the explosion.
-            verdict("NFR-002", "largest tick while the scenario runs", w.atmos.max() / MS, 10, "ms");
-            line(String.format("Ticks over NFR-002's 10 ms: %d of %,d.", w.atmos.countAbove(10_000_000L), w.ticks));
+            verdict("NFR-002", "largest tick while the scenario runs, zas's own time", largestOwn(w) / MS, 10, "ms");
+            line(overTen(w));
             line();
         }
         line("By NFR-001's list (average per server tick, and its share):");
@@ -229,40 +229,78 @@ final class Report {
                             s.nonZero()));
                 });
         line();
-        worstTicks(w, 5);
+        slowTicks(w);
     }
 
-    private void worstTicks(Window w, int n) {
+    /** How many of a window's ticks are over NFR-002's 10 ms, by zas's own time and with the pauses left in. */
+    private static String overTen(Window w) {
+        int own = 0;
+        for (int i = 0; i < w.ticks; i++) {
+            if (own(w, i) > 10_000_000L) {
+                own++;
+            }
+        }
+        return String.format(
+                "Ticks over NFR-002's 10 ms: %d of %,d by zas's own time, %d with collector pauses left in.",
+                own, w.ticks, w.atmos.countAbove(10_000_000L));
+    }
+
+    /** A window's largest tick by zas's own time. */
+    private static long largestOwn(Window w) {
+        long best = 0;
+        for (int i = 0; i < w.ticks; i++) {
+            best = Math.max(best, own(w, i));
+        }
+        return best;
+    }
+
+    /**
+     * A window's slowest ticks by atmos time: every one over 10 ms, at least 5 and at most 12, each with
+     * zas's own time, the whole tick's wall and CPU time, its pauses, where its time went and its batch work.
+     */
+    private void slowTicks(Window w) {
         List<Integer> order = new ArrayList<>();
         for (int i = 0; i < w.ticks; i++) {
             order.add(i);
         }
         order.sort((x, y) -> Long.compare(w.atmos.get(y), w.atmos.get(x)));
-        line("The " + n + " slowest ticks, and where their time went:");
+        int n = Math.min(order.size(), Math.max(5, Math.min(12, w.atmos.countAbove(10_000_000L))));
+        line("The " + n + " slowest ticks, and where their time went. NFR-002 is judged on zas's own time: a"
+                + " collector pause inside zas's calls is taken out. A tick that took much less CPU time than"
+                + " wall time had the thread stopped for the rest, not working; Windows counts CPU time in steps"
+                + " of about 15.6 ms.");
         line();
-        List<Clock.Part> parts = Clock.parts();
-        for (int k = 0; k < Math.min(n, order.size()); k++) {
+        for (int k = 0; k < n; k++) {
             int i = order.get(k);
-            List<String> top = new ArrayList<>();
-            parts.stream()
-                    .filter(p ->
-                            p.index < w.parts.size() && w.parts.get(p.index).get(i) > 0)
-                    .sorted(Comparator.comparingLong(
-                                    (Clock.Part p) -> w.parts.get(p.index).get(i))
-                            .reversed())
-                    .limit(4)
-                    .forEach(p -> top.add(String.format(
-                            "%s %.2f", p.name, w.parts.get(p.index).get(i) / MS)));
-            long gc = GcPauses.within(w.starts.get(i), w.starts.get(i) + w.wall.get(i));
-            line(String.format(
-                    "- tick %,d (%.1f s in): %.3f ms: %s%s",
-                    i,
-                    i / 20.0,
-                    w.atmos.get(i) / MS,
-                    String.join(", ", top),
-                    gc > 0 ? String.format(" (a collector pause of %.1f ms fell in this tick)", gc / MS) : ""));
+            line(String.format("- tick %,d (%.1f s in): %s", i, i / 20.0, slowTick(w, i, 4)));
         }
         line();
+    }
+
+    /** One slow server tick: its atmos and own time, wall and CPU time, pauses, top parts and batch work. */
+    private static String slowTick(Window w, int i, int parts) {
+        long pause = tickPause(w, i);
+        return String.format(
+                "%.3f ms, zas's own %.3f ms; %s; %s; %s; %s",
+                w.atmos.get(i) / MS,
+                own(w, i) / MS,
+                onCpu(w, i),
+                pause == 0
+                        ? "no pause in the tick"
+                        : String.format(
+                                "a %.1f ms pause in the tick, %.1f ms of it in zas's calls",
+                                pause / MS, zasPause(w, i) / MS),
+                topParts(w, i, parts),
+                batchWork(w, i));
+    }
+
+    /** A server tick's whole wall time, with the server thread's CPU time over it beside it. */
+    private static String onCpu(Window w, int i) {
+        long c = w.cpu.get(i);
+        return String.format(
+                "the whole tick %.1f ms, %s",
+                w.wall.get(i) / MS,
+                c < 0 ? "CPU time not measured" : String.format("%.0f ms of it on the CPU", c / MS));
     }
 
     private void closeAndApply(Window w) {
@@ -502,11 +540,11 @@ final class Report {
             return;
         }
         line(String.format(
-                "TNT's power inside the big room by its east wall, then %.0f s with the scenario running. Ticks over"
-                        + " 10 ms of atmos work: **%d** of %,d. The largest: %.3f ms. The zone: %s.",
-                w.seconds(), w.atmos.countAbove(10_000_000L), w.ticks, w.atmos.max() / MS, b.blastVerdict));
+                "TNT's power inside the big room by its east wall, then %.0f s with the scenario running. %s The"
+                        + " largest by zas's own time: %.3f ms (%.3f ms with collector pauses left in). The zone: %s.",
+                w.seconds(), overTen(w), largestOwn(w) / MS, w.atmos.max() / MS, b.blastVerdict));
         line();
-        verdict("NFR-002", "largest tick after the explosion", w.atmos.max() / MS, 10, "ms");
+        verdict("NFR-002", "largest tick after the explosion, zas's own time", largestOwn(w) / MS, 10, "ms");
         verdicts.put(
                 "NFR-002 vents",
                 "| NFR-002 the zone still vents correctly | " + (b.blastVented ? "as modelled" : "not as modelled")
@@ -517,7 +555,7 @@ final class Report {
         b.blastTrace.forEach(this::line);
         line("```");
         line();
-        worstTicks(w, 5);
+        slowTicks(w);
         closeAndApply(w);
     }
 
@@ -619,10 +657,12 @@ final class Report {
         line();
         line("Time budgets need a margin of " + REQUIRED_MARGIN + "; memory needs none. NFR-002 is judged on zas's own"
                 + " time: a collector pause inside zas's calls in that tick is taken out, and given in the last"
-                + " column with the tick's other pauses. Ticks over 10 ms are listed after each table, with where"
-                + " their time went and the batch close and apply in them, so a stall that isn't the work shows."
-                + " Worker ticks (NFR-005) are judged on wall time, with their time on the CPU in the last column:"
-                + " a tick well above its CPU time was slowed by other work on the machine.");
+                + " column with the tick's other pauses and the whole tick's wall and CPU time. Ticks over 10 ms are"
+                + " listed after each table, with where their time went and the batch close and apply in them, so a"
+                + " stall that isn't the work shows: a server tick that took much less CPU time than wall time had"
+                + " the thread stopped for the rest. Worker ticks (NFR-005) are judged on wall time, with their time"
+                + " on the CPU in the last column: a tick well above its CPU time was slowed by other work on the"
+                + " machine. Windows counts CPU time in steps of about 15.6 ms.");
         line();
         for (Map.Entry<String, String> e : c.notes.entrySet()) {
             line("- " + e.getValue());
@@ -919,17 +959,7 @@ final class Report {
         for (Window w : windows) {
             for (int i = 0; i < w.ticks; i++) {
                 if (w.atmos.get(i) > 10_000_000L) {
-                    slow.add(String.format(
-                            "%s, tick %d: %.3f ms, zas's own %.3f ms%s; %s; %s",
-                            w.name,
-                            i,
-                            w.atmos.get(i) / MS,
-                            own(w, i) / MS,
-                            tickPause(w, i) > 0
-                                    ? String.format(", a %.1f ms pause in the tick", tickPause(w, i) / MS)
-                                    : "",
-                            topParts(w, i, 3),
-                            batchWork(w, i)));
+                    slow.add(String.format("%s, tick %d: %s", w.name, i, slowTick(w, i, 3)));
                 }
             }
         }
@@ -1059,13 +1089,15 @@ final class Report {
         return String.join(", ", out);
     }
 
-    /** A tick's collector pauses, and how much of them fell in zas's calls. */
+    /** A tick's collector pauses, how much of them fell in zas's calls, and the whole tick's wall and CPU time. */
     private static String pauses(Window w, int at) {
         long pause = tickPause(w, at);
-        return pause == 0
-                ? "none in that tick"
-                : String.format(
-                        "a %.1f ms pause in that tick, %.1f ms of it in zas's calls", pause / MS, zasPause(w, at) / MS);
+        return (pause == 0
+                        ? "none in that tick"
+                        : String.format(
+                                "a %.1f ms pause in that tick, %.1f ms of it in zas's calls",
+                                pause / MS, zasPause(w, at) / MS))
+                + "; " + onCpu(w, at);
     }
 
     private CapRow workerRow(String step, List<CapStep.Event> events, Window... more) {
@@ -1175,15 +1207,23 @@ final class Report {
     private void wholeTicks() {
         line("## Whole server ticks, for context");
         line();
-        line("From the first listener of a tick to the last, everything the server did, not only atmos work.");
+        line("From the first listener of a tick to the last, everything the server did, not only atmos work, and"
+                + " the server thread's time on the CPU over the same span (in steps of about 15.6 ms on Windows).");
         line();
         line("| Window | Ticks | Average ms | 99th pct ms | Largest ms |");
         line("|---|---|---|---|---|");
         for (Window w : new Window[] {b.measure, b.blast, b.surveyWindow}) {
             if (w != null) {
-                line(String.format(
-                        "| %s | %,d | %.3f | %.3f | %.3f |",
-                        w.name, w.ticks, w.wall.average() / MS, w.wall.quantile(0.99) / MS, w.wall.max() / MS));
+                line(row(w.name, w.wall));
+                Window.Series cpu = new Window.Series();
+                for (int i = 0; i < w.cpu.size(); i++) {
+                    if (w.cpu.get(i) >= 0) {
+                        cpu.add(w.cpu.get(i));
+                    }
+                }
+                if (cpu.size() > 0) {
+                    line(row(w.name + ", on the CPU", cpu));
+                }
             }
         }
         line();
@@ -1218,13 +1258,17 @@ final class Report {
     }
 
     private String csv(Window w) {
-        StringBuilder s = new StringBuilder("tick,atmos_ns,wall_ns\n");
+        StringBuilder s = new StringBuilder("tick,atmos_ns,own_ns,wall_ns,cpu_ns\n");
         for (int i = 0; i < w.ticks; i++) {
             s.append(i)
                     .append(',')
                     .append(w.atmos.get(i))
                     .append(',')
+                    .append(own(w, i))
+                    .append(',')
                     .append(w.wall.get(i))
+                    .append(',')
+                    .append(w.cpu.get(i))
                     .append('\n');
         }
         return s.toString();
