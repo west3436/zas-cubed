@@ -248,6 +248,57 @@ worker time above the idle tick with rooms of 1,000, 8,000 and 50,000 cells,
 and causes no split check ([benchmarks · door
 toggles](../research/benchmarks.md#geo-044-door-toggles)).*
 
+*2026-11-08: a correction to the 2026-11-01 note. A toggle also changed a zone's
+volume where a block's closed shape takes room its open shape doesn't. The
+airlock's and the firelock's two cells held 527.3 L closed and 1,406.3 L open,
+and the large airlock's four held 1,230.5 L and 3,281.3 L. So closing one shrank
+the zone holding its cells, which kept its gas (CORE-022) and rose in pressure:
+by 3.2 % in a 27 m³ room, and by up to 22 % in a 4 m³ airlock chamber. It still
+caused no split check, split, merge or new zone. Since GEO-045 every state of a
+tagged block holds its open state's volume, so a toggle now changes only
+boundary faces and an edge's connection count, as the note said. Vanilla doors
+and trapdoors were never affected: their cells hold 812.5 L open or closed.*
+
+#### GEO-045 · Boundary toggles keep a zone's volume
+`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-41, CORE-022 · Depends: GEO-007, GEO-044
+
+Each state of a block tagged `zas:zone_boundary` that has an `open` property
+shall hold the gas volume of the same state with `open=true`, so opening or
+closing it changes only its boundary faces and edges, never a zone's volume.
+The state's cells keep their shares of that volume. A tagged block with no
+`open` property keeps each state's own volume, and so do a state with no cells,
+such as a waterlogged one (GEO-006), and a state whose open state holds no gas.
+
+- **Rationale:** Inferred: displaced gas stays in its zone (D-41, CORE-022). So
+  a door whose cells hold less gas closed than open compresses the zone they
+  belong to as it closes and dilutes it as it opens, and the gas that crossed
+  while it was open stays where it went. Each cycle then moves gas toward the
+  door's side, with no power. The airlock's closed leaf fills the passage from
+  the face it seals, so it held 879 L less closed: closing an airlock's outer
+  door raised a 4 m³ chamber from 200 to 204.1 kPa after one exchange step, and
+  to up to 22 % above the room beyond, where an airlock cycle finishes within
+  5.07 kPa (CONT-139). A leaf that slides out of its frame takes no room from
+  either side.
+- **Verify:** A Unit test checks that resizing a geometry's cells keeps their
+  faces, heat data and shares. A GameTest checks every tagged state holds its
+  open state's volume and every vanilla door and trapdoor state the volume its
+  shape gives. GameTests open and close the airlock, the large airlock, the
+  firelock and a door with a firelock four times between two rooms at 200 kPa
+  and check both rooms stay at 200 kPa within 1e-6.
+
+*2026-11-08: implemented, and still Draft for the owner. Once tags are bound,
+`Geometries` resizes each tagged state's cells, after overrides, to
+`boundaryVolume`, each cell keeping its share (`Geometry.withVolume`). The
+airlock's and the firelock's lower block now holds 750 L in every state and the
+upper 656.25 L; the large airlock's hold 875 L and 765.625 L. Vanilla doors,
+trapdoors and the door with a firelock hold 812.5 L, as before. A seal
+provider's answer (API-023) and a shape worked out per position (GEO-043) are
+the block's own and aren't resized
+([architecture §4.7](../architecture.md#47-zone-boundary-blocks-geo-007-geo-044-core-034-core-067)).
+`geo_045_with_volume_resizes_the_cells_and_nothing_else` (Unit),
+`geo_045_every_boundary_state_holds_its_open_volume` and the four
+`geo_045_toggling_…_keeps_both_rooms_at_200_kpa` (GameTests) pass.*
+
 #### GEO-008 · Dynamic sealing API
 `Must` · `R1` · `Rejected` — duplicate of API-023 (Seal provider), 2026-10-30.
 
