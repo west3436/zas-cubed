@@ -388,6 +388,11 @@ on a chunk's edge, and `s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_op
 measures the extra rebuild that position costs as it opens (#341): negligible
 ([benchmarks](../research/benchmarks.md#a-valve-at-a-chunks-edge-341-2026-11-07)).*
 
+*2026-11-08: the station has batch 5's blocks too: the tank holder, radiator pipe,
+the radiator adaptor, heat exchangers, airlocks, firelocks on an airlock and a
+door, an airlock controller and air sensors (DATA-016's note). A second test saves
+and reloads an airlock midway through a cycle, and the cycle finishes.*
+
 ## Questions
 
 ### Resolved (2026-10-30)

@@ -192,6 +192,28 @@ game's player files use. A GameTest can't restart the server, so a new JVM,
 saved data read at startup and the final save at a stop are left to the release
 checklist's "Saving and quitting mid-transfer".*
 
+*2026-11-08: the station now has batch 5's blocks too, so it again has a block
+entity of every kind the mod has. They are a tank holder of four tanks, and
+radiator pipe joined to a pipe by an adaptor, at the open air's temperature. There
+is a pair of heat exchangers at 450 K, and an airlock, bolted. The large airlock
+is open, waiting to close itself. There is an airlock in Q's wall whose firelock
+is locked down, and a spruce door with its firelock shut. Last come an unpowered
+airlock controller with its five slots, a vent, an armed slot and a last door, and
+three air sensors. Besides each block entity's saved data, the test checks:
+- the holder's tanks, in order, each with its gas within 1e-9;
+- the networks' gas, and the exchangers' bands;
+- the bolts, the firelocks and the large airlock's close time, with its scheduled
+  tick, which then closes it at its time;
+- the door under the firelock;
+- the controller's slots, links, armed slot and last door;
+- each sensor's status.
+
+`s_09_an_airlock_cycle_saved_midway_resumes_and_finishes` (GameTest) unloads and
+reloads an airlock's chunk midway through a cycle. Each block entity's saved
+data, the zones and the vent's network come back within 1e-9. The controller
+comes back without power, as a lease is never saved. Once the area air controller
+pays for it again, it finishes the cycle.*
+
 #### DATA-003 · Versioned format
 `Must` · `R0` · `Implemented` · Verify: Unit
 

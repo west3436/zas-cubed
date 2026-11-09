@@ -35,6 +35,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
@@ -86,7 +87,12 @@ public final class PipeSaveTests {
 
     /** Holds a chunk loaded in full, without ticking, or lets it go. */
     static void hold(Area a, ChunkPos chunk, boolean on) {
-        hold(a, chunk, 0, on);
+        hold(a.level, chunk, 0, on);
+    }
+
+    /** Holds a chunk of a level loaded in full, without ticking, or lets it go. */
+    static void hold(ServerLevel level, ChunkPos chunk, boolean on) {
+        hold(level, chunk, 0, on);
     }
 
     /**
@@ -94,14 +100,14 @@ public final class PipeSaveTests {
      * step only there (architecture §11.2). Its neighbours are loaded in full.
      */
     static void holdTicking(Area a, ChunkPos chunk, boolean on) {
-        hold(a, chunk, 1, on);
+        hold(a.level, chunk, 1, on);
     }
 
-    private static void hold(Area a, ChunkPos chunk, int distance, boolean on) {
+    private static void hold(ServerLevel level, ChunkPos chunk, int distance, boolean on) {
         if (on) {
-            a.level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
+            level.getChunkSource().addRegionTicket(HOLD, chunk, distance, chunk);
         } else {
-            a.level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
+            level.getChunkSource().removeRegionTicket(HOLD, chunk, distance, chunk);
         }
     }
 

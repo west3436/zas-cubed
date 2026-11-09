@@ -187,7 +187,7 @@ public final class AirlockTests {
     }
 
     /** Fills the zone at a point with N₂ and O₂ at partial pressures, emptying it first. */
-    private static void fill(Site s, int x, int y, int z, double n2, double o2) {
+    static void fill(Site s, int x, int y, int z, double n2, double o2) {
         if (s.zone(x, y, z).mixture().totalMoles() > 0) {
             s.empty(x, y, z);
         }
@@ -226,7 +226,7 @@ public final class AirlockTests {
     }
 
     /** The parts of {@link #lock}: {@code sensor} is the chamber's. */
-    private record Lock(
+    record Lock(
             AreaAirControllerBlockEntity area,
             AirlockControllerBlockEntity controller,
             AirlockBlockEntity inner,
@@ -286,7 +286,7 @@ public final class AirlockTests {
      * @param roomB whether B is a room; without, the outer airlock opens onto the outside
      * @param ceilingVent whether the chamber has a second vent, in its ceiling
      */
-    private static Lock lock(Site s, boolean roomB, boolean ceilingVent) {
+    static Lock lock(Site s, boolean roomB, boolean ceilingVent) {
         s.clear();
         s.room(0, 4);
         if (roomB) {
@@ -1000,7 +1000,7 @@ public final class AirlockTests {
      * {@code mode}, powered by the controller, that all three sensors show cycling, and that the
      * airlock opens only on a reading within 5.07 kPa of the pressure at the sensor beyond it.
      */
-    private static void cycle(GameTestHelper h, Site s, Lock lock, int toward, VentMode mode) {
+    static void cycle(GameTestHelper h, Site s, Lock lock, int toward, VentMode mode) {
         AirlockControllerBlockEntity ac = lock.controller();
         int x = toward == 0 ? 4 : 6;
         for (int i = 0; i < 200 && ac.cycling() >= 0; i++) {
