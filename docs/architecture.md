@@ -564,17 +564,17 @@ section, S-10's station needs about 1–2 MiB.
 1. **Prefetch.** An operation that can create a zone (CORE-055, CORE-056)
    makes the server thread snapshot the non-empty, loaded sections within
    3 sections of the target at the next batch close, and the sections above
-   the target up to the top of the world. Most enclosures under the 65,536-cell
-   cap fit inside that 7³-section cube (about 100 µs of copying in the worst
-   case).
+   the target up to the top of the world. Most enclosures under the cap fit
+   inside that 7³-section cube (about 100 µs of copying in the worst case).
 2. **Without a fill.** A cell found open before is open, from the cache (GEO-027,
    20 ns). So is a cell that nothing seals from the top of the world in its own
    column, whatever the sky light (GEO-021, 0.8 µs). If the column reaches
    a section the mirror lacks before anything seals it, a fill could only say
    open or unresolved, so the operation waits for the rest of the column.
 3. **The fill** runs on the mirror (GEO-022): the bounded fill (*spike (S3):*
-   5.5 ms at the cap). The bound is `[atmos] enclosure_max_cells` (GEO-020,
-   default 65,536), which each batch's settings carry: a new bound applies from
+   5.5 ms at 65,536 cells). The bound is `[atmos] enclosure_max_cells`
+   (GEO-020, D-23), 1 to 102,400 cells, default 102,400 (owner, 2026-11-08;
+   65,536 before), which each batch's settings carry: a new bound applies from
    the next atmos tick, a higher one also forgets the cells found open (step 4)
    and puts them in doubt, and zones that formed under another stay as they
    are. Possible outcomes:

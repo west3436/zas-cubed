@@ -28,7 +28,7 @@ import java.util.function.LongPredicate;
  * <ul>
  *   <li>The cell topology is a {@link SectionTopology} over the mirror, with {@link CellIds} cell
  *       ids, shared by the zone graph and the fill.
- *   <li>A zone trigger at an unzoned cell runs one {@link EnclosureFill} (default bound 65,536
+ *   <li>A zone trigger at an unzoned cell runs one {@link EnclosureFill} (default bound 102,400
  *       cells, GEO-020; each tick's settings set it, {@link #fillBound}), with zoned cells as walls. Enclosed: its cells join the zones they open
  *       onto, or become new zones ({@link EnclosureZones#absorb}, CORE-051). Open: the ambient.
  *       If the fill reached sections the mirror lacks, those whose chunks are loaded are fetched

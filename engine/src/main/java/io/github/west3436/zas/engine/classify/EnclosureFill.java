@@ -25,8 +25,12 @@ import java.util.function.LongPredicate;
  * enclosed result allocates its cell array. Not thread-safe; one instance per worker.
  */
 public final class EnclosureFill {
-    /** The default bound, in cells (D-23). */
-    public static final int DEFAULT_MAX_CELLS = 65_536;
+    /**
+     * The default bound, in cells (D-23): the most it can be set to. The owner raised it from 65,536
+     * on 2026-11-08, after the S-10 bench's cap step measured a hall of this size within every
+     * budget.
+     */
+    public static final int DEFAULT_MAX_CELLS = 102_400;
 
     /**
      * The most the game lets the bound be set to (GEO-020): a hall 5 × 5 chunks wide and 16 blocks

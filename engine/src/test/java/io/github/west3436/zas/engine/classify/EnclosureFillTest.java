@@ -18,32 +18,33 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 class EnclosureFillTest {
-    /** A 64 × 16 × 64 hall: exactly 65,536 cells, across 16 sections. */
+    /** An 80 × 16 × 80 hall: exactly 102,400 cells, the default bound, across 25 sections. */
     private static TestWorld hall() {
-        return new TestWorld().box(0, 0, 0, 63, 15, 63, AIR);
+        return new TestWorld().box(0, 0, 0, 79, 15, 79, AIR);
     }
 
     @Test
     void geo_020_bounded_enclosure_test() {
         EnclosureFill fill = new EnclosureFill();
-        assertEquals(65_536, fill.maxCells(), "the default bound (D-23)");
+        assertEquals(102_400, fill.maxCells(), "the default bound (D-23)");
+        assertEquals(EnclosureFill.SETTABLE_MAX_CELLS, fill.maxCells(), "the default is the most it can be set to");
 
-        // 65,535 cells: one corner block filled in.
-        TestWorld below = hall().set(63, 15, 63, SOLID);
+        // 102,399 cells: one corner block filled in.
+        TestWorld below = hall().set(79, 15, 79, SOLID);
         FillResult r = fill.fill(below.topology(), cell(10, 5, 10));
         FillResult.Enclosed e = assertInstanceOf(FillResult.Enclosed.class, r);
-        assertEquals(65_535, e.cells().length);
-        assertEquals(65_535 * Geometry.FULL_VOLUME, e.volume());
+        assertEquals(102_399, e.cells().length);
+        assertEquals(102_399 * Geometry.FULL_VOLUME, e.volume());
 
         // Exactly at the bound is still enclosed.
         e = assertInstanceOf(FillResult.Enclosed.class, fill.fill(hall().topology(), cell(0, 0, 0)));
-        assertEquals(65_536, e.cells().length);
+        assertEquals(102_400, e.cells().length);
 
-        // 65,537 cells: an alcove through the wall. Exceeding the bound means open.
-        TestWorld above = hall().set(64, 0, 0, AIR);
+        // 102,401 cells: an alcove through the wall. Exceeding the bound means open.
+        TestWorld above = hall().set(80, 0, 0, AIR);
         FillResult.Open o = assertInstanceOf(FillResult.Open.class, fill.fill(above.topology(), cell(10, 5, 10)));
         assertEquals(FillResult.Open.Reason.BOUND, o.reason());
-        assertEquals(65_536, o.visited());
+        assertEquals(102_400, o.visited());
 
         // The bound is configurable.
         TestWorld small = new TestWorld().box(0, 0, 0, 4, 1, 0, AIR); // 10 cells
@@ -98,7 +99,7 @@ class EnclosureFillTest {
 
     @Test
     void geo_020_fill_cost() {
-        // Bench (S3): a fill at the 65,536-cell cap, on the worker's view of 16 sections plus shell.
+        // Bench (S3): a fill at the 102,400-cell cap, on the worker's view of 25 sections plus shell.
         TestWorld world = hall();
         SectionTopology topology = world.topology();
         EnclosureFill fill = new EnclosureFill();
@@ -110,11 +111,11 @@ class EnclosureFillTest {
             long t0 = System.nanoTime();
             FillResult r = fill.fill(topology, cell(i, 1, 1));
             times[i] = System.nanoTime() - t0;
-            assertEquals(65_536, r.visited());
+            assertEquals(102_400, r.visited());
         }
         Arrays.sort(times);
         double median = times[times.length / 2] / 1e6;
-        System.out.printf("geo_020_fill_cost: 65,536-cell fill median %.2f ms, min %.2f ms%n", median, times[0] / 1e6);
+        System.out.printf("geo_020_fill_cost: 102,400-cell fill median %.2f ms, min %.2f ms%n", median, times[0] / 1e6);
         assertTrue(median < 200, "a capped fill took " + median + " ms");
     }
 

@@ -44,24 +44,26 @@ final class FillBench {
         System.out.println("| Case | Outcome | Visited | Mean | Median | p99 | Max | Cells/s (median) |");
         System.out.println("|---|---|---|---|---|---|---|---|");
         BenchWorld w = new BenchWorld(Ambient.VACUUM, BenchWorld.SOLID);
-        w.box(0, 0, 0, 63, 15, 63, BenchWorld.AIR); // 65,536 cells
-        w.box(100, 0, 0, 163, 15, 63, BenchWorld.AIR).set(164, 0, 0, BenchWorld.AIR); // 65,537 cells
-        w.box(200, 0, 0, 219, 19, 19, BenchWorld.AIR); // 8,000 cells
-        w.box(300, 0, 0, 302, 2, 2, BenchWorld.AIR); // 27 cells
-        // The largest hall the S-10 bench's enclosure cap step tests (owner, 2026-11-08): 80 × 80 × 16.
+        // The default cap (owner, 2026-11-08): 80 × 80 × 16, the largest hall the S-10 bench's enclosure
+        // cap step tests.
         w.box(400, 0, 0, 479, 15, 79, BenchWorld.AIR); // 102,400 cells
         w.box(600, 0, 0, 679, 15, 79, BenchWorld.AIR).set(680, 0, 0, BenchWorld.AIR); // 102,401 cells
+        w.box(200, 0, 0, 219, 19, 19, BenchWorld.AIR); // 8,000 cells
+        w.box(300, 0, 0, 302, 2, 2, BenchWorld.AIR); // 27 cells
+        // The cap before 2026-11-08, so these rows compare with the earlier runs'.
+        w.box(0, 0, 0, 63, 15, 63, BenchWorld.AIR); // 65,536 cells
+        w.box(100, 0, 0, 163, 15, 63, BenchWorld.AIR).set(164, 0, 0, BenchWorld.AIR); // 65,537 cells
         Map<Long, SectionSnapshot> cache = new HashMap<>();
         SectionTopology topology =
                 new SectionTopology(BenchWorld.PALETTE, key -> cache.computeIfAbsent(key, w::snapshot));
         EnclosureFill fill = new EnclosureFill();
-        row("Sealed hall, 65,536 cells (the cap)", fill, topology, CellIds.of(10, 5, 10), warm, runs);
-        row("Hall of 65,537 cells: open at the cap", fill, topology, CellIds.of(110, 5, 10), warm, runs);
+        row("Sealed hall, 102,400 cells (the cap)", fill, topology, CellIds.of(410, 5, 10), warm, runs);
+        row("Hall of 102,401 cells: open at the cap", fill, topology, CellIds.of(610, 5, 10), warm, runs);
         row("S-10's largest zone, 8,000 cells", fill, topology, CellIds.of(210, 5, 10), warm, runs);
         row("3 × 3 × 3 room, 27 cells", fill, topology, CellIds.of(301, 1, 1), warm, runs);
-        EnclosureFill raised = new EnclosureFill(102_400);
-        row("Sealed hall, 102,400 cells, at a cap of 102,400", raised, topology, CellIds.of(410, 5, 10), warm, runs);
-        row("Hall of 102,401 cells: open at a cap of 102,400", raised, topology, CellIds.of(610, 5, 10), warm, runs);
+        EnclosureFill old = new EnclosureFill(65_536);
+        row("Sealed hall, 65,536 cells, at the old cap of 65,536", old, topology, CellIds.of(10, 5, 10), warm, runs);
+        row("Hall of 65,537 cells: open at the old cap of 65,536", old, topology, CellIds.of(110, 5, 10), warm, runs);
         System.out.println();
     }
 

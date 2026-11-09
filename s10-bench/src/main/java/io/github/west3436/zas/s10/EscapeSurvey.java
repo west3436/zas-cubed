@@ -65,7 +65,8 @@ final class EscapeSurvey {
                 new Shape("hall 32 × 8 × 32, from a corner", 32, 8, 32, 0, 0, 0),
                 new Shape("hall 64 × 8 × 64, from its middle", 64, 8, 64, 32, 1, 32),
                 new Shape("hall 64 × 8 × 64, from a corner", 64, 8, 64, 0, 0, 0),
-                // The largest a fill takes (EnclosureFill's 65,536 cells) is about 100 × 6 × 100.
+                // About the largest a fill took at the default cap of 65,536 cells, which spike #80
+                // measured. Kept as it was when the default rose to 102,400 (owner, 2026-11-08).
                 new Shape("hall 100 × 6 × 100, from a corner", 100, 6, 100, 0, 0, 0),
                 new Shape("corridor 3 × 3 × 64, from an end", 3, 3, 64, 1, 1, 0),
                 new Shape("corridor 3 × 3 × 128, from its middle", 3, 3, 128, 1, 1, 64),

@@ -62,6 +62,9 @@ result is never split, and devices, hazards and sync sit outside it. The owner's
 S-10's figures settle it. If no tick goes over 10 ms, this is reworded to what's built. If one
 does, that shows what needs gating.*
 
+*(owner, 2026-11-08) S-10's final run had 6 of 12,000 ticks over 10 ms; the owner judged that a
+pass, and no further verification is needed.*
+
 #### NFR-003 · Cost scales with activity
 `Must` · `R0` · `Implemented` · Verify: Bench · Trace: CORE-051, CORE-054, GEO-011
 

@@ -504,7 +504,10 @@ public final class PersistenceTests {
             throw new GameTestAssertException("no End");
         }
         try {
-            Rooms.withoutHeat(() -> saveAndReloadEveryKindOfState(h, nether, end));
+            // C's hole opens onto the Nether's caves. The chunks this test loads hold more than
+            // 65,536 cells of them, but not the default bound's 102,400.
+            Rooms.withoutHeat(
+                    () -> Rooms.withEnclosureBound(65_536, () -> saveAndReloadEveryKindOfState(h, nether, end)));
         } finally {
             service().dimensionFor(end).resumeSimulation();
         }

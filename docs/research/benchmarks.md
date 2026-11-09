@@ -947,9 +947,9 @@ controller's parts. The script, all on the server thread:
 5. Runs spike #80's survey.
 6. Runs the enclosure cap step (owner, 2026-11-08; GEO-020, D-23): how far
    `[atmos] enclosure_max_cells` can go. Everything before it runs at the
-   default cap of 65,536 cells, so its figures stay comparable with earlier
-   runs. The station is let go (its players leave and its chunks unload), and
-   sealed halls 16 blocks high with insides of 64, 68, 72, 76 and 80 blocks
+   default cap: 102,400 cells since the owner set it from this step's result
+   (owner, 2026-11-08), and 65,536 in the final run below. The station is let
+   go (its players leave and its chunks unload), and sealed halls 16 blocks high with insides of 64, 68, 72, 76 and 80 blocks
    square (65,536 to 102,400 cells) are each built in `zas_s10:halls`, a void
    dimension of their own with a vacuum ambient, with the cap set to the
    hall's cells and one player by it, in ticking chunks. For each hall: (a) one
@@ -1153,8 +1153,9 @@ Bold is a time not met with the margin (7.14 ms for NFR-002).
 | 80 × 80 × 16 | 102,400 | 153 ms (1.63) | 4.15 / 0.26 / 4.29 / 4.05 | 0.072, 0.544 ms | 161 B | 22.62 MiB | yes |
 
 The largest hall that passes every budget is **80 × 80 × 16, 102,400 cells**,
-the setting's top value. The 64 and 68 halls failed on server ticks that
-weren't the hall's work. Each was spent in a listener that doesn't touch the
+the setting's top value. From this, the owner made 102,400 the default and
+kept it the top (owner, 2026-11-08). The 64 and 68 halls failed on server
+ticks that weren't the hall's work. Each was spent in a listener that doesn't touch the
 hall, with no collector pause the bench saw:
 - the 64 hall's third merge: `Airflow`, 14.53 ms;
 - the 68 hall's zoning: `DeviceActivitySync`, 14.40 ms.
@@ -1186,7 +1187,8 @@ out.
 
 [#422](https://github.com/west3436/zas-cubed/pull/422) makes the bench count
 those pauses. It also gives each server tick's CPU time beside its wall time,
-so the next run can tell a stall from work.
+so the next run can tell a stall from work. The owner judged the scenario's
+6 ticks over 10 ms a pass for NFR-002, with no rerun (owner, 2026-11-08).
 
 **Spike #80's survey.** Every shape zoned whole. Its first batch carried the
 355 sections of the prefetch cube and closed in 0.19 to 0.36 ms. A fill that

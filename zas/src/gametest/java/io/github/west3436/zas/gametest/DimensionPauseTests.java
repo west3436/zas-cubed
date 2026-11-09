@@ -210,7 +210,10 @@ public final class DimensionPauseTests {
 
             run(op, "zas resume");
             h.assertTrue(restarted.simulationPause() == null, "still paused after /zas resume");
-            r.ticks(3);
+            // The held hole opens onto the Nether's caves. At the default bound of 102,400 cells its
+            // fill needs sections the restarted mirror doesn't hold yet, so it comes out open a
+            // couple of atmos ticks later than it did at 65,536 (GEO-028).
+            r.ticks(6);
             ZoneInfo resumed = Atmospheres.zoneAt(nether, r.abs(12, 2, 2))
                     .orElseThrow(() -> new GameTestAssertException("the zone didn't resume"));
             h.assertFalse(resumed.paused(), "the zone is paused after /zas resume");

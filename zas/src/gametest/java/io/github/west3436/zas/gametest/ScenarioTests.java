@@ -776,31 +776,32 @@ public final class ScenarioTests {
     // ---- GEO-020, GEO-022 ---------------------------------------------------------------------
 
     /**
-     * A sealed hall of more cells than the enclosure bound (65,536, D-23) classifies as open: gas
-     * added in it goes to the ambient and no zone forms. Walled in two, each half is under the
-     * bound and zones (GEO-020).
+     * A sealed hall of more cells than the enclosure bound (by default 102,400, D-23) classifies as
+     * open: gas added in it goes to the ambient and no zone forms. Walled in two, each half is under
+     * the bound and zones (GEO-020).
      */
     @GameTest(template = "empty", timeoutTicks = 200, batch = BATCH)
     public static void geo_020_hall_too_big_to_enclose_reports_open(GameTestHelper h) {
         inVacuum(h, end -> {
+            h.assertValueEqual(ZasServerConfig.enclosureMaxCells(), 102_400, "the bound");
             Station s = new Station(h, end, 45);
             Rooms r = s.r;
-            // Interior 41 × 40 × 41 = 67,240 cells.
-            s.hollow(0, 0, 0, 42, 41, 42);
+            // Interior 51 × 40 × 51 = 104,040 cells.
+            s.hollow(0, 0, 0, 52, 41, 52);
             s.ticks(2);
             MutationResult open =
-                    s.settle(GasMutations.add(end, r.point(21, 20, 21), oxygen(10), source("geo_020")), 30);
+                    s.settle(GasMutations.add(end, r.point(26, 20, 26), oxygen(10), source("geo_020")), 30);
             h.assertValueEqual(open.outcome(), MutationOutcome.AMBIENT, "the hall's outcome");
-            h.assertFalse(r.zoned(21, 20, 21), "the hall zoned");
+            h.assertFalse(r.zoned(26, 20, 26), "the hall zoned");
             h.assertValueEqual(
-                    Atmospheres.at(end, r.abs(21, 20, 21)).state(), AtmosphereState.AMBIENT, "a point in the hall");
+                    Atmospheres.at(end, r.abs(26, 20, 26)).state(), AtmosphereState.AMBIENT, "a point in the hall");
 
-            // A wall at x = 21 leaves two halves of 20 × 40 × 41 = 32,800 cells: sealed, and zoned.
-            s.fill(21, 1, 1, 21, 40, 41, STONE);
+            // A wall at x = 26 leaves two halves of 25 × 40 × 51 = 51,000 cells: sealed, and zoned.
+            s.fill(26, 1, 1, 26, 40, 51, STONE);
             MutationResult half =
-                    s.settle(GasMutations.add(end, r.point(10, 20, 21), oxygen(10), source("geo_020")), 30);
+                    s.settle(GasMutations.add(end, r.point(12, 20, 26), oxygen(10), source("geo_020")), 30);
             h.assertValueEqual(half.outcome(), MutationOutcome.ZONE, "a half's outcome");
-            h.assertValueEqual(r.zone(10, 20, 21).cellCount(), 32_800, "the half's cells");
+            h.assertValueEqual(r.zone(12, 20, 26).cellCount(), 51_000, "the half's cells");
         });
     }
 

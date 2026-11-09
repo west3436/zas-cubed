@@ -174,6 +174,23 @@ final class Rooms {
         }
     }
 
+    /**
+     * Runs a test's body with the enclosure bound at {@code cells} (GEO-020), for a test whose
+     * rooms open onto air that must count as open, in an area with few chunks loaded: a fill there
+     * finds that many cells before it reaches the unloaded chunks around, where at a larger bound it
+     * would reach them first and hold the room's zone paused (GEO-024). The body must run within
+     * the call, so no other test's atmos tick sees the setting.
+     */
+    static void withEnclosureBound(int cells, Runnable body) {
+        int configured = ZasServerConfig.ENCLOSURE_MAX_CELLS.get();
+        ZasServerConfig.ENCLOSURE_MAX_CELLS.set(cells);
+        try {
+            body.run();
+        } finally {
+            ZasServerConfig.ENCLOSURE_MAX_CELLS.set(configured);
+        }
+    }
+
     void ticks(int n) {
         for (int i = 0; i < n; i++) {
             tick();

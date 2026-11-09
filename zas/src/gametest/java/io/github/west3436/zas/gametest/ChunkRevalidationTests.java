@@ -109,6 +109,9 @@ public final class ChunkRevalidationTests {
         Rooms r = spanning(h, 675);
         double full = r.zone(12, 2, 2).mixture().moles().get(Rooms.O2);
         whileWhollyUnloaded(r, () -> unseen(r, 21, 2, 2, AIR));
+        // At the default bound of 102,400 cells the hole's fill needs sections the rebuilt mirror
+        // doesn't hold yet, so it comes out open an atmos tick later than it did at 65,536 (GEO-028).
+        r.ticks(2);
         ZoneInfo open = r.zone(12, 2, 2);
         h.assertFalse(open.paused(), "the zone didn't resume");
         h.assertTrue(open.breached(), "the zone doesn't know its wall has gone: " + open);
