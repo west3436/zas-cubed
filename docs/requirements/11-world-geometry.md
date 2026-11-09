@@ -391,11 +391,11 @@ does that, in a real level: the zones change only once markDirty is called.*
 `Must` · `R0` · `Implemented` · Verify: Unit, GameTest, Bench · Trace: D-23
 
 Whether a seed cell is enclosed shall be decided by a fill through connected
-cells, bounded by a configurable maximum volume (default 65,536 cells).
+cells, bounded by a configurable maximum volume (default 102,400 cells).
 Exceeding the bound means "open to ambient".
 
 - **Rationale:** Decision: D-23.
-- **Verify:** Unit tests check enclosures of 65,535 and 65,537 cells; a
+- **Verify:** Unit tests check enclosures of 102,399 and 102,401 cells; a
   GameTest checks a large hall reports open; Bench measures fill cost.
 
 *2026-10-31: Implemented. `geo_020_bounded_enclosure_test` (Unit) checks
@@ -418,6 +418,22 @@ cells held for a paused breach (GEO-026), are sized from the range's top, so a
 zone of any size the key allows is listed whole;
 `client_005_a_hall_at_the_largest_cap_is_listed_whole` (Unit) checks it. The
 overlay's packet still carries at most 32,768 cells, as before.*
+
+*The default is 102,400 cells, up from 65,536, and the range stays 1 to
+102,400 (owner, 2026-11-08). S-10's cap step found an 80 × 80 × 16 hall of
+102,400 cells within every budget
+([benchmarks](../research/benchmarks.md#the-final-run-2026-11-08)). The
+engine's own default follows, so headless runs and the game agree.
+`geo_020_bounded_enclosure_test` now checks 102,399, 102,400 and 102,401 cells
+at the default; `geo_020_hall_too_big_to_enclose_reports_open` checks a hall
+of 104,040 cells classifies as open, and that its halves of 51,000 zone. A
+server whose config file already holds 65,536 keeps it until that line is
+changed or removed. A fill must now find more cells before it calls a region
+open, so where few chunks are loaded it can take more atmos ticks to fetch
+sections (GEO-028), or reach unloaded chunks first, which pauses a breached
+zone (GEO-024, GEO-026). Three GameTests whose rooms open onto the air of the few
+chunks they load saw this: two now wait an atmos tick or two longer, and
+`data_001_a_saved_world_keeps_every_kind_of_state` runs at a bound of 65,536.*
 
 #### GEO-024 · Fills that reach unloaded chunks
 `Must` · `R0` · `Implemented` · Verify: GameTest · Trace: D-24, D-43
