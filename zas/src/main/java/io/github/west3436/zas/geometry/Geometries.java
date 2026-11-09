@@ -285,6 +285,27 @@ public final class Geometries {
     }
 
     /**
+     * The gas volume a zone-boundary block's state holds (GEO-045): what the same state holds open,
+     * with {@code open=true} and every other property as it is. So opening or closing it changes only
+     * its boundary faces and edges, never a zone's volume, whether its panel takes room when closed,
+     * as the content mod's airlocks' do, or only swings, as a vanilla door's does. A block with no
+     * {@code open} property has nothing to toggle, and keeps each state's own volume, as do a state
+     * with no cells, such as a waterlogged one (GEO-006), and one whose open state holds no gas.
+     *
+     * @param state the state
+     * @param geometry the geometry of any state of the block
+     */
+    public static double boundaryVolume(BlockState state, Function<BlockState, Geometry> geometry) {
+        Geometry here = geometry.apply(state);
+        if (!state.hasProperty(BlockStateProperties.OPEN) || here.cellCount() == 0) {
+            return here.volume();
+        }
+        double open =
+                geometry.apply(state.setValue(BlockStateProperties.OPEN, true)).volume();
+        return open > 0 ? open : here.volume();
+    }
+
+    /**
      * Maps each block to the override that applies to it. Tags are read here, on the thread that
      * bound them. A block named directly beats one matched through a tag; otherwise later
      * overrides win.
@@ -357,7 +378,8 @@ public final class Geometries {
     /**
      * The derived table with the overrides applied, then the blocks with seal providers flagged
      * {@link Geometry#FLAG_POSITIONAL}, then the zone boundaries marked: each tagged
-     * state's geometry, override or derived, with its {@link #boundaryFlags} added; then each
+     * state's geometry, override or derived, holding its {@link #boundaryVolume}, with its {@link
+     * #boundaryFlags} added; then each
      * block's heat data added to its states' geometries; then the ignition sources flagged; then the
      * flammable states given their odds and ignition temperatures (FIRE-033, FIRE-034); then the
      * fragile blocks flagged (FLOW-007).
@@ -420,7 +442,7 @@ public final class Geometries {
             for (BlockState state : block.getStateDefinition().getPossibleStates()) {
                 int stateId = Block.getId(state);
                 if (stateId >= 0 && stateId < byStateId.length) {
-                    Geometry g = geometry.apply(state);
+                    Geometry g = geometry.apply(state).withVolume(boundaryVolume(state, geometry));
                     byStateId[stateId] = palette.intern(g.withFlags(boundaryFlags(state, geometry)));
                     marked++;
                 }

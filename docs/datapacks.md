@@ -655,6 +655,12 @@ at the same path listing them; to take blocks out, it replaces the tag with
   or top face and the side it swings to. Its own cells join the space on its
   other sides, so a door belongs to the room it faces. Opening and closing it
   never splits or rebuilds a zone (GEO-044).
+- **One volume.** A tagged block with an `open` property holds, in every state,
+  the gas volume of the same state open (GEO-045). So a door whose closed panel
+  takes more room than its open one, as the airlock's leaf does, never changes
+  the volume of the zone its cells are in. A vanilla door's or trapdoor's
+  panel is the same size either way, so its volume doesn't change. A tagged
+  block with no `open` property keeps each state's own volume.
 - **Other blocks.** A tagged block that doesn't open, or seals the same faces
   either way, keeps zones apart across every face: each of its cells is a zone
   of its own.

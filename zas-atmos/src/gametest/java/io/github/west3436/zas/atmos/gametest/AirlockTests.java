@@ -23,6 +23,7 @@ import io.github.west3436.zas.atmos.controller.ConsoleSide;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
 import io.github.west3436.zas.atmos.power.DevicePower;
@@ -421,7 +422,6 @@ public final class AirlockTests {
             h.assertTrue(open(s, 4, 2), "the hand didn't open it");
             h.assertTrue(at(s, 4, 2, 2).getValue(AirlockBlock.OPEN), "the upper block stayed closed");
             s.cycles(3, a);
-            // B's side: opening widens the airlock's cells, which are A's, so A's pressure dips first.
             h.assertTrue(s.zone(6, 2, 2).mixture().pressure() < b0 - 1, "no gas went through the open airlock");
             h.assertFalse(s.zone(2, 2, 2).id().equals(s.zone(6, 2, 2).id()), "the open airlock joined A and B");
             h.assertValueEqual(s.zone(2, 2, 2).cellCount(), 29, "A's cells once open");
@@ -435,6 +435,142 @@ public final class AirlockTests {
             s.close(s.zone(2, 2, 2).mixture().pressure(), a1, 0.05, "A behind the airlock closed again");
             h.assertValueEqual(s.zone(6, 2, 2).cellCount(), 27, "B's cells once closed");
             player.discard();
+        });
+    }
+
+    // ---- GEO-045: a toggle keeps the rooms' volumes ---------------------------------------------
+
+    /**
+     * Fills A and B to 200 kPa of N₂ around a closed door between them, then opens and closes it four
+     * times, two atmos ticks apart. After every toggle A and B are still two zones, each with the
+     * volume it had and at 200 kPa within 1e-6 (GEO-045). Before GEO-045 the airlock's and the
+     * firelock's cells held 879 L less gas closed than open: opening dropped A, whose cells they are,
+     * to 196.8 kPa, gas crossed from B, and closing left A at 203.1 kPa.
+     */
+    private static void toggles(Site s, Runnable open, Runnable close, String door) {
+        seedRooms(s);
+        fill(s, 2, 2, 2, 200, 0);
+        fill(s, 6, 2, 2, 200, 0);
+        s.ticks(2);
+        double va = s.zone(2, 2, 2).volume();
+        double vb = s.zone(6, 2, 2).volume();
+        for (int i = 1; i <= 4; i++) {
+            for (boolean opening : new boolean[] {true, false}) {
+                (opening ? open : close).run();
+                s.ticks(2);
+                String when = door + (opening ? " opened" : " closed") + ", cycle " + i;
+                ZoneInfo a = s.zone(2, 2, 2);
+                ZoneInfo b = s.zone(6, 2, 2);
+                s.h.assertFalse(a.id().equals(b.id()), "A and B are one zone, " + when);
+                s.close(a.volume(), va, 1e-9, "A's volume, " + when);
+                s.close(b.volume(), vb, 1e-9, "B's volume, " + when);
+                s.close(a.mixture().pressure(), 200, 1e-6, "A's kPa, " + when);
+                s.close(b.mixture().pressure(), 200, 1e-6, "B's kPa, " + when);
+            }
+        }
+    }
+
+    /** The 1 by 2 airlock, opened and closed as a controller does (GEO-045). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void geo_045_toggling_an_airlock_keeps_both_rooms_at_200_kpa(GameTestHelper h) {
+        Site s = new Site(h, 1351);
+        run(h, s, () -> {
+            rooms(s);
+            airlock(s, 4, 2, Direction.EAST, false);
+            BlockState closed = at(s, 4, 1, 2);
+            Geometry shut = Geometries.table().geometry(closed);
+            Geometry open = Geometries.table().geometry(closed.setValue(AirlockBlock.OPEN, true));
+            h.assertValueEqual(shut.volume(), open.volume(), "the closed lower block's volume against the open's");
+            h.assertValueEqual(open.volume(), 750.0, "the open lower block's volume");
+            BlockPos origin = s.abs(4, 1, 2);
+            toggles(
+                    s,
+                    () -> AirlockBlock.setOpen(s.level, origin, true, null),
+                    () -> AirlockBlock.setOpen(s.level, origin, false, null),
+                    "the airlock");
+        });
+    }
+
+    /** The large airlock (GEO-045). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void geo_045_toggling_the_large_airlock_keeps_both_rooms_at_200_kpa(GameTestHelper h) {
+        Site s = new Site(h, 1352);
+        run(h, s, () -> {
+            rooms(s);
+            largeAirlock(s, false);
+            BlockPos origin = s.abs(4, 1, 2);
+            toggles(
+                    s,
+                    () -> AirlockBlock.setOpen(s.level, origin, true, null),
+                    () -> AirlockBlock.setOpen(s.level, origin, false, null),
+                    "the large airlock");
+        });
+    }
+
+    /** The standalone firelock, opened and closed as an alarm and the crowbar do (GEO-045). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void geo_045_toggling_a_firelock_keeps_both_rooms_at_200_kpa(GameTestHelper h) {
+        Site s = new Site(h, 1353);
+        run(h, s, () -> {
+            rooms(s);
+            BlockState lower = AtmosBlocks.FIRELOCK
+                    .get()
+                    .defaultBlockState()
+                    .setValue(FirelockBlock.FACING, Direction.EAST)
+                    .setValue(FirelockBlock.OPEN, false);
+            s.set(4, 1, 2, lower);
+            s.set(4, 2, 2, lower.setValue(FirelockBlock.HALF, DoubleBlockHalf.UPPER));
+            h.assertValueEqual(
+                    Geometries.table().geometry(lower).volume(),
+                    Geometries.table()
+                            .geometry(lower.setValue(FirelockBlock.OPEN, true))
+                            .volume(),
+                    "the closed lower block's volume against the open's");
+            BlockPos at = s.abs(4, 1, 2);
+            toggles(
+                    s,
+                    () -> FirelockBlock.setOpen(s.level, at, true, null),
+                    () -> FirelockBlock.setOpen(s.level, at, false, null),
+                    "the firelock");
+        });
+    }
+
+    /**
+     * A door with a firelock, closed by its firelock shutting on odd cycles and by the door itself on
+     * even ones. Its states hold the vanilla door's 812.5 L, as before (GEO-045).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void geo_045_toggling_a_door_with_a_firelock_keeps_both_rooms_at_200_kpa(GameTestHelper h) {
+        Site s = new Site(h, 1354);
+        run(h, s, () -> {
+            rooms(s);
+            BlockState oak = Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.FACING, Direction.EAST);
+            s.set(4, 1, 2, oak);
+            s.set(4, 2, 2, oak.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+            BlockPos lower = s.abs(4, 1, 2);
+            h.assertTrue(FirelockDoorBlock.fit(s.level, lower), "the firelock didn't fit");
+            for (BlockState st :
+                    AtmosBlocks.FIRELOCK_DOOR.get().getStateDefinition().getPossibleStates()) {
+                h.assertValueEqual(Geometries.table().geometry(st).volume(), 812.5, "the volume of " + st);
+            }
+            FirelockDoorBlockEntity f = s.entity(4, 1, 2, FirelockDoorBlockEntity.class);
+            int[] closes = {0};
+            Runnable open = () -> {
+                f.firelockDoor().setOpen(s.level, true);
+                BlockState st = s.level.getBlockState(lower);
+                ((DoorBlock) st.getBlock()).setOpen(null, s.level, st, lower, true);
+                h.assertTrue(at(s, 4, 1, 2).getValue(DoorBlock.OPEN), "the door didn't open");
+            };
+            Runnable close = () -> {
+                if (closes[0]++ % 2 == 0) {
+                    f.firelockDoor().setOpen(s.level, false);
+                } else {
+                    BlockState st = s.level.getBlockState(lower);
+                    ((DoorBlock) st.getBlock()).setOpen(null, s.level, st, lower, false);
+                }
+                h.assertFalse(at(s, 4, 1, 2).getValue(DoorBlock.OPEN), "the door didn't close");
+            };
+            toggles(s, open, close, "the door with a firelock");
         });
     }
 
@@ -996,20 +1132,34 @@ public final class AirlockTests {
     }
 
     /**
-     * Runs a cycle toward door {@code toward} to its end, checking at each step that the vents do
-     * {@code mode}, powered by the controller, that all three sensors show cycling, and that the
-     * airlock opens only on a reading within 5.07 kPa of the pressure at the sensor beyond it.
+     * Runs a cycle toward door {@code toward} to its end, checking at each step that the vents
+     * siphon while the chamber reads above the pressure beyond that door and blow while it reads
+     * below, powered by the controller, that they start with {@code mode}, that all three sensors
+     * show cycling, and that the airlock opens only on a reading within 5.07 kPa of the pressure at
+     * the sensor beyond it.
+     *
+     * <p>A vent's blow is bounded by the pressure beyond, but each vent in the chamber is bounded on
+     * its own, so two can overshoot: the cycle back of {@link
+     * #cont_139_a_chamber_cycles_out_to_a_vacuum_and_back_to_1_atm} blows its 5.8 m³ chamber from
+     * 87.6 to 101.4 kPa in one step, toward 95.6 kPa, and then siphons once (CONT-139).
      */
     static void cycle(GameTestHelper h, Site s, Lock lock, int toward, VentMode mode) {
         AirlockControllerBlockEntity ac = lock.controller();
         int x = toward == 0 ? 4 : 6;
+        boolean started = false;
         for (int i = 0; i < 200 && ac.cycling() >= 0; i++) {
             s.cycle(lock.devices());
             if (ac.cycling() >= 0) {
                 h.assertFalse(open(s, x, 2), "the airlock opened during the cycle");
                 if (ac.cycleStep() != null) {
+                    VentMode due = ac.chamberKpa() > ac.beyondKpa(toward) ? VentMode.SIPHON : VentMode.BLOW;
+                    if (!started) {
+                        h.assertValueEqual(due, mode, "the way the cycle starts");
+                        started = true;
+                    }
                     for (VentBlockEntity v : lock.vents()) {
-                        h.assertValueEqual(v.settings().mode(), mode, "a vent during the cycle");
+                        h.assertValueEqual(
+                                v.settings().mode(), due, "a vent at " + ac.chamberKpa() + " kPa during the cycle");
                         h.assertTrue(v.power().source() == ac, "a vent isn't powered by the airlock controller");
                     }
                 }

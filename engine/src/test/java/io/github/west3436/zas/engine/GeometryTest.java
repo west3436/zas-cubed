@@ -188,6 +188,39 @@ class GeometryTest {
         assertThrows(IllegalArgumentException.class, () -> Geometry.declared(EnumSet.noneOf(Face.class), 1001, 0));
     }
 
+    /**
+     * GEO-045: a geometry resized to a zone-boundary state's open volume keeps its faces and heat
+     * data, its only cell holds exactly that volume, and several cells keep their shares.
+     */
+    @Test
+    void geo_045_with_volume_resizes_the_cells_and_nothing_else() {
+        // A closed airlock's lower half: posts at the sides, the leaf from the north face to z = 10.
+        BitSet closed = box(0, 0, 0, 2, 16, 16);
+        GeometryDeriver.fill(closed, 14, 0, 0, 16, 16, 16);
+        GeometryDeriver.fill(closed, 2, 0, 0, 14, 16, 10);
+        Geometry g = GeometryDeriver.derive(closed).withFlags(Geometry.boundaryFlag(Face.NORTH));
+        assertEquals(281.25, g.volume());
+        Geometry open = g.withVolume(750);
+        assertEquals(750.0, open.volume());
+        assertEquals(750.0, open.cell(0).volume());
+        assertEquals(g.coverage(), open.coverage());
+        assertEquals(g.through(), open.through());
+        assertEquals(g.flags(), open.flags());
+        assertEquals(g.cell(0).footprints(), open.cell(0).footprints());
+        assertEquals(g.cell(0).shields(), open.cell(0).shields());
+
+        // A pane's two halves hold 437.5 L each: resized to 500 L, each keeps half.
+        Geometry pane = straightPane().withVolume(500);
+        assertEquals(250.0, pane.cell(0).volume());
+        assertEquals(250.0, pane.cell(1).volume());
+        assertEquals(straightPane().partitions(), pane.partitions());
+
+        assertSame(g, g.withVolume(281.25), "the volume it has");
+        assertSame(Geometry.SOLID, Geometry.SOLID.withVolume(500), "no cells");
+        assertThrows(IllegalArgumentException.class, () -> g.withVolume(1001));
+        assertThrows(IllegalArgumentException.class, () -> g.withVolume(Double.NaN));
+    }
+
     /** HEAT-011, HEAT-012: a full block is a wall layer on every line; air is none. */
     @Test
     void heat_011_through_lines_of_full_blocks_and_air() {

@@ -16,6 +16,7 @@ import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.engine.Face;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.geometry.Geometries;
+import io.github.west3436.zas.geometry.GeometryDerivation;
 import io.github.west3436.zas.geometry.GeometryTable;
 import java.util.EnumSet;
 import java.util.List;
@@ -162,6 +163,57 @@ public final class ZoneBoundaryTests {
                 Geometries.boundaryFlags(Blocks.OAK_FENCE_GATE.defaultBlockState(), t::geometry),
                 Geometry.FLAG_ZONE_BOUNDARY,
                 "a gate seals no face either way");
+        h.succeed();
+    }
+
+    /**
+     * Every state of a tagged block holds what the same state holds open, so a toggle never changes
+     * a zone's volume (GEO-045). A vanilla door's or trapdoor's panel only swings, so each of their
+     * states holds what its shape gives, as before. A block that takes room when closed holds its
+     * open volume closed; one that doesn't open, and a waterlogged state, keep their own.
+     */
+    @GameTest(template = "empty")
+    public static void geo_045_every_boundary_state_holds_its_open_volume(GameTestHelper h) {
+        GeometryTable t = Geometries.table();
+        GeometryTable shapes = GeometryDerivation.derived();
+        int states = 0;
+        for (Holder<Block> block : BuiltInRegistries.BLOCK.getTagOrEmpty(Geometries.ZONE_BOUNDARY)) {
+            for (BlockState s : block.value().getStateDefinition().getPossibleStates()) {
+                double v = t.geometry(s).volume();
+                if (s.hasProperty(BlockStateProperties.OPEN) && t.geometry(s).cellCount() > 0) {
+                    BlockState open = s.setValue(BlockStateProperties.OPEN, true);
+                    h.assertValueEqual(v, t.geometry(open).volume(), s + ": the volume against its open state's");
+                }
+                if (BuiltInRegistries.BLOCK.getKey(block.value()).getNamespace().equals("minecraft")) {
+                    h.assertValueEqual(v, shapes.geometry(s).volume(), s + ": the volume against its shape's");
+                }
+                states++;
+            }
+        }
+        h.assertTrue(states > 0, "no tagged states");
+        h.assertValueEqual(
+                t.geometry(DOOR.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER)).volume(), 812.5, "the oak door");
+
+        // A door whose panel takes room when closed: its closed states hold the open state's volume.
+        BlockState closed = DOOR.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER).setValue(DoorBlock.OPEN, false);
+        Geometry slab = Geometry.AIR.withVolume(300);
+        Geometry gap = Geometry.AIR.withVolume(800);
+        h.assertValueEqual(
+                Geometries.boundaryVolume(closed, s -> s.getValue(DoorBlock.OPEN) ? gap : slab),
+                800.0,
+                "a closed state's volume");
+        h.assertValueEqual(
+                Geometries.boundaryVolume(closed, s -> s.getValue(DoorBlock.OPEN) ? Geometry.SOLID : slab),
+                300.0,
+                "a state whose open state holds no gas");
+        h.assertValueEqual(
+                Geometries.boundaryVolume(Blocks.COBWEB.defaultBlockState(), s -> slab),
+                300.0,
+                "a block that doesn't open");
+        h.assertValueEqual(
+                Geometries.boundaryVolume(TRAPDOOR.setValue(TrapDoorBlock.WATERLOGGED, true), t::geometry),
+                0.0,
+                "a waterlogged trapdoor");
         h.succeed();
     }
 

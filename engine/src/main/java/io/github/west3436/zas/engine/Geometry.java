@@ -295,6 +295,39 @@ public record Geometry(
                 block.ignitionTemperature);
     }
 
+    /**
+     * This geometry with its cells holding {@code total} litres between them, each keeping its share
+     * of what they hold now: for a zone-boundary state, which holds what its open state holds
+     * (GEO-045). The faces, footprints and heat data stay as they are. Unchanged if it has no cells,
+     * if they hold nothing, or if they hold {@code total} already.
+     *
+     * @throws IllegalArgumentException if {@code total} isn't 0 to 1,000 L
+     */
+    public Geometry withVolume(double total) {
+        if (!(total >= 0 && total <= FULL_VOLUME)) {
+            throw new IllegalArgumentException("volume must be 0 to 1000 L, got " + total);
+        }
+        double now = volume();
+        if (cells.isEmpty() || !(now > 0) || total == now) {
+            return this;
+        }
+        List<Cell> resized = new ArrayList<>(cells.size());
+        for (Cell c : cells) {
+            // A cell's share first, so a block's only cell holds exactly the total.
+            resized.add(new Cell(c.volume() / now * total, c.footprints(), c.shields()));
+        }
+        return new Geometry(
+                coverage,
+                resized,
+                flags,
+                through,
+                partitions,
+                transmittance,
+                sourceTemperature,
+                igniteOdds,
+                ignitionTemperature);
+    }
+
     /** Whether the block can catch fire (FIRE-033, FIRE-034). */
     public boolean isFlammable() {
         return igniteOdds > 0;

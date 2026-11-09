@@ -433,7 +433,8 @@ context (GEO-041).
    (GEO-006) and zone-boundary tags (GEO-007) are applied over the derived
    geometry, then heat data (HEAT-002, HEAT-003; §4.8). Each produces a new
    palette entry: an override is a single cell, a zone boundary is the block's
-   geometry with a flag per boundary face (§4.7), and heat data is the block's
+   geometry with a flag per boundary face and its open state's volume (§4.7,
+   GEO-045), and heat data is the block's
    geometry with its U and source temperature. Overrides are
    JSON files at `data/<namespace>/zas/geometry_overrides/<path>.json`:
    `blocks` (block ids, or tags prefixed with `#`; unknown ones are skipped),
@@ -1054,6 +1055,18 @@ closing it is a cheap edge update.
   direct opening to its own zone), no zone is created or rebuilt, and the
   edge's connection count is all that changes (GEO-044). Closing the last open
   door between two rooms removes their edge; opening it adds one.
+- **One volume** (GEO-045). After overrides, `Geometries` resizes each tagged
+  state's cells to what the same state holds open (`boundaryVolume`,
+  `Geometry.withVolume`), each cell keeping its share, so a toggle changes no
+  zone's volume either. A vanilla door's or trapdoor's panel only swings, so
+  its cells hold 812.5 L either way and are unchanged. The airlocks' and the
+  firelock's leaf takes room closed, since it fills the passage from the face it
+  seals (§11.8). Before this, closing one shrank the zone holding its cells,
+  which kept its gas (CORE-022), and opening one grew it. The gas that crossed
+  while it was open stayed where it went, so each cycle moved gas toward the
+  door's side. A tagged block with no `open` property keeps each state's own
+  volume. A seal provider's answer (API-023) and a shape worked out per position
+  (GEO-043) aren't resized: they are the block's own.
 - **Why per face.** Until #107 a boundary block was a boundary on every face,
   so each open door's cell was a one-cell zone with an edge to each room: the
   S-10 station had 278 zones and 356 edges for 100 rooms, and every toggle
@@ -2449,7 +2462,7 @@ The test names include requirement IDs (README rule 5).
 | Area | Where |
 |---|---|
 | CORE | §3, §4.4; §3.5 (determinism); §5 (ledger) |
-| GEO | §4.1–§4.3, §4.6 |
+| GEO | §4.1–§4.3, §4.6, §4.7 |
 | ENV | §2.3 (ambients in `Batch`), §3.4 (providers on the server thread) |
 | API | §6 |
 | HEAT (conduction: HEAT-001, HEAT-002, HEAT-004, HEAT-006, HEAT-008, HEAT-011 to HEAT-015, HEAT-019; sources HEAT-003, HEAT-016; heat at open air HEAT-010) | §4.8 |
@@ -3529,7 +3542,10 @@ work through `FirelockLogic` (§11.18).*
   frame and lintel seal only the side faces and the top. The front face is
   the boundary, in both states: the firelock's cells join the room behind it,
   and opening or closing it never splits a zone (GEO-044). The outline shape
-  is the model's.
+  is the model's. The cells hold the open state's volume in both states, 750 L
+  in the lower block and 656.25 L in the upper, although the closed leaf leaves
+  only 281.25 L and 246.09 L free: so closing it takes no room from the zone
+  they're in (GEO-045, §4.7).
 - **Its work** (`FirelockBlockEntity`, an `AtmosDevice` on the lower half),
   each atmos tick. It reads the cells in front of the panel and behind it. A
   side that reads as unresolved changes nothing that step.
@@ -4141,7 +4157,9 @@ block-entity renderer.
   one is fitted (loot tables). The geometry is the firelock's (§11.8): closed,
   the collision leaf fills the passage from the face it looks to, which is its
   boundary in both states, so its cells join the room behind it and a toggle
-  never splits a zone.
+  never splits a zone. Its cells hold the open state's volume closed too (in
+  the large airlock, 875 L in each lower block and 765.625 L in each upper), so
+  a toggle doesn't change the chamber's volume (GEO-045).
 - **Opening** (CONT-135). Use opens or closes it unless it's bolted, and a
   redstone signal at any of its blocks opens it and holds it open. Opening
   schedules a block tick `AUTO_CLOSE_TICKS` (100) later, and a signal ending
