@@ -22,6 +22,8 @@ CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07
 CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
 added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
+On 2026-11-09 the owner made the tank transfer valve placeable (D-86), changing
+CONT-103 and CONT-104.
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -1413,18 +1415,31 @@ canister in the world.*
 #### CONT-103 · Tank transfer valve
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13
 
-A handheld tank transfer valve shall hold two gas tanks (CONT-030) joined by a
+A tank transfer valve shall hold two gas tanks (CONT-030) joined by a
 valve. Opening the valve moves all of the first tank's gas into the second;
 closing it shares the gas back by volume, as in vg. The merged mixture reacts
 in its tank (CONT-100), so a hot oxidizer mixed with fuel above its
 autoignition temperature (FIRE-010) burns, and the tank may fail (CONT-038).
-It's an item until its timer starts, and an entity once primed (CONT-104).
+It's an item or a placed block until its timer starts, and an entity once
+primed (CONT-104).
 
-- **Rationale:** Decision: D-57 (S-13).
+Sneak-using a TTV on a block shall place it with its tanks, valve and timer;
+plain use opens its window, as before. A tank used on a placed TTV fits in its
+first free place. An empty hand opens its window. A placed TTV breaks at once by
+hand and drops as the item, with its tanks, valve and timer.
+
+- **Rationale:** Decision: D-57 (S-13), D-86.
 - **Verify:** A GameTest opens and closes a TTV and checks the gas moves and
-  shares back by volume, and that a hot mixture burns in the tank.
+  shares back by volume, and that a hot mixture burns in the tank. GameTests
+  place a TTV by sneak-use, fit tanks to it and open its window with an empty
+  hand, and check that broken by hand it drops with its tanks, valve and timer.
 - **Changed 2026-11-02 (the owner, in the batch 3 art review):** a TTV is an
   entity only once primed, like primed TNT (CONT-104).
+- **Changed 2026-11-09 (the owner, in chat):** a TTV can be placed (D-86).
+  Sneak-use on a block places it, and plain use still opens its window. A tank
+  used on a placed TTV fits in the first free place, an empty hand opens its
+  window, and it breaks at once by hand, dropping with its tanks, valve and
+  timer.
 
 *2026-11-04: Implemented ([#49](https://github.com/west3436/zas-cubed/issues/49)).
 `zas_atmos:tank_transfer_valve` holds two tanks, fitted by right-clicks in an
@@ -1472,22 +1487,56 @@ through the slots exists exactly once afterwards, with its gas:
 `cont_103_a_tank_can_fail_with_the_screen_open` check that. The screen's look
 needs a client, so it waits for the owner's check.*
 
+*2026-11-09: Implemented the placed TTV (D-86,
+[#428](https://github.com/west3436/zas-cubed/issues/428)). The block is
+`zas_atmos:tank_transfer_valve`, the item's own ID. It stands 7 px high, faces
+the way its timer points, toward whoever placed it, and shows 0 to 2 tanks and
+its valve shut or open. It holds its tanks, valve and timer as the item's own
+components, so placing and breaking carry them across, and its window is the
+item's, bound to the block. Its gas reacts every atmos tick, at the block's
+middle, and its tanks fail as a held TTV's do: a leaking tank stays, a ruptured
+one leaves its place empty, and one that explodes takes the TTV, which drops
+nothing. `cont_103_sneak_use_places_it_and_plain_use_opens_its_screen`,
+`cont_103_a_tank_used_on_it_fits_and_an_empty_hand_opens_its_screen`,
+`cont_103_broken_it_drops_as_the_item_it_was_placed_from`,
+`cont_103_a_blast_from_elsewhere_drops_it_whole`,
+`cont_103_gas_reacts_in_a_placed_ttv` and
+`cont_103_a_placed_ttvs_tanks_fail_as_a_held_ones_do` check it. A tank moved
+through a placed TTV's window exists exactly once afterwards, with two windows
+open on it, and when it breaks with a window open:
+`cont_103_its_screen_moves_each_tank_once`,
+`cont_103_a_clients_screen_on_it_agrees_with_the_servers` and
+`cont_103_its_screen_opens_and_syncs_through_the_game` check that. The tests
+above still pass on the item. These details are mine, for the owner to confirm:
+broken in creative it drops nothing, as any block does; a blast from elsewhere
+drops it whole, while its own exploding tank leaves nothing; it needs nothing
+under it; a piston breaks it and it drops; and an item other than a tank or a
+TTV does nothing to it. Its models need a client, so they wait for the owner's
+check.*
+
 #### CONT-104 · TTV timer
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-57, S-13 · Depends: CONT-103
 
 A TTV's valve shall open by hand, or when a timer set from 0 to 600 s
 (default 10 s) runs out. Starting the timer primes the TTV: it becomes an
 entity in the world, like primed TNT, that no one can pick up or use, and its
-valve opens when the timer runs out. At 0 s the valve opens as soon as the
-timer starts, as in vg. vg's signaler and proximity triggers are R2.
+valve opens when the timer runs out. A placed TTV primes where it stands,
+keeping its tanks, timer and facing. At 0 s the valve opens as soon as the
+timer starts, as in vg. Redstone does nothing to a TTV. vg's signaler and
+proximity triggers are R2.
 
-- **Rationale:** Decision: D-57 and D-59.
+- **Rationale:** Decision: D-57, D-59 and D-86.
 - **Verify:** GameTests check the valve opens by hand, at 0 s, and when a
   primed TTV's timer runs out, and that a primed TTV can't be picked up or
-  used.
+  used. A GameTest starts a placed TTV's timer and checks it primes where it
+  stands, and another powers one and checks nothing happens.
 - **Changed 2026-11-02 (the owner, in the batch 3 art review):** a primed TTV
   is an entity, like primed TNT, so the timer no longer counts down in an
   inventory or as a dropped item.
+- **Changed 2026-11-09 (the owner, in chat):** Start on a placed TTV primes it
+  where it stands: the block goes, and a primed TTV takes its place with its
+  tanks, timer and facing (D-86). Redstone does nothing to a TTV; the signaler
+  stays R2.
 
 *2026-10-31: the range now starts at 0 s, as in vg (D-59).*
 
@@ -1511,6 +1560,13 @@ too, as the entity then has the only tanks. A creative player could keep a copy
 before. `cont_104_start_waits_for_a_tank_being_moved`,
 `cont_104_the_hand_valve_needs_both_tanks_from_slots` and
 `cont_103_a_creative_player_gets_no_copies` check it.*
+
+*2026-11-09: Implemented for the placed TTV (D-86,
+[#428](https://github.com/west3436/zas-cubed/issues/428)). Start in its window
+removes the block and primes a TTV at the bottom middle of its place, still,
+turned as the block was. As on the item, Start waits while a tank is on the
+cursor, and an open valve won't start. `cont_104_start_primes_it_where_it_stands`
+and `cont_104_redstone_does_nothing_to_it` check it.*
 
 #### CONT-039 · Tank filling
 `Must` · `R1` · `Implemented` · Verify: GameTest

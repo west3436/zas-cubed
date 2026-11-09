@@ -56,7 +56,10 @@ public abstract class TguiScreen<M extends AbstractContainerMenu> extends Abstra
         }
     }
 
-    /** The section around the player's inventory, which starts at {@code inventoryY} in the window, and every slot's frame. */
+    /**
+     * The section around the player's inventory, which starts at {@code inventoryY} in the window, and
+     * the frame of every slot that is shown.
+     */
     protected final void slots(Ui ui, int inventoryY) {
         ui.section(
                 leftPos + Ui.PAD,
@@ -65,7 +68,9 @@ public abstract class TguiScreen<M extends AbstractContainerMenu> extends Abstra
                 INVENTORY_HEIGHT,
                 null);
         for (Slot slot : menu.slots) {
-            ui.slot(leftPos + slot.x, topPos + slot.y);
+            if (slot.isActive()) {
+                ui.slot(leftPos + slot.x, topPos + slot.y);
+            }
         }
     }
 

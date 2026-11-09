@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -129,6 +130,15 @@ public final class ZasAtmosClient {
                         ? holder.tint(tintIndex - 1)
                         : -1,
                 AtmosBlocks.TANK_HOLDER.get());
+
+        // A placed TTV's tanks are tinted as the item's are: index 1 its first or lone tank, 2 its second (D-86).
+        event.register(
+                (state, level, pos, tintIndex) -> level != null
+                                && pos != null
+                                && level.getBlockEntity(pos) instanceof TransferValveBlockEntity ttv
+                        ? ttv.tint(tintIndex)
+                        : -1,
+                AtmosBlocks.TANK_TRANSFER_VALVE.get());
     }
 
     /** Dyed pipe and cap items are tinted like the blocks they place (CONT-114). */

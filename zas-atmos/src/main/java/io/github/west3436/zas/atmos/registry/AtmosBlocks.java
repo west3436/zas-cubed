@@ -31,6 +31,7 @@ import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
@@ -218,6 +219,23 @@ public final class AtmosBlocks {
     /** The heat exchanger, which works in pairs (CONT-147, HEAT-022). */
     public static final DeferredBlock<HeatExchangerBlock> HEAT_EXCHANGER =
             BLOCKS.registerBlock("heat_exchanger", HeatExchangerBlock::new, metal());
+
+    // ---- The tank transfer valve, placed (CONT-103, D-86) ----
+
+    /**
+     * A tank transfer valve standing on the ground, which its item places: small, metal, and broken at
+     * once by hand, as a lantern is, but needing no support.
+     */
+    public static final DeferredBlock<TransferValveBlock> TANK_TRANSFER_VALVE = BLOCKS.registerBlock(
+            "tank_transfer_valve",
+            TransferValveBlock::new,
+            BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instabreak()
+                    .sound(SoundType.LANTERN)
+                    .noOcclusion()
+                    .forceSolidOn()
+                    .pushReaction(PushReaction.DESTROY));
 
     // ---- The tank holder (CONT-149 to CONT-151, D-84) ----
 

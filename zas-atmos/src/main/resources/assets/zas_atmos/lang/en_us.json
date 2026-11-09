@@ -243,7 +243,7 @@
   "message.zas_atmos.magnetic_boots.on": "Magnetic boots on",
   "message.zas_atmos.magnetic_boots.off": "Magnetic boots off",
   "message.zas_atmos.magnetic_boots.none": "No magnetic boots",
-  "item.zas_atmos.tank_transfer_valve": "Tank Transfer Valve",
+  "block.zas_atmos.tank_transfer_valve": "Tank Transfer Valve",
   "item.zas_atmos.tank_transfer_valve.open": "Valve: open",
   "item.zas_atmos.tank_transfer_valve.closed": "Valve: closed",
   "item.zas_atmos.tank_transfer_valve.timer": "Timer: %s s",

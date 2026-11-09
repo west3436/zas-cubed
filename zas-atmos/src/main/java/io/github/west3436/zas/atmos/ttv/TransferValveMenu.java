@@ -1,5 +1,6 @@
 package io.github.west3436.zas.atmos.ttv;
 
+import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -7,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -20,9 +22,9 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A held TTV's GUI (CONT-103, CONT-104, CONT-074): a slot for each of its tanks, its valve and timer,
- * and the player's inventory. The client sends only clicks and button ids, and the server checks
- * each.
+ * A TTV's GUI (CONT-103, CONT-104, CONT-074), held or placed: a slot for each of its tanks, its valve
+ * and timer, and the player's inventory. The client sends only clicks and button ids, and the server
+ * checks each.
  *
  * <p>A menu on a held item is the classic way to duplicate one, so this one has nothing to duplicate
  * from:
@@ -36,6 +38,11 @@ import org.jetbrains.annotations.Nullable;
  *       #stillValid}). It acts on nothing after that, and the game closes it at the next tick. A tank
  *       on the cursor then goes back to the inventory.
  * </ul>
+ *
+ * <p>On a placed TTV (D-86), the stack is its {@linkplain TransferValveBlockEntity block entity}'s,
+ * which every player's menu on it reads and changes, so a tank is only ever in one place. A hidden
+ * slot sends it to the client, as the inventory's slot sends a held one. The menu stops when the block
+ * goes or the player is out of reach, as a chest's does.
  */
 public class TransferValveMenu extends AbstractContainerMenu {
     /** Lowers the timer by 10 s. */
@@ -79,6 +86,9 @@ public class TransferValveMenu extends AbstractContainerMenu {
     /** The tank slots belong to no container of their own: they are the stack's data. */
     private static final SimpleContainer NO_CONTAINER = new SimpleContainer(0);
 
+    /** The index a placed TTV's menu sends its client, as a held one's sends the inventory slot. */
+    public static final int PLACED = -1;
+
     private final Inventory inventory;
     private final int valveIndex;
     private final int valveSlot;
@@ -87,22 +97,45 @@ public class TransferValveMenu extends AbstractContainerMenu {
     @Nullable
     private final ItemStack opened;
 
+    /** The server's placed TTV, or null. */
+    @Nullable
+    private final TransferValveBlockEntity placed;
+
+    /** A client's copy of a placed TTV's stack, which the hidden slot replaces as it syncs. */
+    private ItemStack local = ItemStack.EMPTY;
+
     /** The server's menu, on what a player's hand holds. */
     public TransferValveMenu(int id, Inventory inventory, InteractionHand hand) {
-        this(id, inventory, indexOf(inventory, hand), inventory.player.getItemInHand(hand));
+        this(id, inventory, indexOf(inventory, hand), inventory.player.getItemInHand(hand), null);
+    }
+
+    /** The server's menu, on a placed TTV. */
+    public TransferValveMenu(int id, Inventory inventory, TransferValveBlockEntity placed) {
+        this(id, inventory, PLACED, null, placed);
     }
 
     /** The client's menu. */
     public TransferValveMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(id, inventory, buf.readVarInt(), null);
+        this(id, inventory, buf.readVarInt(), null, null);
     }
 
-    private TransferValveMenu(int id, Inventory inventory, int valveIndex, @Nullable ItemStack opened) {
+    private TransferValveMenu(
+            int id,
+            Inventory inventory,
+            int valveIndex,
+            @Nullable ItemStack opened,
+            @Nullable TransferValveBlockEntity placed) {
         super(AtmosMenus.TANK_TRANSFER_VALVE.get(), id);
         this.inventory = inventory;
         this.valveIndex = valveIndex;
-        this.valveSlot = valveIndex == Inventory.SLOT_OFFHAND ? INVENTORY_END : HOTBAR_START + valveIndex;
+        this.valveSlot = valveIndex == Inventory.SLOT_OFFHAND || valveIndex == PLACED
+                ? INVENTORY_END
+                : HOTBAR_START + valveIndex;
         this.opened = opened;
+        this.placed = placed;
+        if (valveIndex == PLACED) {
+            local = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());
+        }
         addSlot(new TankSlot(TransferValve.FIRST, FIRST_Y));
         addSlot(new TankSlot(TransferValve.SECOND, SECOND_Y));
         for (int row = 0; row < 3; row++) {
@@ -121,6 +154,10 @@ public class TransferValveMenu extends AbstractContainerMenu {
         if (valveIndex == Inventory.SLOT_OFFHAND) {
             addSlot(new ValveSlot(inventory, valveIndex, OFF_HAND_X, INVENTORY_Y + 58));
         }
+        // A placed TTV's stack reaches the client the same way, through a slot no one sees.
+        if (valveIndex == PLACED) {
+            addSlot(new PlacedSlot());
+        }
     }
 
     private static int indexOf(Inventory inventory, InteractionHand hand) {
@@ -131,15 +168,32 @@ public class TransferValveMenu extends AbstractContainerMenu {
     public static void open(ServerPlayer player, InteractionHand hand) {
         int index = indexOf(player.getInventory(), hand);
         player.openMenu(
-                new SimpleMenuProvider(
-                        (id, inventory, p) -> new TransferValveMenu(id, inventory, hand),
-                        Component.translatable("item.zas_atmos.tank_transfer_valve")),
+                new SimpleMenuProvider((id, inventory, p) -> new TransferValveMenu(id, inventory, hand), title()),
                 buf -> buf.writeVarInt(index));
+    }
+
+    /** Opens it on a placed TTV. */
+    public static void open(ServerPlayer player, TransferValveBlockEntity placed) {
+        player.openMenu(
+                new SimpleMenuProvider((id, inventory, p) -> new TransferValveMenu(id, inventory, placed), title()),
+                buf -> buf.writeVarInt(PLACED));
+    }
+
+    private static Component title() {
+        return Component.translatable(AtmosItems.TANK_TRANSFER_VALVE.get().getDescriptionId());
     }
 
     /** The stack where the TTV is: the only one this menu ever reads or changes. */
     private ItemStack stack() {
-        return inventory.getItem(valveIndex);
+        if (placed != null) {
+            return placed.stack();
+        }
+        return valveIndex == PLACED ? local : inventory.getItem(valveIndex);
+    }
+
+    /** Whether this menu is on a placed TTV rather than a held one. */
+    public boolean isPlaced() {
+        return valveIndex == PLACED;
     }
 
     private InteractionHand hand() {
@@ -156,7 +210,7 @@ public class TransferValveMenu extends AbstractContainerMenu {
         return TransferValveItem.timer(stack());
     }
 
-    /** The index in this menu of the slot the TTV itself is in. */
+    /** The index in this menu of the slot the TTV itself is in: on a placed TTV, the hidden one. */
     public int valveSlot() {
         return valveSlot;
     }
@@ -167,10 +221,14 @@ public class TransferValveMenu extends AbstractContainerMenu {
      */
     @Override
     public boolean stillValid(Player player) {
+        if (!player.isAlive() || player.isSpectator()) {
+            return false;
+        }
+        if (placed != null) {
+            return !placed.isRemoved() && Container.stillValidBlockEntity(placed, player);
+        }
         ItemStack stack = stack();
-        return player.isAlive()
-                && !player.isSpectator()
-                && stack.getCount() == 1
+        return stack.getCount() == 1
                 && stack.getItem() instanceof TransferValveItem
                 && (opened == null || (stack == opened && player.getItemInHand(hand()) == opened));
     }
@@ -185,9 +243,15 @@ public class TransferValveMenu extends AbstractContainerMenu {
         if (!stillValid(player)) {
             return;
         }
+        ItemStack before = placed != null ? stack().copy() : ItemStack.EMPTY;
+        click(slotId, button, type, player);
+        changed(before);
+    }
+
+    private void click(int slotId, int button, ClickType type, Player player) {
         if (refuses(slotId, button, type)) {
             resetQuickCraft();
-            if (slotId == valveSlot && type == ClickType.PICKUP && button == 1) {
+            if (slotId == valveSlot && !isPlaced() && type == ClickType.PICKUP && button == 1) {
                 TransferValveItem.rightClicked(
                         stack(), getCarried(), player, SlotAccess.of(this::getCarried, this::setCarried));
             }
@@ -214,7 +278,7 @@ public class TransferValveMenu extends AbstractContainerMenu {
             return true;
         }
         return switch (type) {
-            case SWAP -> button == valveIndex;
+            case SWAP -> !isPlaced() && button == valveIndex;
             case CLONE -> isTank(slotId);
             default -> false;
         };
@@ -235,6 +299,20 @@ public class TransferValveMenu extends AbstractContainerMenu {
         if (!stillValid(player)) {
             return false;
         }
+        ItemStack before = placed != null ? stack().copy() : ItemStack.EMPTY;
+        boolean done = button(player, id);
+        changed(before);
+        return done;
+    }
+
+    /** A placed TTV that a click changed saves, and shows its tanks and valve. */
+    private void changed(ItemStack before) {
+        if (placed != null && !placed.isRemoved() && !ItemStack.matches(before, placed.stack())) {
+            placed.changed();
+        }
+    }
+
+    private boolean button(Player player, int id) {
         ItemStack stack = stack();
         int now = TransferValveItem.timer(stack);
         return switch (id) {
@@ -249,16 +327,20 @@ public class TransferValveMenu extends AbstractContainerMenu {
                     SoundEvent event = TransferValveItem.valve(stack).isOpen()
                             ? AtmosSounds.TTV_OPEN.get()
                             : AtmosSounds.VALVE_CLOSE.get();
-                    player.level()
-                            .playSound(
-                                    null,
-                                    player.getX(),
-                                    player.getY(),
-                                    player.getZ(),
-                                    event,
-                                    SoundSource.PLAYERS,
-                                    1.0f,
-                                    1.0f);
+                    if (placed != null) {
+                        player.level().playSound(null, placed.getBlockPos(), event, SoundSource.BLOCKS, 1.0f, 1.0f);
+                    } else {
+                        player.level()
+                                .playSound(
+                                        null,
+                                        player.getX(),
+                                        player.getY(),
+                                        player.getZ(),
+                                        event,
+                                        SoundSource.PLAYERS,
+                                        1.0f,
+                                        1.0f);
+                    }
                 }
                 yield moved;
             }
@@ -272,9 +354,18 @@ public class TransferValveMenu extends AbstractContainerMenu {
         return true;
     }
 
-    /** The timer waits for an empty cursor: a tank on it is one the player hasn't finished moving. */
+    /**
+     * The timer waits for an empty cursor: a tank on it is one the player hasn't finished moving. A
+     * placed TTV primes where it stands.
+     */
     private boolean start(Player player) {
-        return getCarried().isEmpty() && TransferValveItem.start(player, hand()) != null;
+        if (!getCarried().isEmpty()) {
+            return false;
+        }
+        if (placed != null) {
+            return placed.prime() != null;
+        }
+        return !isPlaced() && TransferValveItem.start(player, hand()) != null;
     }
 
     /**
@@ -337,6 +428,53 @@ public class TransferValveMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
+            return false;
+        }
+
+        @Override
+        public boolean isHighlightable() {
+            return false;
+        }
+    }
+
+    /**
+     * The hidden slot of a placed TTV's stack, which only syncs it: no click reaches it, and nothing
+     * draws it. On the client, the stack it is sent is the menu's copy.
+     */
+    private final class PlacedSlot extends Slot {
+        PlacedSlot() {
+            super(NO_CONTAINER, 0, OFF_HAND_X, INVENTORY_Y + 58);
+        }
+
+        @Override
+        public ItemStack getItem() {
+            return stack();
+        }
+
+        @Override
+        public void set(ItemStack stack) {
+            if (placed == null) {
+                local = stack;
+            }
+        }
+
+        @Override
+        public ItemStack remove(int amount) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return false;
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return false;
+        }
+
+        @Override
+        public boolean isActive() {
             return false;
         }
 

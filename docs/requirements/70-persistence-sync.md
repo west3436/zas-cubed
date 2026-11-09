@@ -214,6 +214,14 @@ data, the zones and the vent's network come back within 1e-9. The controller
 comes back without power, as a lease is never saved. Once the area air controller
 pays for it again, it finishes the cycle.*
 
+*2026-11-09: the station now has a placed TTV too (D-86), so it again has a block
+entity of every kind the mod has. It holds two tanks, of O2 and H2, cold and apart,
+with its valve shut and its timer at 321 s, facing east. The station test checks
+each tank's gas within 1e-9, the valve, the timer, and the block's tank count and
+facing. `cont_103_broken_it_drops_as_the_item_it_was_placed_from` (GameTest) also
+writes a placed TTV's saved data to bytes and reads it back, for four TTVs: a named
+one with two tanks, one with its valve open, one with a lone tank and a bare one.*
+
 #### DATA-003 · Versioned format
 `Must` · `R0` · `Implemented` · Verify: Unit
 

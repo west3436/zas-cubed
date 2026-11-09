@@ -7,6 +7,8 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -86,11 +88,40 @@ public class PrimedTransferValve extends Entity {
      * @return the entity
      */
     public static PrimedTransferValve prime(ServerLevel level, Player player, ItemStack stack) {
-        PrimedTransferValve primed = new PrimedTransferValve(AtmosEntities.PRIMED_TANK_TRANSFER_VALVE.get(), level);
         Vec3 look = player.getLookAngle();
-        primed.setPos(player.position());
-        primed.setDeltaMovement(look.x * 0.2, 0.2, look.z * 0.2);
-        primed.setYRot(player.getDirection().toYRot());
+        return prime(
+                level,
+                player.position(),
+                new Vec3(look.x * 0.2, 0.2, look.z * 0.2),
+                player.getDirection().toYRot(),
+                stack);
+    }
+
+    /**
+     * Primes a placed TTV where it stands (D-86): adds its entity on the block's floor, still, its timer
+     * facing the way the block's did. The caller removes the block. The stack isn't changed.
+     *
+     * @param level the level
+     * @param pos where the block stood
+     * @param facing the way its timer faced
+     * @param stack the TTV's tanks, valve and timer
+     * @return the entity
+     */
+    public static PrimedTransferValve prime(ServerLevel level, BlockPos pos, Direction facing, ItemStack stack) {
+        // The model's timer is on its north face, and the renderer turns it by -yRot.
+        return prime(
+                level,
+                Vec3.atBottomCenterOf(pos),
+                Vec3.ZERO,
+                facing.getOpposite().toYRot(),
+                stack);
+    }
+
+    private static PrimedTransferValve prime(ServerLevel level, Vec3 at, Vec3 motion, float yRot, ItemStack stack) {
+        PrimedTransferValve primed = new PrimedTransferValve(AtmosEntities.PRIMED_TANK_TRANSFER_VALVE.get(), level);
+        primed.setPos(at);
+        primed.setDeltaMovement(motion);
+        primed.setYRot(yRot);
         primed.arm(TransferValveItem.valve(stack), TransferValveItem.timer(stack));
         level.addFreshEntity(primed);
         level.playSound(
