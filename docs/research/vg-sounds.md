@@ -236,7 +236,7 @@ Event sounds. Every event below is in `zas_atmos`:
 
 ## Items
 
-The bike horn (CONT-154, D-85), in `assets/zas_atmos/sounds/item/`. The server plays it at
+The bike horn (CONT-154, D-87), in `assets/zas_atmos/sounds/item/`. The server plays it at
 volume 1 and pitch 1, on the Players slider.
 
 | Event | Pitch | Volume | vg file | vg's use | Source |

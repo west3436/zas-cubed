@@ -22,7 +22,7 @@ CONT-132, their connected textures with Fusion, was added as Draft on 2026-11-07
 CONT-143 to CONT-148, the radiator pipe, the radiator adaptor and the heat exchanger, were
 added as Draft on 2026-11-07 (D-84).
 CONT-149 to CONT-151, the tank holder, were added as Draft on 2026-11-07 (D-84).
-CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-85).
+CONT-154, the bike horn, was added as Draft on 2026-11-09 (D-87).
 
 **Scope.** The SS13-style content layer (D-02): pipe networks, devices,
 portable atmospherics, tanks and suits, area air controllers and firelocks,
@@ -3930,14 +3930,14 @@ five setup slots from a screenshot the same day.*
 ## Easter eggs
 
 #### CONT-154 · Bike horn
-`Could` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-85
+`Could` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-87
 
 A bike horn shall honk for every player within 16 blocks when used, then refuse uses for 2 s
 (40 ticks), and shall honk at each hit it lands on a mob. It shall stack to 1 and have no recipe:
 a dungeon chest or a stronghold chest (corridor, crossing or library) shall hold one with a chance
 of 5 %.
 
-- **Rationale:** Decision: D-85, the owner's request of 2026-11-09: a honk on use with a 2 s
+- **Rationale:** Decision: D-87, the owner's request of 2026-11-09: a honk on use with a 2 s
   cooldown, a honk on a hit, and found only in dungeon and stronghold chests. Inferred: the 5 %, all
   three stronghold chests, the stack of 1, and hits that honk whatever the cooldown, since the
   owner set the cooldown on use.
@@ -3946,7 +3946,7 @@ of 5 %.
   seeded rolls of each chest's table hold about 5 % horns and a desert pyramid's none. Manual: the
   sprite in hand and in the inventory, and the honk.
 
-*2026-11-09: added for review (D-85). The owner set what it does and where it's found. These are
+*2026-11-09: added for review (D-87). The owner set what it does and where it's found. These are
 mine, for review: 5 % a chest, all three stronghold chests, a stack of 1, a hit honking whatever
 the cooldown and starting none, the subtitle "Honk", and the honk's volume of 0.5. Its sprite is
 vg's `bike_horn`, cropped to 16×16 ([texture procurement](../texture-procurement.md#63-content-mod-zas_atmos-items)),
@@ -3977,4 +3977,4 @@ airlock controller, the air sensor, the radiator pipe, the radiator adaptor, the
 tank holder. Heat-exchange pipes and radiators, and air sensors, leave the R2 column; meters, the
 thermoelectric cooler and the rest of it stay.*
 
-*2026-11-09: the bike horn is added (D-85).*
+*2026-11-09: the bike horn is added (D-87).*

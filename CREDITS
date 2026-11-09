@@ -3258,7 +3258,7 @@ notes: The reinforced glass block item: the block model.
 path: zas-ponder/src/main/resources/assets/zas_ponder/lang/en_us.json
 origin: original
 
-# The bike horn (CONT-154, D-85): vg's sprite and honk.
+# The bike horn (CONT-154, D-87): vg's sprite and honk.
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/bike_horn.png
 origin: vgstation13
 source: icons/obj/items.dmi

@@ -4288,7 +4288,7 @@ block-entity renderer.
   slot and clear one.
 - **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.
 
-### 11.19 The bike horn (CONT-154, D-85)
+### 11.19 The bike horn (CONT-154, D-87)
 
 `tool.BikeHornItem`, one to a stack, with vg's sprite and honk: an easter egg.
 
