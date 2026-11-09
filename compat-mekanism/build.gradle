@@ -1,0 +1,117 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Mekanism adapter (MEK), a reference integration (D-11): it compiles against the public API and
+// Mekanism only, so another mod can copy it. Its classes and data ship inside the zas jar
+// (zas/build.gradle's `bundled`), and zas starts it only when Mekanism is installed in a version it
+// supports (MEK-001).
+
+// This project's GameTest server is zas with the adapter in it, so it reads zas's mod definition.
+// zas doesn't wait for this project in turn: it only needs the source set, which the root build
+// gives every project.
+evaluationDependsOn(':zas')
+
+// The Mekanism the GameTest server runs with (MEK-003): the newest build by default, the oldest
+// supported one with -Pmekanism.version=floor, or any published version by name. The adapter itself
+// is always compiled against the newest, as the release is.
+def chosen = providers.gradleProperty('mekanism.version').getOrElse('newest')
+def runVersion = chosen == 'newest' ? mekanism_version : chosen == 'floor' ? mekanism_floor_version : chosen
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = 'https://modmaven.dev/'
+                // Its POMs promise Gradle module metadata that the repository doesn't serve.
+                metadataSources {
+                    mavenPom()
+                    artifact()
+                    ignoreGradleMetadataRedirection()
+                }
+            }
+        }
+        filter { includeGroup 'mekanism' }
+    }
+}
+
+// GameTests live in their own source set so they stay out of the zas jar.
+sourceSets {
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
+def zasProject = project(':zas')
+
+neoForge {
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but
+    // the game is never bootstrapped and Mekanism isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    runs {
+        // Not named gameTestServer: `./gradlew runGameTestServer` is the main run, which never
+        // downloads Mekanism.
+        mekanismGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            gameDirectory = layout.buildDirectory.dir('mekanismRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas_mekanism'
+            // What the tests expect to find installed.
+            systemProperty 'zas.mekanism.runVersion', runVersion
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    mods {
+        // zas as its own runs build it, with this project's GameTests in place of zas's own.
+        zas {
+            zasProject.neoForge.mods.zas.modSourceSets.get()
+                    .findAll { it != zasProject.sourceSets.gametest }
+                    .each { sourceSet it }
+            sourceSet sourceSets.gametest
+        }
+    }
+}
+
+// GameTests start from a fresh world, as in :zas.
+tasks.matching { it.name == 'runMekanismGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('mekanismRun/world')
+    }
+}
+
+dependencies {
+    // Rule of a reference integration: the public API and the target, nothing else of ours.
+    implementation project(':zas-api')
+    // Compile-only, so no jar and no run but this project's own ever holds Mekanism. The main jar
+    // holds Mekanism's API too. Code outside the mixin package uses only that API, which
+    // AdapterReferencesTest checks; the generators jar is there for mixin targets.
+    compileOnly "mekanism:Mekanism:${mekanism_version}"
+    compileOnly "mekanism:Mekanism:${mekanism_version}:generators"
+
+    gametestRuntimeOnly zasProject
+    gametestRuntimeOnly "mekanism:Mekanism:${runVersion}"
+    gametestRuntimeOnly "mekanism:Mekanism:${runVersion}:generators"
+    // GameTests (only) may ask the framework what it loaded. main stays API-only.
+    gametestCompileOnly zasProject
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped data pack, which tests read as files.
+    systemProperty 'zas.mekanism.resources', file('src/main/resources').absolutePath
+    // zas's own resources, for its gas definitions and the names the pack's gases need.
+    def zasResources = project(':zas').file('src/main/resources')
+    inputs.dir(zasResources).withPropertyName('zasResources')
+    systemProperty 'zas.resources', zasResources.absolutePath
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.mekanism.classes', classes.files.join(File.pathSeparator)
+    // MEK-001: the oldest Mekanism the tests run with is the one the adapter says it supports.
+    systemProperty 'zas.mekanism.floorVersion', mekanism_floor_version
+    testLogging.exceptionFormat = 'full'
+}

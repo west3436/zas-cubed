@@ -1,7 +1,9 @@
 package io.github.west3436.zas.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -44,6 +46,15 @@ class GasPropertiesTest {
         assertEquals(20.81, GasProperties.molarHeatCapacity(N2));
         assertEquals(21.06, GasProperties.molarHeatCapacity(O2));
         assertEquals(GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY, GasProperties.molarHeatCapacity(UNKNOWN));
+    }
+
+    /** Without ZAS³, standard air's gases are the only ones defined. */
+    @Test
+    void api_051_fallback_defines_only_standard_airs_gases() {
+        assertTrue(GasProperties.isDefined(N2));
+        assertTrue(GasProperties.isDefined(O2));
+        assertFalse(GasProperties.isDefined(UNKNOWN));
+        assertThrows(NullPointerException.class, () -> GasProperties.isDefined(null));
     }
 
     /** The provider methods have defaults, which answer as the fallback does (architecture §6.2). */

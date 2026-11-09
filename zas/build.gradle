@@ -13,8 +13,10 @@ sourceSets {
     }
 }
 
-// Source sets compiled elsewhere whose classes ship inside the zas jar.
-def bundled = [project(':engine'), project(':compat-adastra')].collect { it.sourceSets.main }
+// Source sets compiled elsewhere whose classes ship inside the zas jar. compat-mekanism isn't waited
+// for above, because its own build reads this project's mod definition for its GameTest server; its
+// source set is there all the same, since the root build gives every project one.
+def bundled = [project(':engine'), project(':compat-adastra'), project(':compat-mekanism')].collect { it.sourceSets.main }
 
 neoForge {
     runs {
@@ -68,6 +70,8 @@ dependencies {
     implementation project(':engine')
     implementation project(':compat-adastra')
     implementation project(':zas-api')
+    // Started by name (Adapters), so zas never compiles against it.
+    runtimeOnly project(':compat-mekanism')
 
     // ModDevGradle takes the jar-in-jar range only from a module selector, so
     // the API is requested by coordinates and substituted with the project.

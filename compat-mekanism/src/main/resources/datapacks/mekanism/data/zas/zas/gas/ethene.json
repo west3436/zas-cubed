@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.ethene",
+  "formula": "C₂H₄",
+  "molar_mass": 0.028054,
+  "molar_heat_capacity": 34.57,
+  "sources": {
+    "molar_mass": "2 × C 12.011 + 4 × H 1.0080 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 42.886 − 8.314 J/(mol·K). C_p of C2H4(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table C-128, https://janaf.nist.gov/tables/C-128.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}
