@@ -151,7 +151,7 @@ gives which, are in the
 | `zas_atmos:emergency_oxygen_tank` | Emergency O₂ tank | Must | CONT-030 | Flat sprite. It holds 2 L against the others' 70 L, so it should look smaller. |
 | `zas_atmos:air_tank` | Air tank | Must | CONT-030 | Flat sprite. Yellow, as vg's yellow tank (the owner's choice of 2026-11-01). |
 | `zas_atmos:empty_tank` | Empty tank | Must | CONT-030 | Flat sprite. Grey. |
-| `zas_atmos:tank_transfer_valve` | Tank transfer valve | Must | CONT-103, CONT-104 | Flat sprite, with variants for no tanks, one tank and two tanks, each tank tinted in code by its kind. Once primed it's an entity, like primed TNT (CONT-104), drawn with block models: no tanks, one or two, with the timer running or the valve open. |
+| `zas_atmos:tank_transfer_valve` | Tank transfer valve | Must | CONT-103, CONT-104 | Flat sprite, with variants for no tanks, one tank and two tanks, each tank tinted in code by its kind. Once primed it's an entity, like primed TNT (CONT-104), drawn with block models: no tanks, one or two, with the timer running or the valve open. Placed (D-86), it's a block in four facings that uses the same models, with the timer's lamp dark while the valve is shut. |
 
 **Wearables.** Each piece needs a flat sprite and a worn texture. The
 **Worn texture** column gives the vanilla armor layer it's drawn on. Pieces of

@@ -30,6 +30,7 @@ import io.github.west3436.zas.atmos.radiator.HeatExchangerBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -217,6 +218,15 @@ public final class AtmosBlockEntities {
             "heat_exchanger",
             () -> BlockEntityType.Builder.of(HeatExchangerBlockEntity::new, AtmosBlocks.HEAT_EXCHANGER.get())
                     .build(null));
+
+    // The tank transfer valve, placed (CONT-103, D-86).
+
+    public static final Supplier<BlockEntityType<TransferValveBlockEntity>> TANK_TRANSFER_VALVE =
+            BLOCK_ENTITIES.register(
+                    "tank_transfer_valve",
+                    () -> BlockEntityType.Builder.of(
+                                    TransferValveBlockEntity::new, AtmosBlocks.TANK_TRANSFER_VALVE.get())
+                            .build(null));
 
     // The tank holder (CONT-149 to CONT-151, D-84).
 

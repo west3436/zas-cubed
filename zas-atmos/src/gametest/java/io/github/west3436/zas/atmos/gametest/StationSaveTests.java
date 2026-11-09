@@ -79,6 +79,8 @@ import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberMode;
 import io.github.west3436.zas.atmos.ttv.PrimedTransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
+import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import io.github.west3436.zas.atmos.valve.ValveBlock;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
@@ -205,8 +207,8 @@ public final class StationSaveTests {
 
     /**
      * The station is saved to disk and loaded again: zones, pipe networks split by volume, every
-     * device's settings and buffers, canisters, tanks in a chest, a portable, a suit and a TTV, and a
-     * primed TTV. Chunks A and B load first: everything in them is as it was, and the zone across B
+     * device's settings and buffers, canisters, tanks in a chest, a portable, a suit and a TTV, a
+     * primed TTV, and a placed TTV with two tanks of gas. Chunks A and B load first: everything in them is as it was, and the zone across B
      * and C is paused with B's share. Then C loads, and that zone resumes with all of its gas.
      *
      * <p>Batch 5's blocks come back too: a tank holder's tanks in their order, each with its gas;
@@ -335,8 +337,8 @@ public final class StationSaveTests {
      *   <li>Network N1 runs across A and B at z = 10 through a manual valve at x = 15, on A's edge
      *       (#341), with a canister on a port. N2 runs across B and C at z = 12.
      *   <li>A canister on its own; a pressure pump, a volume pump, a filter, a mixer and an
-     *       electrolyzer at z = 14; a central controller, an igniter, a chest of tanks and a primed
-     *       TTV in A. With the chest, that is a block entity of every kind the mod has.
+     *       electrolyzer at z = 14; a central controller, an igniter, a chest of tanks, a primed TTV
+     *       and a placed one in A. With the chest, that is a block entity of every kind the mod has.
      *   <li>A portable pump and scrubber, a heater, an air conditioner, a recharger and a generator at
      *       z = 8 in B.
      *   <li>In B's corner by P, an airlock controller, unpowered, with all five slots filled: a bolted
@@ -369,6 +371,11 @@ public final class StationSaveTests {
         static final BlockPos PARTNER = new BlockPos(19, 1, 12);
         static final double EXCHANGER_K = 450;
 
+        /** The placed TTV (D-86), its timer facing east. */
+        static final BlockPos PLACED_TTV = new BlockPos(10, 1, 8);
+
+        static final int PLACED_TIMER = 321;
+
         final GameTestHelper h;
         final Area a;
         final HolderLookup.Provider registries;
@@ -377,6 +384,9 @@ public final class StationSaveTests {
 
         /** The tanks put in the holder, in order, as they went in. */
         final List<ItemStack> held = new ArrayList<>();
+
+        /** What the placed TTV was given. */
+        ItemStack placedTtv = ItemStack.EMPTY;
 
         /** When the large airlock closes itself, a game time. */
         long largeCloseAt;
@@ -544,6 +554,15 @@ public final class StationSaveTests {
             a.place(27, 1, 8, AtmosBlocks.GENERATOR.get().defaultBlockState());
             a.set(2, 1, 8, Blocks.CHEST.defaultBlockState());
             a.place(12, 1, 6, AtmosBlocks.IGNITER.get().defaultBlockState()); // with no signal, it never sparks
+            a.place(
+                    PLACED_TTV.getX(),
+                    PLACED_TTV.getY(),
+                    PLACED_TTV.getZ(),
+                    AtmosBlocks.TANK_TRANSFER_VALVE
+                            .get()
+                            .defaultBlockState()
+                            .setValue(TransferValveBlock.FACING, Direction.EAST)
+                            .setValue(TransferValveBlock.TANKS, 2));
             buildBatch5();
 
             // The rooms' gas: R near one atmosphere, Q at about a third, P hot and rich in CO₂.
@@ -809,6 +828,15 @@ public final class StationSaveTests {
             player.setPos(Vec3.atBottomCenterOf(a.abs(6, 1, 8)));
             PrimedTransferValve entity = PrimedTransferValve.prime(a.level, player, ttv(TransferValve.MAX_TIMER));
             primed = entity.getUUID();
+
+            // The placed TTV's gases are cold and apart, so they never react.
+            placedTtv = new ItemStack(AtmosItems.TANK_TRANSFER_VALVE.get());
+            TransferValveItem.save(
+                    placedTtv, new TransferValve(tank(Map.of(O2, 3.125), 290.0), tank(Map.of(H2, 2.25), 293.0), false));
+            TransferValveItem.setTimer(placedTtv, PLACED_TIMER);
+            TransferValveBlockEntity placed = at(PLACED_TTV);
+            placed.applyComponentsFromItemStack(placedTtv);
+            placed.setChanged();
             settingsBatch5();
         }
 
@@ -978,6 +1006,7 @@ public final class StationSaveTests {
                 sameParcel(now.networks.get(net), then.networks.get(net), when + ": " + net + " network");
             }
             batch5(now, when);
+            placedTtv(when);
             h.assertTrue(now.primed != null, when + ": no primed TTV");
             for (String key : List.of("First", "Second", "Open", "Timer", "Fuse", "Settle")) {
                 sameTag(h, now.primedSaved.get(key), then.primedSaved.get(key), when + ": the primed TTV's " + key);
@@ -986,6 +1015,27 @@ public final class StationSaveTests {
             if (Arrays.stream(which).anyMatch(i -> i == 2)) {
                 sameParcel(now.networks.get("N2 in B"), then.networks.get("N2 in B"), when + ": N2");
             }
+        }
+
+        /**
+         * The placed TTV holds what it was given, on top of its saved tag matching: both tanks, each
+         * with its gas, its valve shut and its timer; and its block shows two tanks, facing east.
+         */
+        void placedTtv(String when) {
+            ItemStack now = this.<TransferValveBlockEntity>at(PLACED_TTV).item();
+            for (int place : List.of(TransferValve.FIRST, TransferValve.SECOND)) {
+                sameGas(
+                        h,
+                        TransferValveItem.tank(now, place),
+                        TransferValveItem.tank(placedTtv, place),
+                        when + ": the placed TTV's tank " + place);
+            }
+            h.assertFalse(TransferValveItem.valve(now).isOpen(), when + ": the placed TTV's valve is open");
+            h.assertValueEqual(TransferValveItem.timer(now), PLACED_TIMER, when + ": the placed TTV's timer");
+            BlockState state = state(PLACED_TTV);
+            h.assertValueEqual(state.getValue(TransferValveBlock.TANKS), 2, when + ": the tanks the placed TTV shows");
+            h.assertValueEqual(
+                    state.getValue(TransferValveBlock.FACING), Direction.EAST, when + ": the placed TTV's facing");
         }
 
         /**

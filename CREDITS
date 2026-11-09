@@ -277,7 +277,7 @@ notes: vg's sprite as it is, at 32x32 (D-70).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/wrench.json
 origin: original
-notes: A handheld item model for the wrench sprite.
+notes: A handheld item model for the wrench sprite. Its hand poses are item/handheld's turned a quarter clockwise, because the sprite's handle is at the bottom right, not the bottom left.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/fire_extinguisher.png
 origin: vgstation13
@@ -1298,6 +1298,22 @@ notes: As tank_transfer_valve.png, with the timer's lamp blinking red, 2 frames.
 path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/tank_transfer_valve_timer.png.mcmeta
 origin: original
 notes: 10 ticks a frame.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/tank_transfer_valve.json
+origin: original
+notes: The placed TTV's four facings, its timer toward whoever placed it, with 0 to 2 tanks and its valve shut or open: the shut models below and the existing open ones.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve.json
+origin: original
+notes: The placed TTV with no tanks: tank_transfer_valve_timer.json with its timer's lamp dark, on tank_transfer_valve.png. After vg's valve_1 (icons/obj/assemblies.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_one.json
+origin: original
+notes: The placed TTV with tank one (west, tintindex 1): tank_transfer_valve_one_timer.json with its timer's lamp dark, on tank_transfer_valve.png. After vg's valve_1 (icons/obj/assemblies.dmi).
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_two.json
+origin: original
+notes: The placed TTV with both tanks (tintindex 1 west, 2 east): tank_transfer_valve_two_timer.json with its timer's lamp dark, on tank_transfer_valve.png. After vg's valve_1 (icons/obj/assemblies.dmi).
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/tank_transfer_valve_timer.json
 origin: original

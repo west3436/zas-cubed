@@ -47,8 +47,10 @@ final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
                 topPos + TransferValveMenu.SECOND_Y - 1,
                 valve.isOpen() ? Ui.GOOD : Ui.DIM);
 
-        Slot own = menu.getSlot(menu.valveSlot());
-        ui.lockedSlot(leftPos + own.x, topPos + own.y);
+        if (!menu.isPlaced()) {
+            Slot own = menu.getSlot(menu.valveSlot());
+            ui.lockedSlot(leftPos + own.x, topPos + own.y);
+        }
 
         y += TANKS_HEIGHT + Ui.PAD;
         ui.section(x, y, w, CONTROLS_HEIGHT, null);
@@ -116,7 +118,9 @@ final class TransferValveScreen extends TguiScreen<TransferValveMenu> {
 
     @Override
     protected void drawOver(Ui ui) {
-        Slot own = menu.getSlot(menu.valveSlot());
-        ui.lock(leftPos + own.x + 11, topPos + own.y, Ui.AVERAGE);
+        if (!menu.isPlaced()) {
+            Slot own = menu.getSlot(menu.valveSlot());
+            ui.lock(leftPos + own.x + 11, topPos + own.y, Ui.AVERAGE);
+        }
     }
 }

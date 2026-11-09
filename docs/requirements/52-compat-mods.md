@@ -1,6 +1,7 @@
 # 52 · Compat with other mods (`COMPAT`)
 
-**Status:** Draft, 2026-11-06. Candidates for the owner's review, all after R1.
+**Status:** Draft, 2026-11-06. Candidates for the owner's review, all after R1. The
+Entity Model Features requirements were accepted on 2026-11-09.
 
 **Scope.** Adapters beyond Mekanism ([MEK](50-compat-mekanism.md)) and the space
 mods ([SPACE](51-compat-space.md)). D-78 sets the targets, and the priority shows
@@ -13,6 +14,8 @@ how sure each one is:
 | Likely | `Could` | Modern Industrialization |
 | Maybe | `Could` | Moving structures on Sable, Create: The Factory Must Grow |
 | No | `Won't` | Create itself |
+
+D-85 adds Entity Model Features at `Should`, so that bodies flung by airflow tumble.
 
 The Mekanism and Ad Astra adapters are reference integrations that other mods can
 copy, so they use only the public API (D-11, D-66). These aren't, so they may use
@@ -306,3 +309,74 @@ to it.
 There shall be no adapter or data for Create's own blocks and items. Create
 Aeronautics and TFMG need Create installed, but their adapters target only those
 mods.
+
+## Entity Model Features
+
+Added after D-78 (D-85). EMF is client-only and needs Entity Texture Features, so this
+adapter is client-only too and servers need nothing.
+
+#### COMPAT-130 · Flung bodies tumble
+`Should` · `R2` · `Accepted` · Verify: Manual · Trace: D-85, FLOW-002
+
+With EMF present, a mob or player that airflow (FLOW-002) lifts off the ground shall
+turn end over end until it lands, enters a liquid or is mounted. It turns about the
+level axis across its motion, faster as it moves faster. The rate is tuned in
+playtesting.
+
+- **Rationale:** Decision: D-85.
+- **Verify:** Manual check beside a breach to vacuum: a cow and a second player are
+  flung, tumble while in the air, and stop tumbling when they land.
+
+*2026-11-09: Accepted by the owner from [#432](https://github.com/west3436/zas-cubed/issues/432).*
+
+#### COMPAT-131 · On top of any pack
+`Should` · `R2` · `Accepted` · Verify: Manual · Trace: D-85 · Depends: COMPAT-130
+
+The tumble shall be added after a resource pack's EMF animation runs, so it works with
+Fresh Animations and other packs without changing them.
+
+- **Rationale:** Inferred: players install EMF for packs such as Fresh Animations, and
+  replacing a pack's models would undo them.
+- **Verify:** COMPAT-130's check with Fresh Animations loaded: the cow keeps the pack's
+  model and still tumbles.
+
+*2026-11-09: Accepted by the owner from [#432](https://github.com/west3436/zas-cubed/issues/432).*
+
+#### COMPAT-132 · Variables for packs
+`Should` · `R2` · `Accepted` · Verify: Unit, Manual · Trace: D-85 · Depends: COMPAT-130
+
+The adapter shall register EMF animation variables that packs can read:
+`zas_tumbling`, true while COMPAT-130 applies, and `zas_flung_speed`, the entity's
+speed in blocks per tick, or 0 when it isn't tumbling.
+
+- **Rationale:** Inferred: packs can then move limbs during a tumble, which turning
+  the whole body can't.
+- **Verify:** Unit tests of both values for a tumbling and a grounded entity, and a
+  Manual check with a test pack that raises the arms while `zas_tumbling` is true.
+
+*2026-11-09: Accepted by the owner from [#432](https://github.com/west3436/zas-cubed/issues/432).*
+
+#### COMPAT-133 · Never the camera
+`Should` · `R2` · `Accepted` · Verify: Manual · Trace: D-85 · Depends: COMPAT-130
+
+A player's own first-person view shall never tumble. Other players see their body
+tumble.
+
+- **Rationale:** Inferred: a spinning camera would leave the player unable to see
+  where they're going.
+- **Verify:** Manual check of a player flung in first person while a second player
+  watches.
+
+*2026-11-09: Accepted by the owner from [#432](https://github.com/west3436/zas-cubed/issues/432).*
+
+#### COMPAT-134 · Tumble setting
+`Should` · `R2` · `Accepted` · Verify: Manual · Trace: D-85 · Depends: COMPAT-130, COMPAT-132
+
+A client setting, on by default, shall turn off the tumble. COMPAT-132's variables
+still work when it's off.
+
+- **Rationale:** Inferred: some players won't want the motion.
+- **Verify:** Manual check that with the setting off, a flung cow doesn't tumble and
+  the test pack still raises its arms.
+
+*2026-11-09: Accepted by the owner from [#432](https://github.com/west3436/zas-cubed/issues/432).*

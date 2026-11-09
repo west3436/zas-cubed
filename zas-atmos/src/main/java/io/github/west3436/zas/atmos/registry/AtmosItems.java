@@ -148,9 +148,9 @@ public final class AtmosItems {
     public static final DeferredItem<FireExtinguisherItem> FIRE_EXTINGUISHER =
             ITEMS.registerItem("fire_extinguisher", FireExtinguisherItem::new);
 
-    /** Two gas tanks joined by a valve, with a timer (CONT-103, CONT-104). */
-    public static final DeferredItem<TransferValveItem> TANK_TRANSFER_VALVE =
-            ITEMS.registerItem("tank_transfer_valve", TransferValveItem::new);
+    /** Two gas tanks joined by a valve, with a timer (CONT-103, CONT-104); it places its block (D-86). */
+    public static final DeferredItem<TransferValveItem> TANK_TRANSFER_VALVE = ITEMS.registerItem(
+            "tank_transfer_valve", p -> new TransferValveItem(AtmosBlocks.TANK_TRANSFER_VALVE.get(), p));
 
     /** Reads the air where the player is, a point, a pipe network, a canister or a tank (CONT-034). */
     public static final DeferredItem<AnalyzerItem> ATMOS_ANALYZER =

@@ -779,7 +779,7 @@ NFR-031, NFR-033, NFR-040 and NFR-042.
    kept in this repo. PneumaticCraft, CC: Tweaked, Jade, Curios and Accessories, KubeJS, and JEI
    with EMI come first, then Applied Energistics 2, Create Aeronautics and Modern
    Industrialization. Moving structures on Sable and The Factory Must Grow are
-   maybes.
+   maybes. The Entity Model Features adapter (D-85, #432) is client-only.
 5. **The rest of the SS13 device set** (CONT R2 column), and biome/altitude
    ambients.
 
@@ -792,7 +792,7 @@ NFR-031, NFR-033, NFR-040 and NFR-042.
 | `zas` (framework mod) | api (jar-in-jar), engine | Geometry, hooks and mixins, persistence, sync, environments, life support, heat, fire, airflow, presets, commands, client |
 | `zas_atmos` (content mod "ZAS³ Atmospherics", D-38) | api, `zas` | SS13 atmospherics blocks and items, power (D-68, D-69), GUIs, CC BY-SA 4.0 assets (D-39) |
 | `compat-adastra` | api, Ad Astra (compile-only) | The Ad Astra adapter (SPACE-010 to SPACE-023), R2 (D-66) |
-| one module per D-78 adapter | api, its target mod (compile-only), and `zas` or `zas_atmos` if it needs their classes | The COMPAT adapters, R2 (D-78) |
+| one module per D-78 or D-85 adapter | api, its target mod (compile-only), and `zas` or `zas_atmos` if it needs their classes | The COMPAT adapters, R2 (D-78, D-85) |
 | `example-addon` | api | Usage examples for consumers (API-047) |
 
 **Constraints from the platform research:**

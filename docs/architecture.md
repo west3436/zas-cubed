@@ -2511,13 +2511,13 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `inline` | The base of devices set in a pipe line (§11.5): `InlineDeviceBlock`, `InlineDeviceEntity`, `InlineDeviceMenu` and `InlineStatus`, and of those with a side port: `SidePortBlock`, `SidePortEntity`, `SidePortMenu` and `MirroredDeviceItem` |
 | `pump` | The pumps (§11.5), and `PumpFlow`, their moles per second |
 | `holder` | The tank holder (§11.9): `TankHolderBlock` and `TankHolderBlockEntity` |
-| `ttv` | The tank transfer valve, as an item and primed, and its screen's menu (§11.11) |
+| `ttv` | The tank transfer valve, as an item, placed and primed, and its screen's menu (§11.11) |
 | `analyzer` | The atmos analyzer (§11.14): `AnalyzerItem`, what it reads (`AnalyzerTarget`), its menu (`AnalyzerMenu`) and the reading it sends (`AnalyzerSync`) |
 | `filter`, `mixer` | The filter and the mixer (§11.5), with what each moves in a step (`FilterMath`, `MixerMath`) and what a filter's GUI offers (`FilterOption`) |
 | `electrolyzer` | The water electrolyzer (§11.5), its water tank (`ElectrolyzerTank`) and its rates (`ElectrolyzerMath`) |
 | `radiator` | Radiator pipe, the radiator adaptor and the heat exchanger (§11.17): their blocks and block entities, `RadiatorExchange` (a network's radiator pipe each atmos tick), `RadiatorMath` and `HeatExchangerTint`, which hold no game classes |
 | `particle` | Gas particles (§11.12): the server's sends (`GasJets`, `SendLimiter`), the payload (`GasJet`), and what a client makes of it (`JetPlan`, `JetEmitters`, `ParticleDensity`, `DeviceJets`), which hold no game classes |
-| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.18) |
+| `client` | `ZasAtmosClient`, the client entry point: block tints, device screens, the tank, TTV and analyzer screens (with `WalkingInput`, §11.14), item model properties, the primed TTV's renderer and models, the placed TTV's tints, `GasJetParticles` (§11.12), `DeviceLoops` (§11.2), `FireAlarmSounds` (§11.13) and `FirelockDoorModel`, the door with a firelock's model (§11.18) |
 
 Unit tests of the pure logic (the schedule, the power lease, ports) are in
 `src/test`, with Minecraft's classes on the classpath but no bootstrap.
@@ -3615,7 +3615,7 @@ registered in `AtmosCapabilities`; ZAS³'s internals do the breathing
   | In a player's inventory, held or in the offhand | `Item.inventoryTick`, which the game calls for every stack in a player's inventory, armor slots and offhand |
   | In a suit's tank slot, worn or carried | The suit's `inventoryTick`, which works on a copy of the tank and writes it back if it changed |
   | Dropped, alone or in a suit | `onEntityItemUpdate`, NeoForge's per-tick call for a dropped item |
-  | In a tank transfer valve | The valve, as a suit does; its primed entity in its own tick (CONT-103) |
+  | In a tank transfer valve | The valve, as a suit does; its primed entity in its own tick, and a placed one's block entity in its device step (CONT-103, D-86) |
   | In a chest or a tank holder, on a mob, in an item frame, on a player's cursor or in a crafting grid | Nothing: the game offers these stacks no tick. The gas waits and goes on reacting once the tank is carried again |
 
   A mined canister's item (`CanisterItem`) reacts in the same places, with its
@@ -3723,7 +3723,7 @@ is in [crafting.md](crafting.md), and a crafted one is full.
 ### 11.11 The tank transfer valve (CONT-103, CONT-104)
 
 Two gas tanks joined by a valve, with a timer: `ttv.TransferValve` holds the
-tanks and the valve and is what the item and the entity share.
+tanks and the valve and is what the item, the placed block and the entity share.
 
 - **The valve.** Opening moves all of the first tank's gas into the second,
   mixing temperatures through `GasTankItem.add`; the second tank's volume
@@ -3745,6 +3745,26 @@ tanks and the valve and is what the item and the entity share.
   TTV. A tank that leaks stays on. One that ruptures bursts alone, leaving its
   place empty. One that explodes takes the TTV with it, and the other tank's gas
   goes into the cell too.
+- **Placed** (`TransferValveBlock`, `TransferValveBlockEntity`, D-86). The
+  item is a `BlockItem` for `zas_atmos:tank_transfer_valve`, but its `useOn`
+  places only on a sneak-use; plain use goes on to the item's own use, which
+  opens its screen. The block entity holds a TTV stack and keeps the tanks,
+  valve and timer in its three components, so the item's rules and screen work
+  on it unchanged. It reads them from the placed stack and gives them back to
+  a picked or dropped one as implicit components, and the loot table copies
+  them (`copy_components`) with no `survives_explosion`, so a blast from
+  elsewhere drops it whole. The block shows `tanks` (0–2) and `open`, set after
+  each change, and faces `facing`, its timer toward whoever placed it; its shape
+  is the body and each tank, turned with it. A tank used on it goes
+  through `TransferValveItem.fit`; an empty hand opens the screen; anything else
+  passes. As an `AtmosDevice` it gets an atmos step, which runs
+  `TransferValve.step` at the block's middle, with no entity as the source. A
+  tank that explodes removes the block; while that step runs the block entity
+  is `goingOff`, so a blast that breaks the block itself, under Hardcore, drops
+  nothing, and the gas exists only in the room. Its timer never counts down
+  here: Start removes the block and calls `PrimedTransferValve.prime` at its
+  place, still, turned as the block was. Clients are sent only its tanks' kinds,
+  for the tints.
 - **Its screen** (`ttv.TransferValveMenu`, `client.TransferValveScreen`). Using
   a held TTV opens it from the server, with the inventory place of the hand it
   was opened from. Its two slots have no container of their own: each reads and
@@ -3765,6 +3785,15 @@ tanks and the valve and is what the item and the entity share.
   would skip closing the valve, so the menu closes it before the click goes on.
   Start waits for an empty cursor, and consumes the item in creative too, or its
   tanks would be in the hand and in the entity.
+
+  On a placed TTV the screen opens with `PLACED` in place of a hand, and works on
+  the block entity's stack: what one screen takes, another on the same TTV no
+  longer has. Its `stillValid` is `Container.stillValidBlockEntity`, so it stops
+  out of reach and once the block goes, and the player's tick then closes it. A
+  hidden slot, which takes and gives nothing, carries the TTV stack to the
+  client, so vanilla's slot sync corrects the client's guess at the valve and
+  timer. Number keys and the TTV's own slot need no guard here, as the TTV isn't
+  in the inventory.
 - **Primed** (`PrimedTransferValve`). Starting the timer consumes the item and
   adds the entity at the player's feet, tossed gently the way they face, with
   primed TNT's gravity and friction. It can't be targeted (`isPickable`), used
@@ -3777,10 +3806,13 @@ tanks and the valve and is what the item and the entity share.
   and drops as an item, valve open and timer setting kept, so a dud can be
   taken away. It saves its tanks, valve, timer and countdowns.
 - **Drawn** with its block models (`client.PrimedTransferValveRenderer`), which
-  have no block state, so `ModelEvent.RegisterAdditional` loads them: no tanks,
-  one or two, timer running or valve open. Each tank's faces carry a tint index,
+  the primed entity loads through `ModelEvent.RegisterAdditional`: no tanks,
+  one or two, timer running or valve open. The placed block's state picks the
+  same open models, and for a shut valve its own, which are the timer models
+  with the timer's lamp dark. Each tank's faces carry a tint index,
   1 for the first and 2 for the second, tinted by the tank's kind. Clients are
-  sent the tanks and the valve as entity data. The item uses the same tints on
+  sent the tanks and the valve as entity data, and a placed TTV's tanks' kinds
+  in its block entity's update tag. The item uses the same tints on
   its sprite's layers 1 and 2, and `zas_atmos:tanks` picks its sprite.
 
 ### 11.12 Gas particles (CLIENT-017 to CLIENT-019)
