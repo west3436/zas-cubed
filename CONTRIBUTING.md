@@ -104,7 +104,9 @@ mods itself.
 |---|---|
 | `./gradlew build` | Compiles, runs the engine's and the API's unit tests, and checks formatting, the API's packages and dependencies, its javadoc and its compatibility |
 | `./gradlew runGameTestServer` | Boots dedicated GameTest servers and runs the GameTests, including S-12 (the example addon without `zas`). `zas-atmos`'s server also repeats `zas`'s tests with the content mod loaded; add `-Pgametests.ownOnly=true` to leave those out, as CI does on a PR. The [Full GameTests](https://github.com/west3436/zas-cubed/actions/workflows/full-gametests.yml) workflow runs them nightly |
-| `./gradlew :example-addon:runOneCopyGameTestServer` | Loads the built `zas` jar and a built copy of the example addon, each nesting the API, on one GameTest server, and checks only one copy of the API loads (API-007); not part of `build` or `runGameTestServer` |
+| `./gradlew :dist:jar` | Builds the release jar, `dist/build/libs/zas-<ver>.jar`: `zas` and `zas_atmos` as two mods in one file (D-88). The Ponder addon's jar is `zas-ponder/build/libs/zas_ponder-<ver>.jar` |
+| `./gradlew :dist:runReleaseCheckGameTestServer :dist:runContentOffGameTestServer` | Loads the built release jar on a GameTest server, once with the content on and once with `zas_atmos-startup.toml` turning it off, and checks what loads (CONT-052, CONT-155); not part of `build` or `runGameTestServer` |
+| `./gradlew :example-addon:runOneCopyGameTestServer` | Loads the built release jar and a built copy of the example addon, each nesting the API, on one GameTest server, and checks only one copy of the API loads (API-007); not part of `build` or `runGameTestServer` |
 | `./gradlew :engine:bench` | Runs the headless engine benchmarks ([results](docs/research/benchmarks.md)); not part of `build` |
 | `./gradlew :s10-bench:s10Bench` | Runs S-10 in a dedicated server with both mods, about 20 minutes, and writes `s10-report.md` (NFR-001, NFR-002, NFR-004, NFR-005, DATA-006; [how](docs/research/benchmarks.md#the-in-game-s-10-bench)); `-Ps10.quick=true` checks the harness in a few minutes; not part of `build` |
 | `./gradlew :engine:benchCheck` | Runs the S-10 script on this code and on the engine at the commit in `engine/s10-baseline.properties`, side by side, and fails if either the worker or the server thread costs more than 10 % over it in two runs, the second in a new JVM (NFR-034; [method](docs/research/benchmarks.md)); not part of `build` |
@@ -115,7 +117,7 @@ mods itself.
 | `./gradlew :zas-atmos:runClient -Pfusion=true` | The same, with Fusion, to see the station blocks' connected textures (CONT-132); no jar or CI run holds it |
 | `./gradlew :zas-atmos:runServer` | Starts a dev dedicated server with both mods |
 | `./gradlew :zas-ponder:runClient` | Starts a dev client with both mods and the Ponder addon, to see its scenes; [zas-ponder/README.md](zas-ponder/README.md) says how to add one |
-| `./gradlew :zas-ponder:runServerCheckGameTestServer` | Loads the built Ponder addon, with the Ponder and Flywheel it nests, on a GameTest server beside both mods (CLIENT-025); not part of `build` or `runGameTestServer` |
+| `./gradlew :zas-ponder:runServerCheckGameTestServer` | Loads the built Ponder addon, with the Ponder and Flywheel it nests, on a GameTest server beside the built release jar (CLIENT-025); not part of `build` or `runGameTestServer` |
 | `./gradlew :zas-api:apiCompat` | Checks the API for binary-incompatible changes against the last release |
 | `./gradlew :zas-api:javadoc` | Builds the API's javadoc and fails on a broken or missing comment (API-005): every public or protected member needs one, with its `@param`, `@return` and `@throws`. `build` runs it |
 

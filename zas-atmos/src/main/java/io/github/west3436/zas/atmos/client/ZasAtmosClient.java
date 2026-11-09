@@ -62,6 +62,10 @@ public final class ZasAtmosClient {
             "key.categories.zas");
 
     public ZasAtmosClient(IEventBus modBus) {
+        // FML builds the common entry point first, so the startup config is read (CONT-155).
+        if (!ZasAtmosMod.contentEnabled()) {
+            return;
+        }
         modBus.addListener((RegisterKeyMappingsEvent e) -> e.register(TOGGLE_MAGNETIC_BOOTS));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> {
             while (TOGGLE_MAGNETIC_BOOTS.consumeClick()) {

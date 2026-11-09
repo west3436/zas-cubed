@@ -414,6 +414,8 @@
   "block.zas_atmos.heat_exchanger": "Heat Exchanger",
   "pack.zas_atmos.fusion_connected": "ZAS³ Connected Textures",
   "pack.zas_atmos.fusion_connected.description": "Joined station walls and glass",
+  "pack.zas_atmos.content": "ZAS³ Atmospherics",
+  "pack.zas_atmos.content.description": "Recipes, loot and tags",
   "item.zas_atmos.bike_horn": "Bike Horn",
   "subtitles.zas_atmos.item.bike_horn.honk": "Honk"
 }

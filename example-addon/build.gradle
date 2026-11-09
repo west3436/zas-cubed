@@ -12,7 +12,7 @@ sourceSets {
         runtimeClasspath += main.output + main.runtimeClasspath
     }
     // API-007 and API-047: tests that run inside a built copy of this addon,
-    // beside zas's built jar.
+    // beside the built release jar, which holds zas.
     oneCopy {
         compileClasspath += main.output + main.compileClasspath
         resources.srcDir 'src/gametest/resources'
@@ -75,6 +75,7 @@ def oneCopyJar = tasks.register('oneCopyJar', Jar) {
 }
 
 dependencies {
-    oneCopyRunRuntimeOnly(project(':zas')) { transitive = false }
+    // The release jar, which nests the API for zas (D-88).
+    oneCopyRunRuntimeOnly(project(':dist')) { transitive = false }
     oneCopyRunRuntimeOnly files(oneCopyJar)
 }

@@ -16,7 +16,8 @@ NeoForge 1.21.1** (D-12):
    oxygen systems. Mods can use it even when ZAS³ isn't installed (D-17).
 2. **Players and packs.** A full SS13-style atmospherics gameplay layer
    (pipes, pumps, vents, scrubbers, canisters, alarms, firelocks, suits) that
-   works entirely standalone. It ships as a separate content mod (D-16).
+   works entirely standalone. It's a separate content mod (D-16) in the
+   framework's jar, and a pack can turn it off (D-88).
 
 ## Stakeholders
 
@@ -59,7 +60,7 @@ decision that supersedes it.
 | D-13 | 2026-10-30 | **Zones form only when an area is enclosed *and* its air is being modified.** Ambient air never forms zones, natural caves included. What can trigger a new zone depends on the preset (D-14): **Normal** — deliberate changes only (devices, leaks, API calls, breaches of existing zones). **Hardcore** — also combustion (fires, lit furnaces and campfires) and planting in an enclosed area (D-33). | Once a zone exists, all processes affect it. D-68 adds a trigger, in both presets, that modifies no air: placing an area air controller (API-050). |
 | D-14 | 2026-10-30 | **Global atmosphere difficulty preset: Normal (default) / Hardcore.** It sets the defaults for zone triggers (D-13), vanilla-dimension atmospheres (D-19) and block damage (D-28). Any single option can be overridden. | OPS-007 |
 | D-15 | 2026-10-30 | **Identity:** display name **ZAS³**, mod ID and datapack namespace `zas`, package root `io.github.west3436.zas`, Maven group `io.github.west3436` | Q-01. The package root follows the short-ID option. |
-| D-16 | 2026-10-30 | **Packaging: two mods from one repo.** The framework mod `zas` (engine, API, debug tools) and the SS13 content mod, which depends on it. | Q-02. Content mod ID in D-38. |
+| D-16 | 2026-10-30 | **Packaging: two mods from one repo.** The framework mod `zas` (engine, API, debug tools) and the SS13 content mod, which depends on it. | Q-02. Content mod ID in D-38. *2026-11-09: the two mods ship in one jar (D-88).* |
 | D-17 | 2026-10-30 | **The API is a standalone module that can be bundled (jar-in-jar).** ZAS³ and consumer mods may both bundle it; the loader keeps one copy. Without ZAS³ installed, API calls return safe defaults: a vanilla, breathable world. | API-006 |
 | D-18 | 2026-10-30 | **Distribution:** mod jars on Modrinth and CurseForge; the API on Maven Central under `io.github.west3436` | Q-14 |
 | D-19 | 2026-10-30 | **Vanilla dimensions.** Normal: all breathable (the Nether warmer). Hardcore: the Nether is hot and CO₂-rich and the End has thin air, both with real hazards. | Q-03, ENV-002 |
@@ -131,6 +132,7 @@ decision that supersedes it.
 | D-85 | 2026-11-09 | **Entity Model Features joins the compat targets, so that mobs and players flung by airflow tumble through the air.** Its adapter is client-only and, like D-78's, stays in this repo. It is filed under R2. | The owner's call, 2026-11-09: EMF is the animation mod for making spaced mobs tumble, and its requirements are approved. COMPAT-130 to COMPAT-134; [compat-targets](../research/compat-targets.md#entity-model-features); [#432](https://github.com/west3436/zas-cubed/issues/432). |
 | D-86 | 2026-11-09 | **A tank transfer valve can be placed.** Sneak-using it on a block places it with its tanks, valve and timer; plain use still opens its window. A tank used on a placed TTV fits in its first free place, an empty hand opens the same window, and Start primes it where it stands. It breaks at once by hand and drops as the item, with its tanks, valve and timer. It takes no redstone; the signaler stays R2. | The owner's answers, 2026-11-09, in chat, for the release trailer's scientist fitting tanks to a TTV on his bench. Changes CONT-103 and CONT-104, which kept the TTV handheld. |
 | D-87 | 2026-11-09 | **A bike horn, as an easter egg, with vg's own sprite and honk.** Using it honks, with a 2 s cooldown, and hitting a mob honks too. It has no recipe: it's a rare find in vanilla dungeon and stronghold chests. | The owner's request and answers, 2026-11-09, for R1; the release trailer shows it. The one item a player can't make, an exception to A-05. The chance per chest, which stronghold chests, its stack size and its subtitle weren't set by the owner, who accepted them as built the same day. CONT-154; [#427](https://github.com/west3436/zas-cubed/issues/427). |
+| D-88 | 2026-11-09 | **One jar for `zas` and `zas_atmos`, and a switch for the content.** Players install one jar that holds both mods, and the Ponder addon's own. A startup config turns the content off, so a pack can run the atmosphere simulation alone. | The owner's request, 2026-11-09. Amends D-16: still two mods from one repo, built and tested apart. CONT-052, CONT-096, CONT-155. |
 
 ## Assumptions (confirmed 2026-10-31)
 

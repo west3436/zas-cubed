@@ -52,9 +52,10 @@ Requirements: D-30, CORE-045, CORE-049, CORE-069.
 |---|---|---|---|---|
 | `engine` | plain `java-library`, no Minecraft | `io.github.west3436.zas.engine` | classes copied into the `zas` jar | nothing |
 | `zas-api` | ModDevGradle, `FMLModType: GAMELIBRARY` | `io.github.west3436.zas.api` | its own jar on Maven Central; nested (jar-in-jar) in `zas` and in consumers | Minecraft, NeoForge |
-| `zas` | ModDevGradle mod `zas` | `io.github.west3436.zas` (excluding `.api`, `.engine`, `.atmos`) | `zas-<ver>.jar` | engine, zas-api |
+| `zas` | ModDevGradle mod `zas` | `io.github.west3436.zas` (excluding `.api`, `.engine`, `.atmos`) | the release jar, through `dist` | engine, zas-api |
 | `compat-adastra` | ModDevGradle source set or project | `io.github.west3436.zas.compat.adastra` | classes inside the `zas` jar, loaded only when Ad Astra is present | zas-api, Ad Astra (compile-only) |
-| `zas-atmos` | ModDevGradle mod `zas_atmos` | `io.github.west3436.zas.atmos` | `zas_atmos-<ver>.jar` | zas-api, `zas` (required at runtime) |
+| `zas-atmos` | ModDevGradle mod `zas_atmos` | `io.github.west3436.zas.atmos` | the release jar, through `dist` | zas-api, `zas` (required at runtime) |
+| `dist` | ModDevGradle, packing only | `io.github.west3436.zas.releasecheck` (its checks, never shipped) | `zas-<ver>.jar`, the release jar: `zas` and `zas_atmos` as two mods in one file, the API nested once (D-88) | the `zas` and `zas-atmos` jars |
 | `example-addon` | ModDevGradle mod | `io.github.west3436.zas.example` | not published; CI only (API-047, API-048) | zas-api only |
 | `zas-ponder` | ModDevGradle mod `zas_ponder`, client only | `io.github.west3436.zas.ponder` | `zas_ponder-<ver>.jar`, nesting Ponder and Flywheel (D-83) | `zas_atmos` (required), Ponder, Flywheel |
 
@@ -2487,13 +2488,25 @@ framework's internals fails the build. Everything it does to zones goes
 through `Atmospheres` and `GasMutations` (CONT-071); pipe gas lives in the
 content mod and never joins zone gas except through a device (CONT-002).
 
+It ships in the framework's jar (D-88), and its startup config,
+`zas_atmos-startup.toml`, can turn it off (CONT-155). `ZasAtmosMod` registers the
+config first, which FML loads at once, and with `[content] enabled = false`
+returns before registering anything; `ZasAtmosClient`, which FML builds after
+it, and the Ponder addon check `ZasAtmosMod.contentEnabled()` and do nothing.
+Because the framework shares the jar, and so its data, the content's data
+(recipes, loot tables, loot modifiers, and its additions to vanilla's and the
+framework's tags) isn't in the mod's own `data/`: it's a built-in data pack at
+`datapacks/content`, which `ZasAtmosMod` adds only with the content on. The pack
+is always on and starts at the bottom of the list, so any other data pack
+overrides it.
+
 ### 11.1 Packages and registries
 
 | Package (`io.github.west3436.zas.atmos.`) | Contents |
 |---|---|
 | (root) | `ZasAtmosMod`: the `@Mod` constructor, which registers everything below |
 | `registry` | One `DeferredRegister` each: `AtmosSounds` (§11.13), `AtmosBlocks`, `AtmosItems`, `AtmosBlockEntities`, `AtmosMenus` (one menu type per device GUI, CONT-074), `AtmosComponents` (item data components: a canister's or tank's `zas_atmos:gas`, a tank's `zas_atmos:distribution_pressure`, `zas_atmos:tank_low` and `zas_atmos:leaking`, a suit chestplate's `zas_atmos:suit_tank`, a battery's `zas_atmos:energy`, a fire extinguisher's `zas_atmos:charges` and a tank transfer valve's `zas_atmos:ttv_tanks`, `zas_atmos:ttv_open` and `zas_atmos:ttv_timer`), `AtmosEntities` (the primed tank transfer valve) and `AtmosCreativeTab` (the "ZAS³ Atmospherics" tab, filled in `fill`) |
-| `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065) |
+| `config` | `AtmosServerConfig`, `zas_atmos-server.toml`; its `[power]` section holds the FE draws (CONT-065). `AtmosStartupConfig`, `zas_atmos-startup.toml`, the content switch (CONT-155) |
 | `device` | The device base (§11.2): `AtmosDevice`, `DeviceTicker`, `DeviceSchedule`, `LoadedBlocks`, `ZonePort`, `AtmosTicks`, `CellWatch` (§11.5); the powered parts by zone, for the area air controllers (`ZoneIndex`, §11.6); how hard a device is working (`DeviceActivity`, `DeviceActivitySync`, `DeviceActivityPayload`, `ClientDeviceActivity`) |
 | `power` | The power contract (§11.3): `DevicePower`, `PoweredDevice`, `PowerPriority` |
 | `gas` | `GasStore`, the content mod's mutable mixture (§11.4), and `GasCodecs` for gas carried by items |
