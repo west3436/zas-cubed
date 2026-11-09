@@ -595,6 +595,17 @@ public final class ElectrolyzerTests {
     private static final Set<String> MATRIX_MODS = Set.of("modernfix", "ferritecore", "lithium");
 
     /**
+     * The mods Sodium nests inside its jar (jar-in-jar), which a matrix run loads with it. Sodium is
+     * on the run's runtime classpath, so the GameTest server loads these too. NeoForge's ModList
+     * lists them as plain mods, with nothing to tell them from top-level ones.
+     */
+    private static final Set<String> MATRIX_NESTED_MODS = Set.of(
+            "fabric_api_base",
+            "fabric_block_view_api_v2",
+            "fabric_renderer_api_v1",
+            "fabric_rendering_data_attachment_v1");
+
+    /**
      * CONT-050: with only ZAS³ installed, gas comes by each R1 route. The electrolyzer fills a
      * canister with O₂. A scrubber takes a room's O₂ and N₂ into its pipe, and a filter splits them:
      * the O₂ it selects into one canister at its side outlet, the N₂ into another at its output.
@@ -608,6 +619,7 @@ public final class ElectrolyzerTests {
         Set<String> allowed = new HashSet<>(Set.of("minecraft", "neoforge", "zas", ZasAtmosMod.MOD_ID));
         if (Boolean.getBoolean("zas.compatMatrix")) {
             allowed.addAll(MATRIX_MODS);
+            allowed.addAll(MATRIX_NESTED_MODS);
         }
         mods.removeAll(allowed);
         h.assertValueEqual(mods, Set.of(), "mods other than ZAS³");
