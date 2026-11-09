@@ -308,7 +308,7 @@ cell: a solid block beside it takes none, and heat reaches a room's walls throug
 room's own conduction (HEAT-001).
 
 #### HEAT-020 · Radiator pipe and the gas around it
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-006, HEAT-008, HEAT-010, [vg §2.4](../research/vg-atmos-content.md#24-heat-exchange-and-generators) · Depends: CONT-143, API-064
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-84, HEAT-006, HEAT-008, HEAT-010, [vg §2.4](../research/vg-atmos-content.md#24-heat-exchange-and-generators) · Depends: CONT-143, API-064
 
 Each atmos tick, heat shall flow between each radiator pipe segment's network and the gas of
 the cell the segment is in, its zone's or the open air's, at 20 W/K (configurable) per
@@ -341,8 +341,12 @@ small (architecture §11.17). Checked by `RadiatorMathTest` (Unit:
 `heat_020_a_run_in_a_near_vacuum_room_changes_nothing`. A 512-segment run costs about
 0.2 ms an atmos tick (architecture §11.17).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests and
+GameTests pass (see the notes above). The owner saw the radiator pipe and the heat
+exchangers in the R1 finish round's world.*
+
 #### HEAT-021 · Radiator pipe in a vacuum
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, HEAT-004 · Depends: CONT-143, API-064
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-84, HEAT-004 · Depends: CONT-143, API-064
 
 A radiator pipe segment in the open air of an ambient thinner than HEAT-008's near-vacuum
 density shall radiate εσA(T⁴ − T_bg⁴) from its network, where T_bg is the ambient's
@@ -363,8 +367,12 @@ temperature, ε is 0.9 (configurable) and A is 1 m², never taking its network b
 `heat_021_a_hot_run_in_a_vacuum_radiates_at_the_law` (GameTest, in the test datapack's
 2.7 K vacuum): each atmos tick is the implicit step's, within 2 % of the law for its gas.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests and
+GameTests pass (see the notes above). The owner saw the radiator pipe and the heat
+exchangers in the R1 finish round's world.*
+
 #### HEAT-022 · Heat exchanger pair
-`Must` · `R1` · `Draft` · Verify: Unit, GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices) · Depends: CONT-147
+`Must` · `R1` · `Implemented` · Verify: Unit, GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices) · Depends: CONT-147
 
 Each atmos tick, two heat exchangers facing each other from neighbouring blocks shall bring
 their shares of their networks' gas to one temperature, conserving thermal energy: ΔT ×
@@ -384,6 +392,10 @@ of its network's gas by volume.
 *2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Of a pair, the
 exchanger facing south, east or up runs it, once per atmos tick. Checked by
 `heat_022_a_pair_shares_one_temperature` (Unit and GameTest).*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests and
+GameTests pass (see the notes above). The owner saw the radiator pipe and the heat
+exchangers in the R1 finish round's world.*
 
 ## Not in R1
 

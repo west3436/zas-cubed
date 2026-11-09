@@ -713,7 +713,7 @@ same keys and checks each is in the addon's `en_us.json`.*
 ## Player guides
 
 #### CLIENT-023 · A Ponder scene for each device and tool
-`Must` · `R1` · `Draft` · Verify: Manual, Inspect · Trace: D-82, D-83, [#270](https://github.com/west3436/zas-cubed/issues/270)
+`Must` · `R1` · `Implemented` · Verify: Manual, Inspect · Trace: D-82, D-83, [#270](https://github.com/west3436/zas-cubed/issues/270)
 
 Every placed device and handheld tool in `zas_atmos` shall have at least one Ponder scene
 showing how to set it up and use it.
@@ -725,8 +725,16 @@ showing how to set it up and use it.
 
 *2026-11-07: added for review.*
 
+*2026-11-08: Accepted by the owner, and Implemented. Inspected against the content mod:
+every block that's a device and every handheld tool has a scene, and the ZAS³ tag lists
+every item with one. The items without one aren't devices or tools: the wearables, tanks,
+batteries and crafting components, and the station walls and glass. For the Manual check,
+the owner opened the tag and seven scenes in the R1 finish round's world, on a client
+without Create. Every scene was also opened and shot in a dev client without Create as it
+was made.*
+
 #### CLIENT-024 · The Ponder addon
-`Must` · `R1` · `Draft` · Verify: Inspect · Trace: D-83, NFR-022
+`Must` · `R1` · `Implemented` · Verify: Inspect · Trace: D-83, NFR-022
 
 The Ponder scenes shall ship in a separate addon, `zas_ponder`, that requires `zas_atmos`
 and nests Ponder and Flywheel with jar-in-jar, in version ranges that accept the copies
@@ -744,8 +752,13 @@ and Flywheel 1.0.6 in the same ranges, so FML can load either copy, and the scen
 against Create's. The mod metadata requires `zas_atmos` of the same version and Ponder on the
 client. It stays Draft until it's accepted.*
 
+*2026-11-08: Accepted by the owner, and Implemented. Inspected: `zas-ponder/build.gradle`
+nests Ponder 1.0.87 in `[1.0.82+mc1.21.1,)` and Flywheel 1.0.7 in `[1.0.6,2.0)`, and the mod
+metadata requires `zas_atmos` of the same version, and Ponder on the client only, as the
+note above says.*
+
 #### CLIENT-025 · A dedicated server with the Ponder addon
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: NFR-022, [#270](https://github.com/west3436/zas-cubed/issues/270)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: NFR-022, [#270](https://github.com/west3436/zas-cubed/issues/270)
 
 A dedicated server with the Ponder addon installed shall start and run normally.
 
@@ -763,8 +776,11 @@ server and that all five mods, Ponder and Flywheel among them, are loaded. CI ru
 PR. The addon has no entry point on a server, since its mod class is client only. It stays
 Draft until it's accepted.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its GameTest,
+`client_025_a_dedicated_server_runs_with_the_ponder_addon`, passes on every PR.*
+
 #### CLIENT-026 · What a device's scene shows
-`Must` · `R1` · `Draft` · Verify: Manual · Trace: D-68, CONT-014, CONT-015, CONT-016, CONT-083 · Depends: CLIENT-023
+`Must` · `R1` · `Implemented` · Verify: Manual · Trace: D-68, CONT-014, CONT-015, CONT-016, CONT-083 · Depends: CLIENT-023
 
 A device's scene shall show which of its faces take a pipe, what powers it, and what the
 wrench or multitool does to it, wherever these apply.
@@ -775,3 +791,7 @@ wrench or multitool does to it, wherever these apply.
 - **Verify:** Manual check of each scene against its device's requirements.
 
 *2026-11-07: added for review.*
+
+*2026-11-08: Accepted by the owner, and Implemented: each scene's frames were checked
+against its device's requirements as the scenes were made, and the owner watched seven of
+them in the R1 finish round's world.*

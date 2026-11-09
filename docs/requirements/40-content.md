@@ -412,7 +412,7 @@ HEAT-022). The art is the owner's from batch 5
 ([textures](../textures.md#content-mod-zas_atmos-blocks)).
 
 #### CONT-143 · Radiator pipe
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-007, [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-007, [vg §1](../research/vg-atmos-content.md#1-pipe-networks)
 
 A radiator pipe shall be a 70 L pipe-network segment that connects only to radiator pipe and
 to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
@@ -429,8 +429,11 @@ to a radiator adaptor's radiator end: never to pipe, a device or a gas handler.
 a heat exchanger's pipe face are checked too. Checked by
 `cont_143_radiator_pipe_joins_only_radiator_pipe` (GameTest).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-144 · Radiator pipe ends are closed
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-004 · Depends: CONT-143
 
 A radiator pipe with fewer than two connections shall keep its gas: unlike a pipe's
 (CONT-004), its end is closed.
@@ -445,8 +448,11 @@ A radiator pipe with fewer than two connections shall keep its gas: unlike a pip
 *2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
 `cont_144_radiator_pipe_ends_keep_their_gas` (GameTest).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-145 · Radiator adaptor
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84 · Depends: CONT-143
 
 A radiator adaptor shall be one 70 L pipe-network node, placed facing any of six ways, with a
 pipe end and a radiator end on opposite faces. Its pipe end connects as a pipe does, and its
@@ -463,8 +469,11 @@ radiator end only to radiator pipe.
 radiator pipe its radiator end faces it, and otherwise its pipe end faces the block clicked.
 Checked by `cont_145_an_adaptor_joins_pipe_to_radiator_pipe` (GameTest).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-146 · Radiator pipe bursts
-`Should` · `R1` · `Draft` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
+`Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-59, CONT-108 · Depends: CONT-143, CONT-145
 
 Radiator pipe and radiator adaptors shall be segments that burst as pipe does (CONT-108).
 
@@ -478,8 +487,11 @@ Radiator pipe and radiator adaptors shall be segments that burst as pipe does (C
 *2026-11-07: Built, and its Verify plan passes; it stays Draft for the owner. Checked by
 `cont_146_radiator_pipe_bursts_above_100_atm` (GameTest).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-147 · Heat exchanger
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, [vg §2](../research/vg-atmos-content.md#2-devices)
 
 A heat exchanger shall be a 200 L pipe-network node, half a block deep against one face of
 its block, placed facing any of six ways, with a pipe connection only on the opposite face.
@@ -496,8 +508,11 @@ owner. Placed against another's box it faces back, making a pair; otherwise its 
 the block clicked. Checked by `cont_147_a_heat_exchanger_takes_pipe_opposite_its_box`
 (GameTest).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-148 · Heat exchanger's colour
-`Should` · `R1` · `Draft` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
+`Should` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: D-84 · Depends: CONT-147
 
 A heat exchanger's coil and pipe shall show the temperature of its network's gas, blending
 between these colours, and its item shall show copper:
@@ -524,6 +539,10 @@ between these colours, and its item shall show copper:
 in the block state, and `heat_022_a_pair_shares_one_temperature` (GameTest) checks it follows
 the network and shows copper with no gas. The Manual check, how it looks, is in the round's
 combined test world.*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's unit tests pass, and
+the owner made the Manual check in the R1 finish round's world: heat exchanger pairs at
+1,773 K and 150 K, their coils' and pipes' colours.*
 
 ## Devices (R1 set)
 
@@ -1512,7 +1531,7 @@ holds gas. `cont_039_tanks_fill_from_a_canister` checks the fill, the
 canister's loss and the kinds.*
 
 #### CONT-149 · Tank holder
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-030, DATA-016
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-030, DATA-016
 
 A tank holder shall hold up to 10 personal tanks (CONT-030) and no other item, and shall give
 each tank back with the item data it went in with, its gas to a relative error of 1e-9 per gas
@@ -1535,8 +1554,11 @@ each tank back with the item data it went in with, its gas to a relative error o
 `cont_149_tanks_in_it_dont_change` check it, counting every tank and mole after each step.
 The holder moves no gas, so the exploit to rule out is a tank made or lost (NFR-012).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-150 · Moving tanks in and out of a tank holder
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-113 · Depends: CONT-149
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-113 · Depends: CONT-149
 
 A player shall put a tank into a tank holder by using the tank on it, and take out the last
 tank put in by using the holder with an empty hand. A tank used on a full holder shall stay
@@ -1557,8 +1579,11 @@ no window, a tank's pressure shows once it's in hand, in its tooltip. Verify was
 Manual. `cont_150_using_a_tank_puts_it_in` and
 `cont_150_an_empty_hand_takes_out_the_last_tank_put_in` check it.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-151 · A tank holder's shelves
-`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
+`Must` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: D-84 · Depends: CONT-149
 
 A tank holder shall show the tanks it holds standing on two shelves of five, the lower shelf
 filled first, each tinted by its kind as on a tank transfer valve: O₂ and emergency O₂ tanks
@@ -1578,6 +1603,10 @@ first places.*
 or a command that leaves one is closed up when it's read.
 `cont_151_the_block_shows_as_many_tanks_as_it_holds` checks every count from 0 to 10 and
 the kinds sent.*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass, and
+the owner made the Manual check in the R1 finish round's world: O₂, air and plain tanks put
+into an empty holder and taken out, each tank and its tint, and a full holder of ten.*
 
 #### CONT-031 · Breath mask and helmets
 `Must` · `R1` · `Implemented` · Verify: GameTest · Trace: LIFE-021
@@ -3049,7 +3078,7 @@ chunk and are refused past 1 or the maximum. A range left at the maximum follows
 server's maximum, and a lower one is cut to a lowered maximum.*
 
 #### CONT-118 · Moving an area air controller to another central controller
-`Should` · `R1` · `Accepted` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
+`Should` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: D-75 · Depends: CONT-116
 
 The multitool shall move an area air controller to another central
 controller whose range it's in. The area air controller's GUI shall name the
@@ -3071,6 +3100,9 @@ multitool on an area air controller, then on a second central controller in rang
 checks the second now has it and pays for it. The controller's window shows its central
 controller's position in a "Central" row. This stays Accepted until the owner has seen
 that row.*
+
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world: a
+near area air controller's window named the console in its Central row.*
 
 #### CONT-119 · Removing a central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-116
@@ -3174,7 +3206,7 @@ with no random ticks or mob spawning. The option is read at each atmos tick, so 
 it off releases them without a restart.*
 
 #### CONT-123 · Central controller GUI
-`Should` · `R1` · `Accepted` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
+`Should` · `R1` · `Implemented` · Verify: Manual · Trace: D-75 · Depends: CONT-116, CONT-121
 
 The central atmospherics controller's GUI shall list each area air controller
 it has claimed, with its position, its zone's pressure and temperature, its
@@ -3204,6 +3236,10 @@ shown as out of contact too, with its last readings, and gets no FE. Before, the
 console counted it in contact and showed its frozen readings as live.
 `cont_123_a_claimed_controller_in_a_chunk_that_doesnt_tick_is_out_of_contact`
 (GameTest) checks its row.*
+
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world:
+the console's window listed its three controllers, and the far one, 20 chunks away and not
+loaded, showed No contact with its last readings dimmed.*
 
 #### CONT-124 · Remote control from the central controller
 `Should` · `R1` · `Implemented` · Verify: GameTest · Trace: D-75 · Depends: CONT-074, CONT-123
@@ -3523,7 +3559,7 @@ with a reinforced glass window keeps its temperature, and by
 them. The owner saw it in the R1 items round's world.*
 
 #### CONT-132 · Connected textures with Fusion
-`Could` · `R1` · `Accepted` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
+`Could` · `R1` · `Implemented` · Verify: Unit, Manual · Trace: #391 · Depends: CONT-129, CONT-130, CONT-131
 
 On a client with Fusion (Connected Textures) installed, station walls, reinforced station
 walls and reinforced glass shall each join with touching blocks of their own kind, showing
@@ -3556,6 +3592,11 @@ can show a one-pixel crack where a block's edge meets the middle of the next blo
 from the way Fusion draws a face in quarters. The owner's own look in game (`./gradlew
 :zas-atmos:runClient -Pfusion=true`) is left, so this stays Accepted.*
 
+*2026-11-08: Implemented. The owner made the Manual check in the R1 finish round's world, in
+a client run with `-Pfusion=true`: panels of each block, 1 × 1, 3 × 1 and 3 × 3, the glass
+in front of stone, each joining with its own kind, with the rim or frame only on outer
+edges.*
+
 ## Airlocks
 
 Decided in D-84. Airlocks are zone-boundary doors (GEO-007) in two sizes. An airlock
@@ -3564,7 +3605,7 @@ through an air sensor. Their art follows the firelock's form ([texture
 procurement](../texture-procurement.md#62-content-mod-zas_atmos-blocks)).
 
 #### CONT-133 · Airlock
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
 
 An airlock shall be a door one block wide and two tall, tagged `zas:zone_boundary`, whose two
 blocks open and close together.
@@ -3575,8 +3616,11 @@ blocks open and close together.
 - **Verify:** A GameTest opens and closes it between two zoned rooms and checks gas passes
   only while it's open, the rooms stay two zones, and no toggle splits or rebuilds a zone.
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-134 · Large airlock
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, GEO-007, GEO-044
 
 A large airlock shall be a door two blocks wide and two tall, tagged `zas:zone_boundary`,
 placed only where all four of its spaces are free, whose four blocks open, close and break
@@ -3589,8 +3633,11 @@ together, dropping one item.
   removes all four and drops one item, and between two zoned rooms it passes gas only while
   open and keeps them two zones.
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-135 · Opening an airlock
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133, CONT-134
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84 · Depends: CONT-133, CONT-134
 
 An airlock that isn't bolted shall open or close when a player uses it and open while it
 receives a redstone signal, and once open shall close itself 5 s after it opened or after the
@@ -3613,8 +3660,11 @@ opens at the end of a cycle closes itself the same way; and it checks again each
 anything but a spectator stands in its doorway, so it doesn't shut on a player. The test is
 `AirlockTests.cont_135_an_airlock_closes_itself_5_s_after_it_opens_or_its_signal_ends`.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-136 · Bolts
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-135
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84 · Depends: CONT-135
 
 A bolted airlock shall stay closed and show its bolted look: a player's hand, the crowbar and a
 redstone signal don't open it. Only an airlock controller bolts or unbolts an airlock
@@ -3628,8 +3678,11 @@ redstone signal don't open it. Only an airlock controller bolts or unbolts an ai
 - **Verify:** A GameTest bolts an airlock of each size and checks a hand, the crowbar and a
   redstone signal leave it closed.
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-137 · Firelock on an airlock or a door
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-043 · Depends: CONT-133, CONT-134
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-043 · Depends: CONT-133, CONT-134
 
 A firelock used on an airlock of either size or on a vanilla door that has none shall fit to
 it and then work as a firelock in that doorway (CONT-043, CONT-092 to CONT-094): closing, it
@@ -3652,8 +3705,11 @@ default, which the owner kept. A firelock on a door replaces it with a door with
 only by redstone) and drops the door and the firelock when broken
 ([architecture §11.18](../architecture.md#1118-airlocks-cont-133-to-cont-142)).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-138 · Airlock controller links
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84 · Depends: CONT-133
 
 An airlock controller shall be a wall panel with five slots, an inner and an outer door that
 take airlocks and an inner, an outer and a chamber sensor that take air sensors, which the
@@ -3691,8 +3747,11 @@ of its kind, and a part put there with no guess makes way for a later guess. The
 at the link only. How the doors are told apart, the swap and the making way are my choices, for
 review.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-139 · Cycling
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
 
 Cycling toward its inner or outer door, an airlock controller shall close and bolt both, run
 its vents until the pressure its chamber sensor reads is within 5.07 kPa (5 % of 1 atm) of the
@@ -3724,8 +3783,11 @@ through a cycle comes back still cycling toward the same door, without power unt
 controller pays for it again, and then finishes the cycle
 (`StationSaveTests.s_09_an_airlock_cycle_saved_midway_resumes_and_finishes`, DATA-016).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-140 · Asking for a cycle
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84 · Depends: CONT-139
 
 Using a bolted airlock that's linked to a controller shall ask that controller to cycle toward
 it, unless it's already cycling. Pressing any air sensor in a controller's slot shall ask it to
@@ -3751,8 +3813,11 @@ chamber. An airlock opened by hand counts as opened.*
 
 *A sensor's side is its slot (owner, 2026-11-08), and airlock 1 is now the inner door.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-141 · Airlock controller power
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, D-68, CONT-060 · Depends: CONT-138
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, D-68, CONT-060 · Depends: CONT-138
 
 An airlock controller shall be powered as a part of an area air controller (CONT-068), drawing
 `[power] airlock_controller` (1 FE/t) and the draw of the vents linked to it, and shall power
@@ -3770,8 +3835,11 @@ those vents.
 controller and powers its vents. A cycle that loses power stays where it is, with both
 airlocks bolted, until the power comes back or a player stops it.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-142 · Air sensor
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-047
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-047
 
 An air sensor shall be a wall panel that reads the pressure at its own block and shows cycling
 while a controller it's linked to cycles, otherwise alert while that pressure is below 81 kPa or
@@ -3794,8 +3862,11 @@ resource pack can show each one. Cycling shows over alert.*
 pressing any sensor cycles the airlock (CONT-140). Each one's light works as the chamber's
 does.*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-152 · Vents under an airlock controller
-`Must` · `R1` · `Draft` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
+`Must` · `R1` · `Implemented` · Verify: GameTest · Trace: D-84, CONT-041 · Depends: CONT-138
 
 A vent linked to an airlock controller shall take its orders from that controller alone, and
 be off while the controller isn't cycling.
@@ -3816,8 +3887,11 @@ test's cycle back blew its chamber from 87.6 to 101.4 kPa toward 95.6 kPa, and t
 once (`AirlockTests.cont_152_*_cycle_down_and_up_without_passing_either_side`,
 `VentFlowTest.cont_152_*`).*
 
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass (see
+the notes above). The owner played it in the R1 finish round's world.*
+
 #### CONT-153 · Airlock controller window
-`Must` · `R1` · `Draft` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139
+`Must` · `R1` · `Implemented` · Verify: GameTest, Manual · Trace: D-84, D-76, CONT-074 · Depends: CONT-139
 
 An airlock controller's window shall show whether it's cycling, the pressure its chamber
 sensor reads, and the pressure the sensor past each door reads with a button that cycles toward
@@ -3847,6 +3921,10 @@ Outer door, Inner sensor, Outer sensor, Chamber sensor. Each row is the slot's b
 while armed; a dot, green filled, orange armed and grey empty; the position or a dash; and a red
 ✕ that clears it. A guessed slot and a set one look the same. The sides are labelled Inner
 and Outer.*
+
+*2026-11-08: Accepted by the owner, and Implemented: its Verify plan's GameTests pass. The
+owner opened the window in the R1 finish round's world, and approved the window with its
+five setup slots from a screenshot the same day.*
 
 ## R1 / R2 split
 
