@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.inline.MirroredDeviceItem;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.portable.PortableGasItem;
+import io.github.west3436.zas.atmos.tool.BikeHornItem;
 import io.github.west3436.zas.atmos.tool.CrowbarItem;
 import io.github.west3436.zas.atmos.tool.FireExtinguisherItem;
 import io.github.west3436.zas.atmos.tool.MultitoolItem;
@@ -323,6 +324,10 @@ public final class AtmosItems {
     // The tank holder (CONT-149 to CONT-151, D-84).
 
     public static final DeferredItem<BlockItem> TANK_HOLDER = ITEMS.registerSimpleBlockItem(AtmosBlocks.TANK_HOLDER);
+
+    // The bike horn (CONT-154, D-87): an easter egg with no recipe, found in dungeon and stronghold chests.
+
+    public static final DeferredItem<BikeHornItem> BIKE_HORN = ITEMS.registerItem("bike_horn", BikeHornItem::new);
 
     private AtmosItems() {}
 

@@ -51,7 +51,8 @@ public final class AtmosCreativeTab {
 
     /**
      * The tab's contents, in order: pipes first, then devices, then the creative canisters, then the
-     * station blocks, then the tools, then the breathing gear, then the crafting components.
+     * station blocks, then the tools, then the breathing gear, then the crafting components, then the
+     * bike horn on its own.
      */
     private static void fill(CreativeModeTab.ItemDisplayParameters params, CreativeModeTab.Output out) {
         out.accept(AtmosItems.PIPE.get());
@@ -111,6 +112,8 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.EMERGENCY_OXYGEN_TANK.get());
         AtmosItems.gear().forEach(g -> out.accept(g.get()));
         AtmosItems.components().forEach(c -> out.accept(c.get()));
+        // The bike horn (CONT-154): only chests have it in survival.
+        out.accept(AtmosItems.BIKE_HORN.get());
     }
 
     public static void register(IEventBus modBus) {

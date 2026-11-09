@@ -330,5 +330,9 @@
   "device.wrench.use": {
     "subtitle": "subtitles.zas_atmos.device.wrench.use",
     "sounds": [{ "name": "zas_atmos:device/ratchet", "volume": 0.4 }]
+  },
+  "item.bike_horn.honk": {
+    "subtitle": "subtitles.zas_atmos.item.bike_horn.honk",
+    "sounds": [{ "name": "zas_atmos:item/bike_horn", "volume": 0.5 }]
   }
 }

@@ -180,6 +180,7 @@ one suit share their layer files.
 | `zas_atmos:crowbar` | Crowbar | Must | CONT-094 | Flat sprite. Forces firelocks open, even in lockdown. A crowbar, not a halligan bar (the owner's choice of 2026-11-01). |
 | `zas_atmos:multitool` | Multitool | Must | CONT-042 | Flat sprite. Links parts to an area air controller (D-68). |
 | `zas_atmos:fire_extinguisher` | Fire extinguisher | Could | CONT-037 | Flat sprite, vg's own at 32×32, centred (D-74). Puts out hotspots and fire blocks. Moved from R2 by the owner, 2026-11-03. |
+| `zas_atmos:bike_horn` | Bike horn | Could | CONT-154 | Flat sprite, vg's own cropped to 16×16. An easter egg found in dungeon and stronghold chests (D-87). Added 2026-11-09. |
 
 **Batteries.** Portables run on these (D-69), and so can other mods' batteries
 in the `zas_atmos:batteries` tag (CONT-112). The three tiers follow vg's power
@@ -228,7 +229,7 @@ All are done (2026-11-02).
 | Blocks (`zas`) | 1 | – | – | – | 1 |
 | Blocks (`zas_atmos`) | 13 | 13 | 1 | 8 | 35 |
 | Creative canisters (`zas_atmos`) | 8 | – | – | – | 8 |
-| Items (`zas_atmos`) | 18 | 5 | 1 | – | 24 |
+| Items (`zas_atmos`) | 18 | 5 | 2 | – | 25 |
 | Crafting components (`zas_atmos`) | 15 | 4 | – | – | 19 |
 
 *2026-11-02: R1 now has crafting components of its own (D-72). Its recipes
@@ -236,6 +237,8 @@ still come down to vanilla materials (CONT-051).*
 
 *2026-11-07: the station walls and reinforced glass are added (D-80, D-81).
 The Should count for blocks was one short before them and is corrected.*
+
+*2026-11-09: the bike horn is added (D-87).*
 
 ## Art that isn't a block or item
 

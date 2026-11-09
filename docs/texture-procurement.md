@@ -15,7 +15,7 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
   at 32 px, so each face is redrawn at 16 px per block (D-67). The filter's
   and mixer's tops are the exception: vg's own boxes, cut out at 32×32
   (D-71).
-- **10 of the 24 items' sprites can be cropped.** vg draws many items at
+- **11 of the 25 items' sprites can be cropped.** vg draws many items at
   16 px or less inside a 32 px frame. Those are cut out and touched up. Larger
   ones are redrawn to fill the 16 px slot, not at half size (the owner's pick
   for the atmos analyzer). The wrench and the fire extinguisher are the
@@ -36,7 +36,7 @@ HUD, particles and R2 come later ([§8](#8-not-covered)).
 
 | Route | Blocks | Canister colours | Item sprites | Worn textures |
 |---|---|---|---|---|
-| Crop | 2 | – | 12 | – |
+| Crop | 2 | – | 13 | – |
 | Redraw | 31 | 17 | 15 | 8 files |
 | As is | – | – | 2 | – |
 | Original | 2 | – | – | – |
@@ -298,6 +298,7 @@ The vg size is the sprite's opaque area inside its 32 px frame.
 | `zas_atmos:battery` | `icons/obj/power.dmi` | `cell`, `cell-o1`, `cell-o2` | 11×8 | Crop | The overlays show the charge. Done in batch 4: grey, as it is. The overlays, yellow part charged and green full, are shared by all three tiers. |
 | `zas_atmos:high_capacity_battery` | `icons/obj/power.dmi` | `hcell` | 11×8 | Crop | vg's high- and super-capacity cells look much alike. Recolour them so the tiers are easy to tell apart. Done in batch 4: red, as it is. |
 | `zas_atmos:super_capacity_battery` | `icons/obj/power.dmi` | `scell` | 11×8 | Crop | Done in batch 4: in the blues of vg's ultra cell, `ucell`, keeping `scell`'s two stripes. |
+| `zas_atmos:bike_horn` | `icons/obj/items.dmi` | `bike_horn` | 12×12 | Crop | Added 2026-11-09 with D-87, outside the batches. vg's sprite as it is, cut from its 32 px frame and centred in 16×16. History check (§3), 2026-11-09, over `items.dmi`'s 232 commits: `bike_horn`'s pixels are as in vg's first commit of the file (662c082, 2010). A 2013 change to 7 of them was undone a month later (3836252), and a 2016 64 px upscale four days later (78a56e1). No Goon or NC source. |
 
 **Worn textures** are redrawn onto Minecraft's armor layout from vg's worn
 sprites. Those have four directions, which give the front, back and sides;

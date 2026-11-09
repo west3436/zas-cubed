@@ -2503,7 +2503,7 @@ content mod and never joins zone gas except through a device (CONT-002).
 | `firelock` | The firelock and its lockdown (§11.8), the work it shares with a firelock on an airlock or a door (`FirelockLogic`), the firelock item, and the door with a firelock (§11.18) |
 | `airlock` | The airlocks, the airlock controller with its menu, the air sensor, and the rules of a cycle (`AirlockCycle`, `SensorStatus`), which hold no game classes (§11.18) |
 | `firealarm` | The fire alarm (§11.6) |
-| `tool` | The multitool (§11.6, §11.18), the crowbar (§11.8), the fire extinguisher (§11.10) and the wrench (§11.16) |
+| `tool` | The multitool (§11.6, §11.18), the crowbar (§11.8), the fire extinguisher (§11.10), the wrench (§11.16) and the bike horn (§11.19) |
 | `gear` | The breathing gear (§11.9): `GasTankItem`, `TankKind` (a tank's kind, which tints it on a TTV and a tank holder), `SuitItem`, `GearMaterials` (armor materials), `Encumbrance` (the hardsuit's slowdown), `MagneticBootsItem` (with its keybind's payload) and `TankSettings` (the tank screen's payload) |
 | `failure` | How containers fail (§11.9): the rule, `ContainerFailure`; `TankFailure`, which applies it to a tank; `ContainerBlast`, their explosion; and `BlastSound`, which sound of it a listener hears (§11.13) |
 | `battery` | The batteries, the battery tag and slot (`Batteries`), and the recharger (§11.5) |
@@ -3929,6 +3929,7 @@ as they happen:
 | Tank | `close`, `open` | Its distribution pressure reaches 0, or leaves it |
 | | `low` | A breath takes it under `LOW_SECONDS` (60) of breath |
 | Fire extinguisher | `spray`, `refill`, `empty` | §11.10 |
+| Bike horn | `item.bike_horn.honk` | §11.19 |
 | Container | `leak`, as a leak starts; `burst` | `ContainerBlast.hiss` and `burst` |
 
 A controller decides from the panel saved in its block state, so a chunk coming
@@ -4318,3 +4319,24 @@ block-entity renderer.
   buttons go through `clickMenuButton`: Cycle toward either door, Stop, arm a
   slot and clear one.
 - **Sounds.** `device.airlock.open`, `close`, `bolt`, `unbolt` and `denied`.
+
+### 11.19 The bike horn (CONT-154, D-87)
+
+`tool.BikeHornItem`, one to a stack, with vg's sprite and honk: an easter egg.
+
+- **Use** honks, through `honk`: a server `playSound` with no player left out, at
+  the user's feet, on the Players slider, so its user hears it from the server
+  like everyone else in range (16 blocks). It then puts the item on a
+  `COOLDOWN` (40-tick) cooldown, on both sides as the ender pearl does, and the
+  game turns away uses until it ends. `use` checks the cooldown too, for any
+  caller that doesn't.
+- **A hit** honks from `hurtEnemy`, which the game calls on the server for each
+  hit that lands on a living entity. It neither waits for the cooldown nor starts
+  it. A mob's half second of invulnerability after a hit spaces the honks out.
+- **No recipe.** A global loot modifier, `data/zas_atmos/loot_modifiers/bike_horn.json`,
+  listed in `neoforge:loot_modifiers/global_loot_modifiers`, is NeoForge's
+  `neoforge:add_table`. For `minecraft:chests/simple_dungeon` and the three
+  stronghold chests (`stronghold_corridor`, `stronghold_crossing`,
+  `stronghold_library`) it rolls `zas_atmos:chests/bike_horn`, one pool that
+  gives one horn at a `random_chance` of 0.05. A data pack can change the chance
+  in that table, or the chests in the modifier.
