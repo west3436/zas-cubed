@@ -17,8 +17,16 @@ import io.github.west3436.zas.api.reaction.ReactionContext;
 import io.github.west3436.zas.api.reaction.ReactionType;
 import io.github.west3436.zas.api.reaction.Reactions;
 import io.github.west3436.zas.data.DatapackErrors;
+import io.github.west3436.zas.engine.reaction.ReactionDefinition;
+import io.github.west3436.zas.reaction.ClientReactions;
+import io.github.west3436.zas.reaction.ReactionCodecs;
+import io.github.west3436.zas.reaction.ReactionDefinitionsPayload;
 import io.github.west3436.zas.reaction.ServerReactions;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -115,6 +123,64 @@ public final class ReactionTests {
         r.close(after.mixture().moles(N2), n2 + gas * FRACTION, "nitrogen after a tick");
         r.close(after.mixture().moles(PLAIN_GAS), before.mixture().moles(PLAIN_GAS), "the catalyst");
         h.assertFalse(r.dimension().isFaulted(), "the broken type faulted the dimension");
+        h.succeed();
+    }
+
+    /**
+     * COMPAT-060: the sync payload carries every reaction the server runs to the client's holder
+     * unchanged, the shipped ones and the test datapack's, and a later payload replaces the earlier
+     * one, as after a {@code /reload}. A code type arrives as its id and what the definition
+     * declares; its implementation stays on the server. The payload goes through its network codec,
+     * as it does on the wire; a GameTest server has no client to receive it.
+     */
+    @GameTest(template = "empty")
+    public static void compat_060_reaction_definitions_sync_to_clients(GameTestHelper h) {
+        List<ReactionDefinition> server = ServerReactions.current().definitions();
+        for (String shipped : List.of(
+                "zas:carbon_monoxide_combustion",
+                "zas:hydrogen_combustion",
+                "zas:methane_combustion",
+                "zas:nitrous_oxide_decomposition",
+                "zas_gametest:code_swap")) {
+            h.assertTrue(server.stream().anyMatch(d -> d.id().equals(shipped)), "the server lacks " + shipped);
+        }
+        ByteBuf buf = Unpooled.buffer();
+        try {
+            ReactionDefinitionsPayload.STREAM_CODEC.encode(buf, new ReactionDefinitionsPayload(server));
+            ReactionDefinitionsPayload received = ReactionDefinitionsPayload.STREAM_CODEC.decode(buf);
+            h.assertTrue(buf.readableBytes() == 0, "payload left unread bytes");
+
+            ClientReactions.accept(received);
+            List<ReactionDefinition> client = ClientReactions.current();
+            h.assertValueEqual(client.size(), server.size(), "the client's reaction count");
+            for (int i = 0; i < server.size(); i++) {
+                ReactionDefinition sent = server.get(i);
+                ReactionDefinition got = client.get(i);
+                boolean code = sent.code().isPresent();
+                h.assertValueEqual(
+                        got.code(), code ? Optional.of(ReactionCodecs.NOT_RUN) : Optional.empty(), sent.id() + " code");
+                // Everything but the implementation, which a record's equals would compare too.
+                h.assertValueEqual(
+                        new ReactionDefinition(
+                                got.id(),
+                                got.type(),
+                                got.reactants(),
+                                got.products(),
+                                got.enthalpy(),
+                                got.conditions(),
+                                got.rate(),
+                                got.incomplete(),
+                                sent.code()),
+                        sent,
+                        sent.id());
+            }
+
+            ClientReactions.accept(new ReactionDefinitionsPayload(server.subList(0, 1)));
+            h.assertValueEqual(ClientReactions.current().size(), 1, "the client's reactions after a second sync");
+        } finally {
+            buf.release();
+            ClientReactions.accept(new ReactionDefinitionsPayload(List.of()));
+        }
         h.succeed();
     }
 
