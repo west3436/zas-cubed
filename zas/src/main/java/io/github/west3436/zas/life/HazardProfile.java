@@ -14,7 +14,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
  * A gas's hazard profile (LIFE-004): the partial pressures in the breath at which it harms a
  * breathing entity, each optionally only once it has been sustained for a duration, and what it
  * does there. Data, from {@code data/<namespace>/zas/hazard_profile/<path>.json}, for the gas
- * {@code <namespace>:<path>} (docs/datapacks.md).
+ * {@code <namespace>:<path>} (the wiki's Datapack-Life-Support page).
  *
  * <p>A threshold applies at or above its partial pressure, or, with {@code "above": true}, only
  * strictly above it. A threshold with no effect level, status effects or damage is a warning level: it does

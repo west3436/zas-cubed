@@ -27,8 +27,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * {@code /zas preset}: the atmosphere preset and the options it sets, each with its value and
- * whether that comes from the preset or an override (OPS-007, OPS-014, OPS-015), documented in
- * {@code docs/commands.md}.
+ * whether that comes from the preset or an override (OPS-007, OPS-014, OPS-015), documented on the
+ * wiki's Commands page.
  *
  * <p>Switching the preset or changing an override writes the server config file, so the change
  * lasts, and applies from the next read of the option: for the ambient, the next atmos tick.

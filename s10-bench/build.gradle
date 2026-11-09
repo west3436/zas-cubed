@@ -3,7 +3,8 @@ apply plugin: 'net.neoforged.moddev'
 // The in-game S-10 bench (00-overview, scenario S-10; NFR-001, NFR-002, NFR-004, NFR-005, DATA-006,
 // and the bench halves of DATA-014 and DATA-015). A dedicated server loads zas, zas_atmos and this
 // project's own mod, zas_s10, which builds the station, runs the script, measures and stops the
-// server. `./gradlew :s10-bench:s10Bench` runs it; docs/research/benchmarks.md says how to read it.
+// server. `./gradlew :s10-bench:s10Bench` runs it; the archived benchmarks note says how to read it:
+// https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#the-in-game-s-10-bench
 // Nothing here is published or goes into the zas or zas_atmos jar.
 
 evaluationDependsOn(':zas')
@@ -15,7 +16,7 @@ def bundled = [project(':engine'), project(':compat-adastra')].collect { it.sour
 
 def runDir = layout.projectDirectory.dir('run')
 
-// What the bench run is told, from -Ps10.<name> (docs/research/benchmarks.md).
+// What the bench run is told, from -Ps10.<name>.
 def benchProps = [
     // `quick`: a short script, to check the harness works. Its figures mean nothing.
     'quick'   : providers.gradleProperty('s10.quick').getOrElse('false'),
@@ -104,7 +105,7 @@ tasks.matching { it.name == 'runS10' }.configureEach {
         new File(benchProps.out).mkdirs()
         new File(dir, 'config').mkdirs()
         new File(dir, 'server.properties').text = '''\
-# Written by :s10-bench before each run (docs/research/benchmarks.md).
+# Written by :s10-bench before each run.
 online-mode=false
 server-port=25695
 level-name=world
@@ -121,9 +122,9 @@ max-tick-time=-1
 network-compression-threshold=256
 sync-chunk-writes=false
 '''
-        // The scenario's settings. Everything else keeps its default (docs/config.md).
+        // The scenario's settings. Everything else keeps its default.
         new File(dir, 'config/zas-server.toml').text = '''\
-# Written by :s10-bench before each run (docs/research/benchmarks.md).
+# Written by :s10-bench before each run.
 preset = "HARDCORE"
 
 [fire]
@@ -131,7 +132,7 @@ preset = "HARDCORE"
 \tspread_chance = 0.0
 '''
         new File(dir, 'config/zas_atmos-server.toml').text = '''\
-# Written by :s10-bench before each run (docs/research/benchmarks.md).
+# Written by :s10-bench before each run.
 [power]
 \t# One generator beside each area air controller covers its room's parts.
 \tgenerator_output = 400

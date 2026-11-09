@@ -1618,8 +1618,7 @@ public final class StationSaveTests {
      *
      * <p>It checks the rebuilds: two of the valve's network as it opens on the edge and one away
      * from it, one as it shuts in both, and none while it stays open. It logs each rig's median
-     * time per atmos tick, for {@code docs/research/benchmarks.md}; times aren't checked, as CI's
-     * machines vary too much.
+     * time per atmos tick; times aren't checked, as CI's machines vary too much.
      */
     @GameTest(template = "empty", batch = EDGE_BATCH)
     public static void s_09_a_valve_at_a_chunk_edge_rebuilds_once_more_as_it_opens(GameTestHelper h) {

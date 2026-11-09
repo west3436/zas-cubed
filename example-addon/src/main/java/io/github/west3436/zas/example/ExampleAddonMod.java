@@ -18,10 +18,13 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 /**
- * An example addon built on the ZAS³ API alone, using each of its extension points (API-047). {@code
- * docs/api-consumers.md} lists them and which class here shows each. It runs the same way whether or
- * not ZAS³ is installed (API-048): without it, the API's fallback answers with standard air and
- * vanilla's breathing rules, and nothing calls what's registered here (D-17).
+ * An example addon built on the ZAS³ API alone, using each of its extension points (API-047). It
+ * runs the same way whether or not ZAS³ is installed (API-048): without it, the API's fallback
+ * answers with standard air and vanilla's breathing rules, and nothing calls what's registered
+ * here (D-17).
+ *
+ * <p>The archived API guide lists the extension points and which class here shows each:
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#the-example-addon
  */
 @Mod(ExampleAddonMod.MOD_ID)
 public final class ExampleAddonMod {

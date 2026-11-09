@@ -338,8 +338,9 @@ public final class LiveConfigTests {
     }
 
     /**
-     * The settings marked restart-only are exactly the two the docs name, and a reload leaves one as
-     * it was. Fails when a key gains the mark, as a reminder to mark it in docs/config.md too.
+     * The settings marked restart-only are exactly the two the wiki names, and a reload leaves one as
+     * it was. Fails when a key gains the mark, as a reminder to mark it on the wiki's
+     * Server-Configuration page too.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void ops_016_only_the_thread_settings_are_restart_only(GameTestHelper h) {

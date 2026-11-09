@@ -118,7 +118,7 @@ public class GasTankItem extends Item {
     public static final double AIR_MIN_N2_O2 = 0.98;
 
     /**
-     * The kind a 70 L tank becomes when filled from a canister (CONT-039, docs/crafting.md: an
+     * The kind a 70 L tank becomes when filled from a canister (CONT-039: an
      * empty tank filled from an O₂ canister is an O₂ tank, and from air an air tank): an O₂ tank if
      * its gas is at least 95 % O₂, an air tank if it is N₂ and O₂ with 19–23 % O₂, else the plain
      * tank, which is named a gas tank while it holds gas. The emergency tank stays what it is.

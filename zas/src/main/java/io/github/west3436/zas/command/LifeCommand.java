@@ -28,7 +28,7 @@ import net.minecraft.world.level.Level;
 /**
  * {@code /zas life} and {@code /zas hazards}: what breathing and the hazards make of an entity where
  * it is, and the hazard settings in a dimension (LIFE-010, LIFE-011, LIFE-014, LIFE-031, LIFE-036),
- * documented in {@code docs/commands.md}. They only read.
+ * documented on the wiki's Commands page. They only read.
  */
 final class LifeCommand {
     private LifeCommand() {}

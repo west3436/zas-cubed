@@ -9,8 +9,8 @@ import io.github.west3436.zas.api.AnyThread;
  * definition then names it in its {@code "type"} field, and may give it {@code "parameters"}.
  *
  * <p>The definition's own conditions (temperatures, concentrations, catalysts, ignition and
- * flammability limits; see {@code docs/datapacks.md}) are checked first. Only where they all hold is
- * {@link #react} called, once per zone per atmos tick, or once per {@link
+ * flammability limits; see the wiki's Datapack-Fire-and-Reactions page) are checked first. Only
+ * where they all hold is {@link #react} called, once per zone per atmos tick, or once per {@link
  * Reactions#applyStandalone} call. If several reactions want more of a gas than there is, ZAS³
  * scales the change it returns down, as a whole, like any reaction's (FIRE-002).
  *

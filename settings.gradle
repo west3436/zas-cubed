@@ -24,5 +24,5 @@ include 'zas-ponder'
 // The jar players install: zas and zas_atmos in one file (D-88).
 include 'dist'
 
-// The in-game S-10 bench: a dev-only mod and server run, never published (docs/research/benchmarks.md).
+// The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

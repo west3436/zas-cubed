@@ -12,9 +12,9 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Gas reactions outside the world (API-019) and reaction types implemented in code (API-020).
  *
- * <p>Reactions are datapack definitions (FIRE-001, {@code docs/datapacks.md}). Zones run them on
- * their own; this class lets a mod run them on gas it holds itself, such as a tank's or a pipe's,
- * and lets it add reaction types that a datapack definition can name.
+ * <p>Reactions are datapack definitions (FIRE-001; see the wiki's Datapack-Fire-and-Reactions page).
+ * Zones run them on their own; this class lets a mod run them on gas it holds itself, such as a
+ * tank's or a pipe's, and lets it add reaction types that a datapack definition can name.
  *
  * <p>Without ZAS³ installed there are no reactions: {@link #applyStandalone} returns its mixture
  * unchanged, and registered types are kept but never run (D-17).

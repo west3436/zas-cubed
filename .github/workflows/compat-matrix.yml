@@ -2,7 +2,7 @@ name: Compatibility matrix
 
 # NFR-025: every GameTest, with ModernFix, FerriteCore and Lithium on the run's
 # classpath. Never on a PR: it runs nightly on main, or from the Actions tab.
-# docs/release-checklist.md has the rest, including the client launch.
+# The wiki's Release-Checklist page has the rest, including the client launch.
 on:
   workflow_dispatch:
   schedule:

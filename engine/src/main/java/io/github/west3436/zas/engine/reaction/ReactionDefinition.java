@@ -9,8 +9,8 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 /**
- * One gas reaction, as a datapack defines it (FIRE-001). The format is documented in {@code
- * docs/datapacks.md}.
+ * One gas reaction, as a datapack defines it (FIRE-001). The format is documented on the wiki's
+ * Datapack-Fire-and-Reactions page.
  *
  * <p>The reaction as written, {@code Σ νᵢ reactantᵢ → Σ μⱼ productⱼ}, happens some number of times
  * per step: its <em>extent</em>, in mol. Each unit of extent consumes νᵢ mol of each reactant,

@@ -20,11 +20,12 @@ import java.util.Locale;
  * engine/s10-baseline.properties} and on this code, and fails if this code costs more than {@value
  * #TOLERANCE_PERCENT} % over the baseline.
  *
- * <p>The baseline is a commit, not a time, because CI's machines differ by far more than that (see
- * docs/research/benchmarks.md). So both engines run here, on this machine, in turn, each from its
- * own class loader so that neither shares the other's classes or their JIT profiles. Each pair
- * gives a ratio, and the result is the median over the pairs, after warm-up pairs that let the JIT
- * settle.
+ * <p>The baseline is a commit, not a time, because CI's machines differ by far more than that. So
+ * both engines run here, on this machine, in turn, each from its own class loader so that neither
+ * shares the other's classes or their JIT profiles. Each pair gives a ratio, and the result is the
+ * median over the pairs, after warm-up pairs that let the JIT settle. The archived benchmarks note
+ * has the measurements:
+ * https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/research/benchmarks.md#regression-check-nfr-034-2026-11-06
  *
  * <p>A run over the limit runs once more, in a new JVM, and the check fails only if that one is over
  * too. A JVM's pairs agree with each other more than with another JVM's, and one with no change has
@@ -67,7 +68,7 @@ public final class RegressionCheck {
         }
         String message = "S-10 costs more than " + TOLERANCE_PERCENT
                 + " % over its recorded baseline (NFR-034), in two runs. To accept that, see"
-                + " docs/research/benchmarks.md.";
+                + " engine/s10-baseline.properties.";
         System.out.println((System.getenv("GITHUB_ACTIONS") != null ? "::error::" : "") + message);
         System.exit(1);
     }

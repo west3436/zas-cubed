@@ -21,8 +21,8 @@ import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
 
 /**
  * The datapack and network formats of gas definitions (CORE-010, CORE-014, CORE-017) and the
- * datapack folder of gas tags (CORE-012). The datapack formats are documented in {@code
- * docs/datapacks.md}.
+ * datapack folder of gas tags (CORE-012). The datapack formats are documented on the wiki's
+ * Datapack-Gases and Datapack-Tags pages.
  */
 public final class GasDefinitionCodecs {
     /** The datapack folder: {@code data/<namespace>/zas/gas/<path>.json} defines gas {@code <namespace>:<path>}. */
