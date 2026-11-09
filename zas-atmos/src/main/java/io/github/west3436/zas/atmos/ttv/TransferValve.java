@@ -15,7 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Two gas tanks joined by a valve (CONT-103): what a tank transfer valve is, whether it is an item
- * ({@link TransferValveItem}) or primed ({@link PrimedTransferValve}).
+ * ({@link TransferValveItem}), placed ({@link TransferValveBlockEntity}) or primed ({@link
+ * PrimedTransferValve}).
  *
  * <p>Opening the valve moves all of the first tank's gas into the second, mixing temperatures.
  * Closing it shares the gas back by volume. Without both tanks there is nothing to join, so the
@@ -192,7 +193,19 @@ public final class TransferValve {
      * @return what it came to
      */
     public Step step(ServerLevel level, Entity holder, @Nullable Entity source) {
-        Vec3 at = TankFailure.pointOf(holder);
+        return step(level, TankFailure.pointOf(holder), source);
+    }
+
+    /**
+     * The same atmos tick, for a TTV at a point rather than on an entity: a placed one ({@link
+     * TransferValveBlockEntity}).
+     *
+     * @param level the level it is in
+     * @param at where its tanks fail, and where their gas goes
+     * @param source the entity an explosion comes from, or null
+     * @return what it came to
+     */
+    public Step step(ServerLevel level, Vec3 at, @Nullable Entity source) {
         boolean changed = react(first);
         changed |= TankFailure.leaking(first);
         Kind kind = TankFailure.check(level, at, first, source).kind();

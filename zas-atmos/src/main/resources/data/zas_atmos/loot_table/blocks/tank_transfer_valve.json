@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "zas_atmos:tank_transfer_valve",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "source": "block_entity",
+              "include": [
+                "minecraft:custom_name",
+                "zas_atmos:ttv_tanks",
+                "zas_atmos:ttv_open",
+                "zas_atmos:ttv_timer"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

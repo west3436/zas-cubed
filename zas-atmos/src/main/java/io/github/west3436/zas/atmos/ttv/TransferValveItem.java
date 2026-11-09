@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.SlotAccess;
@@ -17,11 +18,13 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 
 /**
  * A tank transfer valve as an item (CONT-103): two gas tanks joined by a valve, carried as {@link
@@ -30,13 +33,17 @@ import net.minecraft.world.level.Level;
  * TransferValveMenu screen}, which has a slot for each tank, and where the valve opens and closes by
  * hand and the timer is set and started.
  *
+ * <p>It is the item of {@link TransferValveBlock} too (D-86): sneak-used on a block, it places a TTV
+ * with its tanks, valve and timer, and a placed one breaks back into it. Plain use opens its screen,
+ * on a block as anywhere else.
+ *
  * <p>Its timer never counts down in this form: starting it primes the TTV, which becomes a {@link
  * PrimedTransferValve} (CONT-104). Its tanks' gas does go on reacting while it is in a player's
  * inventory or lying on the ground (CONT-100).
  */
-public class TransferValveItem extends Item {
-    public TransferValveItem(Properties properties) {
-        super(properties.stacksTo(1));
+public class TransferValveItem extends BlockItem {
+    public TransferValveItem(Block block, Properties properties) {
+        super(block, properties.stacksTo(1));
     }
 
     // ---- A TTV stack's state -----------------------------------------------------------------
@@ -140,18 +147,26 @@ public class TransferValveItem extends Item {
     }
 
     /**
-     * Fits a tank in the first free place, as every way of loading a TTV but a slot does. The stack
-     * given isn't changed: the caller takes it away.
+     * Fits a tank in the first free place, as every way of loading a TTV but a slot does, with the
+     * bundle's sound. The stack given isn't changed: the caller takes it away.
      *
      * @return whether it went on
      */
     static boolean fit(ItemStack stack, ItemStack tank, Player player) {
+        if (!fit(stack, tank)) {
+            return false;
+        }
+        sound(player, true);
+        return true;
+    }
+
+    /** The same, without a sound: for a placed TTV, which plays it from where it stands. */
+    static boolean fit(ItemStack stack, ItemStack tank) {
         TransferValve valve = valve(stack);
         if (!valve.attach(tank.copy())) {
             return false;
         }
         save(stack, valve);
-        sound(player, true);
         return true;
     }
 
@@ -214,6 +229,19 @@ public class TransferValveItem extends Item {
 
     static void sound(Player player, boolean in) {
         player.playSound(in ? SoundEvents.BUNDLE_INSERT : SoundEvents.BUNDLE_REMOVE_ONE, 0.8f, 1.0f);
+    }
+
+    /**
+     * Sneak-used on a block, it places a TTV there (D-86), which takes its tanks, valve and timer from
+     * the stack. Plain use passes, so the game goes on to {@link #use}, which opens its screen.
+     */
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        Player player = context.getPlayer();
+        if (player == null || !player.isSecondaryUseActive()) {
+            return InteractionResult.PASS;
+        }
+        return super.useOn(context);
     }
 
     /** Opens its screen, from the server, which alone can say what is on it. */

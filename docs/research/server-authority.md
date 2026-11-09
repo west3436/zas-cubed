@@ -52,7 +52,7 @@ that has been removed.
 | `PortableMenu` | Switch (portable scrubber: this only) | Id 0 |
 | `PortablePumpMenu` | Direction; target | Ids 1–5. Clamped to 0–4,500 kPa |
 | `ThermoMachineMenu` (heater, air conditioner) | Setpoint | Ids 1–4. Clamped to 293–573 K (heater) or 73–293 K (air conditioner) |
-| `TransferValveMenu` | Timer; valve; starting the timer | Ids 0–6. Clamped to 0–600 s. The menu has to be on the very stack it opened on, and starting needs an empty cursor |
+| `TransferValveMenu` | Timer; valve; starting the timer | Ids 0–6. Clamped to 0–600 s. The menu has to be on the very stack it opened on, or on a placed TTV still standing within reach, and starting needs an empty cursor |
 | `GeneratorMenu` | Nothing: it has no buttons | The base class refuses every id |
 
 GameTests send these menus unknown ids and settings past their limits. The `cont_074_`
@@ -72,7 +72,7 @@ and the stacks the client reports are only used to resynchronise it.
 |---|---|---|
 | `PortableMenu` and subclasses | Battery, tank | Each slot's handler takes only what it holds (CONT-112) |
 | `GeneratorMenu` | Fuel | The slot takes only furnace fuel |
-| `TransferValveMenu` | Two tanks | The stack's own data is the only copy. The menu refuses any click that would move the TTV or copy a tank (see its class comment) |
+| `TransferValveMenu` | Two tanks | The stack's own data is the only copy, in the hand or in a placed TTV's block entity. The menu refuses any click that would move the TTV or copy a tank (see its class comment) |
 
 All other menus have no slots, and their `quickMoveStack` returns nothing.
 
