@@ -3119,7 +3119,8 @@ origin: vgstation13
 source: sound/misc/fire_alarm.ogg
 commit: bc8e6c73f7b07b90cdd75fe30ff81836df13900b
 adapted: Mixed to mono, levelled to -1 dBFS peak, re-encoded.
-notes: From Freesound under a suitable license, per the vg PR's author, 2026-11-05; the original sound and its author aren't recorded.
+attribution: vgstation13 contributors, CC BY-SA 3.0 US
+notes: One of SS13's classic shared sounds. Credited to vgstation13 contributors by the owner's decision, 2026-11-09; its original source isn't recorded.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/sounds/device/beep.ogg
 origin: vgstation13
