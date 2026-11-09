@@ -5,6 +5,8 @@ import static io.github.west3436.zas.atmos.gametest.Area.O2;
 import static io.github.west3436.zas.atmos.gametest.Area.REL;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
@@ -12,6 +14,16 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.airlock.AirSensorBlock;
+import io.github.west3436.zas.atmos.airlock.AirSensorBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockBlock;
+import io.github.west3436.zas.atmos.airlock.AirlockBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlock;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
+import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity.Slot;
+import io.github.west3436.zas.atmos.airlock.AirlockCycle;
+import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
+import io.github.west3436.zas.atmos.airlock.SensorStatus;
 import io.github.west3436.zas.atmos.battery.RechargerBlock;
 import io.github.west3436.zas.atmos.battery.RechargerBlockEntity;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
@@ -21,6 +33,7 @@ import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.controller.CentralClaims;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlock;
 import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
+import io.github.west3436.zas.atmos.controller.ConsoleSide;
 import io.github.west3436.zas.atmos.controller.ControllerMode;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
 import io.github.west3436.zas.atmos.controller.ZonePriority;
@@ -32,10 +45,15 @@ import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
+import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
+import io.github.west3436.zas.atmos.firelock.Lockdown;
 import io.github.west3436.zas.atmos.gas.GasStore;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.heater.ThermoMachineBlockEntity;
+import io.github.west3436.zas.atmos.holder.TankHolderBlock;
+import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.inline.PortedBlock;
@@ -49,6 +67,9 @@ import io.github.west3436.zas.atmos.portable.PortableGasDevice;
 import io.github.west3436.zas.atmos.portable.PortablePumpBlockEntity;
 import io.github.west3436.zas.atmos.power.GeneratorBlockEntity;
 import io.github.west3436.zas.atmos.pump.PumpBlockEntity;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
+import io.github.west3436.zas.atmos.radiator.HeatExchangerTint;
+import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosComponents;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -77,6 +98,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -99,12 +121,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -122,6 +146,7 @@ import org.slf4j.Logger;
  * S-09 with content (DATA-016): a station of zones, pipes, every device that keeps a setting or a
  * buffer, canisters and tanks is saved to the world's files and loaded from them again, and every
  * amount comes back within 1e-9. A zone across the chunk that loads last is paused until it does.
+ * An airlock controller saved midway through a cycle takes it up again and finishes it.
  *
  * <p><b>What stands in for a restart.</b> A GameTest can't restart the server. The station's three
  * chunks really unload, with nothing else holding them: the game writes their block entities, their
@@ -157,12 +182,23 @@ public final class StationSaveTests {
     /** What the station batch's end undoes, even if the test failed or timed out. */
     private static final List<Runnable> CLEANUP = new ArrayList<>();
 
+    private static final String LOCK_BATCH = "zas_atmos_airlock_save";
+
+    /** What the airlock batch's end undoes. */
+    private static final List<Runnable> LOCK_CLEANUP = new ArrayList<>();
+
     private StationSaveTests() {}
 
     @AfterBatch(batch = BATCH)
     public static void cleanUp(ServerLevel level) {
         CLEANUP.forEach(Runnable::run);
         CLEANUP.clear();
+    }
+
+    @AfterBatch(batch = LOCK_BATCH)
+    public static void cleanUpLock(ServerLevel level) {
+        LOCK_CLEANUP.forEach(Runnable::run);
+        LOCK_CLEANUP.clear();
     }
 
     // ---- S-09 and DATA-016: the station ---------------------------------------------------
@@ -172,6 +208,12 @@ public final class StationSaveTests {
      * device's settings and buffers, canisters, tanks in a chest, a portable, a suit and a TTV, and a
      * primed TTV. Chunks A and B load first: everything in them is as it was, and the zone across B
      * and C is paused with B's share. Then C loads, and that zone resumes with all of its gas.
+     *
+     * <p>Batch 5's blocks come back too: a tank holder's tanks in their order, each with its gas;
+     * the networks of radiator pipe and of a pair of heat exchangers, and the pair's bands; airlocks
+     * open, bolted and with a firelock locked down, and the large airlock's pending close, which its
+     * scheduled tick then makes at its time; the door under a firelock; an airlock controller's
+     * slots, links, armed slot and last door, without power; and each air sensor's status.
      */
     @GameTest(template = "empty", batch = BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
     public static void s_09_a_station_saved_to_disk_comes_back_with_every_amount(GameTestHelper h) {
@@ -241,6 +283,7 @@ public final class StationSaveTests {
                     Snapshot after = s.snapshot();
                     s.compare(after, before[0], "after C loaded", 0, 1, 2);
                     s.sameZone(after.zones.get("P"), before[0].zones.get("P"), "P, resumed");
+                    s.closeLargeAirlock();
                 })
                 .thenSucceed();
     }
@@ -296,6 +339,12 @@ public final class StationSaveTests {
      *       TTV in A. With the chest, that is a block entity of every kind the mod has.
      *   <li>A portable pump and scrubber, a heater, an air conditioner, a recharger and a generator at
      *       z = 8 in B.
+     *   <li>In B's corner by P, an airlock controller, unpowered, with all five slots filled: a bolted
+     *       airlock and the large airlock, open and waiting to close itself, and three air sensors, one
+     *       of them in Q; and a vent linked to it. A spruce door with its firelock shut, and a tank
+     *       holder of four tanks. In Q's east wall, an airlock whose firelock is locked down.
+     *   <li>Radiator pipe, joined to a pipe by an adaptor, in the open air at the ambient's
+     *       temperature, at z = 14 in B; and a pair of heat exchangers at 450 K at z = 12.
      * </ul>
      */
     private static final class Station {
@@ -304,11 +353,33 @@ public final class StationSaveTests {
         static final BlockPos CONSOLE = new BlockPos(13, 1, 3);
         static final BlockPos CONTROLLER = new BlockPos(3, 2, 2);
 
+        // Batch 5. The airlocks are at their origins, the lower (left) block.
+        static final BlockPos BOLTED = new BlockPos(17, 1, 4);
+        static final BlockPos LARGE = new BlockPos(20, 1, 4);
+        static final BlockPos FIRELOCKED = new BlockPos(9, 1, 3);
+        static final BlockPos DOOR = new BlockPos(22, 1, 6);
+        static final BlockPos AIRLOCK_CONTROLLER = new BlockPos(19, 2, 1);
+        static final BlockPos SENSOR_IN = new BlockPos(17, 2, 1);
+        static final BlockPos SENSOR_OUT = new BlockPos(21, 2, 1);
+        static final BlockPos SENSOR_Q = new BlockPos(8, 2, 2);
+        static final BlockPos LOCK_VENT = new BlockPos(18, 1, 2);
+        static final BlockPos HOLDER = new BlockPos(17, 1, 6);
+        static final BlockPos RADIATOR = new BlockPos(21, 1, 14);
+        static final BlockPos EXCHANGER = new BlockPos(18, 1, 12);
+        static final BlockPos PARTNER = new BlockPos(19, 1, 12);
+        static final double EXCHANGER_K = 450;
+
         final GameTestHelper h;
         final Area a;
         final HolderLookup.Provider registries;
         final ChunkPos[] chunks = new ChunkPos[3];
         UUID primed;
+
+        /** The tanks put in the holder, in order, as they went in. */
+        final List<ItemStack> held = new ArrayList<>();
+
+        /** When the large airlock closes itself, a game time. */
+        long largeCloseAt;
 
         /** Set while only chunks A and B are held, and chunk C must stay away. */
         boolean cAway;
@@ -365,6 +436,14 @@ public final class StationSaveTests {
 
         <E extends BlockEntity> E at(int x, int y, int z) {
             return a.entity(x, y, z);
+        }
+
+        <E extends BlockEntity> E at(BlockPos p) {
+            return a.entity(p.getX(), p.getY(), p.getZ());
+        }
+
+        BlockState state(BlockPos p) {
+            return a.level.getBlockState(abs(p));
         }
 
         /** A hollow box from (x0, 0, z0) to (x1, 4, z1), walls of one block, without clearing around it. */
@@ -465,12 +544,126 @@ public final class StationSaveTests {
             a.place(27, 1, 8, AtmosBlocks.GENERATOR.get().defaultBlockState());
             a.set(2, 1, 8, Blocks.CHEST.defaultBlockState());
             a.place(12, 1, 6, AtmosBlocks.IGNITER.get().defaultBlockState()); // with no signal, it never sparks
+            buildBatch5();
 
             // The rooms' gas: R near one atmosphere, Q at about a third, P hot and rich in CO₂.
             a.fill(3, 2, 3, Map.of(N2, 900.0, O2, 250.0, CO2, 2.0));
             a.fill(7, 2, 3, Map.of(N2, 400.0));
             a.settle(GasMutations.add(
                     a.level, a.point(30, 2, 3), new GasParcel(Map.of(CO2, 120.0, N2, 300.0), 350.0), Area.SOURCE));
+        }
+
+        /**
+         * The airlocks, their controller and sensors, the firelock door, the tank holder, the
+         * radiator pipe and the heat exchangers. Doors stand on stone; panels hang on a block to
+         * their north. Links, gas and tanks come in {@link #settingsBatch5}, once all are loaded.
+         */
+        void buildBatch5() {
+            // In Q's east wall, an airlock facing out: it seals its east face, and its cells are Q's.
+            airlock(FIRELOCKED, Direction.EAST);
+            a.place(SENSOR_Q.getX(), SENSOR_Q.getY(), SENSOR_Q.getZ(), sensor()); // on Q's north wall
+
+            for (BlockPos panel : List.of(SENSOR_IN, AIRLOCK_CONTROLLER, SENSOR_OUT)) {
+                a.set(panel.getX(), panel.getY(), panel.getZ() - 1, STONE);
+            }
+            a.place(SENSOR_IN.getX(), SENSOR_IN.getY(), SENSOR_IN.getZ(), sensor());
+            a.place(SENSOR_OUT.getX(), SENSOR_OUT.getY(), SENSOR_OUT.getZ(), sensor());
+            a.place(
+                    AIRLOCK_CONTROLLER.getX(),
+                    AIRLOCK_CONTROLLER.getY(),
+                    AIRLOCK_CONTROLLER.getZ(),
+                    AtmosBlocks.AIRLOCK_CONTROLLER
+                            .get()
+                            .defaultBlockState()
+                            .setValue(AirlockControllerBlock.FACING, Direction.SOUTH));
+            a.place(LOCK_VENT.getX(), LOCK_VENT.getY(), LOCK_VENT.getZ(), GasDeviceTests.vent(Direction.UP));
+
+            a.set(BOLTED.getX(), 0, BOLTED.getZ(), STONE);
+            airlock(BOLTED, Direction.EAST);
+            // The large airlock facing east: its right column is south of its left, the origin.
+            BlockState large = AtmosBlocks.LARGE_AIRLOCK
+                    .get()
+                    .defaultBlockState()
+                    .setValue(AirlockBlock.FACING, Direction.EAST)
+                    .setValue(AirlockBlock.OPEN, false);
+            a.set(LARGE.getX(), 0, LARGE.getZ(), STONE);
+            a.set(LARGE.getX(), 0, LARGE.getZ() + 1, STONE);
+            for (int i = 0; i < 4; i++) {
+                boolean right = (i & 1) == 1;
+                boolean upper = i >= 2;
+                a.set(
+                        LARGE.getX(),
+                        LARGE.getY() + (upper ? 1 : 0),
+                        LARGE.getZ() + (right ? 1 : 0),
+                        large.setValue(AirlockBlock.SIDE, right ? ConsoleSide.RIGHT : ConsoleSide.LEFT)
+                                .setValue(AirlockBlock.HALF, upper ? DoubleBlockHalf.UPPER : DoubleBlockHalf.LOWER));
+            }
+
+            // A spruce door, which the firelock wraps in settings: not the iron door a lost one becomes.
+            BlockState door = Blocks.SPRUCE_DOOR.defaultBlockState().setValue(DoorBlock.FACING, Direction.EAST);
+            a.set(DOOR.getX(), 0, DOOR.getZ(), STONE);
+            a.set(DOOR.getX(), DOOR.getY(), DOOR.getZ(), door);
+            a.set(DOOR.getX(), DOOR.getY() + 1, DOOR.getZ(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+            a.place(
+                    HOLDER.getX(),
+                    HOLDER.getY(),
+                    HOLDER.getZ(),
+                    AtmosBlocks.TANK_HOLDER
+                            .get()
+                            .defaultBlockState()
+                            .setValue(TankHolderBlock.FACING, Direction.SOUTH));
+
+            // A cap, a pipe, an adaptor and four segments of radiator pipe: one network.
+            a.place(
+                    17,
+                    1,
+                    14,
+                    AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, Direction.EAST));
+            a.place(18, 1, 14, GasDeviceTests.pipe());
+            a.place(
+                    19,
+                    1,
+                    14,
+                    AtmosBlocks.RADIATOR_ADAPTOR
+                            .get()
+                            .defaultBlockState()
+                            .setValue(RadiatorAdaptorBlock.FACING, Direction.EAST));
+            for (int x = 20; x <= 23; x++) {
+                a.place(x, 1, 14, AtmosBlocks.RADIATOR_PIPE.get().defaultBlockState());
+            }
+            // A pair of heat exchangers, each capped on its pipe face: two networks.
+            a.place(
+                    17,
+                    1,
+                    12,
+                    AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, Direction.EAST));
+            a.place(EXCHANGER.getX(), EXCHANGER.getY(), EXCHANGER.getZ(), exchanger(Direction.EAST));
+            a.place(PARTNER.getX(), PARTNER.getY(), PARTNER.getZ(), exchanger(Direction.WEST));
+            a.place(
+                    20,
+                    1,
+                    12,
+                    AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, Direction.WEST));
+        }
+
+        /** A closed 1 by 2 airlock, its origin at {@code at}. */
+        void airlock(BlockPos at, Direction facing) {
+            BlockState lower = AtmosBlocks.AIRLOCK
+                    .get()
+                    .defaultBlockState()
+                    .setValue(AirlockBlock.FACING, facing)
+                    .setValue(AirlockBlock.OPEN, false);
+            a.set(at.getX(), at.getY(), at.getZ(), lower);
+            a.set(at.getX(), at.getY() + 1, at.getZ(), lower.setValue(AirlockBlock.HALF, DoubleBlockHalf.UPPER));
+        }
+
+        static BlockState sensor() {
+            return AtmosBlocks.AIR_SENSOR.get().defaultBlockState().setValue(AirSensorBlock.FACING, Direction.SOUTH);
+        }
+
+        static BlockState exchanger(Direction box) {
+            return AtmosBlocks.HEAT_EXCHANGER.get().defaultBlockState().setValue(HeatExchangerBlock.FACING, box);
         }
 
         /** A capped row at y = 1 from x0 to x1: caps at the ends facing in, pipes between. */
@@ -616,6 +809,72 @@ public final class StationSaveTests {
             player.setPos(Vec3.atBottomCenterOf(a.abs(6, 1, 8)));
             PrimedTransferValve entity = PrimedTransferValve.prime(a.level, player, ttv(TransferValve.MAX_TIMER));
             primed = entity.getUUID();
+            settingsBatch5();
+        }
+
+        /**
+         * Batch 5's settings. The airlock controller is linked by arming each slot first, so each
+         * slot is the one given and all five are sure, and is left with a slot armed. No area air
+         * controller covers it, so it has no power and never cycles. The large airlock, its outer
+         * door, opens and waits to close itself, which its scheduled tick does, and the station's
+         * chunks don't tick. The radiator pipe's gas is at the open air's temperature, and the
+         * exchangers' at one temperature, so no heat moves.
+         */
+        void settingsBatch5() {
+            ServerLevel level = a.level;
+            AirlockControllerBlockEntity lock = at(AIRLOCK_CONTROLLER);
+            BlockPos[] slotted = slotted();
+            for (Slot slot : Slot.values()) {
+                lock.arm(slot);
+                h.assertValueEqual(
+                        lock.toggleLink(level, slotted[slot.ordinal()]),
+                        AirlockControllerBlockEntity.LinkResult.LINKED,
+                        "linking the airlock controller's " + slot.key());
+            }
+            lock.toggleLink(level, abs(LOCK_VENT));
+            lock.arm(Slot.OUTER_SENSOR);
+            AirlockBlock.setBolted(level, abs(BOLTED), true);
+            h.assertTrue(AirlockBlock.setOpen(level, abs(LARGE), true, null), "the large airlock didn't open");
+            largeCloseAt = this.<AirlockBlockEntity>at(LARGE).closeAt();
+            h.assertTrue(largeCloseAt > level.getGameTime(), "the large airlock isn't waiting to close itself");
+            h.assertValueEqual(lock.lastOpened(), AirlockCycle.OUTER, "the controller didn't see its outer door open");
+
+            h.assertTrue(AirlockBlock.fitFirelock(level, abs(FIRELOCKED)), "no firelock fitted to the airlock");
+            this.<AirlockBlockEntity>at(FIRELOCKED).firelockDoor().setOpen(level, false);
+            h.assertTrue(FirelockDoorBlock.fit(level, abs(DOOR)), "no firelock fitted to the spruce door");
+            this.<FirelockDoorBlockEntity>at(DOOR).firelockDoor().setOpen(level, false);
+
+            TankHolderBlockEntity holder = at(HOLDER);
+            for (ItemStack tank : List.of(
+                    tank(AtmosItems.OXYGEN_TANK.get(), Map.of(O2, 4.25), 289.0),
+                    tank(AtmosItems.AIR_TANK.get(), Map.of(N2, 3.0, O2, 0.8125), 294.0),
+                    tank(AtmosItems.EMPTY_TANK.get(), Map.of(CO2, 0.5, N2, 0.375), 301.0),
+                    tank(AtmosItems.EMERGENCY_OXYGEN_TANK.get(), Map.of(O2, 0.625), 285.0))) {
+                held.add(tank.copy());
+                h.assertTrue(holder.put(tank), "the tank holder refused " + tank);
+            }
+
+            AtmosphereSample air = Atmospheres.at(level, abs(RADIATOR));
+            h.assertValueEqual(air.state(), AtmosphereState.AMBIENT, "the radiator pipe's cell");
+            PipeNodeEntity radiator = at(RADIATOR);
+            h.assertTrue(
+                    this.<PipeNodeEntity>at(17, 1, 14).network() == radiator.network()
+                            && this.<PipeNodeEntity>at(19, 1, 14).network() == radiator.network(),
+                    "the cap, the pipe, the adaptor and the radiator pipe aren't one network");
+            radiator.network()
+                    .gas()
+                    .add(new GasParcel(Map.of(N2, 6.0, O2, 1.5), air.mixture().temperature()));
+            PipeNodeEntity exchanger = at(EXCHANGER);
+            PipeNodeEntity partner = at(PARTNER);
+            h.assertTrue(exchanger.network() != partner.network(), "the exchangers share a network");
+            exchanger.network().gas().add(new GasParcel(Map.of(N2, 9.0), EXCHANGER_K));
+            partner.network().gas().add(new GasParcel(Map.of(CO2, 4.5), EXCHANGER_K));
+            this.<PipeNodeEntity>at(LOCK_VENT).network().gas().add(new GasParcel(Map.of(N2, 0.75), 290.0));
+        }
+
+        /** What fills each of the airlock controller's slots, in {@link Slot}'s order. */
+        BlockPos[] slotted() {
+            return new BlockPos[] {abs(BOLTED), abs(LARGE), abs(SENSOR_IN), abs(SENSOR_OUT), abs(SENSOR_Q)};
         }
 
         PrimedTransferValve primed() {
@@ -648,6 +907,9 @@ public final class StationSaveTests {
             zone(s, "P", 30, 2, 3);
             network(s, "N1", 12, 1, 10);
             network(s, "N2 in B", 30, 1, 12); // all of N2 while C is loaded
+            network(s, "the radiator pipe's", RADIATOR.getX(), RADIATOR.getY(), RADIATOR.getZ());
+            network(s, "the leading exchanger's", EXCHANGER.getX(), EXCHANGER.getY(), EXCHANGER.getZ());
+            network(s, "its partner's", PARTNER.getX(), PARTNER.getY(), PARTNER.getZ());
             if (a.level.getEntity(primed) instanceof PrimedTransferValve p) {
                 s.primed = primed;
                 s.primedSaved = p.saveWithoutId(new CompoundTag());
@@ -712,6 +974,10 @@ public final class StationSaveTests {
             sameZone(now.zones.get("R"), then.zones.get("R"), when + ": R");
             sameZone(now.zones.get("Q"), then.zones.get("Q"), when + ": Q");
             sameParcel(now.networks.get("N1"), then.networks.get("N1"), when + ": N1");
+            for (String net : List.of("the radiator pipe's", "the leading exchanger's", "its partner's")) {
+                sameParcel(now.networks.get(net), then.networks.get(net), when + ": " + net + " network");
+            }
+            batch5(now, when);
             h.assertTrue(now.primed != null, when + ": no primed TTV");
             for (String key : List.of("First", "Second", "Open", "Timer", "Fuse", "Settle")) {
                 sameTag(h, now.primedSaved.get(key), then.primedSaved.get(key), when + ": the primed TTV's " + key);
@@ -720,6 +986,122 @@ public final class StationSaveTests {
             if (Arrays.stream(which).anyMatch(i -> i == 2)) {
                 sameParcel(now.networks.get("N2 in B"), then.networks.get("N2 in B"), when + ": N2");
             }
+        }
+
+        /**
+         * Batch 5's parts hold what {@link #settingsBatch5} gave them, on top of their saved tags
+         * matching: the holder's tanks in order, each with its gas; the exchangers' bands; the
+         * airlocks' bolts, firelocks and pending close; the door under the firelock; the airlock
+         * controller's slots, links and last door, with no power; and each sensor's status.
+         */
+        void batch5(Snapshot now, String when) {
+            TankHolderBlockEntity holder = at(HOLDER);
+            h.assertValueEqual(holder.count(), held.size(), when + ": the tanks in the holder");
+            h.assertValueEqual(
+                    state(HOLDER).getValue(TankHolderBlock.TANKS), held.size(), when + ": the tanks the holder shows");
+            for (int i = 0; i < TankHolderBlockEntity.PLACES; i++) {
+                ItemStack tank = holder.tanks().getStackInSlot(i);
+                String place = when + ": the holder's place " + i;
+                if (i >= held.size()) {
+                    h.assertTrue(tank.isEmpty(), place + " holds " + tank);
+                    continue;
+                }
+                ItemStack put = held.get(i);
+                h.assertTrue(tank.is(put.getItem()), place + " holds " + tank + ", not " + put);
+                sameGas(h, tank, put, place + "'s tank");
+                close(
+                        h,
+                        GasTankItem.distributionPressure(tank),
+                        GasTankItem.distributionPressure(put),
+                        place + "'s distribution pressure");
+            }
+
+            for (BlockPos x : List.of(EXCHANGER, PARTNER)) {
+                PipeNodeEntity node = at(x);
+                int band = state(x).getValue(HeatExchangerBlock.HEAT);
+                h.assertValueEqual(
+                        band,
+                        HeatExchangerTint.band(node.network().gas().temperature()),
+                        when + ": the band of the exchanger at " + rel(abs(x)));
+                h.assertValueEqual(band, HeatExchangerTint.band(EXCHANGER_K), when + ": the band at 450 K");
+            }
+
+            BlockState bolted = state(BOLTED);
+            h.assertTrue(
+                    bolted.getValue(AirlockBlock.BOLTED) && !bolted.getValue(AirlockBlock.OPEN),
+                    when + ": the bolted airlock is " + bolted);
+            h.assertTrue(state(LARGE).getValue(AirlockBlock.OPEN), when + ": the large airlock isn't open");
+            AirlockBlockEntity large = at(LARGE);
+            h.assertValueEqual(large.closeAt(), largeCloseAt, when + ": when the large airlock closes itself");
+            h.assertTrue(
+                    a.level.getBlockTicks().hasScheduledTick(abs(LARGE), AtmosBlocks.LARGE_AIRLOCK.get()),
+                    when + ": the large airlock's closing isn't scheduled");
+            h.assertValueEqual(
+                    state(FIRELOCKED).getValue(AirlockBlock.FIRELOCK),
+                    AirlockFirelock.LOCKED,
+                    when + ": the airlock's firelock");
+            AirlockBlockEntity firelocked = at(FIRELOCKED);
+            h.assertTrue(
+                    firelocked
+                            .firelock()
+                            .lockdown()
+                            .map(l -> l.reason() == Lockdown.Reason.PRESSURE)
+                            .orElse(false),
+                    when + ": the airlock's firelock isn't locked down by pressure");
+
+            h.assertValueEqual(
+                    state(DOOR).getValue(FirelockDoorBlock.FIRELOCK),
+                    AirlockFirelock.CLOSED,
+                    when + ": the door's firelock");
+            for (int y = 0; y <= 1; y++) {
+                h.assertValueEqual(
+                        this.<FirelockDoorBlockEntity>at(DOOR.above(y)).door(),
+                        Blocks.SPRUCE_DOOR,
+                        when + ": the door under the firelock, " + (y == 0 ? "lower" : "upper"));
+            }
+
+            AirlockControllerBlockEntity lock = at(AIRLOCK_CONTROLLER);
+            BlockPos[] slotted = slotted();
+            for (Slot slot : Slot.values()) {
+                h.assertValueEqual(
+                        lock.slot(slot), slotted[slot.ordinal()], when + ": the airlock controller's " + slot.key());
+            }
+            CompoundTag saved = lock.saveWithoutMetadata(registries);
+            h.assertValueEqual(saved.getInt("Sure"), 0b11111, when + ": the slots the controller is sure of");
+            h.assertValueEqual(lock.armed(), Slot.OUTER_SENSOR, when + ": the controller's armed slot");
+            h.assertValueEqual(lock.linkedVents(), Set.of(abs(LOCK_VENT)), when + ": the controller's vents");
+            h.assertValueEqual(lock.lastOpened(), AirlockCycle.OUTER, when + ": the door the controller opened last");
+            h.assertValueEqual(lock.cycling(), -1, when + ": the controller is cycling");
+            h.assertFalse(lock.power().isPowered(), when + ": the airlock controller has power");
+            VentBlockEntity vent = at(LOCK_VENT);
+            h.assertTrue(vent.airlockControlled(), when + ": the linked vent isn't the controller's");
+            h.assertValueEqual(vent.settings().mode(), VentMode.OFF, when + ": the linked vent");
+
+            double q = now.zones.get("Q").mixture().pressure();
+            AirSensorBlockEntity inQ = at(SENSOR_Q);
+            close(h, inQ.pressure(), q, when + ": the pressure the sensor in Q read");
+            h.assertValueEqual(
+                    state(SENSOR_Q).getValue(AirSensorBlock.STATUS),
+                    SensorStatus.ALERT,
+                    when + ": the sensor in Q, at " + q + " kPa");
+            for (BlockPos sensor : List.of(SENSOR_IN, SENSOR_OUT)) {
+                h.assertValueEqual(
+                        state(sensor).getValue(AirSensorBlock.STATUS),
+                        SensorStatus.STANDBY,
+                        when + ": the sensor in the open air at " + rel(abs(sensor)));
+            }
+        }
+
+        /**
+         * The large airlock's scheduled tick, run here as it runs where a chunk ticks: once its time
+         * has come, it closes the airlock. The time it reads is the one the save kept.
+         */
+        void closeLargeAirlock() {
+            BlockPos pos = abs(LARGE);
+            h.assertTrue(a.level.getGameTime() >= largeCloseAt, "the large airlock's closing isn't due");
+            a.level.getBlockState(pos).tick(a.level, pos, a.level.random);
+            h.assertFalse(state(LARGE).getValue(AirlockBlock.OPEN), "the large airlock didn't close itself");
+            h.assertValueEqual(this.<AirlockBlockEntity>at(LARGE).closeAt(), -1L, "the large airlock's closing");
         }
 
         /**
@@ -852,6 +1234,11 @@ public final class StationSaveTests {
             if (a.level.getBlockEntity(a.abs(2, 1, 8)) instanceof ChestBlockEntity chest) {
                 chest.clearContent();
             }
+            if (a.level.getBlockEntity(abs(HOLDER)) instanceof TankHolderBlockEntity holder) {
+                while (holder.count() > 0) {
+                    holder.takeLast(); // broken, it would drop them
+                }
+            }
             clear();
             hold(false, 0, 1, 2);
         }
@@ -871,7 +1258,11 @@ public final class StationSaveTests {
     }
 
     static ItemStack tank(Map<ResourceLocation, Double> moles, double kelvin) {
-        ItemStack tank = new ItemStack(AtmosItems.EMPTY_TANK.get());
+        return tank(AtmosItems.EMPTY_TANK.get(), moles, kelvin);
+    }
+
+    static ItemStack tank(Item kind, Map<ResourceLocation, Double> moles, double kelvin) {
+        ItemStack tank = new ItemStack(kind);
         GasTankItem.setGas(tank, new GasParcel(moles, kelvin));
         GasTankItem.setDistributionPressure(tank, 55.5);
         return tank;
@@ -890,6 +1281,228 @@ public final class StationSaveTests {
         ItemStack battery = AtmosItems.BATTERY.get().full();
         battery.set(AtmosComponents.ENERGY.get(), energy);
         return battery;
+    }
+
+    // ---- S-09 and DATA-016: an airlock cycle saved midway ------------------------------------
+
+    /** The airlock's site, in {@link Site}'s numbering: one chunk, x 0 to 10 and z 0 to 4 of it. */
+    private static final int LOCK_SITE = 2805;
+
+    /**
+     * An airlock controller saved to disk midway through a cycle and loaded again takes the cycle up
+     * and finishes it (DATA-016, CONT-139, CONT-141). It is {@link AirlockTests#lock}'s airlock, with
+     * B and the chamber at 200 kPa and A at 100. It cycles out to B, which opens B's door at once,
+     * and then back toward A, siphoning; two steps in, its chunk unloads with nothing else holding it,
+     * and loads again.
+     *
+     * <p>Every block entity's saved tag comes back as it was, numbers within 1e-9, and so do the
+     * zones and the vent's network. The controller keeps its five slots, the slots it is sure of,
+     * the armed slot, its vent, its cycle and the door it opened last. Its lease of power is never
+     * saved, so it comes back unpowered, and so do its vent and its cycle's step. Once the area air
+     * controller pays for it again, the cycle goes on, with the vent siphoning, and ends with A's
+     * door open, unbolted, on a chamber within 5.07 kPa of A.
+     *
+     * <p>The chunk is held loaded in full only, so the schedule steps nothing there; the test steps
+     * the airlock's devices, as {@link AirlockTests} does, and drives atmos ticks with {@code tickNow},
+     * so it has a batch of its own.
+     */
+    @GameTest(template = "empty", batch = LOCK_BATCH, timeoutTicks = Area.CHUNK_WAIT_TICKS)
+    public static void s_09_an_airlock_cycle_saved_midway_resumes_and_finishes(GameTestHelper h) {
+        Site s = new Site(h, LOCK_SITE);
+        ChunkPos chunk = new ChunkPos(s.origin);
+        PipeSaveTests.hold(s.level, chunk, true);
+        LOCK_CLEANUP.add(() -> {
+            PipeSaveTests.hold(s.level, chunk, true);
+            BatteryTests.clear(s);
+            PipeSaveTests.hold(s.level, chunk, false);
+        });
+        AirlockTests.Lock before = AirlockTests.lock(s, true, false);
+        AirlockControllerBlockEntity ac = before.controller();
+        AirlockTests.fill(s, 8, 2, 2, 158, 42);
+        AirlockTests.fill(s, 5, 2, 2, 158, 42);
+        h.assertTrue(ac.requestCycle(AirlockCycle.OUTER), "the controller refused a cycle out to B");
+        for (int i = 0; i < 4 && ac.cycling() >= 0; i++) {
+            s.cycle(before.devices());
+        }
+        h.assertValueEqual(ac.cycling(), -1, "the cycle out to B, at the chamber's pressure, hasn't ended");
+        h.assertValueEqual(ac.lastOpened(), AirlockCycle.OUTER, "the door opened last");
+        h.assertTrue(ac.requestCycle(AirlockCycle.INNER), "the controller refused a cycle in to A");
+        // Until the vent has siphoned: it waits a step or two for the chamber's cell to settle.
+        GasStore siphoned = before.vents().get(0).network().gas();
+        int stepped = 0;
+        while (stepped < 8 && (stepped < 2 || siphoned.isEmpty())) {
+            s.cycle(before.devices());
+            stepped++;
+        }
+        s.tick();
+        int steps = stepped;
+        h.assertFalse(siphoned.isEmpty(), "the vent hasn't siphoned in " + steps + " steps");
+        ac.arm(Slot.CHAMBER_SENSOR);
+        h.assertValueEqual(ac.cycleStep(), AirlockCycle.Step.SIPHON, "the cycle's step as it's saved");
+        double savedKpa = ac.chamberKpa();
+        h.assertTrue(
+                savedKpa > ac.beyondKpa(AirlockCycle.INNER) + AirlockCycle.TOLERANCE_KPA,
+                "the chamber reached A's pressure before the save: " + savedKpa + " kPa");
+
+        LockSave was = new LockSave(s);
+        PipeSaveTests.hold(s.level, chunk, false);
+        h.startSequence()
+                .thenWaitUntil(() -> {
+                    for (BlockEntity be : was.entities.values()) {
+                        h.assertTrue(be.isRemoved(), "the airlock hasn't unloaded: " + be.getBlockPos());
+                    }
+                })
+                .thenWaitUntil(() -> {
+                    for (ZoneInfo zone : was.zones.values()) {
+                        h.assertTrue(Atmospheres.zone(s.level, zone.id()).isEmpty(), "a zone hasn't left memory");
+                    }
+                })
+                .thenExecute(() -> PipeSaveTests.hold(s.level, chunk, true))
+                .thenWaitUntil(() -> h.assertTrue(s.level.getChunkSource().hasChunk(chunk.x, chunk.z), "not loaded"))
+                .thenWaitUntil(() -> {
+                    for (Map.Entry<String, ZoneInfo> e : was.zones.entrySet()) {
+                        h.assertTrue(
+                                Atmospheres.zone(s.level, e.getValue().id()).isPresent(), e.getKey() + " isn't back");
+                    }
+                })
+                .thenExecute(() -> {
+                    LockSave now = new LockSave(s);
+                    now.compare(h, was);
+                    AirlockTests.Lock lock = now.lock(before);
+                    AirlockControllerBlockEntity back = lock.controller();
+                    h.assertValueEqual(back.cycling(), AirlockCycle.INNER, "the cycle, reloaded");
+                    h.assertTrue(back.cycleStep() == null, "the cycle's step was saved: " + back.cycleStep());
+                    h.assertValueEqual(back.lastOpened(), AirlockCycle.OUTER, "the door opened last, reloaded");
+                    h.assertValueEqual(back.armed(), Slot.CHAMBER_SENSOR, "the armed slot, reloaded");
+                    BlockPos[] slotted = before.slotted();
+                    for (Slot slot : Slot.values()) {
+                        h.assertValueEqual(back.slot(slot), slotted[slot.ordinal()], slot.key() + ", reloaded");
+                    }
+                    h.assertValueEqual(
+                            back.linkedVents(), Set.of(before.vents().get(0).getBlockPos()), "the vents, reloaded");
+                    h.assertFalse(back.power().isPowered(), "the airlock controller's lease was saved");
+                    h.assertFalse(lock.vents().get(0).power().isPowered(), "the vent's lease was saved");
+                    for (AirSensorBlockEntity sensor : lock.sensors()) {
+                        h.assertValueEqual(
+                                sensor.getBlockState().getValue(AirSensorBlock.STATUS),
+                                SensorStatus.CYCLING,
+                                "a sensor, reloaded");
+                    }
+                    for (AirlockBlockEntity airlock : List.of(lock.inner(), lock.outer())) {
+                        BlockState st = airlock.getBlockState();
+                        h.assertTrue(
+                                st.getValue(AirlockBlock.BOLTED) && !st.getValue(AirlockBlock.OPEN),
+                                "an airlock, reloaded: " + st);
+                    }
+
+                    int waited = 0;
+                    while (waited < 8 && !back.power().isPowered()) {
+                        s.cycle(lock.devices());
+                        waited++;
+                    }
+                    h.assertTrue(back.power().source() == lock.area(), "the area air controller doesn't power it");
+                    h.assertValueEqual(back.cycling(), AirlockCycle.INNER, "the cycle, once powered again");
+                    h.assertValueEqual(
+                            back.cycleStep(), AirlockCycle.Step.SIPHON, "the cycle's step, once powered again");
+                    AirlockTests.cycle(h, s, lock, AirlockCycle.INNER, VentMode.SIPHON);
+                    h.assertTrue(
+                            lock.inner().getBlockState().getValue(AirlockBlock.OPEN)
+                                    && !lock.inner().getBlockState().getValue(AirlockBlock.BOLTED),
+                            "A's door isn't open and unbolted");
+                    BlockState outer = lock.outer().getBlockState();
+                    h.assertTrue(
+                            outer.getValue(AirlockBlock.BOLTED) && !outer.getValue(AirlockBlock.OPEN),
+                            "B's door isn't bolted shut");
+                    h.assertValueEqual(back.lastOpened(), AirlockCycle.INNER, "the door opened last, at the end");
+                    LOGGER.info(
+                            "s_09 airlock: saved {} steps into the cycle at {} kPa, cycling to {} kPa, with {} mol in"
+                                    + " the vent; reloaded, it waited {} steps for power and opened A's door at {} kPa",
+                            steps,
+                            savedKpa,
+                            was.zones.get("A").mixture().pressure(),
+                            was.vent.totalMoles(),
+                            waited,
+                            back.chamberKpa());
+                })
+                .thenSucceed();
+    }
+
+    /** What the airlock's site holds: each block entity's saved tag, its zones and its vent's network. */
+    private static final class LockSave {
+        final Site s;
+        final Map<BlockPos, CompoundTag> saved = new LinkedHashMap<>();
+        final Map<BlockPos, BlockEntity> entities = new LinkedHashMap<>();
+        final Map<String, ZoneInfo> zones = new LinkedHashMap<>();
+        final GasParcel vent;
+
+        LockSave(Site s) {
+            this.s = s;
+            HolderLookup.Provider registries = s.level.registryAccess();
+            for (BlockPos p : BlockPos.betweenClosed(s.abs(0, 0, 0), s.abs(10, 4, 4))) {
+                BlockEntity be = s.level.getBlockEntity(p);
+                if (be != null) {
+                    CompoundTag tag = be.saveWithoutMetadata(registries);
+                    // Shown while a controller orders the vent, and never loaded: it orders it again.
+                    tag.remove("Controlled");
+                    tag.remove("Controller");
+                    saved.put(p.immutable(), tag);
+                    entities.put(p.immutable(), be);
+                }
+            }
+            for (String room : List.of("A", "chamber", "B")) {
+                int x = room.equals("A") ? 2 : room.equals("chamber") ? 5 : 8;
+                zones.put(room, s.zone(x, 2, 2));
+            }
+            GasStore gas = s.entity(5, 0, 2, VentBlockEntity.class).network().gas();
+            vent = new GasParcel(gas.moles(), gas.temperature());
+        }
+
+        void compare(GameTestHelper h, LockSave then) {
+            h.assertValueEqual(saved.keySet(), then.saved.keySet(), "where the block entities are");
+            then.saved.forEach((pos, tag) -> sameTag(
+                    h,
+                    saved.get(pos),
+                    tag,
+                    Station.name(then.entities.get(pos)) + " at "
+                            + pos.subtract(s.origin).toShortString()));
+            then.zones.forEach((room, zone) -> {
+                ZoneInfo back = zones.get(room);
+                h.assertValueEqual(back.id(), zone.id(), room + "'s id");
+                h.assertFalse(back.paused(), room + " is paused");
+                h.assertValueEqual(back.cellCount(), zone.cellCount(), room + "'s cells");
+                sameParcel(h, back.mixture().parcel(), zone.mixture().parcel(), room);
+            });
+            sameParcel(h, vent, then.vent, "the vent's network");
+        }
+
+        /** The airlock's parts as they are now, in place of {@code was}'s. */
+        AirlockTests.Lock lock(AirlockTests.Lock was) {
+            return new AirlockTests.Lock(
+                    now(was.area()),
+                    now(was.controller()),
+                    now(was.inner()),
+                    now(was.outer()),
+                    now(was.sensor()),
+                    now(was.sensorA()),
+                    now(was.sensorB()),
+                    was.vents().stream().map(this::now).toList());
+        }
+
+        @SuppressWarnings("unchecked")
+        private <T extends BlockEntity> T now(T was) {
+            BlockEntity be = s.level.getBlockEntity(was.getBlockPos());
+            if (be == null || be.getClass() != was.getClass() || be == was) {
+                throw new GameTestAssertException("no new " + Station.name(was) + " at " + was.getBlockPos());
+            }
+            Site.loaded(be);
+            return (T) be;
+        }
+    }
+
+    private static void sameParcel(GameTestHelper h, GasParcel now, GasParcel then, String what) {
+        h.assertValueEqual(now.moles().keySet(), then.moles().keySet(), what + "'s gases");
+        then.moles().forEach((gas, n) -> close(h, now.moles(gas), n, what + "'s " + gas));
+        close(h, now.temperature(), then.temperature(), what + "'s temperature");
     }
 
     // ---- DATA-016: a player's inventory ---------------------------------------------------
