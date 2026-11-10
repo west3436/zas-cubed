@@ -38,6 +38,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -359,6 +360,42 @@ public final class GasRegistryTests {
         h.assertFalse(GasProperties.isDefined(none), "a gas the server doesn't define is defined");
         double c = GasProperties.heatCapacity(new GasParcel(Map.of(co2, 2.0), 300));
         h.assertTrue(Math.abs(c - 2 * 28.81) < 1e-9, "2 mol of CO₂ has " + c + " J/K");
+        h.succeed();
+    }
+
+    /**
+     * The API lists every gas the server defines, in id order, and names each by the translation
+     * key its definition gives (API-051). A gas no datapack defines isn't listed, and its key has
+     * the usual form.
+     */
+    @GameTest(template = "empty")
+    public static void api_051_the_api_lists_the_gases_and_their_names(GameTestHelper h) {
+        GasRegistry registry = ServerGasRegistry.current();
+        List<ResourceLocation> expected = registry.definitions().stream()
+                .map(d -> ResourceLocation.parse(d.id()))
+                .sorted()
+                .toList();
+        h.assertTrue(expected.size() >= 8, "the built-in gases aren't loaded");
+        h.assertValueEqual(List.copyOf(GasProperties.defined()), expected, "the gases the API lists");
+        for (GasDefinition d : registry.definitions()) {
+            h.assertValueEqual(GasProperties.translationKey(ResourceLocation.parse(d.id())), d.nameKey(), d.id());
+        }
+        ResourceLocation co2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
+        h.assertValueEqual(GasProperties.translationKey(co2), "gas.zas.carbon_dioxide", "CO₂'s name key");
+        h.assertValueEqual(
+                GasProperties.name(co2),
+                Component.translatableWithFallback("gas.zas.carbon_dioxide", "zas:carbon_dioxide"),
+                "CO₂'s name");
+        ResourceLocation none = ResourceLocation.fromNamespaceAndPath("zas_gametest", "no_such_gas");
+        h.assertFalse(GasProperties.defined().contains(none), "a gas the server doesn't define is listed");
+        h.assertValueEqual(
+                GasProperties.translationKey(none), "gas.zas_gametest.no_such_gas", "an undefined gas's name key");
+        try {
+            GasProperties.defined().add(none);
+            h.fail("the list of gases can be changed");
+        } catch (UnsupportedOperationException expectedFailure) {
+            // immutable, as documented
+        }
         h.succeed();
     }
 

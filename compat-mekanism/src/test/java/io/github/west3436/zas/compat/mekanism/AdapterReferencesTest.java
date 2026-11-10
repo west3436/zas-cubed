@@ -63,6 +63,8 @@ class AdapterReferencesTest {
             PACKAGE + "ChemicalMap",
             PACKAGE + "ChemicalMapFormat",
             PACKAGE + "ChemicalMapLoader",
+            // The connection's rule for mixtures (MEK-013).
+            PACKAGE + "GasPurity",
             // The venting's cap (MEK-021).
             PACKAGE + "VentBudget",
             MIXIN_PACKAGE + "MekanismMixinPlugin");

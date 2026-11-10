@@ -70,6 +70,11 @@ public final class MekanismUnsupportedTests {
                 GasProperties.isDefined(ResourceLocation.fromNamespaceAndPath("zas", "chlorine")),
                 "the adapter's gases are defined");
         h.assertTrue(ChemicalGases.loadedMap().mappings().isEmpty(), "the chemical map loaded");
+        // Not even its chemicals (MEK-011): nothing in Mekanism's registry is ZAS³'s.
+        h.assertTrue(
+                MekanismAPI.CHEMICAL_REGISTRY.keySet().stream()
+                        .noneMatch(chemical -> chemical.getNamespace().equals("zas")),
+                "the adapter's chemicals are registered");
 
         // Mekanism itself is untouched and running.
         h.assertTrue(

@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
  * Where the Mekanism adapter starts (MEK-001). {@code zas} calls {@link #init} by name, and only
@@ -21,7 +23,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  * is never loaded, and nothing of the adapter registers.
  *
  * <p>Everything the adapter adds hangs off this one call: its config file, its data pack, its
- * reload listener and, as they are built, each part's own registrations. A mod copying the adapter
+ * reload listener and each part's own registrations, each part in a block of its own. A mod copying the adapter
  * calls {@code init} from its own constructor behind a check that Mekanism is loaded.
  *
  * <p>This class names nothing of Mekanism's, so asking it {@link #isActive} never loads a class of
@@ -65,6 +67,14 @@ public final class MekanismCompat {
 
         // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
+
+        // ---- The chemical connection: ZAS³'s gases as chemicals (MEK-011), and tubes, tanks and
+        // machines joined to pipes (MEK-013) ----
+        modBus.addListener((RegisterEvent event) -> ZasChemicals.register(event));
+        // Last of all, so that it sees what every mod registered (ChemicalConnection).
+        modBus.addListener(
+                EventPriority.LOWEST, (RegisterCapabilitiesEvent event) -> ChemicalConnection.register(event));
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ZasChemicals.logWithoutChemical());
 
         active = true;
     }

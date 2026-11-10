@@ -66,6 +66,17 @@ public final class MekanismFoundationTests {
             "mekanismgenerators:deuterium", "zas:deuterium",
             "mekanismgenerators:tritium", "zas:tritium"));
 
+    /**
+     * The gases Mekanism has no chemical for. The adapter registers each as a chemical under the
+     * gas's own id (MEK-011), and maps it by default like the rest.
+     */
+    private static final List<String> REGISTERED =
+            List.of("zas:nitrogen", "zas:carbon_dioxide", "zas:nitrous_oxide", "zas:carbon_monoxide", "zas:methane");
+
+    static {
+        REGISTERED.forEach(gas -> DEFAULTS.put(gas, gas));
+    }
+
     private static final String FUSION_FUEL = "mekanismgenerators:fusion_fuel";
 
     /** A mapping these tests' own data adds, to a chemical the defaults leave out. */
@@ -73,6 +84,9 @@ public final class MekanismFoundationTests {
 
     /** Another, to a radioactive chemical, which only a datapack ever maps (MEK-023). */
     private static final String ADDED_RADIOACTIVE = "mekanism:nuclear_waste";
+
+    /** A third, to a radioactive chemical both ways, with a gas of its own that the data defines. */
+    private static final String ADDED_BOTH_WAYS = "mekanism:polonium";
 
     /** The gases the adapter's data pack defines. */
     private static final List<String> PACK_GASES = List.of(
@@ -228,11 +242,12 @@ public final class MekanismFoundationTests {
         h.assertTrue(fuel != null, FUSION_FUEL + " isn't mapped");
         h.assertValueEqual(fuel.gases(), Map.of(id("zas:deuterium"), 0.5, id("zas:tritium"), 0.5), "fusion fuel");
 
-        // The whole map on this server: the defaults, and the two these tests' data adds.
+        // The whole map on this server: the defaults, and the three these tests' data adds.
         Set<String> expected = new TreeSet<>(DEFAULTS.keySet());
         expected.add(FUSION_FUEL);
         expected.add(ADDED);
         expected.add(ADDED_RADIOACTIVE);
+        expected.add(ADDED_BOTH_WAYS);
         h.assertValueEqual(
                 new TreeSet<>(ChemicalGases.map().chemicals().stream()
                         .map(ResourceLocation::toString)
@@ -252,9 +267,10 @@ public final class MekanismFoundationTests {
         h.assertValueEqual(
                 chemicalFor("zas:deuterium", 293.15), Optional.of("mekanismgenerators:deuterium"), "deuterium");
         h.assertValueEqual(chemicalFor("zas:tritium", 293.15), Optional.of("mekanismgenerators:tritium"), "tritium");
-        // Gases Mekanism has no chemical for don't cross.
-        h.assertValueEqual(chemicalFor("zas:nitrogen", 293.15), Optional.empty(), "nitrogen");
-        h.assertValueEqual(chemicalFor("zas:carbon_dioxide", 293.15), Optional.empty(), "carbon dioxide");
+        // Gases Mekanism has no chemical for leave as the chemicals the adapter registers (MEK-011).
+        for (String gas : REGISTERED) {
+            h.assertValueEqual(chemicalFor(gas, 293.15), Optional.of(gas), gas);
+        }
         h.succeed();
     }
 
@@ -294,7 +310,7 @@ public final class MekanismFoundationTests {
 
     /**
      * The map is the allow-list, against every chemical Mekanism registers: a chemical without a
-     * mapping is no gas. No infuse type or slurry has one, and no radioactive chemical but the one
+     * mapping is no gas. No infuse type or slurry has one, and no radioactive chemical but the two
      * these tests' data maps.
      */
     @GameTest(template = "empty")
@@ -303,6 +319,7 @@ public final class MekanismFoundationTests {
         mapped.add(FUSION_FUEL);
         mapped.add(ADDED);
         mapped.add(ADDED_RADIOACTIVE);
+        mapped.add(ADDED_BOTH_WAYS);
         List<TagKey<Chemical>> neverGases = List.of(
                 MekanismAPITags.Chemicals.CARBON,
                 MekanismAPITags.Chemicals.REDSTONE,
@@ -329,7 +346,9 @@ public final class MekanismFoundationTests {
             }
             if (chemical.value().isRadioactive()) {
                 radioactive++;
-                h.assertTrue(!isMapped || name.equals(ADDED_RADIOACTIVE), name + " is radioactive, and a gas");
+                h.assertTrue(
+                        !isMapped || name.equals(ADDED_RADIOACTIVE) || name.equals(ADDED_BOTH_WAYS),
+                        name + " is radioactive, and a gas");
             }
             if (neverGases.stream().anyMatch(chemical::is)) {
                 tagged++;
@@ -370,7 +389,11 @@ public final class MekanismFoundationTests {
         Holder<Chemical> waste = chemical(h, ADDED_RADIOACTIVE);
         h.assertTrue(waste.value().isRadioactive(), ADDED_RADIOACTIVE + " isn't radioactive");
         h.assertTrue(ChemicalGases.mapping(waste).isPresent(), ADDED_RADIOACTIVE + " isn't mapped by the tests' data");
-        h.assertValueEqual(chemicalFor("zas:carbon_dioxide", 293.15), Optional.empty(), "carbon dioxide's chemical");
+        // One way: carbon dioxide still leaves as its own chemical, never as the waste.
+        h.assertValueEqual(
+                chemicalFor("zas:carbon_dioxide", 293.15),
+                Optional.of("zas:carbon_dioxide"),
+                "carbon dioxide's chemical");
 
         // Loaded, and then ignored: a gas the server doesn't define.
         ResourceLocation undefined = id("mekanism:uranium_hexafluoride");

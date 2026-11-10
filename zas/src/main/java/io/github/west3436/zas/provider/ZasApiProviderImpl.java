@@ -29,6 +29,7 @@ import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.gas.GasDefinition;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
@@ -55,6 +56,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
@@ -309,13 +311,22 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      */
     @Override
     public Set<ResourceLocation> gasesInTag(GasTag tag) {
-        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        return sets().gases().getOrDefault(tag.id(), Set.of());
+    }
+
+    private static GasRegistry registry() {
+        return ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+    }
+
+    /** The id sets of the gas set in use now, built once for each. */
+    private TagSets sets() {
+        GasRegistry registry = registry();
         TagSets sets = tagSets;
         if (sets.registry() != registry) {
             sets = TagSets.of(registry);
             tagSets = sets;
         }
-        return sets.gases().getOrDefault(tag.id(), Set.of());
+        return sets;
     }
 
     /**
@@ -324,9 +335,24 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      */
     @Override
     public OptionalDouble molarHeatCapacity(ResourceLocation gas) {
-        GasRegistry registry = ServerGasRegistry.running() ? ServerGasRegistry.current() : ClientGasRegistry.current();
+        GasRegistry registry = registry();
         int index = registry.indexOf(gas.toString());
         return index < 0 ? OptionalDouble.empty() : OptionalDouble.of(registry.molarHeatCapacity(index));
+    }
+
+    /**
+     * The gases of the gas set of the server running in this JVM, or else of the set the client
+     * received from its server (CORE-010, API-051).
+     */
+    @Override
+    public Set<ResourceLocation> definedGases() {
+        return sets().ids();
+    }
+
+    /** The name key the gas's definition gives, in the same gas set as {@link #definedGases}. */
+    @Override
+    public Optional<String> gasTranslationKey(ResourceLocation gas) {
+        return registry().find(gas.toString()).map(GasDefinition::nameKey);
     }
 
     /** The configured atmos period (CORE-041, API-052); the default before the config loads. */
@@ -410,9 +436,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
         return StandaloneReactions.apply(mixture, seconds, ignition, ServerReactions.current(), FireConfig.settings());
     }
 
-    /** A registry's tags as the API's id sets, built once per registry. */
-    private record TagSets(GasRegistry registry, Map<ResourceLocation, Set<ResourceLocation>> gases) {
+    /** A registry's gases and tags as the API's id sets, built once per registry. */
+    private record TagSets(
+            GasRegistry registry, Set<ResourceLocation> ids, Map<ResourceLocation, Set<ResourceLocation>> gases) {
         static TagSets of(GasRegistry registry) {
+            Set<ResourceLocation> all = new TreeSet<>();
+            registry.definitions().forEach(definition -> all.add(ResourceLocation.parse(definition.id())));
             Map<ResourceLocation, Set<ResourceLocation>> gases = new HashMap<>();
             registry.tags().forEach((tag, ids) -> {
                 // In id order, so iterating a set is deterministic.
@@ -420,7 +449,7 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
                 ids.forEach(id -> set.add(ResourceLocation.parse(id)));
                 gases.put(ResourceLocation.parse(tag), Collections.unmodifiableSet(set));
             });
-            return new TagSets(registry, Map.copyOf(gases));
+            return new TagSets(registry, Collections.unmodifiableSet(all), Map.copyOf(gases));
         }
     }
 
