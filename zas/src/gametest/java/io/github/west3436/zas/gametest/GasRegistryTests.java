@@ -347,13 +347,16 @@ public final class GasRegistryTests {
         for (GasDefinition d : registry.definitions()) {
             h.assertValueEqual(
                     GasProperties.molarHeatCapacity(ResourceLocation.parse(d.id())), d.molarHeatCapacity(), d.id());
+            h.assertTrue(GasProperties.isDefined(ResourceLocation.parse(d.id())), d.id() + " isn't defined");
         }
         ResourceLocation co2 = ResourceLocation.fromNamespaceAndPath("zas", "carbon_dioxide");
         h.assertValueEqual(GasProperties.molarHeatCapacity(co2), 28.81, "CO₂, from its shipped definition");
+        ResourceLocation none = ResourceLocation.fromNamespaceAndPath("zas_gametest", "no_such_gas");
         h.assertValueEqual(
-                GasProperties.molarHeatCapacity(ResourceLocation.fromNamespaceAndPath("zas_gametest", "no_such_gas")),
+                GasProperties.molarHeatCapacity(none),
                 GasProperties.DEFAULT_MOLAR_HEAT_CAPACITY,
                 "a gas the server doesn't define");
+        h.assertFalse(GasProperties.isDefined(none), "a gas the server doesn't define is defined");
         double c = GasProperties.heatCapacity(new GasParcel(Map.of(co2, 2.0), 300));
         h.assertTrue(Math.abs(c - 2 * 28.81) < 1e-9, "2 mol of CO₂ has " + c + " J/K");
         h.succeed();

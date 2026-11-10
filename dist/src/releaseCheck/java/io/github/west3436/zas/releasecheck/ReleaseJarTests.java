@@ -1,6 +1,9 @@
 package io.github.west3436.zas.releasecheck;
 
+import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.compat.Adapters;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -13,13 +16,14 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforgespi.language.IModFileInfo;
 
 /**
- * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155). Gradle runs them
+ * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001). Gradle runs them
  * twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
  * runContentOffGameTestServer} with it off, as {@code zas.releaseCheck.contentOff} says.
  */
@@ -34,6 +38,9 @@ public final class ReleaseJarTests {
     /** A framework tag that the content adds its doors to, and that holds vanilla's doors either way. */
     private static final TagKey<Block> ZONE_BOUNDARY =
             TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("zas", "zone_boundary"));
+
+    /** The Mekanism adapter's package. */
+    private static final String MEKANISM_ADAPTER = "io.github.west3436.zas.compat.mekanism";
 
     private ReleaseJarTests() {}
 
@@ -98,6 +105,66 @@ public final class ReleaseJarTests {
                     server.getPackRepository().getAvailableIds().contains(CONTENT_PACK), CONTENT_PACK + " is offered");
         }
         h.succeed();
+    }
+
+    /**
+     * The release jar holds the whole Mekanism adapter, and on a server without Mekanism none of it
+     * loads (MEK-001, NFR-022): {@code zas} left the adapter off, Mixin was never handed its config,
+     * and its data pack, its gases and its settings file aren't there.
+     */
+    @GameTest(template = "empty")
+    public static void mek_001_nothing_of_the_mekanism_adapter_loads_without_mekanism(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("mekanism"), "Mekanism is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            MEKANISM_ADAPTER.replace('.', '/') + "/MekanismCompat.class",
+            "zas.mekanism.mixins.json",
+            "datapacks/mekanism/pack.mcmeta",
+            "datapacks/mekanism/data/zas/zas/gas/chlorine.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no Mekanism, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("mekanism"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for Mekanism");
+        h.assertValueEqual(status.row().entryClass(), MEKANISM_ADAPTER + ".MekanismCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Mekanism adapter's state");
+        h.assertFalse(Adapters.isActive("mekanism"), "the Mekanism adapter is on");
+
+        // What the adapter would have added.
+        MinecraftServer server = h.getLevel().getServer();
+        String pack = "mod/zas:datapacks/mekanism";
+        h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        h.assertFalse(ModConfigs.getFileMap().containsKey("zas-mekanism-server.toml"), "its config file is registered");
+        ResourceLocation chlorine = ResourceLocation.fromNamespaceAndPath("zas", "chlorine");
+        h.assertFalse(GasProperties.isDefined(chlorine), "the adapter's gases are defined");
+        h.assertFalse(GasTags.contains(GasTags.TOXIC, chlorine), "the adapter's gas tags loaded");
+        h.assertTrue(
+                GasProperties.isDefined(ResourceLocation.fromNamespaceAndPath("zas", "oxygen")),
+                "zas's own gases aren't defined");
+
+        // Last, the adapter's own word, from the two classes that name nothing of Mekanism's. Asking
+        // loads them, which is why everything above was checked first.
+        h.assertFalse(mekanismAdapterSays("MekanismCompat", "isActive"), "the adapter says it started");
+        h.assertFalse(
+                mekanismAdapterSays("mixin.MekanismMixinPlugin", "loaded"), "Mixin loaded the adapter's mixin config");
+        h.succeed();
+    }
+
+    /** Calls a static yes-or-no method of the Mekanism adapter by name: nothing here compiles against it. */
+    private static boolean mekanismAdapterSays(String className, String method) {
+        try {
+            return (boolean) Class.forName(MEKANISM_ADAPTER + "." + className)
+                    .getMethod(method)
+                    .invoke(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("The release jar's " + className + " has no " + method + "()", e);
+        }
     }
 
     private static boolean isContent(ResourceLocation id) {

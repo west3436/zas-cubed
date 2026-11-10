@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.deuterium",
+  "formula": "D₂",
+  "molar_mass": 0.004028,
+  "molar_heat_capacity": 20.88,
+  "sources": {
+    "molar_mass": "4.0282 g/mol, the molecular weight of D2: NIST Chemistry WebBook (SRD 69), deuterium, https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782390",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 29.194 − 8.314 J/(mol·K). C_p of D2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table D-012, https://janaf.nist.gov/tables/D-012.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

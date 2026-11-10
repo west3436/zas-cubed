@@ -24,10 +24,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One row per adapter: its name, and the task that runs its GameTests.
+        # One row per adapter, or per version of its target that it is tested
+        # with: its name, and the task that runs its GameTests, with any
+        # arguments.
         include:
           - adapter: adastra
             task: ":compat-adastra:runAdapterGameTestServer"
+          # MEK-003: the oldest Mekanism the adapter supports and the newest.
+          # MEK-001: with the last one before the oldest, the adapter stays off.
+          - adapter: mekanism (oldest supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=floor"
+          - adapter: mekanism (newest)
+            task: ":compat-mekanism:runAdapterGameTestServer"
+          - adapter: mekanism (older than supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=unsupported"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

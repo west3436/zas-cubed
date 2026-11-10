@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.chlorine",
+  "formula": "Cl₂",
+  "molar_mass": 0.0709,
+  "molar_heat_capacity": 25.63,
+  "sources": {
+    "molar_mass": "2 × Cl 35.45 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 33.949 − 8.314 J/(mol·K). C_p of Cl2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table Cl-073, https://janaf.nist.gov/tables/Cl-073.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

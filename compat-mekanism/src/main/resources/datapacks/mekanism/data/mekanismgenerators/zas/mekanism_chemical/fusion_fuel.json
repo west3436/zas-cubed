@@ -1,0 +1,6 @@
+{
+  "gases": {
+    "zas:deuterium": 0.5,
+    "zas:tritium": 0.5
+  }
+}
