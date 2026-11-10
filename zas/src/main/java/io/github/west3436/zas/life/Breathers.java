@@ -253,7 +253,7 @@ public final class Breathers {
                     profiled.get(),
                     seconds,
                     state,
-                    interval + GasHazards.EFFECT_GRACE_TICKS,
+                    interval,
                     HazardConfig.scale(dimension, HazardType.TOXIC_GAS));
         } else {
             state.clearExposure();
@@ -412,7 +412,7 @@ public final class Breathers {
                 breath,
                 seconds,
                 entity.getData(STATE),
-                BreathingConfig.checkIntervalTicks() + GasHazards.EFFECT_GRACE_TICKS,
+                BreathingConfig.checkIntervalTicks(),
                 HazardConfig.scale(entity.level().dimension(), HazardType.TOXIC_GAS));
     }
 
