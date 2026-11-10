@@ -35,6 +35,11 @@ import net.minecraft.world.level.Level;
  * <p>{@code /zas life} reports the air the rules apply. In another mod's breathable place outside
  * zones that is the place's air, not the open air an atmosphere query finds there (SPACE-017), and
  * the exposure line says {@code local}.
+ *
+ * <p>Its damage line is what the checks charge the entity each second, for every hazard that deals
+ * any: hypoxia and toxic gas as well as pressure and temperature (LIFE-004, LIFE-008). The rules
+ * decide it and this prints it ({@link Breathers#damageRates}), so a hazard the entity's gear keeps
+ * from it isn't there.
  */
 final class LifeCommand {
     /** What the exposure line names instead of the atmosphere's state where another mod's air applies. */
@@ -96,12 +101,10 @@ final class LifeCommand {
                     local != null
                             ? Component.translatable(LOCAL)
                             : lower(sample.state().name())));
+        }
+        if (BreathingRules.checked(entity) && !EnvironmentHazards.exempt(entity)) {
             List<String> rates = new ArrayList<>();
-            for (HazardType t : HazardType.values()) {
-                if (x.rate(t) > 0) {
-                    rates.add(t.id() + " " + ZasCommands.num(x.rate(t)));
-                }
-            }
+            Breathers.damageRates(entity).forEach((t, rate) -> rates.add(t.id() + " " + ZasCommands.num(rate)));
             lines.add(Component.translatable(
                     "commands.zas.life.damage", rates.isEmpty() ? "-" : String.join(", ", rates)));
         }

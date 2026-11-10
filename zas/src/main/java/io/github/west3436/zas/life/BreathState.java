@@ -138,9 +138,16 @@ public final class BreathState {
         return e;
     }
 
-    /** Whether any exposure is recorded for a gas. */
-    boolean exposed(ResourceLocation gas) {
-        return exposure.containsKey(gas);
+    /**
+     * The seconds the checks have counted a gas's partial pressure at or above one of its
+     * thresholds; 0 if they have counted none for a profile of this many thresholds. Changes nothing.
+     *
+     * @param index the threshold's place in the profile
+     * @param thresholds how many thresholds the profile has
+     */
+    double sustained(ResourceLocation gas, int index, int thresholds) {
+        double[] e = exposure.get(gas);
+        return e != null && e.length == thresholds ? e[index] : 0;
     }
 
     /** Forgets a gas's exposure. */

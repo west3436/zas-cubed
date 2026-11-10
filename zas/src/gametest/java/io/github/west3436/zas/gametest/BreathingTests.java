@@ -51,17 +51,21 @@ import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.monster.piglin.Piglin;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -162,6 +166,13 @@ public final class BreathingTests {
         /** A survival player standing in the room from x0; not added to the level. */
         FakePlayer player(int x0) {
             FakePlayer p = FakePlayerFactory.get(r.level, new GameProfile(UUID.randomUUID(), "zas_life"));
+            p.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
+            return p;
+        }
+
+        /** A survival player standing in the room from x0 that damage reaches ({@link TestPlayers}); not added to the level. */
+        FakePlayer hurtable(int x0) {
+            FakePlayer p = TestPlayers.hurtable(r.level, "zas_life");
             p.moveTo(Vec3.atBottomCenterOf(r.abs(x0 + 2, 1, 2)));
             return p;
         }
@@ -397,6 +408,9 @@ public final class BreathingTests {
      * breathable ambient. An entity with no verdict yet waits for the atmosphere to resolve
      * (LIFE-048). The unresolved region is one held at a breach because it reaches an unloaded
      * chunk (GEO-026); CO at 0.5 kPa deals 0.5 HP/s (LIFE-041).
+     *
+     * <p>{@code /zas life}'s damage line says what is charged: CO's rate in the room, and nothing
+     * while held, even if the last-known mixture would burn.
      */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void life_048_unresolved_atmosphere_holds_the_breath_state(GameTestHelper h) {
@@ -424,6 +438,7 @@ public final class BreathingTests {
             Breathers.checkAt(pig, t + 40);
             float health = pig.getHealth();
             close(h, pig.getMaxHealth() - health, 1, 1e-4, "damage from 2 s of CO");
+            h.assertValueEqual(line(pig, DAMAGE), DAMAGE + "toxic_gas 0.5", "the damage /zas life reports in A");
 
             ChunkPos east = new ChunkPos(r.abs(16, 0, 0));
             byte[] saved = r.dimension().simulateUnload(east);
@@ -443,6 +458,16 @@ public final class BreathingTests {
                 h.assertValueEqual(held.lastCheck(), t + 80, "the held check's time");
                 h.assertValueEqual(Breathing.of(pig), before, "the API's verdict");
                 h.assertValueEqual(pig.getHealth(), health, "health after a held check");
+                // A held check charges nothing, whatever the last-known mixture would deal: with a
+                // comfort band that ends below the ambient's 293.15 K, the guess burns.
+                double comfortMax = HazardConfig.COMFORT_MAX.get();
+                HazardConfig.COMFORT_MAX.set(280.0);
+                try {
+                    h.assertTrue(BreathingRules.assess(pig).exposure().burns() > 0, "the guess doesn't burn");
+                    h.assertValueEqual(line(pig, DAMAGE), DAMAGE + "-", "the damage /zas life reports while held");
+                } finally {
+                    HazardConfig.COMFORT_MAX.set(comfortMax);
+                }
                 int air = pig.getAirSupply();
                 ticks(pig, 20);
                 h.assertValueEqual(pig.getAirSupply(), air - 20, "air while held");
@@ -802,6 +827,141 @@ public final class BreathingTests {
                     "effects at 1.5 kPa");
             close(h, unconscious.getHealth(), unconscious.getMaxHealth() - 4, 1e-4, "2 HP/s for 2 s");
             h.assertTrue(unconscious.getLastDamageSource().is(LifeDamage.TOXIC_GAS), "the damage type");
+        }
+        h.succeed();
+    }
+
+    // ---- LIFE-004, LIFE-008: the damage /zas life reports ------------------------------
+
+    /** The start of {@code /zas life}'s hazards line. */
+    private static final String HAZARDS = "  Hazards: ";
+
+    /** The start of {@code /zas life}'s damage line. */
+    private static final String DAMAGE = "  Damage per second: ";
+
+    /** The line {@code /zas life} says of an entity that starts with {@code start}. */
+    private static String line(LivingEntity e, String start) {
+        List<String> said = SpaceQueryTests.life(e);
+        return said.stream()
+                .filter(l -> l.startsWith(start))
+                .findFirst()
+                .orElseThrow(() -> new GameTestAssertException("no line starting '" + start + "' in " + said));
+    }
+
+    /**
+     * In the room from x0, whose CO deals {@code rate} HP/s: a bare player's lines give the hazard
+     * and that rate, and 2 s of checks take that much health. A player with a filter on its head,
+     * as a gas mask is, and one breathing from an always-on tank behind a seal, as running scuba
+     * gear is, have nothing on the damage line and lose no health.
+     */
+    private static void carbonMonoxideRoom(GameTestHelper h, Lab lab, int x0, String rate, double lostIn2s) {
+        FakePlayer bare = lab.hurtable(x0);
+        FakePlayer masked = lab.hurtable(x0);
+        masked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.CREEPER_HEAD));
+        FakePlayer tanked = lab.hurtable(x0);
+        tanked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+        tanked.setItemInHand(
+                InteractionHand.OFF_HAND, TestLifeSupport.alwaysOnTank(Map.of(StandardAir.OXYGEN, 1.0), 21.3));
+        String at = ", where CO deals " + rate + " HP/s";
+
+        h.assertValueEqual(line(bare, HAZARDS), HAZARDS + "toxic gas; protection: -", "bare, the hazards" + at);
+        h.assertValueEqual(line(bare, DAMAGE), DAMAGE + "toxic_gas " + rate, "bare, the damage" + at);
+        h.assertValueEqual(line(masked, HAZARDS), HAZARDS + "-; protection: gas filtering", "masked, the hazards" + at);
+        h.assertValueEqual(line(masked, DAMAGE), DAMAGE + "-", "masked, the damage" + at);
+        h.assertValueEqual(Breathing.of(tanked).source(), BreathSource.INTERNALS, "on a tank, the breath" + at);
+        h.assertValueEqual(line(tanked, DAMAGE), DAMAGE + "-", "on a tank, the damage" + at);
+
+        for (FakePlayer p : List.of(bare, masked, tanked)) {
+            long now = p.level().getGameTime();
+            Breathers.checkAt(p, now);
+            Breathers.checkAt(p, now + 40);
+        }
+        close(h, bare.getMaxHealth() - bare.getHealth(), lostIn2s, 1e-4, "bare, the health 2 s took" + at);
+        close(h, masked.getHealth(), masked.getMaxHealth(), 0, "masked, the health" + at);
+        close(h, tanked.getHealth(), tanked.getMaxHealth(), 0, "on a tank, the health" + at);
+        h.assertValueEqual(line(bare, DAMAGE), DAMAGE + "toxic_gas " + rate, "bare, the damage after 2 s" + at);
+        h.assertValueEqual(line(masked, DAMAGE), DAMAGE + "-", "masked, the damage after 2 s" + at);
+    }
+
+    /**
+     * {@code /zas life}'s damage line gives the toxic gas damage the checks charge (LIFE-004). In air
+     * with CO at 0.2 kPa, where it impairs and deals 0.5 HP/s, and at 1.5 kPa, where it knocks out
+     * and deals 2 HP/s (LIFE-041), a bare player's line gives that rate and loses health at it; a
+     * filtered breath and a tank's have no damage. The line used to be built from pressure and
+     * temperature alone, so it said "-" under "Hazards: toxic gas" while health fell.
+     *
+     * <p>The line follows the rules, not the threshold alone. CO2 above 10 kPa is a hazard at once but
+     * deals its 1 HP/s only once sustained for 60 s: the line is empty at 58 s and gives the rate at
+     * 60 s, with the check that first takes health. With toxic gas off nothing is charged, and the
+     * line is empty (LIFE-031).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_004_the_life_command_reports_toxic_gas_damage(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 222)) {
+            lab.room(0, airWith(CO, 0.2));
+            lab.room(6, airWith(CO, 1.5));
+            lab.room(12, airWith(CO2, 12));
+            carbonMonoxideRoom(h, lab, 0, "0.5", 1);
+            carbonMonoxideRoom(h, lab, 6, "2", 4);
+
+            FakePlayer slow = lab.hurtable(12);
+            long t = slow.level().getGameTime();
+            for (int check = 0; check <= 29; check++) {
+                Breathers.checkAt(slow, t + 40L * check);
+            }
+            h.assertValueEqual(line(slow, HAZARDS), HAZARDS + "toxic gas; protection: -", "58 s into CO2, the hazards");
+            h.assertValueEqual(line(slow, DAMAGE), DAMAGE + "-", "58 s into CO2, the damage");
+            close(h, slow.getHealth(), slow.getMaxHealth(), 0, "58 s into CO2, the health");
+            Breathers.checkAt(slow, t + 40L * 30);
+            h.assertValueEqual(line(slow, DAMAGE), DAMAGE + "toxic_gas 1", "60 s into CO2, the damage");
+            close(h, slow.getMaxHealth() - slow.getHealth(), 2, 1e-4, "the health the check at 60 s took");
+
+            FakePlayer bare = lab.hurtable(6);
+            lab.off(HazardType.TOXIC_GAS);
+            h.assertValueEqual(line(bare, HAZARDS), HAZARDS + "-; protection: -", "toxic gas off, the hazards");
+            h.assertValueEqual(line(bare, DAMAGE), DAMAGE + "-", "toxic gas off, the damage");
+        }
+        h.succeed();
+    }
+
+    /**
+     * {@code /zas life}'s damage line gives the hypoxia damage an empty air meter deals (LIFE-008).
+     * In nitrogen at one atmosphere, where nothing but the lack of O2 harms it, a pig can't breathe
+     * from the start, but its line is empty while its meter drains and it loses no health. Once the
+     * meter is empty the line gives 2 HP/s, and the next second takes 2 HP. The line used to stay
+     * empty. A player breathing from a tank there isn't short of O2, and its line stays empty.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void life_008_the_life_command_reports_hypoxia_damage(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 223)) {
+            lab.room(0, Map.of(StandardAir.NITROGEN, StandardAir.PRESSURE));
+            Pig pig = lab.mob(EntityType.PIG, 0);
+            FakePlayer tanked = lab.hurtable(0);
+            tanked.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+            tanked.setItemInHand(
+                    InteractionHand.OFF_HAND, TestLifeSupport.alwaysOnTank(Map.of(StandardAir.OXYGEN, 1.0), 21.3));
+
+            ticks(pig, 100);
+            List<String> draining = SpaceQueryTests.life(pig);
+            h.assertTrue(draining.get(0).contains(": low oxygen, "), "the pig's verdict: " + draining);
+            h.assertTrue(pig.getAirSupply() > 0, "the meter is empty after 5 s");
+            h.assertValueEqual(line(pig, DAMAGE), DAMAGE + "-", "while the meter drains, the damage");
+            h.assertValueEqual(pig.getHealth(), pig.getMaxHealth(), "while the meter drains, the health");
+
+            ticks(pig, 200);
+            h.assertValueEqual(pig.getAirSupply(), 0, "the meter after 15 s");
+            h.assertValueEqual(line(pig, DAMAGE), DAMAGE + "hypoxia 2", "with the meter empty, the damage");
+            float before = pig.getHealth();
+            ticks(pig, 20);
+            close(h, before - pig.getHealth(), 2, 1e-4, "the health the next second took");
+            h.assertValueEqual(line(pig, DAMAGE), DAMAGE + "hypoxia 2", "a second later, the damage");
+
+            ticks(tanked, 320);
+            List<String> breathing = SpaceQueryTests.life(tanked);
+            h.assertTrue(
+                    breathing.get(0).contains(": breathable, breathing from internals"), "on a tank: " + breathing);
+            h.assertValueEqual(tanked.getAirSupply(), tanked.getMaxAirSupply(), "on a tank, the meter");
+            h.assertValueEqual(line(tanked, DAMAGE), DAMAGE + "-", "on a tank, the damage");
         }
         h.succeed();
     }
