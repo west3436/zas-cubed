@@ -13,6 +13,7 @@ on:
       - "compat-*/**"
       - "zas/src/main/java/io/github/west3436/zas/compat/**"
       - "zas-api/**"
+      - "build.gradle"
       - ".github/workflows/compat-adapters.yml"
 
 permissions:
@@ -65,6 +66,16 @@ jobs:
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=1.1.24"
           - adapter: emi (older than supported)
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=unsupported"
+          # CONT-155: with the adapter's target mod installed and the content
+          # switched off, the game starts and the tests that need none of the
+          # content pass. For the adapters that do something as a server
+          # starts: the viewer plugins only start on a client.
+          - adapter: mekanism (content off)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pcontent=off"
+          - adapter: adastra (content off)
+            task: ":compat-adastra:runAdapterGameTestServer -Pcontent=off"
+          - adapter: jade (content off)
+            task: ":compat-jade:runAdapterGameTestServer -Pcontent=off"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -80,3 +91,9 @@ jobs:
         run: |
           ./gradlew ${{ matrix.task }} --stacktrace | tee gametests.log
           grep -E "All [0-9]+ required tests passed" gametests.log
+      # A content-off row means nothing unless the content was off, which the
+      # content mod logs as it loads.
+      - name: The content was off
+        if: contains(matrix.task, '-Pcontent=off')
+        shell: bash
+        run: grep -F "content is off in zas_atmos-startup.toml" gametests.log

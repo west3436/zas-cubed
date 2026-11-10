@@ -83,8 +83,11 @@ neoForge {
             gameDirectory = layout.buildDirectory.dir('adapterRun')
             // The run named unsupported has tests of its own, which check that the adapter is off.
             // A version given by name gets the usual tests, so they fail on one that isn't supported.
+            // With the content off (-Pcontent=off, CONT-155) the tests that build with the content
+            // mod's blocks are left out: they are in a namespace of their own.
             systemProperty 'neoforge.enabledGameTestNamespaces',
-                    chosen == 'unsupported' ? 'zas_mekanism_off' : 'zas_mekanism'
+                    chosen == 'unsupported' ? 'zas_mekanism_off'
+                            : contentOff ? 'zas_mekanism' : 'zas_mekanism,zas_mekanism_content'
             // What the tests expect to find installed.
             systemProperty 'zas.mekanism.runVersion', runVersion
             jvmArgument '-Xmx4G'
