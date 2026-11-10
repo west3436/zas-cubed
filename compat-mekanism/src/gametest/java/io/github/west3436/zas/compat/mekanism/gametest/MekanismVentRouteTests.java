@@ -48,10 +48,11 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * network through its gas handler. Gas is conserved: every mole of what the tank held is in the
  * room or in the vent's network, at the unit factor (MEK-002).
  *
- * <p>The tests are in the venting's batch because they run atmos ticks themselves. They pass over
- * when the content is switched off, since there is no passive vent then.
+ * <p>The tests are in the venting's batch because they run atmos ticks themselves. The passive vent
+ * exists only while the content is on (CONT-155), so they are held in the namespace of the tests
+ * that build with the content mod's blocks, which a run with the content off leaves out.
  */
-@GameTestHolder(MekanismFoundationTests.NAMESPACE)
+@GameTestHolder(MekanismConnectionTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class MekanismVentRouteTests {
     private static final String MEK_OXYGEN = "mekanism:oxygen";
@@ -72,15 +73,6 @@ public final class MekanismVentRouteTests {
     private static final int CHUNK_WAIT = 12_000;
 
     private MekanismVentRouteTests() {}
-
-    /** Passes a test over if the content is switched off, and says whether it did. */
-    private static boolean passedOver(GameTestHelper h) {
-        if (BuiltInRegistries.BLOCK.containsKey(PASSIVE_VENT)) {
-            return false;
-        }
-        h.succeed();
-        return true;
-    }
 
     private static <V extends Comparable<V>> BlockState facing(BlockState state, Direction way) {
         @SuppressWarnings("unchecked")
@@ -222,9 +214,6 @@ public final class MekanismVentRouteTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH, timeoutTicks = CHUNK_WAIT)
     public static void mek_022_a_passive_vent_on_a_tube_lets_a_tanks_chemical_into_its_room(GameTestHelper h) {
-        if (passedOver(h)) {
-            return;
-        }
         route(h, 60, true);
     }
 
@@ -234,9 +223,6 @@ public final class MekanismVentRouteTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH, timeoutTicks = CHUNK_WAIT)
     public static void mek_022_a_passive_vent_against_a_tanks_output_lets_its_chemical_into_its_room(GameTestHelper h) {
-        if (passedOver(h)) {
-            return;
-        }
         route(h, 61, false);
     }
 
@@ -247,9 +233,6 @@ public final class MekanismVentRouteTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_a_passive_vent_takes_no_chemical_that_is_not_a_gas(GameTestHelper h) {
-        if (passedOver(h)) {
-            return;
-        }
         VentArea a = new VentArea(h, 62);
         try {
             a.room();
@@ -285,9 +268,6 @@ public final class MekanismVentRouteTests {
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_023_a_mapped_radioactive_chemical_radiates_once_as_it_enters_a_passive_vent(
             GameTestHelper h) {
-        if (passedOver(h)) {
-            return;
-        }
         VentArea a = new VentArea(h, 63);
         try {
             IRadiationManager radiation = IRadiationManager.INSTANCE;
