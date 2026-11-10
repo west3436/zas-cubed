@@ -7,9 +7,6 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 > **Status: beta.** 0.1.0 is on [GitHub Releases](https://github.com/west3436/zas-cubed/releases).
 > Guides for players, server owners, pack makers and mod developers are on the
 > [wiki](https://github.com/west3436/zas-cubed/wiki).
->
-> The adapters for Mekanism, Ad Astra, Jade, JEI and EMI are built on `main`
-> and arrive with the next release. 0.1.0 doesn't have them.
 
 The requirements, plan, design notes and research were retired before the
 first release. They're archived in
