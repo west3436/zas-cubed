@@ -3307,6 +3307,27 @@ path: zas-ponder/src/main/resources/assets/zas_ponder/logo.png
 origin: original
 notes: The same picture as zas/src/main/resources/assets/zas/logo.png.
 
+# The Jade readout's icons (COMPAT-030), drawn pixel by pixel for this adapter.
+path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/pressure.png
+origin: original
+notes: A half dial on its base, the needle to the upper right, 8 x 8: it stands before a pressure in the Jade readout.
+
+path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/temperature.png
+origin: original
+notes: A thermometer, 8 x 8: it stands before a temperature in the Jade readout.
+
+path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/in.png
+origin: original
+notes: An arrow into a wall, 8 x 8: the port gas comes in at.
+
+path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/out.png
+origin: original
+notes: An arrow out of a wall, 8 x 8: the port gas goes out at.
+
+path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/side.png
+origin: original
+notes: A branch off a line, 8 x 8: the port on a filter's or a mixer's side.
+
 # The recipe viewers' pages (COMPAT-060 to COMPAT-062): the JEI and EMI plugins draw both.
 path: zas/src/main/resources/assets/zas/textures/gui/viewer/gas.png
 origin: original

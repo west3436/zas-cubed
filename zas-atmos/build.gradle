@@ -131,6 +131,11 @@ tasks.named('test', Test) {
     inputs.dir(ponder.file('src/main/resources/assets/zas_ponder/lang'))
     systemProperty 'zas_ponder.resources', ponder.file('src/main/resources').absolutePath
     systemProperty 'zas_ponder.mainClasses', ponderClasses.get().asFile.absolutePath
+    // And the Jade adapter's, which are part of this mod in the release jar. Named by path too.
+    def jadeClasses = project(':compat-jade').layout.buildDirectory.dir('classes/java/main')
+    dependsOn ':compat-jade:compileJava'
+    inputs.files(jadeClasses)
+    systemProperty 'zas_atmos.jadeClasses', jadeClasses.get().asFile.absolutePath
     testLogging.exceptionFormat = 'full'
 }
 

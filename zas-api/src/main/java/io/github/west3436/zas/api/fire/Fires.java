@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.ServerThread;
 import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ZasApi;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.List;
 import java.util.Objects;
@@ -14,8 +15,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 /**
- * Fire: where gas burns (API-055), starting a fire (API-056, API-058) and putting fires out
- * (API-057).
+ * Fire: where gas burns (API-055), starting a fire (API-056, API-058), putting fires out
+ * (API-057) and whether fire can burn in some air.
  *
  * <p><b>Hotspots.</b> A fire in a zone burns as hotspots, one per block: each is a vanilla fire
  * block in a zone or a {@code zas:gas_fire} block, and burns the zone's flammable gas (FIRE-011),
@@ -35,7 +36,34 @@ public final class Fires {
     /** The most blocks {@link #extinguish} covers in one call: a 16 × 16 × 16 box. */
     public static final int MAX_EXTINGUISH_BLOCKS = 4096;
 
+    /** FIRE-030's default: the least O₂ mole fraction fire burns in. */
+    public static final double DEFAULT_OXYGEN_FRACTION = 0.14;
+
+    /** FIRE-030's default: the least O₂ partial pressure fire burns in, in kPa. */
+    public static final double DEFAULT_OXYGEN_PRESSURE = 10.0;
+
     private Fires() {}
+
+    /**
+     * Whether fire can burn in this air (FIRE-030, D-49): its O₂ mole fraction and its O₂ partial
+     * pressure are both at or above the server's minimums, {@value #DEFAULT_OXYGEN_FRACTION} and
+     * {@value #DEFAULT_OXYGEN_PRESSURE} kPa by default. A mod asks it before letting something burn
+     * that ZAS³ doesn't burn itself, such as a torch being placed (SPACE-015). Gas with no O₂, or
+     * no gas at all, burns nothing.
+     *
+     * <p>It reads the server's settings, so ask each time. Without ZAS³ the defaults apply, and on a
+     * client the server's settings once its config has reached the client.
+     *
+     * <p>Thread: any.
+     *
+     * @param air the gas, such as a sample's mixture ({@link
+     *     io.github.west3436.zas.api.atmosphere.AtmosphereSample#mixture()})
+     * @return true if fire can burn in it
+     */
+    @AnyThread
+    public static boolean canBurnIn(GasMixture air) {
+        return ZasApi.provider().fireBurnsIn(Objects.requireNonNull(air, "air"));
+    }
 
     /**
      * The hotspots of a zone, in ascending order of {@link BlockPos#asLong} (API-055).

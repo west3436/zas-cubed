@@ -17,6 +17,7 @@ import io.github.west3436.zas.config.HazardConfig;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -114,10 +115,10 @@ public final class BreathingRules {
             }
             EnvironmentHazards.Exposure exposure = null;
             if (environment) {
-                AtmosphereSample around = Atmospheres.of(entity);
-                exposure = around.state() == AtmosphereState.UNRESOLVED
+                AtmosphereSample at = Atmospheres.of(entity);
+                exposure = at.state() == AtmosphereState.UNRESOLVED
                         ? null
-                        : EnvironmentHazards.exposure(entity, around.mixture());
+                        : EnvironmentHazards.exposure(entity, around(entity, at));
             }
             if (tank != null) {
                 return breathing(entity, null, tank.breath(), exposure, tank);
@@ -129,7 +130,7 @@ public final class BreathingRules {
         if (EnvironmentHazards.exempt(entity)) {
             AtmosphereSample sample = Atmospheres.of(entity);
             Breathability exempt = Breathability.builder(BreathReason.EXEMPT, BreathSource.ATMOSPHERE)
-                    .breath(sample.mixture())
+                    .breath(around(entity, sample))
                     .protection(Protection.EXEMPT)
                     .build();
             return new Assessment(exempt, sample, 0, null);
@@ -142,7 +143,7 @@ public final class BreathingRules {
             return new Assessment(immune, null, 0, null);
         }
         AtmosphereSample sample = Atmospheres.of(entity);
-        GasMixture around = sample.mixture();
+        GasMixture around = around(entity, sample);
         EnvironmentHazards.Exposure exposure = environment ? EnvironmentHazards.exposure(entity, around) : null;
         if (!breathes) {
             Breathability.Builder b = Breathability.builder(BreathReason.DOES_NOT_BREATHE, BreathSource.NONE);
@@ -151,6 +152,21 @@ public final class BreathingRules {
         }
         Internals.Active internals = Internals.active(entity);
         return breathing(entity, sample, internals != null ? internals.breath() : around, exposure, internals);
+    }
+
+    /**
+     * The air the rules take an entity to be in: the atmosphere at its eyes, or, outside every zone,
+     * the air of another mod's breathable place there if a provider names one (SPACE-017). A zone
+     * always governs, and an unresolved atmosphere stays the guess it is.
+     */
+    private static GasMixture around(LivingEntity entity, AtmosphereSample sample) {
+        if (sample.state() == AtmosphereState.AMBIENT && entity.level() instanceof ServerLevel level) {
+            GasMixture local = LocalAir.at(level, entity.getEyePosition());
+            if (local != null) {
+                return local;
+            }
+        }
+        return sample.mixture();
     }
 
     /**

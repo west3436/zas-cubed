@@ -414,5 +414,7 @@
   "pack.zas_atmos.content": "ZAS³ Atmospherics",
   "pack.zas_atmos.content.description": "Recipes, loot and tags",
   "item.zas_atmos.bike_horn": "Bike Horn",
-  "subtitles.zas_atmos.item.bike_horn.honk": "Honk"
+  "subtitles.zas_atmos.item.bike_horn.honk": "Honk",
+
+  "config.jade.plugin_zas_atmos.readout": "Device Readouts"
 }

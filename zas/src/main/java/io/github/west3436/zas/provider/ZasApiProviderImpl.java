@@ -12,6 +12,7 @@ import io.github.west3436.zas.api.fire.IgnitionOutcome;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.HeatResult;
@@ -21,11 +22,13 @@ import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import io.github.west3436.zas.change.ChangeTracker;
+import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.PresetOptions;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.Ambient;
+import io.github.west3436.zas.engine.SectionKeys;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import io.github.west3436.zas.engine.scheduler.AtmosSnapshot;
 import io.github.west3436.zas.engine.scheduler.ZoneView;
@@ -336,6 +339,60 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
     @Override
     public boolean containerExplosionsBreakBlocks() {
         return PresetOptions.CONTAINER_EXPLOSIONS_BREAK_BLOCKS.get();
+    }
+
+    /** The server's preset (OPS-007), Normal before the config loads. */
+    @Override
+    public io.github.west3436.zas.api.atmosphere.AtmospherePreset preset() {
+        return ZasServerConfig.preset() == AtmospherePreset.HARDCORE
+                ? io.github.west3436.zas.api.atmosphere.AtmospherePreset.HARDCORE
+                : io.github.west3436.zas.api.atmosphere.AtmospherePreset.NORMAL;
+    }
+
+    /**
+     * Whether a zone touches a block, or the atmosphere there isn't resolved (SPACE-014, SPACE-018).
+     * A space mod asks this once per randomly ticked block, so it stops as early as it can: a
+     * dimension with no zone costs the resolved check and one read, and no answer builds a mixture
+     * or reads a block.
+     */
+    @Override
+    public boolean zoneTouches(Level level, BlockPos pos) {
+        DimensionAtmos d = dimension(level);
+        if (d == null || !(level instanceof ServerLevel server)) {
+            return false;
+        }
+        if (!isResolved(server, d, pos)) {
+            return true;
+        }
+        AtmosSnapshot table = d.published();
+        if (table == null || (table.zonedPositions() == 0 && !table.hasRejections() && table.heldCells() == 0)) {
+            return false;
+        }
+        int x = pos.getX();
+        int y = pos.getY();
+        int z = pos.getZ();
+        return touched(table, x, y, z)
+                || touched(table, x, y + 1, z)
+                || touched(table, x, y - 1, z)
+                || touched(table, x + 1, y, z)
+                || touched(table, x - 1, y, z)
+                || touched(table, x, y, z + 1)
+                || touched(table, x, y, z - 1);
+    }
+
+    /** Whether a position holds a zoned cell, or a cell held unresolved at a breach (GEO-026). */
+    private static boolean touched(AtmosSnapshot table, int x, int y, int z) {
+        long block = SectionKeys.block(x, y, z);
+        return table.zoneAt(block) != null || table.heldAt(block, -1);
+    }
+
+    /** FIRE-030's thresholds as the server has them (D-49), or a GameTest's override. */
+    @Override
+    public boolean fireBurnsIn(GasMixture air) {
+        double total = air.totalMoles();
+        return total > 0
+                && FireConfig.settings()
+                        .sustains(air.moles(StandardAir.OXYGEN) / total, air.partialPressure(StandardAir.OXYGEN));
     }
 
     /** The configured near-vacuum density (API-064, HEAT-008), or a GameTest's override; the default before the config loads. */

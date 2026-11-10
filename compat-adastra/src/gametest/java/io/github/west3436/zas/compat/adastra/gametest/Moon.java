@@ -56,8 +56,13 @@ final class Moon {
 
     /** The Moon's level, made on first use. Server thread. */
     static ServerLevel level(MinecraftServer server) {
-        ServerLevel moon = server.getLevel(Planet.MOON);
-        return moon != null ? moon : create(server, Planet.MOON);
+        return planet(server, Planet.MOON);
+    }
+
+    /** The level of one of Ad Astra's planets, made on first use in the same way. Server thread. */
+    static ServerLevel planet(MinecraftServer server, ResourceKey<Level> key) {
+        ServerLevel level = server.getLevel(key);
+        return level != null ? level : create(server, key);
     }
 
     /** Adds a level to a running server, as a mod that makes dimensions at run time does. */
