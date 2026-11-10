@@ -1,0 +1,148 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Jade adapter (COMPAT-030 to COMPAT-032): looking at an atmospherics device shows its pressure,
+// temperature and gases. Its classes are part of zas_atmos and ship in the release jar, where only
+// Jade ever loads them, so the game runs the same without Jade (COMPAT-001, NFR-022). Jade is never
+// in a jar of ours: it is compiled against, and added to this project's own runs.
+
+evaluationDependsOn(':zas-atmos')
+
+// The oldest Jade the adapter supports, which it is compiled against so that it uses nothing newer,
+// and the newest, which its runs load. The range itself is in JadeGate.
+def jadeOldest = '15.1.6+neoforge'
+def jadeNewest = '15.10.6+neoforge'
+
+// -Pjade.version=<version> runs with another Jade, as the Adapter tests workflow does with the
+// oldest and with the last one below it. -Pjade.gateOnly=true goes with a Jade outside the range:
+// the readouts are off there, so only the tests of the version check run (COMPAT-002).
+def jadeRun = providers.gradleProperty('jade.version').getOrElse(jadeNewest)
+def gateOnly = providers.gradleProperty('jade.gateOnly').getOrElse('false').toBoolean()
+
+// Jade comes from Modrinth's maven, as the other optional mods of dev runs do.
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with Jade loaded (COMPAT-004). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that Jade finds it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_jade', 'zas_jade_gate'].each { namespace ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${namespace}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+def zasMod = project(':zas').neoForge.mods.zas
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but the
+    // game is never bootstrapped.
+    addModdingDependenciesTo(sourceSets.test)
+    runs {
+        // ./gradlew :compat-jade:runClient: a dev client with zas, zas_atmos and Jade.
+        client {
+            client()
+        }
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Jade, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', gateOnly ? 'zas_jade_gate' : 'zas_jade,zas_jade_gate'
+            // The Jade the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.jade.version', jadeRun
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    // The dev client's mods. The adapter is part of zas_atmos, as it is in the release jar.
+    mods {
+        zas {
+            zasMod.modSourceSets.get().each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet project(':zas-atmos').sourceSets.main
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
+    implementation project(':zas-api')
+    implementation project(':zas-atmos')
+
+    // Compile-only, never bundled: the adapter is optional (NFR-022).
+    compileOnly "maven.modrinth:jade:${jadeOldest}"
+    // For the dev client.
+    runtimeOnly "maven.modrinth:jade:${jadeRun}"
+
+    // The tests alone may use the framework's hook that drives atmos ticks, as zas_atmos's do.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// The release jar plus the tests and their empty structures.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly "maven.modrinth:jade:${jadeRun}"
+}
+
+// The tests start from a fresh world and a fresh log, which one of them reads.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    testLogging.exceptionFormat = 'full'
+}
