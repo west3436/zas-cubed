@@ -37,8 +37,9 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  *       ambient_variant} preset option overrides it with;
  *   <li>its registered provider's answer (ENV-004, ENV-019), which {@link #takeProviderAnswer} takes
  *       once per atmos tick (ENV-015), or its last good answer while it throws (NFR-013);
- *   <li>a seeded ambient from another mod's data (SPACE-020), which comes in R2 with the Ad Astra
- *       adapter (D-66), so only a test fills this slot for now ({@link #seedForTest});
+ *   <li>an ambient seeded from another mod's data (SPACE-020): the answer of the first registered
+ *       {@link io.github.west3436.zas.api.environment.AmbientSeed} that covers the dimension, taken
+ *       with the provider's, or one a test puts there ({@link #seedForTest});
  *   <li>{@link Ambient#STANDARD_AIR} (ENV-011).
  * </ol>
  *
@@ -65,7 +66,7 @@ public final class Ambients {
     /** Definitions GameTests put in place of a dimension's own, by dimension. */
     private static final Map<ResourceLocation, DimensionAmbient> testDefinitions = new ConcurrentHashMap<>();
 
-    /** Ambients seeded from another mod's data, by dimension: ENV-014's third source (SPACE-020). */
+    /** Seeded ambients GameTests put ahead of the registered seeds' answers, by dimension. */
     private static final Map<ResourceLocation, Ambient> seeded = new ConcurrentHashMap<>();
 
     private Ambients() {}
@@ -114,16 +115,21 @@ public final class Ambients {
             return provided;
         }
         Ambient seed = seeded.get(id);
+        if (seed == null) {
+            seed = SeededAmbients.answer(id);
+        }
         return seed != null ? seed : Ambient.STANDARD_AIR;
     }
 
     /**
-     * Takes the answer of a level's provider for this atmos tick (ENV-015), which every lookup then
-     * reads until the next. The atmos scheduler calls this as it closes a batch, whether or not the
-     * dimension simulates, since an excluded one keeps its ambient (ENV-018). Server thread.
+     * Takes the answer of a level's provider for this atmos tick (ENV-015), and of the ambient seeds
+     * (SPACE-020), which every lookup then reads until the next. The atmos scheduler calls this as it
+     * closes a batch, whether or not the dimension simulates, since an excluded one keeps its ambient
+     * (ENV-018). Server thread.
      */
     public static void takeProviderAnswer(ServerLevel level) {
         ProvidedAmbients.refresh(level);
+        SeededAmbients.refresh(level);
     }
 
     /** The datapack definition of a dimension, if it has a valid one. */
@@ -184,8 +190,8 @@ public final class Ambients {
     }
 
     /**
-     * Fills ENV-014's third source for a dimension until cleared: for GameTests, until the Ad Astra
-     * adapter fills it in R2 (SPACE-020, D-66). Any thread.
+     * Fills ENV-014's third source for a dimension until cleared, ahead of any registered seed: for
+     * GameTests of the sources' order, which need no seed of their own. Any thread.
      *
      * @param ambient the seeded ambient, or null for none
      */
@@ -229,6 +235,7 @@ public final class Ambients {
         testDefinitions.clear();
         seeded.clear();
         ProvidedAmbients.serverStopped();
+        SeededAmbients.serverStopped();
     }
 
     /** Checks the loaded definitions against the running server's gases and puts them in force. */

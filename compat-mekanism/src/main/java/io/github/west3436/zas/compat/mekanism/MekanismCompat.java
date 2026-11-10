@@ -63,6 +63,9 @@ public final class MekanismCompat {
         // Breathing gear (MEK-030 to MEK-034): what a player wearing Mekanism's gear gives itself.
         modBus.addListener((RegisterCapabilitiesEvent event) -> MekanismGear.register(event));
 
+        // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
+
         active = true;
     }
 

@@ -1,7 +1,9 @@
 package io.github.west3436.zas.releasecheck;
 
+import io.github.west3436.zas.api.environment.AmbientSeeds;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.GasTags;
+import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.compat.Adapters;
 import net.minecraft.core.Registry;
@@ -12,6 +14,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.api.distmarker.Dist;
@@ -24,7 +27,7 @@ import net.neoforged.neoforgespi.language.IModFileInfo;
 
 /**
  * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001,
- * COMPAT-001). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
+ * COMPAT-001, SPACE-003). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
  * runContentOffGameTestServer} with it off, as {@code zas.releaseCheck.contentOff} says.
  */
 @GameTestHolder("zas")
@@ -44,6 +47,13 @@ public final class ReleaseJarTests {
 
     /** The Jade adapter's package, which is part of zas_atmos. */
     private static final String JADE_ADAPTER = "io.github.west3436.zas.atmos.compat.jade";
+
+    /** The Ad Astra adapter's package. */
+    private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
+
+    /** The entity types pressure and temperature don't harm, which the Ad Astra adapter's data pack adds to. */
+    private static final TagKey<EntityType<?>> ATMOSPHERE_IMMUNE =
+            TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("zas", "atmosphere_immune"));
 
     private ReleaseJarTests() {}
 
@@ -195,6 +205,53 @@ public final class ReleaseJarTests {
             throw new IllegalStateException("The release jar's JadeGate has no pluginStarted()", e);
         }
         h.assertFalse(started, "the Jade plugin was created");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the whole Ad Astra adapter, and on a server without Ad Astra none of it
+     * loads (SPACE-003, NFR-022): {@code zas} left the adapter off, and its data pack, its settings
+     * file, its planet seed and its distributor areas aren't there. A zombie, which the pack makes
+     * immune through Ad Astra's tags, isn't.
+     */
+    @GameTest(template = "empty")
+    public static void space_003_nothing_of_the_ad_astra_adapter_loads_without_ad_astra(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("ad_astra"), "Ad Astra is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            AD_ASTRA_ADAPTER.replace('.', '/') + "/AdAstraCompat.class",
+            "datapacks/ad_astra/pack.mcmeta",
+            "datapacks/ad_astra/data/zas/tags/entity_type/atmosphere_immune.json",
+            "datapacks/ad_astra/data/zas/zas/protection/ad_astra_space_suit.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no Ad Astra, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("ad_astra"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for Ad Astra");
+        h.assertValueEqual(status.row().entryClass(), AD_ASTRA_ADAPTER + ".AdAstraCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Ad Astra adapter's state");
+        h.assertFalse(Adapters.isActive("ad_astra"), "the Ad Astra adapter is on");
+
+        // What the adapter would have added.
+        MinecraftServer server = h.getLevel().getServer();
+        String pack = "mod/zas:datapacks/ad_astra";
+        h.assertFalse(server.getPackRepository().getAvailableIds().contains(pack), pack + " is offered");
+        h.assertFalse(ModConfigs.getFileMap().containsKey("zas-adastra-server.toml"), "its config file is registered");
+        ResourceLocation seed = ResourceLocation.fromNamespaceAndPath("zas", "ad_astra_planets");
+        ResourceLocation areas = ResourceLocation.fromNamespaceAndPath("zas", "ad_astra_distributors");
+        h.assertFalse(
+                AmbientSeeds.registered().stream().anyMatch(r -> r.id().equals(seed)), "its planet seed is registered");
+        h.assertFalse(
+                LocalAtmospheres.registered().stream().anyMatch(r -> r.id().equals(areas)),
+                "its distributor areas are registered");
+        h.assertFalse(EntityType.ZOMBIE.is(ATMOSPHERE_IMMUNE), "a zombie is immune to the atmosphere");
+        h.assertTrue(EntityType.IRON_GOLEM.is(ATMOSPHERE_IMMUNE), "zas's own immune entity tag didn't load");
         h.succeed();
     }
 

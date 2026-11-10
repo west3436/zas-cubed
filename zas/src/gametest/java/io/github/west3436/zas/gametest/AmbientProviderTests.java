@@ -8,6 +8,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.environment.AmbientDefinition;
 import io.github.west3436.zas.api.environment.AmbientProvider;
 import io.github.west3436.zas.api.environment.AmbientProviders;
+import io.github.west3436.zas.api.environment.AmbientSeed;
+import io.github.west3436.zas.api.environment.AmbientSeeds;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.PinOutcome;
 import io.github.west3436.zas.api.mutation.PinResult;
@@ -53,9 +55,9 @@ import org.apache.logging.log4j.core.config.Property;
  * sets; the exception is {@link #env_015_provider_runs_once_per_real_atmos_tick}, in a batch of its
  * own for that reason.
  *
- * <p>ENV-014's third source, an ambient seeded from another mod's data (SPACE-020), comes with the
- * Ad Astra adapter in R2 (D-66). Until then these tests fill its slot with {@link
- * Ambients#seedForTest}.
+ * <p>ENV-014's third source is an ambient seeded from another mod's data (SPACE-020). The tests of
+ * the providers fill its slot with {@link Ambients#seedForTest}, which needs no seed; the tests of
+ * the seeds themselves, last in the file, register real ones ({@link AmbientSeeds}).
  */
 @GameTestHolder(ZasMod.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -109,6 +111,11 @@ public final class AmbientProviderTests {
         } finally {
             for (AmbientProviders.Registration r : AmbientProviders.registered(Level.END)) {
                 AmbientProviders.unregister(r.id(), Level.END);
+            }
+            for (AmbientSeeds.Registration r : AmbientSeeds.registered()) {
+                if (r.id().getNamespace().startsWith("zas_gametest")) {
+                    AmbientSeeds.unregister(r.id());
+                }
             }
             Ambients.seedForTest(Level.END, null);
             Ambients.overrideDefinitionForTest(Level.END, null);
@@ -721,6 +728,276 @@ public final class AmbientProviderTests {
                 tick(end);
                 h.assertValueEqual(warnings.messages.size(), 1, "warnings: " + warnings.messages);
             }
+        });
+    }
+
+    // ---- SPACE-020: ambient seeds ---------------------------------------------------------
+
+    /**
+     * A seed that holds an answer for the End and none for any other dimension, as a seed made from
+     * a list of planets does, and that counts the times it was asked about the End.
+     */
+    private static final class EndSeed implements AmbientSeed {
+        AmbientDefinition answer;
+        boolean failing;
+        final List<Thread> threads = new CopyOnWriteArrayList<>();
+
+        EndSeed(AmbientDefinition answer) {
+            this.answer = answer;
+        }
+
+        @Override
+        public AmbientDefinition seed(ServerLevel level) {
+            if (level.dimension() != Level.END) {
+                return null;
+            }
+            threads.add(Thread.currentThread());
+            if (failing) {
+                throw new IllegalStateException("the test seed failing");
+            }
+            return answer;
+        }
+
+        int calls() {
+            return threads.size();
+        }
+    }
+
+    private static Warnings seedFaults() {
+        return new Warnings("io.github.west3436.zas.environment.SeededAmbients");
+    }
+
+    /**
+     * A registered seed sets the ambient of a dimension nothing else defines, for queries and for the
+     * simulation, from the next atmos tick; a dimension it answers null for keeps what it had; and
+     * once it is gone the fallback applies again (SPACE-020, ENV-014).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_a_seed_sets_the_ambient_of_a_dimension_nothing_else_defines(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation id = id("zas_gametest", "space_020");
+            Ambient overworld = Ambients.ambient(Level.OVERWORLD);
+            AmbientSeeds.register(id, new EndSeed(AmbientDefinition.vacuum(100.15)));
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "before the next atmos tick");
+            tick(end);
+            tick(h.getLevel());
+
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100.15), "the lookup");
+            AtmosphereSample open = Atmospheres.at(end, OPEN);
+            h.assertValueEqual(open.state(), AtmosphereState.AMBIENT, "state");
+            h.assertValueEqual(open.pressure(), 0.0, "pressure");
+            close(h, open.temperature(), 100.15, "temperature");
+            h.assertValueEqual(
+                    Ambients.ambient(Level.OVERWORLD), overworld, "the Overworld, which it has no answer for");
+
+            // The simulation has it: a room pinned into a zone there holds no gas.
+            Rooms r = new Rooms(h, end, OPEN.offset(160, 0, 0));
+            r.clear(0, 5);
+            r.shell(0, 4);
+            PinResult pin = r.settle(ZonePins.pin(end, r.point(2, 2, 2), Rooms.source("space_020")));
+            h.assertValueEqual(pin.outcome(), PinOutcome.ZONE, "the pin");
+            close(h, r.zone(2, 2, 2).mixture().pressure(), 0, "the zone's pressure");
+            r.settle(ZonePins.unpin(end, Rooms.source("space_020")));
+
+            h.assertTrue(AmbientSeeds.unregister(id), "the seed wasn't registered");
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100.15), "before the next atmos tick");
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "without the seed");
+        });
+    }
+
+    /** A datapack definition comes before a seed (SPACE-020, ENV-014, D-45). */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_a_datapack_definition_comes_before_a_seed(GameTestHelper h) {
+        withDefinition(h, Ambients.definition(Level.END).orElseThrow(), end -> {
+            Ambient defined = Ambients.ambient(Level.END);
+            EndSeed seed = new EndSeed(AmbientDefinition.vacuum(100.15));
+            AmbientSeeds.register(id("zas_gametest", "space_020_defined"), seed);
+            tick(end);
+            h.assertTrue(seed.calls() > 0, "the seed wasn't asked");
+            h.assertValueEqual(Ambients.ambient(Level.END), defined, "the End's own definition");
+        });
+    }
+
+    /**
+     * A provider comes before a seed: the provider's answer applies while it gives one, and the seed's
+     * when it answers null or is gone (SPACE-020, ENV-014, D-45).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_a_provider_comes_before_a_seed(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation providerId = id("zas_gametest", "space_020_provider");
+            Ambient seeded = Ambient.vacuum(100.15);
+            Faulty provider = new Faulty(PROVIDED);
+            AmbientSeeds.register(id("zas_gametest", "space_020_under"), new EndSeed(AmbientDefinition.vacuum(100.15)));
+            AmbientProviders.register(providerId, Level.END, provider);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "with a provider and a seed");
+
+            provider.answer = null;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), seeded, "once the provider answers null");
+
+            provider.answer = PROVIDED;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), PROVIDED_AMBIENT, "once it answers again");
+
+            AmbientProviders.unregister(providerId, Level.END);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), seeded, "without the provider");
+
+            // A seed a test puts in place stands ahead of the registered ones.
+            Ambients.seedForTest(Level.END, SEEDED);
+            h.assertValueEqual(Ambients.ambient(Level.END), SEEDED, "with a test's seed in place");
+        });
+    }
+
+    /**
+     * Seeds are asked in order of id, namespace first, and the first answer that isn't null stands:
+     * two seeds covering one dimension is no conflict, and nothing is logged for it (SPACE-020).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_seeds_are_asked_in_order_of_id_and_a_null_passes_to_the_next(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            EndSeed first = new EndSeed(null);
+            EndSeed second = new EndSeed(AmbientDefinition.vacuum(200));
+            AmbientSeeds.register(id("zas_gametest_b", "second"), second);
+            AmbientSeeds.register(id("zas_gametest_a", "zz_first"), first);
+            try (Warnings providers = providerWarnings();
+                    Warnings seeds = seedFaults()) {
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(200), "with the first answering null");
+                h.assertValueEqual(first.calls(), 1, "the times the first was asked");
+                h.assertValueEqual(second.calls(), 1, "the times the second was asked");
+
+                first.answer = AmbientDefinition.vacuum(253.15);
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(253.15), "once the first answers");
+                h.assertValueEqual(second.calls(), 1, "the times the second was asked, once the first answers");
+
+                h.assertValueEqual(providers.messages, List.of(), "warnings");
+                h.assertValueEqual(seeds.messages, List.of(), "warnings");
+                h.assertValueEqual(seeds.errors, List.of(), "errors");
+            }
+        });
+    }
+
+    /**
+     * A seed runs once per atmos tick of a dimension, on the server thread, however many lookups read
+     * its answer in between (SPACE-020, ENV-015).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_a_seed_runs_once_per_atmos_tick_on_the_server_thread(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            EndSeed seed = new EndSeed(AmbientDefinition.vacuum(100.15));
+            AmbientSeeds.register(id("zas_gametest", "space_020_once"), seed);
+            for (int i = 1; i <= 3; i++) {
+                tick(end);
+                for (int lookups = 0; lookups < 50; lookups++) {
+                    Ambients.ambient(Level.END);
+                    Atmospheres.at(end, OPEN);
+                }
+                h.assertValueEqual(seed.calls(), i, "the times it was asked after " + i + " atmos ticks");
+            }
+            Thread server = Thread.currentThread();
+            h.assertTrue(seed.threads.stream().allMatch(t -> t == server), "it was asked off the server thread");
+        });
+    }
+
+    /**
+     * A seed's answer naming a gas the server doesn't have is skipped as a null is, so the next seed is
+     * asked, and it is warned about once (SPACE-020, OPS-008).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void space_020_a_seeds_answer_naming_an_unknown_gas_is_skipped(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation id = id("zas_gametest_a", "space_020_unknown");
+            AmbientDefinition unknown = new AmbientDefinition(Map.of(id("zas_gametest", "no_such_gas"), 10.0), 250);
+            AmbientSeeds.register(id, new EndSeed(unknown));
+            try (Warnings warnings = providerWarnings()) {
+                tick(end);
+                tick(end);
+                h.assertValueEqual(warnings.messages.size(), 1, "warnings: " + warnings.messages);
+                String warning = warnings.messages.get(0);
+                h.assertTrue(warning.startsWith("Ambient seed " + id), warning);
+                h.assertTrue(warning.contains("zas_gametest:no_such_gas"), warning);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "with no other seed");
+
+                AmbientSeeds.register(
+                        id("zas_gametest_b", "space_020_known"), new EndSeed(AmbientDefinition.vacuum(200)));
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(200), "with a seed after it");
+            }
+        });
+    }
+
+    /**
+     * A seed that throws is skipped for the atmos tick, and the dimension keeps the seed's last answer:
+     * a vacuum stays one. It is asked again each atmos tick, its answer counts as soon as it stops, and
+     * the log has one line a minute (NFR-013, SPACE-020).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_an_ambient_seed_that_throws_keeps_its_last_answer_and_is_logged_once_a_minute(
+            GameTestHelper h) {
+        onBareEnd(h, end -> {
+            ResourceLocation id = id("zas_gametest", "nfr_013_seed");
+            EndSeed seed = new EndSeed(AmbientDefinition.vacuum(737));
+            AmbientSeeds.register(id, seed);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(737), "before it throws");
+            try (Warnings log = seedFaults()) {
+                FaultLog.aMinutePasses();
+                seed.failing = true;
+                int asked = seed.calls();
+                tick(end);
+                tick(end);
+                tick(end);
+                h.assertValueEqual(seed.calls() - asked, 3, "the times it was asked in 3 atmos ticks");
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(737), "while it throws");
+                h.assertValueEqual(Atmospheres.at(end, OPEN).pressure(), 0.0, "the pressure while it throws");
+                h.assertValueEqual(log.errors.size(), 1, "errors logged: " + log.errors);
+                h.assertTrue(log.errors.get(0).contains(id.toString()), log.errors.get(0));
+
+                FaultLog.aMinutePasses();
+                tick(end);
+                h.assertValueEqual(log.errors.size(), 2, "errors logged a minute later: " + log.errors);
+
+                seed.answer = AmbientDefinition.vacuum(200);
+                seed.failing = false;
+                tick(end);
+                h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(200), "once it stops throwing");
+                h.assertValueEqual(log.errors.size(), 2, "errors logged once it stops: " + log.errors);
+            }
+        });
+    }
+
+    /**
+     * Only its own answer outlasts a seed's fault. A seed that throws before it has answered, or while
+     * the dimension's answer is another seed's, passes to the next seed as a null does (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_seed_that_throws_without_an_answer_of_its_own_passes_to_the_next(GameTestHelper h) {
+        onBareEnd(h, end -> {
+            EndSeed first = new EndSeed(AmbientDefinition.vacuum(100));
+            EndSeed second = new EndSeed(AmbientDefinition.vacuum(200));
+            first.failing = true;
+            AmbientSeeds.register(id("zas_gametest_a", "nfr_013_first"), first);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.STANDARD_AIR, "with the fallback next");
+
+            AmbientSeeds.register(id("zas_gametest_b", "nfr_013_second"), second);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(200), "with another seed next");
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(200), "while the answer is the other's");
+
+            first.failing = false;
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100), "its first answer");
+            first.failing = true;
+            second.answer = AmbientDefinition.vacuum(300);
+            tick(end);
+            h.assertValueEqual(Ambients.ambient(Level.END), Ambient.vacuum(100), "that answer, once it throws again");
         });
     }
 }

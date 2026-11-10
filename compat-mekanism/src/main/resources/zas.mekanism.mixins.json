@@ -4,7 +4,17 @@
   "package": "io.github.west3436.zas.compat.mekanism.mixin",
   "plugin": "io.github.west3436.zas.compat.mekanism.mixin.MekanismMixinPlugin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "AdvancedMachineDumpMixin",
+    "BrokenTubeMixin",
+    "ChemicalTankDumpMixin",
+    "ElectrolyticSeparatorDumpMixin",
+    "FactoryDumpButtonMixin",
+    "GaugeDropperDumpMixin",
+    "GaugeDropperEmptyMixin",
+    "MetallurgicInfuserDumpButtonMixin",
+    "TurbineDumpMixin"
+  ],
   "injectors": {
     "defaultRequire": 0
   }

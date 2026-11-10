@@ -349,6 +349,7 @@ public final class InternalsTests {
      * a breath check draws from it. It still needs the seal, and when it can't deliver the player
      * breathes the air with the indicator off. A switched tank found first is passed over while the
      * switch is off, and used when it is on; if that one can't deliver, the always-on one is.
+     * A supply an item gives through {@link IInternalSupply#ITEM} is treated the same.
      */
     @GameTest(template = "empty")
     public static void api_022_an_always_on_supply_needs_no_switch(GameTestHelper h) {
@@ -400,6 +401,20 @@ public final class InternalsTests {
             p.setItemSlot(EquipmentSlot.CHEST, TestLifeSupport.tank(Map.of(), 30));
             close(h, Internals.active(p).supply().distributionPressure(), 40, 0, "behind an empty switched tank");
             h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_ON, "behind an empty switched tank");
+
+            // An item that only holds gas (IInternalSupply.ITEM) is treated the same: always on, it
+            // supplies with the switch off; not always on, it waits for the switch.
+            Internals.set(p, false);
+            p.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+            p.setItemInHand(
+                    InteractionHand.OFF_HAND, TestLifeSupport.marked(TestLifeSupport.gasHolder(FULL, 50), "Always"));
+            Internals.Active held = Internals.active(p);
+            h.assertTrue(held != null, "an always-on item supply waits for the switch");
+            close(h, held.supply().distributionPressure(), 50, 0, "an always-on item supply");
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.gasHolder(FULL, 50));
+            h.assertTrue(Internals.active(p) == null, "an item supply that isn't always on needs no switch");
+            Internals.set(p, true);
+            close(h, Internals.active(p).supply().distributionPressure(), 50, 0, "an item supply, switched on");
         }
         h.succeed();
     }

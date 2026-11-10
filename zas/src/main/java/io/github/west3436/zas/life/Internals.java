@@ -52,7 +52,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>The seal</b> (LIFE-021). They work only while the head slot, or the entity itself,
  *       seals its breathing ({@link WornProtection#sealedBreathing}).
  *   <li><b>The tank</b> (LIFE-028). They draw from the first internal supply found ({@link
- *       IInternalSupply}): in an armor piece, the chestplate's first, such as a suit's tank slot;
+ *       IInternalSupply}, from an item's life support or its {@link IInternalSupply#ITEM}
+ *       capability): in an armor piece, the chestplate's first, such as a suit's tank slot;
  *       then the offhand; then, for a player, the hotbar from left to right, or else the main hand;
  *       then the entity's own life support.
  *   <li><b>The breath</b> (LIFE-044, LIFE-046). The tank delivers its gas at its distribution
@@ -269,12 +270,22 @@ public final class Internals {
         return own == null ? Optional.empty() : own.internalSupply().filter(wanted);
     }
 
+    /**
+     * The supply an item gives: its life support's, or else its own as an item that only holds gas
+     * ({@link IInternalSupply#ITEM}, SPACE-023).
+     */
     private static Optional<IInternalSupply> supply(ItemStack stack) {
         if (stack.isEmpty()) {
             return Optional.empty();
         }
         ILifeSupport s = GuardedLifeSupport.of(stack);
-        return s == null ? Optional.empty() : s.internalSupply();
+        if (s != null) {
+            Optional<IInternalSupply> held = s.internalSupply();
+            if (held.isPresent()) {
+                return held;
+            }
+        }
+        return GuardedLifeSupport.supplyOf(stack);
     }
 
     /** Whether a supply delivers its distribution pressure: it is above 0 and the tank holds at least that (LIFE-046). */

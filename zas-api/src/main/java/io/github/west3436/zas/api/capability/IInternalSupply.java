@@ -2,6 +2,8 @@ package io.github.west3436.zas.api.capability;
 
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.capabilities.ItemCapability;
 
 /**
  * An internal supply of breathable gas, such as a gas tank, that internals breathe from (API-022,
@@ -19,6 +21,11 @@ import io.github.west3436.zas.api.gas.GasParcel;
  * then breathes from it whenever the wearer's breathing is sealed, whatever the wearer's switch
  * says.
  *
+ * <p><b>Where it comes from.</b> An item or entity with life support of its own gives its supply
+ * through {@link ILifeSupport#internalSupply()}. An item that only holds gas, and gets its
+ * protection from data or has none, gives it through {@link #ITEM} instead. A supply is treated
+ * the same whichever way it is found.
+ *
  * <p><b>Threads.</b> ZAS³ calls it on the server thread, on the item as it is then.
  *
  * <p><b>If it throws</b> (NFR-013). ZAS³ catches it. A supply whose {@link #contents()} or {@link
@@ -27,6 +34,20 @@ import io.github.west3436.zas.api.gas.GasParcel;
  * next time, and logs the fault at most once a minute for each item or entity type.
  */
 public interface IInternalSupply {
+    /**
+     * The capability on an item that is an internal supply without being life support in code: its
+     * protection, if it has any, comes from the {@code zas/protection} datapack directory (LIFE-026),
+     * which an {@link ILifeSupport#ITEM} capability on the same item would replace as a whole. Such
+     * as another mod's suit that holds its own oxygen, with its ratings shipped as data (SPACE-023).
+     *
+     * <p>ZAS³ looks for it wherever internals look for a supply (LIFE-028): in the armor slots, the
+     * offhand and the hotbar. On an item that has both, the supply of its {@link ILifeSupport} is
+     * used and this one isn't asked. Without ZAS³ the capability still exists, but nothing reads
+     * it.
+     */
+    ItemCapability<IInternalSupply, Void> ITEM = ItemCapability.createVoid(
+            ResourceLocation.fromNamespaceAndPath("zas", "internal_supply"), IInternalSupply.class);
+
     /**
      * The gas it holds now, with its temperature and its volume.
      *
