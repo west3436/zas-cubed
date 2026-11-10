@@ -7,7 +7,10 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import io.github.west3436.zas.simulation.AtmosService;
 import java.lang.reflect.Proxy;
@@ -39,6 +42,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -98,7 +102,17 @@ final class VentArea {
     private int extentY = 4;
     private int extentZ = 4;
 
+    /** Whether the game has been told to keep ticking this area's chunk. */
+    private boolean ticking;
+
+    /** Who pins this area's room, if a test has it pinned. */
+    private SourceId pinner;
+
     /**
+     * Two tests with one number build in the same place and spoil each other's rooms, so each test
+     * class keeps to numbers of its own: the venting's 1 to 32, the heat's 40 to 49, the vent
+     * route's 60 to 69.
+     *
      * @param h the test
      * @param index the area's number, one for each test
      */
@@ -149,8 +163,44 @@ final class VentArea {
         extentZ = Math.max(extentZ, z);
     }
 
+    /**
+     * Has the game tick this area's blocks from its next tick on, as it does those near a player,
+     * until the area is cleared: for a test that leaves a pipe or a machine to the game. The area is
+     * within one chunk, which is the one kept.
+     */
+    void keepTicking() {
+        ChunkPos chunk = new ChunkPos(origin);
+        level.setChunkForced(chunk.x, chunk.z, true);
+        ticking = true;
+    }
+
+    /**
+     * Pins the room that holds a cell until the area is cleared. A sealed room whose air matches
+     * the open air's is dissolved after a while, which a test that waits for the game would
+     * otherwise run into.
+     */
+    void pin(int x, int y, int z) {
+        pinner = SourceId.of(MekanismFoundationTests.NAMESPACE, "gametest_area_" + origin.getX());
+        CompletableFuture<PinResult> future = ZonePins.pin(level, Vec3.atCenterOf(abs(x, y, z)), pinner);
+        for (int i = 0; i < 8 && !future.isDone(); i++) {
+            tick();
+        }
+        h.assertTrue(
+                future.isDone() && future.join().outcome() == PinOutcome.ZONE,
+                "the room at " + x + ", " + y + ", " + z + " wasn't pinned");
+    }
+
     /** Sets everything this area built back to air, with a block of margin, and settles Mekanism. */
     void clear() {
+        if (pinner != null) {
+            ZonePins.unpin(level, pinner);
+            pinner = null;
+        }
+        if (ticking) {
+            ChunkPos chunk = new ChunkPos(origin);
+            level.setChunkForced(chunk.x, chunk.z, false);
+            ticking = false;
+        }
         for (BlockPos p : BlockPos.betweenClosed(abs(-1, -1, -1), abs(extentX + 1, extentY + 1, extentZ + 1))) {
             if (!level.getBlockState(p).isAir()) {
                 level.setBlockAndUpdate(p, AIR);
