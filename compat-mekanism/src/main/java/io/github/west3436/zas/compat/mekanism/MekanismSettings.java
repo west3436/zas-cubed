@@ -31,6 +31,12 @@ public final class MekanismSettings {
     /** {@code [connection] min_purity}: how pure a mixture must be to leave for Mekanism (MEK-013). */
     public static final ModConfigSpec.DoubleValue MIN_PURITY;
 
+    /** {@code [gear] scuba_protects}: whether scuba gear protects against pressure and temperature (MEK-031). */
+    public static final ModConfigSpec.BooleanValue SCUBA_PROTECTS;
+
+    /** What {@link #SCUBA_PROTECTS} is unless set: scuba gear gives breathing and filtering only. */
+    public static final boolean DEFAULT_SCUBA_PROTECTS = false;
+
     /** {@code [venting] enabled}: whether what Mekanism voids is released as gas (MEK-020). */
     public static final ModConfigSpec.BooleanValue VENTING_ENABLED;
 
@@ -69,6 +75,15 @@ public final class MekanismSettings {
                         "with no power. 0 turns the rule off: each gas then leaves on its own.",
                         "A chemical coming from Mekanism always enters, whatever the pipe holds.")
                 .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
+        builder.pop();
+
+        // Breathing gear (MEK-030 to MEK-034).
+        builder.push("gear");
+        SCUBA_PROTECTS = builder.comment(
+                        "Whether Mekanism's scuba mask and tank, worn together, also protect the wearer",
+                        "against every pressure and temperature, as a whole suit does. Off, they give",
+                        "breathing and gas filtering only, as in Mekanism.")
+                .define("scuba_protects", DEFAULT_SCUBA_PROTECTS);
         builder.pop();
 
         // Sections of the adapter's other parts go here, each in a block of its own.
@@ -129,6 +144,15 @@ public final class MekanismSettings {
      */
     public static double minPurity() {
         return SPEC.isLoaded() ? MIN_PURITY.get() : GasPurity.DEFAULT_MIN_SHARE;
+    }
+
+    /**
+     * Whether scuba gear protects against pressure and temperature as it is set (MEK-031).
+     *
+     * @return true if it does; false, the default, while no server config is loaded
+     */
+    public static boolean scubaProtects() {
+        return SPEC.isLoaded() ? SCUBA_PROTECTS.get() : DEFAULT_SCUBA_PROTECTS;
     }
 
     /**
