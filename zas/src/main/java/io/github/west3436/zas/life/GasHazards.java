@@ -88,39 +88,10 @@ final class GasHazards {
      */
     static void apply(
             LivingEntity entity, GasMixture breath, double seconds, BreathState state, int effectTicks, double scale) {
-        Map<Holder<MobEffect>, Integer> effects = new LinkedHashMap<>();
-        double damagePerSecond = 0;
-        for (Map.Entry<ResourceLocation, HazardProfile> e : HazardProfiles.all().entrySet()) {
-            ResourceLocation gas = e.getKey();
-            List<HazardProfile.Threshold> thresholds = e.getValue().thresholds();
-            double p = breath.partialPressure(gas);
-            if (thresholds.stream().noneMatch(t -> t.reachedAt(p)) && !state.exposed(gas)) {
-                continue; // below every threshold, and nothing to reset
-            }
-            double[] exposure = state.exposure(gas, thresholds.size());
-            double gasDamage = 0;
-            boolean any = false;
-            for (int i = 0; i < thresholds.size(); i++) {
-                HazardProfile.Threshold t = thresholds.get(i);
-                if (!t.reachedAt(p)) {
-                    exposure[i] = 0;
-                    continue;
-                }
-                any = true;
-                exposure[i] += seconds;
-                if (exposure[i] < t.duration()) {
-                    continue;
-                }
-                t.effectLevel().ifPresent(level -> level.effects().forEach(fx -> add(effects, fx)));
-                t.effects().forEach(fx -> add(effects, fx));
-                gasDamage = Math.max(gasDamage, t.damage());
-            }
-            if (!any) {
-                state.clearExposure(gas);
-            }
-            damagePerSecond += gasDamage;
-        }
-        double damage = damagePerSecond * seconds * scale;
+        count(breath, seconds, state);
+        Applying applying = applying(breath, state);
+        Map<Holder<MobEffect>, Integer> effects = applying.effects();
+        double damage = applying.damagePerSecond() * seconds * scale;
         if (effects.isEmpty() && !(damage > 0)) {
             return;
         }
@@ -131,6 +102,72 @@ final class GasHazards {
         effects.forEach((effect, amplifier) ->
                 entity.addEffect(new MobEffectInstance(effect, effectTicks, amplifier, false, false, true)));
         LifeDamage.hurt(entity, HazardType.TOXIC_GAS, tick.damage());
+    }
+
+    /**
+     * The toxic gas damage a breath deals per second with the exposures the checks have counted, in
+     * HP/s before the hazard's scale: what {@link #apply} charges for each second. It is 0 while
+     * every damaging threshold the breath reaches still waits out its duration. Changes nothing.
+     */
+    static double damagePerSecond(GasMixture breath, BreathState state) {
+        return applying(breath, state).damagePerSecond();
+    }
+
+    /**
+     * What the thresholds that apply come to.
+     *
+     * @param effects their status effects, the highest amplifier of each
+     * @param damagePerSecond their damage in HP/s, each gas's highest added up, before the hazard's
+     *     scale
+     */
+    private record Applying(Map<Holder<MobEffect>, Integer> effects, double damagePerSecond) {}
+
+    /**
+     * Counts a breath's exposures for the seconds since the last check: for each gas with a profile,
+     * the time its partial pressure has been at or above each threshold, which starts again when it
+     * falls below.
+     */
+    private static void count(GasMixture breath, double seconds, BreathState state) {
+        for (Map.Entry<ResourceLocation, HazardProfile> e : HazardProfiles.all().entrySet()) {
+            ResourceLocation gas = e.getKey();
+            List<HazardProfile.Threshold> thresholds = e.getValue().thresholds();
+            double p = breath.partialPressure(gas);
+            if (thresholds.stream().noneMatch(t -> t.reachedAt(p))) {
+                state.clearExposure(gas);
+                continue;
+            }
+            double[] exposure = state.exposure(gas, thresholds.size());
+            for (int i = 0; i < exposure.length; i++) {
+                exposure[i] = thresholds.get(i).reachedAt(p) ? exposure[i] + seconds : 0;
+            }
+        }
+    }
+
+    /**
+     * The thresholds that apply to a breath with the exposures counted so far: those its partial
+     * pressures reach and have reached for their duration (LIFE-004). The one place that decides
+     * it, for the check that applies them and for whatever reports them. Changes nothing.
+     */
+    private static Applying applying(GasMixture breath, BreathState state) {
+        Map<Holder<MobEffect>, Integer> effects = new LinkedHashMap<>();
+        double damagePerSecond = 0;
+        for (Map.Entry<ResourceLocation, HazardProfile> e : HazardProfiles.all().entrySet()) {
+            ResourceLocation gas = e.getKey();
+            List<HazardProfile.Threshold> thresholds = e.getValue().thresholds();
+            double p = breath.partialPressure(gas);
+            double gasDamage = 0;
+            for (int i = 0; i < thresholds.size(); i++) {
+                HazardProfile.Threshold t = thresholds.get(i);
+                if (!t.reachedAt(p) || state.sustained(gas, i, thresholds.size()) < t.duration()) {
+                    continue;
+                }
+                t.effectLevel().ifPresent(level -> level.effects().forEach(fx -> add(effects, fx)));
+                t.effects().forEach(fx -> add(effects, fx));
+                gasDamage = Math.max(gasDamage, t.damage());
+            }
+            damagePerSecond += gasDamage;
+        }
+        return new Applying(effects, damagePerSecond);
     }
 
     private static void add(Map<Holder<MobEffect>, Integer> effects, EffectLevel.Effect fx) {

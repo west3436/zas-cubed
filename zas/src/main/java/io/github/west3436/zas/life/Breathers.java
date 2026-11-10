@@ -11,6 +11,9 @@ import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.resources.ResourceKey;
@@ -145,10 +148,17 @@ public final class Breathers {
         e.setCanceled(true);
         if (e.isDrowning()) {
             entity.setAirSupply(0);
-            double damage =
-                    e.getDamageAmount() * HazardConfig.scale(entity.level().dimension(), HazardType.HYPOXIA);
-            LifeDamage.deal(entity, HazardType.HYPOXIA, damage);
+            LifeDamage.deal(entity, HazardType.HYPOXIA, suffocation(entity, e));
         }
+    }
+
+    /**
+     * The hypoxia damage of one drowning hit (LIFE-008): the hit's amount, vanilla's 2 HP unless a
+     * listener before this changed it, times the hazard's scale (LIFE-031). An empty meter brings
+     * one hit a second.
+     */
+    private static double suffocation(LivingEntity entity, LivingDrownEvent hit) {
+        return hit.getDamageAmount() * HazardConfig.scale(entity.level().dimension(), HazardType.HYPOXIA);
     }
 
     /**
@@ -236,10 +246,11 @@ public final class Breathers {
         }
         ResourceKey<Level> dimension = level.dimension();
         Optional<GasMixture> breath = verdict.breath();
-        if (breath.isPresent() && HazardConfig.enabled(dimension, HazardType.TOXIC_GAS)) {
+        Optional<GasMixture> profiled = profiled(verdict, dimension);
+        if (profiled.isPresent()) {
             GasHazards.apply(
                     entity,
-                    breath.get(),
+                    profiled.get(),
                     seconds,
                     state,
                     interval + GasHazards.EFFECT_GRACE_TICKS,
@@ -263,6 +274,72 @@ public final class Breathers {
             EnvironmentHazards.apply(entity, a.exposure(), seconds);
         }
         HandledHazards.apply(entity, a, seconds);
+    }
+
+    /**
+     * The breath a check applies the gases' hazard profiles to (LIFE-004): the verdict's, unless
+     * toxic gas is off in the dimension (LIFE-031).
+     */
+    private static Optional<GasMixture> profiled(Breathability verdict, ResourceKey<Level> dimension) {
+        return HazardConfig.enabled(dimension, HazardType.TOXIC_GAS) ? verdict.breath() : Optional.empty();
+    }
+
+    /**
+     * The damage each hazard deals an entity per second as the rules stand for it now, in HP/s after
+     * its protection and the hazards' scales, for the hazards that deal any. Each is read from where
+     * a check decides it, so it is what the entity is charged:
+     *
+     * <ul>
+     *   <li>hypoxia, while its last check found too little O2 and its air meter is empty: a
+     *       drowning hit a second (LIFE-008);
+     *   <li>toxic gas, from the thresholds that apply to its breath with the exposures its checks
+     *       have counted (LIFE-004). The breath is the verdict's, so a filter or a tank that keeps
+     *       a gas out of it leaves no damage from that gas;
+     *   <li>pressure and temperature, from its exposure (LIFE-010, LIFE-011, LIFE-014).
+     * </ul>
+     *
+     * <p>A check that holds charges nothing (LIFE-048), and an exempt player is charged nothing
+     * (LIFE-037), so then only hypoxia can be here. Airflow impact has no rate.
+     *
+     * <p>It can't see what comes after the rules decide: a listener that changes or cancels a
+     * hazard's tick (API-033), what another mod's hazard handler deals (LIFE-032), or damage that
+     * something takes in once it is dealt, as armor of another mod's may. Asking any of them would
+     * mean dealing the damage. Server thread; changes nothing.
+     */
+    public static Map<HazardType, Double> damageRates(LivingEntity entity) {
+        Map<HazardType, Double> rates = new EnumMap<>(HazardType.class);
+        BreathState state = entity.getExistingDataOrNull(STATE);
+        if (state != null && state.hypoxic() && entity.getAirSupply() <= 0) {
+            // A hit as the breathing hook starts one. It isn't posted.
+            rate(rates, HazardType.HYPOXIA, suffocation(entity, new LivingDrownEvent(entity)));
+        }
+        BreathingRules.Assessment a = BreathingRules.assess(entity);
+        Breathability verdict = a.verdict();
+        if (holds(verdict, a.sample()) || verdict.reason() == BreathReason.EXEMPT) {
+            return Collections.unmodifiableMap(rates);
+        }
+        ResourceKey<Level> dimension = entity.level().dimension();
+        BreathState counted = state != null ? state : new BreathState();
+        profiled(verdict, dimension)
+                .ifPresent(breath -> rate(
+                        rates,
+                        HazardType.TOXIC_GAS,
+                        GasHazards.damagePerSecond(breath, counted)
+                                * HazardConfig.scale(dimension, HazardType.TOXIC_GAS)));
+        EnvironmentHazards.Exposure exposure = a.exposure();
+        if (exposure != null) {
+            for (HazardType t : HazardType.values()) {
+                rate(rates, t, exposure.rate(t));
+            }
+        }
+        return Collections.unmodifiableMap(rates);
+    }
+
+    /** Notes a hazard's damage per second, if it deals any. */
+    private static void rate(Map<HazardType, Double> rates, HazardType hazard, double perSecond) {
+        if (perSecond > 0) {
+            rates.put(hazard, perSecond);
+        }
     }
 
     /**

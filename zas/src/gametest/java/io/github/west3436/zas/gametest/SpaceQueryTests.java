@@ -512,7 +512,7 @@ public final class SpaceQueryTests {
     }
 
     /** What {@code /zas life} tells an entity about itself, a line each. */
-    private static List<String> life(Entity entity) {
+    static List<String> life(Entity entity) {
         List<String> said = new ArrayList<>();
         CommandSource listener = new CommandSource() {
             @Override
