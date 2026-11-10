@@ -816,6 +816,53 @@ public final class MekanismHeatTests {
     }
 
     /**
+     * A room that sits a step out keeps its part of a body's ceiling (MEK-040). A heater in the west
+     * room alone sends it heat, which is on its way until the next atmos tick, so the west room sits
+     * the next step out. A heater in the wall between the west room and the east, at 5 kW a body at
+     * most, then passes the east room its half of the 5 kJ a second and no more, though its east face
+     * alone would pass over 6 kW.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_040_a_room_that_sits_a_step_out_keeps_its_part_of_the_ceiling(GameTestHelper h) {
+        inArea(h, 53, area -> {
+            area.box(8, 4, 4);
+            area.stone(4, 1, 1, 4, 3, 3);
+            area.form(1, 1, 1);
+            area.form(7, 1, 1);
+            IHeatCapacitor alone = heatBlock(area, 2, 1, 2, FUELWOOD_HEATER);
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(5_000.0);
+            heatTo(alone, 1000);
+            ZoneInfo west = area.zone(1, 1, 1);
+            ZoneInfo east = area.zone(7, 1, 1);
+            h.assertTrue(!east.id().equals(west.id()), "the two rooms are one zone");
+            List<Flow> first = MekanismHeat.step(area.level, 1);
+            Flow sent = only(h, first, west.id());
+            h.assertTrue(first.size() == 1, "the first step sent heat to " + first.size() + " zones");
+
+            // The heater in the wall, set with no atmos tick: the west room's heat is still on its way.
+            TileEntityMekanism wall = area.place(4, 2, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            h.assertTrue(MekanismHeat.knows(area.level, wall.getBlockPos()), "the heater in the wall wasn't learned");
+            IHeatCapacitor capacitor = capacitor(wall);
+            double cb = capacitor.getHeatCapacity();
+            heatTo(capacitor, 1000);
+            double held = alone.getHeat();
+            double face = face(10, 1, capacitor);
+            double toWest = face * (1000 - west.mixture().temperature());
+            double toEast = face * (1000 - east.mixture().temperature());
+            h.assertTrue(toEast > 5_000, "the east face alone would pass only " + toEast + " W");
+
+            List<Flow> second = MekanismHeat.step(area.level, 1);
+            Flow eastward = only(h, second, east.id());
+            h.assertTrue(second.size() == 1, "the second step sent heat to " + second.size() + " zones");
+            close(h, eastward.joules(), 5_000 * toEast / (toWest + toEast), 1e-9, "the east room's part, J");
+            close(h, capacitor.getHeat(), 1000 * cb - eastward.joules(), 1e-9, "the heat of the heater in the wall");
+            close(h, alone.getHeat(), held, 0, "the heat of the heater whose room sits the step out");
+            close(h, land(area, sent).joules(), sent.joules(), 1e-9, "the heat the west room took, J");
+            close(h, land(area, eastward).joules(), eastward.joules(), 1e-9, "the heat the east room took, J");
+        });
+    }
+
+    /**
      * Left to the game, a hot block warms its room, and the room gains no more than the block has
      * lost (MEK-040). Nothing here runs the adapter: its own listeners learn the heater as it is
      * set and exchange once an atmos tick, and the atmos service lands the heat in its own time.

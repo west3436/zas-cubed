@@ -66,7 +66,9 @@ import org.jetbrains.annotations.Nullable;
  *       the server's {@code [heat] max_body_watts} to and from all its zones together. A running
  *       Fusion Reactor or a large hot boiler would pass megawatts; held to the ceiling it makes a
  *       sealed room deadly in minutes, not seconds. With several zones the ceiling is shared out
- *       among them in proportion to what each would be passed as the step starts.
+ *       among them in proportion to what each would be passed as the step starts. A zone that sits
+ *       the step out has its part kept back, so the others get no more for it, and it makes its
+ *       time up at its own part.
  *   <li><b>Once.</b> Faces are gathered by capacitor before anything moves, so a multiblock whose
  *       casing blocks all expose one capacitor is one body with many faces, and its heat capacity
  *       is counted once. Flows within one atmos tick are worked out one after another on running
@@ -280,6 +282,9 @@ public final class MekanismHeat {
 
         final Map<ZoneId, Double> conductance = new LinkedHashMap<>();
 
+        /** What it conducts to the zones that sit this step out, whose part of its ceiling is kept back. */
+        final Map<ZoneId, Double> keptBack = new LinkedHashMap<>();
+
         Body(
                 BlockEntity owner,
                 IHeatHandler handler,
@@ -318,14 +323,19 @@ public final class MekanismHeat {
         final Vec3 point;
         final double capacity;
         final boolean takesPart;
+
+        /** It would take part, but heat of ours is still on its way to it. */
+        final boolean waits;
+
         final double seconds;
         double temperature;
         double added;
 
-        Gas(Vec3 point, GasMixture gas, boolean takesPart, double seconds) {
+        Gas(Vec3 point, GasMixture gas, boolean takesPart, boolean waits, double seconds) {
             this.point = point;
             this.capacity = GasProperties.heatCapacity(gas.moles());
             this.takesPart = takesPart && capacity > 0;
+            this.waits = waits && capacity > 0;
             this.seconds = seconds;
             this.temperature = gas.temperature();
         }
@@ -409,7 +419,8 @@ public final class MekanismHeat {
                 if (own != null) {
                     inverse += own.getTotalInverseInsulation(side);
                 }
-                body.conductance.merge(zone, HeatFlow.conductance(face, body.capacity, inverse), Double::sum);
+                Map<ZoneId, Double> faces = zones.get(zone).takesPart ? body.conductance : body.keptBack;
+                faces.merge(zone, HeatFlow.conductance(face, body.capacity, inverse), Double::sum);
             }
         }
         known.satOut = satOut;
@@ -418,8 +429,13 @@ public final class MekanismHeat {
         List<Flow> flows = new ArrayList<>();
         for (Body body : order) {
             // What each zone of the body's would be passed as its turn starts, to share its ceiling out by.
+            // A zone that sits the step out counts too: its part is kept back for when it makes the time up.
             double[] wouldPass = new double[body.conductance.size()];
             double wouldPassInAll = 0;
+            for (Map.Entry<ZoneId, Double> waiting : body.keptBack.entrySet()) {
+                double difference = body.temperature - zones.get(waiting.getKey()).temperature;
+                wouldPassInAll += Math.abs(waiting.getValue() * difference);
+            }
             int index = 0;
             for (Map.Entry<ZoneId, Double> shared : body.conductance.entrySet()) {
                 double difference = body.temperature - zones.get(shared.getKey()).temperature;
@@ -479,10 +495,10 @@ public final class MekanismHeat {
     }
 
     /**
-     * The zone a sample is of, if it takes part in this step: it isn't paused, its gas isn't too thin
-     * to carry heat, and no heat of ours is still on its way to it. Null otherwise. A zone that sits
-     * the step out for the last reason is counted, once a step, and makes the time up when it next
-     * takes part.
+     * The zone a sample is of, if it takes part in the exchange: it isn't paused and its gas isn't
+     * too thin to carry heat. Null otherwise. A zone with heat of ours still on its way to it sits
+     * this step out, which its {@link Gas} says: it is counted, once a step, and makes the time up
+     * when it next takes part.
      */
     private static @Nullable ZoneId zone(
             Known known,
@@ -505,10 +521,10 @@ public final class MekanismHeat {
             }
             GasMixture mixture = sample.mixture();
             boolean thin = HeatFlow.thin(mixture.totalMoles(), mixture.volume(), nearVacuum);
-            gas = new Gas(point, mixture, !waits && !thin, seconds * (1 + before));
+            gas = new Gas(point, mixture, !waits && !thin, waits && !thin, seconds * (1 + before));
             zones.put(zone, gas);
         }
-        return gas.takesPart ? zone : null;
+        return gas.takesPart || gas.waits ? zone : null;
     }
 
     /** A point just across one side of a block: in the cell that touches the middle of that face. */
