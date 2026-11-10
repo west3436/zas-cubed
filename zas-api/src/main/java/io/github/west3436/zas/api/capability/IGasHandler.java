@@ -22,6 +22,11 @@ import org.jetbrains.annotations.Nullable;
  * up anew each atmos tick, so it follows one that comes or goes within an atmos tick. Other mods may
  * cache it, so call {@code level.invalidateCapabilities(pos)} when it does.
  *
+ * <p><b>Pipes provide it too.</b> The content mod's pipes, caps, valves and devices' pipe faces are gas
+ * handlers themselves, so another mod's pipe or machine can join a pipe network: what it finds on a
+ * face is the whole network behind it. A fill stops at the highest pressure a ZAS³ pump reaches, and a
+ * shut valve holds nothing. ZAS³'s own parts never use it on each other.
+ *
  * <p><b>Conservation.</b> ZAS³ takes what it offers out of the network before it calls {@link #fill}
  * and takes back whatever the handler doesn't say it took, and it adds all that {@link #drain} returns
  * to the network. So gas is conserved as long as the handler's returns are true: it gains what it
