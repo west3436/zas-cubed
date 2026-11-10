@@ -110,7 +110,7 @@ final class VentArea {
 
     /**
      * Two tests with one number build in the same place and spoil each other's rooms, so each test
-     * class keeps to numbers of its own: the venting's 1 to 32, the heat's 40 to 49, the vent
+     * class keeps to numbers of its own: the venting's 1 to 32, the heat's 40 to 59, the vent
      * route's 60 to 69.
      *
      * @param h the test
