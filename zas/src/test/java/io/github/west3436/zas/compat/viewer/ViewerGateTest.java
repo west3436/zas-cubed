@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /** COMPAT-002 for a plugin its viewer starts: it gates itself, and warns once. */
 class ViewerGateTest {
     /** The JEI plugin's range and the EMI plugin's. */
-    private static final String JEI = "[19.21,20)";
+    private static final String JEI = "[19.21.0.247,20)";
 
     private static final String EMI = "[1.1.13,2)";
 
@@ -53,6 +53,22 @@ class ViewerGateTest {
     @Test
     void compat_002_a_range_without_bounds_is_refused_when_the_gate_is_made() {
         assertThrows(IllegalArgumentException.class, () -> new ViewerGate("jei", "19.21", () -> "19.21.0.247"));
+    }
+
+    /**
+     * JEI's range starts at one build, the fourth number of its version. The builds of 19.21 before
+     * it are outside, and every later one is inside.
+     */
+    @Test
+    void compat_002_a_range_that_starts_at_a_build_number_leaves_out_the_builds_before_it() {
+        for (String version : List.of("19.21.0.243", "19.21.0.246", "19.20.0.242", "19.21.0.9")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, JEI), version);
+            assertFalse(new ViewerGate("jei", JEI, () -> version).on(), version);
+        }
+        for (String version : List.of("19.21.0.247", "19.21.0.248", "19.21.0.1000", "19.21.1.312")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, JEI), version);
+            assertTrue(new ViewerGate("jei", JEI, () -> version).on(), version);
+        }
     }
 
     /** The version text is each viewer's own, from its mod metadata. EMI's carries the game's version too. */
