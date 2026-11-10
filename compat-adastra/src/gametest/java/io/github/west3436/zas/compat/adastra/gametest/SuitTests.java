@@ -107,8 +107,8 @@ public final class SuitTests {
     /**
      * In vacuum, on the Moon at 100.15 K, each whole suit keeps out the low pressure and the cold:
      * the verdict lists neither hazard and names the pressure and thermal protection, and with
-     * internals off nothing harms the wearer but the lack of oxygen. A player in nothing has both
-     * hazards and takes both kinds of damage.
+     * no oxygen in the suit nothing harms the wearer but the lack of it. A player in nothing has
+     * both hazards and takes both kinds of damage.
      */
     @GameTest(template = "empty")
     public static void space_022_each_suit_protects_in_vacuum(GameTestHelper h) {
@@ -130,7 +130,7 @@ public final class SuitTests {
                 h.assertTrue(
                         verdict.protection().containsAll(Set.of(Protection.PRESSURE, Protection.THERMAL)),
                         suit + ": protection in vacuum: " + verdict.protection());
-                h.assertValueEqual(verdict.reason(), BreathReason.LOW_OXYGEN, suit + ": the verdict, internals off");
+                h.assertValueEqual(verdict.reason(), BreathReason.LOW_OXYGEN, suit + ": the verdict, store empty");
                 Lab.check(player, 5);
                 h.assertTrue(
                         Set.of(HYPOXIA).containsAll(Lab.dealt(player)),
@@ -210,19 +210,17 @@ public final class SuitTests {
     // ---- SPACE-023 ----------------------------------------------------------------------------
 
     /**
-     * Internals draw from a full Ad Astra suit: on the Moon, with internals on, the wearer of each
-     * suit breathes its oxygen at 21.3 kPa, and a minute of checks takes a minute's draw out of the
-     * store, in whole mB taken ahead of use. Nothing harms the wearer, Ad Astra's check agrees, and
-     * Ad Astra's own drain, which runs where its check finds no oxygen, takes nothing in a minute
-     * of wearing.
+     * Internals draw from a full Ad Astra suit: on the Moon the wearer of each suit breathes its
+     * oxygen at 21.3 kPa, and a minute of checks takes a minute's draw out of the store, in whole mB
+     * taken ahead of use. Nothing harms the wearer, Ad Astra's check agrees, and Ad Astra's own
+     * drain, which runs where its check finds no oxygen, takes nothing in a minute of wearing. The
+     * internals switch is on here, as for any tank; a suit doesn't need it (see the next test).
      */
     @GameTest(template = "empty")
     public static void space_023_internals_draw_from_a_full_ad_astra_suit(GameTestHelper h) {
         try (Lab lab = Lab.onTheMoon(h, 73)) {
             for (Suit suit : Suit.values()) {
                 FakePlayer player = wearing(lab, lab.open(10), suit, suit.capacity);
-                h.assertValueEqual(
-                        Breathing.of(player).source(), BreathSource.ATMOSPHERE, suit + ": the breath, internals off");
                 Lab.internals(player, true);
 
                 Breathability verdict = Breathing.of(player);
@@ -251,6 +249,114 @@ public final class SuitTests {
             }
         }
         h.succeed();
+    }
+
+    /**
+     * A suit has no switch, so its oxygen needs none of ours: on the Moon, with the internals switch
+     * off, a player in a whole space suit that holds oxygen breathes it. Nothing harms the wearer
+     * through a minute of checks, Ad Astra's check agrees, and Ad Astra's own drain then takes
+     * nothing through a minute of wearing: the store is down by the 2 mB ZAS³ drew and no more.
+     * Switching internals on changes nothing.
+     *
+     * <p>What it takes is breathing that is sealed and a chest piece that holds enough oxygen. With
+     * the helmet and the chest piece alone the wearer breathes the suit, though the vacuum hurts
+     * what the missing pieces leave bare. Without the helmet, or with a store too low to deliver,
+     * the wearer has nothing to breathe.
+     */
+    @GameTest(template = "empty")
+    public static void space_023_a_worn_suit_gives_air_on_the_moon_with_the_internals_switch_off(GameTestHelper h) {
+        try (Lab lab = Lab.onTheMoon(h, 75)) {
+            FakePlayer player = wearing(lab, lab.open(10), Suit.SPACE, 1000);
+            Lab.internals(player, false);
+
+            Breathability verdict = Breathing.of(player);
+            h.assertValueEqual(verdict.reason(), BreathReason.BREATHABLE, "the verdict, switch off");
+            h.assertValueEqual(verdict.source(), BreathSource.INTERNALS, "what it breathes, switch off");
+            h.assertTrue(verdict.isProtected(), "hazards in the suit: " + verdict.hazards());
+            close(h, verdict.breath().orElseThrow().partialPressure(Lab.O2), 21.3, "the breath's O2, kPa");
+            h.assertTrue(OxygenApi.API.hasOxygen(player), "Ad Astra's check found no oxygen in the suit");
+
+            // 31 checks, 2 s apart: a minute's draw, 1.87 mB, taken whole.
+            Lab.check(player, 31);
+            h.assertValueEqual(Lab.dealt(player), List.of(), "damage dealt in a minute");
+            h.assertValueEqual(player.getHealth(), player.getMaxHealth(), "health");
+            h.assertValueEqual(
+                    Lab.oxygenIn(player.getItemBySlot(EquipmentSlot.CHEST)), 998, "mB left after a minute of checks");
+            Lab.wear(player, 1200);
+            h.assertValueEqual(
+                    Lab.oxygenIn(player.getItemBySlot(EquipmentSlot.CHEST)), 998, "mB left after a minute of wearing");
+
+            Lab.internals(player, true);
+            h.assertValueEqual(Breathing.of(player).source(), BreathSource.INTERNALS, "what it breathes, switch on");
+            Lab.internals(player, false);
+
+            FakePlayer headAndChest = lab.player(lab.open(10));
+            headAndChest.setItemSlot(EquipmentSlot.HEAD, Lab.adAstra(Suit.SPACE.head));
+            headAndChest.setItemSlot(EquipmentSlot.CHEST, Lab.suitHolding(Suit.SPACE.chest, 1000));
+            Breathability bare = Breathing.of(headAndChest);
+            h.assertValueEqual(bare.reason(), BreathReason.BREATHABLE, "the verdict in the helmet and chest piece");
+            h.assertValueEqual(bare.source(), BreathSource.INTERNALS, "what it breathes in the helmet and chest piece");
+            h.assertTrue(
+                    bare.hazards().contains(Hazard.LOW_PRESSURE),
+                    "hazards in the helmet and chest piece: " + bare.hazards());
+
+            FakePlayer bareheaded = wearing(lab, lab.open(10), Suit.SPACE, 1000);
+            bareheaded.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+            h.assertValueEqual(
+                    Breathing.of(bareheaded).reason(), BreathReason.LOW_OXYGEN, "the verdict without the helmet");
+            h.assertFalse(OxygenApi.API.hasOxygen(bareheaded), "Ad Astra's check found oxygen without the helmet");
+
+            // 34 mB of 1,000 can't deliver 21.3 kPa.
+            FakePlayer spent = wearing(lab, lab.open(10), Suit.SPACE, 34);
+            h.assertValueEqual(Breathing.of(spent).reason(), BreathReason.LOW_OXYGEN, "the verdict on 34 mB");
+            h.assertFalse(OxygenApi.API.hasOxygen(spent), "Ad Astra's check found oxygen on 34 mB");
+        }
+        h.succeed();
+    }
+
+    /**
+     * What always on costs. A supply is asked about its stack alone and can't see where its wearer
+     * is, so a suit is breathed wherever its helmet is worn: also where the wearer could breathe the
+     * room, where Ad Astra alone takes nothing. In a room of air on the Moon and in the Overworld's
+     * open air, a minute of checks takes 2 mB of a space suit's 1,000 (1.87 mB a minute, against
+     * the 100 Ad Astra alone takes in space), and Ad Astra's own drain takes nothing. With the helmet
+     * off the wearer breathes the room, and the suit keeps every mB.
+     */
+    @GameTest(template = "empty")
+    public static void space_023_a_worn_suit_is_breathed_where_the_wearer_could_breathe_the_room(GameTestHelper h) {
+        try (Lab lab = Lab.onTheMoon(h, 76)) {
+            lab.room(0, Lab.AIR);
+            breathedInAir(h, lab, lab.floor(0), "in a room on the Moon");
+        }
+        try (Lab lab = Lab.onTheOverworld(h, 77)) {
+            breathedInAir(h, lab, lab.open(10), "on the Overworld");
+        }
+        h.succeed();
+    }
+
+    /** A minute in a whole space suit, and one in the suit without its helmet, somewhere breathable. */
+    private static void breathedInAir(GameTestHelper h, Lab lab, Vec3 at, String where) {
+        FakePlayer bareheaded = wearing(lab, at, Suit.SPACE, 1000);
+        bareheaded.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+        Breathability room = Breathing.of(bareheaded);
+        h.assertValueEqual(room.reason(), BreathReason.BREATHABLE, "the verdict without the helmet " + where);
+        h.assertValueEqual(room.source(), BreathSource.ATMOSPHERE, "what it breathes without the helmet " + where);
+        Lab.check(bareheaded, 31);
+        Lab.wear(bareheaded, 1200);
+        h.assertValueEqual(
+                Lab.oxygenIn(bareheaded.getItemBySlot(EquipmentSlot.CHEST)),
+                1000,
+                "mB left without the helmet " + where);
+
+        FakePlayer suited = wearing(lab, at, Suit.SPACE, 1000);
+        Breathability verdict = Breathing.of(suited);
+        h.assertValueEqual(verdict.reason(), BreathReason.BREATHABLE, "the verdict in the suit " + where);
+        h.assertValueEqual(verdict.source(), BreathSource.INTERNALS, "what it breathes in the suit " + where);
+        Lab.check(suited, 31);
+        Lab.wear(suited, 1200);
+        h.assertValueEqual(Lab.dealt(suited), List.of(), "damage dealt in the suit " + where);
+        h.assertValueEqual(
+                Lab.oxygenIn(suited.getItemBySlot(EquipmentSlot.CHEST)), 998, "mB left in the suit " + where);
     }
 
     /**
@@ -309,8 +415,8 @@ public final class SuitTests {
     /**
      * S-06, start to end. On the Moon a sealed room of ZAS³ air with no oxygen distributor is
      * breathable: a player in nothing stands in it for a minute unharmed, and Ad Astra's check
-     * agrees though Ad Astra by itself finds no oxygen there. The player puts on a space suit, switches
-     * internals on and goes outside: the suit is the life support, nothing harms the wearer for a
+     * agrees though Ad Astra by itself finds no oxygen there. The player puts on a space suit and
+     * goes outside, pressing nothing: the suit is the life support, nothing harms the wearer for a
      * minute, and Ad Astra's check still agrees.
      */
     @GameTest(template = "empty")
@@ -330,7 +436,6 @@ public final class SuitTests {
             h.assertValueEqual(Lab.dealt(player), List.of(), "damage dealt in the room");
 
             Suit.SPACE.wornBy(player, 1000);
-            Lab.internals(player, true);
             player.moveTo(lab.open(10));
             Breathability outside = Breathing.of(player);
             h.assertValueEqual(outside.reason(), BreathReason.BREATHABLE, "the verdict outside");
