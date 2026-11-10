@@ -13,6 +13,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -27,7 +28,8 @@ import net.minecraft.world.entity.LivingEntity;
  * damages add up, as toxic gas damage for the seconds since the last check (LIFE-007).
  *
  * <p>Effects last until a little after the next check, so they hold while the exposure does and
- * wear off soon after it ends.
+ * wear off soon after it ends. Nausea and blindness last longer ({@link #effectTicks}): the client
+ * only shows them in full while they have time to spare.
  *
  * <p>All of that is one tick of the toxic gas hazard, which a listener can modify or cancel (API-033):
  * cancelling it also stops the effects, and the exposures go on counting either way.
@@ -35,6 +37,21 @@ import net.minecraft.world.entity.LivingEntity;
 final class GasHazards {
     /** Game ticks an effect outlasts the next check. */
     static final int EFFECT_GRACE_TICKS = 20;
+
+    /**
+     * Game ticks nausea needs left for the client to show it. The game builds the view's wobble
+     * only while more than this many remain and lets it settle once they don't ({@code
+     * LocalPlayer.handleConfusionTransitionEffect}), so nausea renewed with fewer left at each
+     * check shows its icon and never wobbles.
+     */
+    static final int NAUSEA_LEAD_TICKS = 60;
+
+    /**
+     * Game ticks blindness needs left for the client to show it in full: its fog draws back over
+     * its last ones ({@code FogRenderer.BlindnessFogFunction}). Renewed with exactly these left, it
+     * lets the view flash through whenever a renewal reaches the client a tick late.
+     */
+    static final int BLINDNESS_LEAD_TICKS = 20;
 
     private GasHazards() {}
 
@@ -76,18 +93,39 @@ final class GasHazards {
     }
 
     /**
+     * How long an effect applied at a check lasts, in game ticks: until {@link #EFFECT_GRACE_TICKS}
+     * after the next check. Nausea and blindness last their lead ({@link #NAUSEA_LEAD_TICKS}, {@link
+     * #BLINDNESS_LEAD_TICKS}) longer, so that they have more than it left the whole time between two
+     * checks, a late one included, and the client goes on showing them in full.
+     *
+     * @param interval the check interval in game ticks
+     */
+    static int effectTicks(Holder<MobEffect> effect, int interval) {
+        return interval + EFFECT_GRACE_TICKS + leadTicks(effect);
+    }
+
+    /** Game ticks an effect needs left for the client to show it in full: 0 for all but two. */
+    private static int leadTicks(Holder<MobEffect> effect) {
+        if (effect.is(MobEffects.CONFUSION)) {
+            return NAUSEA_LEAD_TICKS;
+        }
+        return effect.is(MobEffects.BLINDNESS) ? BLINDNESS_LEAD_TICKS : 0;
+    }
+
+    /**
      * Counts exposures and applies the thresholds that apply.
      *
      * @param entity the breathing entity
      * @param breath the gas it breathes
      * @param seconds the seconds since its last check, for exposure and damage
      * @param state its breathing state
-     * @param effectTicks how long the effects last
+     * @param interval the check interval in game ticks, which sets how long the effects last ({@link
+     *     #effectTicks})
      * @param scale the toxic gas hazard's scale, which multiplies the damage but not the effects
      *     (LIFE-031)
      */
     static void apply(
-            LivingEntity entity, GasMixture breath, double seconds, BreathState state, int effectTicks, double scale) {
+            LivingEntity entity, GasMixture breath, double seconds, BreathState state, int interval, double scale) {
         count(breath, seconds, state);
         Applying applying = applying(breath, state);
         Map<Holder<MobEffect>, Integer> effects = applying.effects();
@@ -99,8 +137,8 @@ final class GasHazards {
         if (tick.isCanceled()) {
             return;
         }
-        effects.forEach((effect, amplifier) ->
-                entity.addEffect(new MobEffectInstance(effect, effectTicks, amplifier, false, false, true)));
+        effects.forEach((effect, amplifier) -> entity.addEffect(
+                new MobEffectInstance(effect, effectTicks(effect, interval), amplifier, false, false, true)));
         LifeDamage.hurt(entity, HazardType.TOXIC_GAS, tick.damage());
     }
 
