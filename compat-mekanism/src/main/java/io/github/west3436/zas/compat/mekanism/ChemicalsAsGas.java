@@ -38,7 +38,10 @@ import org.jetbrains.annotations.Nullable;
  * <p><b>Where.</b> On a face with a tank that could ever hold a mapped chemical, whatever it holds
  * now, so a pipe's arm doesn't come and go with a tank's contents, which would open the pipe's end.
  * While such a tank holds some other chemical it has no room and no gas: the pipe stays joined and
- * moves nothing. A face with no such tank offers nothing, so no pipe joins it.
+ * moves nothing. A face with no such tank offers nothing, so no pipe joins it. A handler's {@code
+ * isValid} decides, and it promises only that false means never: Mekanism's own blocks answer true
+ * for every chemical on a face, so a pipe joins every face of theirs that has a tank, as a tube
+ * does, and where no mapped chemical can go in, nothing moves.
  *
  * <p><b>In.</b> What a pipe offers follows {@link GasPurity}: the parcel's main gas alone, as much
  * of it as may leave, if the parcel is nearly all that gas and the tanks on this face hold no other
