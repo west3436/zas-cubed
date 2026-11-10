@@ -14,8 +14,11 @@ import java.util.TreeMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-/** How a window shows gases: each one's colour, a bar of their shares, and a list of what's there. */
-final class GasParts {
+/**
+ * How a window shows gases: each one's colour, a bar of their shares, and a list of what's there.
+ * The colours are public for whatever else shows gases beside the windows, such as the Jade adapter.
+ */
+public final class GasParts {
     /** Each gas's colour, after SS13's canisters. */
     private static final Map<String, Integer> COLOURS = Map.of(
             "zas:oxygen", 0xFF2A79C8,
@@ -27,7 +30,9 @@ final class GasParts {
             "zas:methane", 0xFFA96A3C,
             "zas:water_vapor", 0xFFE8E8E8);
 
-    private static final int OTHER = 0xFFB0B0B0;
+    /** The colour of a gas that has none of its own, and of the gases a bar doesn't tell apart. */
+    public static final int OTHER = 0xFFB0B0B0;
+
     private static final int BAR_HEIGHT = 5;
     private static final int COLUMNS = 2;
 
@@ -39,8 +44,8 @@ final class GasParts {
 
     private GasParts() {}
 
-    /** A gas's colour, by its id. */
-    static int colour(String gas) {
+    /** A gas's colour, ARGB, by its id. */
+    public static int colour(String gas) {
         return COLOURS.getOrDefault(gas, OTHER);
     }
 
