@@ -1,5 +1,6 @@
 package io.github.west3436.zas.api;
 
+import io.github.west3436.zas.api.atmosphere.AtmospherePreset;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
@@ -154,6 +155,17 @@ final class FallbackProvider implements ZasApiProvider {
 
     @Override
     public boolean containerExplosionsBreakBlocks() {
+        return false;
+    }
+
+    @Override
+    public AtmospherePreset preset() {
+        return AtmospherePreset.NORMAL;
+    }
+
+    /** No zone exists without ZAS³, so none touches anything. */
+    @Override
+    public boolean zoneTouches(Level level, BlockPos pos) {
         return false;
     }
 
