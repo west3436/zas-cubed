@@ -19,6 +19,7 @@ import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.BreathState;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.CheckBudget;
 import io.github.west3436.zas.life.ClientBreath;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.LifeDamage;
@@ -188,6 +189,83 @@ public final class InternalsTests {
         FakePlayer after = TestPlayers.hurtable(h.getLevel(), "zas_switch_after");
         after.copyAttachmentsFrom(before, true);
         h.assertTrue(Internals.on(after), "internals switched on were lost on death");
+        h.succeed();
+    }
+
+    /**
+     * Switching internals on or off is checked on the entity's next tick, not at its turn in the
+     * check interval (LIFE-029, LIFE-007). In a room with no oxygen, a player with an empty meter
+     * and a tick to go before its next hit switches on: the hit never lands, and the meter refills.
+     * In a vacuum, switching off drains the meter from the next tick. Such a check still waits for
+     * room under the per-tick cap (LIFE-038), and setting the switch to what it was asks for none.
+     */
+    @GameTest(template = "empty")
+    public static void life_029_switching_internals_is_checked_on_the_next_tick(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 280)) {
+            double atm = StandardAir.PRESSURE * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+            lab.room(0, Map.of(N2, atm));
+            FakePlayer p = TestPlayers.hurtable(lab.r.level, "zas_life_029_switch");
+            p.moveTo(Vec3.atBottomCenterOf(lab.r.abs(2, 1, 2)));
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            float full = p.getHealth();
+            int air = p.getMaxAirSupply();
+
+            // Internals off: the meter runs out, the first hit lands, and the next is a tick away.
+            ticks(p, air + 20 + 19);
+            BreathState state = p.getData(Breathers.STATE);
+            h.assertValueEqual(state.verdict().reason(), BreathReason.LOW_OXYGEN, "in nitrogen with internals off");
+            close(h, p.getHealth(), full - 2, 1e-4, "health after the first hit");
+            h.assertValueEqual(p.getAirSupply(), -19, "the meter a tick before the next hit");
+
+            h.assertTrue(Internals.toggle(p), "toggling didn't switch them on");
+            ticks(p, 1);
+            h.assertValueEqual(
+                    state.verdict().source(), BreathSource.INTERNALS, "the breath a tick after switching on");
+            h.assertValueEqual(state.verdict().reason(), BreathReason.BREATHABLE, "a tick after switching on");
+            close(h, p.getHealth(), full - 2, 1e-4, "health a tick after switching on");
+            h.assertValueEqual(p.getAirSupply(), -15, "the meter a tick after switching on");
+            ticks(p, 40);
+            close(h, p.getHealth(), full - 2, 1e-4, "health 2 s after switching on");
+            h.assertValueEqual(p.getAirSupply(), 145, "the meter 2 s after switching on");
+
+            // A vacuum: breathing from the tank, then switched off.
+            lab.r.shell(6, 10);
+            lab.r.settle(GasMutations.remove(
+                    lab.r.level, lab.r.point(8, 2, 2), Map.of(N2, 1e6, O2, 1e6), Rooms.source("internals")));
+            FakePlayer v = TestPlayers.hurtable(lab.r.level, "zas_life_029_vacuum");
+            v.moveTo(Vec3.atBottomCenterOf(lab.r.abs(8, 1, 2)));
+            seal(v);
+            v.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            Internals.set(v, true);
+            ticks(v, 1);
+            BreathState inVacuum = v.getData(Breathers.STATE);
+            h.assertValueEqual(inVacuum.verdict().source(), BreathSource.INTERNALS, "the breath in the vacuum");
+            h.assertValueEqual(v.getAirSupply(), air, "the meter on the tank");
+
+            h.assertFalse(Internals.toggle(v), "toggling didn't switch them off");
+            ticks(v, 1);
+            h.assertValueEqual(
+                    inVacuum.verdict().source(), BreathSource.ATMOSPHERE, "the breath a tick after switching off");
+            h.assertValueEqual(inVacuum.verdict().reason(), BreathReason.LOW_OXYGEN, "a tick after switching off");
+            h.assertValueEqual(v.getAirSupply(), air - 1, "the meter a tick after switching off");
+
+            // The cap: with no room this tick the check waits, and runs when there is room.
+            long now = lab.r.level.getGameTime();
+            Internals.toggle(v);
+            Breathers.tickAt(v, now, new CheckBudget(() -> 0));
+            h.assertValueEqual(inVacuum.verdict().source(), BreathSource.ATMOSPHERE, "the breath with the cap spent");
+            h.assertTrue(inVacuum.deferred(), "the check asked for doesn't wait for room under the cap");
+            CheckBudget room = new CheckBudget(() -> 10);
+            Breathers.tickAt(v, now, room);
+            h.assertValueEqual(inVacuum.verdict().source(), BreathSource.INTERNALS, "the breath once there is room");
+            h.assertValueEqual(room.used(now), 1, "checks once there is room");
+
+            // The switch set to what it already was asks for nothing.
+            Internals.set(v, true);
+            Breathers.tickAt(v, now, room);
+            h.assertValueEqual(room.used(now), 1, "checks after setting the switch to what it was");
+        }
         h.succeed();
     }
 
