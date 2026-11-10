@@ -10,10 +10,13 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.capability.IInternalSupply;
+import io.github.west3436.zas.api.capability.ILifeSupport;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
+import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.life.Hazard;
@@ -26,6 +29,9 @@ import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.FireSettings;
 import io.github.west3436.zas.life.Breathers;
+import io.github.west3436.zas.life.BreathingRules;
+import io.github.west3436.zas.life.Internals;
+import io.github.west3436.zas.life.Protections;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -37,21 +43,26 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
  * The API a space-mod adapter is built on, as ZAS³ answers it: the preset (SPACE-004), whether a
- * zone touches a block (SPACE-014, SPACE-018), whether fire burns in some air (SPACE-015), and the
+ * zone touches a block (SPACE-014, SPACE-018), whether fire burns in some air (SPACE-015), the
  * air of another mod's breathable places outside zones (SPACE-017), with the guard around their
- * providers (NFR-013). The adapters' own GameTests run these with the other mod present; these
- * need none.
+ * providers (NFR-013), and an item that only holds breathing gas (SPACE-023). Ambient seeds
+ * (SPACE-020) are with the ambient providers' tests. The adapters' own GameTests run these with
+ * the other mod present; these need none.
  *
  * <p>Each test builds in its own area ({@link Rooms}, areas 750 and up) and runs within one game
  * tick, so no other test's entity reaches a provider it registers.
@@ -476,6 +487,126 @@ public final class SpaceQueryTests {
             LocalAtmospheres.unregister(SECOND);
             LocalAtmospheres.unregister(THIRD);
             pig.discard();
+        }
+        h.succeed();
+    }
+
+    // ---- SPACE-023: an item that only holds gas -------------------------------------------------
+
+    private static FakePlayer wearer(Rooms r, String name) {
+        FakePlayer player = TestPlayers.hurtable(r.level, name);
+        player.moveTo(Vec3.atBottomCenterOf(r.abs(2, 1, 2)));
+        return player;
+    }
+
+    /**
+     * An item with no life support in code is an internals tank through {@link IInternalSupply#ITEM},
+     * and keeps the protection data gives it (SPACE-023, LIFE-026, LIFE-028). Worn on the head, the
+     * gas holder is sealed by its data file and breathed from by its capability; internals find it in
+     * the offhand and the hotbar too, and draw from it at LIFE-043's rate.
+     */
+    @GameTest(template = "empty")
+    public static void space_023_an_item_that_only_holds_gas_is_an_internals_tank(GameTestHelper h) {
+        Rooms r = new Rooms(h, 757);
+        r.clear(0, 8);
+        FakePlayer p = wearer(r, "zas_space_023");
+        ItemStack holder = TestLifeSupport.gasHolder(Map.of(O2, 1.0), 21.3);
+        h.assertTrue(holder.getCapability(ILifeSupport.ITEM) == null, "the gas holder has life support in code");
+        ILifeSupport data = Protections.of(holder);
+        h.assertTrue(data != null && data.sealedBreathing(), "the data file doesn't seal the gas holder");
+        h.assertValueEqual(data.minPressure(), 0.0, "the low pressure the data file rates it for");
+        h.assertTrue(data.internalSupply().isEmpty(), "protection from data holds a supply");
+
+        p.setItemSlot(EquipmentSlot.HEAD, holder);
+        h.assertTrue(Internals.active(p) == null, "internals work while switched off");
+        Internals.set(p, true);
+        Internals.Active active = Internals.active(p);
+        h.assertTrue(active != null, "internals don't breathe from the gas holder");
+        Breathability verdict = BreathingRules.assess(p).verdict();
+        h.assertValueEqual(verdict.source(), BreathSource.INTERNALS, "what it breathes from");
+        h.assertValueEqual(verdict.reason(), BreathReason.BREATHABLE, "the verdict");
+        GasMixture breath = verdict.breath().orElseThrow();
+        h.assertTrue(Math.abs(breath.partialPressure(O2) - 21.3) < 1e-9, "the breath's O2: " + breath);
+
+        // Three checks 2 s apart draw 4 s.
+        double rate = Internals.drawRate(21.3, StandardAir.TEMPERATURE);
+        long t0 = r.level.getGameTime();
+        for (int k = 0; k < 3; k++) {
+            Breathers.checkAt(p, t0 + 40L * k);
+        }
+        double drawn = 1
+                - TestLifeSupport.contents(p.getItemBySlot(EquipmentSlot.HEAD)).totalMoles();
+        h.assertTrue(Math.abs(drawn - rate * 4) < 1e-12, "three checks drew " + drawn + " mol, not " + rate * 4);
+
+        // Wherever internals look: the offhand, then the hotbar, and nowhere else.
+        p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+        p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.gasHolder(Map.of(O2, 1.0), 40));
+        p.getInventory().setItem(3, TestLifeSupport.gasHolder(Map.of(O2, 1.0), 50));
+        p.getInventory().setItem(9, TestLifeSupport.gasHolder(Map.of(O2, 1.0), 60));
+        h.assertValueEqual(Internals.find(p).orElseThrow().distributionPressure(), 40.0, "found in the offhand");
+        p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+        h.assertValueEqual(Internals.find(p).orElseThrow().distributionPressure(), 50.0, "found in the hotbar");
+        p.getInventory().setItem(3, ItemStack.EMPTY);
+        h.assertTrue(Internals.find(p).isEmpty(), "a gas holder outside the hotbar was found");
+        h.succeed();
+    }
+
+    /**
+     * On an item that gives a supply both ways, its life support's is the one used and the item's
+     * own isn't asked. Life support in code with no supply leaves the item's own in use, and
+     * replaces the item's protection data as a whole, as it does on any item (SPACE-023, LIFE-026).
+     */
+    @GameTest(template = "empty")
+    public static void space_023_an_items_life_support_supply_comes_before_its_own(GameTestHelper h) {
+        Rooms r = new Rooms(h, 758);
+        r.clear(0, 8);
+        FakePlayer p = wearer(r, "zas_space_023_both");
+        p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.doubleTank(Map.of(O2, 1.0), 30));
+        IInternalSupply found = Internals.find(p).orElseThrow();
+        h.assertValueEqual(found.distributionPressure(), 30.0, "the supply found on an item that gives two");
+        h.assertValueEqual(TestLifeSupport.SECOND_SUPPLY.distributionPressure(), 99.0, "the supply it wasn't to find");
+
+        ItemStack coded = TestLifeSupport.marked(TestLifeSupport.gasHolder(Map.of(O2, 1.0), 40), "Coded");
+        p.setItemInHand(InteractionHand.OFF_HAND, coded);
+        h.assertValueEqual(
+                Internals.find(p).orElseThrow().distributionPressure(),
+                40.0,
+                "the supply of an item whose life support holds none");
+        ILifeSupport own = Protections.of(coded);
+        h.assertTrue(own != null, "the marked gas holder has no life support");
+        h.assertValueEqual(own.airflowResistance(), 0.125, "its life support in code");
+        h.assertFalse(own.sealedBreathing(), "its data still applies beside life support in code");
+        h.succeed();
+    }
+
+    /**
+     * A lookup of {@link IInternalSupply#ITEM} that throws counts as no supply, so the search goes on
+     * to the next place, and is logged at most once a minute for the item (NFR-013, SPACE-023).
+     */
+    @GameTest(template = "empty")
+    public static void nfr_013_an_item_supply_lookup_that_throws_is_skipped_and_logged_once_a_minute(GameTestHelper h) {
+        Rooms r = new Rooms(h, 759);
+        r.clear(0, 8);
+        FakePlayer p = wearer(r, "zas_space_023_faulty");
+        p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+        p.setItemInHand(
+                InteractionHand.OFF_HAND,
+                TestLifeSupport.marked(TestLifeSupport.gasHolder(Map.of(O2, 1.0), 40), "Throw"));
+        p.getInventory().setItem(0, TestLifeSupport.tank(Map.of(O2, 1.0), 50));
+        Internals.set(p, true);
+        String source = "Internal supply of item " + TestLifeSupport.GAS_HOLDER_ID;
+        try (FaultLog log = new FaultLog()) {
+            FaultLog.aMinutePasses();
+            for (int i = 0; i < 4; i++) {
+                h.assertValueEqual(
+                        Internals.find(p).orElseThrow().distributionPressure(), 50.0, "the tank found behind it");
+                h.assertValueEqual(
+                        BreathingRules.assess(p).verdict().source(), BreathSource.INTERNALS, "what it breathes from");
+            }
+            h.assertValueEqual(log.naming(source), 1, "errors about the lookup");
+            FaultLog.aMinutePasses();
+            Internals.find(p);
+            h.assertValueEqual(log.naming(source), 2, "errors a minute later");
         }
         h.succeed();
     }

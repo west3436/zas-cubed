@@ -1,6 +1,5 @@
 package io.github.west3436.zas.compat.adastra.gametest;
 
-import earth.terrarium.adastra.api.planets.Planet;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -30,9 +29,9 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 /**
- * Ad Astra's Moon, for the tests. A GameTest server's world has only vanilla's dimensions, so the
- * first test to ask gets {@code ad_astra:moon} made: Ad Astra's own dimension type and planet file,
- * over an empty world.
+ * Ad Astra's planets, for the tests. A GameTest server's world has only vanilla's dimensions, so
+ * the first test to ask for a planet gets its level made: Ad Astra's own dimension type and planet
+ * file, over an empty world.
  */
 final class Moon {
     /** The Moon's temperature in Ad Astra's planet file, −173 °C, in kelvin. */
@@ -54,12 +53,7 @@ final class Moon {
 
     private Moon() {}
 
-    /** The Moon's level, made on first use. Server thread. */
-    static ServerLevel level(MinecraftServer server) {
-        return planet(server, Planet.MOON);
-    }
-
-    /** The level of one of Ad Astra's planets, made on first use in the same way. Server thread. */
+    /** The level of one of Ad Astra's planets, made on first use. Server thread. */
     static ServerLevel planet(MinecraftServer server, ResourceKey<Level> key) {
         ServerLevel level = server.getLevel(key);
         return level != null ? level : create(server, key);

@@ -1,0 +1,91 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The EMI plugin (COMPAT-062): the same gas and reaction pages as the JEI plugin's, as a native EMI
+// plugin, because EMI without JEI installed loads no JEI plugin. EMI finds it by its @EmiEntrypoint
+// annotation, and only on a client that has EMI. Its classes ship inside the zas jar, and like the
+// JEI plugin it compiles against zas itself. Of EMI it has only the API jar to compile against, so
+// it can't name a class outside EMI's API (COMPAT-003).
+
+// EMI's maven, for EMI alone.
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.terraformersmc.com/' }
+        }
+        filter { includeGroup 'dev.emi' }
+    }
+}
+
+// The plugin compiles against the oldest EMI it supports, so it can't use anything newer by
+// mistake. Its tests run with that version too, or with -Pemi.version's, such as the newest.
+def emiRunVersion = providers.gradleProperty('emi.version').getOrElse(emi_version)
+
+sourceSets {
+    // The plugin's GameTests, which run with EMI loaded (COMPAT-004). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas comes in as the release jar, as a player has it,
+    // so the tests also show that the jar holds the plugin.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+dependencies {
+    compileOnly project(':zas')
+    compileOnly project(':engine')
+    compileOnly project(':zas-api')
+    // Compile-only, never bundled: the plugin is optional (NFR-022).
+    compileOnly("dev.emi:emi-neoforge:${emi_version}+${minecraft_version}:api") { transitive = false }
+
+    releaseJar project(':dist')
+}
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs EMI, which that build never downloads.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests, and the framework's empty GameTest structure for them to run in.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+    from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+        into 'data/zas/structure'
+    }
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly("dev.emi:emi-neoforge:${emiRunVersion}+${minecraft_version}") { transitive = false }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+    }
+}

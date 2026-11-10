@@ -61,6 +61,9 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ChemicalGases.forget());
 
+        // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
+
         // ---- The chemical connection: ZAS³'s gases as chemicals (MEK-011), and tubes, tanks and
         // machines joined to pipes (MEK-013) ----
         modBus.addListener((RegisterEvent event) -> ZasChemicals.register(event));

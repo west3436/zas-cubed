@@ -1,0 +1,9 @@
+{
+  "items": [
+    "ad_astra:space_helmet"
+  ],
+  "min_pressure_kpa": 0,
+  "min_temperature_k": 0,
+  "max_temperature_k": 500,
+  "sealed_breathing": true
+}

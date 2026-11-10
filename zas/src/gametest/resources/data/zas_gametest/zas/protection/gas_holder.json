@@ -1,0 +1,5 @@
+{
+  "items": ["zas:test_gas_holder"],
+  "min_pressure_kpa": 0,
+  "sealed_breathing": true
+}
