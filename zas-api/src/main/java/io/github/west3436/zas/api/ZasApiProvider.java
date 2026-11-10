@@ -327,6 +327,24 @@ public interface ZasApiProvider {
     }
 
     /**
+     * Whether a block position has room for gas, for {@link Atmospheres#holdsGas}.
+     *
+     * <p>The default says it has, which is the answer for a block that can't be read and the only
+     * one a provider from before this query can give. It is there for the same reason as {@link
+     * #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level
+     * @param pos the block's position
+     * @return false if the block there is known to leave no room for gas
+     */
+    @AnyThread
+    default boolean holdsGas(Level level, BlockPos pos) {
+        return true;
+    }
+
+    /**
      * Whether a zone touches a block, or the atmosphere there isn't resolved, for {@link
      * Atmospheres#zoneTouches}.
      *

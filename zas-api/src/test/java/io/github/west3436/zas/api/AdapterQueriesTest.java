@@ -30,7 +30,8 @@ import org.junit.jupiter.api.Test;
 /**
  * The queries a space-mod adapter needs, without ZAS³ and from an older provider: the preset
  * (SPACE-004), whether a zone touches a block (SPACE-014), whether fire burns in some air
- * (SPACE-015), and the registry of local atmospheres (SPACE-017).
+ * (SPACE-015), and the registry of local atmospheres (SPACE-017). Also the one the Mekanism
+ * adapter's exhaust port needs: whether a position has room for gas (MEK-022).
  */
 class AdapterQueriesTest {
     private static final BlockPos HERE = new BlockPos(3, 70, -5);
@@ -101,6 +102,21 @@ class AdapterQueriesTest {
                     older(Map.of(HERE.relative(side, 2), AtmosphereState.ZONED)).zoneTouches(null, HERE), "" + side);
         }
         assertFalse(older(Map.of(HERE.offset(1, 1, 0), AtmosphereState.ZONED)).zoneTouches(null, HERE));
+    }
+
+    /**
+     * Without ZAS³ every position reads as standard air, so every one has room for gas, and an
+     * older provider, which can't read the block, says the same.
+     */
+    @Test
+    void mek_022_every_position_has_room_for_gas_without_zas() throws NoSuchMethodException {
+        assertTrue(FallbackProvider.INSTANCE.holdsGas(null, HERE));
+        assertThrows(NullPointerException.class, () -> Atmospheres.holdsGas(null, HERE));
+        assertTrue(ZasApiProvider.class
+                .getMethod("holdsGas", Level.class, BlockPos.class)
+                .isDefault());
+        assertTrue(older(Map.of()).holdsGas(null, HERE));
+        assertTrue(older(Map.of(HERE, AtmosphereState.ZONED)).holdsGas(null, HERE));
     }
 
     /**

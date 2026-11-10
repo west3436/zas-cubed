@@ -36,6 +36,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForgeMod;
@@ -96,6 +97,41 @@ public final class ApiTests {
     public static void api_015_entity_query_uses_eye_position(GameTestHelper h) {
         Pig pig = h.spawn(EntityType.PIG, new BlockPos(1, 2, 1));
         h.assertValueEqual(Atmospheres.of(pig), Atmospheres.at(h.getLevel(), pig.getEyePosition()), "entity sample");
+        h.succeed();
+    }
+
+    /**
+     * A full block has no room for gas, and a block that leaves some of its space free has
+     * (API-015, MEK-022). The sample can't tell: it reads the ambient in the open air and inside
+     * stone alike. A block that can't be read, as in a chunk that isn't loaded, counts as having
+     * room, and the answer follows the block as it is now.
+     */
+    @GameTest(template = "empty")
+    public static void api_015_a_full_block_has_no_room_for_gas(GameTestHelper h) {
+        ServerLevel level = h.getLevel();
+        BlockPos pos = h.absolutePos(new BlockPos(1, 2, 1));
+        h.assertTrue(Atmospheres.holdsGas(level, pos), "the open air");
+        h.assertValueEqual(Atmospheres.at(level, pos).state(), AtmosphereState.AMBIENT, "the open air's state");
+
+        for (Block full : new Block[] {Blocks.STONE, Blocks.GLASS}) {
+            level.setBlockAndUpdate(pos, full.defaultBlockState());
+            h.assertFalse(Atmospheres.holdsGas(level, pos), "a full block has room for gas: " + full);
+            h.assertValueEqual(Atmospheres.at(level, pos).state(), AtmosphereState.AMBIENT, "the state in " + full);
+        }
+        // Leaves are a full cube that the shipped geometry override opens to gas.
+        for (Block part : new Block[] {
+            Blocks.STONE_SLAB, Blocks.GLASS_PANE, Blocks.OAK_FENCE, Blocks.OAK_SIGN, Blocks.OAK_LEAVES
+        }) {
+            level.setBlockAndUpdate(pos, part.defaultBlockState());
+            h.assertTrue(Atmospheres.holdsGas(level, pos), "a block with space left has no room for gas: " + part);
+        }
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        h.assertTrue(Atmospheres.holdsGas(level, pos), "the open air again");
+
+        BlockPos unloaded = pos.offset(1 << 20, 0, 0);
+        h.assertFalse(level.hasChunkAt(unloaded), "the far chunk is loaded");
+        h.assertTrue(Atmospheres.holdsGas(level, unloaded), "a block that can't be read");
+        h.assertFalse(level.hasChunkAt(unloaded), "asking loaded the far chunk");
         h.succeed();
     }
 

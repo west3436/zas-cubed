@@ -380,6 +380,17 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
                 || touched(table, x, y, z - 1);
     }
 
+    /**
+     * Whether the block at a position has a cell (API-015, MEK-022), from the block as it is now.
+     * A block that can't be read, as in a chunk that isn't loaded, counts as having one, and so does
+     * every block of a client's level.
+     */
+    @Override
+    public boolean holdsGas(Level level, BlockPos pos) {
+        return !(level instanceof ServerLevel server)
+                || PointResolver.resolve(server, pos).cells() != 0;
+    }
+
     /** Whether a position holds a zoned cell, or a cell held unresolved at a breach (GEO-026). */
     private static boolean touched(AtmosSnapshot table, int x, int y, int z) {
         long block = SectionKeys.block(x, y, z);

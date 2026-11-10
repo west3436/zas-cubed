@@ -147,6 +147,12 @@ final class FallbackProvider implements ZasApiProvider {
         return AtmospherePreset.NORMAL;
     }
 
+    /** Every position reads as standard air without ZAS³, so every one has room for gas. */
+    @Override
+    public boolean holdsGas(Level level, BlockPos pos) {
+        return true;
+    }
+
     /** No zone exists without ZAS³, so none touches anything. */
     @Override
     public boolean zoneTouches(Level level, BlockPos pos) {

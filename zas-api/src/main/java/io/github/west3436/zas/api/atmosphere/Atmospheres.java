@@ -153,6 +153,33 @@ public final class Atmospheres {
     }
 
     /**
+     * Whether a block position has room for gas: whether the block there leaves any of its space
+     * to the atmosphere. A full block, such as stone or glass, leaves none; air, a slab, a pane and
+     * a torch do, and so does a block that a datapack's geometry override opens, as leaves are.
+     *
+     * <p>{@link #at(Level, BlockPos)} reads the ambient both in the open air and inside a full
+     * block, and a mutation at a point inside a full block acts on the nearest cell beside it
+     * (API-015), which may be round a corner or through a wall. A device that releases gas through
+     * one of its faces asks this of the position in front of that face, and holds its gas while the
+     * answer is false, as the exhaust port of ZAS³'s Mekanism adapter does (MEK-022).
+     *
+     * <p>It reads the block as it is now, not as of the last atmos tick, and builds no mixture. It
+     * is true wherever the block can't be read: in a chunk that isn't loaded, where {@link #at}
+     * says {@link AtmosphereState#UNRESOLVED}; on a client; and without ZAS³, where every position
+     * reads as standard air.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level, server or client side
+     * @param pos the block's position
+     * @return false if the block there is known to leave no room for gas
+     */
+    @AnyThread
+    public static boolean holdsGas(Level level, BlockPos pos) {
+        return ZasApi.provider().holdsGas(Objects.requireNonNull(level, "level"), Objects.requireNonNull(pos, "pos"));
+    }
+
+    /**
      * The atmosphere at an exact point.
      *
      * <p>Thread: any.
