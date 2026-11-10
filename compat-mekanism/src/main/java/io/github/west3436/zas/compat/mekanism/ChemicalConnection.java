@@ -92,10 +92,18 @@ final class ChemicalConnection {
                 vessels.add(block);
             }
         }
-        // Only now: every answer above was about what other mods registered.
-        event.registerBlock(CHEMICAL, GasAsChemicals::of, stores.toArray(Block[]::new));
-        event.registerBlock(IGasHandler.BLOCK, ChemicalsAsGas::of, vessels.toArray(Block[]::new));
-        event.registerBlock(IGasHandler.BLOCK, TubeJoint::of, tubes.toArray(Block[]::new));
+        // Only now: every answer above was about what other mods registered. A kind may have no
+        // block, as gas stores have none with the content off (CONT-155), and the game refuses to
+        // register a provider for no blocks.
+        if (!stores.isEmpty()) {
+            event.registerBlock(CHEMICAL, GasAsChemicals::of, stores.toArray(Block[]::new));
+        }
+        if (!vessels.isEmpty()) {
+            event.registerBlock(IGasHandler.BLOCK, ChemicalsAsGas::of, vessels.toArray(Block[]::new));
+        }
+        if (!tubes.isEmpty()) {
+            event.registerBlock(IGasHandler.BLOCK, TubeJoint::of, tubes.toArray(Block[]::new));
+        }
         LOGGER.debug(
                 "Chemical connection: {} gas stores, {} chemical vessels, {} transmitters",
                 stores.size(),
