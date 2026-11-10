@@ -4,11 +4,13 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.life.Breathers;
+import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.HazardType;
 import java.util.ArrayList;
@@ -29,8 +31,15 @@ import net.minecraft.world.level.Level;
  * {@code /zas life} and {@code /zas hazards}: what breathing and the hazards make of an entity where
  * it is, and the hazard settings in a dimension (LIFE-010, LIFE-011, LIFE-014, LIFE-031, LIFE-036),
  * documented on the wiki's Commands page. They only read.
+ *
+ * <p>{@code /zas life} reports the air the rules apply. In another mod's breathable place outside
+ * zones that is the place's air, not the open air an atmosphere query finds there (SPACE-017), and
+ * the exposure line says {@code local}.
  */
 final class LifeCommand {
+    /** What the exposure line names instead of the atmosphere's state where another mod's air applies. */
+    private static final String LOCAL = "local";
+
     private LifeCommand() {}
 
     /** The {@code life} node under {@code /zas}. */
@@ -75,13 +84,16 @@ final class LifeCommand {
                 "commands.zas.life.hazards", names(verdict.hazards()), protections(verdict.protection())));
         if (EnvironmentHazards.affects(entity)) {
             AtmosphereSample sample = Atmospheres.of(entity);
-            EnvironmentHazards.Exposure x = EnvironmentHazards.exposure(entity, sample.mixture());
+            // The air the rules take it to be in, which outside zones may be another mod's (SPACE-017).
+            GasMixture local = BreathingRules.localAir(entity, sample);
+            EnvironmentHazards.Exposure x =
+                    EnvironmentHazards.exposure(entity, local != null ? local : sample.mixture());
             lines.add(Component.translatable(
                     "commands.zas.life.exposure",
                     ZasCommands.num(x.pressure()),
                     ZasCommands.num(x.effectivePressure()),
                     ZasCommands.num(x.temperature()),
-                    lower(sample.state().name())));
+                    local != null ? LOCAL : lower(sample.state().name())));
             List<String> rates = new ArrayList<>();
             for (HazardType t : HazardType.values()) {
                 if (x.rate(t) > 0) {

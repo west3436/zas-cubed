@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.adastra.gametest;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import earth.terrarium.adastra.api.systems.OxygenApi;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
@@ -14,17 +15,28 @@ import io.github.west3436.zas.compat.adastra.AdAstraConfig;
 import io.github.west3436.zas.compat.adastra.AdAstraConfig.ModeSetting;
 import io.github.west3436.zas.compat.adastra.Mode;
 import io.github.west3436.zas.config.AtmospherePreset;
+import io.github.west3436.zas.hud.AtmosHudPayload;
+import io.github.west3436.zas.hud.HudLevels;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -101,6 +113,107 @@ public final class ModeTests {
             h.assertValueEqual(asked.state(), AtmosphereState.AMBIENT, "the atmosphere query's state");
             h.assertTrue(asked.mixture().isEmpty(), "the atmosphere query reports gas: " + asked);
             close(h, asked.temperature(), Moon.TEMPERATURE, "the atmosphere query's temperature, K");
+        }
+        h.succeed();
+    }
+
+    /** The content's analyzer, which shows every reading while held (CONT-034). */
+    private static final ResourceLocation ANALYZER =
+            ResourceLocation.fromNamespaceAndPath("zas_atmos", "atmos_analyzer");
+
+    /** What {@code /zas life} tells a player about itself, a line each. */
+    private static List<String> life(FakePlayer player) {
+        List<String> said = new ArrayList<>();
+        CommandSource listener = new CommandSource() {
+            @Override
+            public void sendSystemMessage(Component message) {
+                said.add(message.getString());
+            }
+
+            @Override
+            public boolean acceptsSuccess() {
+                return true;
+            }
+
+            @Override
+            public boolean acceptsFailure() {
+                return true;
+            }
+
+            @Override
+            public boolean shouldInformAdmins() {
+                return false;
+            }
+        };
+        ServerLevel level = player.serverLevel();
+        CommandSourceStack source = new CommandSourceStack(
+                listener,
+                player.position(),
+                Vec2.ZERO,
+                level,
+                4,
+                "zas_space_017",
+                Component.literal("zas_space_017"),
+                level.getServer(),
+                player);
+        try {
+            level.getServer().getCommands().getDispatcher().execute("zas life", source);
+        } catch (CommandSyntaxException e) {
+            throw new GameTestAssertException("/zas life failed: " + e.getMessage());
+        }
+        return said;
+    }
+
+    /**
+     * What reports on a player in a distributor's area agrees with the rules there. In Cooperative
+     * mode {@code /zas life} gives the exposure as standard air at 295.15 K, marked {@code local},
+     * with no hazard and no damage. The command used to give the Moon's vacuum at 100.15 K and the
+     * damage of decompression and frostbite, under a verdict of breathable air and no hazard, while
+     * the player lost no health. The HUD has no alert, so nothing to show; with an analyzer in hand,
+     * which there is only with the content on, it reads the same standard air. In Authoritative mode
+     * the same player in the same area is in the Moon's vacuum, and both say so (SPACE-017).
+     */
+    @GameTest(template = "empty")
+    public static void space_017_the_life_command_and_the_hud_report_a_distributor_areas_air(GameTestHelper h) {
+        try (Lab lab = Lab.onTheMoon(h, 44)) {
+            lab.mode(ModeSetting.COOPERATIVE);
+            FakePlayer player = lab.player(area(lab));
+
+            List<String> cooperative = life(player);
+            h.assertTrue(cooperative.contains("  Hazards: -; protection: -"), "cooperative, hazards: " + cooperative);
+            h.assertTrue(
+                    cooperative.contains("  Exposure: 101.325 kPa (effective 101.325 kPa), 295.15 K (local)"),
+                    "cooperative, exposure: " + cooperative);
+            h.assertTrue(cooperative.contains("  Damage per second: -"), "cooperative, damage: " + cooperative);
+
+            AtmosHudPayload hud = HudLevels.of(player);
+            h.assertTrue(hud != null && !hud.any(), "cooperative: the HUD has an alert: " + hud);
+            boolean analyzer = BuiltInRegistries.ITEM.containsKey(ANALYZER);
+            if (analyzer) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BuiltInRegistries.ITEM.get(ANALYZER)));
+                h.assertTrue(HudLevels.showsReadings(player), "an analyzer in hand doesn't show every reading");
+                AtmosHudPayload read = HudLevels.of(player);
+                h.assertTrue(read != null && !read.any(), "cooperative, analyzer in hand: an alert: " + read);
+                close(h, read.pressureKpa(), StandardAir.PRESSURE, "cooperative: the HUD's pressure, kPa");
+                close(h, read.temperatureK(), 295.15, "cooperative: the HUD's temperature, K");
+                close(h, read.oxygenKpa(), StandardAir.PRESSURE * 0.21, "cooperative: the HUD's O2, kPa");
+            }
+
+            lab.mode(ModeSetting.AUTHORITATIVE);
+            List<String> authoritative = life(player);
+            h.assertTrue(
+                    authoritative.contains("  Exposure: 0 kPa (effective 0 kPa), 100.15 K (ambient)"),
+                    "authoritative, exposure: " + authoritative);
+            h.assertTrue(
+                    authoritative.contains("  Hazards: low pressure, cold; protection: -"),
+                    "authoritative, hazards: " + authoritative);
+            h.assertFalse(authoritative.contains("  Damage per second: -"), "authoritative, damage: " + authoritative);
+            AtmosHudPayload exposed = HudLevels.of(player);
+            h.assertTrue(exposed != null, "authoritative: the HUD has no state");
+            h.assertValueEqual(exposed.pressure(), -HudLevels.DANGER, "authoritative: the pressure alert");
+            h.assertValueEqual(exposed.temperature(), -HudLevels.DANGER, "authoritative: the temperature alert");
+            h.assertTrue(Math.abs(exposed.pressureKpa()) < 1e-3, "authoritative: the HUD's pressure: " + exposed);
+            close(h, exposed.temperatureK(), Moon.TEMPERATURE, "authoritative: the HUD's temperature, K");
         }
         h.succeed();
     }

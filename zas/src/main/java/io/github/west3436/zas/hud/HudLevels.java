@@ -192,9 +192,10 @@ public final class HudLevels {
             if (sample == null) {
                 sample = Atmospheres.of(entity);
             }
+            // The air the rules would take it to be in, as its breath is (SPACE-017).
             exposure = sample.state() == AtmosphereState.UNRESOLVED
                     ? null
-                    : EnvironmentHazards.exposure(entity, sample.mixture());
+                    : EnvironmentHazards.exposure(entity, BreathingRules.around(entity, sample));
         }
         if (exposure == null || (sample != null && sample.state() == AtmosphereState.UNRESOLVED)) {
             return null;
