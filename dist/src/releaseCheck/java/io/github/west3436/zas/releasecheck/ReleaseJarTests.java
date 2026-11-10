@@ -23,8 +23,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforgespi.language.IModFileInfo;
 
 /**
- * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001). Gradle runs them
- * twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
+ * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001,
+ * COMPAT-001). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
  * runContentOffGameTestServer} with it off, as {@code zas.releaseCheck.contentOff} says.
  */
 @GameTestHolder("zas")
@@ -41,6 +41,9 @@ public final class ReleaseJarTests {
 
     /** The Mekanism adapter's package. */
     private static final String MEKANISM_ADAPTER = "io.github.west3436.zas.compat.mekanism";
+
+    /** The Jade adapter's package, which is part of zas_atmos. */
+    private static final String JADE_ADAPTER = "io.github.west3436.zas.atmos.compat.jade";
 
     private ReleaseJarTests() {}
 
@@ -165,6 +168,34 @@ public final class ReleaseJarTests {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("The release jar's " + className + " has no " + method + "()", e);
         }
+    }
+
+    /**
+     * The release jar holds the Jade adapter, and on a server without Jade none of it runs
+     * (COMPAT-001, NFR-022): only Jade creates its plugin, and nothing in the two mods names it.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_jade_adapter_runs_without_jade(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("jade"), "Jade is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            JADE_ADAPTER.replace('.', '/') + "/ZasJadePlugin.class",
+            "assets/zas_atmos/textures/gui/sprites/jade/pressure.png"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+        // The adapter's own word, from its one class that names nothing of Jade's.
+        boolean started;
+        try {
+            started = (boolean) Class.forName(JADE_ADAPTER + ".JadeGate")
+                    .getMethod("pluginStarted")
+                    .invoke(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("The release jar's JadeGate has no pluginStarted()", e);
+        }
+        h.assertFalse(started, "the Jade plugin was created");
+        h.succeed();
     }
 
     private static boolean isContent(ResourceLocation id) {

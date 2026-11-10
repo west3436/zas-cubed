@@ -3,6 +3,7 @@ package io.github.west3436.zas.compat.adastra;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The adapter's entry class. {@code zas} calls {@link #init} when Ad Astra is installed in a
@@ -24,5 +25,7 @@ public final class AdAstraCompat {
     public static void init(IEventBus modBus, ModContainer container) {
         // Ad Astra keeps its listeners in plain lists, so they are added on the main thread.
         modBus.addListener(FMLCommonSetupEvent.class, setup -> setup.enqueueWork(Answers::register));
+        AdAstraConfig.register(container);
+        Torches.register(NeoForge.EVENT_BUS);
     }
 }

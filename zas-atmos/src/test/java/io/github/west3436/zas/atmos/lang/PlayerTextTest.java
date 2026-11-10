@@ -23,7 +23,8 @@ import org.junit.jupiter.api.Test;
  * No player-facing text in {@code zas}, {@code zas_atmos} or {@code zas_ponder} is written in the code,
  * and every key the code spells out is in {@code en_us.json} (CLIENT-007). It lives here because
  * {@code zas_atmos} may look at {@code zas}, and {@code zas} never names {@code zas_atmos}. The Ponder
- * addon, which requires {@code zas_atmos}, is read from its build.
+ * addon, which requires {@code zas_atmos}, is read from its build, and so is the Jade adapter, which is
+ * part of {@code zas_atmos} in the release jar.
  *
  * <p>Text with no letters, such as "●", "—" or a number, is never flagged. Everything else that's
  * allowed is in the three lists below, and each entry is an exact match.
@@ -50,7 +51,10 @@ class PlayerTextTest {
     void client_007_no_hard_coded_player_text() {
         List<String> problems = new ArrayList<>();
         for (Path classes : List.of(
-                classes("zas.mainClasses"), classes("zas_atmos.mainClasses"), classes("zas_ponder.mainClasses"))) {
+                classes("zas.mainClasses"),
+                classes("zas_atmos.mainClasses"),
+                classes("zas_atmos.jadeClasses"),
+                classes("zas_ponder.mainClasses"))) {
             hardCoded(PlayerTextScan.of(classes, OPERATOR_LINES)).forEach(found -> problems.add(found.toString()));
         }
         assertTrue(
@@ -71,6 +75,7 @@ class PlayerTextTest {
         List<String> problems = new ArrayList<>();
         problems.addAll(missing(classes("zas.mainClasses"), zas));
         problems.addAll(missing(classes("zas_atmos.mainClasses"), atmos));
+        problems.addAll(missing(classes("zas_atmos.jadeClasses"), atmos));
         problems.addAll(missing(classes("zas_ponder.mainClasses"), ponder));
         assertTrue(problems.isEmpty(), "Translation keys missing from en_us.json:\n  " + String.join("\n  ", problems));
     }

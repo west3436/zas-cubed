@@ -36,6 +36,10 @@ import org.slf4j.Logger;
  *
  * <p>The client never looks: providers are other mods' code, which runs only on the server thread
  * here, and the server's block state brings a pipe's arms to the client.
+ *
+ * <p>ZAS³'s own parts provide the capability as well, for other mods' pipes and machines ({@link
+ * PipeGasHandler}). They are never each other's handlers: a neighbour that is a pipe part is skipped
+ * here, since the two already share a network.
  */
 public final class GasHandlers {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -158,7 +162,9 @@ public final class GasHandlers {
             return;
         }
         BlockState neighbour = LoadedBlocks.state(level, next);
-        if (neighbour == null) {
+        // A pipe part provides the capability too (PipeGasHandler), for other mods' blocks:
+        // between two of ZAS³'s own, gas is shared by their network and never moved again here.
+        if (neighbour == null || neighbour.getBlock() instanceof PipeConnector) {
             return;
         }
         IGasHandler handler = handler(level, next, neighbour, face);

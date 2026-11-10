@@ -27,5 +27,8 @@ include 'compat-mekanism'
 // The jar players install: zas and zas_atmos in one file (D-88).
 include 'dist'
 
+// The Jade adapter (COMPAT-030 to COMPAT-032): part of zas_atmos in the release jar.
+include 'compat-jade'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'
