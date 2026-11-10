@@ -25,9 +25,20 @@ jobs:
       fail-fast: false
       matrix:
         # One row per adapter: its name, and the task that runs its GameTests.
+        # The viewer plugins have two rows each: the oldest version of the viewer
+        # they support, which they are compiled against, and the newest when the
+        # row was written.
         include:
           - adapter: adastra
             task: ":compat-adastra:runAdapterGameTestServer"
+          - adapter: jei
+            task: ":compat-jei:runAdapterGameTestServer"
+          - adapter: jei-newest
+            task: ":compat-jei:runAdapterGameTestServer -Pjei.version=19.70.0.469"
+          - adapter: emi
+            task: ":compat-emi:runAdapterGameTestServer"
+          - adapter: emi-newest
+            task: ":compat-emi:runAdapterGameTestServer -Pemi.version=1.1.24"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

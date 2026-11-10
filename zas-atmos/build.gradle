@@ -171,10 +171,42 @@ if (compatMatrix) {
 // has its own classpath, so CI never fetches it.
 if (fusion) {
     configurations {
-        localRuntime
+        maybeCreate('localRuntime')
         runtimeClasspath.extendsFrom localRuntime
     }
     dependencies {
         localRuntime 'maven.modrinth:fusion-connected-textures:1.3.16-neoforge-mc1.21.1'
+    }
+}
+
+// The recipe viewers (COMPAT-060 to COMPAT-062). Only -Pjei=true and -Pemi=true add them, to the dev
+// client and server, to see the gas and reaction pages; the plugins themselves are always in zas.
+// Each viewer comes in the oldest version its plugin supports, or in -Pjei.version's and
+// -Pemi.version's. Like Fusion, they are never published or put in a jar, and CI never fetches them.
+def viewers = [
+    jei: [maven: 'https://maven.blamejared.com/', group: 'mezz.jei',
+          module: { v -> "mezz.jei:jei-${minecraft_version}-neoforge:${v}" }, version: jei_version],
+    emi: [maven: 'https://maven.terraformersmc.com/', group: 'dev.emi',
+          module: { v -> "dev.emi:emi-neoforge:${v}+${minecraft_version}" }, version: emi_version],
+]
+viewers.each { name, viewer ->
+    if (!providers.gradleProperty(name).getOrElse('false').toBoolean()) {
+        return
+    }
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven { url = viewer.maven }
+            }
+            filter { includeGroup viewer.group }
+        }
+    }
+    configurations {
+        maybeCreate('localRuntime')
+        runtimeClasspath.extendsFrom localRuntime
+    }
+    def version = providers.gradleProperty("${name}.version").getOrElse(viewer.version)
+    dependencies {
+        localRuntime(viewer.module(version)) { transitive = false }
     }
 }

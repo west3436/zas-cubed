@@ -4,6 +4,8 @@ base { archivesName = 'zas' }
 
 evaluationDependsOn(':engine')
 evaluationDependsOn(':compat-adastra')
+evaluationDependsOn(':compat-jei')
+evaluationDependsOn(':compat-emi')
 
 // GameTests live in their own source set so they stay out of the mod jar.
 sourceSets {
@@ -13,8 +15,10 @@ sourceSets {
     }
 }
 
-// Source sets compiled elsewhere whose classes ship inside the zas jar.
-def bundled = [project(':engine'), project(':compat-adastra')].collect { it.sourceSets.main }
+// Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins compile
+// against zas, so zas only runs with them: it never compiles against them.
+def viewers = [project(':compat-jei'), project(':compat-emi')]
+def bundled = ([project(':engine'), project(':compat-adastra')] + viewers).collect { it.sourceSets.main }
 
 neoForge {
     runs {
@@ -68,6 +72,7 @@ dependencies {
     implementation project(':engine')
     implementation project(':compat-adastra')
     implementation project(':zas-api')
+    viewers.each { runtimeOnly it }
 
     // ModDevGradle takes the jar-in-jar range only from a module selector, so
     // the API is requested by coordinates and substituted with the project.

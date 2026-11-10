@@ -31,7 +31,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 /** The reaction datapack format (FIRE-001) and the shipped reactions (FIRE-003). */
-class ReactionFormatTest {
+public class ReactionFormatTest {
     private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("test", "everything");
 
     @Test
@@ -289,7 +289,7 @@ class ReactionFormatTest {
         });
     }
 
-    static Optional<ReactionDefinition> parse(String json) {
+    public static Optional<ReactionDefinition> parse(String json) {
         return ReactionLoader.parse(ID, JsonParser.parseString(json));
     }
 
@@ -310,7 +310,7 @@ class ReactionFormatTest {
         return Path.of(System.getProperty("zas.resources")).resolve("data/zas/zas");
     }
 
-    static GasRegistry shippedGases() throws IOException {
+    public static GasRegistry shippedGases() throws IOException {
         List<GasDefinition> defs = new ArrayList<>();
         for (Path file : jsonFiles(resources().resolve("gas"))) {
             JsonElement json = JsonParser.parseString(Files.readString(file));
@@ -321,7 +321,7 @@ class ReactionFormatTest {
         return GasRegistry.of(defs);
     }
 
-    static List<ReactionDefinition> shippedReactions() throws IOException {
+    public static List<ReactionDefinition> shippedReactions() throws IOException {
         List<ReactionDefinition> defs = new ArrayList<>();
         for (Path file : jsonFiles(resources().resolve("reaction"))) {
             JsonElement json = JsonParser.parseString(Files.readString(file));
