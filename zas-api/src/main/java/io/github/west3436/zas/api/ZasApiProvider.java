@@ -1,13 +1,17 @@
 package io.github.west3436.zas.api;
 
+import io.github.west3436.zas.api.atmosphere.AtmospherePreset;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.fire.Ignition;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasTag;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.HeatResult;
@@ -21,6 +25,7 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -304,6 +309,71 @@ public interface ZasApiProvider {
     @AnyThread
     default boolean containerExplosionsBreakBlocks() {
         return false;
+    }
+
+    /**
+     * The server's atmosphere preset (OPS-007), for {@link Atmospheres#preset()}.
+     *
+     * <p>The default is the fallback's answer, Normal. It is there for the same reason as {@link
+     * #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return the preset
+     */
+    @AnyThread
+    default AtmospherePreset preset() {
+        return AtmospherePreset.NORMAL;
+    }
+
+    /**
+     * Whether a zone touches a block, or the atmosphere there isn't resolved, for {@link
+     * Atmospheres#zoneTouches}.
+     *
+     * <p>The default works it out from {@link #sample(Level, BlockPos)} at the position and the six
+     * beside it, which is right but builds what the real answer doesn't need. It is there for the
+     * same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level
+     * @param pos the block's position
+     * @return true if a zone touches the block or the atmosphere there isn't resolved
+     */
+    @AnyThread
+    default boolean zoneTouches(Level level, BlockPos pos) {
+        if (sample(level, pos).state() != AtmosphereState.AMBIENT) {
+            return true;
+        }
+        for (Direction side : Direction.values()) {
+            AtmosphereState beside = sample(level, pos.relative(side)).state();
+            if (beside == AtmosphereState.ZONED || beside == AtmosphereState.PAUSED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether fire can burn in this air (FIRE-030), for {@link
+     * io.github.west3436.zas.api.fire.Fires#canBurnIn}.
+     *
+     * <p>The default is the fallback's answer, by FIRE-030's default minimums. It is there for the
+     * same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param air the gas
+     * @return true if fire can burn in it
+     */
+    @AnyThread
+    default boolean fireBurnsIn(GasMixture air) {
+        double total = air.totalMoles();
+        if (!(total > 0)) {
+            return false;
+        }
+        return air.moles(StandardAir.OXYGEN) / total >= Fires.DEFAULT_OXYGEN_FRACTION
+                && air.partialPressure(StandardAir.OXYGEN) >= Fires.DEFAULT_OXYGEN_PRESSURE;
     }
 
     /**

@@ -13,7 +13,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Atmosphere and zone queries (API-010, API-011, API-015), the atmos
- * period (API-052) and the near-vacuum density (API-064).
+ * period (API-052), the near-vacuum density (API-064), the preset and
+ * whether a zone touches a block.
  *
  * <p><b>Threads:</b> every query may be called from any thread. Queries read
  * the published, immutable snapshot of the last applied atmos tick and return
@@ -99,6 +100,56 @@ public final class Atmospheres {
     public static double nearVacuumDensity() {
         double density = ZasApi.provider().nearVacuumDensity();
         return density >= 0 && Double.isFinite(density) ? density : DEFAULT_NEAR_VACUUM_DENSITY;
+    }
+
+    /**
+     * The server's atmosphere difficulty preset (OPS-007, D-14). A mod reads it to give an option of
+     * its own a default that follows the preset, as the mode of ZAS³'s Ad Astra adapter does
+     * (SPACE-004).
+     *
+     * <p>A server can set each of ZAS³'s own preset options by itself, so the preset doesn't say
+     * what any of them is: where the API has the option, such as {@link
+     * #containerExplosionsBreakBlocks()}, ask for it instead. Ask each time, since a preset change
+     * applies from the next read.
+     *
+     * <p>Without ZAS³, {@link AtmospherePreset#NORMAL}. On a client it is the preset of the server
+     * the client is on, once the server's config has reached it, and Normal before.
+     *
+     * <p>Thread: any.
+     *
+     * @return the preset
+     */
+    @AnyThread
+    public static AtmospherePreset preset() {
+        AtmospherePreset preset = ZasApi.provider().preset();
+        return preset != null ? preset : AtmospherePreset.NORMAL;
+    }
+
+    /**
+     * Whether a zone touches a block: whether the block's position, or one of the six positions
+     * beside it, holds a cell of a zone. It is for a mod that changes blocks by its own rules of
+     * the open air, such as freezing water or killing plants on an airless planet, and should leave
+     * alone what a zone's air reaches (SPACE-014). That includes blocks that hold no gas themselves:
+     * a water source in a room, or the floor under it.
+     *
+     * <p>It is also true where the atmosphere isn't resolved ({@link AtmosphereState#UNRESOLVED}),
+     * such as in a chunk whose saved zones are still being read back, so that such a mod doesn't
+     * act on a room in the moments before ZAS³ knows it again.
+     *
+     * <p>It is a lookup in the last applied atmos tick (API-046) that builds no gas mixture, so it
+     * suits a call made once per block. Without ZAS³, and on a client, it is false: no zone exists
+     * there.
+     *
+     * <p>Thread: any.
+     *
+     * @param level the level, server or client side
+     * @param pos the block's position
+     * @return true if a zone touches the block, or the atmosphere there isn't resolved
+     */
+    @AnyThread
+    public static boolean zoneTouches(Level level, BlockPos pos) {
+        return ZasApi.provider()
+                .zoneTouches(Objects.requireNonNull(level, "level"), Objects.requireNonNull(pos, "pos"));
     }
 
     /**
