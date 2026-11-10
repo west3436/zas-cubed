@@ -13,6 +13,8 @@
     "GaugeDropperDumpMixin",
     "GaugeDropperEmptyMixin",
     "MetallurgicInfuserDumpButtonMixin",
+    "RoomAmbientMixin",
+    "RoomLossMixin",
     "TurbineDumpMixin"
   ],
   "injectors": {

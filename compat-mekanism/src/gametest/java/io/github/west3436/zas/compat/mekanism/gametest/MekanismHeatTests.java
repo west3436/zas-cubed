@@ -22,12 +22,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import mekanism.api.heat.HeatAPI;
 import mekanism.api.heat.IHeatCapacitor;
 import mekanism.api.heat.IMekanismHeatHandler;
+import mekanism.common.content.network.transmitter.ThermodynamicConductor;
 import mekanism.common.lib.multiblock.FormationProtocol.FormationResult;
 import mekanism.common.tile.base.TileEntityMekanism;
 import mekanism.common.tile.prefab.TileEntityMultiblock;
+import mekanism.common.tile.transmitter.TileEntityThermodynamicConductor;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -42,10 +46,11 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Heat between zones and Mekanism's heat blocks on a server that has Mekanism (MEK-040). The blocks
- * are Mekanism's own, in a sealed stone room whose gas is read through the public API; each test
- * heats or chills a block's capacitor, runs the adapter's step for a length of time, and follows
- * the heat to where it lands.
+ * Heat between zones and Mekanism's heat blocks on a server that has Mekanism (MEK-040), and
+ * Mekanism's own loss to the environment turned to the room (MEK-041). The blocks are Mekanism's
+ * own, in a sealed stone room whose gas is read through the public API; each test heats or chills
+ * a block's capacitor, runs the adapter's step for a length of time, and follows the heat to where
+ * it lands.
  *
  * <p>All but one build, run and clear within one game tick, driving atmos ticks themselves, so they
  * share the venting tests' batch and leave nothing standing for the adapter's own step, or another
@@ -53,7 +58,12 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  *
  * <p>Those tests run with no ceiling on what a body passes ({@code [heat] max_body_watts}) unless
  * they set one: the exchange itself is tested with blocks hotter than any ceiling a server may come
- * with, and the ceiling by the tests named for it.
+ * with, and the ceiling by the tests named for it. They run with {@code [heat] ambient_from_rooms}
+ * off unless they turn it on.
+ *
+ * <p>The MEK-041 tests are the ones that fail if one of its two hooks into Mekanism didn't apply
+ * (MEK-003): they run Mekanism's own tick, or ask Mekanism's own method, and look for what the
+ * hook does.
  */
 @GameTestHolder(MekanismFoundationTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
@@ -76,16 +86,22 @@ public final class MekanismHeatTests {
 
     /**
      * Runs a test in its own area, clears the area, and passes the test. While it runs a body has no
-     * ceiling, unless the test sets one; the server's own is put back afterwards.
+     * ceiling and a block's own loss is left to Mekanism, unless the test sets otherwise; the
+     * server's own settings are put back afterwards.
      */
     private static void inArea(GameTestHelper h, int index, Consumer<VentArea> test) {
         VentArea area = new VentArea(h, index);
         double most = MekanismSettings.maxBodyWatts();
+        double face = MekanismSettings.heatFaceConductance();
+        boolean ambient = MekanismSettings.ambientFromRooms();
         MekanismSettings.HEAT_MAX_BODY_WATTS.set(0.0);
+        MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(false);
         try {
             test.accept(area);
         } finally {
             MekanismSettings.HEAT_MAX_BODY_WATTS.set(most);
+            MekanismSettings.HEAT_FACE_CONDUCTANCE.set(face);
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(ambient);
             area.clear();
         }
         h.succeed();
@@ -859,6 +875,312 @@ public final class MekanismHeatTests {
             close(h, alone.getHeat(), held, 0, "the heat of the heater whose room sits the step out");
             close(h, land(area, sent).joules(), sent.joules(), 1e-9, "the heat the west room took, J");
             close(h, land(area, eastward).joules(), eastward.joules(), 1e-9, "the heat the east room took, J");
+        });
+    }
+
+    // ---- MEK-041 -------------------------------------------------------------------------------
+
+    /** The heat Mekanism has a block lose through one side in a tick to an ambient temperature, in its units. */
+    private static double ownLoss(IMekanismHeatHandler block, Direction side, double ambient) {
+        double inverse = HeatAPI.AIR_INVERSE_COEFFICIENT
+                + block.getTotalInverseInsulation(side)
+                + block.getTotalInverseConductionCoefficient(side);
+        return (block.getTotalTemperature(side) - ambient) / inverse * block.getTotalHeatCapacity(side);
+    }
+
+    /** That loss through every side but the one underneath, to a room's temperature. */
+    private static double ownLossToRoom(IMekanismHeatHandler block, double room) {
+        double lost = 0;
+        for (Direction side : Direction.values()) {
+            if (side != Direction.DOWN) {
+                lost += ownLoss(block, side, room);
+            }
+        }
+        return lost;
+    }
+
+    /** Warms a room by so many kelvin, and says what its temperature then is. */
+    private static double warm(VentArea area, int x, int y, int z, double kelvin) {
+        ZoneInfo room = area.zone(x, y, z);
+        CompletableFuture<HeatResult> warmed =
+                HeatMutations.add(area.level, Vec3.atCenterOf(area.abs(x, y, z)), kelvin * capacity(room), SOURCE);
+        for (int i = 0; i < 8 && !warmed.isDone(); i++) {
+            area.tick();
+        }
+        area.h.assertTrue(warmed.isDone(), "the room wasn't warmed within 8 atmos ticks");
+        area.tick();
+        return area.zone(x, y, z).mixture().temperature();
+    }
+
+    /**
+     * With {@code [heat] ambient_from_rooms} on, a Mekanism heat block reads the temperature of what
+     * stands round it where Mekanism reads the biome's (MEK-041, the hook into {@code
+     * CachedAmbientTemperature}). A heater on the floor of a room 60 K warmer than its biome is asked
+     * through Mekanism's own method. Off, every side reads the biome's. On, the sides that face the
+     * room read the room's; the side on the floor and the side with another heater across it still
+     * read the biome's. A reading is taken again at the adapter's next step and not before. A heater
+     * in the open air reads the ambient as ZAS³ has it. A valve of a formed Thermal Evaporation Plant,
+     * which is part of a multiblock, keeps the biome's.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_041_a_heat_block_reads_the_temperature_of_what_stands_round_it(GameTestHelper h) {
+        inArea(h, 54, area -> {
+            area.box(9, 6, 9);
+            area.form(1, 1, 1);
+            TileEntityMekanism valve = plant(area).get(0);
+            TileEntityMekanism block = area.place(2, 1, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            area.place(3, 1, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            TileEntityMekanism outside = area.place(12, 3, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            area.tick();
+            // Only the readings are looked at: nothing is to flow.
+            MekanismSettings.HEAT_FACE_CONDUCTANCE.set(0.0);
+            double inRoom = warm(area, 1, 1, 1, 60);
+            BlockPos pos = block.getBlockPos();
+            double biome = HeatAPI.getAmbientTemp(area.level, pos.above());
+            h.assertTrue(inRoom > biome + 20, "the test's room, at " + inRoom + " K, is no warmer than its biome");
+
+            close(h, block.getAmbientTemperature(Direction.UP), biome, 0, "a side on the room with the setting off, K");
+
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(true);
+            for (Direction side : Direction.values()) {
+                boolean onTheRoom = side != Direction.DOWN && side != Direction.EAST;
+                double expected = onTheRoom ? inRoom : HeatAPI.getAmbientTemp(area.level, pos.relative(side));
+                close(h, block.getAmbientTemperature(side), expected, 0, "the heater's " + side + " side, K");
+            }
+
+            // A reading is good until the adapter's next step.
+            double warmer = warm(area, 1, 1, 1, 30);
+            h.assertTrue(warmer > inRoom + 20, "the room wasn't warmed again");
+            close(h, block.getAmbientTemperature(Direction.UP), inRoom, 0, "before the adapter's next step, K");
+            h.assertTrue(MekanismHeat.step(area.level, 1).isEmpty(), "heat flowed with nothing to move it");
+            close(h, block.getAmbientTemperature(Direction.UP), warmer, 0, "after the adapter's next step, K");
+
+            // The open air, as ZAS³ has it.
+            BlockPos open = outside.getBlockPos().above();
+            double ambient = Atmospheres.at(area.level, open).mixture().temperature();
+            h.assertTrue(
+                    ambient != HeatAPI.getAmbientTemp(area.level, open),
+                    "ZAS³ and Mekanism agree on the open air here, so this can't tell them apart");
+            close(h, outside.getAmbientTemperature(Direction.UP), ambient, 0, "a side on the open air, K");
+
+            // A multiblock's block keeps Mekanism's own, though it faces the room.
+            BlockPos west = valve.getBlockPos().west();
+            h.assertTrue(area.level.getBlockState(west).isAir(), "the valve's west side doesn't face the room");
+            close(
+                    h,
+                    valve.getAmbientTemperature(Direction.WEST),
+                    HeatAPI.getAmbientTemp(area.level, west),
+                    0,
+                    "a valve's side on the room, K");
+        });
+    }
+
+    /**
+     * With {@code [heat] ambient_from_rooms} on, the heat Mekanism has a heat block lose to its
+     * environment reaches the room, and a block colder than its room gains only what the room gives
+     * (MEK-041, the hook into {@code ITileHeatHandler#simulateEnvironment}). A heater on the floor
+     * of a room is ticked by Mekanism's own tick, with the exchange of MEK-040 turned off so that
+     * nothing else moves heat. Off, the adapter's step has nothing to carry. On and at 1,000 K, the
+     * heater loses what Mekanism's own sum gives against the room's temperature through five sides
+     * and against the biome's through the floor, and the room gains exactly the first. At 100 K it
+     * gains through the floor as before, and through the other five only when the room has delivered
+     * the heat, in the amount delivered.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_041_a_heat_block_loses_its_heat_to_its_room(GameTestHelper h) {
+        inArea(h, 55, area -> {
+            area.room();
+            area.form(2, 2, 2);
+            TileEntityMekanism block = area.place(2, 1, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            area.tick();
+            IHeatCapacitor capacitor = capacitor(block);
+            double cb = capacitor.getHeatCapacity();
+            double joulesPerUnit = MekanismSettings.joulesPerHeatUnit();
+            double biome =
+                    HeatAPI.getAmbientTemp(area.level, block.getBlockPos().below());
+            MekanismSettings.HEAT_FACE_CONDUCTANCE.set(0.0);
+
+            // Off: Mekanism's own loss, to the biome's temperature, and nothing for the room.
+            heatTo(capacitor, 1000);
+            double own = 0;
+            for (Direction side : Direction.values()) {
+                own += ownLoss(
+                        block,
+                        side,
+                        HeatAPI.getAmbientTemp(area.level, block.getBlockPos().relative(side)));
+            }
+            VentArea.run(block, 1);
+            close(h, capacitor.getHeat(), 1000 * cb - own, 1e-9, "the heater's heat after Mekanism's own tick");
+            h.assertTrue(MekanismHeat.step(area.level, 1).isEmpty(), "heat reached the room with the setting off");
+
+            // On, and hot.
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(true);
+            heatTo(capacitor, 1000);
+            ZoneInfo before = area.zone(2, 2, 2);
+            double cg = capacity(before);
+            double tg = before.mixture().temperature();
+            double toRoom = ownLossToRoom(block, tg);
+            double toFloor = ownLoss(block, Direction.DOWN, biome);
+            h.assertTrue(toRoom > 30, "the test's heater loses only " + toRoom + " to its room in a tick");
+            VentArea.run(block, 1);
+            close(h, capacitor.getHeat(), 1000 * cb - toRoom - toFloor, 1e-9, "the heater's heat after its tick");
+            Flow flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), toRoom * joulesPerUnit, 1e-9, "the heat on its way to the room, J");
+            HeatResult landed = land(area, flow);
+            close(h, landed.joules(), toRoom * joulesPerUnit, 1e-9, "the heat the room took, J");
+            kelvin(h, landed.temperature(), tg + toRoom * joulesPerUnit / cg, "the room's temperature afterwards");
+            close(h, capacitor.getHeat(), 1000 * cb - toRoom - toFloor, 1e-9, "the heater's heat: nothing came back");
+
+            // On, and cold: the room is asked, and the heater gains what it delivers.
+            heatTo(capacitor, 100);
+            before = area.zone(2, 2, 2);
+            tg = before.mixture().temperature();
+            double fromRoom = -ownLossToRoom(block, tg);
+            double fromFloor = -ownLoss(block, Direction.DOWN, biome);
+            h.assertTrue(fromRoom > 5, "the test's heater would gain only " + fromRoom + " from its room in a tick");
+            VentArea.run(block, 1);
+            close(h, capacitor.getHeat(), 100 * cb + fromFloor, 1e-9, "the heater's heat after its tick");
+            flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), -fromRoom * joulesPerUnit, 1e-9, "the heat asked of the room, J");
+            close(h, capacitor.getHeat(), 100 * cb + fromFloor, 1e-9, "the heater's heat before the room delivers");
+            landed = land(area, flow);
+            close(h, landed.joules(), fromRoom * joulesPerUnit, 1e-9, "the heat the room delivered, J");
+            kelvin(h, landed.temperature(), tg - fromRoom * joulesPerUnit / cg, "the room's temperature afterwards");
+            close(h, capacitor.getHeat(), 100 * cb + fromFloor + fromRoom, 1e-9, "the heater's heat once delivered");
+        });
+    }
+
+    /**
+     * A Thermodynamic Conductor's own loss reaches its room too (MEK-041): its heat handler is its
+     * transmitter, not its block entity, which is the other kind of thing the hook into {@code
+     * ITileHeatHandler#simulateEnvironment} has to place. A conductor stands free in a room, all six
+     * sides on its gas; Mekanism's own sum is run for it as its heat network runs it, and the room
+     * gains what the conductor loses.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_041_a_conductors_own_loss_reaches_its_room(GameTestHelper h) {
+        inArea(h, 56, area -> {
+            area.room();
+            area.form(1, 1, 1);
+            ThermodynamicConductor conductor = area.place(
+                            2, 2, 2, "mekanism:basic_thermodynamic_conductor", TileEntityThermodynamicConductor.class)
+                    .getTransmitter();
+            area.tick();
+            MekanismSettings.HEAT_FACE_CONDUCTANCE.set(0.0);
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(true);
+            double joulesPerUnit = MekanismSettings.joulesPerHeatUnit();
+            double cb = conductor.buffer.getHeatCapacity();
+            conductor.buffer.setHeat(1000 * cb);
+            ZoneInfo before = area.zone(1, 1, 1);
+            double tg = before.mixture().temperature();
+            double toRoom = 0;
+            for (Direction side : Direction.values()) {
+                toRoom += ownLoss(conductor, side, tg);
+            }
+            h.assertTrue(toRoom > 0.1, "the test's conductor loses only " + toRoom + " to its room in a tick");
+            conductor.simulate();
+            conductor.updateHeatCapacitors(null);
+            close(h, conductor.buffer.getHeat(), 1000 * cb - toRoom, 1e-9, "the conductor's heat after Mekanism's sum");
+            Flow flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), toRoom * joulesPerUnit, 1e-9, "the heat on its way to the room, J");
+            close(h, land(area, flow).joules(), toRoom * joulesPerUnit, 1e-9, "the heat the room took, J");
+        });
+    }
+
+    /**
+     * A block's own loss to its room counts against its ceiling, and the exchange has what is left
+     * (MEK-041, MEK-040). A heater at 1,000 K loses some 35 units of heat a tick to its room by
+     * Mekanism's own sum. With the ceiling at three tenths of that in a second, the room is passed
+     * the three tenths and the exchange nothing, though the heater still loses all of Mekanism's
+     * sum. With the ceiling at three times it, the room is passed all of it and the exchange makes
+     * it up to the ceiling.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_041_a_blocks_own_loss_counts_against_its_ceiling(GameTestHelper h) {
+        inArea(h, 57, area -> {
+            area.room();
+            area.form(2, 2, 2);
+            TileEntityMekanism block = area.place(2, 1, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            area.tick();
+            IHeatCapacitor capacitor = capacitor(block);
+            double cb = capacitor.getHeatCapacity();
+            double joulesPerUnit = MekanismSettings.joulesPerHeatUnit();
+            double biome =
+                    HeatAPI.getAmbientTemp(area.level, block.getBlockPos().below());
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(true);
+
+            heatTo(capacitor, 1000);
+            ZoneInfo before = area.zone(2, 2, 2);
+            double toRoom = ownLossToRoom(block, before.mixture().temperature());
+            double toFloor = ownLoss(block, Direction.DOWN, biome);
+            h.assertTrue(toRoom > 30, "the test's heater loses only " + toRoom + " to its room in a tick");
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(0.3 * toRoom * joulesPerUnit);
+            VentArea.run(block, 1);
+            Flow flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), 0.3 * toRoom * joulesPerUnit, 1e-9, "the heat passed under the low ceiling, J");
+            close(
+                    h,
+                    capacitor.getHeat(),
+                    1000 * cb - toRoom - toFloor,
+                    1e-9,
+                    "the heater's heat: Mekanism's loss alone");
+            close(h, land(area, flow).joules(), 0.3 * toRoom * joulesPerUnit, 1e-9, "the heat the room took, J");
+
+            heatTo(capacitor, 1000);
+            before = area.zone(2, 2, 2);
+            toRoom = ownLossToRoom(block, before.mixture().temperature());
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(3 * toRoom * joulesPerUnit);
+            VentArea.run(block, 1);
+            flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), 3 * toRoom * joulesPerUnit, 1e-9, "the heat passed under the high ceiling, J");
+            close(h, capacitor.getHeat(), 1000 * cb - toFloor - 3 * toRoom, 1e-9, "the heater's heat: both ways out");
+            close(h, land(area, flow).joules(), 3 * toRoom * joulesPerUnit, 1e-9, "the heat the room took, J");
+        });
+    }
+
+    /**
+     * A block's own loss never warms a room that is the warmer of the two (MEK-041). Mekanism works
+     * the loss out from a reading up to an atmos tick old. A heater 30 K warmer than its room reads
+     * the room; the room is then warmed past the heater before the adapter's next step. Mekanism's
+     * tick still has the heater lose heat towards the room it read. The adapter's step passes the
+     * room none of it and gives it back to the heater.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_041_a_blocks_own_loss_never_flows_uphill(GameTestHelper h) {
+        inArea(h, 58, area -> {
+            area.room();
+            area.form(2, 2, 2);
+            TileEntityMekanism block = area.place(2, 1, 2, FUELWOOD_HEATER, TileEntityMekanism.class);
+            area.tick();
+            IHeatCapacitor capacitor = capacitor(block);
+            double cb = capacitor.getHeatCapacity();
+            double biome =
+                    HeatAPI.getAmbientTemp(area.level, block.getBlockPos().below());
+            MekanismSettings.HEAT_FACE_CONDUCTANCE.set(0.0);
+            MekanismSettings.HEAT_AMBIENT_FROM_ROOMS.set(true);
+
+            ZoneInfo room = area.zone(2, 2, 2);
+            double cool = room.mixture().temperature();
+            heatTo(capacitor, cool + 30);
+            for (Direction side : Direction.values()) {
+                if (side != Direction.DOWN) {
+                    close(h, block.getAmbientTemperature(side), cool, 0, "the heater's reading of its room, K");
+                }
+            }
+            double warmed = warm(area, 2, 2, 2, 60);
+            h.assertTrue(warmed > cool + 40, "the room wasn't warmed past the heater");
+            double toRoom = ownLossToRoom(block, cool);
+            double toFloor = ownLoss(block, Direction.DOWN, biome);
+            h.assertTrue(toRoom > 1, "the test's heater loses only " + toRoom + " towards its room in a tick");
+            VentArea.run(block, 1);
+            close(
+                    h,
+                    capacitor.getHeat(),
+                    (cool + 30) * cb - toRoom - toFloor,
+                    1e-9,
+                    "the heater's heat after its tick");
+            h.assertTrue(of(MekanismHeat.step(area.level, 1), room.id()).isEmpty(), "heat was sent uphill");
+            close(h, capacitor.getHeat(), (cool + 30) * cb - toFloor, 1e-9, "the heater's heat once given back");
         });
     }
 
