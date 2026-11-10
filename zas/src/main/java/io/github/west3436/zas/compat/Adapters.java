@@ -67,6 +67,10 @@ public final class Adapters {
         // Ad Astra (SPACE-003): 1.16.26 is the build the adapter is tested with, and 1.17 may change its API.
         rows.add(new Row("ad_astra", "[1.16.26,1.17)", "io.github.west3436.zas.compat.adastra.AdAstraCompat"));
 
+        // Mekanism (MEK-001): its API has what the adapter uses from 10.7.15 on. No upper bound: the
+        // adapter's GameTests run against the newest build every night (MEK-003).
+        rows.add(new Row("mekanism", "[10.7.15,)", "io.github.west3436.zas.compat.mekanism.MekanismCompat"));
+
         return rows;
     }
 

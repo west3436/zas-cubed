@@ -33,6 +33,26 @@ public final class GasProperties {
     private GasProperties() {}
 
     /**
+     * Whether the server defines a gas (CORE-010): one of its datapacks holds a definition for the
+     * id. A mod that takes gas ids from data of its own, such as a table of another mod's
+     * substances and the gases they are, can check an id with it before it puts such gas into the
+     * world.
+     *
+     * <p>Without ZAS³ the only gases defined are those of {@link StandardAir}.
+     *
+     * <p>Thread: any.
+     *
+     * @param gas the gas id
+     * @return true if the gas is defined
+     */
+    @AnyThread
+    public static boolean isDefined(ResourceLocation gas) {
+        return ZasApi.provider()
+                .molarHeatCapacity(Objects.requireNonNull(gas, "gas"))
+                .isPresent();
+    }
+
+    /**
      * A gas's molar heat capacity at constant volume.
      *
      * <p>Thread: any.

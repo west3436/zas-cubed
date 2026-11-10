@@ -17,6 +17,13 @@ vent, burn and conduct heat. Provides the shared atmosphere API.
 [[mixins]]
 config = "zas.mixins.json"
 
+# The Mekanism adapter's hooks (MEK-001): only with Mekanism installed, and its own plugin then
+# applies them only to a version the adapter supports. No dependency entry names Mekanism, so no
+# version of it can stop the game.
+[[mixins]]
+config = "zas.mekanism.mixins.json"
+requiredMods = ["mekanism"]
+
 [[dependencies.zas]]
 modId = "neoforge"
 type = "required"

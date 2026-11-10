@@ -24,20 +24,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One row per adapter: its name, and the task that runs its GameTests.
-        # The viewer plugins have two rows each: the oldest version of the viewer
-        # they support, which they are compiled against, and the newest when the
-        # row was written.
+        # One row per adapter, or per version of its target that it is tested
+        # with: its name, and the task that runs its GameTests, with any
+        # arguments.
         include:
           - adapter: adastra
             task: ":compat-adastra:runAdapterGameTestServer"
-          - adapter: jei
+          # MEK-003: the oldest Mekanism the adapter supports and the newest.
+          # MEK-001: with the last one before the oldest, the adapter stays off.
+          - adapter: mekanism (oldest supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=floor"
+          - adapter: mekanism (newest)
+            task: ":compat-mekanism:runAdapterGameTestServer"
+          - adapter: mekanism (older than supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=unsupported"
+          # COMPAT-060 to COMPAT-062: each viewer plugin with the oldest version
+          # of its viewer that it supports, which it is compiled against, and
+          # with the newest when the row was written.
+          - adapter: jei (oldest supported)
             task: ":compat-jei:runAdapterGameTestServer"
-          - adapter: jei-newest
+          - adapter: jei (newest)
             task: ":compat-jei:runAdapterGameTestServer -Pjei.version=19.70.0.469"
-          - adapter: emi
+          - adapter: emi (oldest supported)
             task: ":compat-emi:runAdapterGameTestServer"
-          - adapter: emi-newest
+          - adapter: emi (newest)
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=1.1.24"
     steps:
       - uses: actions/checkout@v7
