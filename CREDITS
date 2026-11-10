@@ -3327,3 +3327,12 @@ notes: An arrow out of a wall, 8 x 8: the port gas goes out at.
 path: compat-jade/src/main/resources/assets/zas_atmos/textures/gui/sprites/jade/side.png
 origin: original
 notes: A branch off a line, 8 x 8: the port on a filter's or a mixer's side.
+
+# The recipe viewers' pages (COMPAT-060 to COMPAT-062): the JEI and EMI plugins draw both.
+path: zas/src/main/resources/assets/zas/textures/gui/viewer/gas.png
+origin: original
+notes: A cloud in greys, 16 by 16, which the game tints with each gas's colour.
+
+path: zas/src/main/resources/assets/zas/textures/gui/viewer/icons.png
+origin: original
+notes: Fifteen 9 by 9 icons for conditions and properties (spark, flame, thermometer, share of a mixture, gauge, clock, heat out, heat in, energy barrier, gear, weight, heat store, tag, oxidizer ring, skull) and a 16 by 16 flask, the reactions' icon.
