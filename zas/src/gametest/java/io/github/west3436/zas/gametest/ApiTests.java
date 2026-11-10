@@ -105,11 +105,15 @@ public final class ApiTests {
      * (API-015, MEK-022). The sample can't tell: it reads the ambient in the open air and inside
      * stone alike. A block that can't be read, as in a chunk that isn't loaded, counts as having
      * room, and the answer follows the block as it is now.
+     *
+     * <p>It works above its structure: the game walls and roofs a test's structure with barriers,
+     * which are full blocks, and the one block inside is no open air.
      */
     @GameTest(template = "empty")
     public static void api_015_a_full_block_has_no_room_for_gas(GameTestHelper h) {
         ServerLevel level = h.getLevel();
-        BlockPos pos = h.absolutePos(new BlockPos(1, 2, 1));
+        BlockPos pos = h.absolutePos(new BlockPos(0, 3, 0));
+        h.assertTrue(level.getBlockState(pos).isAir(), "the block above the structure's roof isn't air");
         h.assertTrue(Atmospheres.holdsGas(level, pos), "the open air");
         h.assertValueEqual(Atmospheres.at(level, pos).state(), AtmosphereState.AMBIENT, "the open air's state");
 
