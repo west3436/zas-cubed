@@ -29,7 +29,8 @@ class ChemicalUnitsTest {
     @Test
     void mek_002_a_thousand_millibuckets_fill_one_block_at_one_atmosphere() {
         double moles = ChemicalUnits.moles(1000, DEFAULT);
-        GasMixture cell = new GasMixture(Map.of(StandardAir.OXYGEN, moles), StandardAir.TEMPERATURE, StandardAir.CELL_VOLUME);
+        GasMixture cell =
+                new GasMixture(Map.of(StandardAir.OXYGEN, moles), StandardAir.TEMPERATURE, StandardAir.CELL_VOLUME);
         assertEquals(StandardAir.PRESSURE, cell.pressure(), 1e-9);
         assertEquals(StandardAir.mixture(StandardAir.CELL_VOLUME).totalMoles(), moles, 1e-9);
     }
@@ -58,12 +59,31 @@ class ChemicalUnitsTest {
         assertEquals(0, ChemicalUnits.wholeMillibuckets(Double.NaN, DEFAULT));
         assertEquals(0, ChemicalUnits.wholeMillibuckets(Double.POSITIVE_INFINITY, DEFAULT));
         assertEquals(0, ChemicalUnits.wholeMillibuckets(1, 0));
-        // What the whole millibuckets hold is never more than the gas, but for rounding.
-        for (double moles : new double[] {0.01, 0.5, 1, 3.3333, 41.57, 1e3, 12345.678, 3.4e8}) {
-            long whole = ChemicalUnits.wholeMillibuckets(moles, DEFAULT);
-            double held = ChemicalUnits.moles(whole, DEFAULT);
-            assertTrue(held <= moles * (1 + 1e-11), moles + " mol made " + held + " mol of chemical");
-            assertTrue(moles - held < DEFAULT * (1 + 1e-9), moles + " mol left more than a millibucket behind");
+    }
+
+    /**
+     * What the whole millibuckets hold is never more than the gas, to the last bit, and less than
+     * one millibucket stays behind: converting makes no gas and strands none.
+     */
+    @Test
+    void mek_002_rounding_down_never_makes_gas_and_leaves_less_than_a_millibucket() {
+        java.util.Random random = new java.util.Random(20261109);
+        for (double litres : new double[] {1.0, 0.001, 0.3, 1.0 / 3, 22.414, 1000.0}) {
+            double factor = ChemicalUnits.molesPerMillibucket(litres);
+            for (int i = 0; i < 20_000; i++) {
+                // Amounts from a fraction of a millibucket to 10^12 of them, many of them a hair
+                // to either side of a whole number.
+                double scale = Math.pow(10, random.nextInt(13));
+                double moles = (i % 2 == 0 ? random.nextDouble() * scale : Math.rint(random.nextDouble() * scale))
+                        * factor
+                        * (1 + (random.nextInt(5) - 2) * Math.ulp(1.0));
+                long whole = ChemicalUnits.wholeMillibuckets(moles, factor);
+                double held = ChemicalUnits.moles(whole, factor);
+                assertTrue(held <= moles, moles + " mol made " + held + " mol of chemical");
+                assertTrue(
+                        ChemicalUnits.moles(whole + 1, factor) > moles,
+                        moles + " mol left a whole millibucket behind at " + litres + " L/mB");
+            }
         }
     }
 

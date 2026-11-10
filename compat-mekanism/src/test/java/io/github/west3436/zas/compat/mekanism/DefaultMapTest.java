@@ -40,7 +40,8 @@ class DefaultMapTest {
     static void load() throws IOException {
         List<ChemicalMapping> mappings = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
-        for (Map.Entry<ResourceLocation, JsonElement> file : files(ChemicalMapFormat.DIRECTORY).entrySet()) {
+        for (Map.Entry<ResourceLocation, JsonElement> file :
+                files(ChemicalMapFormat.DIRECTORY).entrySet()) {
             try {
                 mappings.add(ChemicalMapFormat.parse(file.getKey(), file.getValue(), warnings::add));
             } catch (ChemicalMapFormat.InvalidMappingException e) {
@@ -62,7 +63,8 @@ class DefaultMapTest {
                     continue;
                 }
                 try (Stream<Path> found = Files.walk(folder)) {
-                    for (Path file : (Iterable<Path>) found.filter(p -> p.toString().endsWith(".json"))::iterator) {
+                    for (Path file :
+                            (Iterable<Path>) found.filter(p -> p.toString().endsWith(".json"))::iterator) {
                         String path = folder.relativize(file).toString().replace('\\', '/');
                         out.put(
                                 ResourceLocation.fromNamespaceAndPath(
@@ -101,7 +103,8 @@ class DefaultMapTest {
                         "mekanismgenerators:deuterium",
                         "mekanismgenerators:tritium",
                         "mekanismgenerators:fusion_fuel")),
-                new TreeSet<>(map.chemicals().stream().map(ResourceLocation::toString).toList()));
+                new TreeSet<>(
+                        map.chemicals().stream().map(ResourceLocation::toString).toList()));
         assertEquals("zas:oxygen", onlyGas("mekanism:oxygen"));
         assertEquals("zas:hydrogen", onlyGas("mekanism:hydrogen"));
         assertEquals("zas:water_vapor", onlyGas("mekanism:water_vapor"));
@@ -120,24 +123,33 @@ class DefaultMapTest {
     void mek_010_steam_is_the_only_default_with_a_least_temperature() {
         for (ChemicalMapping mapping : map.mappings()) {
             boolean steam = mapping.chemical().equals(id("mekanism:steam"));
-            assertEquals(steam ? 373.15 : 0, mapping.minTemperature(), mapping.chemical().toString());
+            assertEquals(
+                    steam ? 373.15 : 0,
+                    mapping.minTemperature(),
+                    mapping.chemical().toString());
             assertFalse(mapping.oneWay(), mapping.chemical().toString());
         }
-        assertEquals(Optional.of(id("mekanism:steam")), map.forGas(id("zas:water_vapor"), 373.15).map(ChemicalMapping::chemical));
         assertEquals(
-                Optional.of(id("mekanism:water_vapor")), map.forGas(id("zas:water_vapor"), 293.15).map(ChemicalMapping::chemical));
+                Optional.of(id("mekanism:steam")),
+                map.forGas(id("zas:water_vapor"), 373.15).map(ChemicalMapping::chemical));
+        assertEquals(
+                Optional.of(id("mekanism:water_vapor")),
+                map.forGas(id("zas:water_vapor"), 293.15).map(ChemicalMapping::chemical));
     }
 
     /** Fusion fuel is half deuterium and half tritium, and neither gas comes back as fuel. */
     @Test
     void mek_010_fusion_fuel_is_half_deuterium_and_half_tritium() {
-        ChemicalMapping fuel = map.ofChemical(id("mekanismgenerators:fusion_fuel")).orElseThrow();
+        ChemicalMapping fuel =
+                map.ofChemical(id("mekanismgenerators:fusion_fuel")).orElseThrow();
         assertEquals(Map.of(id("zas:deuterium"), 0.5, id("zas:tritium"), 0.5), fuel.gases());
         assertFalse(fuel.bothWays());
         assertEquals(
-                Optional.of(id("mekanismgenerators:deuterium")), map.forGas(id("zas:deuterium"), 300).map(ChemicalMapping::chemical));
+                Optional.of(id("mekanismgenerators:deuterium")),
+                map.forGas(id("zas:deuterium"), 300).map(ChemicalMapping::chemical));
         assertEquals(
-                Optional.of(id("mekanismgenerators:tritium")), map.forGas(id("zas:tritium"), 300).map(ChemicalMapping::chemical));
+                Optional.of(id("mekanismgenerators:tritium")),
+                map.forGas(id("zas:tritium"), 300).map(ChemicalMapping::chemical));
     }
 
     /**
@@ -148,17 +160,53 @@ class DefaultMapTest {
     void mek_010_process_liquids_metals_radioactives_infusions_pigments_and_slurries_are_never_mapped() {
         List<String> never = new ArrayList<>(List.of(
                 // process liquids and metals, and what isn't a gas at room conditions
-                "brine", "sodium", "superheated_sodium", "lithium", "sulfuric_acid", "hydrofluoric_acid",
-                "osmium", "uranium_oxide", "uranium_hexafluoride", "fissile_fuel", "sulfur_trioxide",
+                "brine",
+                "sodium",
+                "superheated_sodium",
+                "lithium",
+                "sulfuric_acid",
+                "hydrofluoric_acid",
+                "osmium",
+                "uranium_oxide",
+                "uranium_hexafluoride",
+                "fissile_fuel",
+                "sulfur_trioxide",
                 // radioactive
-                "nuclear_waste", "spent_nuclear_waste", "plutonium", "polonium",
+                "nuclear_waste",
+                "spent_nuclear_waste",
+                "plutonium",
+                "polonium",
                 // exotic, and the placeholder
-                "antimatter", "empty",
+                "antimatter",
+                "empty",
                 // infuse types
-                "carbon", "redstone", "diamond", "refined_obsidian", "gold", "tin", "bio", "fungi"));
+                "carbon",
+                "redstone",
+                "diamond",
+                "refined_obsidian",
+                "gold",
+                "tin",
+                "bio",
+                "fungi"));
         for (String colour : List.of(
-                "black", "dark_blue", "dark_green", "dark_aqua", "dark_red", "purple", "orange", "gray", "dark_gray",
-                "indigo", "bright_green", "aqua", "red", "pink", "yellow", "white", "brown", "bright_pink")) {
+                "black",
+                "dark_blue",
+                "dark_green",
+                "dark_aqua",
+                "dark_red",
+                "purple",
+                "orange",
+                "gray",
+                "dark_gray",
+                "indigo",
+                "bright_green",
+                "aqua",
+                "red",
+                "pink",
+                "yellow",
+                "white",
+                "brown",
+                "bright_pink")) {
             never.add(colour);
         }
         for (String ore : List.of("iron", "gold", "osmium", "copper", "tin", "lead", "uranium")) {
@@ -181,7 +229,8 @@ class DefaultMapTest {
         for (ChemicalMapping mapping : map.mappings()) {
             mapping.gases().keySet().forEach(gas -> named.add(gas.toString()));
         }
-        Set<String> defined = new TreeSet<>(definitions.keySet().stream().map(ResourceLocation::toString).toList());
+        Set<String> defined = new TreeSet<>(
+                definitions.keySet().stream().map(ResourceLocation::toString).toList());
         Set<String> expected = new TreeSet<>(named);
         expected.removeAll(BUILT_IN);
         assertEquals(expected, defined, "the pack's gas definitions");
@@ -211,8 +260,8 @@ class DefaultMapTest {
     /** The toxic chemicals' gases join ZAS³'s toxic gases, so masks filter them and scrubbers remove them. */
     @Test
     void mek_010_chlorine_hydrogen_chloride_and_sulfur_dioxide_are_toxic() throws IOException {
-        JsonObject tag = JsonParser.parseString(Files.readString(
-                        PACK.resolve("data/zas/tags/zas/gas/toxic.json"), StandardCharsets.UTF_8))
+        JsonObject tag = JsonParser.parseString(
+                        Files.readString(PACK.resolve("data/zas/tags/zas/gas/toxic.json"), StandardCharsets.UTF_8))
                 .getAsJsonObject();
         assertFalse(tag.has("replace"), "the tag must add to ZAS³'s, not replace it");
         Set<String> values = new TreeSet<>();

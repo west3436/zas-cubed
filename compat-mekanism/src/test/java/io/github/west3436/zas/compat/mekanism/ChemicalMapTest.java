@@ -45,7 +45,9 @@ class ChemicalMapTest {
     /** The map is the allow-list: a chemical without a mapping is no gas. */
     @Test
     void mek_010_an_unmapped_chemical_is_no_gas() {
-        assertEquals(Optional.of(O2), MAP.ofChemical(OXYGEN).map(m -> m.gases().keySet().iterator().next()));
+        assertEquals(
+                Optional.of(O2),
+                MAP.ofChemical(OXYGEN).map(m -> m.gases().keySet().iterator().next()));
         assertEquals(Optional.empty(), MAP.ofChemical(BRINE));
         assertEquals(Optional.empty(), ChemicalMap.EMPTY.ofChemical(OXYGEN));
         assertEquals(Set.of(OXYGEN, WATER_VAPOR, STEAM, DEUTERIUM, FUSION_FUEL), MAP.chemicals());

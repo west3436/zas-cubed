@@ -23,15 +23,25 @@ class MekanismVersionsTest {
         assertFalse(MekanismVersions.supports("9.99.99"));
     }
 
-    /** The oldest Mekanism the build runs the GameTests with is the oldest the adapter supports (MEK-003). */
+    /**
+     * The builds the GameTests run with (MEK-003): the oldest is the oldest the adapter supports, and
+     * the one named unsupported is outside its range.
+     */
     @Test
     void mek_001_the_builds_floor_is_the_adapters() {
-        String floor = System.getProperty("zas.mekanism.floorVersion");
-        assertTrue(floor != null && !floor.isBlank(), "zas.mekanism.floorVersion is not set by the build");
-        // A published build is <minecraft>-<mod version>.<build number>.
+        assertEquals(MekanismVersions.FLOOR, modVersion("zas.mekanism.floorVersion"));
+        assertTrue(MekanismVersions.supports(modVersion("zas.mekanism.floorVersion")));
+        assertFalse(
+                MekanismVersions.supports(modVersion("zas.mekanism.unsupportedVersion")),
+                "gradle.properties' mekanism_unsupported_version is one the adapter supports");
+    }
+
+    /** The mod version in a published build's name, which is {@code <minecraft>-<mod version>.<build number>}. */
+    private static String modVersion(String property) {
+        String build = System.getProperty(property);
         assertTrue(
-                floor.matches("1\\.21\\.1-" + MekanismVersions.FLOOR.replace(".", "\\.") + "\\.\\d+"),
-                "gradle.properties' mekanism_floor_version is " + floor + ", and the adapter supports "
-                        + MekanismVersions.SUPPORTED);
+                build != null && build.matches("1[.]21[.]1-[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+"),
+                property + " is " + build);
+        return build.substring(build.indexOf('-') + 1, build.lastIndexOf('.'));
     }
 }

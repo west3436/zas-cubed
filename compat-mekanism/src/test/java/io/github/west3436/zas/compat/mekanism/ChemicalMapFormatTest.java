@@ -99,7 +99,8 @@ class ChemicalMapFormatTest {
         assertTrue(error("{\"gases\": []}").startsWith("gases: must be an object"));
         assertTrue(error("{\"gases\": {}}").startsWith("gases: must name at least one gas"));
         assertTrue(error("{\"gases\": {\"Bad Id\": 1}}").startsWith("gases: not a gas id"));
-        assertTrue(error("{\"gases\": {\"zas:deuterium\": \"half\"}}").startsWith("gases: zas:deuterium: not a number"));
+        assertTrue(
+                error("{\"gases\": {\"zas:deuterium\": \"half\"}}").startsWith("gases: zas:deuterium: not a number"));
         assertTrue(error("{\"gases\": {\"zas:deuterium\": 0, \"zas:tritium\": 1}}")
                 .startsWith("gases: zas:deuterium: must be finite and above 0"));
         assertTrue(error("{\"gases\": {\"zas:deuterium\": 0.5, \"zas:tritium\": 0.4}}")
@@ -108,7 +109,8 @@ class ChemicalMapFormatTest {
                 .startsWith("min_temperature: must be finite and not negative"));
         assertTrue(error("{\"gas\": \"zas:oxygen\", \"min_temperature\": \"hot\"}")
                 .startsWith("min_temperature: not a number"));
-        assertTrue(error("{\"gas\": \"zas:oxygen\", \"one_way\": \"yes\"}").startsWith("one_way: must be true or false"));
+        assertTrue(
+                error("{\"gas\": \"zas:oxygen\", \"one_way\": \"yes\"}").startsWith("one_way: must be true or false"));
     }
 
     /** An unknown field is warned about and the rest loads; NeoForge's conditions key isn't unknown. */
@@ -117,7 +119,8 @@ class ChemicalMapFormatTest {
         List<String> warnings = new ArrayList<>();
         ChemicalMapping mapping = ChemicalMapFormat.parse(
                 STEAM,
-                JsonParser.parseString("{\"gas\": \"zas:water_vapor\", \"colour\": \"white\", \"neoforge:conditions\": []}"),
+                JsonParser.parseString(
+                        "{\"gas\": \"zas:water_vapor\", \"colour\": \"white\", \"neoforge:conditions\": []}"),
                 warnings::add);
         assertEquals(Map.of(H2O, 1.0), mapping.gases());
         assertEquals(List.of("'colour' names no field of a chemical mapping"), warnings);

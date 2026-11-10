@@ -13,6 +13,7 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.registries.datamaps.DataMapsUpdatedEvent;
 
 /**
  * Where the Mekanism adapter starts (MEK-001). {@code zas} calls {@link #init} by name, and only
@@ -57,6 +58,8 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ChemicalGases.forget());
+        // Mekanism reads which chemicals are radioactive from a data map, which a reload can change.
+        NeoForge.EVENT_BUS.addListener((DataMapsUpdatedEvent event) -> ChemicalGases.forget());
         active = true;
     }
 

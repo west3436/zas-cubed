@@ -37,9 +37,9 @@ import org.slf4j.Logger;
  *
  * <p>The map comes from datapacks ({@link ChemicalMapFormat}) and the unit factor from the server
  * config ({@link MekanismSettings}); both are read on each call, so a {@code /reload} or an edited
- * config applies at once. A mapping applies only if Mekanism has registered its chemical and the
- * server defines every gas it names; one that names a gas the server doesn't define is logged once
- * for each load.
+ * config applies at once. A mapping applies only if Mekanism has registered its chemical, the
+ * chemical isn't radioactive and the server defines every gas it names; one that is radioactive or
+ * names a gas the server doesn't define is logged once for each load.
  *
  * <p><b>Server side.</b> The map is the running server's, so every method answers "unmapped" on a
  * client that is connected to a server elsewhere, and before a server has started. Each lookup is
@@ -173,7 +173,7 @@ public final class ChemicalGases {
 
     /**
      * The mappings that apply on this server: those whose chemical Mekanism has registered and
-     * whose gases the server defines.
+     * isn't radioactive, and whose gases the server defines.
      *
      * @return the map the lookups answer from
      */
@@ -211,6 +211,15 @@ public final class ChemicalGases {
                     ResourceKey.create(MekanismAPI.CHEMICAL_REGISTRY_NAME, mapping.chemical()));
             if (holder.isEmpty()) {
                 // Another mod's chemical, and the mod isn't here: Mekanism Generators' are the usual case.
+                continue;
+            }
+            if (holder.get().value().isRadioactive()) {
+                // Never mapped, whatever a datapack says (MEK-010): ZAS³ has no radiation, so as a
+                // gas the chemical would shed its hazard.
+                LOGGER.warn(
+                        "Ignoring {} {}: a radioactive chemical is never a gas",
+                        ChemicalMapFormat.KIND,
+                        ChemicalMapFormat.file(mapping.chemical()));
                 continue;
             }
             List<ResourceLocation> undefined = mapping.gases().keySet().stream()

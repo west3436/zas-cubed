@@ -91,8 +91,9 @@ class AdapterReferencesTest {
         Set<String> bad = new TreeSet<>();
         for (String name : NO_MEKANISM) {
             // Nested and anonymous classes load with their outer class's code.
-            List<String> found =
-                    classes.keySet().stream().filter(c -> c.equals(name) || c.startsWith(name + "$")).toList();
+            List<String> found = classes.keySet().stream()
+                    .filter(c -> c.equals(name) || c.startsWith(name + "$"))
+                    .toList();
             assertFalse(found.isEmpty(), name + " isn't among the adapter's classes");
             for (String c : found) {
                 classes.get(c).stream().filter(r -> r.startsWith("mekanism/")).forEach(r -> bad.add(c + " -> " + r));

@@ -31,12 +31,6 @@ public final class ChemicalUnits {
     /** The most the factor can be set to, in L per mB. */
     public static final double MAX_LITRES_PER_MILLIBUCKET = 1000.0;
 
-    /**
-     * How close to a whole millibucket an amount of gas must come to count as it, as a share of the
-     * amount: the rounding error of turning millibuckets into moles and back, and no more.
-     */
-    private static final double ROUNDING = 1e-12;
-
     private ChemicalUnits() {}
 
     /**
@@ -76,8 +70,9 @@ public final class ChemicalUnits {
      * leaves the rest where it is. Rounding down never makes gas, and leaving the rest never loses
      * any.
      *
-     * <p>An amount within floating-point error of a whole millibucket counts as that millibucket,
-     * so millibuckets turned into moles and back come out as they went in.
+     * <p>The answer is the most millibuckets whose {@link #moles} are no more than the gas, by the
+     * same multiplication {@code moles} does. So what the result holds is never more than the gas,
+     * to the last bit, and millibuckets turned into moles and back come out as they went in.
      *
      * @param moles the gas, in moles; a negative or non-finite amount makes none
      * @param molesPerMillibucket the factor, from {@link #molesPerMillibucket}
@@ -88,7 +83,16 @@ public final class ChemicalUnits {
             return 0;
         }
         double amount = moles / molesPerMillibucket;
-        double whole = Math.floor(amount + amount * ROUNDING);
-        return whole >= Long.MAX_VALUE ? Long.MAX_VALUE : (long) whole;
+        if (amount >= Long.MAX_VALUE) {
+            return Long.MAX_VALUE;
+        }
+        long whole = (long) Math.floor(amount);
+        // The division can land a hair to either side of a whole number; the multiplication settles it.
+        if ((whole + 1) * molesPerMillibucket <= moles) {
+            whole++;
+        } else if (whole * molesPerMillibucket > moles) {
+            whole--;
+        }
+        return whole;
     }
 }
