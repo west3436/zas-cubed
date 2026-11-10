@@ -6,6 +6,7 @@ import static io.github.west3436.zas.gametest.Rooms.O2;
 import static io.github.west3436.zas.gametest.Rooms.oxygen;
 import static io.github.west3436.zas.gametest.Rooms.source;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
@@ -28,6 +29,8 @@ import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.FireConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.fire.FireSettings;
+import io.github.west3436.zas.hud.AtmosHudPayload;
+import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.Internals;
@@ -38,19 +41,28 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -487,6 +499,158 @@ public final class SpaceQueryTests {
             LocalAtmospheres.unregister(SECOND);
             LocalAtmospheres.unregister(THIRD);
             pig.discard();
+        }
+        h.succeed();
+    }
+
+    /** One cell's worth of nitrogen at a pressure, in kPa, and a temperature, in K. */
+    private static GasMixture nitrogen(double kPa, double kelvin) {
+        return new GasMixture(
+                Map.of(N2, kPa * StandardAir.CELL_VOLUME / (GasMixture.GAS_CONSTANT * kelvin)),
+                kelvin,
+                StandardAir.CELL_VOLUME);
+    }
+
+    /** What {@code /zas life} tells an entity about itself, a line each. */
+    private static List<String> life(Entity entity) {
+        List<String> said = new ArrayList<>();
+        CommandSource listener = new CommandSource() {
+            @Override
+            public void sendSystemMessage(Component message) {
+                said.add(message.getString());
+            }
+
+            @Override
+            public boolean acceptsSuccess() {
+                return true;
+            }
+
+            @Override
+            public boolean acceptsFailure() {
+                return true;
+            }
+
+            @Override
+            public boolean shouldInformAdmins() {
+                return false;
+            }
+        };
+        ServerLevel level = (ServerLevel) entity.level();
+        CommandSourceStack source = new CommandSourceStack(
+                listener,
+                entity.position(),
+                Vec2.ZERO,
+                level,
+                4,
+                "zas_space_017",
+                Component.literal("zas_space_017"),
+                level.getServer(),
+                entity);
+        try {
+            level.getServer().getCommands().getDispatcher().execute("zas life", source);
+        } catch (CommandSyntaxException e) {
+            throw new GameTestAssertException("/zas life failed: " + e.getMessage());
+        }
+        return said;
+    }
+
+    /**
+     * {@code /zas life} reports the air the rules apply. For a pig in a provider's thin, cold
+     * nitrogen, in the open on the overworld, the exposure line gives that air's pressure and
+     * temperature and says {@code local}, and the damage line the hazards the verdict above them
+     * names. It used to give the open air an atmosphere query finds there, 101.325 kPa at 293.15 K
+     * and no damage, under a verdict of low pressure. Outside the provider's box, and once the
+     * provider is gone, the lines are the ambient's (SPACE-017, LIFE-010, LIFE-011).
+     */
+    @GameTest(template = "empty")
+    public static void space_017_the_life_command_reports_the_air_the_rules_apply(GameTestHelper h) {
+        Rooms r = new Rooms(h, 760);
+        r.clear(0, 14);
+        GasMixture thin = nitrogen(15, 200);
+        AABB box = AABB.encapsulatingFullBlocks(r.abs(0, 0, 0), r.abs(9, 6, 6));
+        Pig inBox = pig(h, r, 7, 1, 2);
+        Pig outside = pig(h, r, 12, 1, 2);
+        String ambient = "  Exposure: 101.325 kPa (effective 101.325 kPa), 293.15 K (ambient)";
+        String unharmed = "  Damage per second: -";
+        try {
+            List<String> before = life(inBox);
+            h.assertTrue(before.contains(ambient), "before a provider, the exposure: " + before);
+            h.assertTrue(before.contains(unharmed), "before a provider, the damage: " + before);
+
+            LocalAtmospheres.register(FIRST, (level, point) -> level == r.level && box.contains(point) ? thin : null);
+            try {
+                h.assertValueEqual(Atmospheres.of(inBox).state(), AtmosphereState.AMBIENT, "the query in the box");
+                Breathability verdict = Breathing.of(inBox);
+                h.assertTrue(verdict.hazards().contains(Hazard.LOW_PRESSURE), "its hazards: " + verdict.hazards());
+                h.assertTrue(verdict.hazards().contains(Hazard.COLD), "its hazards: " + verdict.hazards());
+
+                List<String> in = life(inBox);
+                h.assertTrue(
+                        in.contains("  Hazards: low pressure, cold; protection: -"), "in the box, the hazards: " + in);
+                h.assertTrue(
+                        in.contains("  Exposure: 15 kPa (effective 15 kPa), 200 K (local)"),
+                        "in the box, the exposure: " + in);
+                String damage = in.stream()
+                        .filter(line -> line.startsWith("  Damage per second: "))
+                        .findFirst()
+                        .orElse("");
+                h.assertTrue(damage.contains("decompression "), "in the box, the damage: " + in);
+                h.assertTrue(damage.contains("frostbite "), "in the box, the damage: " + in);
+
+                List<String> out = life(outside);
+                h.assertTrue(out.contains(ambient), "outside the box, the exposure: " + out);
+                h.assertTrue(out.contains(unharmed), "outside the box, the damage: " + out);
+            } finally {
+                LocalAtmospheres.unregister(FIRST);
+            }
+            h.assertValueEqual(life(inBox), before, "once the provider is gone");
+        } finally {
+            inBox.discard();
+            outside.discard();
+        }
+        h.succeed();
+    }
+
+    /**
+     * The HUD reads the air the rules apply for a player nothing harms too. A creative player
+     * holding what shows every reading, in a provider's thin, cold nitrogen, is shown that air's
+     * pressure and temperature beside its oxygen, with no alert. It used to be shown the open air's
+     * pressure and temperature beside the provider's oxygen. A survival player there gets the same
+     * readings, with the alerts (SPACE-017, CLIENT-008).
+     */
+    @GameTest(template = "empty")
+    public static void space_017_the_hud_reads_the_air_the_rules_apply(GameTestHelper h) {
+        Rooms r = new Rooms(h, 761);
+        r.clear(0, 8);
+        GasMixture thin = nitrogen(15, 200);
+        AABB box = AABB.encapsulatingFullBlocks(r.abs(0, 0, 0), r.abs(9, 6, 6));
+        FakePlayer survival = wearer(r, "zas_space_017_hud");
+        FakePlayer creative = wearer(r, "zas_space_017_hud_creative");
+        creative.setGameMode(GameType.CREATIVE);
+        creative.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.CLOCK));
+
+        AtmosHudPayload open = HudLevels.of(creative);
+        h.assertTrue(open != null && open.readings(), "the creative player isn't shown every reading");
+        h.assertTrue(Math.abs(open.pressureKpa() - 101.325) < 1e-3, "in the open, kPa shown: " + open);
+
+        LocalAtmospheres.register(FIRST, (level, point) -> level == r.level && box.contains(point) ? thin : null);
+        try {
+            AtmosHudPayload shown = HudLevels.of(creative);
+            h.assertTrue(shown != null, "the creative player's HUD has no state");
+            h.assertTrue(Math.abs(shown.pressureKpa() - 15) < 1e-3, "creative: kPa shown: " + shown);
+            h.assertTrue(Math.abs(shown.temperatureK() - 200) < 1e-3, "creative: K shown: " + shown);
+            h.assertTrue(Math.abs(shown.oxygenKpa()) < 1e-6, "creative: O2 shown: " + shown);
+            h.assertFalse(shown.any(), "creative: an alert: " + shown);
+
+            AtmosHudPayload harmed = HudLevels.of(survival);
+            h.assertTrue(harmed != null, "the survival player's HUD has no state");
+            h.assertTrue(Math.abs(harmed.pressureKpa() - 15) < 1e-3, "survival: kPa shown: " + harmed);
+            h.assertTrue(Math.abs(harmed.temperatureK() - 200) < 1e-3, "survival: K shown: " + harmed);
+            h.assertValueEqual(harmed.pressure(), -HudLevels.DANGER, "survival: the pressure alert");
+            h.assertValueEqual(harmed.temperature(), -HudLevels.DANGER, "survival: the temperature alert");
+            h.assertValueEqual(harmed.oxygen(), HudLevels.DANGER, "survival: the O2 alert");
+        } finally {
+            LocalAtmospheres.unregister(FIRST);
         }
         h.succeed();
     }
