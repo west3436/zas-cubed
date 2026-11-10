@@ -66,6 +66,8 @@ public final class JadeGateTests {
     @GameTest(template = "empty", batch = BATCH)
     public static void compat_002_the_readout_is_on_only_with_a_supported_jade(GameTestHelper h) {
         boolean on = expected(h);
+        // Jade creates the plugin whatever its version; the check only stops it registering.
+        h.assertTrue(JadeGate.pluginStarted(), "Jade never created the plugin");
         h.assertValueEqual(JadeGate.open(), on, "whether the version check lets the adapter in");
         Spot s = new Spot(h, 40);
         s.clear();

@@ -15,8 +15,11 @@ import org.slf4j.Logger;
  *
  * <p>The framework's adapter loader has the same check for the adapters it starts. It is internal
  * to {@code zas}, which this mod may not name (CONT-095), so the few lines are repeated here.
+ *
+ * <p>This is the adapter's one class that names nothing of Jade's, so it also keeps the note of
+ * whether Jade ever created the plugin, which a game without Jade can ask for.
  */
-final class JadeGate {
+public final class JadeGate {
     static final String MOD_ID = "jade";
 
     /**
@@ -30,7 +33,25 @@ final class JadeGate {
 
     private static @Nullable Boolean open;
 
+    private static volatile boolean pluginStarted;
+
     private JadeGate() {}
+
+    /** The plugin's note that Jade has created it. */
+    static void notePluginStarted() {
+        pluginStarted = true;
+    }
+
+    /**
+     * Whether Jade has created the plugin, the adapter's only way in. Without Jade it never has, and
+     * so none of the adapter's classes that name Jade's has run (NFR-022): the release jar's check
+     * asks here, on a server without Jade. Any thread.
+     *
+     * @return true once the plugin class has been initialised
+     */
+    public static boolean pluginStarted() {
+        return pluginStarted;
+    }
 
     /**
      * Whether the adapter may register with the Jade that is installed. Decided at the first call,

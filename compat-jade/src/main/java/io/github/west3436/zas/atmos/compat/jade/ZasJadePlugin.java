@@ -22,6 +22,11 @@ import snownee.jade.api.WailaPlugin;
  */
 @WailaPlugin
 public final class ZasJadePlugin implements IWailaPlugin {
+    static {
+        // For the check that nothing here runs without Jade.
+        JadeGate.notePluginStarted();
+    }
+
     @Override
     public void register(IWailaCommonRegistration registration) {
         if (!on()) {
