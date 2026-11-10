@@ -83,6 +83,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
      *
      * @return the network, valid
      */
+    @Override
     public PipeNetwork network() {
         if (network == null || !network.usable()) {
             network = null;
