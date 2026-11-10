@@ -63,9 +63,10 @@ jobs:
       # loaded as well run nightly: full-gametests.yml.
       # The task can succeed without a server ever starting, so the log must also
       # say that the tests passed, once for each of the two servers.
+      # The two take 5 to 7 minutes between them, and over 10 on a slow machine.
       - name: GameTests (dedicated server)
         if: steps.gradle.outputs.present == 'true'
-        timeout-minutes: 10
+        timeout-minutes: 20
         shell: bash
         run: |
           ./gradlew runGameTestServer -x :example-addon:runGameTestServer -Pgametests.ownOnly=true --stacktrace | tee gametests.log
