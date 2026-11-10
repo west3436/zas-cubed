@@ -9,8 +9,10 @@ import java.util.List;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.slf4j.Logger;
 
 /**
@@ -30,13 +32,36 @@ public final class ServerReactions {
     private ServerReactions() {}
 
     /**
-     * Registers the loader and the server lifecycle hooks, after the gases' ({@link
-     * io.github.west3436.zas.gas.GasRegistryEvents}), so the gases are known when reactions compile.
+     * Registers the loader, the server lifecycle hooks and the client sync, after the gases' ({@link
+     * io.github.west3436.zas.gas.GasRegistryEvents}), so the gases are known when reactions compile
+     * and reach a client before the reactions that name them.
      */
-    public static void register(IEventBus gameBus) {
+    public static void register(IEventBus modBus, IEventBus gameBus) {
+        // Optional, so a client from before this payload can still join.
+        modBus.addListener((RegisterPayloadHandlersEvent e) -> e.registrar("1")
+                .optional()
+                .playToClient(
+                        ReactionDefinitionsPayload.TYPE,
+                        ReactionDefinitionsPayload.STREAM_CODEC,
+                        ClientReactions::handle));
         gameBus.addListener((AddReloadListenerEvent e) -> e.addListener(new ReactionLoader()));
         gameBus.addListener((ServerAboutToStartEvent e) -> compile());
         gameBus.addListener((ServerStoppedEvent e) -> current = ReactionSet.EMPTY);
+        gameBus.addListener(ServerReactions::sync);
+    }
+
+    /**
+     * Fires for a joining player, and for everyone after {@code /reload}, in both cases before the
+     * recipes are sent, which is when recipe viewers build their lists (COMPAT-060).
+     */
+    private static void sync(OnDatapackSyncEvent event) {
+        ReactionDefinitionsPayload payload = new ReactionDefinitionsPayload(current.definitions());
+        event.getRelevantPlayers().forEach(player -> {
+            // An older client lacks the channel, and so do GameTest mock players.
+            if (player.connection.hasChannel(ReactionDefinitionsPayload.TYPE)) {
+                player.connection.send(payload);
+            }
+        });
     }
 
     /** The running server's reactions; {@link ReactionSet#EMPTY} when no server runs. Any thread. */
