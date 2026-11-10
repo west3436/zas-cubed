@@ -63,6 +63,7 @@ class AdapterReferencesTest {
             PACKAGE + "ChemicalMap",
             PACKAGE + "ChemicalMapFormat",
             PACKAGE + "ChemicalMapLoader",
+            PACKAGE + "GasPurity",
             MIXIN_PACKAGE + "MekanismMixinPlugin");
 
     private static final Pattern DESCRIPTOR_TYPE = Pattern.compile("L([\\w/$]+)[;<]");

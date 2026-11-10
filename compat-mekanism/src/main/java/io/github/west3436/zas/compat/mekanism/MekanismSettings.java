@@ -28,6 +28,9 @@ public final class MekanismSettings {
     /** {@code [units] litres_per_millibucket}: the mB to mol factor (MEK-002). */
     public static final ModConfigSpec.DoubleValue LITRES_PER_MILLIBUCKET;
 
+    /** {@code [connection] min_purity}: how pure a mixture must be to leave for Mekanism (MEK-013). */
+    public static final ModConfigSpec.DoubleValue MIN_PURITY;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -42,6 +45,21 @@ public final class MekanismSettings {
                         ChemicalUnits.DEFAULT_LITRES_PER_MILLIBUCKET,
                         ChemicalUnits.MIN_LITRES_PER_MILLIBUCKET,
                         ChemicalUnits.MAX_LITRES_PER_MILLIBUCKET);
+        builder.pop();
+
+        // ---- The connection to tubes, tanks and machines (MEK-013) ----
+        builder.push("connection");
+        MIN_PURITY = builder.comment(
+                        "A Mekanism tank holds one chemical, and a ZAS³ pipe holds a mixture. Gas leaves a",
+                        "pipe for a tube, tank or machine only while one gas is at least this share of what",
+                        "the pipe holds, by moles. Then that gas alone leaves, and only as much of it as",
+                        "keeps the rest at this share. At 0.99, a pipe of air gives nothing, a pipe of",
+                        "oxygen gives all of it, and a pipe of oxygen with a trace of something else keeps",
+                        "the trace and 99 times as much oxygen.",
+                        "Without the rule a tube would pick one gas out of a mixture, as a filter does, but",
+                        "with no power. 0 turns the rule off: each gas then leaves on its own.",
+                        "A chemical coming from Mekanism always enters, whatever the pipe holds.")
+                .defineInRange("min_purity", GasPurity.DEFAULT_MIN_SHARE, 0.0, 1.0);
         builder.pop();
 
         // Sections of the adapter's other parts go here, each in a block of its own.
@@ -73,5 +91,16 @@ public final class MekanismSettings {
      */
     public static double molesPerMillibucket() {
         return ChemicalUnits.molesPerMillibucket(litresPerMillibucket());
+    }
+
+    /**
+     * The least share one gas must be, and stay, of a mixture for that gas to leave it for Mekanism
+     * (MEK-013, {@link GasPurity}).
+     *
+     * @return the share, from 0 to 1, where 0 turns the rule off; the default while no server
+     *     config is loaded
+     */
+    public static double minPurity() {
+        return SPEC.isLoaded() ? MIN_PURITY.get() : GasPurity.DEFAULT_MIN_SHARE;
     }
 }

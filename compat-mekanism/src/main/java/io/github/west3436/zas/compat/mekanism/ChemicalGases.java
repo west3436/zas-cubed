@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.ServerThread;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -133,6 +134,16 @@ public final class ChemicalGases {
     public static Optional<Holder<Chemical>> chemical(ResourceLocation gas, double temperature) {
         Resolved now = resolved();
         return now.map().forGas(gas, temperature).map(mapping -> now.holders().get(mapping.chemical()));
+    }
+
+    /**
+     * The mapped chemicals on this server, for asking a tank which of them it would hold.
+     *
+     * @return their holders, unmodifiable, in no particular order
+     */
+    @ServerThread
+    public static Collection<Holder<Chemical>> chemicals() {
+        return resolved().holders().values();
     }
 
     /**
