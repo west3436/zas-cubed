@@ -52,6 +52,9 @@ public final class MekanismSettings {
     /** {@code [heat] joules_per_heat_unit}: how many joules one unit of Mekanism's heat is (MEK-040). */
     public static final ModConfigSpec.DoubleValue HEAT_JOULES_PER_UNIT;
 
+    /** {@code [heat] max_body_watts}: the most watts one heat block or multiblock passes (MEK-040). */
+    public static final ModConfigSpec.DoubleValue HEAT_MAX_BODY_WATTS;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -129,6 +132,13 @@ public final class MekanismSettings {
                         HeatFlow.DEFAULT_JOULES_PER_HEAT_UNIT,
                         HeatFlow.MIN_JOULES_PER_HEAT_UNIT,
                         HeatFlow.MAX_JOULES_PER_HEAT_UNIT);
+        HEAT_MAX_BODY_WATTS = builder.comment(
+                        "The most heat one Mekanism heat block, or one whole multiblock, passes to and from",
+                        "the zones it touches, in W, all its faces together. A running Fusion Reactor or a",
+                        "large hot boiler would pass millions. At 50,000 a sealed stone room built closely",
+                        "round a Fusion Reactor at full power passes 360 K, where a player starts to burn,",
+                        "in about 10 to 15 minutes, and sooner underground. 0 is no ceiling.")
+                .defineInRange("max_body_watts", HeatFlow.DEFAULT_MAX_BODY_WATTS, 0.0, HeatFlow.HIGHEST_MAX_BODY_WATTS);
         builder.pop();
 
         SPEC = builder.build();
@@ -223,5 +233,14 @@ public final class MekanismSettings {
      */
     public static double joulesPerHeatUnit() {
         return SPEC.isLoaded() ? HEAT_JOULES_PER_UNIT.get() : HeatFlow.DEFAULT_JOULES_PER_HEAT_UNIT;
+    }
+
+    /**
+     * The most watts one heat block or one whole multiblock passes to and from its zones (MEK-040).
+     *
+     * @return the ceiling in W, or 0 for none; the default while no server config is loaded
+     */
+    public static double maxBodyWatts() {
+        return SPEC.isLoaded() ? HEAT_MAX_BODY_WATTS.get() : HeatFlow.DEFAULT_MAX_BODY_WATTS;
     }
 }

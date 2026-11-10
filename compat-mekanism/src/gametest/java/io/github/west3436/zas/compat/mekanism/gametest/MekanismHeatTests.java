@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.mutation.GasMutations;
+import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
@@ -49,6 +50,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * <p>All but one build, run and clear within one game tick, driving atmos ticks themselves, so they
  * share the venting tests' batch and leave nothing standing for the adapter's own step, or another
  * test's, to find. The one that leaves the exchange to the game has a batch of its own.
+ *
+ * <p>Those tests run with no ceiling on what a body passes ({@code [heat] max_body_watts}) unless
+ * they set one: the exchange itself is tested with blocks hotter than any ceiling a server may come
+ * with, and the ceiling by the tests named for it.
  */
 @GameTestHolder(MekanismFoundationTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
@@ -69,12 +74,18 @@ public final class MekanismHeatTests {
 
     // ---- Helpers -------------------------------------------------------------------------------
 
-    /** Runs a test in its own area, clears the area, and passes the test. */
+    /**
+     * Runs a test in its own area, clears the area, and passes the test. While it runs a body has no
+     * ceiling, unless the test sets one; the server's own is put back afterwards.
+     */
     private static void inArea(GameTestHelper h, int index, Consumer<VentArea> test) {
         VentArea area = new VentArea(h, index);
+        double most = MekanismSettings.maxBodyWatts();
+        MekanismSettings.HEAT_MAX_BODY_WATTS.set(0.0);
         try {
             test.accept(area);
         } finally {
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(most);
             area.clear();
         }
         h.succeed();
@@ -360,6 +371,51 @@ public final class MekanismHeatTests {
         return parts;
     }
 
+    /**
+     * Builds a Fusion Reactor in a room, with (2, 2, 2) its low corner, and forms it. It is 5 by 5 by
+     * 5 with no corners and only the middle of each edge, every block a frame but for the controller
+     * in the middle of the top, a port in the middle of the west side and one in the middle of the
+     * east. The two ports are returned, the west one first.
+     */
+    private static List<TileEntityMekanism> fusionReactor(VentArea area) {
+        List<TileEntityMekanism> parts = new ArrayList<>();
+        List<TileEntityMekanism> ports = new ArrayList<>();
+        TileEntityMultiblock<?> controller = null;
+        for (int x = 0; x <= 4; x++) {
+            for (int y = 0; y <= 4; y++) {
+                for (int z = 0; z <= 4; z++) {
+                    int outer = (x % 4 == 0 ? 1 : 0) + (y % 4 == 0 ? 1 : 0) + (z % 4 == 0 ? 1 : 0);
+                    boolean edge = outer == 2 && (x == 2 || y == 2 || z == 2);
+                    if (outer == 0 || outer == 3 || outer == 2 && !edge) {
+                        continue; // inside, a corner, or an edge away from its middle
+                    }
+                    String id = "mekanismgenerators:fusion_reactor_frame";
+                    if (x == 2 && y == 4 && z == 2) {
+                        id = "mekanismgenerators:fusion_reactor_controller";
+                    } else if (y == 2 && z == 2 && (x == 0 || x == 4)) {
+                        id = "mekanismgenerators:fusion_reactor_port";
+                    }
+                    TileEntityMekanism part = area.place(2 + x, 2 + y, 2 + z, id, TileEntityMekanism.class);
+                    parts.add(part);
+                    if (id.endsWith("controller")) {
+                        controller = (TileEntityMultiblock<?>) part;
+                    } else if (id.endsWith("port")) {
+                        ports.add(part);
+                    }
+                }
+            }
+        }
+        if (controller == null) {
+            throw new GameTestAssertException("the reactor has no controller");
+        }
+        tick(parts, 12);
+        FormationResult formed = controller.getStructure().runUpdate(controller);
+        area.h.assertTrue(formed.isFormed(), "the reactor didn't form");
+        tick(parts, 1);
+        area.h.assertTrue(controller.getMultiblock().isFormed(), "the reactor isn't formed");
+        return ports;
+    }
+
     private static void tick(List<TileEntityMekanism> parts, int ticks) {
         for (int i = 0; i < ticks; i++) {
             for (TileEntityMekanism part : parts) {
@@ -538,9 +594,10 @@ public final class MekanismHeatTests {
     }
 
     /**
-     * Both heat settings are read at each step (MEK-040, OPS-016). Twice the face conductance
-     * carries what twice the conductance carries. At 2 J to a unit of Mekanism's heat the capacitor
-     * counts for twice the heat capacity, and loses half as many units as the zone gains joules.
+     * The heat settings are read at each step (MEK-040, OPS-016). Twice the face conductance carries
+     * what twice the conductance carries. At 2 J to a unit of Mekanism's heat the capacitor counts
+     * for twice the heat capacity, and loses half as many units as the zone gains joules. At 100 W a
+     * body at most, five faces that would carry kilowatts pass 100 J in a second between them.
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_040_the_heat_settings_are_read_on_use(GameTestHelper h) {
@@ -574,10 +631,187 @@ public final class MekanismHeatTests {
                 close(h, flow.joules(), joules, 1e-9, "the heat at 2 J a unit, J");
                 close(h, capacitor.getHeat(), 1000 * cb - joules / 2, 1e-9, "the capacitor's heat, in units");
                 close(h, land(area, flow).joules(), joules, 1e-9, "the heat the zone took, J");
+
+                MekanismSettings.HEAT_JOULES_PER_UNIT.set(unit);
+                MekanismSettings.HEAT_MAX_BODY_WATTS.set(100.0);
+                heatTo(capacitor, 1000);
+                before = area.zone(2, 2, 2);
+                flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+                close(h, flow.joules(), 100, 1e-9, "the heat at 100 W a body at most, J");
+                close(h, capacitor.getHeat(), 1000 * cb - 100, 1e-9, "the capacitor's heat");
+                close(h, land(area, flow).joules(), 100, 1e-9, "the heat the zone took, J");
             } finally {
                 MekanismSettings.HEAT_FACE_CONDUCTANCE.set(setting);
                 MekanismSettings.HEAT_JOULES_PER_UNIT.set(unit);
             }
+        });
+    }
+
+    /**
+     * A Fusion Reactor passes no more than the most watts set for a body, and under that passes what
+     * it did (MEK-040). A formed reactor stands clear in a room, with a port in its west side and one
+     * in its east: one case, two faces on the room. Mekanism gives the case a heat capacity of 1 and
+     * an insulation of 100,000, so a face conducts 0.0002 W/K. With the case at 9.8 × 10⁹ K, which is
+     * Mekanism's figure for an air-cooled reactor at its highest injection rate, a face would pass
+     * 1.96 MW. At 45 kW a body at most, the two faces pass 45 kJ in a second between them, the case
+     * loses just that and the room gains just that. At 2 × 10⁷ K the two pass 8 kW with the ceiling
+     * or without. With no ceiling the hot case's two faces pass their 3.9 MJ.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_040_a_fusion_reactor_passes_no_more_than_the_most_watts_set(GameTestHelper h) {
+        inArea(h, 50, area -> {
+            area.box(8, 8, 8);
+            List<TileEntityMekanism> ports = fusionReactor(area);
+            // The room's zone forms round the reactor: what is inside the reactor is no part of it.
+            area.form(1, 1, 1);
+            area.tick();
+            IHeatCapacitor casing = capacitor(ports.get(0));
+            h.assertTrue(casing == capacitor(ports.get(1)), "the two ports don't share the case's capacitor");
+            for (TileEntityMekanism port : ports) {
+                h.assertTrue(MekanismHeat.knows(area.level, port.getBlockPos()), "a port wasn't learned");
+            }
+            double cb = casing.getHeatCapacity();
+            double conductance = 2 * face(10, 1, casing);
+            close(h, cb, 1, 0, "the case's heat capacity");
+            h.assertTrue(
+                    Math.abs(conductance - 2 * 0.0002) < 1e-7,
+                    "the two port faces conduct " + conductance + " W/K, not 0.0004");
+            double hot = 9.8e9;
+
+            // 45 kW a body at most: 45 kJ in a second, from both faces together.
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(45_000.0);
+            heatTo(casing, hot);
+            ZoneInfo before = area.zone(1, 1, 1);
+            double cg = capacity(before);
+            double tg = before.mixture().temperature();
+            Flow flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), 45_000, 1e-9, "the heat the reactor passes at 45 kW at most, J");
+            close(h, hot * cb - casing.getHeat(), 45_000, 1e-6, "the heat the case lost");
+            HeatResult landed = land(area, flow);
+            close(h, landed.joules(), 45_000, 1e-9, "the heat the zone took, J");
+            kelvin(h, landed.temperature(), tg + 45_000 / cg, "the zone's temperature afterwards");
+
+            // A cooler case, whose two faces pass 8 kW: the ceiling changes nothing.
+            heatTo(casing, 2e7);
+            before = area.zone(1, 1, 1);
+            double under = expected(cb, 2e7, capacity(before), before.mixture().temperature(), conductance, 1);
+            h.assertTrue(under > 7_000 && under < 9_000, "the test's cooler case passes " + under + " J");
+            flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), under, 1e-9, "the heat the reactor passes under the ceiling, J");
+            land(area, flow);
+
+            // No ceiling: megawatts.
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(0.0);
+            heatTo(casing, hot);
+            before = area.zone(1, 1, 1);
+            double free = expected(cb, hot, capacity(before), before.mixture().temperature(), conductance, 1);
+            h.assertTrue(free > 2 * 1.9e6, "two faces with no ceiling pass " + free + " J");
+            flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), free, 1e-9, "the heat the reactor passes with no ceiling, J");
+            close(h, land(area, flow).joules(), free, 1e-9, "the heat the zone took, J");
+        });
+    }
+
+    /**
+     * A body's faces share one ceiling, whichever way the heat goes, and the exchange still ends
+     * level (MEK-040). A heater's five faces would pass 26 kW from 1,000 K: at 10 kW a body at most
+     * they pass 10 kJ in a second between them, not 10 kJ each. At 100 K the heater would take
+     * kilowatts: at 500 W at most it asks the room for 500 J in a second, and gains them when the
+     * room delivers. Given an hour, the two end at the one temperature their heat capacities give,
+     * as with no ceiling.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_040_a_bodys_faces_share_one_ceiling_whichever_way_the_heat_goes(GameTestHelper h) {
+        inArea(h, 51, area -> {
+            area.room();
+            area.form(2, 2, 2);
+            IHeatCapacitor capacitor = heatBlock(area, 2, 1, 2, FUELWOOD_HEATER);
+            double cb = capacitor.getHeatCapacity();
+
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(10_000.0);
+            heatTo(capacitor, 1000);
+            ZoneInfo before = area.zone(2, 2, 2);
+            double cg = capacity(before);
+            double tg = before.mixture().temperature();
+            double free = expected(cb, 1000, cg, tg, 5 * face(10, 1, capacitor), 1);
+            h.assertTrue(free > 2 * 10_000, "the test's heater would pass only " + free + " J");
+            Flow flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), 10_000, 1e-9, "the heat five faces pass at 10 kW a body at most, J");
+            close(h, capacitor.getHeat(), 1000 * cb - 10_000, 1e-9, "the capacitor's heat afterwards");
+            close(h, land(area, flow).joules(), 10_000, 1e-9, "the heat the zone took, J");
+
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(500.0);
+            heatTo(capacitor, 100);
+            before = area.zone(2, 2, 2);
+            tg = before.mixture().temperature();
+            flow = only(h, MekanismHeat.step(area.level, 1), before.id());
+            close(h, flow.joules(), -500, 1e-9, "the heat asked of the room, J");
+            close(h, capacitor.getHeat(), 100 * cb, 0, "the capacitor's heat before the zone delivers");
+            HeatResult landed = land(area, flow);
+            close(h, landed.joules(), 500, 1e-9, "the heat the zone delivered, J");
+            kelvin(h, landed.temperature(), tg - 500 / cg, "the zone's temperature afterwards");
+            close(h, capacitor.getHeat(), 100 * cb + 500, 1e-9, "the capacitor's heat once delivered");
+
+            // An hour is far longer than 500 W take to bring the two level.
+            before = area.zone(2, 2, 2);
+            tg = before.mixture().temperature();
+            double tb = capacitor.getTemperature();
+            double meet = (cb * tb + cg * tg) / (cb + cg);
+            h.assertTrue(cb * (meet - tb) < 500 * 3600, "an hour isn't enough for the test's heater");
+            flow = only(h, MekanismHeat.step(area.level, 3600), before.id());
+            close(h, flow.joules(), -cb * (meet - tb), 1e-9, "the heat to equilibrium, J");
+            landed = land(area, flow);
+            kelvin(h, landed.temperature(), meet, "the zone's temperature");
+            close(h, capacitor.getTemperature(), meet, 1e-9, "the block's temperature, K");
+        });
+    }
+
+    /**
+     * A body between two rooms shares its ceiling out between them by what each would be passed
+     * (MEK-040). A heater stands in the wall between two rooms, a face on each, and one room is the
+     * warmer, so the heater at 1,000 K would pass it less. Together the faces would pass over 10 kW.
+     * At 5 kW a body at most each room gets its part of the 5 kJ a second, in that proportion, and
+     * the heater loses 5 kJ.
+     */
+    @GameTest(template = "empty", batch = VentArea.BATCH)
+    public static void mek_040_a_ceiling_is_shared_out_between_a_bodys_rooms(GameTestHelper h) {
+        inArea(h, 52, area -> {
+            // Two rooms, x 1 to 3 and x 5 to 7, with the wall between them at x 4.
+            area.box(8, 4, 4);
+            area.stone(4, 1, 1, 4, 3, 3);
+            area.form(1, 1, 1);
+            area.form(7, 1, 1);
+            IHeatCapacitor capacitor = heatBlock(area, 4, 2, 2, FUELWOOD_HEATER);
+            ZoneInfo east = area.zone(7, 1, 1);
+            h.assertTrue(!east.id().equals(area.zone(1, 1, 1).id()), "the two rooms are one zone");
+            CompletableFuture<HeatResult> warmed =
+                    HeatMutations.add(area.level, Vec3.atCenterOf(area.abs(7, 1, 1)), 150 * capacity(east), SOURCE);
+            for (int i = 0; i < 8 && !warmed.isDone(); i++) {
+                area.tick();
+            }
+            h.assertTrue(warmed.isDone(), "the east room wasn't warmed within 8 atmos ticks");
+            area.tick();
+
+            MekanismSettings.HEAT_MAX_BODY_WATTS.set(5_000.0);
+            heatTo(capacitor, 1000);
+            ZoneInfo west = area.zone(1, 1, 1);
+            east = area.zone(7, 1, 1);
+            double cb = capacitor.getHeatCapacity();
+            double face = face(10, 1, capacitor);
+            double toWest = face * (1000 - west.mixture().temperature());
+            double toEast = face * (1000 - east.mixture().temperature());
+            h.assertTrue(toEast < 0.9 * toWest, "the east room isn't the warmer by enough to show");
+            h.assertTrue(toWest + toEast > 2 * 5_000, "the test's heater would pass only " + (toWest + toEast));
+
+            List<Flow> flows = MekanismHeat.step(area.level, 1);
+            Flow westward = only(h, flows, west.id());
+            Flow eastward = only(h, flows, east.id());
+            close(h, westward.joules(), 5_000 * toWest / (toWest + toEast), 1e-9, "the west room's part, J");
+            close(h, eastward.joules(), 5_000 * toEast / (toWest + toEast), 1e-9, "the east room's part, J");
+            close(h, westward.joules() + eastward.joules(), 5_000, 1e-9, "the heat the heater passes, J");
+            close(h, capacitor.getHeat(), 1000 * cb - 5_000, 1e-9, "the capacitor's heat afterwards");
+            close(h, land(area, westward).joules(), westward.joules(), 1e-9, "the heat the west room took, J");
+            close(h, land(area, eastward).joules(), eastward.joules(), 1e-9, "the heat the east room took, J");
         });
     }
 

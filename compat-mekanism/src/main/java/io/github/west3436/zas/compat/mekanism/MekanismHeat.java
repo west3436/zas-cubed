@@ -62,6 +62,11 @@ import org.jetbrains.annotations.Nullable;
  *       in an atmos tick is the exact course of the capacitor and the zone's gas toward one
  *       temperature, so it never passes it (HEAT-006). Mekanism's heat is turned into joules by
  *       {@code [heat] joules_per_heat_unit}.
+ *   <li><b>No more than.</b> One capacitor, so one block or one whole multiblock, passes at most
+ *       the server's {@code [heat] max_body_watts} to and from all its zones together. A running
+ *       Fusion Reactor or a large hot boiler would pass megawatts; held to the ceiling it makes a
+ *       sealed room deadly in minutes, not seconds. With several zones the ceiling is shared out
+ *       among them in proportion to what each would be passed as the step starts.
  *   <li><b>Once.</b> Faces are gathered by capacitor before anything moves, so a multiblock whose
  *       casing blocks all expose one capacitor is one body with many faces, and its heat capacity
  *       is counted once. Flows within one atmos tick are worked out one after another on running
@@ -346,6 +351,7 @@ public final class MekanismHeat {
             return List.of();
         }
         double joulesPerUnit = MekanismSettings.joulesPerHeatUnit();
+        double mostWatts = MekanismSettings.maxBodyWatts();
         double nearVacuum = Atmospheres.nearVacuumDensity();
 
         // Gather: every capacitor with the faces it shares with each zone.
@@ -411,11 +417,28 @@ public final class MekanismHeat {
         // Move: each capacitor with each of its zones in turn, on running temperatures.
         List<Flow> flows = new ArrayList<>();
         for (Body body : order) {
+            // What each zone of the body's would be passed as its turn starts, to share its ceiling out by.
+            double[] wouldPass = new double[body.conductance.size()];
+            double wouldPassInAll = 0;
+            int index = 0;
+            for (Map.Entry<ZoneId, Double> shared : body.conductance.entrySet()) {
+                double difference = body.temperature - zones.get(shared.getKey()).temperature;
+                wouldPass[index] = shared.getValue() * difference;
+                wouldPassInAll += Math.abs(wouldPass[index++]);
+            }
+            index = 0;
             double lost = 0;
             for (Map.Entry<ZoneId, Double> shared : body.conductance.entrySet()) {
                 Gas gas = zones.get(shared.getKey());
+                double most = HeatFlow.share(mostWatts, wouldPass[index++], wouldPassInAll);
                 double joules = HeatFlow.exchange(
-                        body.capacity, body.temperature, gas.capacity, gas.temperature, shared.getValue(), gas.seconds);
+                        body.capacity,
+                        body.temperature,
+                        gas.capacity,
+                        gas.temperature,
+                        shared.getValue(),
+                        gas.seconds,
+                        most);
                 if (joules == 0) {
                     continue;
                 }
