@@ -7,10 +7,12 @@ import static io.github.west3436.zas.engine.zone.ZoneFixtures.N2;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.O2;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.REGISTRY;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.ROOM_T;
+import static io.github.west3436.zas.engine.zone.ZoneFixtures.TRACE;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.air;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.assertConsistent;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.fillWith;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.graph;
+import static io.github.west3436.zas.engine.zone.ZoneFixtures.nitrogen;
 import static io.github.west3436.zas.engine.zone.ZoneFixtures.vacuum;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
-import io.github.west3436.zas.engine.gas.GasConstants;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
 import java.util.ArrayList;
@@ -408,22 +409,7 @@ class DissolutionTest {
 
     // ---- Sealed zones holding a gas past one of its levels (CORE-052) -------------------------
 
-    /** Oxygen standing in for a toxic gas: a warning from 0.0001 kPa, harm from 0.001, and half the lowest. */
-    private static final DissolveGuard TRACE = DissolveGuard.builder(REGISTRY)
-            .level(O2, 0.00005, false)
-            .level(O2, 0.0001, false)
-            .level(O2, 0.001, false)
-            .build();
-
-    /** Nitrogen at one atmosphere with oxygen at a partial pressure, in kPa. */
-    private static GasMixture nitrogen(double oxygenKpa) {
-        GasMixture m = new GasMixture(REGISTRY, CONFIG, CELL, ROOM_T);
-        m.setMoles(N2, 101.325 * CELL / (GasConstants.R * ROOM_T));
-        m.setMoles(O2, oxygenKpa * CELL / (GasConstants.R * ROOM_T));
-        return m;
-    }
-
-    /** A graph in plain nitrogen whose sealed zones wait 3 s and are kept by {@link #TRACE}. */
+    /** A graph in plain nitrogen whose sealed zones wait 3 s and are kept by {@link ZoneFixtures#TRACE}. */
     private static ZoneGraph guarded(Grid grid) {
         ZoneGraph graph = graph(grid, nitrogen(0));
         graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3).withGuard(TRACE));
@@ -727,5 +713,89 @@ class DissolutionTest {
         assertTrue(zone.isPinned(), "an unpinned share of a pinned zone doesn't unpin it");
         assertNull(graph.loadShare(8, new long[] {}, gas, true), "a share with no cells creates nothing");
         assertTrue(graph.checkConservation(1).conserved());
+    }
+
+    // ---- Opened zones holding a gas past one of its levels (CORE-076) -------------------------
+
+    /**
+     * A room opened to the ambient with a harmful trace isn't dissolved for matching it. It goes on
+     * venting, the trace falling by the venting ratio each tick, and dissolves once the trace is
+     * under its lowest level. All of the trace goes to the ambient, in the ledger. Without the
+     * levels the tolerances lose it in one exchange.
+     */
+    @Test
+    void core_076_an_opened_zone_holding_a_gas_past_its_level_vents_it_over_time() {
+        Grid grid = roomWithOpening();
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+        // Twice what harms, and a thousandth of what the tolerances let through.
+        fillWith(graph, room, nitrogen(0.002));
+        double held = room.mixture().moles(O2);
+        assertTrue(room.mixture().isEquivalent(graph.ambient()), "the tolerances take it for the ambient");
+        double r = ExchangeSettings.DEFAULT.ambientRatio(room.ambientEdge().connections(), room.volume());
+        // The first exchange after which 0.002 kPa is under 0.00005 kPa, a fortieth of it.
+        int expected = (int) Math.floor(Math.log(40) / -Math.log(1 - r)) + 1;
+        graph.beginConservationPeriod();
+
+        int ticks = 0;
+        double last = held;
+        while (room.isAlive() && ticks < 10 * expected) {
+            graph.exchange();
+            ticks++;
+            if (room.isAlive()) {
+                double now = room.mixture().moles(O2);
+                assertEquals(last * (1 - r), now, 1e-9 * held, "exchange " + ticks + " left its share");
+                assertTrue(room.mixture().partialPressure(O2) >= 0.00005, "it stays while at its lowest level");
+                last = now;
+            }
+        }
+
+        assertFalse(room.isAlive(), "under its lowest level it dissolves");
+        assertEquals(expected, ticks, "the time venting takes");
+        assertTrue(ticks > 10, "over time, not at once");
+        ConservationReport report = graph.checkConservation(ticks);
+        assertTrue(report.conserved(), report::toString);
+        assertEquals(-held, report.recorded(LedgerCategory.AMBIENT, O2), 1e-9 * held, "all of it went to the ambient");
+        for (long c : ROOM) {
+            assertNull(graph.zoneOf(c));
+        }
+        assertConsistent(graph, grid);
+
+        ZoneGraph plain = graph(roomWithOpening(), nitrogen(0));
+        Zone lost = plain.createZone(ROOM);
+        fillWith(plain, lost, nitrogen(0.002));
+        plain.exchange();
+        assertFalse(lost.isAlive(), "with no levels the tolerances lose it in one exchange");
+    }
+
+    @Test
+    void core_076_an_opened_zone_with_a_trace_under_every_level_dissolves_at_once() {
+        Grid grid = roomWithOpening();
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+        fillWith(graph, room, nitrogen(0.00004));
+        double held = room.mixture().moles(O2);
+        assertTrue(held > 0);
+        graph.beginConservationPeriod();
+
+        graph.exchange();
+
+        assertFalse(room.isAlive(), "under half the lowest level it is the ambient, as before");
+        ConservationReport report = graph.checkConservation(1);
+        assertTrue(report.conserved(), report::toString);
+        assertEquals(-held, report.recorded(LedgerCategory.AMBIENT, O2), 1e-9 * held, "the trace went to the ambient");
+    }
+
+    @Test
+    void core_076_an_opened_zone_at_the_ambient_dissolves_at_once_whatever_the_levels() {
+        Grid grid = roomWithOpening();
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+        long exchanges = graph.exchangeCount();
+
+        graph.exchange();
+
+        assertFalse(room.isAlive());
+        assertEquals(exchanges, graph.exchangeCount(), "nothing was exchanged first");
     }
 }

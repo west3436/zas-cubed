@@ -50,6 +50,24 @@ final class ZoneFixtures {
         return m;
     }
 
+    /**
+     * Oxygen standing in for a toxic gas: a warning from 0.0001 kPa, harm from 0.001, and half the
+     * lowest. All far inside what the tolerances let through (CORE-006).
+     */
+    static final DissolveGuard TRACE = DissolveGuard.builder(REGISTRY)
+            .level(O2, 0.00005, false)
+            .level(O2, 0.0001, false)
+            .level(O2, 0.001, false)
+            .build();
+
+    /** Nitrogen at one atmosphere with oxygen at a partial pressure, in kPa. */
+    static GasMixture nitrogen(double oxygenKpa) {
+        GasMixture m = new GasMixture(REGISTRY, CONFIG, CELL, ROOM_T);
+        m.setMoles(N2, 101.325 * CELL / (GasConstants.R * ROOM_T));
+        m.setMoles(O2, oxygenKpa * CELL / (GasConstants.R * ROOM_T));
+        return m;
+    }
+
     static GasMixture vacuum() {
         return new GasMixture(REGISTRY, CONFIG, CELL, ROOM_T);
     }

@@ -11,6 +11,7 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -25,6 +26,8 @@ import io.github.west3436.zas.config.HazardConfig;
 import io.github.west3436.zas.config.WorldConfigCopy;
 import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.engine.conservation.ConservationReport;
+import io.github.west3436.zas.engine.conservation.LedgerCategory;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.life.HazardLevels;
@@ -347,6 +350,147 @@ public final class LiveConfigTests {
             ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
         }
         h.succeed();
+    }
+
+    /**
+     * A room holding 0.2 kPa of carbon monoxide, opened to the open air by one block, isn't taken
+     * for open air because the tolerances allow that much: it stays a zone and vents, losing the
+     * same share of its carbon monoxide each atmos tick, until that is under half the gas's lowest
+     * threshold. Then it dissolves. Every mole of it is in the ledger as gone to the open air, and
+     * no tick leaves anything unexplained (CORE-076, CORE-036). It used to be gone, all of it, on
+     * the tick after the wall was opened.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_076_an_opened_room_vents_a_harmful_gas_over_time(GameTestHelper h) {
+        Rooms r = new Rooms(h, 993);
+        boolean checker = ZasServerConfig.CONSERVATION_CHECKER.get();
+        try {
+            ZasServerConfig.CONSERVATION_CHECKER.set(true);
+            double moles = roomWithCarbonMonoxide(r, 0.2, source("core_076"));
+            ZoneId zone = r.zone(2, 2, 2).id();
+            int gas = r.dimension().registry().indexOf(CO.toString());
+            double kept = HazardLevels.KEPT_FRACTION
+                    * HazardProfiles.of(CO).orElseThrow().thresholds().get(0).partialPressure();
+
+            r.set(4, 2, 2, AIR);
+            double last = moles;
+            double lastPressure = 0.2;
+            double share = Double.NaN;
+            double toTheOpenAir = 0;
+            int ticks = 0;
+            while (r.zoned(2, 2, 2) && ticks < 1000) {
+                r.tick();
+                ticks++;
+                ConservationReport report = r.dimension().lastConservation();
+                h.assertTrue(report != null, "tick " + ticks + ": the checker didn't run");
+                h.assertTrue(report.conserved(), "tick " + ticks + ": unexplained: " + report.violations());
+                toTheOpenAir -= report.recorded(LedgerCategory.AMBIENT, gas);
+                if (!r.zoned(2, 2, 2)) {
+                    break;
+                }
+                ZoneInfo room = r.zone(2, 2, 2);
+                h.assertValueEqual(room.id(), zone, "tick " + ticks + ": the room's zone");
+                h.assertValueEqual(room.edges().ambientEdges(), 1, "tick " + ticks + ": the room's openings");
+                double now = room.mixture().moles(CO);
+                lastPressure = room.mixture().partialPressure(CO);
+                h.assertTrue(lastPressure >= kept, "tick " + ticks + ": kept at " + lastPressure + " kPa");
+                if (ticks == 1) {
+                    h.assertTrue(now < moles && now > 0.9 * moles, "the first tick left " + now + " of " + moles);
+                    share = now / last;
+                } else {
+                    h.assertTrue(
+                            Math.abs(now / last - share) < 1e-6,
+                            "tick " + ticks + " left " + now / last + " of it; the first left " + share);
+                }
+                last = now;
+            }
+
+            h.assertFalse(r.zoned(2, 2, 2), "the room never turned into open air");
+            h.assertTrue(ticks > 100, "it took " + ticks + " atmos ticks");
+            h.assertTrue(lastPressure * share < kept, "it went from " + lastPressure + " kPa");
+            h.assertValueEqual(
+                    Atmospheres.at(r.level, r.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "the room's cells");
+            r.close(toTheOpenAir, moles, "carbon monoxide the ledger has as gone to the open air, mol");
+        } finally {
+            ZasServerConfig.CONSERVATION_CHECKER.set(checker);
+            r.set(4, 2, 2, STONE);
+        }
+        h.succeed();
+    }
+
+    /**
+     * Two rooms joined by an open door, the same but for carbon monoxide in the west one. A trace
+     * under half the gas's lowest threshold stays where it is, as it always has: by the tolerances
+     * the rooms are equivalent and nothing is exchanged (CORE-033). 0.2 kPa, which harms, is by the
+     * tolerances just as equivalent, and used to stay in the west room too, the room next door
+     * reading clean. Now it crosses the door a share each atmos tick, and the two rooms end at one
+     * partial pressure with all of it between them.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_033_a_harmful_gas_spreads_to_the_room_through_the_door(GameTestHelper h) {
+        Rooms r = ZoneBoundaryTests.row(h, 994, 2, true);
+        int west = ZoneBoundaryTests.centre(0);
+        int east = ZoneBoundaryTests.centre(1);
+        SourceId src = source("core_033");
+        // Both rooms zoned and back at the open air's nitrogen and oxygen.
+        for (int x : new int[] {west, east}) {
+            r.settle(GasMutations.add(r.level, r.point(x, 2, 2), Rooms.oxygen(500), src));
+        }
+        for (int x : new int[] {west, east}) {
+            r.settle(GasMutations.remove(r.level, r.point(x, 2, 2), Map.of(O2, 500.0), src));
+        }
+        r.ticks(2);
+        ZoneId westZone = r.zone(west, 2, 2).id();
+        ZoneId eastZone = r.zone(east, 2, 2).id();
+        h.assertTrue(!westZone.equals(eastZone), "the door keeps the rooms' zones apart");
+        h.assertValueEqual(r.zone(west, 2, 2).edges().zoneEdges(), 1, "the door's edge");
+
+        double trace = molesFor(0.002);
+        r.settle(GasMutations.add(
+                r.level, r.point(west, 2, 2), new GasParcel(Map.of(CO, trace), StandardAir.TEMPERATURE), src));
+        r.ticks(5);
+        h.assertValueEqual(r.zone(east, 2, 2).mixture().moles(CO), 0.0, "a trace under every level, next door");
+        r.close(r.zone(west, 2, 2).mixture().moles(CO), trace, "the trace where it was put, mol");
+
+        double harmful = molesFor(0.2);
+        r.settle(GasMutations.add(
+                r.level, r.point(west, 2, 2), new GasParcel(Map.of(CO, harmful), StandardAir.TEMPERATURE), src));
+        double first = r.zone(east, 2, 2).mixture().moles(CO);
+        h.assertTrue(first > 0, "the harmful gas stayed on its side of the door");
+        h.assertTrue(first < 0.25 * harmful, "it crossed all at once: " + first + " of " + harmful + " mol");
+
+        int ticks = 0;
+        while (apart(r, west, east) && ticks < 200) {
+            r.tick();
+            ticks++;
+        }
+        h.assertFalse(apart(r, west, east), "the rooms never came to one partial pressure");
+        h.assertTrue(ticks > 5, "it took " + ticks + " atmos ticks");
+        ZoneInfo w = r.zone(west, 2, 2);
+        ZoneInfo e = r.zone(east, 2, 2);
+        h.assertValueEqual(w.id(), westZone, "the west room's zone");
+        h.assertValueEqual(e.id(), eastZone, "the east room's zone");
+        r.close(
+                w.mixture().moles(CO) + e.mixture().moles(CO),
+                trace + harmful,
+                "carbon monoxide in the two rooms, mol");
+        h.assertTrue(
+                HazardProfiles.of(CO).orElseThrow().thresholds().get(0).partialPressure()
+                        < Atmospheres.at(r.level, r.abs(east, 2, 2)).mixture().partialPressure(CO),
+                "a reading next door finds less than the HUD warns at");
+
+        // Asleep again: nothing more moves.
+        double settled = e.mixture().moles(CO);
+        r.ticks(5);
+        h.assertValueEqual(r.zone(east, 2, 2).mixture().moles(CO), settled, "carbon monoxide next door, later");
+        h.succeed();
+    }
+
+    /** Whether two rooms of a row differ in their partial pressure of carbon monoxide. */
+    private static boolean apart(Rooms r, int west, int east) {
+        double w = r.zone(west, 2, 2).mixture().partialPressure(CO);
+        double e = r.zone(east, 2, 2).mixture().partialPressure(CO);
+        return Math.abs(w - e) > 1e-9 * Math.max(w, e);
     }
 
     /** The moles the room at (2, 2, 2) loses in one atmos tick. */

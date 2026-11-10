@@ -1095,7 +1095,7 @@ public final class ZoneGraph {
      *
      * <ol>
      *   <li>Sleeping edges of zones that changed since the last exchange wake if
-     *       their sides are no longer equivalent (CORE-066).
+     *       their sides are no longer {@linkplain #alike alike} (CORE-066).
      *   <li>Every awake edge, in order, exchanges once: zone to zone by the
      *       sharing ratio for its connection count, weighted by the two volumes
      *       (CORE-031); zone to ambient the same way against ambient gas that is
@@ -1104,12 +1104,17 @@ public final class ZoneGraph {
      *   <li>Then, if its sides are equivalent: zones joined by a direct opening
      *       merge (CORE-023), and other zone-to-zone edges, which join their zones
      *       only through zone boundaries, sleep (CORE-033) and never merge
-     *       (CORE-034). Sleeping edges cost no exchange work.
+     *       (CORE-034). Sleeping edges cost no exchange work. An edge that would
+     *       sleep stays awake while a gas level tells its sides apart, so a
+     *       harmful trace on one side is shared like any other difference.
      *   <li>Then every zone reachable through sleeping edges from an edge that fell
      *       asleep takes one combined mixture, shared by volume (CORE-067): once per
      *       group, however many of its edges fell asleep.
      *   <li>Last, in zone id order, every zone with an ambient edge that is
-     *       nearly equivalent to the ambient dissolves into it (CORE-076, D-63):
+     *       {@linkplain #nearlyAmbient nearly equivalent} to the ambient dissolves
+     *       into it (CORE-076, D-63). Until then its ambient edge exchanges, so a
+     *       room opened with a harmful trace vents it over the time venting takes.
+     *       When it dissolves
      *       its gas goes to the ambient, recorded as {@link
      *       LedgerCategory#AMBIENT}, and its cells become unzoned, so they hold
      *       the ambient again (CORE-050) and a later trigger can zone them anew.
@@ -1198,11 +1203,11 @@ public final class ZoneGraph {
      * room someone is breathing in keeps its zone, however little that changes its air, for without
      * one its air would stop being used up (CORE-038).
      *
-     * <p>Nearly equivalent allows far more of a gas than harms: 0.0021 mol/L, about 5 kPa at room
-     * temperature. So a zone's time doesn't count either while the settings' {@link DissolveGuard}
-     * keeps it: while one of its gases has reached a level the ambient's hasn't, or the other way
-     * round. A room holding chlorine at a partial pressure that hurts therefore stays, with its
-     * chlorine, though nobody is in it.
+     * <p>The tolerances alone allow far more of a gas than harms: 0.0021 mol/L, about 5 kPa at room
+     * temperature. So nearly equivalent also means that the settings' {@link DissolveGuard} doesn't
+     * tell the zone from the ambient: that none of its gases has reached a level the ambient's
+     * hasn't, or the other way round. A room holding chlorine at a partial pressure that hurts
+     * therefore stays, with its chlorine, though nobody is in it.
      *
      * <p>Zones joined by zone edges dissolve together or not at all. A zone left behind would gain an
      * ambient edge across cells that are still sealed, and vent into them as if they were the open air.
@@ -1212,15 +1217,10 @@ public final class ZoneGraph {
      */
     public void collectSealed(LongPredicate undecided) {
         double delay = zoneSettings.sealedDissolveSeconds();
-        DissolveGuard guard = zoneSettings.guard();
         double period = settings.periodSeconds();
         boolean anyDue = false;
         for (Zone z : zones.values()) {
-            if (!z.paused
-                    && !z.isPinned()
-                    && z.ambientEdge() == null
-                    && nearlyAmbient(z.mixture())
-                    && !guard.keeps(z.mixture(), ambient)) {
+            if (!z.paused && !z.isPinned() && z.ambientEdge() == null && nearlyAmbient(z.mixture())) {
                 z.matchedSeconds += period;
                 anyDue |= z.matchedSeconds >= delay;
             } else {
@@ -1271,28 +1271,59 @@ public final class ZoneGraph {
      * mixture is near-empty, its pressure within the absolute pressure tolerance
      * both of the ambient's and of vacuum, since near-empty gas carries
      * negligible heat. At ordinary pressures temperature is always compared.
+     *
+     * <p>And no gas level {@linkplain #apart tells it from the ambient}. So a zone that holds a
+     * harmful trace isn't dissolved for matching the ambient, sealed (CORE-052) or open (CORE-076):
+     * an open one goes on venting until the trace is under its lowest level.
      */
     private boolean nearlyAmbient(GasMixture m) {
         double p = m.pressure();
         double tolerance = ignoringTemperature.pressureAbsolute();
-        if (p <= tolerance && Math.abs(p - ambient.pressure()) <= tolerance) {
-            return m.isEquivalent(ambient, ignoringTemperature);
-        }
-        return m.isEquivalent(ambient);
+        boolean equivalent = p <= tolerance && Math.abs(p - ambient.pressure()) <= tolerance
+                ? m.isEquivalent(ambient, ignoringTemperature)
+                : m.isEquivalent(ambient);
+        return equivalent && !apart(m, ambient);
+    }
+
+    /**
+     * Whether a gas level tells two mixtures apart though the equivalence test may not: the one
+     * test of it, for dissolving a zone, for an edge's sleep and for exchange with a paused zone,
+     * so that a trace that harms is never lost in CORE-006's tolerances at one of them and kept at
+     * another. The levels are the settings' ({@link ZoneSettings#guard()}).
+     */
+    private boolean apart(GasMixture a, GasMixture b) {
+        return zoneSettings.guard().keeps(a, b);
+    }
+
+    /** Whether two mixtures are equivalent (CORE-006) and no gas level tells them {@linkplain #apart apart}. */
+    private boolean alike(GasMixture a, GasMixture b) {
+        return a.isEquivalent(b) && !apart(a, b);
     }
 
     private boolean sidesEquivalent(Edge e) {
         GasMixture other = e.isAmbient() ? ambient : e.second().mixture();
-        return e.first().mixture().isEquivalent(other);
+        return alike(e.first().mixture(), other);
+    }
+
+    /**
+     * Whether an edge's two zones have nothing more to exchange. Through a direct opening that is
+     * equivalence alone: the two merge (CORE-023), and the one zone holds whatever trace either had.
+     * Through a zone boundary they must be {@linkplain #alike alike}, or the edge would sleep with
+     * a harmful trace on one side of it (CORE-033).
+     */
+    private boolean settled(Edge e) {
+        GasMixture a = e.first().mixture();
+        GasMixture b = e.second().mixture();
+        return e.direct > 0 ? a.isEquivalent(b) : alike(a, b);
     }
 
     private void exchangeZones(Edge e) {
         Zone a = e.first();
         Zone b = e.second();
-        if (!a.mixture().isEquivalent(b.mixture())) {
+        if (!settled(e)) {
             e.molesPerSecond =
                     share(a, b, settings.zoneRatio(e.connections, a.volume(), b.volume())) / settings.periodSeconds();
-            if (!a.mixture().isEquivalent(b.mixture())) {
+            if (!settled(e)) {
                 return;
             }
         }
@@ -1411,7 +1442,7 @@ public final class ZoneGraph {
      * change. The edge never sleeps or merges while a side is paused.
      */
     private void exchangeWithPaused(Edge e, Zone active, Zone paused) {
-        if (active.mixture().isEquivalent(paused.mixture())) {
+        if (alike(active.mixture(), paused.mixture())) {
             return;
         }
         double va = active.volume();

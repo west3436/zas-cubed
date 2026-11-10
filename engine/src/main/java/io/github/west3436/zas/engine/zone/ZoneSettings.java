@@ -9,7 +9,9 @@ import java.util.Objects;
  *     by volume, as ZAS does (CORE-029), rather than staying in the zone (CORE-022, CORE-075)
  * @param sealedDissolveSeconds how long a sealed zone must match the ambient before it dissolves into
  *     it, in s (CORE-052)
- * @param guard the gas levels that keep a sealed zone though it matches the ambient (CORE-052)
+ * @param guard the gas levels that tell two mixtures apart though they are equivalent: they keep a
+ *     zone that matches the ambient (CORE-052, CORE-076) and an edge between two zones awake
+ *     (CORE-033)
  * @throws IllegalArgumentException if the delay is negative or not a number
  */
 public record ZoneSettings(boolean deleteDisplacedGas, double sealedDissolveSeconds, DissolveGuard guard) {

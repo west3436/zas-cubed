@@ -7,21 +7,25 @@ import java.util.Map;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * The hazard profiles (LIFE-004) as the gas levels that keep a sealed room's zone from dissolving
- * into the open air (CORE-052).
+ * The hazard profiles (LIFE-004) as the gas levels that tell two airs apart where the engine's
+ * tolerances don't: they keep a room's zone from dissolving into the open air, sealed (CORE-052)
+ * or open (CORE-076), and keep gas moving between two rooms through a door (CORE-033).
  *
  * <p>A zone that matches the open air within the engine's tolerances dissolves, and its gas goes.
  * Those tolerances allow about 5 kPa of a gas, and chlorine hurts from 0.001 kPa, so without these
  * levels a room that would hurt whoever walked in turned back into open air a minute after it was
- * left. Each gas with a profile gets a level at every threshold's partial pressure, and one at
+ * left, or the tick after a wall was opened, and a room next door to it read clean for ever. Each
+ * gas with a profile gets a level at every threshold's partial pressure, and one at
  * {@link #KEPT_FRACTION} of its lowest, so that a room isn't lost just under the level the HUD
- * warns at. A zone stays while its gas and the open air's lie on different sides of any of them.
+ * warns at. A zone stays while its gas and the open air's lie on different sides of any of them:
+ * an opened room vents until it is under them all. Two rooms go on sharing their gas while they
+ * lie on different sides of any.
  *
  * <p>The levels follow the profiles: a {@code /reload} that changes a profile changes them from
  * the next atmos tick.
  */
 public final class HazardLevels {
-    /** The share of a gas's lowest threshold from which a sealed room holding it is kept. */
+    /** The share of a gas's lowest threshold from which a room holding it is kept. */
     public static final double KEPT_FRACTION = 0.5;
 
     /** The last guard compiled, with what it was compiled from. */
