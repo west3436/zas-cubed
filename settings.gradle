@@ -18,6 +18,9 @@ rootProject.name = 'zas-cubed'
 // and ours as one library and keep whichever it saw first.
 include 'engine', 'zas-api', 'zas', 'compat-adastra', 'zas-atmos', 'example-addon'
 
+// The recipe viewer plugins (COMPAT-060 to COMPAT-062). Their classes ship inside the zas jar.
+include 'compat-jei', 'compat-emi'
+
 // The Ponder scenes, a client addon of their own that nests Ponder and Flywheel (D-83).
 include 'zas-ponder'
 
