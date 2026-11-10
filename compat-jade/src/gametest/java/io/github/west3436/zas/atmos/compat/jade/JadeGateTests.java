@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.compat.jade;
 
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import java.io.IOException;
@@ -22,7 +23,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * The version check with a real Jade loaded (COMPAT-002). The run says which Jade it asked for, and
  * the table below says what each is expected to do, so the expectation doesn't come from the code
  * under test. They are in a namespace of their own because they are all that runs with a Jade
- * outside the range, where the readouts are off.
+ * outside the range, where the readouts are off, and with the content off (CONT-155), where there
+ * is nothing to read.
  */
 @GameTestHolder(JadeGateTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
@@ -69,6 +71,11 @@ public final class JadeGateTests {
         // Jade creates the plugin whatever its version; the check only stops it registering.
         h.assertTrue(JadeGate.pluginStarted(), "Jade never created the plugin");
         h.assertValueEqual(JadeGate.open(), on, "whether the version check lets the adapter in");
+        if (!ZasAtmosMod.contentEnabled()) {
+            // With the content off (CONT-155) there is no pipe to place, so the rest is passed over.
+            h.succeed();
+            return;
+        }
         Spot s = new Spot(h, 40);
         s.clear();
         PipeBlockEntity pipe = s.place(1, 1, 1, AtmosBlocks.PIPE.get().defaultBlockState(), PipeBlockEntity.class);

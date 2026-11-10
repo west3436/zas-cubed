@@ -55,4 +55,22 @@ subprojects {
         inputs.properties(props)
         filesMatching('META-INF/neoforge.mods.toml') { expand(props) }
     }
+
+    // CONT-155: -Pcontent=off runs an adapter's GameTests (runAdapterGameTestServer) with the content
+    // mod switched off in its startup config, so the game has to start with the adapter's target mod
+    // installed and nothing of zas_atmos registered. Every such run writes the config, on or off, so
+    // one run's choice never reaches the next. An adapter whose tests build with the content leaves
+    // them out of the run by their namespace, in its own build file.
+    def content = providers.gradleProperty('content').getOrElse('on')
+    if (!(content in ['on', 'off'])) {
+        throw new GradleException("-Pcontent is on or off, not '${content}'")
+    }
+    ext.contentOff = content == 'off'
+    tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+        doFirst {
+            def config = layout.buildDirectory.file('adapterRun/config/zas_atmos-startup.toml').get().asFile
+            config.parentFile.mkdirs()
+            config.setText("[content]\nenabled = ${!contentOff}\n", 'UTF-8')
+        }
+    }
 }

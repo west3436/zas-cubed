@@ -14,9 +14,10 @@ def jadeNewest = '15.10.6+neoforge'
 
 // -Pjade.version=<version> runs with another Jade, as the Adapter tests workflow does with the
 // oldest and with the last one below it. -Pjade.gateOnly=true goes with a Jade outside the range:
-// the readouts are off there, so only the tests of the version check run (COMPAT-002).
+// the readouts are off there, so only the tests of the version check run (COMPAT-002). So it is
+// with the content off (-Pcontent=off, CONT-155): the readouts are of the content's own devices.
 def jadeRun = providers.gradleProperty('jade.version').getOrElse(jadeNewest)
-def gateOnly = providers.gradleProperty('jade.gateOnly').getOrElse('false').toBoolean()
+def gateOnly = providers.gradleProperty('jade.gateOnly').getOrElse('false').toBoolean() || contentOff
 
 // Jade comes from Modrinth's maven, as the other optional mods of dev runs do.
 repositories {
