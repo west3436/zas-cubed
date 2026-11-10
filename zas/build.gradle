@@ -4,6 +4,7 @@ base { archivesName = 'zas' }
 
 evaluationDependsOn(':engine')
 evaluationDependsOn(':compat-adastra')
+evaluationDependsOn(':compat-mekanism')
 
 // GameTests live in their own source set so they stay out of the mod jar.
 sourceSets {
@@ -13,9 +14,7 @@ sourceSets {
     }
 }
 
-// Source sets compiled elsewhere whose classes ship inside the zas jar. compat-mekanism isn't waited
-// for above, because its own build reads this project's mod definition for its GameTest server; its
-// source set is there all the same, since the root build gives every project one.
+// Source sets compiled elsewhere whose classes ship inside the zas jar.
 def bundled = [project(':engine'), project(':compat-adastra'), project(':compat-mekanism')].collect { it.sourceSets.main }
 
 neoForge {

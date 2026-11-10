@@ -5,11 +5,6 @@ apply plugin: 'net.neoforged.moddev'
 // (zas/build.gradle's `bundled`), and zas starts it only when Mekanism is installed in a version it
 // supports (MEK-001).
 
-// This project's GameTest server is zas with the adapter in it, so it reads zas's mod definition.
-// zas doesn't wait for this project in turn: it only needs the source set, which the root build
-// gives every project.
-evaluationDependsOn(':zas')
-
 // The Mekanism the GameTest server runs with (MEK-003): the newest build by default, the oldest
 // supported one with -Pmekanism.version=floor, the last one before it with
 // -Pmekanism.version=unsupported, or any published version by name. The adapter itself is always
@@ -35,52 +30,21 @@ repositories {
     }
 }
 
-// GameTests live in their own source set so they stay out of the zas jar.
 sourceSets {
+    // The adapter's GameTests, which run with Mekanism loaded (MEK-003). They stay out of every jar
+    // but the one their own run loads.
     gametest {
         compileClasspath += main.output + main.compileClasspath
-        runtimeClasspath += main.output + main.runtimeClasspath
     }
+    // That run's classpath, empty on purpose: zas comes in as the release jar, as a player has it,
+    // so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
 }
 
-def zasProject = project(':zas')
-
-neoForge {
-    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but
-    // the game is never bootstrapped and Mekanism isn't there.
-    addModdingDependenciesTo(sourceSets.test)
-    runs {
-        // Not named gameTestServer: `./gradlew runGameTestServer` is the main run, which never
-        // downloads Mekanism.
-        mekanismGameTestServer {
-            type = 'gameTestServer'
-            sourceSet = sourceSets.gametest
-            gameDirectory = layout.buildDirectory.dir('mekanismRun')
-            // The run named unsupported has tests of its own, which check that the adapter is off.
-            // A version given by name gets the usual tests, so they fail on one that isn't supported.
-            systemProperty 'neoforge.enabledGameTestNamespaces',
-                    chosen == 'unsupported' ? 'zas_mekanism_off' : 'zas_mekanism'
-            // What the tests expect to find installed.
-            systemProperty 'zas.mekanism.runVersion', runVersion
-            jvmArgument '-XX:+ExitOnOutOfMemoryError'
-            logLevel = org.slf4j.event.Level.INFO
-        }
-    }
-    mods {
-        // zas as its own runs build it, with this project's GameTests in place of zas's own.
-        zas {
-            zasProject.neoForge.mods.zas.modSourceSets.get()
-                    .findAll { it != zasProject.sourceSets.gametest }
-                    .each { sourceSet it }
-            sourceSet sourceSets.gametest
-        }
-    }
-}
-
-// GameTests start from a fresh world, as in :zas.
-tasks.matching { it.name == 'runMekanismGameTestServer' }.configureEach {
-    doFirst {
-        delete layout.buildDirectory.dir('mekanismRun/world')
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
     }
 }
 
@@ -93,15 +57,62 @@ dependencies {
     compileOnly "mekanism:Mekanism:${mekanism_version}"
     compileOnly "mekanism:Mekanism:${mekanism_version}:generators"
 
-    gametestRuntimeOnly zasProject
-    gametestRuntimeOnly "mekanism:Mekanism:${runVersion}"
-    gametestRuntimeOnly "mekanism:Mekanism:${runVersion}:generators"
     // GameTests (only) may ask the framework what it loaded. main stays API-only.
-    gametestCompileOnly zasProject
+    gametestCompileOnly project(':zas')
+
+    releaseJar project(':dist')
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but
+    // the game is never bootstrapped and Mekanism isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Mekanism, which that build never downloads.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            // The run named unsupported has tests of its own, which check that the adapter is off.
+            // A version given by name gets the usual tests, so they fail on one that isn't supported.
+            systemProperty 'neoforge.enabledGameTestNamespaces',
+                    chosen == 'unsupported' ? 'zas_mekanism_off' : 'zas_mekanism'
+            // What the tests expect to find installed.
+            systemProperty 'zas.mekanism.runVersion', runVersion
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data, which brings its own empty GameTest structure.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly "mekanism:Mekanism:${runVersion}"
+    gametestRunRuntimeOnly "mekanism:Mekanism:${runVersion}:generators"
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+    }
 }
 
 tasks.named('test', Test) {
