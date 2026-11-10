@@ -55,6 +55,12 @@ public final class MekanismSettings {
     /** {@code [heat] max_body_watts}: the most watts one heat block or multiblock passes (MEK-040). */
     public static final ModConfigSpec.DoubleValue HEAT_MAX_BODY_WATTS;
 
+    /** {@code [heat] ambient_from_rooms}: whether a heat block's own loss goes to its room (MEK-041). */
+    public static final ModConfigSpec.BooleanValue HEAT_AMBIENT_FROM_ROOMS;
+
+    /** What {@link #HEAT_AMBIENT_FROM_ROOMS} is unless set: Mekanism's own loss is left as it is. */
+    public static final boolean DEFAULT_HEAT_AMBIENT_FROM_ROOMS = false;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -139,6 +145,13 @@ public final class MekanismSettings {
                         "round a Fusion Reactor at full power passes 360 K, where a player starts to burn,",
                         "in about 10 to 15 minutes, and sooner underground. 0 is no ceiling.")
                 .defineInRange("max_body_watts", HeatFlow.DEFAULT_MAX_BODY_WATTS, 0.0, HeatFlow.HIGHEST_MAX_BODY_WATTS);
+        HEAT_AMBIENT_FROM_ROOMS = builder.comment(
+                        "Mekanism has each heat block lose a little heat to the temperature of its biome,",
+                        "and that heat goes nowhere. true has a heat block that is no part of a multiblock",
+                        "lose it to what stands round it: to the room a side faces, which gains the heat,",
+                        "or to the open air as ZAS has it, which matters on another planet. Multiblocks",
+                        "keep Mekanism's own. It works through two hooks into Mekanism's own code.")
+                .define("ambient_from_rooms", DEFAULT_HEAT_AMBIENT_FROM_ROOMS);
         builder.pop();
 
         SPEC = builder.build();
@@ -242,5 +255,15 @@ public final class MekanismSettings {
      */
     public static double maxBodyWatts() {
         return SPEC.isLoaded() ? HEAT_MAX_BODY_WATTS.get() : HeatFlow.DEFAULT_MAX_BODY_WATTS;
+    }
+
+    /**
+     * Whether a Mekanism heat block's own loss to its environment goes to what stands round it
+     * (MEK-041, {@link MekanismAmbient}).
+     *
+     * @return true if it does; false, the default, while no server config is loaded
+     */
+    public static boolean ambientFromRooms() {
+        return SPEC.isLoaded() ? HEAT_AMBIENT_FROM_ROOMS.get() : DEFAULT_HEAT_AMBIENT_FROM_ROOMS;
     }
 }
