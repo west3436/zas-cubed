@@ -1,3 +1,4 @@
 {
-  "gas": "zas:carbon_dioxide"
+  "gas": "zas:carbon_dioxide",
+  "one_way": true
 }

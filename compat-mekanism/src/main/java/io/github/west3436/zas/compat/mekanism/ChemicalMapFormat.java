@@ -37,9 +37,8 @@ import net.minecraft.resources.ResourceLocation;
  * A file for a chemical that isn't registered loads and never applies, so a pack can map another
  * mod's chemicals. An invalid file is logged, naming the file and the field at fault, and skipped.
  *
- * <p>Two kinds of file load and are then ignored with a warning, when the map is first used on a
- * server ({@link ChemicalGases}): one that names a gas the server doesn't define, and one for a
- * radioactive chemical, which is never a gas whatever a datapack says.
+ * <p>A file that names a gas the server doesn't define loads and is then ignored with a warning,
+ * when the map is first used on a server ({@link ChemicalGases}).
  */
 public final class ChemicalMapFormat {
     /** The datapack folder, under {@code data/<namespace>/}. */

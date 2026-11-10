@@ -71,6 +71,9 @@ public final class MekanismFoundationTests {
     /** A mapping these tests' own data adds, to a chemical the defaults leave out. */
     private static final String ADDED = "mekanism:sulfur_trioxide";
 
+    /** Another, to a radioactive chemical, which only a datapack ever maps (MEK-023). */
+    private static final String ADDED_RADIOACTIVE = "mekanism:nuclear_waste";
+
     /** The gases the adapter's data pack defines. */
     private static final List<String> PACK_GASES = List.of(
             "zas:chlorine",
@@ -225,10 +228,11 @@ public final class MekanismFoundationTests {
         h.assertTrue(fuel != null, FUSION_FUEL + " isn't mapped");
         h.assertValueEqual(fuel.gases(), Map.of(id("zas:deuterium"), 0.5, id("zas:tritium"), 0.5), "fusion fuel");
 
-        // The whole map on this server: the defaults, and the one these tests' data adds.
+        // The whole map on this server: the defaults, and the two these tests' data adds.
         Set<String> expected = new TreeSet<>(DEFAULTS.keySet());
         expected.add(FUSION_FUEL);
         expected.add(ADDED);
+        expected.add(ADDED_RADIOACTIVE);
         h.assertValueEqual(
                 new TreeSet<>(ChemicalGases.map().chemicals().stream()
                         .map(ResourceLocation::toString)
@@ -290,13 +294,15 @@ public final class MekanismFoundationTests {
 
     /**
      * The map is the allow-list, against every chemical Mekanism registers: a chemical without a
-     * mapping is no gas, and neither is a radioactive one, an infuse type or a slurry.
+     * mapping is no gas. No infuse type or slurry has one, and no radioactive chemical but the one
+     * these tests' data maps.
      */
     @GameTest(template = "empty")
     public static void mek_010_no_other_chemical_is_a_gas(GameTestHelper h) {
         Set<String> mapped = new TreeSet<>(DEFAULTS.keySet());
         mapped.add(FUSION_FUEL);
         mapped.add(ADDED);
+        mapped.add(ADDED_RADIOACTIVE);
         List<TagKey<Chemical>> neverGases = List.of(
                 MekanismAPITags.Chemicals.CARBON,
                 MekanismAPITags.Chemicals.REDSTONE,
@@ -323,7 +329,7 @@ public final class MekanismFoundationTests {
             }
             if (chemical.value().isRadioactive()) {
                 radioactive++;
-                h.assertFalse(isMapped, name + " is radioactive, and a gas");
+                h.assertTrue(!isMapped || name.equals(ADDED_RADIOACTIVE), name + " is radioactive, and a gas");
             }
             if (neverGases.stream().anyMatch(chemical::is)) {
                 tagged++;
@@ -341,9 +347,9 @@ public final class MekanismFoundationTests {
 
     /**
      * What a datapack can and can't do, with the files these tests add: map another chemical, one
-     * way; leave a file out by a failed condition, which is how a shipped mapping is removed; and
-     * not map a radioactive chemical, a gas nobody defines, a chemical nobody registers or a file
-     * that isn't a mapping.
+     * way, a radioactive one among them (MEK-023); leave a file out by a failed condition, which is
+     * how a shipped mapping is removed; and not map a gas nobody defines, a chemical nobody
+     * registers or a file that isn't a mapping.
      */
     @GameTest(template = "empty")
     public static void mek_010_a_datapack_changes_the_map(GameTestHelper h) {
@@ -359,13 +365,17 @@ public final class MekanismFoundationTests {
         h.assertTrue(ChemicalGases.loadedMap().ofChemical(conditional).isEmpty(), conditional + " was loaded");
         h.assertTrue(ChemicalGases.mapping(chemical(h, conditional.toString())).isEmpty(), conditional + " is mapped");
 
-        // Loaded, and then refused: a radioactive chemical, and a gas the server doesn't define.
-        for (String refused : List.of("mekanism:nuclear_waste", "mekanism:uranium_hexafluoride")) {
-            h.assertTrue(ChemicalGases.loadedMap().ofChemical(id(refused)).isPresent(), refused + " wasn't loaded");
-            h.assertTrue(ChemicalGases.mapping(chemical(h, refused)).isEmpty(), refused + " is mapped");
-        }
-        h.assertTrue(chemical(h, "mekanism:nuclear_waste").value().isRadioactive(), "nuclear waste isn't radioactive");
+        // Added, though radioactive: the defaults map none, and a pack may. What becomes of its
+        // radiation is up to whoever moves it.
+        Holder<Chemical> waste = chemical(h, ADDED_RADIOACTIVE);
+        h.assertTrue(waste.value().isRadioactive(), ADDED_RADIOACTIVE + " isn't radioactive");
+        h.assertTrue(ChemicalGases.mapping(waste).isPresent(), ADDED_RADIOACTIVE + " isn't mapped by the tests' data");
         h.assertValueEqual(chemicalFor("zas:carbon_dioxide", 293.15), Optional.empty(), "carbon dioxide's chemical");
+
+        // Loaded, and then ignored: a gas the server doesn't define.
+        ResourceLocation undefined = id("mekanism:uranium_hexafluoride");
+        h.assertTrue(ChemicalGases.loadedMap().ofChemical(undefined).isPresent(), undefined + " wasn't loaded");
+        h.assertTrue(ChemicalGases.mapping(chemical(h, undefined.toString())).isEmpty(), undefined + " is mapped");
 
         // Loaded and never applied: a chemical no mod registers.
         ResourceLocation unregistered = id(NAMESPACE + ":no_such_chemical");
