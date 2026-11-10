@@ -423,8 +423,10 @@ public final class HudTests {
 
     /**
      * A shown value is resent when it changes by its display resolution (1 kPa, 1 K, 0.1 kPa
-     * partial pressure), and a value that isn't shown never counts. A trace of the toxic gas, which
-     * the HUD writes to two significant figures, is resent when its second figure changes.
+     * partial pressure), and a value that isn't shown never counts. A trace of a toxic gas at warning
+     * or worse, which the HUD writes to two significant figures and no more than five decimals, is
+     * resent when its second figure changes, and never for less than the fifth decimal. A safe
+     * trace, shown with the analyzer in hand, is written to one decimal and resent at 0.1 kPa.
      */
     @GameTest(batch = "hud", template = "empty")
     public static void data_014_values_resend_at_their_resolution(GameTestHelper h) {
@@ -453,10 +455,39 @@ public final class HudTests {
         h.assertTrue(toxin(0.00093f).differsFrom(toxin(0.00102f)), "0.0010 kPa of CO down to 0.00093");
         h.assertTrue(toxin(0.095f).differsFrom(toxin(0.12f)), "0.1 kPa of CO down to a trace");
         h.assertFalse(toxin(0.19f).differsFrom(toxin(0.12f)), "no trace, changed by under 0.1 kPa");
+        h.assertFalse(toxin(0.000024f).differsFrom(toxin(0.00002f)), "a trace, changed by under the fifth decimal");
+        h.assertTrue(toxin(0.00003f).differsFrom(toxin(0.00002f)), "0.00002 kPa of CO up to 0.00003");
+        AtmosHudPayload warning = new AtmosHudPayload(0, 0, 0, 1, 101, 21, 293, Optional.of(CO), 0.00094f);
+        h.assertTrue(
+                new AtmosHudPayload(0, 0, 0, 1, 101, 21, 293, Optional.of(CO), 0.00073f).differsFrom(warning),
+                "a trace at warning, 0.00094 kPa down to 0.00073");
+        AtmosHudPayload safe = safe(0.0002f);
+        h.assertValueEqual(safe.toxinKpa(), 0.0002f, "a safe trace is kept while every reading is shown");
+        h.assertFalse(safe(0.00062f).differsFrom(safe), "a safe trace of CO2, grown threefold");
+        h.assertFalse(safe(0.09f).differsFrom(safe), "a safe trace, changed by under 0.1 kPa");
+        h.assertTrue(safe(0.11f).differsFrom(safe), "a safe reading, changed by 0.1 kPa");
         AtmosHudPayload hidden = new AtmosHudPayload(0, 0, 0, 0, 101, 21, 293, Optional.of(CO2), 0.04f);
         h.assertValueEqual(hidden, AtmosHudPayload.NONE, "values with no alert are dropped");
         h.assertTrue(base.differsFrom(null), "the first state is always sent");
         h.succeed();
+    }
+
+    /** A state with no alert and every reading shown, as with the analyzer in hand: CO2 at a partial pressure. */
+    private static AtmosHudPayload safe(float kPa) {
+        return new AtmosHudPayload(
+                0,
+                0,
+                0,
+                0,
+                101,
+                21,
+                293,
+                Optional.of(CO2),
+                kPa,
+                false,
+                AtmosHudPayload.INTERNALS_OFF,
+                AtmosHudPayload.NO_TANK,
+                true);
     }
 
     /** A state whose one alert is CO in the breath, at a partial pressure in kPa. */

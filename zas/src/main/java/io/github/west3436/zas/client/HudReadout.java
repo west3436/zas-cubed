@@ -20,12 +20,18 @@ final class HudReadout {
     }
 
     /**
-     * A toxic gas's partial pressure: as {@link #pressure} writes a partial pressure, except that a
-     * trace, above zero and under 0.1 in the unit, keeps two significant figures ({@link
-     * DisplayUnits#reading}). A gas that harms at a thousandth of a kPa then has a number beside its
-     * alert, not "0.0".
+     * A toxic gas's partial pressure. While its row is at warning or worse, a trace, above zero and
+     * under 0.1 in the unit, keeps two significant figures and no more than five decimals ({@link
+     * DisplayUnits#reading}): a gas that harms at a thousandth of a kPa then has a number beside its
+     * alert, not "0.0". A safe row is written as {@link #pressure} writes a partial pressure, so the
+     * little carbon dioxide of a room that was breathed in reads as none.
+     *
+     * @param alert whether the row is at warning or worse
      */
-    static String toxin(double kPa, PressureUnit unit) {
+    static String toxin(double kPa, boolean alert, PressureUnit unit) {
+        if (!alert) {
+            return pressure(kPa, 1, unit);
+        }
         return DisplayUnits.reading(unit.fromKpa(kPa), decimals(unit, 1)) + " " + unit.symbol();
     }
 

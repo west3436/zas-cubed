@@ -13,47 +13,85 @@ class HudReadoutTest {
     /** What is left of it a minute and a half after its room is opened: a warning. */
     private static final double WARNING = 0.00093;
 
+    /** The carbon dioxide of a room that was breathed in for two minutes: safe. */
+    private static final double BREATHED_OUT = 0.00062;
+
     @Test
-    void client_008_a_trace_of_a_toxic_gas_has_two_significant_figures_in_each_unit() {
-        assertEquals("0.0020 kPa", HudReadout.toxin(DANGER, PressureUnit.KPA));
-        assertEquals("0.0019 kPa", HudReadout.toxin(0.00193, PressureUnit.KPA));
-        assertEquals("0.00093 kPa", HudReadout.toxin(WARNING, PressureUnit.KPA));
-        assertEquals("0.00029 psi", HudReadout.toxin(DANGER, PressureUnit.PSI));
-        assertEquals("0.00013 psi", HudReadout.toxin(WARNING, PressureUnit.PSI));
-        assertEquals("0.000020 atm", HudReadout.toxin(DANGER, PressureUnit.ATM));
-        assertEquals("0.0000092 atm", HudReadout.toxin(WARNING, PressureUnit.ATM));
-        assertEquals("0.000020 bar", HudReadout.toxin(DANGER, PressureUnit.BAR));
-        assertEquals("0.0000093 bar", HudReadout.toxin(WARNING, PressureUnit.BAR));
+    void client_008_a_trace_of_a_gas_at_warning_or_worse_has_two_significant_figures_in_each_unit() {
+        assertEquals("0.0020 kPa", HudReadout.toxin(DANGER, true, PressureUnit.KPA));
+        assertEquals("0.0019 kPa", HudReadout.toxin(0.00193, true, PressureUnit.KPA));
+        assertEquals("0.00093 kPa", HudReadout.toxin(WARNING, true, PressureUnit.KPA));
+        assertEquals("0.00029 psi", HudReadout.toxin(DANGER, true, PressureUnit.PSI));
+        assertEquals("0.00013 psi", HudReadout.toxin(WARNING, true, PressureUnit.PSI));
+    }
+
+    /** No more than five decimals, in the unit shown: atm and bar have one figure left for this chlorine. */
+    @Test
+    void client_008_a_trace_has_no_more_than_five_decimals_in_each_unit() {
+        assertEquals("0.00002 atm", HudReadout.toxin(DANGER, true, PressureUnit.ATM));
+        assertEquals("0.00001 atm", HudReadout.toxin(WARNING, true, PressureUnit.ATM));
+        assertEquals("0.00002 bar", HudReadout.toxin(DANGER, true, PressureUnit.BAR));
+        assertEquals("0.00001 bar", HudReadout.toxin(WARNING, true, PressureUnit.BAR));
+        // Zero at five decimals is written as zero is in that unit.
+        assertEquals("0.0 kPa", HudReadout.toxin(0.0000049, true, PressureUnit.KPA));
+        assertEquals("0.0 kPa", HudReadout.toxin(3.2e-11, true, PressureUnit.KPA));
+        assertEquals("0.00 psi", HudReadout.toxin(0.00003, true, PressureUnit.PSI));
+        // Chlorine at its lowest threshold, 0.0001 kPa, is under a millionth of an atmosphere.
+        assertEquals("0.00010 kPa", HudReadout.toxin(0.0001, true, PressureUnit.KPA));
+        assertEquals("0.00001 psi", HudReadout.toxin(0.0001, true, PressureUnit.PSI));
+        assertEquals("0.000 atm", HudReadout.toxin(0.0001, true, PressureUnit.ATM));
+        assertEquals("0.000 bar", HudReadout.toxin(0.0001, true, PressureUnit.BAR));
     }
 
     /** A trace is under a tenth of the unit shown, which is a different pressure in each unit. */
     @Test
     void client_008_a_trace_is_under_a_tenth_of_the_unit_shown() {
-        assertEquals("0.5 kPa", HudReadout.toxin(0.5, PressureUnit.KPA));
-        assertEquals("0.073 psi", HudReadout.toxin(0.5, PressureUnit.PSI));
-        assertEquals("0.0049 atm", HudReadout.toxin(0.5, PressureUnit.ATM));
-        assertEquals("0.0050 bar", HudReadout.toxin(0.5, PressureUnit.BAR));
+        assertEquals("0.5 kPa", HudReadout.toxin(0.5, true, PressureUnit.KPA));
+        assertEquals("0.073 psi", HudReadout.toxin(0.5, true, PressureUnit.PSI));
+        assertEquals("0.0049 atm", HudReadout.toxin(0.5, true, PressureUnit.ATM));
+        assertEquals("0.0050 bar", HudReadout.toxin(0.5, true, PressureUnit.BAR));
         for (PressureUnit unit : PressureUnit.values()) {
-            assertEquals("0.050 " + unit.symbol(), HudReadout.toxin(0.05 / unit.fromKpa(1), unit), unit.toString());
+            assertEquals(
+                    "0.050 " + unit.symbol(), HudReadout.toxin(0.05 / unit.fromKpa(1), true, unit), unit.toString());
         }
     }
 
     @Test
     void client_008_zero_and_a_tenth_or_more_are_written_as_before() {
-        assertEquals("0.0 kPa", HudReadout.toxin(0, PressureUnit.KPA));
-        assertEquals("0.00 psi", HudReadout.toxin(0, PressureUnit.PSI));
-        assertEquals("0.000 atm", HudReadout.toxin(0, PressureUnit.ATM));
-        assertEquals("0.000 bar", HudReadout.toxin(0, PressureUnit.BAR));
+        assertEquals("0.0 kPa", HudReadout.toxin(0, true, PressureUnit.KPA));
+        assertEquals("0.00 psi", HudReadout.toxin(0, true, PressureUnit.PSI));
+        assertEquals("0.000 atm", HudReadout.toxin(0, true, PressureUnit.ATM));
+        assertEquals("0.000 bar", HudReadout.toxin(0, true, PressureUnit.BAR));
         for (PressureUnit unit : PressureUnit.values()) {
             for (double shown : new double[] {0, 0.1, 0.12, 0.96, 6.04, 21.3}) {
                 double kPa = shown / unit.fromKpa(1);
                 assertEquals(
-                        HudReadout.pressure(kPa, 1, unit), HudReadout.toxin(kPa, unit), shown + " " + unit.symbol());
+                        HudReadout.pressure(kPa, 1, unit),
+                        HudReadout.toxin(kPa, true, unit),
+                        shown + " " + unit.symbol());
             }
         }
         // A trace that rounds up to a tenth is written as a tenth is.
-        assertEquals("0.1 kPa", HudReadout.toxin(0.0996, PressureUnit.KPA));
-        assertEquals("0.10 psi", HudReadout.toxin(0.0996 / PressureUnit.PSI.fromKpa(1), PressureUnit.PSI));
+        assertEquals("0.1 kPa", HudReadout.toxin(0.0996, true, PressureUnit.KPA));
+        assertEquals("0.10 psi", HudReadout.toxin(0.0996 / PressureUnit.PSI.fromKpa(1), true, PressureUnit.PSI));
+    }
+
+    /** A safe row, which shows only with the analyzer in hand, is written as it always was. */
+    @Test
+    void client_008_a_safe_row_keeps_its_one_decimal() {
+        assertEquals("0.0 kPa", HudReadout.toxin(BREATHED_OUT, false, PressureUnit.KPA));
+        assertEquals("0.00 psi", HudReadout.toxin(BREATHED_OUT, false, PressureUnit.PSI));
+        assertEquals("0.000 atm", HudReadout.toxin(BREATHED_OUT, false, PressureUnit.ATM));
+        assertEquals("0.000 bar", HudReadout.toxin(BREATHED_OUT, false, PressureUnit.BAR));
+        assertEquals("0.0 kPa", HudReadout.toxin(0, false, PressureUnit.KPA));
+        for (PressureUnit unit : PressureUnit.values()) {
+            for (double kPa : new double[] {0, 0.0000049, BREATHED_OUT, DANGER, 0.05, 0.5, 4.9}) {
+                assertEquals(
+                        HudReadout.pressure(kPa, 1, unit), HudReadout.toxin(kPa, false, unit), kPa + " kPa in " + unit);
+            }
+        }
+        // The same trace at warning has its figures.
+        assertEquals("0.00062 kPa", HudReadout.toxin(BREATHED_OUT, true, PressureUnit.KPA));
     }
 
     /** The pressure row and the oxygen row are as they were: a little oxygen still reads to a tenth of a kPa. */

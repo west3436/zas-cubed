@@ -164,7 +164,8 @@ public final class AtmosHudRenderer {
                     Component.translatable("hud.zas.oxygen", pressure(hud.oxygenKpa(), 1))));
         }
         if (hud.shows(hud.toxins(), hud.toxinKpa())) {
-            String value = HudReadout.toxin(hud.toxinKpa(), ZasClientConfig.pressureUnit());
+            String value =
+                    HudReadout.toxin(hud.toxinKpa(), hud.toxins() != HudLevels.NONE, ZasClientConfig.pressureUnit());
             Component reading = hud.toxinGas()
                     .map(id -> Component.translatable(
                             "hud.zas.toxin",

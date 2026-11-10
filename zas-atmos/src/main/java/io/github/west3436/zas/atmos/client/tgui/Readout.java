@@ -51,7 +51,8 @@ public final class Readout {
     /**
      * A gas's reading: as {@link #number}, except that a trace, above zero and under 0.1 in the unit
      * shown, keeps two significant figures as it does on the HUD ({@link DisplayUnits#reading}):
-     * 0.0020 and 0.00093, where {@link #number} would write 0.002 and 0.001.
+     * 0.0020 and 0.00093, where {@link #number} would write 0.002 and 0.001. It has no more than five
+     * decimals, so 0.000019 is 0.00002, and a trace that is zero there reads 0.000, as it did.
      */
     static String traceNumber(double value) {
         return value > 0 && value < 0.1 ? DisplayUnits.reading(value, 3) : number(value);

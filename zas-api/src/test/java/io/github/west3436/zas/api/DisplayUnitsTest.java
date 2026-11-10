@@ -26,10 +26,29 @@ class DisplayUnitsTest {
         assertEquals("0.050", DisplayUnits.reading(0.05, 1));
         assertEquals("0.099", DisplayUnits.reading(0.0994, 1));
         assertEquals("0.010", DisplayUnits.reading(0.00996, 1));
-        assertEquals("0.00000012", DisplayUnits.reading(1.23e-7, 1));
         // The same digits whatever the decimals asked for.
         assertEquals("0.0019", DisplayUnits.reading(0.0019, 0));
         assertEquals("0.0019", DisplayUnits.reading(0.0019, 3));
+    }
+
+    /** Two figures, but never past the fifth decimal; a trace that is zero there is written as zero is. */
+    @Test
+    void api_063_a_trace_has_no_more_than_five_decimals() {
+        // Two figures that fit in five decimals are kept.
+        assertEquals("0.00094", DisplayUnits.reading(0.00094, 1));
+        assertEquals("0.00057", DisplayUnits.reading(0.00057, 1));
+        assertEquals("0.00010", DisplayUnits.reading(0.0001, 1));
+        // Smaller, one figure is left, rounded from the value and not from its two figures.
+        assertEquals("0.00002", DisplayUnits.reading(0.000019, 1));
+        assertEquals("0.00010", DisplayUnits.reading(0.000096, 1));
+        assertEquals("0.00001", DisplayUnits.reading(0.0000149, 1));
+        assertEquals("0.00001", DisplayUnits.reading(0.000005, 1));
+        // Zero at five decimals: as zero is written, with the decimals asked for.
+        assertEquals("0.0", DisplayUnits.reading(0.0000049, 1));
+        assertEquals("0.0", DisplayUnits.reading(3.2e-11, 1));
+        assertEquals("0.000", DisplayUnits.reading(3.2e-11, 3));
+        assertEquals("0", DisplayUnits.reading(1.23e-7, 0));
+        assertEquals("0.000000", DisplayUnits.reading(1.23e-7, 6));
     }
 
     @Test

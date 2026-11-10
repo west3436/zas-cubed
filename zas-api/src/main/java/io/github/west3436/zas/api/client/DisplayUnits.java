@@ -22,6 +22,9 @@ public final class DisplayUnits {
 
     private static final MathContext TWO_FIGURES = new MathContext(2, RoundingMode.HALF_UP);
 
+    /** A trace is written with no more decimals than this ({@link #reading}). */
+    private static final int MOST_TRACE_DECIMALS = 5;
+
     private static volatile DisplayUnitProvider provider = NONE;
 
     private DisplayUnits() {}
@@ -81,8 +84,11 @@ public final class DisplayUnits {
      * {@code decimals} decimals, except that a trace, a reading above zero and under 0.1, keeps two
      * significant figures, so that a little of a gas doesn't read as none. With one decimal,
      * {@code 0.0019} and {@code 0.00093} are written so, where they would both be {@code 0.0};
-     * {@code 0} is {@code 0.0} and {@code 21.28} is {@code 21.3}. A trace that rounds up to 0.1 is
-     * written as 0.1 is.
+     * {@code 0} is {@code 0.0} and {@code 21.28} is {@code 21.3}.
+     *
+     * <p>A trace has no more than five decimals: {@code 0.000019} is written {@code 0.00002}, and
+     * one that rounds to zero there is written as zero is. A trace that rounds up to 0.1 is written
+     * as 0.1 is.
      *
      * <p>The value is the one shown, so convert a pressure first ({@link #pressure}). The digits
      * have a dot and no grouping, whatever the player's language.
@@ -100,13 +106,22 @@ public final class DisplayUnits {
             throw new IllegalArgumentException("decimals must be 0 or more: " + decimals);
         }
         if (value > 0 && value < 0.1) {
-            BigDecimal figures = BigDecimal.valueOf(value).round(TWO_FIGURES);
+            BigDecimal exact = BigDecimal.valueOf(value);
+            BigDecimal figures = exact.round(TWO_FIGURES);
             if (figures.compareTo(TRACE_BELOW) < 0) {
-                // The place of the leading figure, then one more: 0.002 is written 0.0020.
-                int leading = figures.precision() - figures.scale() - 1;
-                return figures.setScale(1 - leading, RoundingMode.UNNECESSARY).toPlainString();
+                // The decimals of the leading figure and one more: 0.002 is written 0.0020.
+                int places = 2 - figures.precision() + figures.scale();
+                if (places <= MOST_TRACE_DECIMALS) {
+                    return figures.setScale(places, RoundingMode.UNNECESSARY).toPlainString();
+                }
+                BigDecimal floored = exact.setScale(MOST_TRACE_DECIMALS, RoundingMode.HALF_UP);
+                return floored.signum() == 0 ? digits(0, decimals) : floored.toPlainString();
             }
         }
+        return digits(value, decimals);
+    }
+
+    private static String digits(double value, int decimals) {
         return String.format(Locale.ROOT, "%." + decimals + "f", value);
     }
 
