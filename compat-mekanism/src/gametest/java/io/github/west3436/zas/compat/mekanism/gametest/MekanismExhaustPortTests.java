@@ -87,6 +87,16 @@ public final class MekanismExhaustPortTests {
 
     private static final ResourceLocation PIPE_CAP = ResourceLocation.parse("zas_atmos:pipe_cap");
 
+    /** The game ticks between a pipe's steps. */
+    private static final int PIPE_STEP = 20;
+
+    /**
+     * How long a test waits for the game to tick a chunk it has asked it to keep. The test server
+     * runs game ticks as fast as it can while a chunk starts ticking in real time, so this is far
+     * more ticks than a passing test uses.
+     */
+    private static final int CHUNK_WAIT = 12_000;
+
     /** What the ports sent to the open air, in the order they sent it. */
     private static final List<OpenAirGasEvent> OPEN_AIR = new CopyOnWriteArrayList<>();
 
@@ -108,7 +118,7 @@ public final class MekanismExhaustPortTests {
 
     /** The handler a tube or a machine behind a port finds. */
     private static IChemicalHandler back(GameTestHelper h, VentArea a, BlockPos pos, Direction facing) {
-        IChemicalHandler handler = a.level.getCapability(ExhaustPort.CHEMICAL, pos, facing.getOpposite());
+        IChemicalHandler handler = a.level.getCapability(Bench.CHEMICAL, pos, facing.getOpposite());
         h.assertTrue(handler != null, "the port offers no chemical handler at its back");
         return handler;
     }
@@ -247,11 +257,11 @@ public final class MekanismExhaustPortTests {
                     "the port took oxygen into a tank it doesn't have");
 
             // Only the back is a chemical handler, and no face is a gas handler.
-            h.assertTrue(a.level.getCapability(ExhaustPort.CHEMICAL, pos, null) == null, "a handler for no side");
+            h.assertTrue(a.level.getCapability(Bench.CHEMICAL, pos, null) == null, "a handler for no side");
             for (Direction side : Direction.values()) {
                 if (side != Direction.WEST) {
                     h.assertTrue(
-                            a.level.getCapability(ExhaustPort.CHEMICAL, pos, side) == null,
+                            a.level.getCapability(Bench.CHEMICAL, pos, side) == null,
                             "a chemical handler on the port's " + side + " face");
                 }
                 h.assertTrue(
@@ -304,8 +314,8 @@ public final class MekanismExhaustPortTests {
         ChemicalNetwork network = null;
         try {
             h.assertTrue(
-                    ExhaustPort.CHEMICAL == Capabilities.CHEMICAL.block(),
-                    "the port's capability isn't the one Mekanism's tubes ask for");
+                    Bench.CHEMICAL == Capabilities.CHEMICAL.block(),
+                    "the capability made by name isn't the one Mekanism's tubes ask for");
             a.room();
             BlockPos pos = port(a, 0, 2, 2, Direction.EAST);
             a.form(2, 2, 2);
@@ -600,12 +610,12 @@ public final class MekanismExhaustPortTests {
      * a pipe has vents of its own. The port offers no gas handler on any face, so a pipe behind it
      * and a pipe on top of it grow no arm to it, whichever of the two is placed first.
      *
-     * <p>Then the game runs the pipes for five of their steps. Each was given an arm to the port by
-     * hand, as a pipe that had joined a gas handler there would have, and takes it back at its
-     * first step, having asked the port and found none. The pipes keep all their gas, none of it is
-     * in the room, and the port still takes chemicals at its back.
+     * <p>Then the game runs the pipes. Each was given an arm to the port by hand, as a pipe that had
+     * joined a gas handler there would have, and takes it back at its first step, having asked the
+     * port and found none. Five steps later the pipes have all their gas, none of it is in the
+     * room, and the port still takes chemicals at its back.
      */
-    @GameTest(template = "empty", batch = VentArea.BATCH, timeoutTicks = 400)
+    @GameTest(template = "empty", batch = VentArea.BATCH, timeoutTicks = CHUNK_WAIT)
     public static void mek_022_a_pipe_beside_an_exhaust_port_neither_joins_nor_feeds_it(GameTestHelper h) {
         if (!BuiltInRegistries.BLOCK.containsKey(PIPE)) {
             // The content is switched off on this server, so there are no pipes.
@@ -627,6 +637,8 @@ public final class MekanismExhaustPortTests {
             cap(a, 4, 3, 2, Direction.DOWN);
             cap(a, 5, 2, 2, Direction.WEST);
             a.form(5, 1, 2);
+            // The test waits, and the room's air is close to the open air's.
+            a.pin(5, 1, 2);
 
             for (Direction side : Direction.values()) {
                 h.assertTrue(
@@ -657,46 +669,55 @@ public final class MekanismExhaustPortTests {
             setArm(a, 3, 1, 2, Direction.EAST);
             setArm(a, 4, 2, 2, Direction.DOWN);
 
-            // A pipe steps once in 20 game ticks.
+            // From here the game runs the pipes: each steps once in 20 game ticks, once its chunk
+            // ticks, which takes real time on a server that runs game ticks as fast as it can.
             left = true;
-            h.runAtTickTime(110, () -> {
-                try {
-                    h.assertValueEqual(
-                            arms(a, 3, 1, 2),
-                            EnumSet.of(Direction.WEST, Direction.UP),
-                            "the arms of the pipe behind the port, after its steps");
-                    h.assertValueEqual(
-                            arms(a, 4, 2, 2),
-                            EnumSet.of(Direction.UP, Direction.EAST),
-                            "the arms of the pipe on the port, after its steps");
-                    a.close(
-                            network(h, a, 3, 1, 2, Direction.NORTH).contents().moles(CARBON_DIOXIDE),
-                            5,
-                            "the carbon dioxide in the pipe behind the port");
-                    a.close(
-                            network(h, a, 4, 2, 2, Direction.NORTH).contents().moles(HYDROGEN),
-                            5,
-                            "the hydrogen in the pipe on the port");
-                    a.tick();
-                    a.close(a.moles(5, 1, 2, CARBON_DIOXIDE), roomCarbonDioxide, "the room's carbon dioxide");
-                    a.close(a.moles(5, 1, 2, HYDROGEN), roomHydrogen, "the room's hydrogen");
-                    for (Direction side : Direction.values()) {
-                        h.assertTrue(
-                                a.level.getCapability(IGasHandler.BLOCK, pos, side) == null,
-                                "a gas handler on the port's " + side + " face, after the pipes' steps");
-                    }
+            Set<Direction> behindArms = EnumSet.of(Direction.WEST, Direction.UP);
+            Set<Direction> onTopArms = EnumSet.of(Direction.UP, Direction.EAST);
+            h.startSequence()
+                    .thenWaitUntil(() -> {
+                        h.assertValueEqual(arms(a, 3, 1, 2), behindArms, "the arms of the pipe behind the port");
+                        h.assertValueEqual(arms(a, 4, 2, 2), onTopArms, "the arms of the pipe on the port");
+                    })
+                    .thenIdle(5 * PIPE_STEP)
+                    .thenExecute(() -> {
+                        try {
+                            h.assertValueEqual(
+                                    arms(a, 3, 1, 2), behindArms, "the arms of the pipe behind the port, later");
+                            h.assertValueEqual(arms(a, 4, 2, 2), onTopArms, "the arms of the pipe on the port, later");
+                            a.close(
+                                    network(h, a, 3, 1, 2, Direction.NORTH)
+                                            .contents()
+                                            .moles(CARBON_DIOXIDE),
+                                    5,
+                                    "the carbon dioxide in the pipe behind the port");
+                            a.close(
+                                    network(h, a, 4, 2, 2, Direction.NORTH)
+                                            .contents()
+                                            .moles(HYDROGEN),
+                                    5,
+                                    "the hydrogen in the pipe on the port");
+                            a.tick();
+                            a.close(a.moles(5, 1, 2, CARBON_DIOXIDE), roomCarbonDioxide, "the room's carbon dioxide");
+                            a.close(a.moles(5, 1, 2, HYDROGEN), roomHydrogen, "the room's hydrogen");
+                            for (Direction side : Direction.values()) {
+                                h.assertTrue(
+                                        a.level.getCapability(IGasHandler.BLOCK, pos, side) == null,
+                                        "a gas handler on the port's " + side + " face, after the pipes' steps");
+                            }
 
-                    // The port is still Mekanism's to use, with a pipe where a tube would be.
-                    double oxygen = a.moles(5, 1, 2, OXYGEN);
-                    IChemicalHandler handler = back(h, a, pos, Direction.EAST);
-                    h.assertValueEqual(taken(handler, a.stack(MEK_OXYGEN, 500), Action.EXECUTE), 500L, "beside a pipe");
-                    a.tick();
-                    a.close(a.moles(5, 1, 2, OXYGEN) - oxygen, mol(500), "the oxygen the room gained");
-                } finally {
-                    a.clear();
-                }
-                h.succeed();
-            });
+                            // The port is still Mekanism's to use, with a pipe where a tube would be.
+                            double oxygen = a.moles(5, 1, 2, OXYGEN);
+                            IChemicalHandler handler = back(h, a, pos, Direction.EAST);
+                            h.assertValueEqual(
+                                    taken(handler, a.stack(MEK_OXYGEN, 500), Action.EXECUTE), 500L, "beside a pipe");
+                            a.tick();
+                            a.close(a.moles(5, 1, 2, OXYGEN) - oxygen, mol(500), "the oxygen the room gained");
+                        } finally {
+                            a.clear();
+                        }
+                    })
+                    .thenSucceed();
         } finally {
             if (!left) {
                 a.clear();
@@ -745,7 +766,7 @@ public final class MekanismExhaustPortTests {
             for (Direction facing : Direction.values()) {
                 port(a, 2, 2, 2, facing);
                 for (Direction side : Direction.values()) {
-                    boolean offered = a.level.getCapability(ExhaustPort.CHEMICAL, pos, side) != null;
+                    boolean offered = a.level.getCapability(Bench.CHEMICAL, pos, side) != null;
                     h.assertValueEqual(
                             offered, side == facing.getOpposite(), "facing " + facing + ", a handler on " + side);
                 }

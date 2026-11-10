@@ -7,7 +7,10 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationResult;
+import io.github.west3436.zas.api.mutation.PinOutcome;
+import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.mutation.ZonePins;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import io.github.west3436.zas.simulation.AtmosService;
 import java.lang.reflect.Proxy;
@@ -102,6 +105,9 @@ final class VentArea {
     /** Whether the game has been told to keep ticking this area's chunk. */
     private boolean ticking;
 
+    /** Who pins this area's room, if a test has it pinned. */
+    private SourceId pinner;
+
     /**
      * @param h the test
      * @param index the area's number, one for each test
@@ -164,8 +170,28 @@ final class VentArea {
         ticking = true;
     }
 
+    /**
+     * Pins the room that holds a cell until the area is cleared. A sealed room whose air matches
+     * the open air's is dissolved after a while, which a test that waits for the game would
+     * otherwise run into.
+     */
+    void pin(int x, int y, int z) {
+        pinner = SourceId.of(MekanismFoundationTests.NAMESPACE, "gametest_area_" + origin.getX());
+        CompletableFuture<PinResult> future = ZonePins.pin(level, Vec3.atCenterOf(abs(x, y, z)), pinner);
+        for (int i = 0; i < 8 && !future.isDone(); i++) {
+            tick();
+        }
+        h.assertTrue(
+                future.isDone() && future.join().outcome() == PinOutcome.ZONE,
+                "the room at " + x + ", " + y + ", " + z + " wasn't pinned");
+    }
+
     /** Sets everything this area built back to air, with a block of margin, and settles Mekanism. */
     void clear() {
+        if (pinner != null) {
+            ZonePins.unpin(level, pinner);
+            pinner = null;
+        }
         if (ticking) {
             ChunkPos chunk = new ChunkPos(origin);
             level.setChunkForced(chunk.x, chunk.z, false);

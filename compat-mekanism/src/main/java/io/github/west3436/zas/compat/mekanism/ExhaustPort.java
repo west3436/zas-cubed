@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -42,13 +41,13 @@ import org.jetbrains.annotations.Nullable;
  * <p>The only capability it offers is Mekanism's chemical handler, on its back face.
  *
  * <p><b>No pipe joins it.</b> A pipe grows an arm to any neighbour that offers a gas handler toward
- * it and shares gas with it, and the adapter gives a block that offers Mekanism's chemical handler
- * and no gas handler a view of its tanks as one. Through that view a pipe would empty itself into
- * the room at the port, with none of a vent's rates or pressure checks. The port is for Mekanism's
- * machinery, and a pipe has vents of its own. So the port registers the gas-handler capability
- * itself, with a provider that offers nothing on any face: a block that has registered both
- * capabilities is given no view, and a pipe that asks the port finds no handler. Nothing can draw
- * from it either.
+ * it and shares gas with it, and {@link ChemicalConnection} gives a block that offers Mekanism's
+ * chemical handler and no gas handler a view of its tanks as one. Through that view a pipe would
+ * empty itself into the room at the port, with none of a vent's rates or pressure checks. The port
+ * is for Mekanism's machinery, and a pipe has vents of its own. So the port registers the
+ * gas-handler capability itself, with a provider that offers nothing on any face: a block that has
+ * registered both capabilities is given no view, and a pipe that asks the port finds no handler.
+ * Nothing can draw from it either.
  */
 public final class ExhaustPort {
     /** The path of the block's and the item's id. */
@@ -56,14 +55,6 @@ public final class ExhaustPort {
 
     /** Who the gas a port releases is from, in ZAS³'s ledger and logs. */
     public static final SourceId SOURCE = SourceId.of("zas", "mekanism_exhaust_port");
-
-    /**
-     * Mekanism's chemical capability for blocks. Mekanism's API has the handler's interface but not
-     * the capability, which a mod makes for itself under Mekanism's name for it: NeoForge hands
-     * out one capability per name and type, so this is the one Mekanism's tubes and machines ask.
-     */
-    public static final BlockCapability<IChemicalHandler, @Nullable Direction> CHEMICAL = BlockCapability.createSided(
-            ResourceLocation.fromNamespaceAndPath(MekanismVersions.MOD_ID, "chemical_handler"), IChemicalHandler.class);
 
     /** The content mod's creative tab and its passive vent, by id: the adapter can't name its classes. */
     private static final ResourceLocation ATMOSPHERICS_TAB =
@@ -100,7 +91,7 @@ public final class ExhaustPort {
         blocks.register(modBus);
         items.register(modBus);
         modBus.addListener((RegisterCapabilitiesEvent event) -> {
-            event.registerBlock(CHEMICAL, ExhaustPort::handler, block.get());
+            event.registerBlock(ChemicalConnection.CHEMICAL, ExhaustPort::handler, block.get());
             // On purpose, and not a gas handler: registering says the port has answered for itself,
             // so nothing gives it a view of its chemical handler, and the answer is always none.
             event.registerBlock(IGasHandler.BLOCK, (level, pos, state, blockEntity, side) -> null, block.get());
