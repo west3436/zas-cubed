@@ -14,10 +14,12 @@ import io.github.west3436.zas.api.life.Breathing;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -43,6 +45,10 @@ final class FallbackProvider implements ZasApiProvider {
     private static final CompletableFuture<MutationResult> ABSENT =
             CompletableFuture.completedFuture(MutationResult.ABSENT);
     private static final Set<ResourceLocation> OXIDIZERS = Set.of(StandardAir.OXYGEN);
+
+    /** Standard air's gases, in id order. Also {@link ZasApiProvider#definedGases}'s default. */
+    static final Set<ResourceLocation> STANDARD_AIR_GASES =
+            Collections.unmodifiableSet(new TreeSet<>(Set.of(StandardAir.NITROGEN, StandardAir.OXYGEN)));
 
     /** N₂'s C<sub>v</sub> at 298.15 K, as ZAS³ ships it (CORE-015), in J/(mol·K). */
     static final double NITROGEN_HEAT_CAPACITY = 20.81;
@@ -130,6 +136,16 @@ final class FallbackProvider implements ZasApiProvider {
             return OptionalDouble.of(OXYGEN_HEAT_CAPACITY);
         }
         return OptionalDouble.empty();
+    }
+
+    @Override
+    public Set<ResourceLocation> definedGases() {
+        return STANDARD_AIR_GASES;
+    }
+
+    @Override
+    public Optional<String> gasTranslationKey(ResourceLocation gas) {
+        return Optional.empty();
     }
 
     @Override
