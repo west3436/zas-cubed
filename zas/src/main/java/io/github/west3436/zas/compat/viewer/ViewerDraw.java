@@ -34,14 +34,15 @@ public final class ViewerDraw {
 
     /** A line as a component. */
     public static Component text(Line line) {
-        if (!line.translated()) {
-            return Component.literal(line.fallback());
-        }
-        Object[] args = line.args().toArray();
-        if (!line.fallback().isEmpty()) {
-            return Component.translatableWithFallback(line.key(), line.fallback(), args);
-        }
-        return Component.translatable(line.key(), args);
+        return switch (line) {
+            case Line.Text plain -> Component.literal(plain.text());
+            case Line.Key keyed -> {
+                Object[] args = keyed.args().toArray();
+                yield keyed.fallback().isEmpty()
+                        ? Component.translatable(keyed.key(), args)
+                        : Component.translatableWithFallback(keyed.key(), keyed.fallback(), args);
+            }
+        };
     }
 
     /** A line's width in the game's font. */

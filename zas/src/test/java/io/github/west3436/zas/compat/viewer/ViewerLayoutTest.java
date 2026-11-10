@@ -19,9 +19,10 @@ import org.junit.jupiter.api.Test;
 class ViewerLayoutTest {
     /** Six pixels a character, about the game's font, with a translated line as long as its key's arguments. */
     private static final ToIntFunction<Line> WIDTH = line -> 6
-            * (line.translated()
-                    ? String.join(" ", line.args()).length() + 8
-                    : line.fallback().length());
+            * switch (line) {
+                case Line.Key keyed -> String.join(" ", keyed.args()).length() + 8;
+                case Line.Text plain -> plain.text().length();
+            };
 
     @Test
     void compat_060_every_shipped_reaction_fits_its_page() throws IOException {

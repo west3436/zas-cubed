@@ -239,6 +239,11 @@ class ViewerEntriesTest {
         assertTrue(after.chips().contains(new Chip(Icon.SHARE, Line.plain("O₂ ≥10%"), hint("fire_oxygen"))));
         assertTrue(after.chips().contains(new Chip(Icon.GAUGE, Line.plain("O₂ ≥2.5 kPa"), hint("fire_oxygen"))));
         assertEquals(before.reactants(), after.reactants());
+
+        // Where no datapack defines oxygen, the threshold still shows, under the chip's own name.
+        ReactionEntry bare = ViewerEntries.reaction(GasRegistry.EMPTY, hydrogen, FIRE, false);
+        assertTrue(bare.chips().contains(new Chip(Icon.SHARE, Line.plain("≥14%"), hint("fire_oxygen"))));
+        assertTrue(bare.chips().contains(new Chip(Icon.GAUGE, Line.plain("≥10 kPa"), hint("fire_oxygen"))));
     }
 
     @Test
@@ -258,14 +263,9 @@ class ViewerEntriesTest {
     @Test
     void compat_060_numbers_are_short_and_keep_their_sign() {
         assertEquals("2", ViewerNumbers.amount(2));
-        // A coefficient is drawn over the gas, so the common fractions are one character.
-        assertEquals("½", ViewerNumbers.amount(0.5));
-        assertEquals("1½", ViewerNumbers.amount(1.5));
-        assertEquals("¼", ViewerNumbers.amount(0.25));
-        assertEquals("2¾", ViewerNumbers.amount(2.75));
-        assertEquals("0.3", ViewerNumbers.amount(0.3));
+        assertEquals("0.5", ViewerNumbers.amount(0.5));
+        assertEquals("1.5", ViewerNumbers.amount(1.5));
         assertEquals("1.33", ViewerNumbers.amount(4.0 / 3));
-        assertEquals("12", ViewerNumbers.amount(12));
         assertEquals("12.5%", ViewerNumbers.percent(0.125));
         assertEquals("0.1%", ViewerNumbers.percent(0.001));
         assertEquals("4–75%", ViewerNumbers.percentRange(0.04, 0.75));
@@ -309,8 +309,8 @@ class ViewerEntriesTest {
 
     private static void keys(Chip chip, Set<String> out) {
         for (Line line : List.of(chip.text(), chip.hint())) {
-            if (line.translated()) {
-                out.add(line.key());
+            if (line instanceof Line.Key keyed) {
+                out.add(keyed.key());
             }
         }
     }

@@ -213,17 +213,17 @@ public final class ViewerEntries {
             // Every reaction with flammability limits is a fire, and a fire needs this much oxygen.
             out.add(new Chip(
                     Icon.SHARE,
-                    share(registry, FireSettings.OXYGEN, "≥" + ViewerNumbers.percent(fire.minOxygenFraction())),
+                    oxygen(registry, "≥" + ViewerNumbers.percent(fire.minOxygenFraction())),
                     hint("fire_oxygen")));
             out.add(new Chip(
                     Icon.GAUGE,
-                    share(registry, FireSettings.OXYGEN, "≥" + ViewerNumbers.pressure(fire.minOxygenKpa())),
+                    oxygen(registry, "≥" + ViewerNumbers.pressure(fire.minOxygenKpa())),
                     hint("fire_oxygen")));
         }
         if (incomplete) {
             out.add(new Chip(
                     Icon.SHARE,
-                    share(registry, FireSettings.OXYGEN, "<" + ViewerNumbers.percent(fire.incompleteBelowFraction())),
+                    oxygen(registry, "<" + ViewerNumbers.percent(fire.incompleteBelowFraction())),
                     hint("incomplete")));
         }
         for (ReactionConditions.Concentration c : cond.concentrations()) {
@@ -296,7 +296,21 @@ public final class ViewerEntries {
 
     /** A gas's formula, then a value: what share or pressure of that gas. */
     private static Line share(GasRegistry registry, String gas, String value) {
-        return Line.plain(String.format(Locale.ROOT, "%s %s", gas(registry, gas).formula(), value));
+        return labelled(gas(registry, gas).formula(), value);
+    }
+
+    /**
+     * Oxygen's formula, then a value. On a server whose datapacks define no oxygen the value stands
+     * alone, under the chip's own name.
+     */
+    private static Line oxygen(GasRegistry registry, String value) {
+        return find(registry, FireSettings.OXYGEN)
+                .map(gas -> labelled(gas.formula(), value))
+                .orElseGet(() -> Line.plain(value));
+    }
+
+    private static Line labelled(String formula, String value) {
+        return Line.plain(String.format(Locale.ROOT, "%s %s", formula, value));
     }
 
     private static Line hint(String name) {

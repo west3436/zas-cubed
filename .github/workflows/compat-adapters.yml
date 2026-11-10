@@ -2,8 +2,8 @@ name: Adapter tests
 
 # COMPAT-004: each adapter's GameTests, on a server with the adapter's target
 # mod loaded. The main CI compiles the adapters but never downloads a target mod
-# to run, so they run here: on a PR that touches an adapter or the public API,
-# nightly on main, or from the Actions tab.
+# to run, so they run here: on a PR that touches an adapter, what zas holds for
+# the adapters or the public API, nightly on main, or from the Actions tab.
 on:
   workflow_dispatch:
   schedule:
@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - "compat-*/**"
+      - "zas/src/main/java/io/github/west3436/zas/compat/**"
       - "zas-api/**"
       - ".github/workflows/compat-adapters.yml"
 

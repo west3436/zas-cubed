@@ -24,31 +24,9 @@ public final class ViewerNumbers {
         return plain(BigDecimal.valueOf(value).round(new MathContext(digits, RoundingMode.HALF_UP)));
     }
 
-    /**
-     * A reaction's coefficient, as short as it can be written, since it is drawn over the gas: 2, ½,
-     * 1½, and any other fraction to two places.
-     */
+    /** A reaction's coefficient, such as 2 or 0.5. */
     public static String amount(double moles) {
-        double whole = Math.floor(moles);
-        String part = moles < 0 ? "" : fraction(moles - whole);
-        if (part.isEmpty()) {
-            return number(moles, 2);
-        }
-        return whole == 0 ? part : number(whole, 0) + part;
-    }
-
-    /** The one character for a quarter, a half or three quarters, or nothing for any other part. */
-    private static String fraction(double part) {
-        if (part == 0.25) {
-            return "¼";
-        }
-        if (part == 0.5) {
-            return "½";
-        }
-        if (part == 0.75) {
-            return "¾";
-        }
-        return "";
+        return number(moles, 2);
     }
 
     /** A share of a mixture, 0 to 1, as a percentage. */
