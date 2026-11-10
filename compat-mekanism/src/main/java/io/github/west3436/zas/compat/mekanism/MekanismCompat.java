@@ -5,8 +5,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -16,6 +18,7 @@ import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
 
 /**
  * Where the Mekanism adapter starts (MEK-001). {@code zas} calls {@link #init} by name, and only
@@ -23,7 +26,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
  * is never loaded, and nothing of the adapter registers.
  *
  * <p>Everything the adapter adds hangs off this one call: its config file, its data pack, its
- * reload listener and, as they are built, each part's own registrations. A mod copying the adapter
+ * reload listener and each part's own registrations, each part in a block of its own. A mod copying the adapter
  * calls {@code init} from its own constructor behind a check that Mekanism is loaded.
  *
  * <p>This class names nothing of Mekanism's, so asking it {@link #isActive} never loads a class of
@@ -31,9 +34,10 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
  */
 public final class MekanismCompat {
     /**
-     * The adapter's built-in data pack, a folder in the jar: the chemical map's defaults, and the
-     * gas definitions of the chemicals that ZAS³ has no gas for. It is offered only by {@link
-     * #init}, so none of it loads without Mekanism.
+     * The adapter's built-in data pack, a folder in the jar: the chemical map's defaults, the gas
+     * definitions of the chemicals that ZAS³ has no gas for with their hazard profiles, and the
+     * breathing gear's data (the MekaSuit's protection and how Mekanism treats ZAS³'s damage
+     * types). It is offered only by {@link #init}, so none of it loads without Mekanism.
      */
     public static final String DATA_PACK = "datapacks/mekanism";
 
@@ -61,6 +65,9 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ChemicalGases.forget());
 
+        // Breathing gear (MEK-030 to MEK-034): what a player wearing Mekanism's gear gives itself.
+        modBus.addListener((RegisterCapabilitiesEvent event) -> MekanismGear.register(event));
+
         // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
 
@@ -70,6 +77,14 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((BlockEvent.NeighborNotifyEvent event) -> MekanismHeat.blockChanged(event));
         NeoForge.EVENT_BUS.addListener((LevelTickEvent.Post event) -> MekanismHeat.levelTicked(event));
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> MekanismHeat.forget());
+
+        // ---- The chemical connection: ZAS³'s gases as chemicals (MEK-011), and tubes, tanks and
+        // machines joined to pipes (MEK-013) ----
+        modBus.addListener((RegisterEvent event) -> ZasChemicals.register(event));
+        // Last of all, so that it sees what every mod registered (ChemicalConnection).
+        modBus.addListener(
+                EventPriority.LOWEST, (RegisterCapabilitiesEvent event) -> ChemicalConnection.register(event));
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ZasChemicals.logWithoutChemical());
 
         active = true;
     }

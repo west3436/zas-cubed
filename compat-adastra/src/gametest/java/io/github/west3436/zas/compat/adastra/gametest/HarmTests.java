@@ -12,6 +12,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -93,27 +94,42 @@ public final class HarmTests {
     }
 
     /**
-     * A whole space suit holding oxygen, worn through a minute of ticks. In a room of ZAS³ air on the
-     * Moon, where Ad Astra by itself finds no oxygen and would drain the suit, it keeps every mB:
-     * the wearer breathes the room. In the open, where the verdict is that the wearer can't breathe,
-     * Ad Astra's drain is the one thing of its own still running, 1 mB every 12 ticks: its only
-     * public switch is the oxygen check, which has to stay the verdict (SPACE-010).
+     * Ad Astra's own drain, through a minute of wearing a space suit that holds oxygen. Ad Astra by
+     * itself takes 1 mB every 12 ticks wherever it finds no oxygen, which is everywhere on the Moon.
+     * Its only public switch is the oxygen check, which has to stay the verdict (SPACE-010), so
+     * with the adapter it takes nothing wherever the wearer can breathe: in a room of ZAS³ air, with
+     * the helmet or without, and in the open in the whole suit, whose own oxygen the wearer then
+     * breathes (SPACE-023). Without the helmet in the open the wearer can't breathe, and there the
+     * drain is the one thing of Ad Astra's own still running.
      */
     @GameTest(template = "empty")
     public static void space_013_a_suit_keeps_its_oxygen_where_the_wearer_can_breathe(GameTestHelper h) {
         try (Lab lab = Lab.onTheMoon(h, 22)) {
             lab.room(0, Lab.AIR);
             FakePlayer inRoom = suited(lab, lab.floor(0));
+            FakePlayer bareheadedInRoom = suited(lab, lab.floor(0));
+            bareheadedInRoom.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
             FakePlayer inTheOpen = suited(lab, lab.open(10));
+            FakePlayer bareheadedInTheOpen = suited(lab, lab.open(10));
+            bareheadedInTheOpen.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
             h.assertFalse(
                     OxygenApi.API.hasOxygen(lab.level, BlockPos.containing(inRoom.getEyePosition())),
                     "Ad Astra by itself found oxygen in a room on the Moon");
 
-            Lab.wear(inRoom, 1200);
-            Lab.wear(inTheOpen, 1200);
+            for (FakePlayer player : List.of(inRoom, bareheadedInRoom, inTheOpen, bareheadedInTheOpen)) {
+                Lab.wear(player, 1200);
+            }
 
             h.assertValueEqual(Lab.oxygenIn(inRoom.getItemBySlot(EquipmentSlot.CHEST)), 500, "mB left in the room");
-            h.assertValueEqual(Lab.oxygenIn(inTheOpen.getItemBySlot(EquipmentSlot.CHEST)), 400, "mB left in the open");
+            h.assertValueEqual(
+                    Lab.oxygenIn(bareheadedInRoom.getItemBySlot(EquipmentSlot.CHEST)),
+                    500,
+                    "mB left in the room, without the helmet");
+            h.assertValueEqual(Lab.oxygenIn(inTheOpen.getItemBySlot(EquipmentSlot.CHEST)), 500, "mB left in the open");
+            h.assertValueEqual(
+                    Lab.oxygenIn(bareheadedInTheOpen.getItemBySlot(EquipmentSlot.CHEST)),
+                    400,
+                    "mB left in the open, without the helmet");
         }
         h.succeed();
     }

@@ -31,8 +31,18 @@ class DefaultMapTest {
     private static final Path PACK = Path.of(System.getProperty("zas.mekanism.resources"), "datapacks", "mekanism");
     private static final Path ZAS_RESOURCES = Path.of(System.getProperty("zas.resources"));
 
+    /** ZAS³'s gases that Mekanism has no chemical for, which the adapter registers as chemicals (MEK-011). */
+    private static final Set<String> REGISTERED =
+            Set.of("zas:nitrogen", "zas:carbon_dioxide", "zas:nitrous_oxide", "zas:carbon_monoxide", "zas:methane");
+
     /** The gases ZAS³ itself defines that the defaults map onto. */
-    private static final Set<String> BUILT_IN = Set.of("zas:oxygen", "zas:hydrogen", "zas:water_vapor");
+    private static final Set<String> BUILT_IN;
+
+    static {
+        Set<String> builtIn = new TreeSet<>(Set.of("zas:oxygen", "zas:hydrogen", "zas:water_vapor"));
+        builtIn.addAll(REGISTERED);
+        BUILT_IN = builtIn;
+    }
 
     private static ChemicalMap map;
 
@@ -87,22 +97,27 @@ class DefaultMapTest {
         return mapping.gases().keySet().iterator().next().toString();
     }
 
-    /** The requirement's list, and nothing else: O₂, H₂, water vapour, steam, Cl₂, HCl, SO₂, C₂H₄, D₂, T₂, fuel. */
+    /**
+     * The requirement's list, O₂, H₂, water vapour, steam, Cl₂, HCl, SO₂, C₂H₄, D₂, T₂ and fuel, the
+     * chemicals the adapter itself registers (MEK-011), and nothing else.
+     */
     @Test
     void mek_010_the_default_map_is_the_requirements_list() {
+        Set<String> expected = new TreeSet<>(Set.of(
+                "mekanism:oxygen",
+                "mekanism:hydrogen",
+                "mekanism:water_vapor",
+                "mekanism:steam",
+                "mekanism:chlorine",
+                "mekanism:hydrogen_chloride",
+                "mekanism:sulfur_dioxide",
+                "mekanism:ethene",
+                "mekanismgenerators:deuterium",
+                "mekanismgenerators:tritium",
+                "mekanismgenerators:fusion_fuel"));
+        expected.addAll(REGISTERED);
         assertEquals(
-                new TreeSet<>(Set.of(
-                        "mekanism:oxygen",
-                        "mekanism:hydrogen",
-                        "mekanism:water_vapor",
-                        "mekanism:steam",
-                        "mekanism:chlorine",
-                        "mekanism:hydrogen_chloride",
-                        "mekanism:sulfur_dioxide",
-                        "mekanism:ethene",
-                        "mekanismgenerators:deuterium",
-                        "mekanismgenerators:tritium",
-                        "mekanismgenerators:fusion_fuel")),
+                expected,
                 new TreeSet<>(
                         map.chemicals().stream().map(ResourceLocation::toString).toList()));
         assertEquals("zas:oxygen", onlyGas("mekanism:oxygen"));
@@ -116,6 +131,40 @@ class DefaultMapTest {
         assertEquals("zas:deuterium", onlyGas("mekanismgenerators:deuterium"));
         assertEquals("zas:tritium", onlyGas("mekanismgenerators:tritium"));
         assertEquals(Map.of(), map.ties());
+    }
+
+    /**
+     * Each gas the adapter registers as a chemical is mapped to that chemical, which has the gas's
+     * own id, both ways and with no least temperature; and the pack tags the five as gaseous, which
+     * is how Mekanism knows to draw them as gas, adding to Mekanism's tag.
+     */
+    @Test
+    void mek_011_each_registered_gas_is_mapped_to_the_chemical_of_its_own_id() throws IOException {
+        for (String gas : REGISTERED) {
+            ChemicalMapping mapping = map.ofChemical(id(gas)).orElseThrow(() -> new AssertionError(gas));
+            assertEquals(Map.of(id(gas), 1.0), mapping.gases(), gas);
+            assertTrue(mapping.bothWays(), gas);
+            assertEquals(0, mapping.minTemperature(), gas);
+            assertEquals(Optional.of(id(gas)), map.forGas(id(gas), 293.15).map(ChemicalMapping::chemical), gas);
+            assertTrue(
+                    Files.isRegularFile(ZAS_RESOURCES.resolve("data/zas/zas/gas/" + id(gas).getPath() + ".json")),
+                    gas + " isn't one of ZAS³'s gases");
+        }
+        // No chemical in ZAS³'s namespace is mapped but those.
+        assertEquals(
+                new TreeSet<>(REGISTERED),
+                new TreeSet<>(map.chemicals().stream()
+                        .filter(chemical -> chemical.getNamespace().equals("zas"))
+                        .map(ResourceLocation::toString)
+                        .toList()));
+
+        JsonObject tag = JsonParser.parseString(Files.readString(
+                        PACK.resolve("data/mekanism/tags/mekanism/chemical/gaseous.json"), StandardCharsets.UTF_8))
+                .getAsJsonObject();
+        assertFalse(tag.has("replace"), "the tag must add to Mekanism's, not replace it");
+        Set<String> values = new TreeSet<>();
+        tag.getAsJsonArray("values").forEach(v -> values.add(v.getAsString()));
+        assertEquals(new TreeSet<>(REGISTERED), values);
     }
 
     /** Steam enters at 373.15 K or more; water vapour and everything else at the source's temperature. */

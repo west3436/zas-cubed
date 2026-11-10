@@ -95,6 +95,30 @@ public record ChemicalMapping(
     }
 
     /**
+     * The whole millibuckets of the chemical that some gas makes, rounded down: the most whose
+     * {@link #gas} holds no more of any gas than there is. For a chemical that is one gas this is
+     * {@link ChemicalUnits#wholeMillibuckets}; one that is several is limited by the gas there is
+     * least of, for its share. Take {@link #gas} of the result and leave the rest, and nothing is
+     * made or lost.
+     *
+     * @param moles the gas there is, in moles of each gas; gases the chemical isn't are ignored
+     * @param molesPerMillibucket the unit factor, from {@link ChemicalUnits#molesPerMillibucket}
+     * @return the whole millibuckets, 0 or more
+     */
+    public long wholeMillibuckets(Map<ResourceLocation, Double> moles, double molesPerMillibucket) {
+        long whole = Long.MAX_VALUE;
+        for (Map.Entry<ResourceLocation, Double> e : gases.entrySet()) {
+            double there = moles.getOrDefault(e.getKey(), 0.0);
+            whole = Math.min(whole, ChemicalUnits.wholeMillibuckets(there / e.getValue(), molesPerMillibucket));
+            // The division can land a hair high; the multiplication gas() does settles it.
+            while (whole > 0 && ChemicalUnits.moles(whole, molesPerMillibucket) * e.getValue() > there) {
+                whole--;
+            }
+        }
+        return whole;
+    }
+
+    /**
      * The gas an amount of the chemical is.
      *
      * @param millibuckets the amount, not negative

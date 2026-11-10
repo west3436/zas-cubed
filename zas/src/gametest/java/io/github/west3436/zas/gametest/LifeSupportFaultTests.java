@@ -247,4 +247,35 @@ public final class LifeSupportFaultTests {
         }
         h.succeed();
     }
+
+    /**
+     * A supply that throws when asked whether it is always on reads as one that isn't (NFR-013,
+     * API-022): it delivers only with the player's switch on, and the error is logged once.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void nfr_013_a_supply_whose_always_on_throws_waits_for_the_switch(GameTestHelper h) {
+        Rooms r = new Rooms(h, 723);
+        FakePlayer p = player(r);
+        p.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TestLifeSupport.item()));
+        p.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(TestLifeSupport.faultyTank()));
+        TestLifeSupport.FaultySupply tank = TestLifeSupport.FAULTY_TANK;
+        tank.refill();
+        try (FaultLog log = new FaultLog()) {
+            FaultLog.aMinutePasses();
+            tank.alwaysOn(true, false);
+            h.assertTrue(Internals.active(p) != null, "an always-on tank with the switch off");
+
+            tank.alwaysOn(true, true);
+            for (int i = 0; i < 3; i++) {
+                h.assertTrue(Internals.active(p) == null, "a tank whose alwaysOn throws delivered with the switch off");
+            }
+            h.assertValueEqual(log.naming(TANK), 1, "errors logged about it");
+            Internals.set(p, true);
+            h.assertTrue(Internals.active(p) != null, "a tank whose alwaysOn throws, with the switch on");
+        } finally {
+            tank.alwaysOn(false, false);
+            tank.refill();
+        }
+        h.succeed();
+    }
 }

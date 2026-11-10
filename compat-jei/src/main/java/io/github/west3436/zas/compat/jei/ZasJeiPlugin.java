@@ -26,8 +26,12 @@ import net.minecraft.resources.ResourceLocation;
  */
 @JeiPlugin
 public final class ZasJeiPlugin implements IModPlugin {
-    /** The JEI versions the plugin supports: 19.21, which it is compiled against, up to JEI 20. */
-    public static final String SUPPORTED = "[19.21,20)";
+    /**
+     * The JEI versions the plugin supports: from build 19.21.0.247, which it is compiled against
+     * and tested with, up to JEI 20. The range starts at that build and not at 19.21, so that it
+     * holds no build older than the one the plugin is known to work with.
+     */
+    public static final String SUPPORTED = "[19.21.0.247,20)";
 
     /** JEI's mod id. */
     public static final String JEI = "jei";

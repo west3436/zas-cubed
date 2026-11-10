@@ -1,0 +1,9 @@
+{
+  "values": [
+    "zas:carbon_dioxide",
+    "zas:carbon_monoxide",
+    "zas:methane",
+    "zas:nitrogen",
+    "zas:nitrous_oxide"
+  ]
+}
