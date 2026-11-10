@@ -1,6 +1,8 @@
 package io.github.west3436.zas.compat.adastra.gametest;
 
 import com.mojang.authlib.GameProfile;
+import earth.terrarium.adastra.api.systems.OxygenApi;
+import earth.terrarium.adastra.api.systems.TemperatureApi;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
@@ -11,6 +13,11 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.compat.adastra.AdAstraConfig;
+import io.github.west3436.zas.config.AtmospherePreset;
+import io.github.west3436.zas.config.BreathingConfig;
+import io.github.west3436.zas.config.ZasServerConfig;
+import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.simulation.AtmosService;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -21,12 +28,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -36,9 +45,12 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.NeoForge;
@@ -88,6 +100,7 @@ final class Lab implements AutoCloseable {
     final ServerLevel level;
     final BlockPos origin;
     private final List<Entity> entities = new ArrayList<>();
+    private final List<Runnable> restore = new ArrayList<>();
 
     private Lab(GameTestHelper h, ServerLevel level, int index) {
         this.h = h;
@@ -165,24 +178,91 @@ final class Lab implements AutoCloseable {
      * empty map leaves it a vacuum.
      */
     void room(int x0, Map<ResourceLocation, Double> kPa) {
-        for (BlockPos p : BlockPos.betweenClosed(abs(x0, 0, 0), abs(x0 + 5, 6, 6))) {
+        room(x0, 0, kPa);
+    }
+
+    /** As {@link #room(int, Map)}, from area z {@code z0} to {@code z0 + 4}. */
+    void room(int x0, int z0, Map<ResourceLocation, Double> kPa) {
+        for (BlockPos p : BlockPos.betweenClosed(abs(x0, 0, z0), abs(x0 + 4, 6, z0 + 4))) {
             level.setBlockAndUpdate(p, NOTHING);
         }
-        for (BlockPos p : BlockPos.betweenClosed(abs(x0, 0, 0), abs(x0 + 4, 4, 4))) {
+        for (BlockPos p : BlockPos.betweenClosed(abs(x0, 0, z0), abs(x0 + 4, 4, z0 + 4))) {
             int x = p.getX() - origin.getX() - x0;
             int y = p.getY() - origin.getY();
-            int z = p.getZ() - origin.getZ();
+            int z = p.getZ() - origin.getZ() - z0;
             boolean wall = x == 0 || x == 4 || y == 0 || y == 4 || z == 0 || z == 4;
             level.setBlockAndUpdate(p, wall ? STONE : NOTHING);
         }
-        Vec3 middle = point(x0 + 2, 2, 2);
+        Vec3 middle = point(x0 + 2, 2, z0 + 2);
         settle(GasMutations.remove(level, middle, Map.of(N2, 1e6, O2, 1e6), SOURCE));
         if (!kPa.isEmpty()) {
             Map<ResourceLocation, Double> moles = new HashMap<>();
             kPa.forEach((gas, p) -> moles.put(gas, p * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE)));
             settle(GasMutations.add(level, middle, new GasParcel(moles, StandardAir.TEMPERATURE), SOURCE));
-            h.assertTrue(Atmospheres.zoneAt(level, middle).isPresent(), "the room from " + x0 + " has no zone");
+            h.assertTrue(
+                    Atmospheres.zoneAt(level, middle).isPresent(), "the room from " + x0 + ", " + z0 + " has no zone");
         }
+    }
+
+    /**
+     * Makes a box of positions what an Ad Astra oxygen distributor makes of the ones it reaches,
+     * through Ad Astra's API as the distributor does: oxygen, at 22 °C. Undone when the test ends.
+     */
+    void distribute(BlockPos from, BlockPos to) {
+        List<BlockPos> reached = new ArrayList<>();
+        BlockPos.betweenClosed(from, to).forEach(p -> reached.add(p.immutable()));
+        OxygenApi.API.setOxygen(level, reached, true);
+        TemperatureApi.API.setTemperature(level, reached, (short) 22);
+        restore.add(() -> {
+            OxygenApi.API.removeOxygen(level, reached);
+            TemperatureApi.API.removeTemperature(level, reached);
+        });
+    }
+
+    /** Gives positions a temperature in Ad Astra's own data, in °C, until the test ends. */
+    void temperature(int celsius, BlockPos... positions) {
+        List<BlockPos> at = List.of(positions);
+        TemperatureApi.API.setTemperature(level, at, (short) celsius);
+        restore.add(() -> TemperatureApi.API.removeTemperature(level, at));
+    }
+
+    /** Sets the adapter's mode setting until the test ends. */
+    void mode(AdAstraConfig.ModeSetting setting) {
+        AdAstraConfig.ModeSetting before = AdAstraConfig.MODE.get();
+        restore.add(() -> AdAstraConfig.MODE.set(before));
+        AdAstraConfig.MODE.set(setting);
+    }
+
+    /** Switches the server's preset until the test ends. */
+    void preset(AtmospherePreset preset) {
+        AtmospherePreset before = ZasServerConfig.preset();
+        restore.add(() -> ZasServerConfig.setPreset(before));
+        ZasServerConfig.setPreset(preset);
+    }
+
+    /**
+     * Ticks the area's first chunk {@code n} times with vanilla's random ticks off. Ad Astra's
+     * environment tick hooks the end of a chunk's tick, and picks 20 blocks of each section that
+     * has a randomly ticking block in it.
+     */
+    void tickChunk(int n) {
+        LevelChunk chunk = level.getChunkAt(origin);
+        for (int i = 0; i < n; i++) {
+            level.tickChunk(chunk, 0);
+        }
+    }
+
+    /**
+     * Has a player place a block as a right click on a face would, with every event that fires.
+     *
+     * @return the state at the position the block would go to, afterwards
+     */
+    BlockState place(FakePlayer player, ItemStack stack, BlockPos on, Direction face) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        Vec3 hit =
+                Vec3.atCenterOf(on).add(Vec3.atLowerCornerOf(face.getNormal()).scale(0.5));
+        stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, new BlockHitResult(hit, face, on, false)));
+        return level.getBlockState(on.relative(face));
     }
 
     /** Where something standing in the middle of the room from x0 stands. */
@@ -302,6 +382,20 @@ final class Lab implements AutoCloseable {
         }
     }
 
+    /**
+     * Runs ZAS³'s breathing check on an entity {@code n} times, each one check interval of game time
+     * after the last, without waiting for the time to pass: the check is where ZAS³'s hazards deal
+     * their harm, by the seconds since the check before.
+     */
+    static void check(LivingEntity entity, int n) {
+        long now = entity.level().getGameTime();
+        int interval = BreathingConfig.checkIntervalTicks();
+        for (int i = 1; i <= n; i++) {
+            entity.invulnerableTime = 0;
+            Breathers.checkAt(entity, now + (long) i * interval);
+        }
+    }
+
     /** The damage types an entity has been dealt since it was made, in order. */
     static List<ResourceLocation> dealt(Entity entity) {
         return List.copyOf(DEALT.get(entity));
@@ -312,6 +406,9 @@ final class Lab implements AutoCloseable {
         for (Entity entity : entities) {
             DEALT.remove(entity);
             entity.discard();
+        }
+        for (int i = restore.size() - 1; i >= 0; i--) {
+            restore.get(i).run();
         }
     }
 }
