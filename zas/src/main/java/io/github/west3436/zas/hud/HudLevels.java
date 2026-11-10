@@ -4,6 +4,7 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
+import io.github.west3436.zas.api.capability.IInternalSupply;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.config.BreathingConfig;
@@ -279,24 +280,26 @@ public final class HudLevels {
 
     /**
      * What an entity's internals do now (CLIENT-009, LIFE-029): {@link
-     * AtmosHudPayload#INTERNALS_OFF}, {@link AtmosHudPayload#INTERNALS_ON} or {@link
-     * AtmosHudPayload#INTERNALS_FAILING}.
+     * AtmosHudPayload#INTERNALS_ON} while it breathes from a supply, which one that is always on
+     * gives it with the switch off too; otherwise {@link AtmosHudPayload#INTERNALS_FAILING} with the
+     * switch on, and {@link AtmosHudPayload#INTERNALS_OFF} with it off.
      */
     public static int internals(LivingEntity entity) {
-        if (!Internals.on(entity)) {
-            return AtmosHudPayload.INTERNALS_OFF;
+        if (Internals.active(entity) != null) {
+            return AtmosHudPayload.INTERNALS_ON;
         }
-        return Internals.active(entity) != null ? AtmosHudPayload.INTERNALS_ON : AtmosHudPayload.INTERNALS_FAILING;
+        return Internals.on(entity) ? AtmosHudPayload.INTERNALS_FAILING : AtmosHudPayload.INTERNALS_OFF;
     }
 
     /**
-     * The pressure in kPa of the tank an entity's internals draw from (CLIENT-009, LIFE-028), switched
-     * on or not, or {@link AtmosHudPayload#NO_TANK}.
+     * The pressure in kPa of the tank an entity's internals draw from (CLIENT-009, LIFE-028): the
+     * supply it breathes from now, or else the first one found, switched on or not, or {@link
+     * AtmosHudPayload#NO_TANK}.
      */
     public static float tankPressure(LivingEntity entity) {
-        return Internals.find(entity)
-                .map(tank -> (float) tank.contents().pressure())
-                .orElse(AtmosHudPayload.NO_TANK);
+        Internals.Active active = Internals.active(entity);
+        Optional<IInternalSupply> tank = active != null ? Optional.of(active.supply()) : Internals.find(entity);
+        return tank.map(t -> (float) t.contents().pressure()).orElse(AtmosHudPayload.NO_TANK);
     }
 
     /** A player's readings with what else its HUD state holds: its trigger, and while shown, its internals and tank. */

@@ -30,7 +30,8 @@ import org.slf4j.Logger;
  *       nothing. Its other parts still count.
  *   <li>A supply's {@code contents} that throws reads as empty and its {@code distributionPressure}
  *       as 0, so it delivers nothing and the entity breathes the atmosphere (LIFE-046). A {@code
- *       draw} that throws gives no gas, so nothing is exhaled.
+ *       draw} that throws gives no gas, so nothing is exhaled. An {@code alwaysOn} that throws
+ *       reads as false, so the supply waits for the entity's switch.
  * </ul>
  *
  * <p>Nothing is kept, so each call asks again and counts as soon as it stops throwing. Server thread.
@@ -221,6 +222,16 @@ final class GuardedLifeSupport implements ILifeSupport {
             } catch (Exception | LinkageError e) {
                 owner.failed(SUPPLY, e);
                 return GasParcel.EMPTY;
+            }
+        }
+
+        @Override
+        public boolean alwaysOn() {
+            try {
+                return delegate.alwaysOn();
+            } catch (Exception | LinkageError e) {
+                owner.failed(SUPPLY, e);
+                return false;
             }
         }
     }

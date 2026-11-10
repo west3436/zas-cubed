@@ -15,9 +15,16 @@ import net.neoforged.neoforge.capabilities.ItemCapability;
  * Each second ZAS³ draws P_dist × 0.0625 L / (R · T) moles from it (LIFE-043), and the gas goes
  * into the atmosphere around the player once breathed (LIFE-045).
  *
+ * <p><b>Gear with a switch of its own.</b> The internals switch is the wearer's, and nothing but
+ * the wearer flips it (LIFE-029). A breathing set that another mod switches on and off itself
+ * answers true from {@link #alwaysOn()} instead, and offers its supply only while it runs: ZAS³
+ * then breathes from it whenever the wearer's breathing is sealed, whatever the wearer's switch
+ * says.
+ *
  * <p><b>Where it comes from.</b> An item or entity with life support of its own gives its supply
  * through {@link ILifeSupport#internalSupply()}. An item that only holds gas, and gets its
- * protection from data or has none, gives it through {@link #ITEM} instead.
+ * protection from data or has none, gives it through {@link #ITEM} instead. A supply is treated
+ * the same whichever way it is found.
  *
  * <p><b>Threads.</b> ZAS³ calls it on the server thread, on the item as it is then.
  *
@@ -63,4 +70,19 @@ public interface IInternalSupply {
      * @return the gas taken, at the supply's temperature; less than asked if it holds less
      */
     GasParcel draw(double moles);
+
+    /**
+     * Whether it delivers without the wearer's internals being switched on (LIFE-029), for gear
+     * that has a switch of its own. False by default: the wearer's switch decides.
+     *
+     * <p>While the wearer's breathing is sealed, ZAS³ breathes from the first supply it finds if the
+     * wearer's switch is on and that supply delivers (LIFE-028), as ever. Failing that, it breathes
+     * from the first always-on supply that delivers, looking in the same order. So an always-on
+     * supply never keeps the wearer from choosing a tank, and never needs the switch.
+     *
+     * @return true if it needs no internals switch
+     */
+    default boolean alwaysOn() {
+        return false;
+    }
 }

@@ -128,7 +128,8 @@ public interface ILifeSupport {
     /**
      * The internal supply of breathable gas it holds, for internals, or empty for none (the
      * default). A gas tank gives its own gas, and counts in the offhand and the hotbar too; a suit
-     * gives the tank in its tank slot (LIFE-028).
+     * gives the tank in its tank slot (LIFE-028). Gear with a switch of its own gives its supply
+     * only while it runs, and makes it {@linkplain IInternalSupply#alwaysOn() always on}.
      *
      * @return the supply, or empty
      */
