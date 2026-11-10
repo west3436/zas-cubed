@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.west3436.zas.engine.gas.EquivalenceTolerances;
+import io.github.west3436.zas.engine.gas.GasConfig;
 import io.github.west3436.zas.engine.gas.GasConstants;
 import io.github.west3436.zas.engine.gas.GasMixture;
 import io.github.west3436.zas.engine.gas.GasRegistry;
@@ -81,7 +83,8 @@ class DissolveGuardTest {
     void core_052_a_level_is_reached_at_it_or_only_above_it() {
         GasMixture ambient = air(0.5);
         double at = ambient.partialPressure(TOXIN);
-        GasMixture more = air(0.5001);
+        // More than the relative tolerance above it, or the two would be one pressure.
+        GasMixture more = air(0.6);
         DissolveGuard atOrAbove =
                 DissolveGuard.builder(GASES).level(TOXIN, at, false).build();
         DissolveGuard onlyAbove =
@@ -136,5 +139,42 @@ class DissolveGuardTest {
         assertThrows(IllegalArgumentException.class, () -> builder.level(TOXIN, -1, false));
         assertThrows(IllegalArgumentException.class, () -> builder.level(TOXIN, Double.NaN, false));
         assertThrows(IllegalArgumentException.class, () -> builder.level(TOXIN, Double.POSITIVE_INFINITY, false));
+    }
+
+    @Test
+    void core_052_a_level_tells_apart_only_pressures_more_than_the_relative_tolerance_apart() {
+        DissolveGuard level =
+                DissolveGuard.builder(GASES).level(TOXIN, 1, false).build();
+        assertEquals(0.05, air(0).config().equivalence().densityRelative(), "CORE-006's relative tolerance for a gas");
+
+        // On different sides of the level, 4 % apart: one pressure.
+        assertFalse(level.keeps(air(1.02), air(0.98)));
+        assertFalse(level.keeps(air(0.98), air(1.02)), "either way round");
+        // 6 % apart: told apart.
+        assertTrue(level.keeps(air(1.03), air(0.97)));
+        assertTrue(level.keeps(air(0.97), air(1.03)));
+        // On the same side nothing tells them apart, however far.
+        assertFalse(level.keeps(air(4), air(1)));
+        // Against none of the gas, any amount past the level is all of the difference.
+        assertTrue(level.keeps(air(1), air(0)));
+    }
+
+    @Test
+    void core_052_with_no_relative_tolerance_pressures_equal_to_rounding_are_still_one() {
+        GasConfig exact = GasConfig.DEFAULT.withEquivalence(new EquivalenceTolerances(4, 0.012, 0.1, 0.05, 0.0021, 0));
+        GasMixture at = new GasMixture(GASES, exact, LITRES, T);
+        at.setMoles(TOXIN, LITRES / (GasConstants.R * T));
+        // The level is where that mixture is, so it has reached it.
+        DissolveGuard level = DissolveGuard.builder(GASES)
+                .level(TOXIN, at.partialPressure(TOXIN), false)
+                .build();
+        GasMixture under = at.copy();
+        under.setMoles(TOXIN, at.moles(TOXIN) * (1 - 1e-12));
+        assertTrue(under.partialPressure(TOXIN) < at.partialPressure(TOXIN), "a rounding under the level");
+        assertFalse(level.keeps(under, at), "where sharing ends up: not apart");
+
+        GasMixture less = at.copy();
+        less.setMoles(TOXIN, at.moles(TOXIN) * 0.999);
+        assertTrue(level.keeps(less, at), "a thousandth under it is");
     }
 }

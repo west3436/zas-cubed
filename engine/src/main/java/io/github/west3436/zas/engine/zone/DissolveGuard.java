@@ -10,19 +10,29 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 /**
- * Gas levels that keep a sealed zone from dissolving into the ambient (CORE-052).
+ * Gas levels that tell two mixtures apart though the equivalence test doesn't. They keep a zone
+ * from dissolving into the ambient (CORE-052, CORE-076), an edge between two zones from sleeping
+ * (CORE-033) and exchange with a paused zone from being skipped (GEO-035).
  *
  * <p>A level is a partial pressure of one gas at which something changes for whatever is in the
  * room, such as a threshold of the gas's hazard profile. The equivalence test (CORE-006) lets each
  * gas's molar density differ by 0.0021 mol/L, about 5 kPa at room temperature, which is hundreds
- * of times the partial pressure at which some gases harm. So a sealed zone that passes that test is
- * still kept while its gas and the ambient's lie on different sides of any level: dissolving it
- * would change which levels the room has reached.
+ * of times the partial pressure at which some gases harm. So two mixtures that pass that test are
+ * still kept apart while a gas of theirs lies on different sides of any level: treating them as
+ * one would change which levels a room has reached.
  *
  * <p>Immutable, and indexed like its gas registry, so a batch can carry it to the atmos worker.
  * The test costs a few comparisons for each gas with levels, whatever the zone's size.
  */
 public final class DissolveGuard {
+    /**
+     * The least share of the larger of two partial pressures by which they must differ for a level
+     * to tell them apart, whatever the tolerances say. Exchange closes a difference by a fraction
+     * each atmos tick and never ends it, so with no such share a level lying exactly where two zones
+     * are heading would keep them exchanging for ever.
+     */
+    public static final double SAME = 1e-9;
+
     /** No levels: the equivalence test alone decides. */
     public static final DissolveGuard NONE =
             new DissolveGuard(GasRegistry.EMPTY, new int[0], new double[0][], new boolean[0][]);
@@ -58,19 +68,33 @@ public final class DissolveGuard {
     }
 
     /**
-     * Whether a zone must be kept: whether, for any gas with levels, the zone's partial pressure has
-     * reached a level the ambient's hasn't, or the other way round.
+     * Whether the levels keep two mixtures apart: whether, for any gas with levels, one's partial
+     * pressure has reached a level the other's hasn't. The order of the two doesn't matter. For a
+     * zone and its ambient this is whether the zone must be kept.
      *
-     * @param zone the zone's gas, of this guard's registry
-     * @param ambient the ambient, of the same registry, at any volume
+     * <p>A level tells two partial pressures apart only if they also differ by more than the
+     * equivalence test's relative tolerance for a gas (CORE-006; 5 %), and never by less than {@link
+     * #SAME}. So a level keeps two zones exchanging no longer than any other difference between
+     * them would: until they are within that tolerance of each other.
+     *
+     * @param zone one mixture, such as a zone's gas, of this guard's registry
+     * @param ambient the other, such as the ambient or a neighbouring zone's gas, of the same
+     *     registry, at any volume
      */
     public boolean keeps(GasMixture zone, GasMixture ambient) {
+        if (gases.length == 0) {
+            return false;
+        }
+        double same = Math.max(SAME, zone.config().equivalence().densityRelative());
         for (int i = 0; i < gases.length; i++) {
             double inZone = zone.partialPressure(gases[i]);
             double inAmbient = ambient.partialPressure(gases[i]);
             double[] at = levels[i];
             if (inZone < at[0] && inAmbient < at[0]) {
                 continue; // under every level, as nearly every zone is
+            }
+            if (Math.abs(inZone - inAmbient) <= same * Math.max(inZone, inAmbient)) {
+                continue; // within the relative tolerance: one pressure
             }
             boolean[] strict = above[i];
             for (int k = 0; k < at.length; k++) {
