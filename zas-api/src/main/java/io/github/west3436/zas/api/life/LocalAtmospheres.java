@@ -42,7 +42,11 @@ public final class LocalAtmospheres {
      * @param provider the provider
      */
     public record Registration(ResourceLocation id, LocalAtmosphereProvider provider) {
-        /** @throws NullPointerException if an argument is null */
+        /**
+         * Checks the arguments.
+         *
+         * @throws NullPointerException if the id or the provider is null
+         */
         public Registration {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(provider, "provider");
