@@ -10,9 +10,12 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 /**
  * Where the Mekanism adapter starts (MEK-001). {@code zas} calls {@link #init} by name, and only
@@ -60,6 +63,14 @@ public final class MekanismCompat {
 
         // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
+
+        // Heat (MEK-040): heat blocks are learned as they load or are placed, and exchange heat with
+        // the zones they touch once an atmos tick.
+        NeoForge.EVENT_BUS.addListener((ChunkEvent.Load event) -> MekanismHeat.chunkLoaded(event));
+        NeoForge.EVENT_BUS.addListener((BlockEvent.NeighborNotifyEvent event) -> MekanismHeat.blockChanged(event));
+        NeoForge.EVENT_BUS.addListener((LevelTickEvent.Post event) -> MekanismHeat.levelTicked(event));
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> MekanismHeat.forget());
+
         active = true;
     }
 
