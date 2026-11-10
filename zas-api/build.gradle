@@ -167,15 +167,35 @@ if (baselineVersion.isEmpty()) {
     }
     tasks.named('check') { dependsOn apiCompat }
 } else {
-    // -Papi_baseline_repo=<url or path> adds a repository to find the baseline
-    // in, for testing the check against a local repository.
+    // Where the baseline comes from. The API isn't on Maven Central yet
+    // (API-008), so it is the jar attached to the GitHub release named by
+    // api_baseline_tag (v<baseline> if that is empty): an Ivy repository of
+    // bare jars, which answers for these coordinates and nothing else, and
+    // which alone may answer for them. The task then refuses a jar whose
+    // SHA-256 isn't api_baseline_sha256, since a release's files can be replaced.
+    //
+    // -Papi_baseline_repo=<url or path> names a Maven repository to find the
+    // baseline in instead, for testing the check against a local repository.
+    // Its jar is whatever was published there, so it has no hash to match.
     def baselineRepo = providers.gradleProperty('api_baseline_repo').getOrNull()
-    if (baselineRepo) {
-        repositories {
-            maven {
-                name = 'apiBaseline'
-                url = baselineRepo.contains('://') ? baselineRepo : file(baselineRepo).toURI()
+    def baselineTag = providers.gradleProperty('api_baseline_tag').getOrElse('').trim() ?: "v${baselineVersion}"
+    def baselineSha256 = providers.gradleProperty('api_baseline_sha256').getOrElse('').trim().toLowerCase()
+    repositories {
+        exclusiveContent {
+            forRepository {
+                baselineRepo
+                        ? maven {
+                            name = 'apiBaseline'
+                            url = baselineRepo.contains('://') ? baselineRepo : file(baselineRepo).toURI()
+                        }
+                        : ivy {
+                            name = 'apiBaselineRelease'
+                            url = 'https://github.com/west3436/zas-cubed/releases/download'
+                            patternLayout { artifact "${baselineTag}/[artifact]-[revision].[ext]" }
+                            metadataSources { artifact() }
+                        }
             }
+            filter { includeModule('io.github.west3436', 'zas-api') }
         }
     }
 
@@ -238,10 +258,20 @@ if (baselineVersion.isEmpty()) {
         def libs = configurations.compileClasspath
         inputs.files(oldJar).withPropertyName('baseline')
         inputs.file(newJar).withPropertyName('current')
+        inputs.property('baselineSha256', baselineRepo ? '' : baselineSha256)
         outputs.file(report)
         outputs.file(xmlReport)
 
         doFirst {
+            if (!baselineRepo) {
+                def jar = oldJar.singleFile
+                def sha256 = java.security.MessageDigest.getInstance('SHA-256').digest(jar.bytes).encodeHex().toString()
+                if (sha256 != baselineSha256) {
+                    throw new GradleException("apiCompat: ${jar.name} from the GitHub release ${baselineTag} has " +
+                            "SHA-256 ${sha256}, but api_baseline_sha256 in gradle.properties is " +
+                            "${baselineSha256 ?: 'empty'}. It must be that jar's line in the release's SHA256SUMS.txt.")
+                }
+            }
             report.get().asFile.parentFile.mkdirs()
             def cp = libs.files.join(File.pathSeparator)
             def a = [

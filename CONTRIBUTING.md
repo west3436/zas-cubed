@@ -132,7 +132,11 @@ uses only the public API at compile time.
 
 How mods depend on the API is in the wiki's [API guide](https://github.com/west3436/zas-cubed/wiki/API-Guide).
 The version policy and the compatibility check are in the
-[archived one](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check).
+[archived one](https://github.com/west3436/zas-cubed/blob/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/api-consumers.md#versioning-and-the-compatibility-check),
+which was written before the first release. The check now has a baseline: it downloads the API
+jar of the GitHub release named in [`gradle.properties`](gradle.properties) and refuses a jar
+whose SHA-256 isn't the one given there. After a release with a new API version, set the three
+`api_baseline_` lines to it.
 
 To inspect a running simulation, the `/zas` operator commands
 ([Commands](https://github.com/west3436/zas-cubed/wiki/Commands)) report zones and atmospheres, edit gas,
