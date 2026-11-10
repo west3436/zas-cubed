@@ -38,6 +38,15 @@ jobs:
             task: ":compat-mekanism:runAdapterGameTestServer"
           - adapter: mekanism (older than supported)
             task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=unsupported"
+          # COMPAT-004: the oldest Jade the adapter supports and the newest.
+          # COMPAT-002: with the last one before the oldest, the readouts stay
+          # off, so only the version check's tests run.
+          - adapter: jade (oldest supported)
+            task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.6+neoforge"
+          - adapter: jade (newest)
+            task: ":compat-jade:runAdapterGameTestServer"
+          - adapter: jade (older than supported)
+            task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.5+neoforge -Pjade.gateOnly=true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
