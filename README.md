@@ -7,6 +7,9 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 > **Status: beta.** 0.1.0 is on [GitHub Releases](https://github.com/west3436/zas-cubed/releases).
 > Guides for players, server owners, pack makers and mod developers are on the
 > [wiki](https://github.com/west3436/zas-cubed/wiki).
+>
+> The adapters for Mekanism, Ad Astra, Jade, JEI and EMI are built on `main`
+> and arrive with the next release. 0.1.0 doesn't have them.
 
 The requirements, plan, design notes and research were retired before the
 first release. They're archived in
@@ -29,8 +32,9 @@ with the completed requirements in
 - **SS13-style atmospherics content,** a companion mod in the same jar:
   pipes, pumps, vents, scrubbers, canisters, area air controllers, firelocks,
   suits and power. A pack can turn it off and keep only the simulation.
-- **Integrations, after R1.** Mekanism and Ad Astra, as reference
-  integrations built only on the public API.
+- **Integrations.** Adapters for Mekanism, Ad Astra, Jade, JEI and EMI, in
+  the same jar and off unless the other mod is installed. Mekanism's and
+  Ad Astra's are reference integrations built only on the public API.
 
 ## Licensing
 
