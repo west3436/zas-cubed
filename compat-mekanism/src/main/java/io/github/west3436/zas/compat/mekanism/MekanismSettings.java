@@ -28,6 +28,15 @@ public final class MekanismSettings {
     /** {@code [units] litres_per_millibucket}: the mB to mol factor (MEK-002). */
     public static final ModConfigSpec.DoubleValue LITRES_PER_MILLIBUCKET;
 
+    /** {@code [venting] enabled}: whether what Mekanism voids is released as gas (MEK-020). */
+    public static final ModConfigSpec.BooleanValue VENTING_ENABLED;
+
+    /** {@code [venting] max_millibuckets_per_second}: the most one source releases in a second (MEK-021). */
+    public static final ModConfigSpec.LongValue VENTING_MAX_PER_SECOND;
+
+    /** {@code [venting] release_above_cap}: whether what is above the cap is released too (MEK-021). */
+    public static final ModConfigSpec.BooleanValue VENTING_RELEASE_ABOVE_CAP;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -45,6 +54,24 @@ public final class MekanismSettings {
         builder.pop();
 
         // Sections of the adapter's other parts go here, each in a block of its own.
+
+        builder.push("venting");
+        VENTING_ENABLED = builder.comment(
+                        "Whether a chemical that Mekanism voids is released as gas where it is voided, if",
+                        "the chemical map makes it a gas: a tank or machine set to dump, a dump button, a",
+                        "gauge dropper, a broken tube. false leaves all of it to Mekanism, which deletes it.")
+                .define("enabled", VentBudget.DEFAULT_ENABLED);
+        VENTING_MAX_PER_SECOND = builder.comment(
+                        "The most one source releases in a second, in mB. A source is one machine, one",
+                        "multiblock, one broken tube or one player's gauge dropper. An Ultimate chemical",
+                        "tank set to dump sheds 409,600 mB a second, which at 1 L per mB is 409.6 cubic",
+                        "metres of gas. What is above the cap is deleted, as Mekanism does without ZAS.")
+                .defineInRange("max_millibuckets_per_second", VentBudget.DEFAULT_MAX_PER_SECOND, 0L, Long.MAX_VALUE);
+        VENTING_RELEASE_ABOVE_CAP = builder.comment(
+                        "true releases what is above the cap as well, so nothing voided is deleted and a",
+                        "large dump can raise a room's pressure a great deal at once.")
+                .define("release_above_cap", VentBudget.DEFAULT_RELEASE_ABOVE_CAP);
+        builder.pop();
 
         SPEC = builder.build();
     }
@@ -73,5 +100,32 @@ public final class MekanismSettings {
      */
     public static double molesPerMillibucket() {
         return ChemicalUnits.molesPerMillibucket(litresPerMillibucket());
+    }
+
+    /**
+     * Whether what Mekanism voids is released as gas (MEK-020).
+     *
+     * @return the setting; the default while no server config is loaded
+     */
+    public static boolean ventingEnabled() {
+        return SPEC.isLoaded() ? VENTING_ENABLED.get() : VentBudget.DEFAULT_ENABLED;
+    }
+
+    /**
+     * The most one source releases in a second (MEK-021).
+     *
+     * @return the cap in mB, 0 or more; the default while no server config is loaded
+     */
+    public static long ventingMaxPerSecond() {
+        return SPEC.isLoaded() ? VENTING_MAX_PER_SECOND.get() : VentBudget.DEFAULT_MAX_PER_SECOND;
+    }
+
+    /**
+     * Whether what is above the cap is released as well (MEK-021).
+     *
+     * @return the setting; the default while no server config is loaded
+     */
+    public static boolean ventingReleasesAboveCap() {
+        return SPEC.isLoaded() ? VENTING_RELEASE_ABOVE_CAP.get() : VentBudget.DEFAULT_RELEASE_ABOVE_CAP;
     }
 }
