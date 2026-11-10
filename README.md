@@ -29,8 +29,9 @@ with the completed requirements in
 - **SS13-style atmospherics content,** a companion mod in the same jar:
   pipes, pumps, vents, scrubbers, canisters, area air controllers, firelocks,
   suits and power. A pack can turn it off and keep only the simulation.
-- **Integrations, after R1.** Mekanism and Ad Astra, as reference
-  integrations built only on the public API.
+- **Integrations.** Adapters for Mekanism, Ad Astra, Jade, JEI and EMI, in
+  the same jar and off unless the other mod is installed. Mekanism's and
+  Ad Astra's are reference integrations built only on the public API.
 
 ## Licensing
 
