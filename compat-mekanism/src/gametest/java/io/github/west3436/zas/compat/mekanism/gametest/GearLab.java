@@ -153,6 +153,13 @@ final class GearLab implements AutoCloseable {
         service.tickNow(level);
     }
 
+    /** Runs {@code n} atmos ticks, each a second of the simulation, within this game tick. */
+    void atmosTicks(int n) {
+        for (int i = 0; i < n; i++) {
+            tick();
+        }
+    }
+
     /** Runs atmos ticks until a mutation completes; classifying a new room may take a few. */
     private <T> T settle(CompletableFuture<T> future) {
         for (int i = 0; i < 8 && !future.isDone(); i++) {

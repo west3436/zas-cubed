@@ -18,11 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.conservation.ConservationReport;
 import io.github.west3436.zas.engine.conservation.LedgerCategory;
+import io.github.west3436.zas.engine.gas.GasConstants;
 import io.github.west3436.zas.engine.gas.GasMixture;
+import io.github.west3436.zas.engine.gas.GasRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -401,6 +404,131 @@ class DissolutionTest {
         collect(graph, 1);
         assertFalse(a.isAlive());
         assertFalse(b.isAlive());
+    }
+
+    // ---- Sealed zones holding a gas past one of its levels (CORE-052) -------------------------
+
+    /** Oxygen standing in for a toxic gas: a warning from 0.0001 kPa, harm from 0.001, and half the lowest. */
+    private static final DissolveGuard TRACE = DissolveGuard.builder(REGISTRY)
+            .level(O2, 0.00005, false)
+            .level(O2, 0.0001, false)
+            .level(O2, 0.001, false)
+            .build();
+
+    /** Nitrogen at one atmosphere with oxygen at a partial pressure, in kPa. */
+    private static GasMixture nitrogen(double oxygenKpa) {
+        GasMixture m = new GasMixture(REGISTRY, CONFIG, CELL, ROOM_T);
+        m.setMoles(N2, 101.325 * CELL / (GasConstants.R * ROOM_T));
+        m.setMoles(O2, oxygenKpa * CELL / (GasConstants.R * ROOM_T));
+        return m;
+    }
+
+    /** A graph in plain nitrogen whose sealed zones wait 3 s and are kept by {@link #TRACE}. */
+    private static ZoneGraph guarded(Grid grid) {
+        ZoneGraph graph = graph(grid, nitrogen(0));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3).withGuard(TRACE));
+        return graph;
+    }
+
+    @Test
+    void core_052_a_sealed_zone_holding_a_gas_past_its_level_stays() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+        // Twice what harms, and a thousandth of what the tolerances let through.
+        fillWith(graph, room, nitrogen(0.002));
+        double held = room.mixture().moles(O2);
+        assertTrue(room.mixture().isEquivalent(graph.ambient()), "the tolerances take it for the ambient");
+
+        for (int t = 0; t < 20; t++) {
+            graph.exchange();
+            graph.collectSealed(id -> false);
+        }
+        assertTrue(room.isAlive(), "the room is kept well past the 3 s");
+        assertEquals(held, room.mixture().moles(O2), 0, "with its gas");
+        assertEquals(0, graph.dissolveCount());
+
+        // Once the gas is taken out, the room waits the delay like any other.
+        fillWith(graph, room, nitrogen(0));
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "2 s since the gas went isn't 3 s");
+        collect(graph, 1);
+        assertFalse(room.isAlive());
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_052_a_trace_under_every_level_dissolves_on_time() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+        fillWith(graph, room, nitrogen(0.00004));
+        double held = room.mixture().moles(O2);
+        assertTrue(held > 0);
+        graph.beginConservationPeriod();
+
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "2 s isn't 3 s");
+        collect(graph, 1);
+        assertFalse(room.isAlive(), "under half the lowest level, 3 s is");
+        ConservationReport report = graph.checkConservation(1);
+        assertTrue(report.conserved(), report::toString);
+        assertEquals(-held, report.recorded(LedgerCategory.AMBIENT, O2), 1e-9 * held, "the trace went to the ambient");
+    }
+
+    @Test
+    void core_052_a_sealed_zone_at_the_ambient_dissolves_on_time_whatever_the_levels() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = guarded(grid);
+        Zone room = graph.createZone(ROOM);
+
+        collect(graph, 2);
+        assertTrue(room.isAlive(), "2 s isn't 3 s");
+        collect(graph, 1);
+        assertFalse(room.isAlive(), "3 s is");
+    }
+
+    @Test
+    void core_052_a_zone_joined_to_a_kept_zone_stays() {
+        Grid grid = roomsThroughADoor();
+        ZoneGraph graph = guarded(grid);
+        Zone clean = graph.createZone(cell(0, 0, 0));
+        Zone foul = graph.createZone(cell(1, 0, 0));
+        fillWith(graph, foul, nitrogen(0.002));
+
+        collect(graph, 20);
+
+        assertTrue(foul.isAlive());
+        assertTrue(clean.isAlive(), "dissolved, it would be open air through the foul room's door");
+        assertConsistent(graph, grid);
+    }
+
+    @Test
+    void core_052_a_zone_cleaner_than_the_ambient_stays() {
+        Grid grid = new Grid().box(0, 0, 0, 1, 0, 1, CELL);
+        ZoneGraph graph = graph(grid, nitrogen(0.002));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withSealedDissolveSeconds(3).withGuard(TRACE));
+        Zone room = graph.createZone(ROOM);
+        collect(graph, 2);
+        // Scrubbed: dissolving would bring back what the open air holds.
+        fillWith(graph, room, nitrogen(0));
+        assertTrue(room.mixture().isEquivalent(graph.ambient()));
+
+        collect(graph, 20);
+
+        assertTrue(room.isAlive());
+    }
+
+    @Test
+    void core_052_gas_levels_for_other_gases_are_refused() {
+        ZoneGraph graph = collecting(new Grid().box(0, 0, 0, 1, 0, 1, CELL));
+        GasRegistry other = GasRegistry.of(List.of(ZoneFixtures.gas("test:toxin", 0.071, 33.9)));
+        DissolveGuard foreign =
+                DissolveGuard.builder(other).level(0, 0.001, false).build();
+
+        assertThrows(
+                IllegalArgumentException.class, () -> graph.setZoneSettings(ZoneSettings.DEFAULT.withGuard(foreign)));
+        graph.setZoneSettings(ZoneSettings.DEFAULT.withGuard(DissolveGuard.NONE));
     }
 
     @Test

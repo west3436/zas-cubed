@@ -143,9 +143,20 @@ public final class ZoneGraph {
         settings = Objects.requireNonNull(exchangeSettings, "settings");
     }
 
-    /** What happens to a zone's gas when its cells fill (CORE-022, CORE-029). */
+    /**
+     * What happens to a zone's gas when its cells fill (CORE-022, CORE-029), and when a sealed zone
+     * dissolves (CORE-052).
+     *
+     * @throws IllegalArgumentException if the settings' gas levels are for a different gas registry
+     */
     public void setZoneSettings(ZoneSettings settings) {
-        zoneSettings = Objects.requireNonNull(settings, "settings");
+        DissolveGuard guard = Objects.requireNonNull(settings, "settings").guard();
+        if (guard != zoneSettings.guard()
+                && !guard.isEmpty()
+                && !guard.registry().equals(registry)) {
+            throw new IllegalArgumentException("the gas levels are for a different gas registry");
+        }
+        zoneSettings = settings;
     }
 
     /** The ambient, as a mixture whose volume is arbitrary. Read only. */
@@ -1187,6 +1198,12 @@ public final class ZoneGraph {
      * room someone is breathing in keeps its zone, however little that changes its air, for without
      * one its air would stop being used up (CORE-038).
      *
+     * <p>Nearly equivalent allows far more of a gas than harms: 0.0021 mol/L, about 5 kPa at room
+     * temperature. So a zone's time doesn't count either while the settings' {@link DissolveGuard}
+     * keeps it: while one of its gases has reached a level the ambient's hasn't, or the other way
+     * round. A room holding chlorine at a partial pressure that hurts therefore stays, with its
+     * chlorine, though nobody is in it.
+     *
      * <p>Zones joined by zone edges dissolve together or not at all. A zone left behind would gain an
      * ambient edge across cells that are still sealed, and vent into them as if they were the open air.
      *
@@ -1195,10 +1212,15 @@ public final class ZoneGraph {
      */
     public void collectSealed(LongPredicate undecided) {
         double delay = zoneSettings.sealedDissolveSeconds();
+        DissolveGuard guard = zoneSettings.guard();
         double period = settings.periodSeconds();
         boolean anyDue = false;
         for (Zone z : zones.values()) {
-            if (!z.paused && !z.isPinned() && z.ambientEdge() == null && nearlyAmbient(z.mixture())) {
+            if (!z.paused
+                    && !z.isPinned()
+                    && z.ambientEdge() == null
+                    && nearlyAmbient(z.mixture())
+                    && !guard.keeps(z.mixture(), ambient)) {
                 z.matchedSeconds += period;
                 anyDue |= z.matchedSeconds >= delay;
             } else {

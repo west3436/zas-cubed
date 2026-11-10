@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.SectionKeys;
+import io.github.west3436.zas.engine.zone.DissolveGuard;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
 import io.github.west3436.zas.engine.zone.ZoneSettings;
 import java.util.ArrayList;
@@ -48,6 +49,37 @@ class SchedulerTest {
         }
         assertEquals(OpOutcome.Outcome.ZONE, sim.outcomes.get(again).outcome());
         assertNotNull(sim.zoneAt(1, 65, 1));
+    }
+
+    /**
+     * A sealed room the tolerances take for the ambient is kept while the batch's settings carry a
+     * gas level its air has reached and the ambient's hasn't, and waits the delay once they don't
+     * (CORE-052).
+     */
+    @Test
+    void core_052_the_engine_keeps_a_sealed_zone_past_a_gas_level() {
+        Sim sim = new Sim(Ambient.STANDARD_AIR);
+        // Standard air holds 21.3 kPa of oxygen. The room gets 1.2 kPa more: 0.0005 mol/L, a quarter of
+        // what the tolerances let through.
+        DissolveGuard guard =
+                DissolveGuard.builder(Sim.REGISTRY).level(O2, 22, false).build();
+        ZoneSettings kept = ZoneSettings.DEFAULT.withSealedDissolveSeconds(3).withGuard(guard);
+        sim.settings = sim.settings.withZones(kept);
+        sim.world.room(0, 64, 0, 2, 66, 2);
+        long added = sim.add(1, 65, 1, 0, 13.5);
+        for (int i = 0; i < 16 && !sim.outcomes.containsKey(added); i++) {
+            sim.step();
+        }
+        assertNotNull(sim.zoneAt(1, 65, 1), "the addition forms a zone");
+
+        sim.steps(12);
+        assertNotNull(sim.zoneAt(1, 65, 1), "kept well past the 3 s");
+
+        sim.settings = sim.settings.withZones(kept.withGuard(DissolveGuard.NONE));
+        sim.steps(2);
+        assertNotNull(sim.zoneAt(1, 65, 1), "2 s without the level isn't 3 s");
+        sim.step();
+        assertNull(sim.zoneAt(1, 65, 1), "3 s is");
     }
 
     @Test
