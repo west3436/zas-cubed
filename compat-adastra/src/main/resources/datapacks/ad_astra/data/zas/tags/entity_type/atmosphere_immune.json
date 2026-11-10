@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "#ad_astra:lives_without_oxygen",
+      "required": false
+    },
+    {
+      "id": "#ad_astra:can_survive_in_space",
+      "required": false
+    }
+  ]
+}
