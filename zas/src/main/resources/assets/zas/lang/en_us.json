@@ -23,6 +23,15 @@
   "gas.zas.oxygen": "Oxygen",
   "gas.zas.water_vapor": "Water Vapor",
 
+  "gas.zas.chlorine": "Chlorine",
+  "gas.zas.deuterium": "Deuterium",
+  "gas.zas.ethene": "Ethene",
+  "gas.zas.hydrogen_chloride": "Hydrogen Chloride",
+  "gas.zas.sulfur_dioxide": "Sulfur Dioxide",
+  "gas.zas.tritium": "Tritium",
+  "pack.zas.mekanism": "ZAS³ Mekanism",
+  "pack.zas.mekanism.description": "Chemical map and gases",
+
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",

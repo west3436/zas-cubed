@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.hydrogen_chloride",
+  "formula": "HCl",
+  "molar_mass": 0.036458,
+  "molar_heat_capacity": 20.82,
+  "sources": {
+    "molar_mass": "H 1.0080 + Cl 35.45 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 29.136 − 8.314 J/(mol·K). C_p of HCl(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table Cl-026, https://janaf.nist.gov/tables/Cl-026.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.tritium",
+  "formula": "T₂",
+  "molar_mass": 0.006032,
+  "molar_heat_capacity": 20.79,
+  "sources": {
+    "molar_mass": "6.0321 g/mol, the molecular weight of T2: NIST Chemistry WebBook (SRD 69), tritium, https://webbook.nist.gov/cgi/cbook.cgi?ID=C10028178",
+    "molar_heat_capacity": "C_v = 5/2 R, a diatomic ideal gas whose rotation is fully excited and whose vibration isn't, as H2 and D2 are at 298.15 K (20.52 and 20.88). No table value was checked: no NIST-JANAF table for T2 was found. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}
