@@ -113,7 +113,7 @@ public final class ReleaseJarTests {
     /**
      * The release jar holds the whole Mekanism adapter, and on a server without Mekanism none of it
      * loads (MEK-001, NFR-022): {@code zas} left the adapter off, Mixin was never handed its config,
-     * and its data pack, its gases and its settings file aren't there.
+     * and its data pack, its gases, its settings file and its block aren't there.
      */
     @GameTest(template = "empty")
     public static void mek_001_nothing_of_the_mekanism_adapter_loads_without_mekanism(GameTestHelper h) {
@@ -124,7 +124,9 @@ public final class ReleaseJarTests {
             MEKANISM_ADAPTER.replace('.', '/') + "/MekanismCompat.class",
             "zas.mekanism.mixins.json",
             "datapacks/mekanism/pack.mcmeta",
-            "datapacks/mekanism/data/zas/zas/gas/chlorine.json"
+            "datapacks/mekanism/data/zas/zas/gas/chlorine.json",
+            "datapacks/mekanism/data/zas/recipe/exhaust_port.json",
+            "assets/zas/blockstates/exhaust_port.json"
         }) {
             h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
         }
@@ -150,6 +152,11 @@ public final class ReleaseJarTests {
         h.assertTrue(
                 GasProperties.isDefined(ResourceLocation.fromNamespaceAndPath("zas", "oxygen")),
                 "zas's own gases aren't defined");
+        // Its one block, the exhaust port (MEK-022), with its item and its recipe.
+        ResourceLocation port = ResourceLocation.fromNamespaceAndPath("zas", "exhaust_port");
+        h.assertFalse(BuiltInRegistries.BLOCK.containsKey(port), "the exhaust port's block is registered");
+        h.assertFalse(BuiltInRegistries.ITEM.containsKey(port), "the exhaust port's item is registered");
+        h.assertTrue(server.getRecipeManager().byKey(port).isEmpty(), "the exhaust port's recipe loaded");
 
         // Last, the adapter's own word, from the two classes that name nothing of Mekanism's. Asking
         // loads them, which is why everything above was checked first.

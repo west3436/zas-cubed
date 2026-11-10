@@ -3336,3 +3336,33 @@ notes: A cloud in greys, 16 by 16, which the game tints with each gas's colour.
 path: zas/src/main/resources/assets/zas/textures/gui/viewer/icons.png
 origin: original
 notes: Fifteen 9 by 9 icons for conditions and properties (spark, flame, thermometer, share of a mixture, gauge, clock, heat out, heat in, energy barrier, gear, weight, heat store, tag, oxidizer ring, skull) and a 16 by 16 flask, the reactions' icon.
+
+# The exhaust port (MEK-022), the Mekanism adapter's one block: drawn pixel by pixel for it, in
+# the device greys.
+path: compat-mekanism/src/main/resources/assets/zas/textures/block/exhaust_port_front.png
+origin: original
+notes: The port's grille: three broad louvres in a recessed panel, on a bevelled casing.
+
+path: compat-mekanism/src/main/resources/assets/zas/textures/block/exhaust_port_side.png
+origin: original
+notes: The port's casing, with a square plate engraved in it; the same whichever way it is turned.
+
+path: compat-mekanism/src/main/resources/assets/zas/textures/block/exhaust_port_back.png
+origin: original
+notes: The port's back: a square socket in a raised collar, where a tube or a machine's side meets it.
+
+path: compat-mekanism/src/main/resources/assets/zas/blockstates/exhaust_port.json
+origin: original
+notes: Picks the exhaust port's model by facing, six ways.
+
+path: compat-mekanism/src/main/resources/assets/zas/models/block/exhaust_port.json
+origin: original
+notes: A cube facing north: the grille in front, the socket behind, the casing on the other four faces.
+
+path: compat-mekanism/src/main/resources/assets/zas/models/block/exhaust_port_vertical.json
+origin: original
+notes: The exhaust port facing up.
+
+path: compat-mekanism/src/main/resources/assets/zas/models/item/exhaust_port.json
+origin: original
+notes: The exhaust port's item: its block model.

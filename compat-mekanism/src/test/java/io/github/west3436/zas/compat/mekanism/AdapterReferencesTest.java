@@ -42,6 +42,8 @@ class AdapterReferencesTest {
             "net/neoforged/",
             "com/mojang/",
             "com/google/gson/",
+            // The game's own collections library, which NeoForge's creative tab event hands out.
+            "it/unimi/dsi/fastutil/",
             "org/slf4j/",
             "org/jetbrains/annotations/",
             "org/apache/maven/artifact/versioning/",
@@ -108,6 +110,35 @@ class AdapterReferencesTest {
                 classes.get(PACKAGE + "ChemicalUnits").stream()
                         .filter(r -> !r.startsWith("java/") && !r.equals(PACKAGE + "ChemicalUnits"))
                         .toList());
+    }
+
+    /**
+     * The exhaust port must work when the venting's mixins are switched off or didn't apply
+     * (MEK-022), so its classes name none of the code those hooks run: not a mixin, and not {@code
+     * Venting}, which only the mixins call. The cap's arithmetic, which names nothing of the game's,
+     * is all the two share.
+     */
+    @Test
+    void mek_022_the_exhaust_port_names_none_of_the_venting_hooks_code() throws IOException {
+        Map<String, List<String>> classes = adapterClasses();
+        Set<String> bad = new TreeSet<>();
+        int found = 0;
+        for (Map.Entry<String, List<String>> entry : classes.entrySet()) {
+            String name = entry.getKey();
+            if (!name.startsWith(PACKAGE + "ExhaustPort")) {
+                continue;
+            }
+            found++;
+            for (String reference : entry.getValue()) {
+                if (reference.startsWith(MIXIN_PACKAGE)
+                        || reference.equals(PACKAGE + "Venting")
+                        || reference.startsWith(PACKAGE + "Venting$")) {
+                    bad.add(name + " -> " + reference);
+                }
+            }
+        }
+        assertTrue(found >= 3, "the exhaust port's classes weren't found: " + classes.keySet());
+        assertEquals(Set.of(), bad);
     }
 
     /** A sanity check on the scanner, using this test's own class file, which references JUnit. */

@@ -59,17 +59,21 @@ public final class MekanismSettings {
         VENTING_ENABLED = builder.comment(
                         "Whether a chemical that Mekanism voids is released as gas where it is voided, if",
                         "the chemical map makes it a gas: a tank or machine set to dump, a dump button, a",
-                        "gauge dropper, a broken tube. false leaves all of it to Mekanism, which deletes it.")
+                        "gauge dropper, a broken tube. false leaves all of it to Mekanism, which deletes it.",
+                        "An exhaust port works either way.")
                 .define("enabled", VentBudget.DEFAULT_ENABLED);
         VENTING_MAX_PER_SECOND = builder.comment(
                         "The most one source releases in a second, in mB. A source is one machine, one",
                         "multiblock, one broken tube or one player's gauge dropper. An Ultimate chemical",
                         "tank set to dump sheds 409,600 mB a second, which at 1 L per mB is 409.6 cubic",
-                        "metres of gas. What is above the cap is deleted, as Mekanism does without ZAS.")
+                        "metres of gas. What is above the cap is deleted, as Mekanism does without ZAS.",
+                        "An exhaust port is a source too: it takes no more than this in a second, and what",
+                        "is above it stays in the tube or machine.")
                 .defineInRange("max_millibuckets_per_second", VentBudget.DEFAULT_MAX_PER_SECOND, 0L, Long.MAX_VALUE);
         VENTING_RELEASE_ABOVE_CAP = builder.comment(
                         "true releases what is above the cap as well, so nothing voided is deleted and a",
-                        "large dump can raise a room's pressure a great deal at once.")
+                        "large dump can raise a room's pressure a great deal at once. An exhaust port then",
+                        "takes all it is given.")
                 .define("release_above_cap", VentBudget.DEFAULT_RELEASE_ABOVE_CAP);
         builder.pop();
 

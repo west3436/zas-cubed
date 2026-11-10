@@ -1,0 +1,26 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "zas:block/exhaust_port"
+    },
+    "facing=east": {
+      "model": "zas:block/exhaust_port",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "zas:block/exhaust_port",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "zas:block/exhaust_port",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "zas:block/exhaust_port_vertical"
+    },
+    "facing=down": {
+      "model": "zas:block/exhaust_port_vertical",
+      "x": 180
+    }
+  }
+}

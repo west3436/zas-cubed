@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "zas:block/exhaust_port_side",
+    "north": "zas:block/exhaust_port_side",
+    "south": "zas:block/exhaust_port_side",
+    "east": "zas:block/exhaust_port_side",
+    "west": "zas:block/exhaust_port_side",
+    "up": "zas:block/exhaust_port_front",
+    "down": "zas:block/exhaust_port_back"
+  }
+}

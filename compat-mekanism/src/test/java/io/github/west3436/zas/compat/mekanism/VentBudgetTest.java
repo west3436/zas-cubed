@@ -80,6 +80,29 @@ class VentBudgetTest {
         assertEquals(0, budget.grant("huge", 0, Long.MAX_VALUE, Long.MAX_VALUE));
     }
 
+    /**
+     * What is left of a source's cap is what it would be granted, and asking counts nothing: the
+     * exhaust port says what it would take before it takes it (MEK-022).
+     */
+    @Test
+    void mek_021_what_is_left_of_a_cap_is_what_would_be_granted() {
+        VentBudget budget = new VentBudget();
+        assertEquals(CAP, budget.left("port", 0, CAP));
+        assertEquals(CAP, budget.left("port", 0, CAP));
+        assertEquals(0, budget.sources());
+        assertEquals(400, budget.grant("port", 3, 400, CAP));
+        assertEquals(CAP - 400, budget.left("port", 19, CAP));
+        assertEquals(CAP, budget.left("other", 19, CAP));
+        // A smaller cap than what is used leaves nothing, and no cap leaves nothing.
+        assertEquals(0, budget.left("port", 19, 300));
+        assertEquals(0, budget.left("port", 19, 0));
+        assertEquals(0, budget.left("port", 19, -1));
+        // The next second it is all there again, before anything is granted in it.
+        assertEquals(CAP, budget.left("port", 20, CAP));
+        assertEquals(CAP - 400, budget.left("port", 19, CAP));
+        assertEquals(Long.MAX_VALUE - 400, budget.left("port", 19, Long.MAX_VALUE));
+    }
+
     /** The defaults: on, 20,000 mB a second from each source, and the rest deleted. */
     @Test
     void mek_021_the_defaults_cap_a_source_at_twenty_thousand_millibuckets_a_second() {

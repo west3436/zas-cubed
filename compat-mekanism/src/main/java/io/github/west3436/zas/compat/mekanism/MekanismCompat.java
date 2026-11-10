@@ -60,6 +60,10 @@ public final class MekanismCompat {
 
         // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
+
+        // The exhaust port (MEK-022): the adapter's one block, which needs none of those hooks.
+        ExhaustPort.register(modBus, container.getModId());
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ExhaustPortHandler.forget());
         active = true;
     }
 

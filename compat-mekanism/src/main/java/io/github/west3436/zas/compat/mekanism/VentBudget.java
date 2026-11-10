@@ -63,6 +63,24 @@ public final class VentBudget {
     }
 
     /**
+     * How much of its cap a source still has this second, counting nothing. It is what {@link
+     * #grant} would grant of an amount that large, for a source that has to say what it would take
+     * before it takes it.
+     *
+     * @param source the source, a key with value equality
+     * @param tick the game tick now
+     * @param cap the most a source gets in one second, in mB
+     * @return the amount still free, from 0 to {@code cap}
+     */
+    public long left(Object source, long tick, long cap) {
+        if (cap <= 0) {
+            return 0;
+        }
+        long[] used = Math.floorDiv(tick, WINDOW_TICKS) == window ? granted.get(source) : null;
+        return used == null ? cap : Math.max(0, cap - used[0]);
+    }
+
+    /**
      * How many sources have a count in the current second.
      *
      * @return the number of sources recorded

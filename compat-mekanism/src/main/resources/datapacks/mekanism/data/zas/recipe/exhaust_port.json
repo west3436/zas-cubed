@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "XXX",
+    "ITI"
+  ],
+  "key": {
+    "X": {
+      "item": "minecraft:iron_bars"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "T": {
+      "item": "mekanism:basic_pressurized_tube"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas:exhaust_port"
+  }
+}

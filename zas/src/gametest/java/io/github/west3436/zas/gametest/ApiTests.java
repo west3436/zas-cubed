@@ -119,9 +119,9 @@ public final class ApiTests {
             h.assertValueEqual(Atmospheres.at(level, pos).state(), AtmosphereState.AMBIENT, "the state in " + full);
         }
         // Leaves are a full cube that the shipped geometry override opens to gas.
-        for (Block part : new Block[] {
-            Blocks.STONE_SLAB, Blocks.GLASS_PANE, Blocks.OAK_FENCE, Blocks.OAK_SIGN, Blocks.OAK_LEAVES
-        }) {
+        for (Block part :
+                new Block[] {Blocks.STONE_SLAB, Blocks.GLASS_PANE, Blocks.OAK_FENCE, Blocks.OAK_SIGN, Blocks.OAK_LEAVES
+                }) {
             level.setBlockAndUpdate(pos, part.defaultBlockState());
             h.assertTrue(Atmospheres.holdsGas(level, pos), "a block with space left has no room for gas: " + part);
         }
