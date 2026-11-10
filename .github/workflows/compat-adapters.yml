@@ -28,6 +28,14 @@ jobs:
         include:
           - adapter: adastra
             task: ":compat-adastra:runAdapterGameTestServer"
+          # Jade: the newest it supports, the oldest, and the last one below its
+          # range, where only the version check's tests run (COMPAT-002).
+          - adapter: jade
+            task: ":compat-jade:runAdapterGameTestServer"
+          - adapter: jade-oldest
+            task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.6+neoforge"
+          - adapter: jade-below-range
+            task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.5+neoforge -Pjade.gateOnly=true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
