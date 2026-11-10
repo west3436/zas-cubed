@@ -79,6 +79,7 @@ public final class PipePort implements PipeNode {
      *
      * @return the network, valid
      */
+    @Override
     public PipeNetwork network() {
         if (network == null || !network.usable()) {
             network = null;

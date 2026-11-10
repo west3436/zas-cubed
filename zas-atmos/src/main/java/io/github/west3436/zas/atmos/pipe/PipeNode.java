@@ -27,6 +27,16 @@ public interface PipeNode {
     void joinNetwork(PipeNetwork network);
 
     /**
+     * The node's network, built now if it has none or its own has ended. Server side.
+     *
+     * @return the network, valid
+     */
+    default PipeNetwork network() {
+        PipeNetwork own = currentNetwork();
+        return own != null && own.usable() ? own : PipeNetwork.build(this, PipeNode::connectedNodes);
+    }
+
+    /**
      * The nodes connected to this one in the world, for {@link PipeNetwork#build}. A node that isn't
      * in a world, as in a unit test, has none and is linked by the function given to {@code build}.
      */
