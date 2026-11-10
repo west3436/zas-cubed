@@ -37,6 +37,12 @@ import org.slf4j.Logger;
  * whatever its size in mB, scaled by how full it is, and it delivers at an O₂ tank's 21.3 kPa. That
  * is a gameplay scale, kept here.
  *
+ * <p>It is {@linkplain #alwaysOn() always on}. A suit has no switch: under Ad Astra alone its
+ * oxygen is breathed whenever the suit is worn, so here it is breathed whenever the wearer's
+ * breathing is sealed, which Ad Astra's helmets do, with ZAS³'s internals switched on or off. That
+ * includes places where the wearer could breathe the room: a supply is asked about its stack
+ * alone, and can't see who wears it or where.
+ *
  * <p>A store too low to deliver that pressure isn't offered as a tank at all. Internals stop at the
  * first tank they find, and unlike a tank in a suit's slot this one can't be taken out, so an empty
  * one would otherwise keep a tank in the hotbar from ever being used.
@@ -111,6 +117,12 @@ final class SuitOxygen implements IInternalSupply {
     @Override
     public double distributionPressure() {
         return DISTRIBUTION_PRESSURE;
+    }
+
+    /** True: a suit has no switch, so its oxygen needs none of ours. */
+    @Override
+    public boolean alwaysOn() {
+        return true;
     }
 
     @Override
