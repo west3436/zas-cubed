@@ -1,9 +1,127 @@
 apply plugin: 'net.neoforged.moddev'
 
-// The Ad Astra adapter. Its classes ship inside the zas jar and are loaded only
-// when Ad Astra is present (architecture §2.1, SPACE-003). Ad Astra joins as a
-// compile-only dependency once S6 settles the version (#9).
+// The Ad Astra adapter (SPACE-001 to SPACE-023), a reference integration: it compiles against the
+// public API and Ad Astra's API package and nothing else, so another mod can copy it (D-66,
+// SPACE-016). Its classes ship inside the zas jar, and zas loads them only when Ad Astra is present
+// in a supported version (SPACE-003).
+
+// Ad Astra and the three libraries it needs at run time come from Modrinth's maven, each by its
+// version id: Ad Astra gives its Fabric and NeoForge files one version number, which that maven
+// can't tell apart. (Ad Astra's own maven publishes Gradle variants that only its build plugin can
+// choose between.)
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+// Ad Astra 1.16.26 for NeoForge 1.21.1, the version the adapter is tested with. The range the
+// adapter accepts is its row in zas's Adapters table.
+def adAstra = 'maven.modrinth:ad-astra:9pnKHdCG'
+def adAstraLibraries = [
+    'maven.modrinth:resourceful-lib:x99nCLTm',    // 3.0.12
+    'maven.modrinth:resourceful-config:lSbyRD6v', // 3.0.11
+    'maven.modrinth:common-storage-lib:SCkdlli6', // 0.0.10
+]
+
+sourceSets {
+    // SPACE's GameTests, which run with Ad Astra loaded (COMPAT-004). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas comes in as the release jar, as a player has it,
+    // so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
 
 dependencies {
     implementation project(':zas-api')
+    // Compile-only, never bundled: the adapter is optional (NFR-022).
+    compileOnly adAstra
+
+    // The tests alone may use the framework's hooks: driving atmos ticks, the preset, the loader.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+}
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Ad Astra, which that build never downloads.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests, and the framework's empty GameTest structure for them to run in.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+    from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+        into 'data/zas/structure'
+    }
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly adAstra
+    adAstraLibraries.each { gametestRunRuntimeOnly it }
+}
+
+// SPACE-016: of Ad Astra, the adapter names its API package alone, and it has no mixin. Ad Astra's
+// whole jar is on the compile classpath, so the build reads the adapter's sources to hold it to that.
+def adapterSources = sourceSets.main.allSource
+def checkPublicApiOnly = tasks.register('checkPublicApiOnly') {
+    inputs.files(adapterSources)
+    doLast {
+        def found = []
+        adapterSources.files.each { file ->
+            if (file.name.endsWith('mixins.json')) {
+                found << "${file.name}: a mixin configuration"
+            }
+            file.eachLine('UTF-8') { line, number ->
+                if (line =~ /earth\.terrarium\.(?!adastra\.api\b)/ || line.contains('org.spongepowered')) {
+                    found << "${file.name}:${number}: ${line.trim()}"
+                }
+            }
+        }
+        if (found) {
+            throw new GradleException(
+                "The Ad Astra adapter may use only earth.terrarium.adastra.api, with no mixin (SPACE-016):\n  "
+                    + found.join('\n  '))
+        }
+    }
+}
+tasks.named('check') { dependsOn checkPublicApiOnly }
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+    }
 }

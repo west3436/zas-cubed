@@ -63,6 +63,10 @@ public final class Adapters {
         List<Row> rows = new ArrayList<>();
         // One line per adapter, like this one:
         // rows.add(new Row("examplemod", "[1.2,2)", "io.github.west3436.zas.compat.examplemod.ExampleModCompat"));
+
+        // Ad Astra (SPACE-003): 1.16.26 is the build the adapter is tested with, and 1.17 may change its API.
+        rows.add(new Row("ad_astra", "[1.16.26,1.17)", "io.github.west3436.zas.compat.adastra.AdAstraCompat"));
+
         return rows;
     }
 
