@@ -32,7 +32,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *       1,000 K, sealed breathing, gas filtering and airflow resistance 0.5;
  *   <li>{@code zas:test_tank}, an item without a model whose {@link ILifeSupport#ITEM} gives only an
  *       internal supply (LIFE-028): the gas and distribution pressure kept on the stack ({@link
- *       #tank});
+ *       #tank}), and whether it is always on ({@link #alwaysOnTank});
  *   <li>on a zombie with the entity tag {@link #ENTITY_TAG}, {@link ILifeSupport#ENTITY} giving
  *       low-pressure protection to vacuum, sealed breathing and airflow resistance 0.25, and, with
  *       the tag {@link #OWN_TANK_TAG} too, a tank of its own: {@link #OWN_TANK};
@@ -42,7 +42,12 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *       and the tag {@link #FAULTY_TAG} give {@link #FAULTY}, {@code zas:test_faulty_part} gives
  *       {@link #FAULTY_PART}, {@code zas:test_faulty_lookup} and the tag {@link #FAULTY_LOOKUP_TAG}
  *       throw from the capability's lookup, and {@code zas:test_faulty_tank} holds {@link
- *       #FAULTY_TANK}.
+ *       #FAULTY_TANK};
+ *   <li>for SPACE-023, {@code zas:test_gas_holder}, an item that only holds gas: its supply comes
+ *       from {@link IInternalSupply#ITEM}, kept on the stack as the test tank's is, and its
+ *       protection from data ({@link #gasHolder}); and {@code zas:test_double_tank}, whose life
+ *       support holds one supply and whose {@link IInternalSupply#ITEM} gives another, {@link
+ *       #SECOND_SUPPLY}.
  * </ul>
  */
 @EventBusSubscriber(modid = ZasMod.MOD_ID)
@@ -274,6 +279,33 @@ public final class TestLifeSupport {
         return new IllegalStateException("the test life support failing");
     }
 
+    /** The gas holder's id: an item that is an internal supply and no life support in code. */
+    public static final ResourceLocation GAS_HOLDER_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_gas_holder");
+
+    /** The id of the item that gives a supply both ways. */
+    public static final ResourceLocation DOUBLE_TANK_ID =
+            ResourceLocation.fromNamespaceAndPath(ZasMod.MOD_ID, "test_double_tank");
+
+    /** What the double tank's {@link IInternalSupply#ITEM} gives: 1 mol of O2, delivered at 99 kPa. */
+    public static final TestSupply SECOND_SUPPLY = new TestSupply() {
+        @Override
+        public double distributionPressure() {
+            return 99;
+        }
+    };
+
+    /** Life support in code with no supply: what a gas holder marked {@code Coded} also has. */
+    private static final ILifeSupport NO_SUPPLY = new ILifeSupport() {
+        @Override
+        public double airflowResistance() {
+            return 0.125;
+        }
+    };
+
+    private static Item gasHolder;
+    private static Item doubleTank;
+
     private static Item item;
     private static Item tank;
     private static Item faultyPiece;
@@ -322,10 +354,56 @@ public final class TestLifeSupport {
      * @param distribution the distribution pressure, kPa
      */
     public static ItemStack tank(Map<ResourceLocation, Double> moles, double distribution) {
-        ItemStack stack = new ItemStack(tank);
+        return holding(tank, moles, distribution);
+    }
+
+    /**
+     * A gas holder with gas at 293.15 K in 10 L, delivered at a distribution pressure. The GameTest
+     * datapack's {@code gas_holder.json} gives the item low-pressure protection and sealed breathing.
+     *
+     * @param moles the moles per gas
+     * @param distribution the distribution pressure, kPa
+     */
+    public static ItemStack gasHolder(Map<ResourceLocation, Double> moles, double distribution) {
+        return holding(gasHolder, moles, distribution);
+    }
+
+    /** A double tank whose life support holds this gas, delivered at a distribution pressure. */
+    public static ItemStack doubleTank(Map<ResourceLocation, Double> moles, double distribution) {
+        return holding(doubleTank, moles, distribution);
+    }
+
+    /**
+     * Marks a gas holder: {@code Throw} makes the lookup of its supply throw, and {@code Coded} gives
+     * it life support in code as well, with no supply.
+     */
+    public static ItemStack marked(ItemStack holder, String mark) {
+        CompoundTag root = root(holder);
+        root.putBoolean(mark, true);
+        holder.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
+        return holder;
+    }
+
+    private static ItemStack holding(Item item, Map<ResourceLocation, Double> moles, double distribution) {
+        ItemStack stack = new ItemStack(item);
         CompoundTag root = new CompoundTag();
         root.put("Moles", tag(moles));
         root.putDouble("Dist", distribution);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
+        return stack;
+    }
+
+    /**
+     * A test tank that is {@linkplain IInternalSupply#alwaysOn() always on}, as gear with a switch
+     * of its own is: otherwise as {@link #tank}.
+     *
+     * @param moles the moles per gas
+     * @param distribution the distribution pressure, kPa
+     */
+    public static ItemStack alwaysOnTank(Map<ResourceLocation, Double> moles, double distribution) {
+        ItemStack stack = tank(moles, distribution);
+        CompoundTag root = root(stack);
+        root.putBoolean("Always", true);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
         return stack;
     }
@@ -370,6 +448,11 @@ public final class TestLifeSupport {
                 root.put("Moles", tag(left));
                 stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
                 return taken;
+            }
+
+            @Override
+            public boolean alwaysOn() {
+                return root(stack).getBoolean("Always");
             }
         };
     }
@@ -425,12 +508,28 @@ public final class TestLifeSupport {
         private boolean contents;
         private boolean distribution;
         private boolean draw;
+        private boolean alwaysOn;
+        private boolean alwaysOnThrows;
 
         /** Which of its calls throw from now on. */
         public void throwing(boolean contents, boolean distribution, boolean draw) {
             this.contents = contents;
             this.distribution = distribution;
             this.draw = draw;
+        }
+
+        /** Whether it is always on from now on, and whether saying so throws. */
+        public void alwaysOn(boolean alwaysOn, boolean throwing) {
+            this.alwaysOn = alwaysOn;
+            this.alwaysOnThrows = throwing;
+        }
+
+        @Override
+        public boolean alwaysOn() {
+            if (alwaysOnThrows) {
+                throw failing();
+            }
+            return alwaysOn;
         }
 
         @Override
@@ -484,6 +583,14 @@ public final class TestLifeSupport {
             faultyTank = new Item(new Item.Properties());
             return faultyTank;
         });
+        event.register(Registries.ITEM, GAS_HOLDER_ID, () -> {
+            gasHolder = new Item(new Item.Properties().stacksTo(1));
+            return gasHolder;
+        });
+        event.register(Registries.ITEM, DOUBLE_TANK_ID, () -> {
+            doubleTank = new Item(new Item.Properties().stacksTo(1));
+            return doubleTank;
+        });
     }
 
     @SubscribeEvent
@@ -515,6 +622,27 @@ public final class TestLifeSupport {
                     }
                 },
                 faultyTank);
+        event.registerItem(
+                IInternalSupply.ITEM,
+                (stack, context) -> {
+                    if (root(stack).getBoolean("Throw")) {
+                        throw failing();
+                    }
+                    return supply(stack);
+                },
+                gasHolder);
+        event.registerItem(
+                ILifeSupport.ITEM, (stack, context) -> root(stack).getBoolean("Coded") ? NO_SUPPLY : null, gasHolder);
+        event.registerItem(
+                ILifeSupport.ITEM,
+                (stack, context) -> new ILifeSupport() {
+                    @Override
+                    public Optional<IInternalSupply> internalSupply() {
+                        return Optional.of(supply(stack));
+                    }
+                },
+                doubleTank);
+        event.registerItem(IInternalSupply.ITEM, (stack, context) -> SECOND_SUPPLY, doubleTank);
         event.registerEntity(ILifeSupport.ENTITY, EntityType.ZOMBIE, (zombie, context) -> {
             if (zombie.getTags().contains(FAULTY_LOOKUP_TAG)) {
                 throw failing();

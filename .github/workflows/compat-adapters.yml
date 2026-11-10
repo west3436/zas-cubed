@@ -51,14 +51,20 @@ jobs:
           # COMPAT-060 to COMPAT-062: each viewer plugin with the oldest version
           # of its viewer that it supports, which it is compiled against, and
           # with the newest when the row was written.
+          # COMPAT-002: with the newest one below the oldest, the plugin
+          # registers nothing, so only the version check's test runs.
           - adapter: jei (oldest supported)
             task: ":compat-jei:runAdapterGameTestServer"
           - adapter: jei (newest)
             task: ":compat-jei:runAdapterGameTestServer -Pjei.version=19.70.0.469"
+          - adapter: jei (older than supported)
+            task: ":compat-jei:runAdapterGameTestServer -Pjei.version=unsupported"
           - adapter: emi (oldest supported)
             task: ":compat-emi:runAdapterGameTestServer"
           - adapter: emi (newest)
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=1.1.24"
+          - adapter: emi (older than supported)
+            task: ":compat-emi:runAdapterGameTestServer -Pemi.version=unsupported"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

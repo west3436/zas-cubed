@@ -36,7 +36,7 @@ final class ProvidedAmbients {
     /** The providers last warned about for each dimension, so a conflict warns once (ENV-020). Server thread. */
     private static final Map<ResourceLocation, List<ResourceLocation>> WARNED_CONFLICTS = new HashMap<>();
 
-    /** Providers already warned about for naming a gas the server doesn't have. Server thread. */
+    /** Providers and seeds already warned about for naming a gas the server doesn't have. Server thread. */
     private static final Set<ResourceLocation> WARNED_GASES = new HashSet<>();
 
     private ProvidedAmbients() {}
@@ -87,12 +87,18 @@ final class ProvidedAmbients {
             }
             return last != null && last.provider().equals(provider.id()) ? last : null;
         }
-        Ambient ambient = checked(provider, answer);
+        Ambient ambient = checked("Ambient provider", provider.id(), answer);
         return ambient == null ? null : new Answer(provider.id(), ambient);
     }
 
-    /** An answer as the simulation's ambient, or null if it defines nothing the server can use. */
-    private static Ambient checked(AmbientProviders.Registration provider, AmbientDefinition answer) {
+    /**
+     * An answer as the simulation's ambient, or null if it defines nothing the server can use. Also
+     * for an ambient seed's answer ({@link SeededAmbients}), which is checked the same way.
+     *
+     * @param kind what gave it, as the warning names it: "Ambient provider" or "Ambient seed"
+     * @param id the id of what gave it
+     */
+    static Ambient checked(String kind, ResourceLocation id, AmbientDefinition answer) {
         if (answer == null) {
             return null;
         }
@@ -101,11 +107,9 @@ final class ProvidedAmbients {
         for (Map.Entry<ResourceLocation, Double> e : answer.partialPressures().entrySet()) {
             String gas = e.getKey().toString();
             if (gases.indexOf(gas) < 0) {
-                if (WARNED_GASES.add(provider.id())) {
+                if (WARNED_GASES.add(id)) {
                     LOGGER.warn(
-                            "Ambient provider {} names gas {}, which no gas definition has; its answer is skipped",
-                            provider.id(),
-                            gas);
+                            "{} {} names gas {}, which no gas definition has; its answer is skipped", kind, id, gas);
                 }
                 return null;
             }

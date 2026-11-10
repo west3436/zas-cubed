@@ -19,7 +19,8 @@ import org.slf4j.Logger;
 
 /**
  * Another mod's life support behind NFR-013's guard: the one place ZAS³ looks up an {@link
- * ILifeSupport} capability or calls into one, or into the {@link IInternalSupply} it holds. A call
+ * ILifeSupport} capability or calls into one, or into an {@link IInternalSupply}, whether the life
+ * support holds it or the item gives it by itself ({@link IInternalSupply#ITEM}). A call
  * that throws, or answers null where it can't, is logged at most once a minute for each item or
  * entity type, and is skipped:
  *
@@ -29,7 +30,8 @@ import org.slf4j.Logger;
  *       nothing. Its other parts still count.
  *   <li>A supply's {@code contents} that throws reads as empty and its {@code distributionPressure}
  *       as 0, so it delivers nothing and the entity breathes the atmosphere (LIFE-046). A {@code
- *       draw} that throws gives no gas, so nothing is exhaled.
+ *       draw} that throws gives no gas, so nothing is exhaled. An {@code alwaysOn} that throws
+ *       reads as false, so the supply waits for the entity's switch.
  * </ul>
  *
  * <p>Nothing is kept, so each call asks again and counts as soon as it stops throwing. Server thread.
@@ -83,6 +85,20 @@ final class GuardedLifeSupport implements ILifeSupport {
         } catch (Exception | LinkageError e) {
             Owner.of(stack).failed(LIFE_SUPPORT, e);
             return null;
+        }
+    }
+
+    /**
+     * The supply of an item that only holds gas ({@link IInternalSupply#ITEM}), guarded, or empty if
+     * it has none or the lookup throws.
+     */
+    static Optional<IInternalSupply> supplyOf(ItemStack stack) {
+        try {
+            IInternalSupply supply = stack.getCapability(IInternalSupply.ITEM);
+            return supply == null ? Optional.empty() : Optional.of(new GuardedSupply(supply, Owner.of(stack)));
+        } catch (Exception | LinkageError e) {
+            Owner.of(stack).failed(SUPPLY, e);
+            return Optional.empty();
         }
     }
 
@@ -206,6 +222,16 @@ final class GuardedLifeSupport implements ILifeSupport {
             } catch (Exception | LinkageError e) {
                 owner.failed(SUPPLY, e);
                 return GasParcel.EMPTY;
+            }
+        }
+
+        @Override
+        public boolean alwaysOn() {
+            try {
+                return delegate.alwaysOn();
+            } catch (Exception | LinkageError e) {
+                owner.failed(SUPPLY, e);
+                return false;
             }
         }
     }

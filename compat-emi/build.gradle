@@ -18,7 +18,13 @@ repositories {
 
 // The plugin compiles against the oldest EMI it supports, so it can't use anything newer by
 // mistake. Its tests run with that version too, or with -Pemi.version's, such as the newest.
-def emiRunVersion = providers.gradleProperty('emi.version').getOrElse(emi_version)
+// -Pemi.version=unsupported runs with the newest EMI below the plugin's range, and with the tests
+// that check the plugin stays off there (COMPAT-002).
+def chosen = providers.gradleProperty('emi.version').getOrElse(emi_version)
+def unsupported = chosen == 'unsupported'
+// EMI's maven writes the game's version after EMI's. The unsupported one is named whole, since it
+// is a build for an older game.
+def emiRunVersion = unsupported ? emi_unsupported_version : "${chosen}+${minecraft_version}"
 
 sourceSets {
     // The plugin's GameTests, which run with EMI loaded (COMPAT-004). They stay out of every jar
@@ -59,33 +65,42 @@ neoForge {
             sourceSet = sourceSets.gametestRun
             loadedMods = []
             gameDirectory = layout.buildDirectory.dir('adapterRun')
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
+            // The run named unsupported has tests of its own, which check that the plugin is off.
+            // A version given by name gets the usual tests, so they fail on one that isn't supported.
+            systemProperty 'neoforge.enabledGameTestNamespaces', unsupported ? 'zas_emi_off' : 'zas'
+            // The EMI the tests expect to find installed.
+            systemProperty 'zas.emi.runVersion', emiRunVersion
             jvmArgument '-Xmx4G'
             jvmArgument '-XX:+ExitOnOutOfMemoryError'
         }
     }
 }
 
-// The release jar plus the tests, and the framework's empty GameTest structure for them to run in.
+// The release jar plus the tests, and the framework's empty GameTest structure for them to run in,
+// once in each namespace the tests are in.
 def adapterTestJar = tasks.register('adapterTestJar', Jar) {
     archiveClassifier = 'adapter-test'
     dependsOn configurations.releaseJar
     inputs.files(configurations.releaseJar)
     from({ configurations.releaseJar.collect { zipTree(it) } })
     from sourceSets.gametest.output
-    from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
-        into 'data/zas/structure'
+    ['zas', 'zas_emi_off'].each { namespace ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${namespace}/structure"
+        }
     }
 }
 
 dependencies {
     gametestRunRuntimeOnly files(adapterTestJar)
-    gametestRunRuntimeOnly("dev.emi:emi-neoforge:${emiRunVersion}+${minecraft_version}") { transitive = false }
+    gametestRunRuntimeOnly("dev.emi:emi-neoforge:${emiRunVersion}") { transitive = false }
 }
 
-// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back. And from
+// a fresh log, which the unsupported run's test reads.
 tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
     doFirst {
         delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
     }
 }

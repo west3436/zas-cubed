@@ -7,6 +7,7 @@ import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -28,9 +29,10 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
  */
 public final class MekanismCompat {
     /**
-     * The adapter's built-in data pack, a folder in the jar: the chemical map's defaults, and the
-     * gas definitions of the chemicals that ZAS³ has no gas for. It is offered only by {@link
-     * #init}, so none of it loads without Mekanism.
+     * The adapter's built-in data pack, a folder in the jar: the chemical map's defaults, the gas
+     * definitions of the chemicals that ZAS³ has no gas for with their hazard profiles, and the
+     * breathing gear's data (the MekaSuit's protection and how Mekanism treats ZAS³'s damage
+     * types). It is offered only by {@link #init}, so none of it loads without Mekanism.
      */
     public static final String DATA_PACK = "datapacks/mekanism";
 
@@ -57,6 +59,9 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ChemicalGases.forget());
+
+        // Breathing gear (MEK-030 to MEK-034): what a player wearing Mekanism's gear gives itself.
+        modBus.addListener((RegisterCapabilitiesEvent event) -> MekanismGear.register(event));
 
         // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());

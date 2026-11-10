@@ -11,6 +11,11 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.capability.IInternalSupply;
+import io.github.west3436.zas.api.capability.ILifeSupport;
+import io.github.west3436.zas.api.environment.AmbientDefinition;
+import io.github.west3436.zas.api.environment.AmbientSeed;
+import io.github.west3436.zas.api.environment.AmbientSeeds;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -28,10 +33,11 @@ import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
 
 /**
- * The queries a space-mod adapter needs, without ZAS³ and from an older provider: the preset
- * (SPACE-004), whether a zone touches a block (SPACE-014), whether fire burns in some air
- * (SPACE-015), and the registry of local atmospheres (SPACE-017). Also the one the Mekanism
- * adapter's exhaust port needs: whether a position has room for gas (MEK-022).
+ * What a space-mod adapter needs, without ZAS³ and from an older provider: the preset (SPACE-004),
+ * whether a zone touches a block (SPACE-014), whether fire burns in some air (SPACE-015), the
+ * registries of local atmospheres (SPACE-017) and of ambient seeds (SPACE-020), and the capability
+ * of an item that only holds breathing gas (SPACE-023). Also what the Mekanism adapter's exhaust
+ * port needs: whether a position has room for gas (MEK-022).
  */
 class AdapterQueriesTest {
     private static final BlockPos HERE = new BlockPos(3, 70, -5);
@@ -174,5 +180,51 @@ class AdapterQueriesTest {
         }
         assertFalse(LocalAtmospheres.unregister(a1), "it was still registered");
         assertEquals(List.of(), LocalAtmospheres.registered());
+    }
+
+    /**
+     * The seed registry works without ZAS³: seeds are kept in the order they are asked, by id with the
+     * namespace first, each id once, and one registration covers every dimension.
+     */
+    @Test
+    void space_020_ambient_seeds_are_kept_in_order_of_id() {
+        AmbientSeed seed = level -> AmbientDefinition.vacuum(100.15);
+        ResourceLocation b = id("b", "a");
+        ResourceLocation a2 = id("a", "z");
+        ResourceLocation a1 = id("a", "m");
+        assertEquals(List.of(), AmbientSeeds.registered());
+        AmbientSeeds.register(b, seed);
+        AmbientSeeds.register(a2, seed);
+        AmbientSeeds.register(a1, seed);
+        try {
+            assertEquals(
+                    List.of(a1, a2, b),
+                    AmbientSeeds.registered().stream()
+                            .map(AmbientSeeds.Registration::id)
+                            .toList());
+            assertSame(seed, AmbientSeeds.registered().get(0).seed());
+            assertThrows(IllegalArgumentException.class, () -> AmbientSeeds.register(a1, seed));
+            assertThrows(NullPointerException.class, () -> AmbientSeeds.register(id("c", "c"), null));
+            assertThrows(NullPointerException.class, () -> AmbientSeeds.register(null, seed));
+            assertThrows(NullPointerException.class, () -> AmbientSeeds.unregister(null));
+        } finally {
+            assertTrue(AmbientSeeds.unregister(b));
+            assertTrue(AmbientSeeds.unregister(a2));
+            assertTrue(AmbientSeeds.unregister(a1));
+        }
+        assertFalse(AmbientSeeds.unregister(a1), "it was still registered");
+        assertEquals(List.of(), AmbientSeeds.registered());
+    }
+
+    /**
+     * An item that only holds breathing gas has a capability of its own, {@code zas:internal_supply},
+     * apart from life support's, so its protection can come from data.
+     */
+    @Test
+    void space_023_an_item_that_only_holds_gas_has_its_own_capability() {
+        assertEquals(id("zas", "internal_supply"), IInternalSupply.ITEM.name());
+        assertEquals(IInternalSupply.class, IInternalSupply.ITEM.typeClass());
+        assertEquals(void.class, IInternalSupply.ITEM.contextClass());
+        assertFalse(IInternalSupply.ITEM.name().equals(ILifeSupport.ITEM.name()), "it is life support's capability");
     }
 }

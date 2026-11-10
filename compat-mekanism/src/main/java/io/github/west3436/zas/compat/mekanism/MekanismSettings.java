@@ -28,6 +28,12 @@ public final class MekanismSettings {
     /** {@code [units] litres_per_millibucket}: the mB to mol factor (MEK-002). */
     public static final ModConfigSpec.DoubleValue LITRES_PER_MILLIBUCKET;
 
+    /** {@code [gear] scuba_protects}: whether scuba gear protects against pressure and temperature (MEK-031). */
+    public static final ModConfigSpec.BooleanValue SCUBA_PROTECTS;
+
+    /** What {@link #SCUBA_PROTECTS} is unless set: scuba gear gives breathing and filtering only. */
+    public static final boolean DEFAULT_SCUBA_PROTECTS = false;
+
     /** {@code [venting] enabled}: whether what Mekanism voids is released as gas (MEK-020). */
     public static final ModConfigSpec.BooleanValue VENTING_ENABLED;
 
@@ -51,6 +57,15 @@ public final class MekanismSettings {
                         ChemicalUnits.DEFAULT_LITRES_PER_MILLIBUCKET,
                         ChemicalUnits.MIN_LITRES_PER_MILLIBUCKET,
                         ChemicalUnits.MAX_LITRES_PER_MILLIBUCKET);
+        builder.pop();
+
+        // Breathing gear (MEK-030 to MEK-034).
+        builder.push("gear");
+        SCUBA_PROTECTS = builder.comment(
+                        "Whether Mekanism's scuba mask and tank, worn together, also protect the wearer",
+                        "against every pressure and temperature, as a whole suit does. Off, they give",
+                        "breathing and gas filtering only, as in Mekanism.")
+                .define("scuba_protects", DEFAULT_SCUBA_PROTECTS);
         builder.pop();
 
         // Sections of the adapter's other parts go here, each in a block of its own.
@@ -104,6 +119,15 @@ public final class MekanismSettings {
      */
     public static double molesPerMillibucket() {
         return ChemicalUnits.molesPerMillibucket(litresPerMillibucket());
+    }
+
+    /**
+     * Whether scuba gear protects against pressure and temperature as it is set (MEK-031).
+     *
+     * @return true if it does; false, the default, while no server config is loaded
+     */
+    public static boolean scubaProtects() {
+        return SPEC.isLoaded() ? SCUBA_PROTECTS.get() : DEFAULT_SCUBA_PROTECTS;
     }
 
     /**
