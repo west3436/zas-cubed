@@ -1,0 +1,135 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Mekanism adapter (MEK), a reference integration (D-11): it compiles against the public API and
+// Mekanism only, so another mod can copy it. Its classes and data ship inside the zas jar
+// (zas/build.gradle's `bundled`), and zas starts it only when Mekanism is installed in a version it
+// supports (MEK-001).
+
+// The Mekanism the GameTest server runs with (MEK-003): the newest build by default, the oldest
+// supported one with -Pmekanism.version=floor, the last one before it with
+// -Pmekanism.version=unsupported, or any published version by name. The adapter itself is always
+// compiled against the newest, as the release is.
+def chosen = providers.gradleProperty('mekanism.version').getOrElse('newest')
+def named = [newest: mekanism_version, floor: mekanism_floor_version, unsupported: mekanism_unsupported_version]
+def runVersion = named.getOrDefault(chosen, chosen)
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = 'https://modmaven.dev/'
+                // Its POMs promise Gradle module metadata that the repository doesn't serve.
+                metadataSources {
+                    mavenPom()
+                    artifact()
+                    ignoreGradleMetadataRedirection()
+                }
+            }
+        }
+        filter { includeGroup 'mekanism' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with Mekanism loaded (MEK-003). They stay out of every jar
+    // but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas comes in as the release jar, as a player has it,
+    // so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+dependencies {
+    // Rule of a reference integration: the public API and the target, nothing else of ours.
+    implementation project(':zas-api')
+    // Compile-only, so no jar and no run but this project's own ever holds Mekanism. The main jar
+    // holds Mekanism's API too. Code outside the mixin package uses only that API, which
+    // AdapterReferencesTest checks; the generators jar is there for mixin targets.
+    compileOnly "mekanism:Mekanism:${mekanism_version}"
+    compileOnly "mekanism:Mekanism:${mekanism_version}:generators"
+
+    // GameTests (only) may ask the framework what it loaded. main stays API-only.
+    gametestCompileOnly project(':zas')
+
+    releaseJar project(':dist')
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+neoForge {
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but
+    // the game is never bootstrapped and Mekanism isn't there.
+    addModdingDependenciesTo(sourceSets.test)
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Mekanism, which that build never downloads.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            // The run named unsupported has tests of its own, which check that the adapter is off.
+            // A version given by name gets the usual tests, so they fail on one that isn't supported.
+            systemProperty 'neoforge.enabledGameTestNamespaces',
+                    chosen == 'unsupported' ? 'zas_mekanism_off' : 'zas_mekanism'
+            // What the tests expect to find installed.
+            systemProperty 'zas.mekanism.runVersion', runVersion
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data, which brings its own empty GameTest structure.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly "mekanism:Mekanism:${runVersion}"
+    gametestRunRuntimeOnly "mekanism:Mekanism:${runVersion}:generators"
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // The shipped data pack, which tests read as files.
+    systemProperty 'zas.mekanism.resources', file('src/main/resources').absolutePath
+    // zas's own resources, for its gas definitions and the names the pack's gases need.
+    def zasResources = project(':zas').file('src/main/resources')
+    inputs.dir(zasResources).withPropertyName('zasResources')
+    systemProperty 'zas.resources', zasResources.absolutePath
+    // AdapterReferencesTest scans the compiled adapter.
+    def classes = sourceSets.main.output.classesDirs
+    inputs.files(classes).withPropertyName('adapterClasses')
+    systemProperty 'zas.mekanism.classes', classes.files.join(File.pathSeparator)
+    // MEK-001: the oldest Mekanism the tests run with is the one the adapter says it supports, and
+    // the unsupported one is outside its range.
+    systemProperty 'zas.mekanism.floorVersion', mekanism_floor_version
+    systemProperty 'zas.mekanism.unsupportedVersion', mekanism_unsupported_version
+    testLogging.exceptionFormat = 'full'
+}

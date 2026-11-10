@@ -1,0 +1,10 @@
+{
+  "name": "gas.zas.sulfur_dioxide",
+  "formula": "SO₂",
+  "molar_mass": 0.064058,
+  "molar_heat_capacity": 31.56,
+  "sources": {
+    "molar_mass": "S 32.06 + 2 × O 15.999 g/mol: CIAAW abridged standard atomic weights 2024, https://www.ciaaw.org/abridged-atomic-weights.htm",
+    "molar_heat_capacity": "C_v at 298.15 K = C_p − R = 39.878 − 8.314 J/(mol·K). C_p of SO2(g) at 298.15 K: NIST-JANAF Thermochemical Tables, table O-034, https://janaf.nist.gov/tables/O-034.html. R: CODATA 2018, 8.314462618 J/(mol·K)"
+  }
+}

@@ -24,17 +24,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One row per adapter: its name, and the task that runs its GameTests.
+        # One row per adapter, or per version of its target that it is tested
+        # with: its name, and the task that runs its GameTests, with any
+        # arguments.
         include:
           - adapter: adastra
             task: ":compat-adastra:runAdapterGameTestServer"
-          # Jade: the newest it supports, the oldest, and the last one below its
-          # range, where only the version check's tests run (COMPAT-002).
-          - adapter: jade
-            task: ":compat-jade:runAdapterGameTestServer"
-          - adapter: jade-oldest
+          # MEK-003: the oldest Mekanism the adapter supports and the newest.
+          # MEK-001: with the last one before the oldest, the adapter stays off.
+          - adapter: mekanism (oldest supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=floor"
+          - adapter: mekanism (newest)
+            task: ":compat-mekanism:runAdapterGameTestServer"
+          - adapter: mekanism (older than supported)
+            task: ":compat-mekanism:runAdapterGameTestServer -Pmekanism.version=unsupported"
+          # COMPAT-004: the oldest Jade the adapter supports and the newest.
+          # COMPAT-002: with the last one before the oldest, the readouts stay
+          # off, so only the version check's tests run.
+          - adapter: jade (oldest supported)
             task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.6+neoforge"
-          - adapter: jade-below-range
+          - adapter: jade (newest)
+            task: ":compat-jade:runAdapterGameTestServer"
+          - adapter: jade (older than supported)
             task: ":compat-jade:runAdapterGameTestServer -Pjade.version=15.1.5+neoforge -Pjade.gateOnly=true"
     steps:
       - uses: actions/checkout@v7
