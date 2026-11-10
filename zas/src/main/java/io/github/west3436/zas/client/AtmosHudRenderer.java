@@ -3,7 +3,6 @@ package io.github.west3436.zas.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.config.ZasClientConfig;
-import io.github.west3436.zas.config.ZasClientConfig.PressureUnit;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.ClientAtmosHud;
 import io.github.west3436.zas.hud.HudLevels;
@@ -165,7 +164,7 @@ public final class AtmosHudRenderer {
                     Component.translatable("hud.zas.oxygen", pressure(hud.oxygenKpa(), 1))));
         }
         if (hud.shows(hud.toxins(), hud.toxinKpa())) {
-            String value = pressure(hud.toxinKpa(), 1);
+            String value = HudReadout.toxin(hud.toxinKpa(), ZasClientConfig.pressureUnit());
             Component reading = hud.toxinGas()
                     .map(id -> Component.translatable(
                             "hud.zas.toxin",
@@ -194,14 +193,7 @@ public final class AtmosHudRenderer {
      * partial pressure ({@code extra} = 1), with as many more decimals as the unit needs.
      */
     private static String pressure(double kPa, int extra) {
-        PressureUnit unit = ZasClientConfig.pressureUnit();
-        int decimals = extra
-                + switch (unit) {
-                    case KPA -> 0;
-                    case PSI -> 1;
-                    case ATM, BAR -> 2;
-                };
-        return String.format(Locale.ROOT, "%." + decimals + "f %s", unit.fromKpa(kPa), unit.symbol());
+        return HudReadout.pressure(kPa, extra, ZasClientConfig.pressureUnit());
     }
 
     /** A temperature in the display unit, to the nearest degree. */

@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
  * player's state ({@link HudLevels#of}, {@link HudLevels#withIndicator}) and sends it to that player
  * alone if it {@linkplain AtmosHudPayload#differsFrom differs} from the last one sent: so at most 4
  * times a second, and only when a threshold is crossed or a shown value changes by its display
- * resolution. In normal air with no trigger nothing is shown, so nothing is sent. While the
+ * resolution, which for a trace of a toxic gas is its second significant figure. In normal air with no trigger nothing is shown, so nothing is sent. While the
  * atmosphere at the player's eyes is unresolved the last readings stand; what shows the HUD and the
  * internals indicator don't depend on it, so they go on. A new player object, as after a respawn,
  * starts with nothing sent, so its first state goes at once. Fake players get nothing.

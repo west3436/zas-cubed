@@ -39,8 +39,14 @@ public final class GasParts {
     /** The most rows {@link #shares} lists; past it, the last row adds the smallest gases together. */
     static final int MOST_SHARE_ROWS = 12;
 
-    /** Where a row's share ends, from the right edge: the partial pressure's column is the rest. */
+    /**
+     * Where a row's share ends, from the right edge: the partial pressure's column is the rest. It is
+     * wider when a partial pressure needs it, as a trace's digits can.
+     */
     private static final int PRESSURE_COLUMN = 56;
+
+    /** The least space between a row's share and its partial pressure. */
+    private static final int COLUMN_GAP = 8;
 
     private GasParts() {}
 
@@ -99,8 +105,9 @@ public final class GasParts {
 
     /**
      * One bar of each gas's share, then a row for each gas: its share, and its partial pressure in the
-     * player's unit. Gases keep their place, by id. With more than {@link #MOST_SHARE_ROWS} gases, the
-     * smallest are added together in the last row.
+     * player's unit. A trace of a gas has two significant figures in both, so it never reads as none.
+     * Gases keep their place, by id. With more than {@link #MOST_SHARE_ROWS} gases, the smallest are
+     * added together in the last row.
      *
      * @param rowsFrom where the striped rows start on the left, which can be left of {@code x}
      * @param rowsWidth how wide the stripes are
@@ -124,10 +131,15 @@ public final class GasParts {
             listed = new ArrayList<>(listed.subList(0, MOST_SHARE_ROWS - 1));
             listed.sort(Comparator.naturalOrder());
         }
+        float widest = others > 0 ? ui.width(partialPressure(others, total, gas), Face.BODY) : 0;
+        for (ResourceLocation id : listed) {
+            widest = Math.max(widest, ui.width(partialPressure(moles.get(id), total, gas), Face.BODY));
+        }
+        int column = Math.max(PRESSURE_COLUMN, (int) Math.ceil(widest) + COLUMN_GAP);
         int rowY = y + BAR_HEIGHT + 2;
         int i = 0;
         for (ResourceLocation id : listed) {
-            row(ui, x, rowY, w, rowsFrom, rowsWidth, i++, label(id), moles.get(id), total, gas, colour);
+            row(ui, x, rowY, w, rowsFrom, rowsWidth, i++, label(id), moles.get(id), total, gas, colour, column);
             rowY += Ui.ROW;
         }
         if (others > 0) {
@@ -135,7 +147,7 @@ public final class GasParts {
                     .withColor(OTHER & 0xFFFFFF)
                     .append(Component.translatable("gui.zas_atmos.analyzer.others")
                             .withColor(0xFFFFFF));
-            row(ui, x, rowY, w, rowsFrom, rowsWidth, i, label, others, total, gas, colour);
+            row(ui, x, rowY, w, rowsFrom, rowsWidth, i, label, others, total, gas, colour, column);
         }
     }
 
@@ -151,7 +163,8 @@ public final class GasParts {
             double moles,
             double total,
             GasMixture gas,
-            int colour) {
+            int colour,
+            int pressureColumn) {
         if (index % 2 == 1) {
             ui.stripe(rowsFrom, y, rowsWidth, Ui.ROW);
         }
@@ -159,13 +172,17 @@ public final class GasParts {
         double share = total > 0 ? moles / total : 0;
         ui.lineRight(
                 DeviceParts.text("percent", Readout.percentNumber(share)),
-                x + w - PRESSURE_COLUMN,
+                x + w - pressureColumn,
                 y,
                 Ui.ROW,
                 colour,
                 Face.BODY);
-        ui.lineRight(
-                Component.literal(Readout.pressure(gas.pressure() * share)), x + w, y, Ui.ROW, Ui.LABEL, Face.BODY);
+        ui.lineRight(partialPressure(moles, total, gas), x + w, y, Ui.ROW, Ui.LABEL, Face.BODY);
+    }
+
+    /** The partial pressure of some of a mixture's moles, in the player's unit. */
+    private static Component partialPressure(double moles, double total, GasMixture gas) {
+        return Component.literal(Readout.partialPressure(total > 0 ? gas.pressure() * moles / total : 0));
     }
 
     private static Component moles(double moles) {

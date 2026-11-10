@@ -216,8 +216,10 @@ public record AtmosHudPayload(
      * Whether the player should be sent this state when it last got {@code sent} (DATA-014): a
      * reading crossed a threshold, the worst toxic gas changed, the HUD was shown or hidden, every
      * reading began or stopped being shown, the internals changed, or a shown value changed by its
-     * display resolution (1 kPa, 1 K, 0.1 kPa partial pressure, 1 kPa for the tank). A trigger that
-     * comes or goes while an alert shows the HUD anyway changes nothing shown.
+     * display resolution (1 kPa, 1 K, 0.1 kPa partial pressure, 1 kPa for the tank). A trace of the
+     * toxic gas, which the HUD writes to two significant figures, has a finer one ({@link
+     * #toxinResolution}). A trigger that comes or goes while an alert shows the HUD anyway changes
+     * nothing shown.
      *
      * @param sent the state last sent, or null before the first
      */
@@ -237,8 +239,24 @@ public record AtmosHudPayload(
                 || moved(pressureKpa, sent.pressureKpa, 1)
                 || moved(temperatureK, sent.temperatureK, 1)
                 || moved(oxygenKpa, sent.oxygenKpa, 0.1)
-                || moved(toxinKpa, sent.toxinKpa, 0.1)
+                || moved(toxinKpa, sent.toxinKpa, toxinResolution(toxinKpa, sent.toxinKpa))
                 || moved(tankKpa, sent.tankKpa, 1);
+    }
+
+    /**
+     * The display resolution of the toxic gas's partial pressure between two states, in kPa: 0.1, or
+     * while the smaller of the two is a trace under that, one of the trace's second significant
+     * figure, since the HUD writes a trace to two (CLIENT-008). So 0.0020 is sent again at 0.0019,
+     * and 0.00020 at 0.00019. The server doesn't know the player's unit; in another unit the second
+     * figure can lag by one or two.
+     */
+    private static double toxinResolution(float value, float sent) {
+        double smaller = Math.min(value, sent);
+        double trace = smaller > 0 ? smaller : Math.max(value, sent);
+        if (!(trace > 0 && trace < 0.1)) {
+            return 0.1;
+        }
+        return Math.pow(10, Math.floor(Math.log10(trace)) - 1);
     }
 
     /** Whether a value moved by a resolution, allowing for float rounding (6.1f − 6f < 0.1). */

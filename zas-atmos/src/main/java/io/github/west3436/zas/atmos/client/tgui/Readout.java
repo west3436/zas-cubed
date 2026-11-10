@@ -16,6 +16,14 @@ public final class Readout {
         return pressureNumber(kpa) + " " + DisplayUnits.pressureSymbol();
     }
 
+    /**
+     * A gas's partial pressure in kPa, with its unit: as {@link #pressure}, except that a trace keeps
+     * two significant figures ({@link #traceNumber}), so that a little of a gas doesn't read as none.
+     */
+    public static String partialPressure(double kpa) {
+        return traceNumber(DisplayUnits.pressure(kpa)) + " " + DisplayUnits.pressureSymbol();
+    }
+
     /** A pressure in kPa, as a number in the player's unit. */
     public static String pressureNumber(double kpa) {
         return number(DisplayUnits.pressure(kpa));
@@ -32,9 +40,21 @@ public final class Readout {
         return text.equals("-0.0") ? "0.0" : text;
     }
 
-    /** A share, such as a gas's of a mixture, as a number of percent: 78.1, 0.93 or 0.005. */
+    /**
+     * A share, such as a gas's of a mixture, as a number of percent: 78.1, 0.93 or 0.0050. A trace
+     * keeps two significant figures ({@link #traceNumber}).
+     */
     public static String percentNumber(double fraction) {
-        return number(fraction * 100);
+        return traceNumber(fraction * 100);
+    }
+
+    /**
+     * A gas's reading: as {@link #number}, except that a trace, above zero and under 0.1 in the unit
+     * shown, keeps two significant figures as it does on the HUD ({@link DisplayUnits#reading}):
+     * 0.0020 and 0.00093, where {@link #number} would write 0.002 and 0.001.
+     */
+    static String traceNumber(double value) {
+        return value > 0 && value < 0.1 ? DisplayUnits.reading(value, 3) : number(value);
     }
 
     /**

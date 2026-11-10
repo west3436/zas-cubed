@@ -17,6 +17,32 @@ class ReadoutTest {
         assertEquals("1,013", Readout.number(1013.25));
     }
 
+    /** A trace of a gas keeps two significant figures in its partial pressure and in its share (CONT-034). */
+    @Test
+    void cont_034_a_trace_of_a_gas_has_two_significant_figures() {
+        assertEquals("0.0020 kPa", Readout.partialPressure(0.001999991));
+        assertEquals("0.00093 kPa", Readout.partialPressure(0.00093));
+        assertEquals("0.050 kPa", Readout.partialPressure(0.05));
+        assertEquals("0.0020", Readout.percentNumber(0.001999991 / 101.325));
+        assertEquals("0.00092", Readout.percentNumber(0.00093 / 101.325));
+        assertEquals("0.0050", Readout.percentNumber(0.00005));
+    }
+
+    @Test
+    void cont_034_a_gas_that_is_no_trace_reads_as_before() {
+        assertEquals("0 kPa", Readout.partialPressure(0));
+        assertEquals("0.100 kPa", Readout.partialPressure(0.0996));
+        assertEquals("0.12 kPa", Readout.partialPressure(0.12));
+        assertEquals("21.3 kPa", Readout.partialPressure(21.28));
+        assertEquals("101.3 kPa", Readout.partialPressure(101.325));
+        assertEquals("0", Readout.percentNumber(0));
+        assertEquals("0.93", Readout.percentNumber(0.0093));
+        assertEquals("78.1", Readout.percentNumber(0.781));
+        assertEquals("100", Readout.percentNumber(1));
+        // Every other reading of a window keeps the decimals its size needs.
+        assertEquals("0.002 kPa", Readout.pressure(0.001999991));
+    }
+
     @Test
     void client_006_readings_carry_the_default_units() {
         assertEquals("101.3 kPa", Readout.pressure(101.325));
