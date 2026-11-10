@@ -35,20 +35,6 @@ public interface PipeConnector {
     }
 
     /**
-     * Whether this block offers its network as a gas handler on a face, for another mod's pipe or
-     * machine to join ({@link PipeGasHandler}). The default is wherever it offers that block a pipe
-     * connection, which is where it joins a gas handler itself.
-     *
-     * @param self this block's state
-     * @param face the face, toward the neighbour
-     * @param neighbour the neighbour's state, no pipe part
-     * @return true to offer it
-     */
-    default boolean offersGasHandler(BlockState self, Direction face, BlockState neighbour) {
-        return pipeConnects(self, face, neighbour);
-    }
-
-    /**
      * Whether two neighbouring blocks are connected.
      *
      * @param a one block's state

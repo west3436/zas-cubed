@@ -126,10 +126,11 @@ public final class PipeGasHandlerTests {
     }
 
     /**
-     * Each part offers it where a pipe would join it and nowhere else: a cap where it points, a vent,
-     * scrubber, passive vent and heat exchanger at the back, a valve on its two flanges, a radiator
-     * adaptor on its pipe end, a pump, filter, mixer and electrolyzer on each port. A connector port,
-     * a canister and radiator pipe offer none. Every pipe part the mod registers is covered.
+     * Each part offers it where a pipe would join it and nowhere else: a cap where it points, a
+     * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
+     * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
+     * electrolyzer on each port. A canister and radiator pipe offer none. Every pipe part the mod
+     * registers is covered.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void api_021_every_pipe_part_offers_it_where_a_pipe_joins(GameTestHelper h) {
@@ -140,7 +141,7 @@ public final class PipeGasHandlerTests {
         expected.put(
                 AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, Direction.UP),
                 EnumSet.of(Direction.UP));
-        expected.put(GasDeviceTests.port(), EnumSet.noneOf(Direction.class));
+        expected.put(GasDeviceTests.port(), EnumSet.of(Direction.DOWN));
         expected.put(GasDeviceTests.canister(), EnumSet.noneOf(Direction.class));
         expected.put(GasDeviceTests.vent(Direction.DOWN), EnumSet.of(Direction.UP));
         expected.put(ScrubberTests.scrubber(Direction.DOWN), EnumSet.of(Direction.UP));

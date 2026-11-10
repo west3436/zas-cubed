@@ -25,11 +25,10 @@ import org.jetbrains.annotations.Nullable;
  * the whole network at once.
  *
  * <p><b>Where.</b> A part offers it on a face where it would join another mod's gas block ({@link
- * PipeConnector#offersGasHandler}, {@link GasHandlers#connects}): a pipe on every face, a cap on the
- * face it points at, a device on each pipe face. A canister and radiator pipe join only ZAS³'s own
- * parts, so they offer none, and neither does a connector port, a floor socket for a canister. A shut
- * valve offers it, as its pipes keep their arms, and holds and moves nothing until it opens. Only on
- * a server, and only for a face: none for no face in particular.
+ * GasHandlers#connects}): a pipe on every face, a cap on the face it points at, a connector port on
+ * its bottom, a device on each pipe face. A canister and radiator pipe join only ZAS³'s own parts, so
+ * they offer none. A shut valve offers it, as its pipes keep their arms, and holds and moves nothing
+ * until it opens. Only on a server, and only for a face: none for no face in particular.
  *
  * <p><b>Between ZAS³'s own parts</b> it is never used: they join as pipe does and share one network,
  * so {@link GasHandlers} skips a neighbour that is a pipe part, and a part offers none toward one.
@@ -78,8 +77,9 @@ public final class PipeGasHandler implements IGasHandler {
     }
 
     /**
-     * Whether a part offers the capability on a face: only to a block that isn't a pipe part. The
-     * neighbour is read without loading its chunk ({@link LoadedBlocks}).
+     * Whether a part offers the capability on a face: where it offers a pipe connection to a block
+     * that isn't a pipe part, which is where it would join one that provides the capability itself.
+     * The neighbour is read without loading its chunk ({@link LoadedBlocks}).
      */
     private static boolean offers(ServerLevel level, BlockPos pos, BlockState self, Direction face) {
         if (!(self.getBlock() instanceof PipeConnector block)) {
@@ -88,7 +88,7 @@ public final class PipeGasHandler implements IGasHandler {
         BlockState neighbour = LoadedBlocks.state(level, pos.relative(face));
         return neighbour != null
                 && !(neighbour.getBlock() instanceof PipeConnector)
-                && block.offersGasHandler(self, face, neighbour);
+                && block.pipeConnects(self, face, neighbour);
     }
 
     /** The network's store behind the face now, or null if no gas passes there: a shut valve, a part gone. */

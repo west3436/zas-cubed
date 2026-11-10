@@ -49,15 +49,6 @@ public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector
         return face == Direction.DOWN || (face == Direction.UP && neighbour.getBlock() instanceof CanisterBlock);
     }
 
-    /**
-     * None: the port is a floor socket for a canister. Its bottom is for the pipe that feeds it, and
-     * another mod's pipe joins that pipe.
-     */
-    @Override
-    public boolean offersGasHandler(BlockState self, Direction face, BlockState neighbour) {
-        return false;
-    }
-
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockPos above = context.getClickedPos().above();
