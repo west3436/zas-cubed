@@ -57,6 +57,9 @@ public final class MekanismCompat {
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> ChemicalGases.forget());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ChemicalGases.forget());
+
+        // Venting (MEK-020, MEK-021): its hooks are mixins; only the rate cap's counts are kept here.
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> Venting.forget());
         active = true;
     }
 
