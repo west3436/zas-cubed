@@ -38,7 +38,7 @@ import net.minecraft.world.level.Level;
  */
 final class LifeCommand {
     /** What the exposure line names instead of the atmosphere's state where another mod's air applies. */
-    private static final String LOCAL = "local";
+    private static final String LOCAL = "commands.zas.life.local";
 
     private LifeCommand() {}
 
@@ -93,7 +93,9 @@ final class LifeCommand {
                     ZasCommands.num(x.pressure()),
                     ZasCommands.num(x.effectivePressure()),
                     ZasCommands.num(x.temperature()),
-                    local != null ? LOCAL : lower(sample.state().name())));
+                    local != null
+                            ? Component.translatable(LOCAL)
+                            : lower(sample.state().name())));
             List<String> rates = new ArrayList<>();
             for (HazardType t : HazardType.values()) {
                 if (x.rate(t) > 0) {
