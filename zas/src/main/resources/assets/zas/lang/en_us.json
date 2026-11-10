@@ -32,6 +32,9 @@
   "pack.zas.mekanism": "ZAS³ Mekanism",
   "pack.zas.mekanism.description": "Chemical map and gases",
 
+  "pack.zas.ad_astra": "ZAS³ Ad Astra",
+  "pack.zas.ad_astra.description": "Suits and space mobs",
+
   "hud.zas.pressure": "%s",
   "hud.zas.oxygen": "O₂ %s",
   "hud.zas.toxin": "%s %s",

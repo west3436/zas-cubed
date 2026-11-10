@@ -1,0 +1,10 @@
+{
+  "items": [
+    "ad_astra:space_suit",
+    "ad_astra:space_pants",
+    "ad_astra:space_boots"
+  ],
+  "min_pressure_kpa": 0,
+  "min_temperature_k": 0,
+  "max_temperature_k": 500
+}

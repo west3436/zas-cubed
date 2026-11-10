@@ -19,7 +19,8 @@ import org.slf4j.Logger;
 
 /**
  * Another mod's life support behind NFR-013's guard: the one place ZAS³ looks up an {@link
- * ILifeSupport} capability or calls into one, or into the {@link IInternalSupply} it holds. A call
+ * ILifeSupport} capability or calls into one, or into an {@link IInternalSupply}, whether the life
+ * support holds it or the item gives it by itself ({@link IInternalSupply#ITEM}). A call
  * that throws, or answers null where it can't, is logged at most once a minute for each item or
  * entity type, and is skipped:
  *
@@ -83,6 +84,20 @@ final class GuardedLifeSupport implements ILifeSupport {
         } catch (Exception | LinkageError e) {
             Owner.of(stack).failed(LIFE_SUPPORT, e);
             return null;
+        }
+    }
+
+    /**
+     * The supply of an item that only holds gas ({@link IInternalSupply#ITEM}), guarded, or empty if
+     * it has none or the lookup throws.
+     */
+    static Optional<IInternalSupply> supplyOf(ItemStack stack) {
+        try {
+            IInternalSupply supply = stack.getCapability(IInternalSupply.ITEM);
+            return supply == null ? Optional.empty() : Optional.of(new GuardedSupply(supply, Owner.of(stack)));
+        } catch (Exception | LinkageError e) {
+            Owner.of(stack).failed(SUPPLY, e);
+            return Optional.empty();
         }
     }
 

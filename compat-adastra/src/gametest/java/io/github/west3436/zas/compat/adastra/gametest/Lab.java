@@ -1,13 +1,12 @@
 package io.github.west3436.zas.compat.adastra.gametest;
 
 import com.mojang.authlib.GameProfile;
+import earth.terrarium.adastra.api.planets.Planet;
 import earth.terrarium.adastra.api.systems.OxygenApi;
 import earth.terrarium.adastra.api.systems.TemperatureApi;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
-import io.github.west3436.zas.api.environment.AmbientDefinition;
-import io.github.west3436.zas.api.environment.AmbientProviders;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -18,6 +17,7 @@ import io.github.west3436.zas.config.AtmospherePreset;
 import io.github.west3436.zas.config.BreathingConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.life.Breathers;
+import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.simulation.AtmosService;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -32,6 +32,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,6 +47,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -61,9 +63,9 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 
 /**
- * A test's rooms and entities, on the Overworld or on Ad Astra's Moon. Each test has an area of its
- * own, far from the others and from the tests' structures, and drives every tick itself within one
- * game tick, so the tests don't see each other.
+ * A test's rooms and entities, on the Overworld or on one of Ad Astra's planets. Each test has an
+ * area of its own, far from the others and from the tests' structures, and drives every tick itself
+ * within one game tick, so the tests don't see each other.
  *
  * <p>A room is a hollow stone box with a 3 × 3 × 3 inside, from area x {@code x0} to {@code x0 +
  * 4}. Nothing forces a chunk: building loads the area for the game tick the test runs in.
@@ -78,8 +80,6 @@ final class Lab implements AutoCloseable {
             O2, StandardAir.PRESSURE * StandardAir.OXYGEN_FRACTION);
 
     private static final SourceId SOURCE = SourceId.of("zas", "adastra_gametest");
-    private static final ResourceLocation TEST_AMBIENT =
-            ResourceLocation.fromNamespaceAndPath("zas", "adastra_gametest");
     private static final BlockState STONE = Blocks.STONE.defaultBlockState();
     private static final BlockState NOTHING = Blocks.AIR.defaultBlockState();
 
@@ -116,21 +116,24 @@ final class Lab implements AutoCloseable {
     }
 
     /**
-     * An area on Ad Astra's Moon, where Ad Astra finds no oxygen and −173 °C. Until the adapter
-     * seeds ambients from Ad Astra's planets (SPACE-020), the tests give the Moon its vacuum
-     * themselves, through the public API.
+     * An area on Ad Astra's Moon, where Ad Astra finds no oxygen and −173 °C, and which the adapter
+     * makes a vacuum at 100.15 K from Ad Astra's planet file (SPACE-020).
      */
     static Lab onTheMoon(GameTestHelper h, int index) {
-        ServerLevel moon = Moon.level(h.getLevel().getServer());
-        Lab lab = new Lab(h, moon, index);
-        if (AmbientProviders.registered(moon.dimension()).isEmpty()) {
-            AmbientDefinition vacuum = AmbientDefinition.vacuum(Moon.TEMPERATURE);
-            AmbientProviders.register(TEST_AMBIENT, moon.dimension(), asked -> vacuum);
-        }
-        lab.ticks(2);
+        Lab lab = onPlanet(h, Planet.MOON, index);
         AtmosphereSample open = lab.sample(0, 20, 0);
         h.assertValueEqual(open.state(), AtmosphereState.AMBIENT, "the Moon's open air");
         h.assertTrue(open.mixture().isEmpty(), "the Moon's open air should be a vacuum, and is " + open);
+        return lab;
+    }
+
+    /**
+     * An area on one of Ad Astra's planets, whose level is made on first use. Two atmos ticks there
+     * take the ambient the adapter seeds from the planet's file.
+     */
+    static Lab onPlanet(GameTestHelper h, ResourceKey<Level> planet, int index) {
+        Lab lab = new Lab(h, Moon.planet(h.getLevel().getServer(), planet), index);
+        lab.ticks(2);
         return lab;
     }
 
@@ -350,6 +353,54 @@ final class Lab implements AutoCloseable {
             throw new GameTestAssertException(suit + " has no fluid item capability");
         }
         return store.getFluidInTank(0).getAmount();
+    }
+
+    /** Ad Astra's three suits, by the paths of their four pieces, head to feet. */
+    enum Suit {
+        SPACE("space_helmet", "space_suit", "space_pants", "space_boots", 1000),
+        NETHERITE(
+                "netherite_space_helmet",
+                "netherite_space_suit",
+                "netherite_space_pants",
+                "netherite_space_boots",
+                2000),
+        JET("jet_suit_helmet", "jet_suit", "jet_suit_pants", "jet_suit_boots", 4000);
+
+        final String head;
+        final String chest;
+        final String legs;
+        final String feet;
+
+        /** What the chest piece's oxygen store holds when full, in mB. */
+        final int capacity;
+
+        Suit(String head, String chest, String legs, String feet, int capacity) {
+            this.head = head;
+            this.chest = chest;
+            this.legs = legs;
+            this.feet = feet;
+            this.capacity = capacity;
+        }
+
+        /** The four pieces' paths, head to feet. */
+        List<String> pieces() {
+            return List.of(head, chest, legs, feet);
+        }
+
+        /** Dresses an entity in the whole suit, its store holding this much oxygen, in mB. */
+        void wornBy(LivingEntity entity, int oxygen) {
+            dress(
+                    entity,
+                    adAstra(head),
+                    oxygen > 0 ? suitHolding(chest, oxygen) : adAstra(chest),
+                    adAstra(legs),
+                    adAstra(feet));
+        }
+    }
+
+    /** Switches an entity's internals on or off, as its keybind does for a player (LIFE-029). */
+    static void internals(LivingEntity entity, boolean on) {
+        Internals.set(entity, on);
     }
 
     /** Dresses an entity in a whole suit of Ad Astra's: these four items, head to feet. */
