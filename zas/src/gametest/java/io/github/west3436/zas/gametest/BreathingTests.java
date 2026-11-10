@@ -705,6 +705,69 @@ public final class BreathingTests {
         h.succeed();
     }
 
+    /**
+     * Nausea and blindness from a gas keep the ticks the client needs to show them, at any check
+     * interval (LIFE-040): it wobbles the view only while nausea has more than 60 left, and draws
+     * blindness's fog back over its last 20. A tick before the next check both have more than that,
+     * and a check a second late still finds them so. The other effects end a second after the next
+     * check, as before.
+     */
+    @GameTest(template = "empty")
+    public static void life_040_nausea_and_blindness_keep_the_ticks_the_client_needs(GameTestHelper h) {
+        List<Holder<MobEffect>> others =
+                List.of(MobEffects.WEAKNESS, MobEffects.MOVEMENT_SLOWDOWN, MobEffects.DIG_SLOWDOWN);
+        Map<Holder<MobEffect>, Integer> leads = Map.of(MobEffects.CONFUSION, 60, MobEffects.BLINDNESS, 20);
+        try (Lab lab = new Lab(h, 224)) {
+            lab.room(0, airWith(CO, 1.5));
+            long now = lab.r.level.getGameTime();
+            for (int interval : new int[] {40, 10, 200}) {
+                lab.interval(interval);
+                for (boolean checked : new boolean[] {true, false}) {
+                    Pig pig = lab.mob(EntityType.PIG, 0);
+                    String at = (checked ? "a check" : "a profile applied") + " at an interval of " + interval;
+                    if (checked) {
+                        Breathers.checkAt(pig, now);
+                    } else {
+                        Breathers.breatheForTest(pig, breath(CO, 1.5), 0);
+                    }
+                    h.assertValueEqual(
+                            effects(pig), expected(EffectLevel.IMPAIRED, EffectLevel.UNCONSCIOUS), "effects, " + at);
+                    for (Holder<MobEffect> other : others) {
+                        h.assertValueEqual(
+                                pig.getEffect(other).getDuration(),
+                                interval + 20,
+                                other.getRegisteredName() + "'s ticks, " + at);
+                    }
+                    leads.forEach((effect, lead) -> h.assertValueEqual(
+                            pig.getEffect(effect).getDuration(),
+                            interval + 20 + lead,
+                            effect.getRegisteredName() + "'s ticks, " + at));
+                    if (!checked) {
+                        continue;
+                    }
+                    // No other check is due at this game time, so these ticks only run the effects down.
+                    ticks(pig, interval - 1);
+                    leads.forEach((effect, lead) -> {
+                        int left = pig.getEffect(effect).getDuration();
+                        h.assertTrue(
+                                left > lead,
+                                effect.getRegisteredName() + " has " + left + " ticks a tick before the next check, "
+                                        + at);
+                    });
+                    ticks(pig, 20);
+                    leads.forEach((effect, lead) -> {
+                        int left = pig.getEffect(effect).getDuration();
+                        h.assertTrue(
+                                left > lead,
+                                effect.getRegisteredName() + " has " + left + " ticks 19 after the next check was "
+                                        + "due, " + at);
+                    });
+                }
+            }
+        }
+        h.succeed();
+    }
+
     /** The shipped profiles hold LIFE-041's table. */
     @GameTest(template = "empty")
     public static void life_041_shipped_profiles_hold_the_table(GameTestHelper h) {

@@ -43,8 +43,9 @@ import org.jetbrains.annotations.Nullable;
  * player, each living entity in {@code zas:breathers}, and each other living entity that pressure
  * and temperature can harm (not in {@code zas:atmosphere_immune}, LIFE-015). Entities are staggered
  * by id so they spread over the interval (LIFE-033), and a check runs again at once whenever the
- * eyes enter or leave a fluid. A server tick runs at most {@code max_checks_per_tick} checks; one
- * due beyond that waits for the next tick (LIFE-038). A check takes the verdict ({@link
+ * eyes enter or leave a fluid or the internals are switched on or off (LIFE-029). A server tick
+ * runs at most {@code max_checks_per_tick} checks; one due beyond that waits for the next tick
+ * (LIFE-038). A check takes the verdict ({@link
  * BreathingRules#assess}), applies the gases' hazard profiles for the seconds since the last check
  * ({@link GasHazards}), adds the O2 used to its zone's respiration ({@link Respiration}), deals
  * the pressure and temperature damage ({@link EnvironmentHazards}) and runs other mods' hazard
@@ -162,8 +163,22 @@ public final class Breathers {
     }
 
     /**
+     * Asks for an entity's check on its next tick, not at its turn in the interval: for a change that
+     * decides its breath at once, as switching its internals does (LIFE-029). The check still waits
+     * for room under the per-tick cap (LIFE-038). Nothing for an entity no check has reached yet:
+     * its first comes at once anyway. Server thread.
+     */
+    static void checkSoon(LivingEntity entity) {
+        BreathState state = entity.getExistingDataOrNull(STATE);
+        if (state != null) {
+            state.ask();
+        }
+    }
+
+    /**
      * One tick of a checked entity at game time {@code now}: its check if one is due, or if its eyes
-     * entered or left a fluid since the last, and the budget has room for it.
+     * entered or left a fluid since the last, or one was asked for ({@link #checkSoon}), and the
+     * budget has room for it.
      *
      * @return its state
      */
@@ -172,7 +187,7 @@ public final class Breathers {
         int interval = BreathingConfig.checkIntervalTicks();
         boolean inFluid = Breathing.vanilla(entity).source() == BreathSource.FLUID;
         boolean fluidChanged = state.lastCheck() >= 0 && state.inFluid() != inFluid;
-        if (due(state, entity, now, interval) || fluidChanged) {
+        if (due(state, entity, now, interval) || fluidChanged || state.asked()) {
             if (budget.take(now)) {
                 check(entity, level, state, now, interval);
             } else {
@@ -253,7 +268,7 @@ public final class Breathers {
                     profiled.get(),
                     seconds,
                     state,
-                    interval + GasHazards.EFFECT_GRACE_TICKS,
+                    interval,
                     HazardConfig.scale(dimension, HazardType.TOXIC_GAS));
         } else {
             state.clearExposure();
@@ -412,7 +427,7 @@ public final class Breathers {
                 breath,
                 seconds,
                 entity.getData(STATE),
-                BreathingConfig.checkIntervalTicks() + GasHazards.EFFECT_GRACE_TICKS,
+                BreathingConfig.checkIntervalTicks(),
                 HazardConfig.scale(entity.level().dimension(), HazardType.TOXIC_GAS));
     }
 
