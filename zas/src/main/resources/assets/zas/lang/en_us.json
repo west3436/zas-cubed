@@ -177,6 +177,7 @@
   "commands.zas.life.header": "%s in %s: %s, breathing from %s",
   "commands.zas.life.hazards": "  Hazards: %s; protection: %s",
   "commands.zas.life.exposure": "  Exposure: %s kPa (effective %s kPa), %s K (%s)",
+  "commands.zas.life.local": "local",
   "commands.zas.life.damage": "  Damage per second: %s",
   "commands.zas.life.status": "  Health %s / %s, air %s / %s",
   "commands.zas.hazards.header": "Hazards in %s; comfort band %s to %s K",

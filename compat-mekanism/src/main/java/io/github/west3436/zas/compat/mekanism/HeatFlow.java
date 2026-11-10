@@ -30,6 +30,11 @@ package io.github.west3436.zas.compat.mekanism;
  * flows at the ceiling; once the two are close enough that it carries less, they close as before.
  * That is still the exact course, so the exchange is still never past the common temperature. A
  * body that touches several zones has its ceiling shared out among them ({@link #share}).
+ *
+ * <p><b>Mekanism's own loss</b> to the environment, where the server has it go to the room
+ * (MEK-041), is not this exchange: Mekanism works it out, a tick at a time, from a temperature read
+ * up to an atmos tick earlier. {@link #toLevel} cuts it down to what brings the block and the gas
+ * level, so that it can't carry the two past each other either.
  */
 public final class HeatFlow {
     /** How many joules one unit of Mekanism's heat is, unless set. */
@@ -70,6 +75,31 @@ public final class HeatFlow {
     private static final double TICKS_PER_SECOND = 20.0;
 
     private HeatFlow() {}
+
+    /**
+     * The part of some heat on its way between a body and a gas that takes the two no further than
+     * to one temperature (MEK-041).
+     *
+     * @param bodyCapacity the body's heat capacity, in J/K
+     * @param bodyTemperature the body's temperature before the heat moves, in K
+     * @param gasCapacity the gas's heat capacity, in J/K
+     * @param gasTemperature the gas's temperature before the heat moves, in K
+     * @param joules the heat: above 0 from the body to the gas, below 0 from the gas to the body
+     * @return as much of it, with its sign, as brings the two to one temperature at most; 0 if it
+     *     would flow from the colder to the hotter, a capacity is 0 or less, or a value isn't a
+     *     number
+     */
+    public static double toLevel(
+            double bodyCapacity, double bodyTemperature, double gasCapacity, double gasTemperature, double joules) {
+        if (!(bodyCapacity > 0) || !(gasCapacity > 0)) {
+            return 0;
+        }
+        double level = (bodyTemperature - gasTemperature) * (bodyCapacity / (1 + bodyCapacity / gasCapacity));
+        if (Double.isNaN(level) || Double.isNaN(joules)) {
+            return 0;
+        }
+        return joules > 0 ? Math.min(joules, Math.max(0, level)) : Math.max(joules, Math.min(0, level));
+    }
 
     /**
      * What one face of a block conducts between its capacitor and the gas the face touches.

@@ -11,6 +11,8 @@ import io.github.west3436.zas.api.mutation.HeatMutations;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.SourceId;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -87,9 +89,13 @@ import org.jetbrains.annotations.Nullable;
  * </ul>
  *
  * <p><b>Mekanism's own loss.</b> A Mekanism heat block also loses heat each tick to an ambient
- * temperature it reads from the biome, and that heat goes nowhere. This class leaves that as it is,
- * and adds none of it to a zone, so no joule is counted twice; a block in a zone has both ways out.
- * Replacing the biome's ambient is MEK-041.
+ * temperature it reads from the biome, and that heat goes nowhere. The exchange leaves that as it
+ * is, and adds none of it to a zone, so no joule is counted twice; a block in a zone has both ways
+ * out. With the server's {@code [heat] ambient_from_rooms} on (MEK-041), {@link MekanismAmbient}
+ * has a block that is no part of a multiblock lose that heat to its zone instead, and this class's
+ * step carries it there: before the exchange is worked out, so the exchange reads the zone with
+ * that heat in it; no further than level with the block ({@link HeatFlow#toLevel}), anything more
+ * going back to the block; and within the body's ceiling, of which the exchange has what is left.
  *
  * <p>The capability is found by its name, and capacitors through Mekanism's API, so nothing here
  * names a class of Mekanism's outside it. Server thread.
@@ -99,7 +105,7 @@ public final class MekanismHeat {
     public static final SourceId SOURCE = SourceId.of("zas", "mekanism_heat");
 
     /** Mekanism's heat capability on blocks, by its name: the registry gives back the one Mekanism made. */
-    private static final BlockCapability<IHeatHandler, @Nullable Direction> HEAT = BlockCapability.createSided(
+    static final BlockCapability<IHeatHandler, @Nullable Direction> HEAT = BlockCapability.createSided(
             ResourceLocation.fromNamespaceAndPath("mekanism", "heat_handler"), IHeatHandler.class);
 
     private static final Direction[] SIDES = Direction.values();
@@ -195,9 +201,12 @@ public final class MekanismHeat {
      */
     @ServerThread
     public static List<Flow> ticked(ServerLevel level, long gameTime) {
-        Known known = LEVELS.get(level);
         int period = Atmospheres.periodTicks();
-        if (known == null || period <= 0 || gameTime % period != 0 || gameTime == known.stepped) {
+        if (period <= 0 || gameTime % period != 0) {
+            return List.of();
+        }
+        Known known = MekanismAmbient.has(level) ? known(level) : LEVELS.get(level);
+        if (known == null || gameTime == known.stepped) {
             return List.of();
         }
         known.stepped = gameTime;
@@ -207,6 +216,7 @@ public final class MekanismHeat {
     /** The server has stopped: nothing is kept for the next one. */
     static void forget() {
         LEVELS.clear();
+        MekanismAmbient.forget();
     }
 
     /**
@@ -285,6 +295,9 @@ public final class MekanismHeat {
         /** What it conducts to the zones that sit this step out, whose part of its ceiling is kept back. */
         final Map<ZoneId, Double> keptBack = new LinkedHashMap<>();
 
+        /** What Mekanism's own loss has passed its zones this step, either way, in J (MEK-041). */
+        double ownLoss;
+
         Body(
                 BlockEntity owner,
                 IHeatHandler handler,
@@ -300,20 +313,43 @@ public final class MekanismHeat {
 
         /** Gives the body heat, in Mekanism's units; less than 0 takes it. */
         void give(double heat) {
-            if (capacitors == null) {
-                handler.handleHeat(heat);
-            } else if (capacitors.size() == 1) {
-                IHeatCapacitor only = capacitors.getFirst();
-                only.setHeat(only.getHeat() + heat);
-            } else {
-                // Shared out by heat capacity, as Mekanism shares heat a block is handed.
-                double total = 0;
-                for (IHeatCapacitor capacitor : capacitors) {
-                    total += capacitor.getHeatCapacity();
-                }
-                for (IHeatCapacitor capacitor : capacitors) {
-                    capacitor.setHeat(capacitor.getHeat() + heat * capacitor.getHeatCapacity() / total);
-                }
+            MekanismHeat.give(handler, capacitors, heat);
+        }
+    }
+
+    /** A block that is to gain heat from a zone through its sides on it (MEK-041). */
+    private record Gain(BlockEntity owner, IMekanismHeatHandler handler, ZoneId zone) {}
+
+    /**
+     * What makes a block's heat on one side one body with another block's: the one capacitor behind
+     * it, which the blocks of a multiblock share, or else the block.
+     */
+    static Object body(BlockEntity entity, Direction side) {
+        return body(entity, entity instanceof IMekanismHeatHandler own ? own.getHeatCapacitors(side) : null);
+    }
+
+    private static Object body(BlockEntity entity, @Nullable List<IHeatCapacitor> capacitors) {
+        return capacitors != null && capacitors.size() == 1 ? capacitors.getFirst() : entity;
+    }
+
+    /**
+     * Gives a heat handler heat, in Mekanism's units; less than 0 takes it. It is written straight
+     * into Mekanism's capacitors, if the handler has them.
+     */
+    private static void give(IHeatHandler handler, @Nullable List<IHeatCapacitor> capacitors, double heat) {
+        if (capacitors == null || capacitors.isEmpty()) {
+            handler.handleHeat(heat);
+        } else if (capacitors.size() == 1) {
+            IHeatCapacitor only = capacitors.getFirst();
+            only.setHeat(only.getHeat() + heat);
+        } else {
+            // Shared out by heat capacity, as Mekanism shares heat a block is handed.
+            double total = 0;
+            for (IHeatCapacitor capacitor : capacitors) {
+                total += capacitor.getHeatCapacity();
+            }
+            for (IHeatCapacitor capacitor : capacitors) {
+                capacitor.setHeat(capacitor.getHeat() + heat * capacitor.getHeatCapacity() / total);
             }
         }
     }
@@ -351,13 +387,15 @@ public final class MekanismHeat {
      */
     @ServerThread
     public static List<Flow> step(ServerLevel level, double seconds) {
-        Known known = LEVELS.get(level);
+        boolean ambient = MekanismAmbient.has(level);
+        Known known = ambient ? known(level) : LEVELS.get(level);
         if (known == null) {
             return List.of();
         }
         admit(level, known);
         double face = MekanismSettings.heatFaceConductance();
-        if (known.blocks.isEmpty() || !(face > 0) || !(seconds > 0)) {
+        boolean exchange = !known.blocks.isEmpty() && face > 0;
+        if (!(seconds > 0) || !exchange && !ambient) {
             return List.of();
         }
         double joulesPerUnit = MekanismSettings.joulesPerHeatUnit();
@@ -369,7 +407,7 @@ public final class MekanismHeat {
         List<Body> order = new ArrayList<>();
         Map<ZoneId, Gas> zones = new HashMap<>();
         Map<ZoneId, Integer> satOut = new HashMap<>();
-        Iterator<BlockPos> blocks = known.blocks.iterator();
+        Iterator<BlockPos> blocks = exchange ? known.blocks.iterator() : Collections.emptyIterator();
         while (blocks.hasNext()) {
             BlockPos pos = blocks.next();
             if (!level.isLoaded(pos)) {
@@ -403,7 +441,7 @@ public final class MekanismHeat {
                 }
                 List<IHeatCapacitor> capacitors = own == null ? null : own.getHeatCapacitors(side);
                 // One capacitor is one body, however many blocks of a multiblock expose it.
-                Object key = capacitors != null && capacitors.size() == 1 ? capacitors.getFirst() : entity;
+                Object key = body(entity, capacitors);
                 Body body = bodies.get(key);
                 if (body == null) {
                     double capacity = handler.getTotalHeatCapacity() * joulesPerUnit;
@@ -423,11 +461,103 @@ public final class MekanismHeat {
                 faces.merge(zone, HeatFlow.conductance(face, body.capacity, inverse), Double::sum);
             }
         }
+
+        // Mekanism's own loss to a zone since the last step (MEK-041): into the zone's gas before
+        // the exchange is worked out, so the exchange reads it with that heat in it.
+        List<Flow> flows = new ArrayList<>();
+        Map<Gain, double[]> gains = new LinkedHashMap<>();
+        for (MekanismAmbient.Moved moved : MekanismAmbient.take(level)) {
+            BlockEntity owner = moved.owner();
+            Direction side = moved.side();
+            BlockPos next = owner.getBlockPos().relative(side);
+            ZoneId zone = null;
+            if (!owner.isRemoved()
+                    && level.isLoaded(next)
+                    && Atmospheres.at(level, next).state() == AtmosphereState.ZONED) {
+                Vec3 across = across(owner.getBlockPos(), side);
+                zone = zone(known, zones, satOut, Atmospheres.at(level, across), across, seconds, nearVacuum);
+            }
+            if (zone == null) {
+                // No block, or no zone there any more: lost as it is without the adapter, or never gained.
+                continue;
+            }
+            Gas gas = zones.get(zone);
+            if (!gas.takesPart) {
+                MekanismAmbient.keep(level, moved);
+                continue;
+            }
+            IMekanismHeatHandler handler = moved.handler();
+            double capacity = handler.getTotalHeatCapacity(side) * joulesPerUnit;
+            if (!(capacity > 0)) {
+                continue;
+            }
+            // No further than level with the block. What it has lost is no longer in it.
+            double joules = moved.joules();
+            double before = handler.getTotalTemperature(side) + Math.max(0, joules) / capacity;
+            double passes = HeatFlow.toLevel(capacity, before, gas.capacity, gas.temperature, joules);
+            Body body = bodies.get(body(owner, side));
+            if (joules > passes) {
+                // The rest of what the block lost would take the zone past it: back to the block.
+                give(handler, handler.getHeatCapacitors(side), (joules - passes) / joulesPerUnit);
+                if (body != null) {
+                    body.temperature += (joules - passes) / body.capacity;
+                }
+            }
+            if (passes == 0) {
+                continue;
+            }
+            gas.temperature += passes / gas.capacity;
+            if (body != null) {
+                body.ownLoss += Math.abs(passes);
+            }
+            if (passes > 0) {
+                gas.added += passes;
+            } else {
+                if (body != null) {
+                    body.temperature -= passes / body.capacity;
+                }
+                double[] bySide =
+                        gains.computeIfAbsent(new Gain(owner, handler, zone), gain -> new double[SIDES.length]);
+                bySide[side.ordinal()] -= passes;
+            }
+        }
         known.satOut = satOut;
+        // A block colder than its zone asks it once for all its sides on it, and gains what the zone
+        // delivers, when it delivers it, side by side. If the block has gone by then, the heat goes
+        // back where it came from.
+        gains.forEach((gain, bySide) -> {
+            double asked = Arrays.stream(bySide).sum();
+            Vec3 point = zones.get(gain.zone()).point;
+            CompletableFuture<HeatResult> result = HeatMutations.remove(level, point, asked, SOURCE)
+                    .thenApply(delivered -> {
+                        if (delivered.joules() > 0 && gain.owner().isRemoved()) {
+                            HeatMutations.add(level, point, delivered.joules(), SOURCE);
+                        } else if (delivered.joules() > 0) {
+                            for (Direction side : SIDES) {
+                                double part = bySide[side.ordinal()] / asked;
+                                if (part > 0) {
+                                    give(
+                                            gain.handler(),
+                                            gain.handler().getHeatCapacitors(side),
+                                            delivered.joules() * part / joulesPerUnit);
+                                }
+                            }
+                        }
+                        return delivered;
+                    });
+            flows.add(follow(known, new Flow(gain.zone(), -asked, result)));
+        });
 
         // Move: each capacitor with each of its zones in turn, on running temperatures.
-        List<Flow> flows = new ArrayList<>();
         for (Body body : order) {
+            // What Mekanism's own loss has passed the body's zones counts against its ceiling.
+            double most = mostWatts;
+            if (most > 0 && body.ownLoss > 0) {
+                most -= body.ownLoss / seconds;
+                if (!(most > 0)) {
+                    continue;
+                }
+            }
             // What each zone of the body's would be passed as its turn starts, to share its ceiling out by.
             // A zone that sits the step out counts too: its part is kept back for when it makes the time up.
             double[] wouldPass = new double[body.conductance.size()];
@@ -446,7 +576,7 @@ public final class MekanismHeat {
             double lost = 0;
             for (Map.Entry<ZoneId, Double> shared : body.conductance.entrySet()) {
                 Gas gas = zones.get(shared.getKey());
-                double most = HeatFlow.share(mostWatts, wouldPass[index++], wouldPassInAll);
+                double part = HeatFlow.share(most, wouldPass[index++], wouldPassInAll);
                 double joules = HeatFlow.exchange(
                         body.capacity,
                         body.temperature,
@@ -454,7 +584,7 @@ public final class MekanismHeat {
                         gas.temperature,
                         shared.getValue(),
                         gas.seconds,
-                        most);
+                        part);
                 if (joules == 0) {
                     continue;
                 }
@@ -528,7 +658,7 @@ public final class MekanismHeat {
     }
 
     /** A point just across one side of a block: in the cell that touches the middle of that face. */
-    private static Vec3 across(BlockPos pos, Direction side) {
+    static Vec3 across(BlockPos pos, Direction side) {
         double reach = 0.5 + 1.0 / 32;
         return new Vec3(
                 pos.getX() + 0.5 + side.getStepX() * reach,

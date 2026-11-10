@@ -242,6 +242,35 @@ class HeatFlowTest {
     }
 
     /**
+     * Heat that Mekanism has a block lose to its room takes the two no further than level (MEK-041):
+     * all of it while that is short of level, as much as levels them if it is more, and none of it
+     * uphill. The same for heat a block colder than its room asks of it.
+     */
+    @Test
+    void mek_041_a_blocks_own_loss_takes_the_two_no_further_than_level() {
+        // A body of 100 J/K at 1,000 K and a gas of 300 J/K at 300 K are level at 475 K: 52,500 J.
+        assertEquals(700, HeatFlow.toLevel(100, 1000, 300, 300, 700));
+        assertEquals(52_500, HeatFlow.toLevel(100, 1000, 300, 300, 52_500), 1e-9);
+        assertEquals(52_500, HeatFlow.toLevel(100, 1000, 300, 300, 60_000), 1e-9);
+        assertEquals(52_500, HeatFlow.toLevel(100, 1000, 300, 300, Double.POSITIVE_INFINITY), 1e-9);
+        // The other way: the body at 300 K and the gas at 1,000 K are level at 825 K.
+        assertEquals(-700, HeatFlow.toLevel(100, 300, 300, 1000, -700));
+        assertEquals(-52_500, HeatFlow.toLevel(100, 300, 300, 1000, -60_000), 1e-9);
+        // Never from the colder to the hotter, and nothing between two that are level.
+        assertEquals(0, HeatFlow.toLevel(100, 300, 300, 1000, 700));
+        assertEquals(0, HeatFlow.toLevel(100, 1000, 300, 300, -700));
+        assertEquals(0, HeatFlow.toLevel(100, 400, 300, 400, 700));
+        assertEquals(0, HeatFlow.toLevel(100, 400, 300, 400, -700));
+        assertEquals(0, HeatFlow.toLevel(100, 1000, 300, 300, 0));
+        // Nothing with no capacity, or with a value that isn't a number.
+        assertEquals(0, HeatFlow.toLevel(0, 1000, 300, 300, 700));
+        assertEquals(0, HeatFlow.toLevel(100, 1000, 0, 300, 700));
+        assertEquals(0, HeatFlow.toLevel(Double.NaN, 1000, 300, 300, 700));
+        assertEquals(0, HeatFlow.toLevel(100, Double.NaN, 300, 300, 700));
+        assertEquals(0, HeatFlow.toLevel(100, 1000, 300, 300, Double.NaN));
+    }
+
+    /**
      * The defaults: 1 J to a unit of Mekanism's heat, and 10 W/K a face. The ceiling's default is the
      * owner's to choose, 0 for none, so only its range is held here.
      */

@@ -158,15 +158,28 @@ public final class BreathingRules {
      * The air the rules take an entity to be in: the atmosphere at its eyes, or, outside every zone,
      * the air of another mod's breathable place there if a provider names one (SPACE-017). A zone
      * always governs, and an unresolved atmosphere stays the guess it is.
+     *
+     * <p>Whatever reports an entity's pressure, temperature or hazards reads this, not the sample's
+     * own mixture, so that it reports what the rules apply.
+     *
+     * @param sample the atmosphere at the entity's eyes
      */
-    private static GasMixture around(LivingEntity entity, AtmosphereSample sample) {
-        if (sample.state() == AtmosphereState.AMBIENT && entity.level() instanceof ServerLevel level) {
-            GasMixture local = LocalAir.at(level, entity.getEyePosition());
-            if (local != null) {
-                return local;
-            }
-        }
-        return sample.mixture();
+    public static GasMixture around(LivingEntity entity, AtmosphereSample sample) {
+        GasMixture local = localAir(entity, sample);
+        return local != null ? local : sample.mixture();
+    }
+
+    /**
+     * The air of another mod's breathable place around an entity, where the rules take it instead
+     * of the atmosphere at its eyes (SPACE-017): outside every zone, at a point a provider names.
+     * Null everywhere else.
+     *
+     * @param sample the atmosphere at the entity's eyes
+     */
+    public static @Nullable GasMixture localAir(LivingEntity entity, AtmosphereSample sample) {
+        return sample.state() == AtmosphereState.AMBIENT && entity.level() instanceof ServerLevel level
+                ? LocalAir.at(level, entity.getEyePosition())
+                : null;
     }
 
     /**
