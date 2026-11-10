@@ -53,10 +53,25 @@ import org.slf4j.Logger;
  * test's structure and left to the game: a tube moves a chemical in its own tick and a pipe shares
  * gas in its atmos tick, so the tests that watch them wait. The others ask a block's capability
  * what a tube or a pipe would ask it, in one game tick.
+ *
+ * <p>Those pipes exist only while the content is on (CONT-155), so the tests here are held in
+ * {@link #NAMESPACE}, which a run with the content off leaves out. The few that build with no pipe
+ * say so by naming the adapter's usual namespace, and run either way.
  */
-@GameTestHolder(MekanismFoundationTests.NAMESPACE)
+@GameTestHolder(MekanismConnectionTests.NAMESPACE)
 @PrefixGameTestTemplate(false)
 public final class MekanismConnectionTests {
+    /**
+     * The namespace of the adapter's GameTests that build with the content mod's blocks. The
+     * adapter's test run enables it only while the content is on ({@code -Pcontent=off} turns it
+     * off), so a test held in it needs no check of its own. A class of such tests names it in its
+     * {@code @GameTestHolder}, and has its structures under it.
+     */
+    public static final String NAMESPACE = "zas_mekanism_content";
+
+    /** For a test here that builds with no pipe: the namespace that every run enables. */
+    private static final String ALWAYS = MekanismFoundationTests.NAMESPACE;
+
     /** A structure of air, 7 × 3 × 3. */
     private static final String LAB = "lab";
 
@@ -108,7 +123,7 @@ public final class MekanismConnectionTests {
      * tagged as gaseous so Mekanism draws them as gas, and mapped to their gas both ways. Mekanism's
      * own oxygen, hydrogen and water vapour aren't doubled.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", templateNamespace = ALWAYS)
     public static void mek_011_the_gases_mekanism_lacks_are_chemicals_named_as_the_gases(GameTestHelper h) {
         Bench b = new Bench(h);
         Set<ResourceLocation> expected = new TreeSet<>(Set.of(
@@ -156,7 +171,7 @@ public final class MekanismConnectionTests {
      * list of gases that do stay out holds the one gas these tests' data adds, whose only chemical
      * is radioactive.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", templateNamespace = ALWAYS)
     public static void mek_011_every_gas_of_zas_has_a_chemical_and_the_adapter_lists_those_without(GameTestHelper h) {
         Bench b = new Bench(h);
         int checked = 0;
@@ -956,7 +971,7 @@ public final class MekanismConnectionTests {
      * radiation of what it took is released once at the tank, and none for a simulated drain. The tank
      * is a creative one, which never runs down: Mekanism's other tanks hold no radioactive chemical.
      */
-    @GameTest(template = LAB)
+    @GameTest(template = LAB, templateNamespace = ALWAYS)
     public static void mek_023_a_mapped_radioactive_chemical_radiates_once_as_a_pipe_drains_it(GameTestHelper h) {
         Bench b = new Bench(h);
         double factor = factor();
