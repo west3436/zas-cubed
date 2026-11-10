@@ -46,6 +46,12 @@ public final class MekanismSettings {
     /** {@code [venting] release_above_cap}: whether what is above the cap is released too (MEK-021). */
     public static final ModConfigSpec.BooleanValue VENTING_RELEASE_ABOVE_CAP;
 
+    /** {@code [heat] face_conductance}: what one face of a heat block conducts to a zone's gas (MEK-040). */
+    public static final ModConfigSpec.DoubleValue HEAT_FACE_CONDUCTANCE;
+
+    /** {@code [heat] joules_per_heat_unit}: how many joules one unit of Mekanism's heat is (MEK-040). */
+    public static final ModConfigSpec.DoubleValue HEAT_JOULES_PER_UNIT;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -108,6 +114,25 @@ public final class MekanismSettings {
                         "large dump can raise a room's pressure a great deal at once. An exhaust port then",
                         "takes all it is given.")
                 .define("release_above_cap", VentBudget.DEFAULT_RELEASE_ABOVE_CAP);
+        builder.pop();
+
+        // Heat (MEK-040).
+        builder.push("heat");
+        HEAT_FACE_CONDUCTANCE = builder.comment(
+                        "What one face of a Mekanism heat block conducts to the gas of a zone it touches,",
+                        "in W/K, before the block's own insulation as Mekanism counts it. Heat moves both",
+                        "ways and none is made or lost. 0 turns the exchange off.")
+                .defineInRange(
+                        "face_conductance", HeatFlow.DEFAULT_FACE_CONDUCTANCE, 0.0, HeatFlow.MAX_FACE_CONDUCTANCE);
+        HEAT_JOULES_PER_UNIT = builder.comment(
+                        "How many joules of a zone's heat one unit of Mekanism's heat is. Mekanism counts",
+                        "heat in its energy unit, so at 1.0 a Resistive Heater using 100 J a tick, of",
+                        "which it turns 60 into heat, warms its room with up to 1,200 W.")
+                .defineInRange(
+                        "joules_per_heat_unit",
+                        HeatFlow.DEFAULT_JOULES_PER_HEAT_UNIT,
+                        HeatFlow.MIN_JOULES_PER_HEAT_UNIT,
+                        HeatFlow.MAX_JOULES_PER_HEAT_UNIT);
         builder.pop();
 
         SPEC = builder.build();
@@ -184,5 +209,23 @@ public final class MekanismSettings {
      */
     public static boolean ventingReleasesAboveCap() {
         return SPEC.isLoaded() ? VENTING_RELEASE_ABOVE_CAP.get() : VentBudget.DEFAULT_RELEASE_ABOVE_CAP;
+    }
+
+    /**
+     * What one face of a heat block conducts to a zone's gas (MEK-040).
+     *
+     * @return the conductance in W/K, 0 or more; the default while no server config is loaded
+     */
+    public static double heatFaceConductance() {
+        return SPEC.isLoaded() ? HEAT_FACE_CONDUCTANCE.get() : HeatFlow.DEFAULT_FACE_CONDUCTANCE;
+    }
+
+    /**
+     * How many joules one unit of Mekanism's heat is (MEK-040).
+     *
+     * @return joules per unit, above 0; the default while no server config is loaded
+     */
+    public static double joulesPerHeatUnit() {
+        return SPEC.isLoaded() ? HEAT_JOULES_PER_UNIT.get() : HeatFlow.DEFAULT_JOULES_PER_HEAT_UNIT;
     }
 }

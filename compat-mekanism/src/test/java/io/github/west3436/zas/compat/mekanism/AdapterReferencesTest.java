@@ -69,6 +69,8 @@ class AdapterReferencesTest {
             PACKAGE + "GasPurity",
             // The venting's cap (MEK-021).
             PACKAGE + "VentBudget",
+            // The heat exchange's arithmetic (MEK-040).
+            PACKAGE + "HeatFlow",
             MIXIN_PACKAGE + "MekanismMixinPlugin");
 
     private static final Pattern DESCRIPTOR_TYPE = Pattern.compile("L([\\w/$]+)[;<]");
