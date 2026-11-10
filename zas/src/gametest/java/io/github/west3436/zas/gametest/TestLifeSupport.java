@@ -32,7 +32,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  *       1,000 K, sealed breathing, gas filtering and airflow resistance 0.5;
  *   <li>{@code zas:test_tank}, an item without a model whose {@link ILifeSupport#ITEM} gives only an
  *       internal supply (LIFE-028): the gas and distribution pressure kept on the stack ({@link
- *       #tank});
+ *       #tank}), and whether it is always on ({@link #alwaysOnTank});
  *   <li>on a zombie with the entity tag {@link #ENTITY_TAG}, {@link ILifeSupport#ENTITY} giving
  *       low-pressure protection to vacuum, sealed breathing and airflow resistance 0.25, and, with
  *       the tag {@link #OWN_TANK_TAG} too, a tank of its own: {@link #OWN_TANK};
@@ -330,6 +330,21 @@ public final class TestLifeSupport {
         return stack;
     }
 
+    /**
+     * A test tank that is {@linkplain IInternalSupply#alwaysOn() always on}, as gear with a switch
+     * of its own is: otherwise as {@link #tank}.
+     *
+     * @param moles the moles per gas
+     * @param distribution the distribution pressure, kPa
+     */
+    public static ItemStack alwaysOnTank(Map<ResourceLocation, Double> moles, double distribution) {
+        ItemStack stack = tank(moles, distribution);
+        CompoundTag root = root(stack);
+        root.putBoolean("Always", true);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
+        return stack;
+    }
+
     /** The gas a test tank holds now. */
     public static GasMixture contents(ItemStack stack) {
         CompoundTag tag = root(stack).getCompound("Moles");
@@ -370,6 +385,11 @@ public final class TestLifeSupport {
                 root.put("Moles", tag(left));
                 stack.set(DataComponents.CUSTOM_DATA, CustomData.of(root));
                 return taken;
+            }
+
+            @Override
+            public boolean alwaysOn() {
+                return root(stack).getBoolean("Always");
             }
         };
     }
@@ -425,12 +445,28 @@ public final class TestLifeSupport {
         private boolean contents;
         private boolean distribution;
         private boolean draw;
+        private boolean alwaysOn;
+        private boolean alwaysOnThrows;
 
         /** Which of its calls throw from now on. */
         public void throwing(boolean contents, boolean distribution, boolean draw) {
             this.contents = contents;
             this.distribution = distribution;
             this.draw = draw;
+        }
+
+        /** Whether it is always on from now on, and whether saying so throws. */
+        public void alwaysOn(boolean alwaysOn, boolean throwing) {
+            this.alwaysOn = alwaysOn;
+            this.alwaysOnThrows = throwing;
+        }
+
+        @Override
+        public boolean alwaysOn() {
+            if (alwaysOnThrows) {
+                throw failing();
+            }
+            return alwaysOn;
         }
 
         @Override

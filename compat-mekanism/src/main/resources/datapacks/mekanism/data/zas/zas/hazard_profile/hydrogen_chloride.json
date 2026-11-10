@@ -1,0 +1,7 @@
+{
+  "thresholds": [
+    { "partial_pressure": 0.0005 },
+    { "partial_pressure": 0.005, "effect_level": "impaired", "damage": 0.5 },
+    { "partial_pressure": 0.05, "effect_level": "unconscious", "damage": 2 }
+  ]
+}
