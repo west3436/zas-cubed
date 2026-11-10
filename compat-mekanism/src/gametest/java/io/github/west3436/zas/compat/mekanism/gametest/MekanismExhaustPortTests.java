@@ -212,7 +212,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_an_exhaust_port_releases_what_it_is_given_into_its_room(GameTestHelper h) {
-        VentArea a = new VentArea(h, 40);
+        VentArea a = new VentArea(h, 60);
         try {
             a.room();
             BlockPos pos = port(a, 0, 2, 2, Direction.EAST);
@@ -282,7 +282,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_an_exhaust_port_refuses_a_chemical_that_is_not_a_gas(GameTestHelper h) {
-        VentArea a = new VentArea(h, 41);
+        VentArea a = new VentArea(h, 61);
         try {
             a.room();
             BlockPos pos = port(a, 0, 2, 2, Direction.EAST);
@@ -310,7 +310,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_a_tube_empties_into_an_exhaust_port(GameTestHelper h) {
-        VentArea a = new VentArea(h, 42);
+        VentArea a = new VentArea(h, 62);
         ChemicalNetwork network = null;
         try {
             h.assertTrue(
@@ -355,7 +355,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_a_machine_ejects_into_an_exhaust_port(GameTestHelper h) {
-        VentArea a = new VentArea(h, 43);
+        VentArea a = new VentArea(h, 63);
         try {
             a.box(6, 4, 6);
             TileEntityChemicalTank tank = a.place(3, 1, 3, TANK, TileEntityChemicalTank.class);
@@ -401,7 +401,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_a_blocked_exhaust_port_takes_nothing(GameTestHelper h) {
-        VentArea a = new VentArea(h, 44);
+        VentArea a = new VentArea(h, 64);
         try {
             a.room();
             BlockPos pos = port(a, 0, 2, 2, Direction.EAST);
@@ -457,7 +457,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_an_exhaust_port_takes_no_more_than_the_cap_and_leaves_the_rest(GameTestHelper h) {
-        VentArea a = new VentArea(h, 45);
+        VentArea a = new VentArea(h, 65);
         long cap = MekanismSettings.VENTING_MAX_PER_SECOND.get();
         try {
             a.room();
@@ -511,7 +511,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_an_exhaust_port_works_with_the_venting_switched_off(GameTestHelper h) {
-        VentArea a = new VentArea(h, 46);
+        VentArea a = new VentArea(h, 66);
         try {
             a.room();
             BlockPos pos = port(a, 0, 2, 2, Direction.EAST);
@@ -547,7 +547,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_023_an_exhaust_port_radiates_once_for_what_it_takes(GameTestHelper h) {
-        VentArea a = new VentArea(h, 47);
+        VentArea a = new VentArea(h, 67);
         BlockPos free = a.abs(0, 2, 2);
         BlockPos capped = a.abs(2, 0, 2);
         BlockPos unmapped = a.abs(2, 2, 0);
@@ -622,7 +622,7 @@ public final class MekanismExhaustPortTests {
             h.succeed();
             return;
         }
-        VentArea a = new VentArea(h, 49);
+        VentArea a = new VentArea(h, 69);
         boolean left = false;
         try {
             a.box(7, 5, 5);
@@ -733,7 +733,7 @@ public final class MekanismExhaustPortTests {
      */
     @GameTest(template = "empty", batch = VentArea.BATCH)
     public static void mek_022_the_exhaust_port_is_a_block_with_an_item_a_recipe_and_a_drop(GameTestHelper h) {
-        VentArea a = new VentArea(h, 48);
+        VentArea a = new VentArea(h, 68);
         try {
             ResourceLocation id = ResourceLocation.fromNamespaceAndPath("zas", "exhaust_port");
             Block block = ExhaustPort.block();
