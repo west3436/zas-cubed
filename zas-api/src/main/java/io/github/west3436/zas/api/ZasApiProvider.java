@@ -275,6 +275,39 @@ public interface ZasApiProvider {
     }
 
     /**
+     * Every gas the server defines (CORE-010, API-051), for
+     * {@link io.github.west3436.zas.api.gas.GasProperties#defined()}.
+     *
+     * <p>The default is the fallback's answer: standard air's gases. It is there for the same
+     * reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @return the gas ids, immutable, in id order
+     */
+    @AnyThread
+    default Set<ResourceLocation> definedGases() {
+        return FallbackProvider.STANDARD_AIR_GASES;
+    }
+
+    /**
+     * The translation key a gas's definition names it by (CORE-010, API-051), for
+     * {@link io.github.west3436.zas.api.gas.GasProperties#translationKey}.
+     *
+     * <p>The default is the fallback's answer: none, so the caller uses the key's usual form. It
+     * is there for the same reason as {@link #molarHeatCapacity}'s.
+     *
+     * <p>Thread: any.
+     *
+     * @param gas the gas id
+     * @return the key, or empty if the gas isn't defined
+     */
+    @AnyThread
+    default Optional<String> gasTranslationKey(ResourceLocation gas) {
+        return Optional.empty();
+    }
+
+    /**
      * The atmos tick period in game ticks (CORE-041, API-052), for
      * {@link Atmospheres#periodTicks()}.
      *

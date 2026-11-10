@@ -5,7 +5,9 @@ import io.github.west3436.zas.api.ZasApi;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalDouble;
+import java.util.Set;
 import java.util.TreeMap;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -50,6 +52,56 @@ public final class GasProperties {
         return ZasApi.provider()
                 .molarHeatCapacity(Objects.requireNonNull(gas, "gas"))
                 .isPresent();
+    }
+
+    /**
+     * Every gas the server defines (CORE-010). The set is fixed while a server runs and may differ
+     * on the next one, since gases come from datapacks, so read it when you need it: a mod that
+     * has to register something for each gas before any server starts can't learn them here.
+     *
+     * <p>Without ZAS³ the only gases defined are those of {@link StandardAir}.
+     *
+     * <p>Thread: any.
+     *
+     * @return the gas ids, immutable, in id order
+     */
+    @AnyThread
+    public static Set<ResourceLocation> defined() {
+        return ZasApi.provider().definedGases();
+    }
+
+    /**
+     * The translation key of a gas's name: the one its definition gives, which for ZAS³'s own gases
+     * is {@code gas.<namespace>.<path>}. A gas the server doesn't define gets a key of that form
+     * too, so the answer for ZAS³'s gases is the same before a server starts, when none is loaded.
+     *
+     * <p>Without ZAS³ every gas gets a key of that form, and nothing translates it.
+     *
+     * <p>Thread: any.
+     *
+     * @param gas the gas id
+     * @return the key
+     */
+    @AnyThread
+    public static String translationKey(ResourceLocation gas) {
+        Objects.requireNonNull(gas, "gas");
+        return ZasApi.provider()
+                .gasTranslationKey(gas)
+                .orElseGet(() -> "gas." + gas.getNamespace() + "." + gas.getPath());
+    }
+
+    /**
+     * A gas's name for display: the translation of {@link #translationKey}, or the gas's id where
+     * the reader's language files have none.
+     *
+     * <p>Thread: any.
+     *
+     * @param gas the gas id
+     * @return the name
+     */
+    @AnyThread
+    public static Component name(ResourceLocation gas) {
+        return Component.translatableWithFallback(translationKey(gas), gas.toString());
     }
 
     /**

@@ -12,8 +12,12 @@ import io.github.west3436.zas.api.gas.GasProperties;
 import io.github.west3436.zas.api.gas.StandardAir;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Set;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +61,19 @@ class GasPropertiesTest {
         assertThrows(NullPointerException.class, () -> GasProperties.isDefined(null));
     }
 
+    /** Without ZAS³, the list of gases is standard air's, and a gas's name key has the usual form. */
+    @Test
+    void api_051_fallback_lists_standard_airs_gases_and_names_them_by_the_usual_key() {
+        assertEquals(List.of(N2, O2), List.copyOf(GasProperties.defined()));
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> GasProperties.defined().add(UNKNOWN));
+        assertEquals("gas.zas.oxygen", GasProperties.translationKey(O2));
+        assertEquals("gas." + UNKNOWN.getNamespace() + "." + UNKNOWN.getPath(), GasProperties.translationKey(UNKNOWN));
+        assertEquals(Component.translatableWithFallback("gas.zas.nitrogen", "zas:nitrogen"), GasProperties.name(N2));
+        assertThrows(NullPointerException.class, () -> GasProperties.translationKey(null));
+    }
+
     /** The provider methods have defaults, which answer as the fallback does (architecture §6.2). */
     @Test
     void api_051_provider_methods_have_defaults() throws NoSuchMethodException {
@@ -69,6 +86,12 @@ class GasPropertiesTest {
         assertEquals(OptionalDouble.of(21.06), older.molarHeatCapacity(O2));
         assertEquals(OptionalDouble.empty(), older.molarHeatCapacity(UNKNOWN));
         assertEquals(20, older.atmosPeriodTicks());
+        assertTrue(ZasApiProvider.class.getMethod("definedGases").isDefault());
+        assertTrue(ZasApiProvider.class
+                .getMethod("gasTranslationKey", ResourceLocation.class)
+                .isDefault());
+        assertEquals(Set.of(N2, O2), older.definedGases());
+        assertEquals(Optional.empty(), older.gasTranslationKey(O2));
     }
 
     @Test
