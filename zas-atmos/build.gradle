@@ -187,12 +187,17 @@ if (fusion) {
 // The recipe viewers (COMPAT-060 to COMPAT-062). Only -Pjei=true and -Pemi=true add them, to the dev
 // client and server, to see the gas and reaction pages; the plugins themselves are always in zas.
 // Each viewer comes in the oldest version its plugin supports, or in -Pjei.version's and
-// -Pemi.version's. Like Fusion, they are never published or put in a jar, and CI never fetches them.
+// -Pemi.version's; `unsupported` there is the newest one below the oldest, to see the game start
+// with the pages off (COMPAT-002). Like Fusion, they are never published or put in a jar, and CI
+// never fetches them.
 def viewers = [
     jei: [maven: 'https://maven.blamejared.com/', group: 'mezz.jei',
-          module: { v -> "mezz.jei:jei-${minecraft_version}-neoforge:${v}" }, version: jei_version],
+          module: { v -> "mezz.jei:jei-${minecraft_version}-neoforge:${v}" },
+          version: jei_version, unsupported: jei_unsupported_version],
+    // EMI's maven writes the game's version after EMI's. The unsupported one is named whole.
     emi: [maven: 'https://maven.terraformersmc.com/', group: 'dev.emi',
-          module: { v -> "dev.emi:emi-neoforge:${v}+${minecraft_version}" }, version: emi_version],
+          module: { v -> "dev.emi:emi-neoforge:${v.contains('+') ? v : "${v}+${minecraft_version}"}" },
+          version: emi_version, unsupported: emi_unsupported_version],
 ]
 viewers.each { name, viewer ->
     if (!providers.gradleProperty(name).getOrElse('false').toBoolean()) {
@@ -210,7 +215,8 @@ viewers.each { name, viewer ->
         maybeCreate('localRuntime')
         runtimeClasspath.extendsFrom localRuntime
     }
-    def version = providers.gradleProperty("${name}.version").getOrElse(viewer.version)
+    def chosen = providers.gradleProperty("${name}.version").getOrElse(viewer.version)
+    def version = chosen == 'unsupported' ? viewer.unsupported : chosen
     dependencies {
         localRuntime(viewer.module(version)) { transitive = false }
     }
