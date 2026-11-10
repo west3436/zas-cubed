@@ -48,7 +48,8 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li><b>The switch</b> (LIFE-029). Each entity's internals are on or off, saved with it and kept
  *       through death, until toggled. A player toggles them with a keybind, which sends {@link
- *       TogglePayload}; the server toggles the sender's and tells it what they do now.
+ *       TogglePayload}; the server toggles the sender's and tells it what they do now. A switch is
+ *       checked on the entity's next tick, not at its turn in the check interval.
  *   <li><b>The seal</b> (LIFE-021). They work only while the head slot, or the entity itself,
  *       seals its breathing ({@link WornProtection#sealedBreathing}).
  *   <li><b>The tank</b> (LIFE-028). They draw from the first internal supply found ({@link
@@ -140,9 +141,16 @@ public final class Internals {
         return entity.getExistingData(ON).orElse(false);
     }
 
-    /** Switches an entity's internals on or off. */
+    /**
+     * Switches an entity's internals on or off. A change is checked on the entity's next tick, not at
+     * its turn in the check interval, so the breath follows the switch at once.
+     */
     public static void set(LivingEntity entity, boolean on) {
+        boolean was = on(entity);
         entity.setData(ON, on);
+        if (was != on) {
+            Breathers.checkSoon(entity);
+        }
     }
 
     /**

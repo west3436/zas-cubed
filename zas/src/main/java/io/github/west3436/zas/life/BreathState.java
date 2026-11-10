@@ -11,8 +11,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A living entity's breathing and hazards between checks, server side: the verdict of its last
  * check, how fast its air drains, how long it has breathed each hazardous gas (LIFE-004), and
- * whether a check is waiting for room under the per-tick cap (LIFE-038). Kept in an entity
- * attachment that isn't saved, so it starts afresh when the entity loads. Server thread only.
+ * whether a check is waiting for room under the per-tick cap (LIFE-038) or was asked for out of
+ * turn. Kept in an entity attachment that isn't saved, so it starts afresh when the entity loads.
+ * Server thread only.
  */
 public final class BreathState {
     private @Nullable Breathability verdict;
@@ -21,6 +22,7 @@ public final class BreathState {
     private long lastCheck = -1;
     private long lastAttempt = -1;
     private boolean deferred;
+    private boolean asked;
     private double carry;
     /** Per gas, the seconds its partial pressure has been at or above each threshold. */
     private final Map<ResourceLocation, double[]> exposure = new HashMap<>();
@@ -60,6 +62,20 @@ public final class BreathState {
         deferred = true;
     }
 
+    /** Whether a check was asked for out of turn ({@link #ask}) and hasn't run yet. */
+    boolean asked() {
+        return asked;
+    }
+
+    /**
+     * Asks for a check on the entity's next tick, not at its turn in the interval: for a change that
+     * decides its breath at once, as switching its internals does (LIFE-029). The check still waits
+     * for room under the per-tick cap (LIFE-038).
+     */
+    void ask() {
+        asked = true;
+    }
+
     /** Whether the last check found the eyes in a fluid, where vanilla's rules apply. */
     boolean inFluid() {
         return inFluid;
@@ -89,6 +105,7 @@ public final class BreathState {
         this.inFluid = inFluid;
         this.lastCheck = gameTime;
         this.deferred = false;
+        this.asked = false;
         if (!hypoxic()) {
             carry = 0;
         }
@@ -104,6 +121,7 @@ public final class BreathState {
         this.inFluid = false;
         this.lastCheck = gameTime;
         this.deferred = false;
+        this.asked = false;
     }
 
     /**
@@ -113,6 +131,7 @@ public final class BreathState {
     void waited(long gameTime) {
         this.lastAttempt = gameTime;
         this.deferred = false;
+        this.asked = false;
     }
 
     /**
