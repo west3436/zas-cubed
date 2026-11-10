@@ -39,6 +39,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -98,6 +99,9 @@ final class VentArea {
     private int extentY = 4;
     private int extentZ = 4;
 
+    /** Whether the game has been told to keep ticking this area's chunk. */
+    private boolean ticking;
+
     /**
      * @param h the test
      * @param index the area's number, one for each test
@@ -149,8 +153,24 @@ final class VentArea {
         extentZ = Math.max(extentZ, z);
     }
 
+    /**
+     * Has the game tick this area's blocks from its next tick on, as it does those near a player,
+     * until the area is cleared: for a test that leaves a pipe or a machine to the game. The area is
+     * within one chunk, which is the one kept.
+     */
+    void keepTicking() {
+        ChunkPos chunk = new ChunkPos(origin);
+        level.setChunkForced(chunk.x, chunk.z, true);
+        ticking = true;
+    }
+
     /** Sets everything this area built back to air, with a block of margin, and settles Mekanism. */
     void clear() {
+        if (ticking) {
+            ChunkPos chunk = new ChunkPos(origin);
+            level.setChunkForced(chunk.x, chunk.z, false);
+            ticking = false;
+        }
         for (BlockPos p : BlockPos.betweenClosed(abs(-1, -1, -1), abs(extentX + 1, extentY + 1, extentZ + 1))) {
             if (!level.getBlockState(p).isAir()) {
                 level.setBlockAndUpdate(p, AIR);

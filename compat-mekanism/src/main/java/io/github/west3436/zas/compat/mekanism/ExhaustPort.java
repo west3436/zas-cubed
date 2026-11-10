@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.mekanism;
 
+import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.mutation.SourceId;
 import mekanism.api.chemical.IChemicalHandler;
 import net.minecraft.core.BlockPos;
@@ -38,8 +39,16 @@ import org.jetbrains.annotations.Nullable;
  * switched on (D-88). Its recipe, loot table and tool tag are in the adapter's data pack, which
  * loads on the same condition.
  *
- * <p>The only capability it offers is Mekanism's chemical handler, on its back face. It offers no
- * {@code IGasHandler}: nothing can draw from it, and ZAS³'s pipes don't join it.
+ * <p>The only capability it offers is Mekanism's chemical handler, on its back face.
+ *
+ * <p><b>No pipe joins it.</b> A pipe grows an arm to any neighbour that offers a gas handler toward
+ * it and shares gas with it, and the adapter gives a block that offers Mekanism's chemical handler
+ * and no gas handler a view of its tanks as one. Through that view a pipe would empty itself into
+ * the room at the port, with none of a vent's rates or pressure checks. The port is for Mekanism's
+ * machinery, and a pipe has vents of its own. So the port registers the gas-handler capability
+ * itself, with a provider that offers nothing on any face: a block that has registered both
+ * capabilities is given no view, and a pipe that asks the port finds no handler. Nothing can draw
+ * from it either.
  */
 public final class ExhaustPort {
     /** The path of the block's and the item's id. */
@@ -90,8 +99,12 @@ public final class ExhaustPort {
         item = items.registerSimpleBlockItem(block);
         blocks.register(modBus);
         items.register(modBus);
-        modBus.addListener(
-                (RegisterCapabilitiesEvent event) -> event.registerBlock(CHEMICAL, ExhaustPort::handler, block.get()));
+        modBus.addListener((RegisterCapabilitiesEvent event) -> {
+            event.registerBlock(CHEMICAL, ExhaustPort::handler, block.get());
+            // On purpose, and not a gas handler: registering says the port has answered for itself,
+            // so nothing gives it a view of its chemical handler, and the answer is always none.
+            event.registerBlock(IGasHandler.BLOCK, (level, pos, state, blockEntity, side) -> null, block.get());
+        });
         modBus.addListener(ExhaustPort::addToTab);
     }
 
