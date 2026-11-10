@@ -63,9 +63,14 @@ public final class Adapters {
         List<Row> rows = new ArrayList<>();
         // One line per adapter, like this one:
         // rows.add(new Row("examplemod", "[1.2,2)", "io.github.west3436.zas.compat.examplemod.ExampleModCompat"));
-        // Mekanism's API has what the adapter uses from 10.7.15 on (MEK-001). No upper bound: its
-        // GameTests run against the newest build every night (MEK-003).
+
+        // Ad Astra (SPACE-003): 1.16.26 is the build the adapter is tested with, and 1.17 may change its API.
+        rows.add(new Row("ad_astra", "[1.16.26,1.17)", "io.github.west3436.zas.compat.adastra.AdAstraCompat"));
+
+        // Mekanism (MEK-001): its API has what the adapter uses from 10.7.15 on. No upper bound: the
+        // adapter's GameTests run against the newest build every night (MEK-003).
         rows.add(new Row("mekanism", "[10.7.15,)", "io.github.west3436.zas.compat.mekanism.MekanismCompat"));
+
         return rows;
     }
 

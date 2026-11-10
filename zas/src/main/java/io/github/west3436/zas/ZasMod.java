@@ -54,7 +54,7 @@ public final class ZasMod {
         IgnitionSources.register(NeoForge.EVENT_BUS);
         IgnitionEvents.register(NeoForge.EVENT_BUS);
         GasRegistryEvents.register(modBus);
-        ServerReactions.register(NeoForge.EVENT_BUS);
+        ServerReactions.register(modBus, NeoForge.EVENT_BUS);
         Ambients.register(NeoForge.EVENT_BUS);
         ZasCommonConfig.register(container);
         ZasClientConfig.register(container);

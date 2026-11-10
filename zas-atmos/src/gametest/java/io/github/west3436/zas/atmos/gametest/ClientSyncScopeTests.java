@@ -17,6 +17,7 @@ import io.github.west3436.zas.gas.GasDefinitionsPayload;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.ListenerAirPayload;
 import io.github.west3436.zas.life.BreathSyncPayload;
+import io.github.west3436.zas.reaction.ReactionDefinitionsPayload;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public final class ClientSyncScopeTests {
 
     /**
      * Every payload the two mods may send a player with no window open and no overlay on: its own
-     * state, airflow and devices near it, gas particles, and the gas definitions.
+     * state, airflow and devices near it, gas particles, and the gas and reaction definitions.
      */
     private static final Set<Class<?>> ALLOWED = Set.of(
             AtmosHudPayload.class,
@@ -54,7 +55,8 @@ public final class ClientSyncScopeTests {
             AirflowEffectsPayload.class,
             DeviceActivityPayload.class,
             GasJet.class,
-            GasDefinitionsPayload.class);
+            GasDefinitionsPayload.class,
+            ReactionDefinitionsPayload.class);
 
     /** How far past the push's range an opening may be sent: the sync's margin of 8, and a fall. */
     private static final double SYNC_SLACK = 10;
