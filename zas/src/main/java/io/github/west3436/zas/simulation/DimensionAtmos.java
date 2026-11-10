@@ -60,6 +60,7 @@ import io.github.west3436.zas.gas.ServerGasRegistry;
 import io.github.west3436.zas.geometry.Geometries;
 import io.github.west3436.zas.geometry.GeometryTable;
 import io.github.west3436.zas.hotspot.FireIntents;
+import io.github.west3436.zas.life.HazardLevels;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.persistence.DimensionData;
 import io.github.west3436.zas.persistence.DimensionPause;
@@ -1122,8 +1123,8 @@ public final class DimensionAtmos {
      * (FIRE-030), the server's reactions (FIRE-001), the hotspot spread (FIRE-016), how blocks catch
      * fire under the {@code doFireTick} game rule (FIRE-033, FIRE-034), when a pressure difference
      * breaks them (FLOW-007), whether the dimension is paused (OPS-005), whether a filled cell's gas
-     * is deleted (CORE-029), how long a sealed zone waits to dissolve (CORE-052), and the most cells
-     * an enclosure can have (GEO-020).
+     * is deleted (CORE-029), how long a sealed zone waits to dissolve and the hazard levels that
+     * keep it (CORE-052, LIFE-004), and the most cells an enclosure can have (GEO-020).
      */
     private EngineSettings settings(SchedulerSettings timing) {
         ExchangeSettings exchange =
@@ -1137,7 +1138,7 @@ public final class DimensionAtmos {
                         .withEnabled(level.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)))
                 .withFragile(AirflowConfig.fragile())
                 .withDimensionPaused(simulationPause() != null)
-                .withZones(ZasServerConfig.zones())
+                .withZones(ZasServerConfig.zones().withGuard(HazardLevels.guard(registry)))
                 .withEnclosureMaxCells(ZasServerConfig.enclosureMaxCells());
     }
 

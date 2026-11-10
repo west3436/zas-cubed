@@ -158,7 +158,8 @@ public final class ZasServerConfig {
                 .define("delete_displaced_gas", ZoneSettings.DEFAULT.deleteDisplacedGas());
         SEALED_ZONE_DISSOLVE_SECONDS = builder.comment(
                         "How long a sealed room's air must match the ambient before its zone is dissolved, in",
-                        "seconds. A pinned zone, such as an air controller's, is never dissolved.")
+                        "seconds. A pinned zone, such as an air controller's, is never dissolved, nor is a room",
+                        "holding a gas at half its lowest hazard threshold or more.")
                 .defineInRange("sealed_zone_dissolve_seconds", ZoneSettings.DEFAULT.sealedDissolveSeconds(), 0.0, 1e9);
         ENCLOSURE_MAX_CELLS = builder.comment(
                         "The most cells (blocks of air) a sealed space can have and still become a zone. A larger",

@@ -1,5 +1,8 @@
 package io.github.west3436.zas.compat.mekanism.gametest;
 
+import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.BreathReason;
@@ -10,11 +13,13 @@ import io.github.west3436.zas.api.life.Hazard;
 import io.github.west3436.zas.api.life.Protection;
 import io.github.west3436.zas.compat.mekanism.MekanismGear;
 import io.github.west3436.zas.compat.mekanism.MekanismSettings;
+import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
 import io.github.west3436.zas.life.EnvironmentHazards;
 import io.github.west3436.zas.life.Internals;
 import io.github.west3436.zas.life.LifeDamage;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -555,6 +560,48 @@ public final class MekanismGearTests {
     @GameTest(batch = BATCH, template = "empty")
     public static void life_004_sulfur_dioxide_harms_at_its_thresholds_and_gear_prevents_it(GameTestHelper h) {
         gasHazard(h, 13, SULFUR_DIOXIDE, 0.0005, 0.01, 0.1);
+    }
+
+    // ---- A sealed room keeps the new gases (CORE-052) ---------------------------------------------
+
+    /**
+     * Sealed rooms of air nobody is in, each holding one of the adapter's toxic gases at twice the
+     * partial pressure that hurts, keep their zones and their gas well past {@code [atmos]
+     * sealed_zone_dissolve_seconds}. By the engine's tolerances their air is the open air's: these
+     * gases hurt from a five-hundredth or less of what the tolerances let through. So such a room
+     * used to turn back into open air a minute after it was left, and its gas was gone (CORE-052,
+     * LIFE-004).
+     */
+    @GameTest(batch = BATCH, template = "empty")
+    public static void core_052_a_sealed_room_holding_a_toxic_gas_keeps_its_zone(GameTestHelper h) {
+        try (GearLab lab = new GearLab(h, 14)) {
+            double configured = ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.get();
+            lab.afterwards(() -> ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured));
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(3.0);
+
+            // Each gas with the partial pressure it hurts from, in kPa, in a room of its own.
+            List<Map.Entry<ResourceLocation, Double>> gases = List.of(
+                    Map.entry(CHLORINE, 0.001), Map.entry(HYDROGEN_CHLORIDE, 0.005), Map.entry(SULFUR_DIOXIDE, 0.01));
+            List<ZoneId> zones = new ArrayList<>();
+            for (int i = 0; i < gases.size(); i++) {
+                Map<ResourceLocation, Double> air = new HashMap<>(GearLab.AIR);
+                air.put(gases.get(i).getKey(), 2 * gases.get(i).getValue());
+                lab.room(5 * i, air);
+                zones.add(lab.air(5 * i, 0).zone().orElseThrow());
+            }
+
+            lab.atmosTicks(12);
+
+            for (int i = 0; i < gases.size(); i++) {
+                ResourceLocation gas = gases.get(i).getKey();
+                double kPa = 2 * gases.get(i).getValue();
+                AtmosphereSample room = lab.air(5 * i, 0);
+                h.assertValueEqual(room.state(), AtmosphereState.ZONED, "the room of " + gas);
+                h.assertValueEqual(room.zone().orElseThrow(), zones.get(i), "the zone of the room of " + gas);
+                close(h, room.mixture().partialPressure(gas), kPa, 1e-6 * kPa, gas + " still in its room, kPa");
+            }
+        }
+        h.succeed();
     }
 
     /**

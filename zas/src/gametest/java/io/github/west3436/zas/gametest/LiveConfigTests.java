@@ -11,7 +11,9 @@ import io.github.west3436.zas.ZasMod;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneId;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.PinOutcome;
@@ -25,6 +27,9 @@ import io.github.west3436.zas.config.ZasCommonConfig;
 import io.github.west3436.zas.config.ZasServerConfig;
 import io.github.west3436.zas.engine.scheduler.SchedulerSettings;
 import io.github.west3436.zas.engine.zone.ExchangeSettings;
+import io.github.west3436.zas.life.HazardLevels;
+import io.github.west3436.zas.life.HazardProfile;
+import io.github.west3436.zas.life.HazardProfiles;
 import io.github.west3436.zas.life.HazardType;
 import io.github.west3436.zas.simulation.DimensionAtmos;
 import java.io.IOException;
@@ -241,6 +246,103 @@ public final class LiveConfigTests {
             h.assertTrue(Atmospheres.zone(r.level, zone).isPresent(), "the wait starts when the pin goes");
             r.ticks(3);
             h.assertTrue(Atmospheres.zone(r.level, zone).isEmpty(), "the zone outlived its pin by the delay");
+        } finally {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
+        }
+        h.succeed();
+    }
+
+    private static final ResourceLocation CO = ResourceLocation.fromNamespaceAndPath("zas", "carbon_monoxide");
+
+    /** The moles of a gas that give the 27-block room at (2, 2, 2) this partial pressure, in kPa, at room temperature. */
+    private static double molesFor(double kPa) {
+        return kPa * 27_000 / (GasMixture.GAS_CONSTANT * StandardAir.TEMPERATURE);
+    }
+
+    /**
+     * Brings the sealed room at (2, 2, 2) to the open air's nitrogen and oxygen plus carbon monoxide at
+     * a partial pressure, with its zone formed, and has it sit there for 1 s.
+     *
+     * @return the moles of carbon monoxide in the room
+     */
+    private static double roomWithCarbonMonoxide(Rooms r, double kPa, SourceId src) {
+        r.clear(0, 8);
+        r.shell(0, 4);
+        double moles = molesFor(kPa);
+        r.settle(GasMutations.add(r.level, r.point(2, 2, 2), Rooms.oxygen(500), src));
+        r.settle(GasMutations.add(
+                r.level, r.point(2, 2, 2), new GasParcel(Map.of(CO, moles), StandardAir.TEMPERATURE), src));
+        r.settle(GasMutations.remove(r.level, r.point(2, 2, 2), Map.of(O2, 500.0), src));
+        r.close(r.zone(2, 2, 2).mixture().partialPressure(CO), kPa, "carbon monoxide in the room, kPa");
+        return moles;
+    }
+
+    /**
+     * A sealed room nobody is in, holding 0.2 kPa of carbon monoxide, which harms from 0.12 kPa, keeps
+     * its zone and its carbon monoxide well past {@code [atmos] sealed_zone_dissolve_seconds}. By the
+     * engine's tolerances that air is the open air's, 0.2 kPa being a twenty-fifth of what they let
+     * through, so the room used to dissolve and the gas to vanish. What keeps it is the gas's hazard
+     * profile: once that is gone, as after a {@code /reload} without it, the room waits the delay
+     * and dissolves (CORE-052, LIFE-004).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_052_a_sealed_room_holding_a_harmful_gas_keeps_its_zone(GameTestHelper h) {
+        Rooms r = new Rooms(h, 986);
+        double configured = ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.get();
+        HazardProfile profile = HazardProfiles.of(CO).orElseThrow();
+        try {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(3.0);
+            double moles = roomWithCarbonMonoxide(r, 0.2, source("core_052_harmful"));
+            ZoneId zone = r.zone(2, 2, 2).id();
+            h.assertTrue(profile.damagingAt(0.2), "0.2 kPa of carbon monoxide doesn't hurt");
+
+            r.ticks(12);
+            h.assertTrue(r.zoned(2, 2, 2), "the room turned back into open air");
+            h.assertValueEqual(r.zone(2, 2, 2).id(), zone, "the room's zone");
+            r.close(r.zone(2, 2, 2).mixture().moles(CO), moles, "carbon monoxide still in the room, mol");
+            r.close(
+                    Atmospheres.at(r.level, r.abs(2, 2, 2)).mixture().partialPressure(CO),
+                    0.2,
+                    "carbon monoxide a reading in the room finds, kPa");
+
+            HazardProfiles.putForTest(CO, null);
+            r.ticks(2);
+            h.assertTrue(r.zoned(2, 2, 2), "2 s without the profile");
+            r.tick();
+            h.assertFalse(r.zoned(2, 2, 2), "3 s without the profile");
+        } finally {
+            HazardProfiles.putForTest(CO, profile);
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
+        }
+        h.succeed();
+    }
+
+    /**
+     * A trace under half the gas's lowest threshold doesn't keep a room: with 0.002 kPa of carbon
+     * monoxide, whose HUD warning starts at 0.005 kPa, the room dissolves on time, and the trace goes
+     * with it, as any gas within the tolerances always has (CORE-052).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void core_052_a_trace_under_half_the_lowest_threshold_dissolves_on_time(GameTestHelper h) {
+        Rooms r = new Rooms(h, 992);
+        double configured = ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.get();
+        try {
+            ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(3.0);
+            SourceId src = source("core_052_trace");
+            double lowest =
+                    HazardProfiles.of(CO).orElseThrow().thresholds().get(0).partialPressure();
+            h.assertTrue(0.002 < HazardLevels.KEPT_FRACTION * lowest, "0.002 kPa isn't under the kept level");
+            roomWithCarbonMonoxide(r, 0.002, src);
+            h.assertTrue(r.zoned(2, 2, 2), "1 s at the ambient");
+            r.tick();
+            h.assertTrue(r.zoned(2, 2, 2), "2 s at the ambient");
+            r.tick();
+            h.assertFalse(r.zoned(2, 2, 2), "3 s at the ambient");
+            h.assertValueEqual(
+                    Atmospheres.at(r.level, r.abs(2, 2, 2)).state(), AtmosphereState.AMBIENT, "the room's cells");
+
+            r.settle(GasMutations.add(r.level, r.point(2, 2, 2), Rooms.oxygen(500), src));
+            h.assertValueEqual(r.zone(2, 2, 2).mixture().moles(CO), 0.0, "carbon monoxide in the room's new zone");
         } finally {
             ZasServerConfig.SEALED_ZONE_DISSOLVE_SECONDS.set(configured);
         }
