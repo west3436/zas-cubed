@@ -11,9 +11,10 @@ import org.slf4j.Logger;
 
 /**
  * The air of another mod's breathable place, outside zones (SPACE-017): the first answer of the
- * registered {@link io.github.west3436.zas.api.life.LocalAtmosphereProvider}s. Only the breathing
+ * registered {@link io.github.west3436.zas.api.life.LocalAtmosphereProvider}s. The breathing
  * rules ask ({@link BreathingRules}), and through them what reports on an entity, such as the HUD
- * and {@code /zas life}; atmosphere queries never do.
+ * and {@code /zas life}, and what reads the air at a point to show it ({@link
+ * io.github.west3436.zas.api.life.LocalAtmospheres#at}); atmosphere queries never do.
  */
 final class LocalAir {
     private static final Logger LOGGER = LogUtils.getLogger();

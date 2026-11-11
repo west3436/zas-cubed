@@ -151,7 +151,7 @@ public class AnalyzerMenu extends AbstractContainerMenu {
         AnalyzerSync now;
         if (showingTank) {
             now = new AnalyzerSync(
-                    containerId, Kind.TANK, read.name(), tankName, null, -1, GasTankItem.contents(tank.get()));
+                    containerId, Kind.TANK, read.name(), tankName, null, -1, false, GasTankItem.contents(tank.get()));
         } else {
             AtmosphereSample air = read.air();
             now = new AnalyzerSync(
@@ -161,6 +161,7 @@ public class AnalyzerMenu extends AbstractContainerMenu {
                     tankName,
                     air == null ? null : air.state(),
                     air == null ? -1 : air.zone().map(z -> z.value()).orElse(-1L),
+                    read.local(),
                     read.gas());
         }
         if (force || pending || last == null || !now.showsSameAs(last)) {

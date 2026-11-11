@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The service behind the API. ZAS³ installs its implementation with
@@ -543,4 +544,23 @@ public interface ZasApiProvider {
      */
     @ServerThread
     default void markDirty(ServerLevel level, BlockPos pos) {}
+
+    /**
+     * The air living things are in at a point outside zones that another mod keeps breathable, for
+     * {@link io.github.west3436.zas.api.life.LocalAtmospheres#at} (SPACE-017).
+     *
+     * <p>The default is the fallback's answer: {@code null}, as without ZAS³ no provider is asked
+     * (D-17). It is there for the same reason as {@link #hotspots}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param point the point
+     * @return the first provider's air where the atmosphere at the point is the ambient, else {@code
+     *     null}
+     */
+    @ServerThread
+    default @Nullable GasMixture localAir(ServerLevel level, Vec3 point) {
+        return null;
+    }
 }

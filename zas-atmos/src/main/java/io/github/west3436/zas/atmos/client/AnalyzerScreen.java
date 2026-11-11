@@ -138,8 +138,11 @@ public class AnalyzerScreen extends TguiScreen<AnalyzerMenu> {
         ui.endClip();
     }
 
-    /** The air's state: its zone, the open air, or unresolved. */
+    /** The air's state: its zone, the open air, another mod's air for the place, or unresolved. */
     private static Component air(AnalyzerSync s) {
+        if (s.local()) {
+            return Component.translatable("gui.zas_atmos.analyzer.local_air");
+        }
         return switch (s.state()) {
             case ZONED -> Component.translatable("gui.zas_atmos.analyzer.zone", s.zone());
             case PAUSED -> Component.translatable("gui.zas_atmos.analyzer.paused", s.zone());

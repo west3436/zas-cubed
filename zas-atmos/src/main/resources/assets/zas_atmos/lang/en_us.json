@@ -253,6 +253,7 @@
   "gui.zas_atmos.analyzer.zone": "Zone %s",
   "gui.zas_atmos.analyzer.paused": "Zone %s, paused",
   "gui.zas_atmos.analyzer.open_air": "Open air",
+  "gui.zas_atmos.analyzer.local_air": "Local air",
   "gui.zas_atmos.analyzer.unresolved": "Unresolved",
   "gui.zas_atmos.analyzer.others": "Others",
   "subtitles.zas_atmos.blast.near": "Gas explosion",

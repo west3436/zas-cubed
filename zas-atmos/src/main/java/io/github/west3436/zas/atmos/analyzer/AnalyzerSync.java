@@ -32,6 +32,8 @@ import org.jetbrains.annotations.Nullable;
  * @param tank the name of the tank in the other hand, if it holds one, for its tab
  * @param state the air's state where the reading is of air, else null
  * @param zone the zone's id where the air is a zone's, else -1
+ * @param local whether the air read is another mod's for the place, outside zones (SPACE-017), rather
+ *     than the atmosphere's, whose state is then {@link AtmosphereState#AMBIENT}
  * @param gas the gas read
  */
 public record AnalyzerSync(
@@ -41,6 +43,7 @@ public record AnalyzerSync(
         Optional<Component> tank,
         @Nullable AtmosphereState state,
         long zone,
+        boolean local,
         GasMixture gas)
         implements CustomPacketPayload {
 
@@ -80,6 +83,7 @@ public record AnalyzerSync(
         ComponentSerialization.OPTIONAL_STREAM_CODEC.encode(buf, tank);
         buf.writeVarInt(state == null ? -1 : state.ordinal());
         buf.writeLong(zone);
+        buf.writeBoolean(local);
         MOLES.encode(buf, new HashMap<>(gas.moles()));
         buf.writeDouble(gas.temperature());
         buf.writeDouble(gas.volume());
@@ -92,6 +96,7 @@ public record AnalyzerSync(
         Optional<Component> tank = ComponentSerialization.OPTIONAL_STREAM_CODEC.decode(buf);
         int state = buf.readVarInt();
         long zone = buf.readLong();
+        boolean local = buf.readBoolean();
         Map<ResourceLocation, Double> moles = MOLES.decode(buf);
         double temperature = buf.readDouble();
         double volume = buf.readDouble();
@@ -102,6 +107,7 @@ public record AnalyzerSync(
                 tank,
                 byOrdinal(AtmosphereState.values(), state),
                 zone,
+                local,
                 new GasMixture(moles, temperature, volume));
     }
 
@@ -121,9 +127,9 @@ public record AnalyzerSync(
 
     /**
      * Whether this shows the same as another, at the resolution the window shows it in any of the
-     * player's units: what it reads, the zone, pressure to 4 significant figures, temperature to 0.05 K
-     * (°F's 0.1° is 0.056 K) and each gas's share to 3 significant figures. The server doesn't know the
-     * player's units, so this is as fine as the finest of them.
+     * player's units: what it reads, the zone, whose air it is, pressure to 4 significant figures,
+     * temperature to 0.05 K (°F's 0.1° is 0.056 K) and each gas's share to 3 significant figures. The
+     * server doesn't know the player's units, so this is as fine as the finest of them.
      */
     public boolean showsSameAs(AnalyzerSync other) {
         return kind == other.kind
@@ -131,6 +137,7 @@ public record AnalyzerSync(
                 && tank.equals(other.tank)
                 && state == other.state
                 && zone == other.zone
+                && local == other.local
                 && gas.isEmpty() == other.gas.isEmpty()
                 && significant(gas.pressure(), 4) == significant(other.gas.pressure(), 4)
                 && Math.round(gas.temperature() * 20) == Math.round(other.gas.temperature() * 20)

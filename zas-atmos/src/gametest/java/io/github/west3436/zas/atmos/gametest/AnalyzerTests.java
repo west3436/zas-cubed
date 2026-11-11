@@ -7,9 +7,13 @@ import static io.github.west3436.zas.atmos.gametest.Area.T;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.gas.StandardAir;
+import io.github.west3436.zas.api.life.LocalAtmosphereProvider;
+import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync;
@@ -23,6 +27,7 @@ import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.command.ZasCommands;
+import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
@@ -47,6 +52,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -567,6 +573,147 @@ public final class AnalyzerTests {
             a.forceLoad(false);
             h.succeed();
         });
+    }
+
+    // ---- CONT-034, SPACE-017: another mod's air outside zones ---------------------------------------
+
+    /** The id a test's provider of local air is registered under. */
+    private static final ResourceLocation KEPT =
+            ResourceLocation.fromNamespaceAndPath(ZasAtmosMod.MOD_ID, "gametest_cont_034");
+
+    /** Fails unless a reading is of air outside zones, and says whose air it is as expected. */
+    private static void outsideZones(Area a, AnalyzerSync s, Kind kind, boolean local, String what) {
+        a.h.assertValueEqual(s.kind(), kind, "what " + what + " reads");
+        a.h.assertValueEqual(s.state(), AtmosphereState.AMBIENT, what + ": the atmosphere's state");
+        a.h.assertValueEqual(s.zone(), -1L, what + ": the zone");
+        a.h.assertValueEqual(s.local(), local, what + ": whether the air is another mod's");
+    }
+
+    /**
+     * Outside zones, in a place another mod keeps breathable (SPACE-017), it reads that mod's air and
+     * says so, in hand and used on a block there, and agrees with the HUD; {@code /zas at} still gives
+     * the ambient. A zone inside the place is read as the zone, a point outside the place as the
+     * ambient, and so is the place itself once no provider answers for it. The reading comes through
+     * its codec with whose air it is, and a reading of the same gas that is the ambient's shows
+     * something else.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_outside_zones_it_reads_another_mods_air_for_the_place(GameTestHelper h) {
+        Area a = new Area(h, 3467);
+        a.clear(-1, -1, 13, 5);
+        a.box(0, 0, 4, 4);
+        a.fill(2, 2, 2, Map.of(O2, 5.0, N2, 19.0));
+        ZoneInfo zone = a.zone(2, 2, 2);
+        a.set(7, 0, 2, Area.STONE);
+        a.set(12, 0, 2, Area.STONE);
+        // The room and the open air around it, as far as x 9, are the other mod's place.
+        AABB place = AABB.encapsulatingFullBlocks(a.abs(-1, 0, -1), a.abs(9, 6, 5));
+        GasMixture kept = new GasMixture(Map.of(O2, 12.0, N2, 20.0), 295.15, StandardAir.CELL_VOLUME);
+        LocalAtmosphereProvider provider = (level, point) -> level == a.level && place.contains(point) ? kept : null;
+        ListeningPlayer l = player(a, 7, 1, 2);
+        ServerPlayer p = l.player();
+        BlockPos wall = a.abs(4, 2, 2);
+        BlockPos floor = a.abs(7, 0, 2);
+        BlockPos far = a.abs(12, 0, 2);
+        GasMixture ambient = Atmospheres.at(a.level, p.getEyePosition()).mixture();
+        h.assertTrue(
+                Math.abs(ambient.pressure() - kept.pressure()) > 1, "the test's air is as the ambient: " + ambient);
+
+        LocalAtmospheres.register(KEPT, provider);
+        try {
+            useOnNothing(p);
+            AnalyzerSync here = last(a, l);
+            outsideZones(a, here, Kind.HERE, true, "the analyzer in hand");
+            same(a, here.gas(), kept, "the reading in hand");
+            AtmosHudPayload hud = HudLevels.of(p);
+            h.assertTrue(hud != null, "the HUD has no state");
+            h.assertTrue(
+                    Math.abs(hud.pressureKpa() - here.gas().pressure()) < 1e-3,
+                    "the HUD's " + hud.pressureKpa() + " kPa against the reading's "
+                            + here.gas().pressure());
+            h.assertTrue(
+                    Math.abs(hud.temperatureK() - here.gas().temperature()) < 1e-3,
+                    "the HUD's " + hud.temperatureK() + " K against the reading's "
+                            + here.gas().temperature());
+            String at = command(p, "zas at");
+            h.assertTrue(at.contains("ambient, zone -"), "/zas at:\n" + at);
+            says(a, at, ambient, false);
+
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), a.level.registryAccess());
+            AnalyzerSync.CODEC.encode(buf, here);
+            AnalyzerSync decoded = AnalyzerSync.CODEC.decode(buf);
+            h.assertValueEqual(buf.readableBytes(), 0, "bytes left after decoding");
+            h.assertTrue(decoded.local(), "the decoded reading doesn't say the air is another mod's");
+            h.assertTrue(decoded.showsSameAs(here), "the decoded reading shows something else: " + decoded);
+            AnalyzerSync asAmbient = new AnalyzerSync(
+                    here.containerId(),
+                    here.kind(),
+                    here.target(),
+                    here.tank(),
+                    here.state(),
+                    here.zone(),
+                    false,
+                    kept);
+            h.assertFalse(asAmbient.showsSameAs(here), "the same gas as the ambient's shows the same");
+            p.closeContainer();
+
+            h.assertTrue(
+                    useOn(p, floor, Direction.UP, faceCentre(floor, Direction.UP))
+                            .consumesAction(),
+                    "using it on the floor in the place did nothing");
+            AnalyzerSync onFloor = last(a, l);
+            outsideZones(a, onFloor, Kind.POINT, true, "the floor in the place");
+            h.assertValueEqual(onFloor.target(), Component.literal(coordsComma(a.abs(7, 1, 2))), "its name");
+            same(a, onFloor.gas(), kept, "the floor's reading");
+            p.closeContainer();
+
+            h.assertTrue(
+                    useOn(p, wall, Direction.EAST, faceCentre(wall, Direction.EAST))
+                            .consumesAction(),
+                    "using it on the room's wall from outside did nothing");
+            AnalyzerSync onWall = last(a, l);
+            outsideZones(a, onWall, Kind.POINT, true, "the room's wall from outside");
+            same(a, onWall.gas(), kept, "the wall's reading from outside");
+            p.closeContainer();
+
+            // The room is in the place too, and its zone is what is read there.
+            h.assertTrue(
+                    useOn(p, wall, Direction.WEST, faceCentre(wall, Direction.WEST))
+                            .consumesAction(),
+                    "using it on the room's wall from inside did nothing");
+            AnalyzerSync inRoom = last(a, l);
+            h.assertValueEqual(inRoom.kind(), Kind.POINT, "what the wall's inside face reads");
+            h.assertValueEqual(inRoom.state(), AtmosphereState.ZONED, "the room's state");
+            h.assertValueEqual(inRoom.zone(), zone.id().value(), "the room's zone");
+            h.assertFalse(inRoom.local(), "the room's zone is read as another mod's air");
+            same(a, inRoom.gas(), a.zone(2, 2, 2).mixture(), "the room's reading");
+            p.closeContainer();
+
+            h.assertTrue(
+                    useOn(p, far, Direction.UP, faceCentre(far, Direction.UP)).consumesAction(),
+                    "using it on the block outside the place did nothing");
+            AnalyzerSync outside = last(a, l);
+            outsideZones(a, outside, Kind.POINT, false, "the block outside the place");
+            same(a, outside.gas(), ambient, "the reading outside the place");
+            p.closeContainer();
+        } finally {
+            h.assertTrue(LocalAtmospheres.unregister(KEPT), "the provider wasn't registered");
+        }
+
+        useOnNothing(p);
+        AnalyzerSync bare = last(a, l);
+        outsideZones(a, bare, Kind.HERE, false, "the analyzer in hand with no provider");
+        same(a, bare.gas(), ambient, "the reading in hand with no provider");
+        p.closeContainer();
+        h.assertTrue(
+                useOn(p, floor, Direction.UP, faceCentre(floor, Direction.UP)).consumesAction(),
+                "using it on the floor with no provider did nothing");
+        AnalyzerSync bareFloor = last(a, l);
+        outsideZones(a, bareFloor, Kind.POINT, false, "the floor with no provider");
+        same(a, bareFloor.gas(), ambient, "the floor's reading with no provider");
+        p.closeContainer();
+        a.clear(-1, -1, 13, 5);
+        h.succeed();
     }
 
     // ---- CONT-034, CLIENT-008: the HUD while it's held ----------------------------------------------
