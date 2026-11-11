@@ -1,5 +1,6 @@
 package io.github.west3436.zas.compat.mekanism.gametest;
 
+import com.mojang.authlib.GameProfile;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
@@ -7,15 +8,20 @@ import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.TreeMap;
+import java.util.UUID;
+import java.util.function.Consumer;
 import mekanism.api.Action;
 import mekanism.api.MekanismAPI;
+import mekanism.api.RelativeSide;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
 import mekanism.api.chemical.IChemicalHandler;
 import mekanism.common.content.network.transmitter.Transmitter;
 import mekanism.common.lib.transmitter.ConnectionType;
 import mekanism.common.lib.transmitter.TransmissionType;
+import mekanism.common.tile.component.config.DataType;
 import mekanism.common.tile.interfaces.ISideConfiguration;
 import mekanism.common.tile.transmitter.TileEntityTransmitter;
 import net.minecraft.core.BlockPos;
@@ -24,16 +30,24 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.BlockCapability;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -150,6 +164,22 @@ final class Bench {
             tile.getConfig().getConfig(TransmissionType.CHEMICAL).setEjecting(false);
         } else {
             throw new GameTestAssertException("the tank at " + x + ", " + y + ", " + z + " has no side configuration");
+        }
+    }
+
+    /**
+     * Turns a face of a Mekanism block off for chemicals, as a player does in its side configuration:
+     * the block then offers no chemical handler there.
+     */
+    void faceOff(int x, int y, int z, Direction face) {
+        if (level.getBlockEntity(at(x, y, z)) instanceof ISideConfiguration tile) {
+            RelativeSide side = RelativeSide.fromDirections(tile.getDirection(), face);
+            h.assertTrue(
+                    tile.getConfig().getConfig(TransmissionType.CHEMICAL).setDataType(DataType.NONE, side),
+                    "the " + side + " side of the block at " + x + ", " + y + ", " + z + " was off already");
+            tile.getConfig().sideChanged(TransmissionType.CHEMICAL, side);
+        } else {
+            throw new GameTestAssertException("the block at " + x + ", " + y + ", " + z + " has no side configuration");
         }
     }
 
@@ -306,6 +336,71 @@ final class Bench {
             throw new GameTestAssertException("no chemical handler at " + x + ", " + y + ", " + z);
         }
         return handler.getChemicalTanks() == 0 ? ChemicalStack.EMPTY : handler.getChemicalInTank(0);
+    }
+
+    // ---- The content mod's analyzer -------------------------------------------------------------
+
+    /**
+     * What the content mod's analyzer read: the kind of thing, by its name in the content mod, the
+     * name its window gives it, and the gas.
+     */
+    record Analysis(String kind, Component name, GasMixture gas) {}
+
+    /**
+     * A player at a block holding the content mod's analyzer, which exists only with the content on.
+     * A fake player opens no window, so this one keeps the menu it is given, as a real one does.
+     */
+    FakePlayer analyst(int x, int y, int z) {
+        FakePlayer player = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "zas_mek_analyst")) {
+            @Override
+            public OptionalInt openMenu(
+                    @Nullable MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra) {
+                AbstractContainerMenu menu = provider == null ? null : provider.createMenu(1, getInventory(), this);
+                if (menu == null) {
+                    return OptionalInt.empty();
+                }
+                containerMenu = menu;
+                return OptionalInt.of(menu.containerId);
+            }
+        };
+        player.moveTo(Vec3.atBottomCenterOf(at(x, y, z)));
+        player.setItemInHand(
+                InteractionHand.MAIN_HAND,
+                new ItemStack(BuiltInRegistries.ITEM
+                        .getOptional(id("zas_atmos:atmos_analyzer"))
+                        .orElseThrow(() -> new GameTestAssertException("no analyzer on this server"))));
+        return player;
+    }
+
+    /**
+     * Uses the analyzer on the middle of a block's face, as a right-click does, and gives what its
+     * window reads. The adapter builds against the API alone, so the window's reading is taken by
+     * the names of its public accessors.
+     */
+    Analysis analyze(FakePlayer player, int x, int y, int z, Direction face) {
+        BlockPos pos = at(x, y, z);
+        Vec3 on = Vec3.atCenterOf(pos).add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
+        player.containerMenu = player.inventoryMenu;
+        boolean used = player.gameMode
+                .useItemOn(
+                        player,
+                        level,
+                        player.getMainHandItem(),
+                        InteractionHand.MAIN_HAND,
+                        new BlockHitResult(on, face, pos, false))
+                .consumesAction();
+        h.assertTrue(used, "using the analyzer at " + x + ", " + y + ", " + z + " on " + face + " did nothing");
+        Object menu = player.containerMenu;
+        try {
+            Object reading = menu.getClass().getMethod("reading").invoke(menu);
+            Class<?> type = reading.getClass();
+            return new Analysis(
+                    String.valueOf(type.getMethod("kind").invoke(reading)),
+                    (Component) type.getMethod("target").invoke(reading),
+                    (GasMixture) type.getMethod("gas").invoke(reading));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new GameTestAssertException("the window open after using the analyzer is " + menu + ": " + e);
+        }
     }
 
     // ---- Checks --------------------------------------------------------------------------------

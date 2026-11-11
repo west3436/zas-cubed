@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.client;
 
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerMenu;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync;
 import io.github.west3436.zas.atmos.client.tgui.Readout;
@@ -40,6 +41,15 @@ public class AnalyzerScreen extends TguiScreen<AnalyzerMenu> {
         PipeBurst.THRESHOLD_KPA / 2, PipeBurst.THRESHOLD_KPA, PipeBurst.THRESHOLD_KPA * 1.25
     };
     private static final int[] CONTAINER_COLOURS = {Ui.GOOD, Ui.AVERAGE, Ui.BAD_FILL};
+
+    /**
+     * Another mod's store has no limits the analyzer knows of, so its dial has one band and no
+     * warning. It runs to one standard atmosphere, which is what a full tank reads where a mod's
+     * storage has no pressure of its own and its adapter stands a tank's size for a volume.
+     */
+    private static final double[] STORE_STOPS = {StandardAir.PRESSURE};
+
+    private static final int[] STORE_COLOURS = {Ui.GOOD};
 
     public AnalyzerScreen(AnalyzerMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, WIDTH, Ui.TITLE_HEIGHT + 2 * Ui.PAD + 2 + READINGS_HEIGHT + 2);
@@ -94,7 +104,7 @@ public class AnalyzerScreen extends TguiScreen<AnalyzerMenu> {
         int inner = x + Ui.PAD;
         double pressure = s.gas().pressure();
         double[] stops = stops(s.kind());
-        int[] colours = s.kind().isAir() ? AIR_COLOURS : CONTAINER_COLOURS;
+        int[] colours = colours(s.kind());
         ui.gauge(inner + GAUGE_RADIUS, y + 2 + GAUGE_RADIUS + 3, GAUGE_RADIUS, pressure, stops, colours);
 
         boolean unresolved = s.state() == AtmosphereState.UNRESOLVED;
@@ -157,6 +167,15 @@ public class AnalyzerScreen extends TguiScreen<AnalyzerMenu> {
             case NETWORK -> NETWORK_STOPS;
             case CANISTER -> CanisterScreen.GAUGE_STOPS;
             case TANK -> TankScreen.GAUGE_STOPS;
+            case STORE -> STORE_STOPS;
+        };
+    }
+
+    private static int[] colours(AnalyzerSync.Kind kind) {
+        return switch (kind) {
+            case HERE, POINT -> AIR_COLOURS;
+            case NETWORK, CANISTER, TANK -> CONTAINER_COLOURS;
+            case STORE -> STORE_COLOURS;
         };
     }
 

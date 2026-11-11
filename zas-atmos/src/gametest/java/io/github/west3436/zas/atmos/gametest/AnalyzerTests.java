@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.atmosphere.ZoneInfo;
+import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
@@ -22,6 +23,9 @@ import io.github.west3436.zas.atmos.analyzer.AnalyzerTarget;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
+import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
+import io.github.west3436.zas.atmos.pipe.GasHandlers;
+import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
@@ -31,9 +35,12 @@ import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
 import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.commands.CommandSource;
@@ -52,6 +59,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec2;
@@ -59,6 +69,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * The atmos analyzer (CONT-034): what the server reads for each kind of target, checked against what
@@ -573,6 +584,229 @@ public final class AnalyzerTests {
             a.forceLoad(false);
             h.succeed();
         });
+    }
+
+    // ---- CONT-034, API-021: another mod's store of gas ----------------------------------------------
+
+    /** A block that provides the gas-handler capability as another mod's tank would, and its entity. */
+    private static TestGasHandler.Entity store(Area a, int x, int y, int z) {
+        a.place(x, y, z, TestGasHandler.block().defaultBlockState());
+        return a.entity(x, y, z);
+    }
+
+    /** Uses the analyzer on the middle of a block's face, and gives what the window then reads. */
+    private static AnalyzerSync readOn(Area a, ListeningPlayer l, BlockPos pos, Direction face, String what) {
+        l.player().closeContainer();
+        a.h.assertTrue(
+                useOn(l.player(), pos, face, faceCentre(pos, face)).consumesAction(),
+                "using it on " + what + " did nothing");
+        return last(a, l);
+    }
+
+    /** Fails unless a reading is of the air in front of a block's face, outside zones. */
+    private static void airInFront(Area a, AnalyzerSync s, BlockPos pos, Direction face, String what) {
+        outsideZones(a, s, Kind.POINT, false, what);
+        a.h.assertValueEqual(s.target(), Component.literal(coordsComma(pos.relative(face))), what + ": its name");
+        same(
+                a,
+                s.gas(),
+                Atmospheres.at(a.level, Vec3.atCenterOf(pos.relative(face))).mixture(),
+                what);
+    }
+
+    /**
+     * Used on a block that provides the gas-handler capability, as another mod's tank does, it reads
+     * what the block holds, in the volume the block gives, under the block's name: on the face clicked,
+     * or else for no face in particular, so a face the block offers nothing on still reads the block.
+     * Where the block offers nothing either way it reads the air in front of the face, as for any other
+     * block, and so it does for a handler with no room for gas, which only joins blocks. An empty store
+     * with room reads as the store, empty. The window stays open while the block is there and provides
+     * a handler, and the reading comes through its codec.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_used_on_another_mods_store_it_reads_what_the_store_holds(GameTestHelper h) {
+        Area a = new Area(h, 3468);
+        a.clear(0, 0, 6, 4);
+        TestGasHandler.Entity store = store(a, 2, 1, 2);
+        store.tank.add(new GasParcel(Map.of(N2, 2.0, O2, 0.5), 310));
+        ListeningPlayer l = player(a, 4, 1, 2);
+        ServerPlayer p = l.player();
+        BlockPos pos = a.abs(2, 1, 2);
+        Component name = TestGasHandler.block().getName();
+
+        AnalyzerSync s = readOn(a, l, pos, Direction.EAST, "the store");
+        AnalyzerMenu menu = menu(a, l);
+        h.assertValueEqual(s.kind(), Kind.STORE, "what the store reads");
+        h.assertValueEqual(s.target(), name, "its name");
+        h.assertTrue(s.state() == null, "a store has an air state");
+        h.assertValueEqual(s.zone(), -1L, "a store's zone");
+        h.assertFalse(s.local(), "a store is read as another mod's air");
+        same(a, s.gas(), store.tank.mixture(), "the store's reading");
+        a.close(s.gas().volume(), TestGasHandler.VOLUME, "the store's volume, L");
+
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), a.level.registryAccess());
+        AnalyzerSync.CODEC.encode(buf, s);
+        AnalyzerSync decoded = AnalyzerSync.CODEC.decode(buf);
+        h.assertValueEqual(buf.readableBytes(), 0, "bytes left after decoding");
+        h.assertValueEqual(decoded.kind(), Kind.STORE, "the decoded reading's kind");
+        h.assertTrue(decoded.showsSameAs(s), "the decoded reading shows something else: " + decoded);
+
+        // The window stays open while the block provides a handler, and no longer.
+        h.assertTrue(menu.stillValid(p), "the window isn't valid on the store");
+        store.exposed = false;
+        h.assertFalse(menu.stillValid(p), "the window is valid on a block that provides no handler any more");
+        store.exposed = true;
+        h.assertTrue(menu.stillValid(p), "the window isn't valid once the block provides a handler again");
+
+        // What it holds now is what it reads, used again.
+        store.tank.add(new GasParcel(Map.of(O2, 1.5), 310));
+        same(a, readOn(a, l, pos, Direction.UP, "the store's top").gas(), store.tank.mixture(), "the store, with more");
+
+        // A block that answers for no face alone: every face reads it.
+        store.onlyUnsided = true;
+        h.assertTrue(a.level.getCapability(IGasHandler.BLOCK, pos, Direction.EAST) == null, "it answers on a face");
+        AnalyzerSync unsided = readOn(a, l, pos, Direction.EAST, "a face the store offers nothing on");
+        h.assertValueEqual(unsided.kind(), Kind.STORE, "what a face the store offers nothing on reads");
+        h.assertValueEqual(unsided.target(), name, "its name there");
+        same(a, unsided.gas(), store.tank.mixture(), "the store's reading for no face");
+        store.onlyUnsided = false;
+
+        // One face only, and nothing for no face: that face reads the store, another the air in front.
+        store.onlySide = Direction.UP;
+        h.assertValueEqual(
+                readOn(a, l, pos, Direction.UP, "the store's one face").kind(), Kind.STORE, "its one face");
+        airInFront(
+                a,
+                readOn(a, l, pos, Direction.EAST, "a face of a store with one"),
+                pos,
+                Direction.EAST,
+                "another face");
+        store.onlySide = null;
+
+        // No room: a handler that only joins blocks, on every face and on none.
+        store.says = new GasMixture(Map.of(), T, 1e-30);
+        airInFront(a, readOn(a, l, pos, Direction.EAST, "a joint"), pos, Direction.EAST, "a joint");
+        store.says = new GasMixture(Map.of(O2, 1e-9), T, GasHandlers.LEAST_STORE_LITRES / 2);
+        airInFront(a, readOn(a, l, pos, Direction.EAST, "a store too small"), pos, Direction.EAST, "a store too small");
+        // Empty, with room: the store, empty.
+        store.says = new GasMixture(Map.of(), T, GasHandlers.LEAST_STORE_LITRES);
+        AnalyzerSync empty = readOn(a, l, pos, Direction.EAST, "an empty store");
+        h.assertValueEqual(empty.kind(), Kind.STORE, "what an empty store reads");
+        h.assertTrue(empty.gas().isEmpty(), "an empty store reads " + empty.gas());
+        store.says = null;
+
+        // The block gone: the window closes, as a canister's does.
+        AnalyzerSync before = readOn(a, l, pos, Direction.EAST, "the store, once more");
+        h.assertValueEqual(before.kind(), Kind.STORE, "what the store reads once more");
+        AnalyzerMenu open = menu(a, l);
+        a.set(2, 1, 2, Area.AIR);
+        h.assertFalse(open.stillValid(p), "the window is valid with the block gone");
+        p.closeContainer();
+        a.clear(0, 0, 6, 4);
+        h.succeed();
+    }
+
+    /**
+     * A store that throws, from its contents or from the capability's lookup, is read as the air in
+     * front of the face, and a window open on it closes; the fault is logged at most once a minute
+     * (NFR-013).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void nfr_013_a_store_that_throws_is_read_as_the_air_in_front_and_logged_once_a_minute(
+            GameTestHelper h) {
+        Area a = new Area(h, 3469);
+        a.clear(0, 0, 6, 4);
+        TestGasHandler.Entity store = store(a, 2, 1, 2);
+        store.tank.add(new GasParcel(Map.of(N2, 2.0), T));
+        ListeningPlayer l = player(a, 4, 1, 2);
+        ServerPlayer p = l.player();
+        BlockPos pos = a.abs(2, 1, 2);
+        String source = TestGasHandler.ID.toString();
+        try (FaultLog log = new FaultLog()) {
+            FaultLog.aMinutePasses();
+            store.duringContents = () -> {
+                throw new IllegalStateException("the test store failing");
+            };
+            airInFront(a, readOn(a, l, pos, Direction.EAST, "a store whose contents throw"), pos, Direction.EAST, "it");
+            airInFront(a, readOn(a, l, pos, Direction.UP, "the same store, again"), pos, Direction.UP, "it, again");
+            store.duringContents = () -> {};
+            h.assertValueEqual(log.naming(source), 1, "errors logged about its contents");
+
+            FaultLog.aMinutePasses();
+            store.failsLookup = true;
+            airInFront(a, readOn(a, l, pos, Direction.EAST, "a store whose lookup throws"), pos, Direction.EAST, "it");
+            store.failsLookup = false;
+            h.assertValueEqual(log.naming(source), 2, "errors logged about its lookup");
+
+            h.assertValueEqual(readOn(a, l, pos, Direction.EAST, "the store").kind(), Kind.STORE, "once it stops");
+            AnalyzerMenu menu = menu(a, l);
+            FaultLog.aMinutePasses();
+            store.failsLookup = true;
+            h.assertFalse(menu.stillValid(p), "the window is valid on a store whose lookup throws");
+            store.failsLookup = false;
+            h.assertValueEqual(log.naming(source), 3, "errors logged about the open window's lookup");
+            h.assertTrue(menu.stillValid(p), "the window isn't valid once the lookup stops throwing");
+        } finally {
+            p.closeContainer();
+            a.clear(0, 0, 6, 4);
+        }
+        h.succeed();
+    }
+
+    /**
+     * Our own parts read as they did, whatever handler they offer other mods' blocks. Each block of
+     * ours that joins pipes, stood among blocks that provide the capability so that it offers its own
+     * on every face it can, is read on each face as a canister, as its network, or as the air in front,
+     * and never through its handler. The electrolyzer is the one that offers a handler and is none of
+     * the first two: it reads the air in front of the face.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_used_on_our_own_parts_it_never_reads_their_gas_handler(GameTestHelper h) {
+        Area a = new Area(h, 3470);
+        a.clear(-1, -1, 5, 5);
+        BlockPos pos = a.abs(2, 2, 2);
+        for (Direction d : Direction.values()) {
+            BlockPos next = pos.relative(d);
+            a.level.setBlockAndUpdate(next, TestGasHandler.block().defaultBlockState());
+        }
+        Set<Block> offering = new HashSet<>();
+        Map<Kind, Integer> read = new EnumMap<>(Kind.class);
+        int parts = 0;
+        for (DeferredHolder<Block, ? extends Block> holder : AtmosBlocks.BLOCKS.getEntries()) {
+            Block block = holder.get();
+            if (!(block instanceof PipeConnector)) {
+                continue;
+            }
+            parts++;
+            a.place(2, 2, 2, block.defaultBlockState());
+            BlockEntity be = a.level.getBlockEntity(pos);
+            BlockState state = a.level.getBlockState(pos);
+            Kind expected = be instanceof CanisterBlockEntity
+                    ? Kind.CANISTER
+                    : be instanceof PipeNodeEntity
+                                    || be instanceof InlineDeviceEntity && state.getBlock() instanceof InlineDeviceBlock
+                            ? Kind.NETWORK
+                            : Kind.POINT;
+            for (Direction face : Direction.values()) {
+                if (a.level.getCapability(IGasHandler.BLOCK, pos, face) != null) {
+                    offering.add(block);
+                }
+                AnalyzerTarget target =
+                        AnalyzerTarget.on(a.level, new BlockHitResult(faceCentre(pos, face), face, pos, false));
+                h.assertValueEqual(target.kind(), expected, "what " + holder.getId() + " reads on " + face);
+            }
+            read.merge(expected, 1, Integer::sum);
+            a.level.setBlockAndUpdate(pos, Area.AIR);
+        }
+        h.assertTrue(parts >= 12, "blocks of ours that join pipes: " + parts);
+        h.assertTrue(offering.contains(AtmosBlocks.PIPE.get()), "a pipe beside a store offers no handler");
+        h.assertTrue(
+                offering.contains(AtmosBlocks.ELECTROLYZER.get()), "an electrolyzer beside a store offers no handler");
+        h.assertValueEqual(read.get(Kind.CANISTER), 1, "blocks of ours read as a canister");
+        h.assertValueEqual(read.get(Kind.POINT), 1, "blocks of ours read as the air in front: the electrolyzer");
+        h.assertValueEqual(read.get(Kind.NETWORK), parts - 2, "blocks of ours read as their network");
+        a.clear(-1, -1, 5, 5);
+        h.succeed();
     }
 
     // ---- CONT-034, SPACE-017: another mod's air outside zones ---------------------------------------

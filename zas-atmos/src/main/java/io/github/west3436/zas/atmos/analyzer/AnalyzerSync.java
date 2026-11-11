@@ -58,7 +58,9 @@ public record AnalyzerSync(
         /** A canister's own gas. */
         CANISTER,
         /** The tank in the hand without the analyzer. */
-        TANK;
+        TANK,
+        /** Another mod's store of gas: a block read through the gas handler it provides (API-021). */
+        STORE;
 
         /** Whether it reads air, which has a state and maybe a zone. */
         public boolean isAir() {

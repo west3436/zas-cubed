@@ -61,6 +61,11 @@ import org.jetbrains.annotations.Nullable;
  * and the answer is the gas of exactly that many. The fraction stays with whoever offered or asked:
  * in the pipe on the way in, in the tank on the way out. Nothing is made or lost.
  *
+ * <p><b>For no face in particular</b> the view is of every tank the block has, whatever its faces
+ * are set to, and it is only read: it takes nothing and gives nothing, since no pipe joins a block
+ * that way. It is there for what shows a block's gas, as the content mod's analyzer does, so that a
+ * tank reads as itself on a face whose side configuration is off.
+ *
  * <p>The view asks for the block's chemical handler anew on each call, so one that is kept holds
  * nothing once the block has gone or changed.
  */
@@ -70,19 +75,25 @@ final class ChemicalsAsGas implements IGasHandler {
 
     private final ServerLevel level;
     private final BlockPos pos;
+
+    /** The face it is a view of, or null for the whole block, which is only read. */
+    @Nullable
     private final Direction side;
 
-    private ChemicalsAsGas(ServerLevel level, BlockPos pos, Direction side) {
+    private ChemicalsAsGas(ServerLevel level, BlockPos pos, @Nullable Direction side) {
         this.level = level;
         this.pos = pos;
         this.side = side;
     }
 
-    /** The capability provider: a view wherever a face has a tank that could ever hold a mapped chemical. */
+    /**
+     * The capability provider: a view wherever a face has a tank that could ever hold a mapped
+     * chemical, and for no face in particular wherever the block has one.
+     */
     @Nullable
     static IGasHandler of(
             Level level, BlockPos pos, BlockState state, @Nullable BlockEntity entity, @Nullable Direction side) {
-        if (!(level instanceof ServerLevel server) || side == null) {
+        if (!(level instanceof ServerLevel server)) {
             return null;
         }
         IChemicalHandler tanks = level.getCapability(ChemicalConnection.CHEMICAL, pos, state, entity, side);
@@ -160,7 +171,7 @@ final class ChemicalsAsGas implements IGasHandler {
 
     @Override
     public GasParcel fill(GasParcel gas, Action action) {
-        IChemicalHandler tanks = tanks();
+        IChemicalHandler tanks = side == null ? null : tanks();
         if (tanks == null || gas.isEmpty()) {
             return GasParcel.EMPTY;
         }
@@ -204,7 +215,7 @@ final class ChemicalsAsGas implements IGasHandler {
 
     @Override
     public GasParcel drain(Map<ResourceLocation, Double> moles, Action action) {
-        IChemicalHandler tanks = tanks();
+        IChemicalHandler tanks = side == null ? null : tanks();
         if (tanks == null) {
             return GasParcel.EMPTY;
         }
