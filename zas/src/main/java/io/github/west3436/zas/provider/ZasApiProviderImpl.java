@@ -68,6 +68,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * ZAS³'s implementation of the API (architecture §6.2).
@@ -463,6 +464,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
      * as the client breathing sync (LIFE-023) last gave it ({@link ClientBreath#verdict}); for any
      * other entity, and before the first sync, vanilla's.
      */
+    /** A provider's air at a point in the ambient (SPACE-017); null in a zone and where unresolved. */
+    @Override
+    public @Nullable GasMixture localAir(ServerLevel level, Vec3 point) {
+        return BreathingRules.localAir(level, point, sample(level, point));
+    }
+
     @Override
     public Breathability breathability(LivingEntity entity) {
         if (entity.level().isClientSide()) {

@@ -2,6 +2,7 @@ package io.github.west3436.zas.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +30,9 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -164,6 +167,28 @@ class AdapterQueriesTest {
         }
         assertFalse(LocalAtmospheres.unregister(a1), "it was still registered");
         assertEquals(List.of(), LocalAtmospheres.registered());
+    }
+
+    /**
+     * Without ZAS³ no provider is asked, so no point has local air, and an older provider says the
+     * same. The lookup refuses a missing level or point before it asks.
+     */
+    @Test
+    void space_017_no_point_has_local_air_without_zas() throws NoSuchMethodException {
+        assertTrue(ZasApiProvider.class
+                .getMethod("localAir", ServerLevel.class, Vec3.class)
+                .isDefault());
+        LocalAtmosphereProvider provider = (level, point) -> StandardAir.mixture(StandardAir.CELL_VOLUME);
+        ResourceLocation id = id("a", "air");
+        LocalAtmospheres.register(id, provider);
+        try {
+            assertNull(FallbackProvider.INSTANCE.localAir(null, Vec3.ZERO));
+            assertNull(older(Map.of()).localAir(null, Vec3.ZERO));
+            assertThrows(NullPointerException.class, () -> LocalAtmospheres.at(null, Vec3.ZERO));
+            assertThrows(NullPointerException.class, () -> LocalAtmospheres.at(null, null));
+        } finally {
+            assertTrue(LocalAtmospheres.unregister(id));
+        }
     }
 
     /**

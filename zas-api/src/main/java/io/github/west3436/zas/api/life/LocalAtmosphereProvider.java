@@ -20,12 +20,14 @@ public interface LocalAtmosphereProvider {
      * The air a living thing is in at a point, as the breathing rules and hazards should take it.
      *
      * <p>ZAS³ asks only about points outside zones, where the atmosphere is the dimension's
-     * ambient, once per breathing check of an entity there. Keep it to a lookup.
+     * ambient: once per breathing check of an entity there, and whenever something reads the air
+     * at a point with {@link LocalAtmospheres#at}, as an analyzer does up to four times a second.
+     * Keep it to a lookup.
      *
      * <p>Thread: server thread only; ZAS³ calls it there.
      *
      * @param level the level
-     * @param point the point, an entity's eye position
+     * @param point the point: an entity's eye position, or a point something reads
      * @return the air there, of any volume, or {@code null} if this provider has nothing to say
      *     about the point, in which case the next provider is asked and then the ambient applies
      */

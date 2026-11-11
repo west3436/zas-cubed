@@ -1,11 +1,18 @@
 package io.github.west3436.zas.api.life;
 
 import io.github.west3436.zas.api.AnyThread;
+import io.github.west3436.zas.api.ServerThread;
+import io.github.west3436.zas.api.ServerThreads;
+import io.github.west3436.zas.api.ZasApi;
+import io.github.west3436.zas.api.gas.GasMixture;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The registered {@link LocalAtmosphereProvider}s: the air living things are in at places outside
@@ -17,6 +24,10 @@ import net.minecraft.resources.ResourceLocation;
  * zone governs and no provider is asked. Nothing else changes: atmosphere queries ({@link
  * io.github.west3436.zas.api.atmosphere.Atmospheres}) still report the ambient there, no gas
  * exists there to take or to burn, and an entity breathing there uses none up.
+ *
+ * <p><b>Showing it.</b> Something that shows a player the air at a place, such as a gas analyzer,
+ * asks {@link #at} beside the atmosphere query, so that it reads what the rules apply there and
+ * agrees with the HUD.
  *
  * <p>The providers are asked in order of id, namespace first, and the first answer that isn't
  * {@code null} stands.
@@ -105,5 +116,31 @@ public final class LocalAtmospheres {
     @AnyThread
     public static List<Registration> registered() {
         return registered;
+    }
+
+    /**
+     * The air living things are in at a point, where it isn't the atmosphere's: the first
+     * provider's answer for a point outside every zone, as the breathing rules take it for an entity
+     * whose eyes are there.
+     *
+     * <p>It is {@code null} wherever the rules take the atmosphere itself ({@link
+     * io.github.west3436.zas.api.atmosphere.Atmospheres#at}): inside a zone, where the atmosphere
+     * isn't resolved, where no provider answers, and without ZAS³ (D-17). A provider that throws
+     * counts as having no answer (NFR-013).
+     *
+     * <p>It is a reading for showing, not gas: nothing can be taken from it or added to it.
+     *
+     * <p>Thread: server thread only, as the providers are asked there.
+     *
+     * @param level the level
+     * @param point the point
+     * @return the air there, of any volume, or {@code null}
+     * @throws IllegalStateException if called from another thread
+     */
+    @ServerThread
+    public static @Nullable GasMixture at(ServerLevel level, Vec3 point) {
+        Objects.requireNonNull(point, "point");
+        ServerThreads.require(level, "LocalAtmospheres.at");
+        return ZasApi.provider().localAir(level, point);
     }
 }

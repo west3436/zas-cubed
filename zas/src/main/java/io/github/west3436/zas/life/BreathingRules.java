@@ -23,6 +23,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -177,9 +178,18 @@ public final class BreathingRules {
      * @param sample the atmosphere at the entity's eyes
      */
     public static @Nullable GasMixture localAir(LivingEntity entity, AtmosphereSample sample) {
-        return sample.state() == AtmosphereState.AMBIENT && entity.level() instanceof ServerLevel level
-                ? LocalAir.at(level, entity.getEyePosition())
-                : null;
+        return entity.level() instanceof ServerLevel level ? localAir(level, entity.getEyePosition(), sample) : null;
+    }
+
+    /**
+     * The air of another mod's breathable place at a point (SPACE-017, {@link
+     * io.github.west3436.zas.api.life.LocalAtmospheres#at}): outside every zone, at a point a
+     * provider names. Null everywhere else. Server thread.
+     *
+     * @param sample the atmosphere at the point
+     */
+    public static @Nullable GasMixture localAir(ServerLevel level, Vec3 point, AtmosphereSample sample) {
+        return sample.state() == AtmosphereState.AMBIENT ? LocalAir.at(level, point) : null;
     }
 
     /**

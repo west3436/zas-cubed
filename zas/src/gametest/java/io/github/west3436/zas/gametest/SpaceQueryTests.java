@@ -402,6 +402,83 @@ public final class SpaceQueryTests {
     }
 
     /**
+     * What shows a player the air at a point asks for the local air there. Outside every zone, at a
+     * point a provider names, it is the provider's air, the same the rules give an entity whose eyes
+     * are there. It is null in a zone, where the provider isn't asked, at a point no provider names,
+     * and once the provider is unregistered. The atmosphere query at each point is unchanged, and
+     * the lookup is refused off the server thread (SPACE-017, API-045).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void space_017_the_local_air_at_a_point_is_the_providers_outside_zones(GameTestHelper h) {
+        Rooms r = new Rooms(h, 762);
+        r.clear(0, 14);
+        r.shell(0, 4);
+        r.settle(GasMutations.add(r.level, r.point(2, 2, 2), oxygen(100), source("space_017")));
+        GasMixture thin = air(15, 0);
+        AABB box = AABB.encapsulatingFullBlocks(r.abs(0, 0, 0), r.abs(9, 6, 6));
+        List<Vec3> asked = new ArrayList<>();
+        LocalAtmosphereProvider provider = (level, point) -> {
+            asked.add(point);
+            return level == r.level && box.contains(point) ? thin : null;
+        };
+        Vec3 inRoom = r.point(2, 2, 2);
+        Vec3 inBox = r.point(7, 2, 2);
+        Vec3 outside = r.point(12, 2, 2);
+        Pig pig = pig(h, r, 7, 1, 2);
+        AtmosphereSample ambient = Atmospheres.at(r.level, inBox);
+        try {
+            h.assertValueEqual(ambient.state(), AtmosphereState.AMBIENT, "the open air in the box");
+            h.assertTrue(LocalAtmospheres.at(r.level, inBox) == null, "local air with no provider");
+
+            LocalAtmospheres.register(FIRST, provider);
+            try {
+                h.assertValueEqual(LocalAtmospheres.at(r.level, inBox), thin, "the local air in the box");
+                h.assertValueEqual(asked, List.of(inBox), "what the provider was asked");
+                h.assertValueEqual(
+                        LocalAtmospheres.at(r.level, pig.getEyePosition()),
+                        Breathing.of(pig).breath().orElseThrow(),
+                        "the local air at a pig's eyes, against what it breathes");
+                h.assertValueEqual(Atmospheres.at(r.level, inBox), ambient, "the atmosphere query in the box");
+
+                asked.clear();
+                h.assertValueEqual(Atmospheres.at(r.level, inRoom).state(), AtmosphereState.ZONED, "the room");
+                h.assertTrue(LocalAtmospheres.at(r.level, inRoom) == null, "local air in the room's zone");
+                h.assertValueEqual(asked, List.of(), "what the provider was asked about the room");
+
+                h.assertTrue(LocalAtmospheres.at(r.level, outside) == null, "local air outside the box");
+                h.assertValueEqual(asked, List.of(outside), "what it was asked outside the box");
+
+                Throwable[] thrown = new Throwable[1];
+                Thread other = new Thread(
+                        () -> {
+                            try {
+                                LocalAtmospheres.at(r.level, inBox);
+                            } catch (Throwable t) {
+                                thrown[0] = t;
+                            }
+                        },
+                        "zas-space-017");
+                other.start();
+                try {
+                    other.join(5000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                h.assertTrue(thrown[0] instanceof IllegalStateException, "off the server thread: got " + thrown[0]);
+                h.assertValueEqual(asked, List.of(outside), "what it was asked off the server thread");
+            } finally {
+                h.assertTrue(LocalAtmospheres.unregister(FIRST), "the provider wasn't registered");
+            }
+            asked.clear();
+            h.assertTrue(LocalAtmospheres.at(r.level, inBox) == null, "local air once unregistered");
+            h.assertValueEqual(asked, List.of(), "what it was asked once unregistered");
+        } finally {
+            pig.discard();
+        }
+        h.succeed();
+    }
+
+    /**
      * No provider is asked where a zone is paused or the atmosphere is unresolved: the paused zone
      * governs with its last-known gas, and an unresolved position stays the guess it is, which a
      * check holds rather than acts on (SPACE-017, LIFE-048).
@@ -428,6 +505,10 @@ public final class SpaceQueryTests {
             h.assertValueEqual(Breathing.of(inZone).reason(), BreathReason.BREATHABLE, "in the paused zone");
             h.assertValueEqual(Atmospheres.of(unresolved).state(), AtmosphereState.UNRESOLVED, "the unloaded chunk");
             h.assertValueEqual(Breathing.of(unresolved).reason(), BreathReason.BREATHABLE, "the last-known ambient");
+            h.assertTrue(LocalAtmospheres.at(r.level, inZone.getEyePosition()) == null, "local air in the paused zone");
+            h.assertTrue(
+                    LocalAtmospheres.at(r.level, unresolved.getEyePosition()) == null,
+                    "local air in the unresolved place");
             h.assertValueEqual(asked[0], 0, "times the provider was asked");
         } finally {
             LocalAtmospheres.unregister(FIRST);
@@ -494,6 +575,12 @@ public final class SpaceQueryTests {
             Breathability verdict = Breathing.of(pig);
             h.assertValueEqual(verdict.breath(), Optional.of(thin), "the breath: the first answer, not the last");
             h.assertValueEqual(order, List.of(FIRST, SECOND), "asked until one answers");
+
+            faulty[0] = true;
+            order.clear();
+            h.assertValueEqual(
+                    LocalAtmospheres.at(r.level, pig.getEyePosition()), rich, "the local air, with two throwing");
+            h.assertValueEqual(order, List.of(FIRST, SECOND, THIRD), "the order asked for the local air");
         } finally {
             LocalAtmospheres.unregister(FIRST);
             LocalAtmospheres.unregister(SECOND);

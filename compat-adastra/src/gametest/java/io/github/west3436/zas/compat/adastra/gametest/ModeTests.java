@@ -11,6 +11,7 @@ import io.github.west3436.zas.api.life.BreathReason;
 import io.github.west3436.zas.api.life.BreathSource;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.compat.adastra.AdAstraConfig;
 import io.github.west3436.zas.compat.adastra.AdAstraConfig.ModeSetting;
 import io.github.west3436.zas.compat.adastra.Mode;
@@ -113,6 +114,45 @@ public final class ModeTests {
             h.assertValueEqual(asked.state(), AtmosphereState.AMBIENT, "the atmosphere query's state");
             h.assertTrue(asked.mixture().isEmpty(), "the atmosphere query reports gas: " + asked);
             close(h, asked.temperature(), Moon.TEMPERATURE, "the atmosphere query's temperature, K");
+        }
+        h.succeed();
+    }
+
+    /**
+     * What reads the air at a point to show it, as the content's analyzer does in hand and used on
+     * a block, reads a distributor's area as the rules take it. In Cooperative mode the local air
+     * at a player's eyes in the area, and at a point by the area's floor, is standard air at
+     * 295.15 K, and there is none a block outside the area. In Authoritative mode there is none
+     * anywhere, so such a reading is the Moon's vacuum (SPACE-017).
+     */
+    @GameTest(template = "empty")
+    public static void space_017_the_local_air_at_a_point_in_a_distributor_area_is_standard_air(GameTestHelper h) {
+        try (Lab lab = Lab.onTheMoon(h, 45)) {
+            lab.mode(ModeSetting.COOPERATIVE);
+            FakePlayer player = lab.player(area(lab));
+            Vec3 low = Vec3.atCenterOf(lab.abs(8, 8, 0));
+            Vec3 beside = Vec3.atCenterOf(lab.abs(7, 8, 0));
+
+            for (Vec3 point : List.of(player.getEyePosition(), low)) {
+                GasMixture air = LocalAtmospheres.at(lab.level, point);
+                h.assertTrue(air != null, "cooperative: no local air at " + point);
+                close(h, air.pressure(), StandardAir.PRESSURE, "cooperative: the local air's pressure, kPa");
+                close(h, air.temperature(), 295.15, "cooperative: the local air's temperature, K");
+                close(h, air.partialPressure(Lab.O2), StandardAir.PRESSURE * 0.21, "cooperative: its O2, kPa");
+                h.assertValueEqual(
+                        Atmospheres.at(lab.level, point).state(), AtmosphereState.AMBIENT, "the atmosphere there");
+            }
+            h.assertValueEqual(
+                    LocalAtmospheres.at(lab.level, player.getEyePosition()),
+                    Breathing.of(player).breath().orElseThrow(),
+                    "the local air at the player's eyes, against what it breathes");
+            h.assertTrue(LocalAtmospheres.at(lab.level, beside) == null, "local air a block outside the area");
+
+            lab.mode(ModeSetting.AUTHORITATIVE);
+            h.assertTrue(
+                    LocalAtmospheres.at(lab.level, player.getEyePosition()) == null,
+                    "authoritative: local air at the player's eyes");
+            h.assertTrue(LocalAtmospheres.at(lab.level, low) == null, "authoritative: local air by the floor");
         }
         h.succeed();
     }

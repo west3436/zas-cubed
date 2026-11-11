@@ -1,9 +1,11 @@
 package io.github.west3436.zas.atmos.analyzer;
 
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
+import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
+import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync.Kind;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
@@ -32,8 +34,8 @@ import org.jetbrains.annotations.Nullable;
  * the air (API-010) and from the content mod's own gas for the rest (CONT-095):
  *
  * <ul>
- *   <li><b>Nothing:</b> the player's eyes, as the HUD and {@code /zas at} read them, so it follows the
- *       player: its zone, or the open air.
+ *   <li><b>Nothing:</b> the player's eyes, as the HUD reads them, so it follows the player: its
+ *       zone, or the open air.
  *   <li><b>A pipe, or a device on a network:</b> that network's gas. A device with several ports, a
  *       pump, filter or mixer, reads the port on the face clicked, or else the one nearest the point
  *       clicked.
@@ -41,6 +43,11 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>Any other block:</b> the point just in front of the face clicked, so a pane's two sides
  *       read their own cells.
  * </ul>
+ *
+ * <p>Air outside zones is the dimension's ambient, except in a place another mod keeps breathable by
+ * its own means, such as the area of a space mod's oxygen machine (SPACE-017). There it reads that
+ * mod's air ({@link LocalAtmospheres#at}), which is what the breathing rules apply and the HUD shows,
+ * and says so; {@code /zas at} still gives the ambient.
  *
  * <p>A tank isn't a target: the window has a tab for one in the other hand. Server thread only.
  *
@@ -61,8 +68,16 @@ public record AnalyzerTarget(
     /** How far in front of a face its point is, inside the next cell. */
     private static final double FRONT = 0.01;
 
-    /** What a reading says: what it read, where that's air, and its gas. */
-    public record Reading(Component name, @Nullable AtmosphereSample air, GasMixture gas) {}
+    /**
+     * What a reading says.
+     *
+     * @param name what it read
+     * @param air the atmosphere there, where it read air
+     * @param local whether the gas is another mod's air for the place, outside zones, rather than the
+     *     atmosphere's
+     * @param gas its gas
+     */
+    public record Reading(Component name, @Nullable AtmosphereSample air, boolean local, GasMixture gas) {}
 
     public AnalyzerTarget {
         Objects.requireNonNull(kind, "kind");
@@ -157,18 +172,16 @@ public record AnalyzerTarget(
         ServerLevel level = player.serverLevel();
         switch (kind) {
             case HERE -> {
-                AtmosphereSample air = Atmospheres.of(player);
-                return new Reading(Component.translatable("gui.zas_atmos.analyzer.here"), air, air.mixture());
+                return air(Component.translatable("gui.zas_atmos.analyzer.here"), level, player.getEyePosition());
             }
             case POINT -> {
-                AtmosphereSample air = Atmospheres.at(level, point);
-                return new Reading(coordinates(pos), air, air.mixture());
+                return air(coordinates(pos), level, point);
             }
             case CANISTER -> {
                 CanisterBlockEntity canister = (CanisterBlockEntity) level.getBlockEntity(pos);
                 GasParcel share = canister.share();
                 GasMixture gas = new GasMixture(share.moles(), share.temperature(), canister.nodeVolume());
-                return new Reading(blockName(level), null, gas);
+                return new Reading(blockName(level), null, false, gas);
             }
             default -> {
                 BlockEntity be = level.getBlockEntity(pos);
@@ -176,14 +189,25 @@ public record AnalyzerTarget(
                     Component name = Component.translatable(
                             "gui.zas_atmos.analyzer.port", blockName(level), portName(level.getBlockState(pos)));
                     return new Reading(
-                            name, null, device.port(port).network().gas().mixture());
+                            name, null, false, device.port(port).network().gas().mixture());
                 }
                 return new Reading(
                         blockName(level),
                         null,
+                        false,
                         ((PipeNodeEntity) be).network().gas().mixture());
             }
         }
+    }
+
+    /**
+     * The air at a point: the atmosphere's, or outside zones another mod's for the place, where one
+     * answers for it.
+     */
+    private static Reading air(Component name, ServerLevel level, Vec3 point) {
+        AtmosphereSample air = Atmospheres.at(level, point);
+        GasMixture local = air.state() == AtmosphereState.AMBIENT ? LocalAtmospheres.at(level, point) : null;
+        return new Reading(name, air, local != null, local != null ? local : air.mixture());
     }
 
     private Component blockName(Level level) {
