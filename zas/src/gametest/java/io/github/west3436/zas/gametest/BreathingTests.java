@@ -1316,11 +1316,14 @@ public final class BreathingTests {
     /** Ticks a server-side breather and a stand-in for its client copy, comparing their air each tick. */
     private static void matchClient(GameTestHelper h, Pig server, Pig client, int ticks, String where) {
         ClientBreath cb = new ClientBreath();
+        h.assertFalse(cb.drainsForOxygen(false), "grey bubbles before a sync in " + where);
         float health = client.getHealth();
         for (int t = 0; t < ticks; t++) {
             server.baseTick();
             if (t == 0) {
                 cb.accept(server.getData(Breathers.STATE).syncState());
+                h.assertTrue(cb.drainsForOxygen(false), "no grey bubbles in " + where);
+                h.assertFalse(cb.drainsForOxygen(true), "grey bubbles with the eyes in water in " + where);
             }
             clientTick(cb, client);
             if (client.getAirSupply() != server.getAirSupply()) {
