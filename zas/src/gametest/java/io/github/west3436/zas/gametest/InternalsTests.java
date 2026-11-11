@@ -140,6 +140,11 @@ public final class InternalsTests {
     public static void nfr_011_only_a_living_player_toggles_their_own_internals(GameTestHelper h) {
         FakePlayer sender = TestPlayers.hurtable(h.getLevel(), "zas_toggle_sender");
         FakePlayer other = TestPlayers.hurtable(h.getLevel(), "zas_toggle_other");
+        // Both could breathe from a tank, so only who sent it decides whose switch moves.
+        for (FakePlayer p : new FakePlayer[] {sender, other}) {
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+        }
         Internals.handleToggle(Internals.TogglePayload.INSTANCE, TestPlayers.sentBy(sender));
         h.assertTrue(Internals.on(sender), "the toggle didn't reach the sender");
         h.assertFalse(Internals.on(other), "the toggle reached another player");
@@ -157,13 +162,48 @@ public final class InternalsTests {
 
     /**
      * Internals are off until toggled, stay as toggled, and are saved with the entity (LIFE-029).
-     * The keybind sends the toggle; Manual checks it.
+     * Toggled on with nothing to breathe from (no seal, no tank, an empty tank) they stay off, and
+     * the status says why. The keybind sends the toggle; Manual checks it.
      */
     @GameTest(template = "empty")
     public static void life_029_internals_toggle_and_persist(GameTestHelper h) {
         try (Lab lab = new Lab(h, 270)) {
             FakePlayer p = lab.player(2);
             h.assertFalse(Internals.on(p), "a new player's internals are on");
+
+            // Nothing to breathe from: the toggle leaves them off, each time for its own reason.
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            h.assertFalse(Internals.toggle(p), "switched on with no seal");
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            h.assertFalse(Internals.toggle(p), "switched on with no tank");
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(), 21.3));
+            h.assertFalse(Internals.toggle(p), "switched on with an empty tank");
+            h.assertFalse(Internals.on(p), "a refused toggle left them on");
+            Internals.set(p, true);
+            h.assertValueEqual(
+                    Internals.status(p).getString(),
+                    Component.translatable("message.zas.internals.empty").getString(),
+                    "the status of an empty tank switched on");
+            Internals.set(p, false);
+            h.assertValueEqual(
+                    Internals.status(p).getString(),
+                    Component.translatable("message.zas.internals.off").getString(),
+                    "the status switched off");
+
+            // A tank in hotbar slot 3 delivers: the status names the slot.
+            p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            p.getInventory().setItem(2, TestLifeSupport.tank(FULL, 21.3));
+            h.assertTrue(Internals.toggle(p), "toggling didn't switch them on");
+            h.assertValueEqual(
+                    Internals.status(p).getString(),
+                    Component.translatable(
+                                    "message.zas.internals.on",
+                                    Component.translatable("message.zas.internals.place.slot", 3))
+                            .getString(),
+                    "the status from hotbar slot 3");
+            h.assertFalse(Internals.toggle(p), "toggling again didn't switch them off");
+            h.assertFalse(Internals.on(p), "they didn't stay off");
             h.assertTrue(Internals.toggle(p), "toggling didn't switch them on");
             h.assertTrue(Internals.on(p), "they didn't stay on");
             h.assertFalse(Internals.toggle(p), "toggling again didn't switch them off");
@@ -451,7 +491,10 @@ public final class InternalsTests {
             close(h, HudLevels.tankPressure(p), fullKpa, 0.01, "the tank reading");
             h.assertValueEqual(
                     Internals.status(p).getString(),
-                    Component.translatable("message.zas.internals.on", "21.3").getString(),
+                    Component.translatable(
+                                    "message.zas.internals.on",
+                                    Component.translatable("message.zas.internals.place.offhand"))
+                            .getString(),
                     "the status");
 
             // A breath check draws from it, 2 s' worth each 2 s.

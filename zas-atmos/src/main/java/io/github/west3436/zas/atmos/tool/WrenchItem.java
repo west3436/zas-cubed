@@ -6,7 +6,6 @@ import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
-import java.util.Locale;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -165,8 +164,7 @@ public class WrenchItem extends Item {
     public static Optional<Component> remove(ServerLevel level, BlockPos pos, @Nullable Player player, ItemStack tool) {
         double over = overAmbient(level, pos);
         if (over > LOCK_KPA) {
-            return Optional.of(Component.translatable(
-                    "item.zas_atmos.wrench.pressurized", String.format(Locale.ROOT, "%.0f", over)));
+            return Optional.of(Component.translatable("item.zas_atmos.wrench.pressurized"));
         }
         BlockState state = level.getBlockState(pos);
         if (player instanceof ServerPlayer server

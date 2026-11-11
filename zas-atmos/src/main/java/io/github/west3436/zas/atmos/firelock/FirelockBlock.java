@@ -326,7 +326,7 @@ public class FirelockBlock extends HorizontalDirectionalBlock implements EntityB
     }
 
     /** What a refused opening says; a component for each lockdown reason. */
-    static Component lockedMessage(String reason, String value) {
-        return Component.translatable("block.zas_atmos.firelock.locked." + reason, value);
+    static Component lockedMessage(String reason) {
+        return Component.translatable("block.zas_atmos.firelock.locked." + reason);
     }
 }

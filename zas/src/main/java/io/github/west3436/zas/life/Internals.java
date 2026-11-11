@@ -48,8 +48,10 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *   <li><b>The switch</b> (LIFE-029). Each entity's internals are on or off, saved with it and kept
  *       through death, until toggled. A player toggles them with a keybind, which sends {@link
- *       TogglePayload}; the server toggles the sender's and tells it what they do now. A switch is
- *       checked on the entity's next tick, not at its turn in the check interval.
+ *       TogglePayload}; the server toggles the sender's and tells it what they do now. Switching
+ *       on with nothing to breathe from (no seal, no tank, or a tank that can't deliver) leaves
+ *       them off and says why. A switch is checked on the entity's next tick, not at its turn in
+ *       the check interval.
  *   <li><b>The seal</b> (LIFE-021). They work only while the head slot, or the entity itself,
  *       seals its breathing ({@link WornProtection#sealedBreathing}).
  *   <li><b>The tank</b> (LIFE-028). They draw from the first internal supply found ({@link
@@ -154,12 +156,17 @@ public final class Internals {
     }
 
     /**
-     * Toggles a player's internals and tells it, in its action bar, what they do now.
+     * Toggles a player's internals and tells it, in its action bar, what they do now. Switched on
+     * with nothing to breathe from, they stay off, and it is told why.
      *
      * @return whether they are now on
      */
     public static boolean toggle(ServerPlayer player) {
         boolean now = !on(player);
+        if (now && active(player, true) == null) {
+            player.displayClientMessage(failure(player), true);
+            return false;
+        }
         set(player, now);
         player.displayClientMessage(status(player), true);
         return now;
@@ -167,19 +174,23 @@ public final class Internals {
 
     /**
      * What a player's internals do now, for its action bar. While a supply delivers, that is what
-     * they do, even with the switch off and the supply {@linkplain IInternalSupply#alwaysOn() always
-     * on}.
+     * they do, and where the tank is, even with the switch off and the supply {@linkplain
+     * IInternalSupply#alwaysOn() always on}.
      */
     public static Component status(LivingEntity entity) {
         Active active = active(entity);
         if (active != null) {
             return Component.translatable(
-                    "message.zas.internals.on",
-                    String.format("%.1f", active.supply().distributionPressure()));
+                    "message.zas.internals.on", active.place().label());
         }
         if (!on(entity)) {
             return Component.translatable("message.zas.internals.off");
         }
+        return failure(entity);
+    }
+
+    /** Why switched-on internals give nothing to breathe: no seal, no tank, or a tank that can't deliver. */
+    private static Component failure(LivingEntity entity) {
         if (!WornProtection.sealedBreathing(entity)) {
             return Component.translatable("message.zas.internals.no_seal");
         }
@@ -215,12 +226,46 @@ public final class Internals {
     // ---- The tank --------------------------------------------------------------------------
 
     /**
-     * An entity breathing from its internals now: the supply, and the breath it delivers.
+     * An entity breathing from its internals now: the supply, the breath it delivers, and where the
+     * supply was found.
      *
      * @param supply the tank
      * @param breath the tank's mixture at its distribution pressure
+     * @param place where the tank is
      */
-    public record Active(IInternalSupply supply, GasMixture breath) {}
+    public record Active(IInternalSupply supply, GasMixture breath, Place place) {}
+
+    /**
+     * Where a supply was found (LIFE-028): an armor slot, the offhand, a hotbar slot, a mob's main
+     * hand, or the entity's own life support.
+     *
+     * @param key the place's name in the lang file: an armor slot's name, {@code offhand}, {@code
+     *     main_hand} or {@code suit}; unused for a hotbar slot
+     * @param slot the hotbar slot, 0 to 8, or -1 for any other place
+     */
+    public record Place(String key, int slot) {
+        static final Place OFFHAND = new Place("offhand", -1);
+        static final Place MAIN_HAND = new Place("main_hand", -1);
+        static final Place SUIT = new Place("suit", -1);
+
+        static Place armor(EquipmentSlot slot) {
+            return new Place(slot.getName(), -1);
+        }
+
+        static Place hotbar(int slot) {
+            return new Place("slot", slot);
+        }
+
+        /** The place as the action bar names it: "slot 3", "offhand", "chest", "suit". */
+        public Component label() {
+            return slot >= 0
+                    ? Component.translatable("message.zas.internals.place.slot", slot + 1)
+                    : Component.translatable("message.zas.internals.place." + key);
+        }
+    }
+
+    /** A supply and where it was found. */
+    private record Found(IInternalSupply supply, Place place) {}
 
     /**
      * What an entity's internals give it now, or null if it breathes the atmosphere. Its breathing
@@ -229,53 +274,64 @@ public final class Internals {
      * does.
      */
     public static @Nullable Active active(LivingEntity entity) {
+        return active(entity, on(entity));
+    }
+
+    /** What an entity's internals would give it now with the switch as given. */
+    private static @Nullable Active active(LivingEntity entity, boolean switchedOn) {
         if (!WornProtection.sealedBreathing(entity)) {
             return null;
         }
-        if (on(entity)) {
-            Optional<IInternalSupply> found = find(entity);
-            if (found.isPresent() && delivers(found.get())) {
-                return new Active(found.get(), delivered(found.get()));
+        if (switchedOn) {
+            Optional<Found> found = first(entity, supply -> true);
+            if (found.isPresent() && delivers(found.get().supply())) {
+                return active(found.get());
             }
         }
         return first(entity, supply -> supply.alwaysOn() && delivers(supply))
-                .map(supply -> new Active(supply, delivered(supply)))
+                .map(Internals::active)
                 .orElse(null);
+    }
+
+    private static Active active(Found found) {
+        return new Active(found.supply(), delivered(found.supply()), found.place());
     }
 
     /** The first internal supply an entity has, in LIFE-028's order. */
     public static Optional<IInternalSupply> find(LivingEntity entity) {
-        return first(entity, supply -> true);
+        return first(entity, supply -> true).map(Found::supply);
     }
 
-    /** The first internal supply an entity has that passes a test, in LIFE-028's order. */
-    private static Optional<IInternalSupply> first(LivingEntity entity, Predicate<IInternalSupply> wanted) {
+    /** The first internal supply an entity has that passes a test, in LIFE-028's order, and where it is. */
+    private static Optional<Found> first(LivingEntity entity, Predicate<IInternalSupply> wanted) {
         for (EquipmentSlot slot : ARMOR) {
             Optional<IInternalSupply> s = supply(entity.getItemBySlot(slot)).filter(wanted);
             if (s.isPresent()) {
-                return s;
+                return Optional.of(new Found(s.get(), Place.armor(slot)));
             }
         }
         Optional<IInternalSupply> offhand = supply(entity.getOffhandItem()).filter(wanted);
         if (offhand.isPresent()) {
-            return offhand;
+            return Optional.of(new Found(offhand.get(), Place.OFFHAND));
         }
         if (entity instanceof Player player) {
             for (int i = 0; i < Inventory.getSelectionSize(); i++) {
                 Optional<IInternalSupply> s =
                         supply(player.getInventory().getItem(i)).filter(wanted);
                 if (s.isPresent()) {
-                    return s;
+                    return Optional.of(new Found(s.get(), Place.hotbar(i)));
                 }
             }
         } else {
             Optional<IInternalSupply> main = supply(entity.getMainHandItem()).filter(wanted);
             if (main.isPresent()) {
-                return main;
+                return Optional.of(new Found(main.get(), Place.MAIN_HAND));
             }
         }
         ILifeSupport own = Protections.of(entity);
-        return own == null ? Optional.empty() : own.internalSupply().filter(wanted);
+        return own == null
+                ? Optional.empty()
+                : own.internalSupply().filter(wanted).map(supply -> new Found(supply, Place.SUIT));
     }
 
     /**
