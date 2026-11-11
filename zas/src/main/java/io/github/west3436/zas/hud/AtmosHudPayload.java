@@ -79,6 +79,12 @@ public record AtmosHudPayload(
      */
     public static final float NO_BREATH = -1;
 
+    /**
+     * The finest resolution a toxic gas's partial pressure is resent at, in kPa: the fifth decimal,
+     * the last one the HUD writes in kPa, and about the last it writes in the other units.
+     */
+    private static final double TOXIN_FLOOR = 1e-5;
+
     public static final StreamCodec<ByteBuf, AtmosHudPayload> STREAM_CODEC = StreamCodec.of(
             (buf, p) -> {
                 buf.writeByte(p.pressure);
@@ -216,8 +222,10 @@ public record AtmosHudPayload(
      * Whether the player should be sent this state when it last got {@code sent} (DATA-014): a
      * reading crossed a threshold, the worst toxic gas changed, the HUD was shown or hidden, every
      * reading began or stopped being shown, the internals changed, or a shown value changed by its
-     * display resolution (1 kPa, 1 K, 0.1 kPa partial pressure, 1 kPa for the tank). A trigger that
-     * comes or goes while an alert shows the HUD anyway changes nothing shown.
+     * display resolution (1 kPa, 1 K, 0.1 kPa partial pressure, 1 kPa for the tank). A trace of a
+     * toxic gas at warning or worse, which the HUD writes to two significant figures, has a finer
+     * one ({@link #toxinResolution}). A trigger that comes or goes while an alert shows the HUD
+     * anyway changes nothing shown.
      *
      * @param sent the state last sent, or null before the first
      */
@@ -237,8 +245,29 @@ public record AtmosHudPayload(
                 || moved(pressureKpa, sent.pressureKpa, 1)
                 || moved(temperatureK, sent.temperatureK, 1)
                 || moved(oxygenKpa, sent.oxygenKpa, 0.1)
-                || moved(toxinKpa, sent.toxinKpa, 0.1)
+                || moved(toxinKpa, sent.toxinKpa, toxinResolution(toxins, toxinKpa, sent.toxinKpa))
                 || moved(tankKpa, sent.tankKpa, 1);
+    }
+
+    /**
+     * The display resolution of the toxic gas's partial pressure between two states at the same
+     * level, in kPa: 0.1 while the gas is safe, since the HUD then writes it to one decimal. At
+     * warning or worse the HUD writes a trace, a reading under 0.1, to two significant figures and
+     * in kPa no more than five decimals (CLIENT-008), so while the smaller of the two is a trace the
+     * resolution is one of its second figure, and never under {@link #TOXIN_FLOOR}: 0.0020 is sent
+     * again at 0.0019, 0.00020 at 0.00019, and 0.00002 at 0.00003. The server doesn't know the
+     * player's unit; in another unit the second figure can lag by one or two.
+     */
+    private static double toxinResolution(int level, float value, float sent) {
+        if (level == HudLevels.NONE) {
+            return 0.1;
+        }
+        double smaller = Math.min(value, sent);
+        double trace = smaller > 0 ? smaller : Math.max(value, sent);
+        if (!(trace > 0 && trace < 0.1)) {
+            return 0.1;
+        }
+        return Math.max(TOXIN_FLOOR, Math.pow(10, Math.floor(Math.log10(trace)) - 1));
     }
 
     /** Whether a value moved by a resolution, allowing for float rounding (6.1f − 6f < 0.1). */
