@@ -12,8 +12,10 @@ import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
+import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,6 +42,11 @@ import org.jetbrains.annotations.Nullable;
  *       pump, filter or mixer, reads the port on the face clicked, or else the one nearest the point
  *       clicked.
  *   <li><b>A canister:</b> its own gas, its share of the network it's on.
+ *   <li><b>Another mod's tank or machine:</b> a block that provides the gas-handler capability
+ *       (API-021), and isn't a pipe part of ours, is read through it under the block's name: what it
+ *       holds on the face clicked, or else for no face in particular, in the volume it gives ({@link
+ *       GasHandlers#stored}). One with no room for gas, as a block that only joins two others has, is
+ *       passed over. What a click reads is settled when it is made.
  *   <li><b>Any other block:</b> the point just in front of the face clicked, so a pane's two sides
  *       read their own cells.
  * </ul>
@@ -51,14 +58,19 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>A tank isn't a target: the window has a tab for one in the other hand. Server thread only.
  *
- * @param kind what it is: {@link Kind#HERE}, {@link Kind#POINT}, {@link Kind#NETWORK} or {@link
- *     Kind#CANISTER}
+ * @param kind what it is: {@link Kind#HERE}, {@link Kind#POINT}, {@link Kind#NETWORK}, {@link
+ *     Kind#CANISTER} or {@link Kind#STORE}
  * @param pos the block it was used on, or the one holding the point; null for {@link Kind#HERE}
  * @param point the point read, for {@link Kind#POINT}
  * @param port the device's port for a network, or -1 for a node that is one network
+ * @param face the face it was used on, for {@link Kind#STORE}: the one its handler is asked on first
  */
 public record AnalyzerTarget(
-        Kind kind, @Nullable BlockPos pos, @Nullable Vec3 point, int port) {
+        Kind kind,
+        @Nullable BlockPos pos,
+        @Nullable Vec3 point,
+        int port,
+        @Nullable Direction face) {
     /**
      * How far past the player's reach a block target stays readable, as a container's window does: the
      * window closes beyond it.
@@ -67,6 +79,9 @@ public record AnalyzerTarget(
 
     /** How far in front of a face its point is, inside the next cell. */
     private static final double FRONT = 0.01;
+
+    /** What a store reads as once it has no handler with room: nothing, in a litre. */
+    private static final GasMixture NOTHING = new GasMixture(Map.of(), 0, 1);
 
     /**
      * What a reading says.
@@ -84,14 +99,17 @@ public record AnalyzerTarget(
         if (kind == Kind.TANK) {
             throw new IllegalArgumentException("a tank is read from the other hand, not as a target");
         }
-        if ((kind == Kind.HERE) != (pos == null) || (kind == Kind.POINT) != (point != null)) {
-            throw new IllegalArgumentException("a " + kind + " target with pos " + pos + " and point " + point);
+        if ((kind == Kind.HERE) != (pos == null)
+                || (kind == Kind.POINT) != (point != null)
+                || (kind == Kind.STORE) != (face != null)) {
+            throw new IllegalArgumentException(
+                    "a " + kind + " target with pos " + pos + ", point " + point + " and face " + face);
         }
     }
 
     /** The player's own eyes. */
     public static AnalyzerTarget here() {
-        return new AnalyzerTarget(Kind.HERE, null, null, -1);
+        return new AnalyzerTarget(Kind.HERE, null, null, -1, null);
     }
 
     /** What a click on a block reads. */
@@ -99,18 +117,21 @@ public record AnalyzerTarget(
         BlockPos pos = hit.getBlockPos();
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof CanisterBlockEntity) {
-            return new AnalyzerTarget(Kind.CANISTER, pos, null, -1);
+            return new AnalyzerTarget(Kind.CANISTER, pos, null, -1, null);
         }
         if (be instanceof PipeNodeEntity) {
-            return new AnalyzerTarget(Kind.NETWORK, pos, null, -1);
+            return new AnalyzerTarget(Kind.NETWORK, pos, null, -1, null);
         }
         BlockState state = level.getBlockState(pos);
         if (be instanceof InlineDeviceEntity && state.getBlock() instanceof InlineDeviceBlock block) {
-            return new AnalyzerTarget(Kind.NETWORK, pos, null, portAt(block.portFaces(state), pos, hit));
+            return new AnalyzerTarget(Kind.NETWORK, pos, null, portAt(block.portFaces(state), pos, hit), null);
         }
         Direction face = hit.getDirection();
+        if (level instanceof ServerLevel server && GasHandlers.stored(server, pos, face) != null) {
+            return new AnalyzerTarget(Kind.STORE, pos, null, -1, face);
+        }
         Vec3 point = hit.getLocation().add(face.getStepX() * FRONT, face.getStepY() * FRONT, face.getStepZ() * FRONT);
-        return new AnalyzerTarget(Kind.POINT, BlockPos.containing(point), point, -1);
+        return new AnalyzerTarget(Kind.POINT, BlockPos.containing(point), point, -1, null);
     }
 
     /** The port on the face clicked, or else the one whose face is nearest the point clicked. */
@@ -135,7 +156,8 @@ public record AnalyzerTarget(
 
     /**
      * Whether a player can still read it: always for its own eyes; for a block, while the block is still
-     * there and within {@link #REACH} of the player's reach.
+     * there and within {@link #REACH} of the player's reach, and for another mod's store while it still
+     * provides a handler.
      */
     public boolean readableBy(Player player) {
         if (kind == Kind.HERE) {
@@ -149,6 +171,7 @@ public record AnalyzerTarget(
         BlockEntity be = level.getBlockEntity(pos);
         return switch (kind) {
             case CANISTER -> be instanceof CanisterBlockEntity c && !c.isRemoved();
+            case STORE -> level instanceof ServerLevel server && GasHandlers.providesStore(server, pos, face);
             case NETWORK ->
                 port < 0
                         ? be instanceof PipeNodeEntity n && !n.isRemoved()
@@ -182,6 +205,10 @@ public record AnalyzerTarget(
                 GasParcel share = canister.share();
                 GasMixture gas = new GasMixture(share.moles(), share.temperature(), canister.nodeVolume());
                 return new Reading(blockName(level), null, false, gas);
+            }
+            case STORE -> {
+                GasMixture held = GasHandlers.stored(level, pos, face);
+                return new Reading(blockName(level), null, false, held != null ? held : NOTHING);
             }
             default -> {
                 BlockEntity be = level.getBlockEntity(pos);

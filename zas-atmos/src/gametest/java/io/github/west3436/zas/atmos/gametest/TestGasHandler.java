@@ -94,6 +94,11 @@ public final class TestGasHandler {
         /** The one side it provides the capability on, or null for all of them. */
         @Nullable
         public Direction onlySide;
+        /** Whether it provides the capability for no side in particular alone, and on no side. */
+        public boolean onlyUnsided;
+        /** What it says it holds in place of its tank, or null to answer with its tank. */
+        @Nullable
+        public GasMixture says;
         /** Whether it takes no gas. */
         public boolean refusesFill;
         /** Whether it gives no gas. */
@@ -126,14 +131,14 @@ public final class TestGasHandler {
             if (failsLookup) {
                 throw new IllegalStateException("the test handler's capability failing");
             }
-            return exposed && (onlySide == null || onlySide == side) ? this : null;
+            return exposed && (onlyUnsided ? side == null : onlySide == null || onlySide == side) ? this : null;
         }
 
         @Override
         public GasMixture contents() {
             threads.add(Thread.currentThread());
             duringContents.run();
-            return tank.mixture();
+            return says != null ? says : tank.mixture();
         }
 
         @Override

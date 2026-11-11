@@ -12,10 +12,12 @@ import static io.github.west3436.zas.compat.mekanism.gametest.Bench.millibuckets
 import static io.github.west3436.zas.compat.mekanism.gametest.Bench.name;
 
 import com.mojang.logging.LogUtils;
+import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.capability.IGasHandler;
 import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.GasProperties;
+import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.compat.mekanism.ChemicalGases;
 import io.github.west3436.zas.compat.mekanism.ChemicalMapping;
 import io.github.west3436.zas.compat.mekanism.MekanismSettings;
@@ -39,8 +41,11 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.slf4j.Logger;
@@ -231,7 +236,8 @@ public final class MekanismConnectionTests {
      * Each side gets one view, of what the block itself offers: a pipe's chemical handler is the
      * adapter's and its gas handler is the pipe's own, a tank's gas handler is the adapter's and its
      * chemical handler Mekanism's own, and a tube's gas handler is the joint, which holds nothing. No
-     * view is of another view, and none answers for no face in particular.
+     * view is of another view. For no face in particular a pipe has no chemical handler and a tube no
+     * gas handler; a tank has a gas handler, the adapter's, which is only read.
      */
     @GameTest(template = LAB)
     public static void mek_013_each_block_gets_one_view_and_never_a_view_of_a_view(GameTestHelper h) {
@@ -260,13 +266,151 @@ public final class MekanismConnectionTests {
         b.equal(joint.drain(Map.of(O2, 5.0), IGasHandler.Action.EXECUTE), GasParcel.EMPTY, "what the joint gave");
 
         h.assertTrue(h.getLevel().getCapability(Bench.CHEMICAL, b.at(2, 1, 0), null) == null, "a pipe, on no face");
-        h.assertTrue(h.getLevel().getCapability(IGasHandler.BLOCK, b.at(3, 1, 0), null) == null, "a tank, on no face");
+        IGasHandler whole = h.getLevel().getCapability(IGasHandler.BLOCK, b.at(3, 1, 0), null);
+        h.assertTrue(whole != null, "a tank has no gas handler on no face");
+        b.equal(whole.getClass().getName(), ADAPTER + "ChemicalsAsGas", "a tank's gas handler on no face");
         h.assertTrue(h.getLevel().getCapability(IGasHandler.BLOCK, b.at(5, 1, 2), null) == null, "a tube, on no face");
 
         // A block with neither capability gets neither view.
         b.other(5, 1, 0, "minecraft:stone");
         b.equal(faces(b, 5, 1, 0, true), EnumSet.noneOf(Direction.class), "stone's chemical faces");
         b.equal(faces(b, 5, 1, 0, false), EnumSet.noneOf(Direction.class), "stone's gas faces");
+        h.succeed();
+    }
+
+    /**
+     * For no face in particular a tank's gas handler is a view of the whole block that is only read.
+     * It holds what the tank holds in the tank's size: nothing in 64,000 L while the tank is empty,
+     * half an atmosphere of nitrogen when it is half full and one atmosphere when it is full, at
+     * 293.15 K. It takes nothing and gives nothing. A face turned off in the side configuration offers
+     * no gas handler, and the view for no face still holds the tank. A tank of a chemical that is no
+     * gas has no room, on a face or on none.
+     */
+    @GameTest(template = LAB, templateNamespace = ALWAYS)
+    public static void mek_013_a_tank_answers_for_no_face_with_a_view_that_is_only_read(GameTestHelper h) {
+        Bench b = new Bench(h);
+        double factor = factor();
+        double litres = TANK * MekanismSettings.litresPerMillibucket();
+        b.quietTank(3, 1, 1, Direction.NORTH);
+        IGasHandler whole = h.getLevel().getCapability(IGasHandler.BLOCK, b.at(3, 1, 1), null);
+        h.assertTrue(whole != null, "a tank has no gas handler on no face");
+
+        GasMixture empty = whole.contents();
+        h.assertTrue(empty.isEmpty(), "an empty tank holds " + empty);
+        b.close(empty.volume(), litres, "an empty tank's volume, L");
+        b.equal(
+                empty,
+                b.gas(3, 1, 1, Direction.SOUTH).contents(),
+                "an empty tank on no face, against one of its faces");
+
+        b.fillTank(3, 1, 1, b.stack("zas:nitrogen", TANK / 2));
+        GasMixture half = whole.contents();
+        b.equal(half.moles().keySet(), Set.of(N2), "the gases in a tank of nitrogen");
+        b.close(half.moles(N2), TANK / 2 * factor, "the nitrogen in half a tank, mol");
+        b.close(half.volume(), litres, "half a tank's volume, L");
+        b.close(half.temperature(), 293.15, "half a tank's temperature, K");
+        b.close(half.pressure(), StandardAir.PRESSURE / 2, "half a tank's pressure, kPa");
+        GasParcel offered = new GasParcel(Map.of(N2, 5.0), T);
+        b.equal(whole.fill(offered, IGasHandler.Action.EXECUTE), GasParcel.EMPTY, "what the view for no face took");
+        b.equal(whole.fill(offered, IGasHandler.Action.SIMULATE), GasParcel.EMPTY, "what it would take");
+        b.equal(whole.drain(Map.of(N2, 5.0), IGasHandler.Action.EXECUTE), GasParcel.EMPTY, "what it gave");
+        b.equal(whole.drain(Map.of(N2, 5.0), IGasHandler.Action.SIMULATE), GasParcel.EMPTY, "what it would give");
+        b.equal(b.held(3, 1, 1).getAmount(), TANK / 2, "the millibuckets in the tank after");
+
+        b.fillTank(3, 1, 1, b.stack("zas:nitrogen", TANK / 2));
+        GasMixture full = whole.contents();
+        b.close(full.moles(N2), TANK * factor, "the nitrogen in a full tank, mol");
+        b.close(full.pressure(), StandardAir.PRESSURE, "a full tank's pressure, kPa");
+        LOGGER.info(
+                "A Basic Chemical Tank read for no face: {} L; half full {} mol of nitrogen at {} kPa; full {} mol at"
+                        + " {} kPa, {} K",
+                full.volume(),
+                half.moles(N2),
+                half.pressure(),
+                full.moles(N2),
+                full.pressure(),
+                full.temperature());
+
+        b.equal(b.gas(3, 1, 1, Direction.UP).contents(), full, "the tank on its top, while the top is on");
+        b.faceOff(3, 1, 1, Direction.UP);
+        h.assertTrue(b.gasOrNull(3, 1, 1, Direction.UP) == null, "a face that is off offers a gas handler");
+        b.equal(
+                h.getLevel()
+                        .getCapability(IGasHandler.BLOCK, b.at(3, 1, 1), null)
+                        .contents(),
+                full,
+                "the tank on no face, with its top off");
+
+        b.quietTank(5, 1, 1, Direction.NORTH);
+        b.fillTank(5, 1, 1, b.stack("mekanism:sulfuric_acid", 2000));
+        for (Direction side : new Direction[] {null, Direction.SOUTH}) {
+            IGasHandler acid = h.getLevel().getCapability(IGasHandler.BLOCK, b.at(5, 1, 1), side);
+            h.assertTrue(acid != null, "a tank of acid has no gas handler on " + side);
+            GasMixture none = acid.contents();
+            h.assertTrue(none.isEmpty(), "a tank of acid on " + side + " holds " + none);
+            h.assertTrue(none.volume() < 1e-6, "a tank of acid on " + side + " has room: " + none.volume() + " L");
+        }
+        h.succeed();
+    }
+
+    /**
+     * The content mod's analyzer, used on a tank, reads the tank and not the air in front of it, under
+     * the tank's name: a full Basic tank of nitrogen as 2,660 mol of nitrogen at one atmosphere, half
+     * of it as half an atmosphere, and an empty one as empty. It reads the same on a face that the
+     * side configuration has turned off. Used on a tank of a chemical that is no gas, or on a tube,
+     * whose joint holds nothing, it reads the air in front of the face as it always has.
+     */
+    @GameTest(template = LAB)
+    public static void mek_013_the_analyzer_used_on_a_tank_reads_the_tank(GameTestHelper h) {
+        Bench b = new Bench(h);
+        double factor = factor();
+        b.quietTank(3, 1, 1, Direction.NORTH);
+        b.fillTank(3, 1, 1, b.stack("zas:nitrogen", TANK));
+        b.quietTank(5, 1, 1, Direction.NORTH);
+        b.fillTank(5, 1, 1, b.stack("mekanism:sulfuric_acid", 2000));
+        b.quietTank(1, 1, 1, Direction.NORTH);
+        b.tube(6, 1, 2);
+        FakePlayer player = b.analyst(3, 1, 2);
+        Component tank =
+                BuiltInRegistries.BLOCK.get(id("mekanism:basic_chemical_tank")).getName();
+
+        Bench.Analysis full = b.analyze(player, 3, 1, 1, Direction.SOUTH);
+        b.equal(full.kind(), "STORE", "what the analyzer reads on a tank");
+        b.equal(full.name(), tank, "the name it gives the tank");
+        b.equal(full.gas().moles().keySet(), Set.of(N2), "the gases it reads in a tank of nitrogen");
+        b.close(full.gas().moles(N2), TANK * factor, "the nitrogen it reads in a full tank, mol");
+        b.close(full.gas().pressure(), StandardAir.PRESSURE, "a full tank's pressure, kPa");
+        b.close(full.gas().volume(), TANK * MekanismSettings.litresPerMillibucket(), "a full tank's volume, L");
+
+        ChemicalStack taken = b.chemical(3, 1, 1, Direction.NORTH).extractChemical(TANK / 2, Action.EXECUTE);
+        b.equal(taken.getAmount(), TANK / 2, "the millibuckets taken from the tank's front");
+        Bench.Analysis half = b.analyze(player, 3, 1, 1, Direction.SOUTH);
+        b.equal(half.kind(), "STORE", "what the analyzer reads on half a tank");
+        b.close(half.gas().moles(N2), TANK / 2 * factor, "the nitrogen it reads in half a tank, mol");
+        b.close(half.gas().pressure(), StandardAir.PRESSURE / 2, "half a tank's pressure, kPa");
+
+        b.faceOff(3, 1, 1, Direction.UP);
+        h.assertTrue(b.gasOrNull(3, 1, 1, Direction.UP) == null, "a face that is off offers a gas handler");
+        Bench.Analysis off = b.analyze(player, 3, 1, 1, Direction.UP);
+        b.equal(off.kind(), "STORE", "what the analyzer reads on a tank's face that is off");
+        b.equal(off.name(), tank, "the name it gives the tank there");
+        b.equal(off.gas(), half.gas(), "what it reads there");
+
+        Bench.Analysis empty = b.analyze(player, 1, 1, 1, Direction.SOUTH);
+        b.equal(empty.kind(), "STORE", "what the analyzer reads on an empty tank");
+        h.assertTrue(empty.gas().isEmpty(), "an empty tank reads " + empty.gas());
+        b.close(empty.gas().volume(), TANK * MekanismSettings.litresPerMillibucket(), "an empty tank's volume, L");
+
+        GasMixture air =
+                Atmospheres.at(h.getLevel(), Vec3.atCenterOf(b.at(5, 1, 2))).mixture();
+        Bench.Analysis acid = b.analyze(player, 5, 1, 1, Direction.SOUTH);
+        b.equal(acid.kind(), "POINT", "what the analyzer reads on a tank of acid");
+        b.equal(acid.gas(), air, "what it reads there: the air in front of the face");
+        GasMixture joint = b.gas(6, 1, 2, Direction.UP).contents();
+        h.assertTrue(joint.isEmpty() && joint.volume() < 1e-6, "a tube's joint has room: " + joint);
+        Bench.Analysis tube = b.analyze(player, 6, 1, 2, Direction.UP);
+        b.equal(tube.kind(), "POINT", "what the analyzer reads on a tube");
+        b.equal(tube.gas(), air, "what it reads there: the air in front of the face");
         h.succeed();
     }
 

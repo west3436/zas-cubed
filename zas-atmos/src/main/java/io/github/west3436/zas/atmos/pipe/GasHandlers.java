@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.api.ServerThreads;
 import io.github.west3436.zas.api.ThirdPartyFaults;
 import io.github.west3436.zas.api.capability.IGasHandler;
+import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.gas.GasStore;
@@ -40,6 +41,8 @@ import org.slf4j.Logger;
  * <p>ZAS³'s own parts provide the capability as well, for other mods' pipes and machines ({@link
  * PipeGasHandler}). They are never each other's handlers: a neighbour that is a pipe part is skipped
  * here, since the two already share a network.
+ *
+ * <p>A handler can also be read without being joined, to show what it holds ({@link #stored}).
  */
 public final class GasHandlers {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -49,6 +52,13 @@ public final class GasHandlers {
      * connector port would be, since a handler is the same sort of store.
      */
     private static final double RATIO = 1;
+
+    /**
+     * The least volume, in L, a handler's contents need to count as a store when they are read to be
+     * shown ({@link #stored}). Under it a handler has no room for gas, as one that only joins two
+     * blocks has, and there is nothing to show.
+     */
+    public static final double LEAST_STORE_LITRES = 1e-6;
 
     private GasHandlers() {}
 
@@ -203,6 +213,76 @@ public final class GasHandlers {
         }
     }
 
+    /**
+     * What a block that provides the capability holds, for something that reads it without joining
+     * it, as the analyzer does (CONT-034). The handler on a face is asked first and then the one for
+     * no face in particular, so that a face the block offers nothing on still reads the block; the
+     * first whose contents have room for gas ({@link #LEAST_STORE_LITRES}) is the answer.
+     *
+     * <p>A pipe part of ZAS³'s own has none: it is read as its network, and offers its handler only
+     * to other mods' blocks. A handler that throws has none either, and the fault is logged at most
+     * once a minute (NFR-013).
+     *
+     * @param level the level
+     * @param pos the block's position
+     * @param face the face asked first
+     * @return what it holds, or null if it isn't loaded or has no handler with room
+     * @throws IllegalStateException if called off the server thread
+     */
+    @Nullable
+    public static GasMixture stored(ServerLevel level, BlockPos pos, Direction face) {
+        ServerThreads.require(level, "A gas handler reading");
+        BlockState state = readable(level, pos);
+        if (state == null) {
+            return null;
+        }
+        try {
+            GasMixture on = held(offered(level, pos, state, face));
+            return on != null ? on : held(offered(level, pos, state, null));
+        } catch (Exception | LinkageError e) {
+            unread(state, e);
+            return null;
+        }
+    }
+
+    /**
+     * Whether a block still provides a handler to read ({@link #stored}), on a face or for no face in
+     * particular, whatever it holds. It asks the handler nothing.
+     *
+     * @param level the level
+     * @param pos the block's position
+     * @param face the face asked first
+     * @return false if it isn't loaded, is a pipe part of ZAS³'s own, provides none or throws
+     * @throws IllegalStateException if called off the server thread
+     */
+    public static boolean providesStore(ServerLevel level, BlockPos pos, Direction face) {
+        ServerThreads.require(level, "A gas handler reading");
+        BlockState state = readable(level, pos);
+        if (state == null) {
+            return false;
+        }
+        try {
+            return offered(level, pos, state, face) != null || offered(level, pos, state, null) != null;
+        } catch (Exception | LinkageError e) {
+            unread(state, e);
+            return false;
+        }
+    }
+
+    /** A loaded block's state, unless it is a pipe part of ZAS³'s own. */
+    @Nullable
+    private static BlockState readable(ServerLevel level, BlockPos pos) {
+        BlockState state = LoadedBlocks.state(level, pos);
+        return state == null || state.getBlock() instanceof PipeConnector ? null : state;
+    }
+
+    /** What a handler holds, if it has room for gas. */
+    @Nullable
+    private static GasMixture held(@Nullable IGasHandler handler) {
+        GasMixture contents = handler == null ? null : handler.contents();
+        return contents != null && contents.volume() >= LEAST_STORE_LITRES ? contents : null;
+    }
+
     /** The handler on a face, or null if it has none or the lookup throws (NFR-013). */
     @Nullable
     private static IGasHandler handler(ServerLevel level, BlockPos next, BlockState neighbour, Direction face) {
@@ -220,13 +300,22 @@ public final class GasHandlers {
      */
     @Nullable
     private static IGasHandler lookup(ServerLevel level, BlockPos next, BlockState neighbour, Direction face) {
-        LevelChunk chunk = LoadedBlocks.chunk(level, next);
+        return offered(level, next, neighbour, face.getOpposite());
+    }
+
+    /**
+     * The capability a block provides on a side, or for no side in particular, with its block entity
+     * read from its chunk and handed over; none if its chunk isn't loaded in full.
+     */
+    @Nullable
+    private static IGasHandler offered(ServerLevel level, BlockPos pos, BlockState state, @Nullable Direction side) {
+        LevelChunk chunk = LoadedBlocks.chunk(level, pos);
         if (chunk == null) {
             return null;
         }
         BlockEntity entity =
-                neighbour.hasBlockEntity() ? chunk.getBlockEntity(next, LevelChunk.EntityCreationType.IMMEDIATE) : null;
-        return level.getCapability(IGasHandler.BLOCK, next, neighbour, entity, face.getOpposite());
+                state.hasBlockEntity() ? chunk.getBlockEntity(pos, LevelChunk.EntityCreationType.IMMEDIATE) : null;
+        return level.getCapability(IGasHandler.BLOCK, pos, state, entity, side);
     }
 
     /** Logs a handler's fault, at most once a minute for each kind of block (NFR-013). */
@@ -234,6 +323,14 @@ public final class GasHandlers {
         String source = "Gas handler of " + BuiltInRegistries.BLOCK.getKey(neighbour.getBlock());
         if (ThirdPartyFaults.shouldLog(source)) {
             LOGGER.error("{} threw; skipped for the atmos tick (logged at most once a minute)", source, error);
+        }
+    }
+
+    /** Logs the fault of a handler being read to be shown, at most once a minute for each kind of block. */
+    private static void unread(BlockState state, Throwable error) {
+        String source = "Gas handler of " + BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (ThirdPartyFaults.shouldLog(source)) {
+            LOGGER.error("{} threw; not read (logged at most once a minute)", source, error);
         }
     }
 

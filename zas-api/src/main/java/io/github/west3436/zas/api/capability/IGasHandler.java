@@ -27,6 +27,13 @@ import org.jetbrains.annotations.Nullable;
  * face is the whole network behind it. A fill stops at the highest pressure a ZAS³ pump reaches, and a
  * shut valve holds nothing. ZAS³'s own parts never use it on each other.
  *
+ * <p><b>The analyzer reads it.</b> The content mod's analyzer, used on a block that provides it, shows
+ * {@link #contents()} under the block's name: the handler on the face used, or else the one for no
+ * face in particular, whichever first has room. So a block that offers it on some faces only can
+ * still be read on the others by answering for no face, where nothing joins it. A handler whose
+ * volume is under a millionth of a litre has no room and is passed over, which is how one that only
+ * joins two blocks, and holds nothing itself, stays out of it.
+ *
  * <p><b>Conservation.</b> ZAS³ takes what it offers out of the network before it calls {@link #fill}
  * and takes back whatever the handler doesn't say it took, and it adds all that {@link #drain} returns
  * to the network. So gas is conserved as long as the handler's returns are true: it gains what it
