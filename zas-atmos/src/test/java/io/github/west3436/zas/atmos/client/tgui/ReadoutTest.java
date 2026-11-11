@@ -28,12 +28,15 @@ class ReadoutTest {
         assertEquals("0.0050", Readout.percentNumber(0.00005));
     }
 
-    /** A trace has no more than five decimals; one that is zero there reads 0.000, as it did (CONT-034). */
+    /** A trace has no more than seven decimals; one that is zero there reads 0.000, as it did (CONT-034). */
     @Test
-    void cont_034_a_trace_has_no_more_than_five_decimals() {
+    void cont_034_a_trace_has_no_more_than_seven_decimals() {
         assertEquals("0.00091 kPa", Readout.partialPressure(0.00091));
-        assertEquals("0.00002 kPa", Readout.partialPressure(0.000019));
-        assertEquals("0.00002", Readout.percentNumber(0.00000018));
+        assertEquals("0.000019 kPa", Readout.partialPressure(0.000019));
+        assertEquals("0.000018", Readout.percentNumber(0.00000018));
+        assertEquals("0.0000010 kPa", Readout.partialPressure(0.00000099));
+        assertEquals("0.0000001 kPa", Readout.partialPressure(0.00000012));
+        assertEquals("0.000 kPa", Readout.partialPressure(0.00000004));
         assertEquals("0.000 kPa", Readout.partialPressure(3.2e-11));
         assertEquals("0.000", Readout.percentNumber(3.2e-13));
     }

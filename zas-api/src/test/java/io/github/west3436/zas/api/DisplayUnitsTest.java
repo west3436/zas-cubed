@@ -31,10 +31,13 @@ class DisplayUnitsTest {
         assertEquals("0.0019", DisplayUnits.reading(0.0019, 3));
     }
 
-    /** Two figures, but never past the fifth decimal; a trace that is zero there is written as zero is. */
+    /**
+     * Two figures, with at most four decimals more than the reading's own; a trace that is zero
+     * there is written as zero is.
+     */
     @Test
-    void api_063_a_trace_has_no_more_than_five_decimals() {
-        // Two figures that fit in five decimals are kept.
+    void api_063_a_trace_has_at_most_four_decimals_more_than_asked_for() {
+        // With one decimal, five. Two figures that fit are kept.
         assertEquals("0.00094", DisplayUnits.reading(0.00094, 1));
         assertEquals("0.00057", DisplayUnits.reading(0.00057, 1));
         assertEquals("0.00010", DisplayUnits.reading(0.0001, 1));
@@ -43,12 +46,21 @@ class DisplayUnitsTest {
         assertEquals("0.00010", DisplayUnits.reading(0.000096, 1));
         assertEquals("0.00001", DisplayUnits.reading(0.0000149, 1));
         assertEquals("0.00001", DisplayUnits.reading(0.000005, 1));
-        // Zero at five decimals: as zero is written, with the decimals asked for.
+        // Zero there: as zero is written, with the decimals asked for.
         assertEquals("0.0", DisplayUnits.reading(0.0000049, 1));
         assertEquals("0.0", DisplayUnits.reading(3.2e-11, 1));
+        // With none, four; with two, six; with three, seven.
+        assertEquals("0.0019", DisplayUnits.reading(0.0019, 0));
+        assertEquals("0.0009", DisplayUnits.reading(0.00093, 0));
+        assertEquals("0", DisplayUnits.reading(0.00004, 0));
+        assertEquals("0.000015", DisplayUnits.reading(0.0000145, 2));
+        assertEquals("0.000001", DisplayUnits.reading(0.0000014, 2));
+        assertEquals("0.00", DisplayUnits.reading(0.0000004, 2));
+        assertEquals("0.000019", DisplayUnits.reading(0.000019, 3));
+        assertEquals("0.0000010", DisplayUnits.reading(0.00000099, 3));
+        assertEquals("0.0000001", DisplayUnits.reading(0.00000012, 3));
+        assertEquals("0.000", DisplayUnits.reading(0.00000004, 3));
         assertEquals("0.000", DisplayUnits.reading(3.2e-11, 3));
-        assertEquals("0", DisplayUnits.reading(1.23e-7, 0));
-        assertEquals("0.000000", DisplayUnits.reading(1.23e-7, 6));
     }
 
     @Test

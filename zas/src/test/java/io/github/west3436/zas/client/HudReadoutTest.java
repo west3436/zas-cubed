@@ -1,6 +1,7 @@
 package io.github.west3436.zas.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import io.github.west3436.zas.config.ZasClientConfig.PressureUnit;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,9 @@ class HudReadoutTest {
     /** What is left of it a minute and a half after its room is opened: a warning. */
     private static final double WARNING = 0.00093;
 
+    /** The lowest threshold of a gas we ship: the Mekanism adapter's chlorine, at its warning. */
+    private static final double LOWEST_THRESHOLD = 0.0001;
+
     /** The carbon dioxide of a room that was breathed in for two minutes: safe. */
     private static final double BREATHED_OUT = 0.00062;
 
@@ -23,24 +27,40 @@ class HudReadoutTest {
         assertEquals("0.00093 kPa", HudReadout.toxin(WARNING, true, PressureUnit.KPA));
         assertEquals("0.00029 psi", HudReadout.toxin(DANGER, true, PressureUnit.PSI));
         assertEquals("0.00013 psi", HudReadout.toxin(WARNING, true, PressureUnit.PSI));
+        assertEquals("0.000020 atm", HudReadout.toxin(DANGER, true, PressureUnit.ATM));
+        assertEquals("0.0000092 atm", HudReadout.toxin(WARNING, true, PressureUnit.ATM));
+        assertEquals("0.000020 bar", HudReadout.toxin(DANGER, true, PressureUnit.BAR));
+        assertEquals("0.0000093 bar", HudReadout.toxin(WARNING, true, PressureUnit.BAR));
     }
 
-    /** No more than five decimals, in the unit shown: atm and bar have one figure left for this chlorine. */
+    /**
+     * A trace has at most four decimals more than its unit's own: five in kPa, six in psi, seven in
+     * atm and bar. So the lowest threshold of a shipped gas, chlorine's warning at 0.0001 kPa, is a
+     * number in every unit, and so is all a yellow or red row can read.
+     */
     @Test
-    void client_008_a_trace_has_no_more_than_five_decimals_in_each_unit() {
-        assertEquals("0.00002 atm", HudReadout.toxin(DANGER, true, PressureUnit.ATM));
-        assertEquals("0.00001 atm", HudReadout.toxin(WARNING, true, PressureUnit.ATM));
-        assertEquals("0.00002 bar", HudReadout.toxin(DANGER, true, PressureUnit.BAR));
-        assertEquals("0.00001 bar", HudReadout.toxin(WARNING, true, PressureUnit.BAR));
-        // Zero at five decimals is written as zero is in that unit.
+    void client_008_the_lowest_shipped_threshold_is_no_zero_in_any_unit() {
+        assertEquals("0.00010 kPa", HudReadout.toxin(LOWEST_THRESHOLD, true, PressureUnit.KPA));
+        assertEquals("0.000015 psi", HudReadout.toxin(LOWEST_THRESHOLD, true, PressureUnit.PSI));
+        assertEquals("0.0000010 atm", HudReadout.toxin(LOWEST_THRESHOLD, true, PressureUnit.ATM));
+        assertEquals("0.0000010 bar", HudReadout.toxin(LOWEST_THRESHOLD, true, PressureUnit.BAR));
+        // A step above it, the second figure is there in every unit.
+        assertEquals("0.00012 kPa", HudReadout.toxin(0.00012, true, PressureUnit.KPA));
+        assertEquals("0.000017 psi", HudReadout.toxin(0.00012, true, PressureUnit.PSI));
+        assertEquals("0.0000012 atm", HudReadout.toxin(0.00012, true, PressureUnit.ATM));
+        assertEquals("0.0000012 bar", HudReadout.toxin(0.00012, true, PressureUnit.BAR));
+        for (PressureUnit unit : PressureUnit.values()) {
+            String zero = HudReadout.pressure(0, 1, unit);
+            for (double kPa = LOWEST_THRESHOLD; kPa < 0.2; kPa *= 1.07) {
+                assertNotEquals(zero, HudReadout.toxin(kPa, true, unit), kPa + " kPa in " + unit);
+            }
+        }
+        // Far under any threshold, a trace is zero at those decimals and is written as zero is.
+        assertEquals("0.00001 kPa", HudReadout.toxin(0.000012, true, PressureUnit.KPA));
         assertEquals("0.0 kPa", HudReadout.toxin(0.0000049, true, PressureUnit.KPA));
-        assertEquals("0.0 kPa", HudReadout.toxin(3.2e-11, true, PressureUnit.KPA));
-        assertEquals("0.00 psi", HudReadout.toxin(0.00003, true, PressureUnit.PSI));
-        // Chlorine at its lowest threshold, 0.0001 kPa, is under a millionth of an atmosphere.
-        assertEquals("0.00010 kPa", HudReadout.toxin(0.0001, true, PressureUnit.KPA));
-        assertEquals("0.00001 psi", HudReadout.toxin(0.0001, true, PressureUnit.PSI));
-        assertEquals("0.000 atm", HudReadout.toxin(0.0001, true, PressureUnit.ATM));
-        assertEquals("0.000 bar", HudReadout.toxin(0.0001, true, PressureUnit.BAR));
+        for (PressureUnit unit : PressureUnit.values()) {
+            assertEquals(HudReadout.pressure(0, 1, unit), HudReadout.toxin(3.2e-11, true, unit), unit.toString());
+        }
     }
 
     /** A trace is under a tenth of the unit shown, which is a different pressure in each unit. */

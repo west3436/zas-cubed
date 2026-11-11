@@ -81,7 +81,7 @@ public record AtmosHudPayload(
 
     /**
      * The finest resolution a toxic gas's partial pressure is resent at, in kPa: the fifth decimal,
-     * the last one the HUD writes.
+     * the last one the HUD writes in kPa, and about the last it writes in the other units.
      */
     private static final double TOXIN_FLOOR = 1e-5;
 
@@ -253,7 +253,7 @@ public record AtmosHudPayload(
      * The display resolution of the toxic gas's partial pressure between two states at the same
      * level, in kPa: 0.1 while the gas is safe, since the HUD then writes it to one decimal. At
      * warning or worse the HUD writes a trace, a reading under 0.1, to two significant figures and
-     * no more than five decimals (CLIENT-008), so while the smaller of the two is a trace the
+     * in kPa no more than five decimals (CLIENT-008), so while the smaller of the two is a trace the
      * resolution is one of its second figure, and never under {@link #TOXIN_FLOOR}: 0.0020 is sent
      * again at 0.0019, 0.00020 at 0.00019, and 0.00002 at 0.00003. The server doesn't know the
      * player's unit; in another unit the second figure can lag by one or two.

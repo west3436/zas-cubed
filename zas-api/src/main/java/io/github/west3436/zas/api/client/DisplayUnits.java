@@ -22,8 +22,8 @@ public final class DisplayUnits {
 
     private static final MathContext TWO_FIGURES = new MathContext(2, RoundingMode.HALF_UP);
 
-    /** A trace is written with no more decimals than this ({@link #reading}). */
-    private static final int MOST_TRACE_DECIMALS = 5;
+    /** A trace is written with no more decimals than this past a reading's own ({@link #reading}). */
+    private static final int MORE_TRACE_DECIMALS = 4;
 
     private static volatile DisplayUnitProvider provider = NONE;
 
@@ -86,9 +86,10 @@ public final class DisplayUnits {
      * {@code 0.0019} and {@code 0.00093} are written so, where they would both be {@code 0.0};
      * {@code 0} is {@code 0.0} and {@code 21.28} is {@code 21.3}.
      *
-     * <p>A trace has no more than five decimals: {@code 0.000019} is written {@code 0.00002}, and
-     * one that rounds to zero there is written as zero is. A trace that rounds up to 0.1 is written
-     * as 0.1 is.
+     * <p>A trace has at most four decimals more than {@code decimals}. With one decimal that is
+     * five: {@code 0.000019} is written {@code 0.00002}, and {@code 0.000004}, zero at five
+     * decimals, is written as zero is, {@code 0.0}. With three, {@code 0.000019} is written so. A
+     * trace that rounds up to 0.1 is written as 0.1 is.
      *
      * <p>The value is the one shown, so convert a pressure first ({@link #pressure}). The digits
      * have a dot and no grouping, whatever the player's language.
@@ -111,10 +112,11 @@ public final class DisplayUnits {
             if (figures.compareTo(TRACE_BELOW) < 0) {
                 // The decimals of the leading figure and one more: 0.002 is written 0.0020.
                 int places = 2 - figures.precision() + figures.scale();
-                if (places <= MOST_TRACE_DECIMALS) {
+                int most = decimals + MORE_TRACE_DECIMALS;
+                if (places <= most) {
                     return figures.setScale(places, RoundingMode.UNNECESSARY).toPlainString();
                 }
-                BigDecimal floored = exact.setScale(MOST_TRACE_DECIMALS, RoundingMode.HALF_UP);
+                BigDecimal floored = exact.setScale(most, RoundingMode.HALF_UP);
                 return floored.signum() == 0 ? digits(0, decimals) : floored.toPlainString();
             }
         }
