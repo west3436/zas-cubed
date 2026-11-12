@@ -55,6 +55,7 @@ public final class ZasClient {
         });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> ClientBreath.LOCAL.clear());
         modBus.addListener(AtmosHudRenderer::registerLayer);
+        HypoxicAirBar.register();
 
         // Display units for other mods' GUIs (CLIENT-006, API-063).
         ClientDisplayUnits.register();

@@ -110,6 +110,17 @@ public final class ClientBreath {
         }
     }
 
+    /**
+     * Whether the local player's air drains for lack of O₂ rather than by vanilla's rule: while
+     * the server finds it short of O₂ and its eyes aren't in a fluid, or it breathes from its tank.
+     * The air bar then shows grey bubbles in place of vanilla's.
+     *
+     * @param eyesInFluid whether the player's eyes are in a fluid now
+     */
+    public boolean drainsForOxygen(boolean eyesInFluid) {
+        return predicts(eyesInFluid);
+    }
+
     private boolean predicts(boolean eyesInFluid) {
         return state.hypoxic() && (!eyesInFluid || fromTank());
     }
@@ -135,7 +146,7 @@ public final class ClientBreath {
     }
 
     /** Whether an entity's eyes are in a fluid, by vanilla's rule. */
-    static boolean eyesInFluid(LivingEntity entity) {
+    public static boolean eyesInFluid(LivingEntity entity) {
         return Breathing.vanilla(entity).source() == BreathSource.FLUID;
     }
 

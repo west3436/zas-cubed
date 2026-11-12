@@ -2896,6 +2896,13 @@ state: carbon_tox
 commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
 notes: 2 frames stacked vertically, as vg's animation.
 
+# The air bar's grey bubbles, while the air drains for lack of O2.
+path: zas/src/main/resources/assets/zas/textures/gui/sprites/hud/air_hypoxic.png
+origin: original
+
+path: zas/src/main/resources/assets/zas/textures/gui/sprites/hud/air_hypoxic_bursting.png
+origin: original
+
 path: zas/src/main/resources/assets/zas/textures/gui/hud/pressure_low_warning.png
 origin: vgstation13
 source: icons/mob/screen_alarms.dmi
