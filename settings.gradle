@@ -31,6 +31,9 @@ include 'compat-mekanism'
 // The Curios and Accessories adapters (COMPAT-040 to COMPAT-043), bundled into the zas jar likewise.
 include 'compat-slots'
 
+// The KubeJS adapter (COMPAT-050 to COMPAT-053), bundled into the zas jar likewise.
+include 'compat-kubejs'
+
 // The jar players install: zas and zas_atmos in one file (D-88).
 include 'dist'
 
