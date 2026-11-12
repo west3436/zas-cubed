@@ -81,10 +81,19 @@ neoForge {
     }
 }
 
-// GameTests start from a fresh world, as in :zas: saved zones would otherwise come back.
+// GameTests start from a fresh world, as in :zas: saved zones would otherwise come back. The one
+// thing in it is the station a server of release 0.1.0 saved, three chunks far from every test's
+// place, which SavedWorldTests loads as an upgraded server would (DATA-012). The level's own files
+// aren't copied: the test server makes its own flat world around the station.
+def savedWorld = project(':zas').file('src/test/resources/fixtures/saves/0.1.0')
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    inputs.dir(savedWorld).withPropertyName('savedWorld')
     doFirst {
         delete layout.projectDirectory.dir('run/world')
+        copy {
+            from savedWorld
+            into layout.projectDirectory.dir('run/world')
+        }
     }
 }
 
@@ -103,6 +112,8 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // The worlds saved by earlier releases, and what reads their files (DATA-012).
+    testImplementation project(':zas').sourceSets.test.output
 }
 
 // NFR-010: -Pfuzz.seed=S replays a seed, -Pfuzz.seeds=N runs N seeds from it, as the nightly run does.

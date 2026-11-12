@@ -21,8 +21,10 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Every earlier format of a chunk's saved atmosphere reads, and saves again as the current one
- * (DATA-012). There's no release to take saved sample worlds from yet, so these records are written
- * by hand, a byte at a time, as each format laid them out.
+ * (DATA-012). Formats 1 to 4 were never in a release, so there is no saved world to take them from:
+ * these records are written by hand, a byte at a time, as each format laid them out. The first
+ * release, 0.1.0, wrote format 5; a world it saved is read by {@code SavedWorldTest} in the mod's
+ * tests, and loaded in a running game by the content mod's {@code SavedWorldTests}.
  */
 class ChunkRecordMigrationTest {
     private static final GasRegistry GASES =

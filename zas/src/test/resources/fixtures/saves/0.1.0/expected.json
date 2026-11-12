@@ -1,0 +1,176 @@
+{
+ "release": "0.1.0",
+ "commit": "b50eb857",
+ "recorded": "2026-11-11",
+ "chunks": [
+  [
+   40,
+   0
+  ],
+  [
+   41,
+   0
+  ],
+  [
+   42,
+   0
+  ]
+ ],
+ "checker": "Invariant check of atmos tick 454: conserved (0 violations)",
+ "audit": "Geometry audit: no differences in 3 sections and 3 zones",
+ "zones_listed": [
+  "minecraft:overworld: 3 zones, 190 cells (atmos tick 455)",
+  "  Zone 1: 28 cells, 38.0598 kPa, 293.15 K",
+  "  Zone 2: 27 cells, 101.51 kPa, 293.15 K",
+  "  Zone 3: 135 cells, 110.524 kPa, 297.5 K"
+ ],
+ "zones": {
+  "R": {
+   "at": [
+    643,
+    -59,
+    3
+   ],
+   "gases": {
+    "zas:carbon_dioxide": "2",
+    "zas:nitrogen": "864.199",
+    "zas:oxygen": "229.724"
+   },
+   "pins": [
+    "zas_atmos:area_air_controller/643_-59_2"
+   ],
+   "id": 2,
+   "cells": 27,
+   "volume": "26314.5",
+   "enclosure": "enclosed",
+   "state": "active",
+   "pressure": "101.51",
+   "temperature": "293.15",
+   "moles": "1095.92",
+   "edges": [
+    0,
+    0,
+    0
+   ]
+  },
+  "Q": {
+   "at": [
+    647,
+    -59,
+    3
+   ],
+   "gases": {
+    "zas:nitrogen": "338.054",
+    "zas:oxygen": "89.4382"
+   },
+   "pins": [],
+   "id": 1,
+   "cells": 28,
+   "volume": "27377",
+   "enclosure": "enclosed",
+   "state": "active",
+   "pressure": "38.0598",
+   "temperature": "293.15",
+   "moles": "427.492",
+   "edges": [
+    0,
+    0,
+    0
+   ]
+  },
+  "P": {
+   "at": [
+    670,
+    -59,
+    3
+   ],
+   "gases": {
+    "zas:carbon_dioxide": "120",
+    "zas:nitrogen": "4733.57",
+    "zas:oxygen": "1178.54"
+   },
+   "pins": [],
+   "id": 3,
+   "cells": 135,
+   "volume": "135000",
+   "enclosure": "enclosed",
+   "state": "active",
+   "pressure": "110.524",
+   "temperature": "297.5",
+   "moles": "6032.11",
+   "edges": [
+    0,
+    0,
+    0
+   ]
+  }
+ },
+ "block_entities": {
+  "645 -60 3": "{Lockdown: \"PRESSURE\", LockdownValue: 63.450408615903505d, Alarm: 0b, x: 645, y: -60, FormatVersion: 1, z: 3, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:firelock\"}",
+  "649 -60 3": "{Lockdown: \"PRESSURE\", CloseAt: -1L, LockdownValue: 63.26515797019274d, Alarm: 0b, x: 649, y: -60, FormatVersion: 1, z: 3, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:airlock\"}",
+  "648 -59 2": "{x: 648, y: -59, FormatVersion: 1, z: 2, id: \"zas_atmos:air_sensor\"}",
+  "643 -59 2": "{Energy: 3, Preset: {Edited: 0b, Readings: [{Reading: \"pressure\", Min2: -1.0d, Max1: 1.0d, Max2: 5.0d, Min1: -1.0d}, {Reading: \"temperature\", Min2: -1.0d, Max1: -1.0d, Max2: -1.0d, Min1: -1.0d}, {Reading: \"zas:oxygen\", Min2: -1.0d, Max1: 135.0d, Max2: 140.0d, Min1: -1.0d}, {Reading: \"zas:nitrogen\", Min2: -1.0d, Max1: -1.0d, Max2: -1.0d, Min1: -1.0d}, {Reading: \"zas:carbon_dioxide\", Min2: -1.0d, Max1: 5.0d, Max2: 10.0d, Min1: -1.0d}, {Reading: \"zas:nitrous_oxide\", Min2: -1.0d, Max1: 0.5d, Max2: 1.0d, Min1: -1.0d}, {Reading: \"zas:carbon_monoxide\", Min2: -1.0d, Max1: 0.005d, Max2: 0.12d, Min1: -1.0d}, {Reading: \"zas:hydrogen\", Min2: -1.0d, Max1: 1.0d, Max2: 2.0d, Min1: -1.0d}, {Reading: \"zas:methane\", Min2: -1.0d, Max1: 1.0d, Max2: 2.5d, Min1: -1.0d}, {Reading: \"others\", Min2: -1.0d, Max1: 0.5d, Max2: 1.0d, Min1: -1.0d}], Name: \"vacuum\"}, Mode: \"siphon\", Danger: 0, x: 643, Links: [L;], y: -59, FormatVersion: 1, z: 2, DangerLower: 0, DangerLowerMax: 0, id: \"zas_atmos:area_air_controller\"}",
+  "642 -59 2": "{Triggered: 0b, x: 642, y: -59, FormatVersion: 1, z: 2, id: \"zas_atmos:fire_alarm\"}",
+  "642 -60 4": "{Mode: \"siphon\", Internal: 310.0d, Gas: {T: 295.0d, Moles: {\"zas:oxygen\": 0.5d, \"zas:nitrogen\": 2.0d}}, External: 42.5d, x: 642, y: -60, FormatVersion: 1, z: 4, id: \"zas_atmos:vent\"}",
+  "644 -60 4": "{Selection: {Gases: [\"zas:carbon_dioxide\", \"zas:hydrogen\"], GasTags: []}, Mode: \"siphon\", Gas: {T: 300.0d, Moles: {\"zas:carbon_dioxide\": 0.75d}}, x: 644, y: -60, FormatVersion: 1, z: 4, id: \"zas_atmos:scrubber\"}",
+  "647 -60 4": "{Gas: {T: 293.1499999999998d, Moles: {\"zas:oxygen\": 1.2912576327233856d, \"zas:nitrogen\": 4.880630461058908d}}, x: 647, y: -60, FormatVersion: 1, z: 4, id: \"zas_atmos:passive_vent\"}",
+  "653 -60 3": "{Energy: 7, x: 653, y: -60, FormatVersion: 1, z: 3, id: \"zas_atmos:central_atmos_controller\", Range: 1}",
+  "651 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 651, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe_cap\"}",
+  "652 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 652, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "653 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 653, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "654 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 654, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "655 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 1.3300492610837438d, \"zas:nitrogen\": 54.581280788177395d, \"zas:carbon_dioxide\": 1.2315270935960594d}}, x: 655, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:valve\"}",
+  "656 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 656, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "657 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 657, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "658 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 658, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "659 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 659, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe\"}",
+  "660 -60 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 0.4655172413793103d, \"zas:nitrogen\": 19.10344827586209d, \"zas:carbon_dioxide\": 0.4310344827586207d}}, x: 660, y: -60, FormatVersion: 1, z: 10, id: \"zas_atmos:pipe_cap\"}",
+  "652 -59 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 1.3300492610837438d, \"zas:nitrogen\": 54.581280788177395d, \"zas:carbon_dioxide\": 1.2315270935960594d}}, x: 652, y: -59, FormatVersion: 1, z: 10, id: \"zas_atmos:connector_port\"}",
+  "652 -58 10": "{Gas: {T: 293.94232759736065d, Moles: {\"zas:oxygen\": 6.650246305418719d, \"zas:nitrogen\": 272.906403940887d, \"zas:carbon_dioxide\": 6.157635467980296d}}, x: 652, y: -58, FormatVersion: 1, z: 10, id: \"zas_atmos:canister\", Release: 150.0d}",
+  "668 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 668, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe_cap\"}",
+  "669 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 669, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "670 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 670, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "671 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 671, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "672 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 672, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "673 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 673, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "674 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 674, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "675 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 675, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe\"}",
+  "676 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:carbon_dioxide\": 2.222222222222222d}}, x: 676, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe_cap\"}",
+  "642 -60 12": "{Gas: {T: 280.0d, Moles: {\"zas:oxygen\": 30.0d, \"zas:hydrogen\": 1.25d}}, x: 642, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:canister\", Release: 250.0d}",
+  "642 -60 14": "{Setting: 345.0d, x: 642, Ports: [{T: 291.0d, Moles: {\"zas:oxygen\": 0.0625d, \"zas:nitrogen\": 1.125d}}, {T: 292.0d, Moles: {\"zas:oxygen\": 0.125d, \"zas:nitrogen\": 1.25d}}], y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:pressure_pump\", On: 1b}",
+  "644 -60 14": "{Setting: 100.0d, x: 644, Ports: [{T: 293.0d, Moles: {\"zas:oxygen\": 0.1875d, \"zas:nitrogen\": 1.375d}}, {T: 294.0d, Moles: {\"zas:oxygen\": 0.25d, \"zas:nitrogen\": 1.5d}}], y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:volume_pump\", On: 1b}",
+  "646 -60 14": "{Target: 222.0d, Selection: {Gases: [\"zas:oxygen\"], GasTags: []}, x: 646, Ports: [{T: 295.0d, Moles: {\"zas:oxygen\": 0.3125d, \"zas:nitrogen\": 1.625d}}, {T: 296.0d, Moles: {\"zas:oxygen\": 0.375d, \"zas:nitrogen\": 1.75d}}, {T: 297.0d, Moles: {\"zas:oxygen\": 0.4375d, \"zas:nitrogen\": 1.875d}}], y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:filter\", On: 1b}",
+  "648 -60 14": "{BackPercent: 35, Target: 180.0d, x: 648, Ports: [{T: 298.0d, Moles: {\"zas:oxygen\": 0.5d, \"zas:nitrogen\": 2.0d}}, {T: 299.0d, Moles: {\"zas:oxygen\": 0.5625d, \"zas:nitrogen\": 2.125d}}, {T: 300.0d, Moles: {\"zas:oxygen\": 0.625d, \"zas:nitrogen\": 2.25d}}], y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:mixer\", On: 1b}",
+  "650 -60 14": "{Water: 2500.0d, x: 650, Ports: [{T: 301.0d, Moles: {\"zas:oxygen\": 0.6875d, \"zas:nitrogen\": 2.375d}}, {T: 302.0d, Moles: {\"zas:oxygen\": 0.75d, \"zas:nitrogen\": 2.5d}}], y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:electrolyzer\", On: 1b}",
+  "657 -60 8": "{Target: 450.0d, Siphon: 1b, Battery: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 1777}}, id: \"zas_atmos:battery\"}]}, Gas: {T: 301.0d, Moles: {\"zas:nitrogen\": 1.5d, \"zas:carbon_dioxide\": 4.0d}}, x: 657, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:portable_pump\", Tank: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 290.0d, moles: {\"zas:oxygen\": 3.0d}}}}, id: \"zas_atmos:oxygen_tank\"}]}, On: 0b}",
+  "659 -60 8": "{Battery: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 2554}}, id: \"zas_atmos:battery\"}]}, Gas: {T: 296.0d, Moles: {\"zas:carbon_dioxide\": 2.25d}}, x: 659, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:portable_scrubber\", Tank: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 288.0d, moles: {\"zas:nitrogen\": 1.75d, \"zas:carbon_dioxide\": 0.25d}}}}, id: \"zas_atmos:empty_tank\"}]}, On: 0b}",
+  "661 -60 8": "{Battery: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 3331}}, id: \"zas_atmos:battery\"}]}, x: 661, Setpoint: 305.0d, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:heater\", On: 0b}",
+  "663 -60 8": "{Battery: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 4108}}, id: \"zas_atmos:battery\"}]}, x: 663, Setpoint: 285.0d, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:air_conditioner\", On: 0b}",
+  "665 -60 8": "{Battery: {Size: 1, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 4321}}, id: \"zas_atmos:battery\"}]}, x: 665, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:recharger\"}",
+  "667 -60 8": "{Energy: 8000, Fuel: {Size: 1, Items: [{count: 5, Slot: 0, id: \"minecraft:coal\"}]}, BurnLeft: 321, BurnTotal: 1600, x: 667, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:generator\"}",
+  "642 -60 8": "{x: 642, y: -60, Items: [{count: 1, Slot: 0b, components: {\"zas_atmos:distribution_pressure\": {FormatVersion: 1, value: 24.5d}, \"zas_atmos:tank_low\": {FormatVersion: 1, value: {}}, \"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 293.0d, moles: {\"zas:oxygen\": 5.5d, \"zas:nitrogen\": 0.125d}}}}, id: \"zas_atmos:air_tank\"}, {count: 1, Slot: 1b, components: {\"zas_atmos:ttv_tanks\": {FormatVersion: 1, value: [{item: {components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 290.0d, moles: {\"zas:oxygen\": 3.125d}}}}, count: 1, id: \"zas_atmos:oxygen_tank\"}, slot: 0}, {item: {components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 293.0d, moles: {\"zas:hydrogen\": 2.25d}}}}, count: 1, id: \"zas_atmos:empty_tank\"}, slot: 1}]}, \"zas_atmos:ttv_open\": {FormatVersion: 1, value: 0b}, \"zas_atmos:ttv_timer\": {FormatVersion: 1, value: 450}}, id: \"zas_atmos:tank_transfer_valve\"}, {count: 1, Slot: 2b, components: {\"zas_atmos:suit_tank\": {FormatVersion: 1, value: [{item: {components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 291.0d, moles: {\"zas:oxygen\": 2.375d}}}}, count: 1, id: \"zas_atmos:oxygen_tank\"}, slot: 0}]}, \"zas_atmos:leaking\": {FormatVersion: 1, value: 0.25f}}, id: \"zas_atmos:hardsuit_chestplate\"}, {count: 1, Slot: 3b, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 287.0d, moles: {\"zas:nitrogen\": 40.0d, \"zas:carbon_dioxide\": 3.5d}}}}, id: \"zas_atmos:canister\"}, {count: 1, Slot: 4b, components: {\"zas_atmos:energy\": {FormatVersion: 1, value: 2468}}, id: \"zas_atmos:battery\"}, {count: 1, Slot: 5b, components: {\"zas_atmos:magnetized\": {FormatVersion: 1, value: 1b}}, id: \"zas_atmos:magnetic_boots\"}, {count: 1, Slot: 6b, components: {\"zas_atmos:charges\": {FormatVersion: 1, value: 7}}, id: \"zas_atmos:fire_extinguisher\"}, {count: 1, Slot: 7b, components: {\"minecraft:custom_data\": {FormatVersion: 1, Dimension: \"minecraft:overworld\", Controller: 176746494177221L}}, id: \"zas_atmos:multitool\"}], z: 8, id: \"minecraft:chest\"}",
+  "652 -60 6": "{x: 652, y: -60, FormatVersion: 1, z: 6, id: \"zas_atmos:igniter\"}",
+  "650 -60 8": "{components: {\"zas_atmos:ttv_tanks\": {value: [{item: {count: 1, components: {\"zas_atmos:gas\": {value: {temperature: 290.0d, moles: {\"zas:oxygen\": 3.125d}}, FormatVersion: 1}}, id: \"zas_atmos:oxygen_tank\"}, slot: 0}, {item: {count: 1, components: {\"zas_atmos:gas\": {value: {temperature: 293.0d, moles: {\"zas:hydrogen\": 2.25d}}, FormatVersion: 1}}, id: \"zas_atmos:empty_tank\"}, slot: 1}], FormatVersion: 1}, \"zas_atmos:ttv_open\": {value: 0b, FormatVersion: 1}, \"zas_atmos:ttv_timer\": {value: 120, FormatVersion: 1}}, x: 650, y: -60, FormatVersion: 1, z: 8, id: \"zas_atmos:tank_transfer_valve\"}",
+  "657 -59 1": "{x: 657, y: -59, FormatVersion: 1, z: 1, id: \"zas_atmos:air_sensor\"}",
+  "661 -59 1": "{x: 661, y: -59, FormatVersion: 1, z: 1, id: \"zas_atmos:air_sensor\"}",
+  "658 -60 2": "{Mode: \"off\", Internal: 0.0d, Gas: {T: 290.0d, Moles: {\"zas:nitrogen\": 0.75d}}, External: 101.325d, x: 658, y: -60, FormatVersion: 1, z: 2, id: \"zas_atmos:vent\", Controller: [I; 659, -59, 1], Controlled: 1b}",
+  "657 -60 4": "{CloseAt: -1L, Alarm: 0b, x: 657, y: -60, FormatVersion: 1, z: 4, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:airlock\"}",
+  "660 -60 4": "{CloseAt: 987654321L, Alarm: 0b, x: 660, y: -60, FormatVersion: 1, z: 4, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:airlock\"}",
+  "659 -59 1": "{LastOpened: 1, Cycling: -1, ChamberSensor: 178120883711941L, Airlock0: 180594784882628L, Sure: 31, Armed: 3, Airlock1: 181419418603460L, Vents: [L; 180869662781380L], x: 659, y: -59, FormatVersion: 1, z: 1, id: \"zas_atmos:airlock_controller\", OuterSensor: 181694296498117L, InnerSensor: 180594784870341L}",
+  "662 -60 6": "{Alarm: 0b, x: 662, y: -60, FormatVersion: 1, z: 6, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:firelock_door\", Door: \"minecraft:spruce_door\"}",
+  "662 -59 6": "{Alarm: 0b, x: 662, y: -59, FormatVersion: 1, z: 6, ClosedByAlarm: 0b, Reclose: -1, id: \"zas_atmos:firelock_door\", Door: \"minecraft:spruce_door\"}",
+  "657 -60 6": "{Tanks: {Size: 10, Items: [{count: 1, Slot: 0, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 289.0d, moles: {\"zas:oxygen\": 4.25d}}}}, id: \"zas_atmos:oxygen_tank\"}, {count: 1, Slot: 1, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 294.0d, moles: {\"zas:oxygen\": 0.8125d, \"zas:nitrogen\": 3.0d}}}}, id: \"zas_atmos:air_tank\"}, {count: 1, Slot: 2, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 301.0d, moles: {\"zas:nitrogen\": 0.375d, \"zas:carbon_dioxide\": 0.5d}}}}, id: \"zas_atmos:empty_tank\"}, {count: 1, Slot: 3, components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 285.0d, moles: {\"zas:oxygen\": 0.625d}}}}, id: \"zas_atmos:emergency_oxygen_tank\"}]}, x: 657, y: -60, FormatVersion: 1, z: 6, id: \"zas_atmos:tank_holder\"}",
+  "657 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 657, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:pipe_cap\"}",
+  "658 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 658, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:pipe\"}",
+  "659 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 659, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:radiator_adaptor\"}",
+  "660 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 660, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:radiator_pipe\"}",
+  "661 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 661, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:radiator_pipe\"}",
+  "662 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 662, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:radiator_pipe\"}",
+  "663 -60 14": "{Gas: {T: 293.15d, Moles: {\"zas:oxygen\": 0.21428571428571427d, \"zas:nitrogen\": 0.8571428571428571d}}, x: 663, y: -60, FormatVersion: 1, z: 14, id: \"zas_atmos:radiator_pipe\"}",
+  "657 -60 12": "{Gas: {T: 450.0d, Moles: {\"zas:nitrogen\": 2.333333333333333d}}, x: 657, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe_cap\"}",
+  "658 -60 12": "{Gas: {T: 450.0d, Moles: {\"zas:nitrogen\": 6.666666666666666d}}, x: 658, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:heat_exchanger\"}",
+  "659 -60 12": "{Gas: {T: 450.0d, Moles: {\"zas:carbon_dioxide\": 3.333333333333333d}}, x: 659, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:heat_exchanger\"}",
+  "660 -60 12": "{Gas: {T: 450.0d, Moles: {\"zas:carbon_dioxide\": 1.1666666666666665d}}, x: 660, y: -60, FormatVersion: 1, z: 12, id: \"zas_atmos:pipe_cap\"}"
+ },
+ "primed_ttv": "{Fuse: 11000, Motion: [0.0d, 0.0d, 0.0d], Invulnerable: 0b, Air: 300s, OnGround: 0b, PortalCooldown: 0, Settle: 100, Rotation: [0.0f, 0.0f], Open: 0b, FallDistance: 0.0f, Second: {components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 293.0d, moles: {\"zas:nitrogen\": 1.25d}}}}, count: 1, id: \"zas_atmos:empty_tank\"}, Timer: 600, Pos: [646.5d, -60.0d, 8.5d], Fire: 0s, FormatVersion: 1, First: {components: {\"zas_atmos:gas\": {FormatVersion: 1, value: {temperature: 290.0d, moles: {\"zas:oxygen\": 1.5d}}}}, count: 1, id: \"zas_atmos:oxygen_tank\"}, UUID: [I; 1547937761, 2082491904, -1365514322, -1054785699]}"
+}

@@ -8,3 +8,6 @@
 *.ogg binary
 *.nbt binary
 *.ttf binary
+# Worlds saved by earlier releases, which the migration tests read byte for byte (DATA-012).
+*.mca binary
+*.dat binary
