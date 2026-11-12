@@ -1,6 +1,6 @@
 /**
  * The Accessories adapter (COMPAT-041, COMPAT-042): tanks and masks work from Accessories slots. It
- * is built on the public API and Accessories' own public classes only, so another mod with
+ * is built on the public API and Accessories' own API only (COMPAT-003), so another mod with
  * equipment slots can copy it. {@code zas} starts it, through {@link
  * io.github.west3436.zas.compat.accessories.AccessoriesCompat#init}, only when Accessories is
  * installed in a version it supports (COMPAT-002); without Accessories none of these classes is

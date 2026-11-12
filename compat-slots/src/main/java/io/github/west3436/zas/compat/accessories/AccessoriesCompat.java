@@ -12,7 +12,7 @@ import net.neoforged.fml.ModContainer;
  *
  * <p>The adapter is one registration: {@link AccessoriesSlots} as a provider of extra equipment
  * slots ({@link ExtraSlots}), so that internals find a tank in an Accessories slot and a mask in a
- * slot of its head group seals and filters. A mod with slots of its own does the same from its own
+ * hat or face slot there seals and filters. A mod with slots of its own does the same from its own
  * constructor.
  *
  * <p>With Curios installed too, each mod keeps its own slots and each adapter reads its own, so no
