@@ -3,7 +3,17 @@
     "type": "connecting",
     "layout": "pieced",
     "connections": {
-      "type": "is_same_block"
+      "type": "or",
+      "predicates": [
+        {
+          "type": "match_block",
+          "block": "zas_atmos:station_wall"
+        },
+        {
+          "type": "match_block",
+          "block": "zas_atmos:station_wall_pipe"
+        }
+      ]
     }
   }
 }

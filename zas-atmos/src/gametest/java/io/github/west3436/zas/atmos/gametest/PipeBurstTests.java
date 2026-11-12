@@ -35,8 +35,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * Pipe bursts (CONT-108): a network more than 100 atm over a segment's cell loses one segment and
  * dumps everything into that cell, with no explosion. Each test builds in its own {@link Area} and
  * drives its steps within one game tick, in a batch of its own. {@code PipeBurstTest} checks the
- * threshold and the choice among segments, since a run can't span two cells at different pressures:
- * a pipe doesn't seal the gap it passes through.
+ * threshold and the choice among segments, since a bare run can't span two cells at different
+ * pressures: a bare pipe doesn't seal the gap it passes through. A run through a station wall can,
+ * and {@code EncasedPipeTests} bursts one.
  */
 @GameTestHolder(ZasAtmosMod.MOD_ID)
 @PrefixGameTestTemplate(false)

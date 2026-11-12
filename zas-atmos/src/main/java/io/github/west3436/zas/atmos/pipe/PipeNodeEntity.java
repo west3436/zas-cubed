@@ -24,6 +24,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The block entity of a pipe network node: a pipe, a cap, or a device with a port buffer
@@ -52,6 +53,7 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
     private final CellWatch cellWatch = new CellWatch();
     private PipeNetwork network;
     private boolean unloading;
+    private @Nullable Vec3 releaseAt;
 
     protected PipeNodeEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, double volume) {
         super(type, pos, state);
@@ -317,6 +319,17 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
         super.onChunkUnloaded();
     }
 
+    /**
+     * Says which way the node's share goes when it is removed and a full block is left in its place,
+     * as when a pipe is taken out of a wall: into the cell beside that face, if there is one, where the
+     * block's middle would send it to whichever side comes first (API-015).
+     *
+     * @param face the face it is taken out of
+     */
+    public void releaseToward(Direction face) {
+        releaseAt = Vec3.atCenterOf(worldPosition).relative(face, 0.49);
+    }
+
     @Override
     public void setRemoved() {
         if (!unloading && level instanceof ServerLevel server) {
@@ -325,7 +338,8 @@ public abstract class PipeNodeEntity extends AtmosDevice implements PipeNode, Pi
             if (keepsShareWhenRemoved()) {
                 stored.set(share); // carried away, as by a mined canister's item
             } else if (!share.isEmpty() && !voidsShareWhenRemoved()) { // a voided share is destroyed
-                GasMutations.add(server, Vec3.atCenterOf(worldPosition), share, RELEASE);
+                GasMutations.add(
+                        server, releaseAt != null ? releaseAt : Vec3.atCenterOf(worldPosition), share, RELEASE);
             }
         }
         super.setRemoved();

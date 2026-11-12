@@ -1,5 +1,6 @@
 {
   "values": [
-    "zas_atmos:station_wall"
+    "zas_atmos:station_wall",
+    "zas_atmos:station_wall_pipe"
   ]
 }
