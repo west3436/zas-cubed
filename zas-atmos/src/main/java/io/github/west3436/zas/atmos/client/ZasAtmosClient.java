@@ -21,6 +21,7 @@ import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.ttv.TransferValve;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
@@ -125,6 +126,11 @@ public final class ZasAtmosClient {
         event.register(dye, AtmosBlocks.PIPE_CAP.get());
         // A pipe in a casing too: its end in the casing's face is the pipe's (#487).
         event.register(dye, AtmosBlocks.pipes());
+        // A large gas tank's shell: grey undyed, or its dye's colour.
+        event.register(
+                (state, level, pos, tintIndex) ->
+                        tintIndex == 0 ? 0xFF000000 | LargeTankBlock.tint(state.getValue(PipeColor.PROPERTY)) : -1,
+                AtmosBlocks.LARGE_GAS_TANK.get());
         // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
         event.register(
                 (state, level, pos, tintIndex) -> tintIndex == 0
@@ -158,6 +164,9 @@ public final class ZasAtmosClient {
                         tintIndex == 0 ? 0xFF000000 | PipeItem.color(stack).tint() : -1,
                 AtmosItems.PIPE.get(),
                 AtmosItems.PIPE_CAP.get());
+        event.register(
+                (stack, tintIndex) -> tintIndex == 0 ? 0xFF000000 | LargeTankBlock.tint(PipeItem.color(stack)) : -1,
+                AtmosItems.LARGE_GAS_TANK.get());
         // A heat exchanger's item shows copper (CONT-148).
         event.register(
                 (stack, tintIndex) ->

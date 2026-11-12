@@ -36,7 +36,7 @@ public final class CanisterFailure {
      * goes by the air around it. Hot gas inside it is left to the pressure limits (CONT-085, D-57).
      *
      * @param level the level
-     * @param pos the canister, or a large tank's lower half
+     * @param pos the canister, or a large tank's inlet half
      * @param gas its network's gas
      * @return whether the canister failed, and is gone
      */
@@ -88,7 +88,7 @@ public final class CanisterFailure {
         for (BlockPos reached : event.getAffectedBlocks()) {
             PipeNodeEntity vessel = GasVessels.at(level, reached);
             if (vessel != null && !vessel.isRemoved()) {
-                // A tank goes by its lower half, which holds its gas, whichever half the blast reached.
+                // A tank goes by its inlet half, which holds its gas, whichever half the blast reached.
                 BlockPos pos = vessel.getBlockPos();
                 double moles = vessel.share().totalMoles();
                 level.removeBlock(pos, false);

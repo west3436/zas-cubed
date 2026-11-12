@@ -237,7 +237,7 @@ public final class AtmosBlockEntities {
             () -> BlockEntityType.Builder.of(TankHolderBlockEntity::new, AtmosBlocks.TANK_HOLDER.get())
                     .build(null));
 
-    // The large gas tank: on its lower half.
+    // The large gas tank: on its inlet half.
 
     public static final Supplier<BlockEntityType<LargeTankBlockEntity>> LARGE_GAS_TANK = BLOCK_ENTITIES.register(
             "large_gas_tank",

@@ -12,8 +12,29 @@
               "condition": "minecraft:block_state_property",
               "block": "zas_atmos:large_gas_tank",
               "properties": {
-                "half": "lower"
+                "part": "inlet"
               }
+            }
+          ],
+          "functions": [
+            {
+              "function": "minecraft:copy_state",
+              "block": "zas_atmos:large_gas_tank",
+              "properties": [
+                "color"
+              ],
+              "conditions": [
+                {
+                  "condition": "minecraft:inverted",
+                  "term": {
+                    "condition": "minecraft:block_state_property",
+                    "block": "zas_atmos:large_gas_tank",
+                    "properties": {
+                      "color": "none"
+                    }
+                  }
+                }
+              ]
             }
           ]
         }

@@ -32,7 +32,8 @@ import org.jetbrains.annotations.Nullable;
  * The wrench turns and removes atmos parts (CONT-035): the blocks pipes join, which are pipes, caps,
  * valves, connector ports, vents, scrubbers, pumps, filters, mixers and large gas tanks. A canister is
  * a portable, mined into an item that keeps its gas (CONT-017), so it isn't one. A large tank is one
- * part: a click on either half acts on the tank, whose gas its lower half holds.
+ * part: a click on either half acts on the tank, whose gas its inlet half holds. It has nothing to
+ * turn: its pipe joins it from below whichever way it lies.
  *
  * <ul>
  *   <li><b>Use</b> turns a part a quarter turn about the face clicked, clockwise as seen from that
@@ -67,7 +68,7 @@ public class WrenchItem extends Item {
             return InteractionResult.PASS;
         }
         if (state.getBlock() instanceof LargeTankBlock) {
-            pos = LargeTankBlock.lower(state, pos);
+            pos = LargeTankBlock.inlet(state, pos);
             state = level.getBlockState(pos);
             if (!isPart(state)) {
                 return InteractionResult.PASS; // half a tank, as a command can leave
@@ -100,13 +101,16 @@ public class WrenchItem extends Item {
      * turn about that face's axis, clockwise as seen from the face; or, if it points along that axis,
      * turned around. A part that only faces sideways, such as the electrolyzer, turns about the
      * vertical: by that rule when clicked on its top or bottom, and clockwise as seen from above when
-     * clicked on a side. Nothing else changes.
+     * clicked on a side. Nothing else changes. A large gas tank doesn't turn.
      *
      * @param state the part's state
      * @param face the face clicked
      * @return the turned state, or {@code state} itself if it has nothing to turn that way
      */
     public static BlockState turned(BlockState state, Direction face) {
+        if (state.getBlock() instanceof LargeTankBlock) {
+            return state; // its pipe face is underneath, whichever way it lies
+        }
         if (state.hasProperty(BlockStateProperties.FACING)) {
             return state.setValue(
                     BlockStateProperties.FACING, turned(state.getValue(BlockStateProperties.FACING), face));

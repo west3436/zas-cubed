@@ -263,7 +263,7 @@ public final class AtmosBlocks {
 
     // ---- The large gas tank ----
 
-    /** The large gas tank, one block wide and two high: a fixed store on a pipe network. */
+    /** The large gas tank, two blocks long and one high: a fixed store on a pipe network. */
     public static final DeferredBlock<LargeTankBlock> LARGE_GAS_TANK =
             BLOCKS.registerBlock("large_gas_tank", LargeTankBlock::new, metal().pushReaction(PushReaction.BLOCK));
 

@@ -246,8 +246,19 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
         }
     }
 
-    /** Dyes a pipe or cap with the dye in hand (CONT-114), using up one dye outside creative. */
-    static ItemInteractionResult dye(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player) {
+    /**
+     * Dyes a pipe, a cap or a large gas tank with the dye in hand (CONT-114), using up one dye outside
+     * creative.
+     *
+     * @param stack what the player holds
+     * @param state the block's state, which has {@link PipeColor#PROPERTY}
+     * @param level the level
+     * @param pos the block
+     * @param player the player
+     * @return success if it was dyed; otherwise a pass to the block's own use
+     */
+    public static ItemInteractionResult dye(
+            ItemStack stack, BlockState state, Level level, BlockPos pos, Player player) {
         if (!(stack.getItem() instanceof DyeItem dye)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -268,8 +279,14 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
         return dyed(super.getCloneItemStack(level, pos, state), state);
     }
 
-    /** A stack of a pipe or cap item, given the colour of a block state. */
-    static ItemStack dyed(ItemStack stack, BlockState state) {
+    /**
+     * A stack of a pipe, cap or large gas tank item, given the colour of a block state.
+     *
+     * @param stack the stack, of the block's item
+     * @param state the block's state, which has {@link PipeColor#PROPERTY}
+     * @return a stack of that colour, or {@code stack} if its item doesn't carry one
+     */
+    public static ItemStack dyed(ItemStack stack, BlockState state) {
         if (stack.getItem() instanceof PipeItem item) {
             return PipeItem.of(item, state.getValue(PipeColor.PROPERTY), stack.getCount());
         }

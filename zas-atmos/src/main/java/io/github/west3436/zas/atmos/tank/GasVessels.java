@@ -19,7 +19,7 @@ public final class GasVessels {
      *
      * @param level the level
      * @param pos a position
-     * @return its block entity, which for a tank is on its lower half, or null if there is none
+     * @return its block entity, which for a tank is on its inlet half, or null if there is none
      */
     public static @Nullable PipeNodeEntity at(BlockGetter level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);

@@ -429,33 +429,34 @@ public final class AnalyzerTests {
     public static void cont_034_used_on_either_half_of_a_large_tank_it_reads_the_tanks_own_gas(GameTestHelper h) {
         Area a = new Area(h, 4864);
         a.clear(0, 0, 6, 6);
-        LargeTankBlockEntity tank = LargeTankTests.stand(a, 2, 1, 2, Direction.NORTH); // its back to the south
-        a.place(2, 1, 3, GasDeviceTests.pipe());
+        LargeTankBlockEntity tank = LargeTankTests.lay(a, 2, 2, 2, Direction.NORTH); // its end half at (2, 2, 1)
+        a.place(2, 1, 2, GasDeviceTests.pipe());
         a.tick();
         tank.network().gas().add(new GasParcel(Map.of(N2, 1_200.0, O2, 300.0), T));
         h.assertTrue(tank.network().volume() > tank.nodeVolume(), "the tank is alone in its network");
         GasParcel share = tank.share();
         GasMixture own = new GasMixture(share.moles(), share.temperature(), tank.nodeVolume());
-        ListeningPlayer l = player(a, 4, 1, 2);
+        ListeningPlayer l = player(a, 4, 2, 2);
         ServerPlayer p = l.player();
 
-        for (int y = 1; y <= 2; y++) {
-            BlockPos half = a.abs(2, y, 2);
+        for (int z = 2; z >= 1; z--) {
+            BlockPos half = a.abs(2, 2, z);
+            String which = z == 2 ? "its inlet half" : "its end half";
             for (Direction face : Direction.values()) {
                 AnalyzerTarget target =
                         AnalyzerTarget.on(a.level, new BlockHitResult(faceCentre(half, face), face, half, false));
-                h.assertValueEqual(target.kind(), Kind.CANISTER, "what the tank reads at y = " + y + " on " + face);
-                h.assertValueEqual(target.pos(), a.abs(2, 1, 2), "the block read at y = " + y + " on " + face);
+                h.assertValueEqual(target.kind(), Kind.CANISTER, "what the tank reads at " + which + " on " + face);
+                h.assertValueEqual(target.pos(), a.abs(2, 2, 2), "the block read at " + which + " on " + face);
             }
             h.assertTrue(
                     useOn(p, half, Direction.EAST, faceCentre(half, Direction.EAST))
                             .consumesAction(),
-                    "using it on the tank at y = " + y + " did nothing");
+                    "using it on " + which + " did nothing");
             menu(a, l);
             AnalyzerSync s = last(a, l);
             h.assertValueEqual(s.kind(), Kind.CANISTER, "what the tank reads");
             h.assertValueEqual(s.target(), AtmosBlocks.LARGE_GAS_TANK.get().getName(), "its name");
-            same(a, s.gas(), own, "the reading at y = " + y);
+            same(a, s.gas(), own, "the reading at " + which);
             p.closeContainer();
         }
         a.clear(0, 0, 6, 6);
@@ -824,8 +825,8 @@ public final class AnalyzerTests {
             }
             parts++;
             if (block instanceof LargeTankBlock) {
-                // Its upper half takes the place of the store above it, and goes with the tank.
-                a.level.setBlockAndUpdate(pos.above(), LargeTankTests.upper(Direction.NORTH));
+                // Its end half takes the place of the store north of it, and goes with the tank.
+                a.level.setBlockAndUpdate(pos.north(), LargeTankTests.end(Direction.NORTH));
             }
             a.place(2, 2, 2, block.defaultBlockState());
             BlockEntity be = a.level.getBlockEntity(pos);
@@ -848,7 +849,7 @@ public final class AnalyzerTests {
             read.merge(expected, 1, Integer::sum);
             a.level.setBlockAndUpdate(pos, Area.AIR);
             if (block instanceof LargeTankBlock) {
-                a.level.setBlockAndUpdate(pos.above(), TestGasHandler.block().defaultBlockState());
+                a.level.setBlockAndUpdate(pos.north(), TestGasHandler.block().defaultBlockState());
             }
         }
         h.assertTrue(parts >= 12, "blocks of ours that join pipes: " + parts);
