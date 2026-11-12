@@ -5,13 +5,13 @@ import com.vanniktech.maven.publish.SourcesJar
 apply plugin: 'net.neoforged.moddev'
 apply plugin: 'com.vanniktech.maven.publish'
 
-// Independent semver (API-002), 0.x until R1 (API-041). It loads as its own
+// Independent semver (API-002), 1.x from R1 on (API-041). It loads as its own
 // GAMELIBRARY module in dev and production, so no mod lists this project's
 // source set (architecture §2.1).
 //
 // -PapiSnapshot=true (or ORG_GRADLE_PROJECT_apiSnapshot=true) builds
 // <api_version>-SNAPSHOT for the Central snapshots repository. The mods' nested
-// API keeps its [api_version,1.0) range either way.
+// API keeps its range, from api_version up to the next major, either way.
 def snapshot = providers.gradleProperty('apiSnapshot').getOrElse('false').toBoolean()
 version = snapshot ? "${api_version}-SNAPSHOT" : api_version
 

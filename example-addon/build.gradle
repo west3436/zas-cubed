@@ -54,7 +54,7 @@ dependencies {
     implementation project(':zas-api')
     jarJar('io.github.west3436:zas-api') {
         version {
-            strictly "[${api_version},1.0)"
+            strictly api_range
             prefer api_version
         }
     }

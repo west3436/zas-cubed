@@ -23,7 +23,7 @@ body:
     attributes:
       label: Versions
       description: ZAS³, ZAS³ Atmospherics, NeoForge, and any related mods (e.g. Ad Astra).
-      placeholder: "zas 0.1.0, zas_atmos 0.1.0, NeoForge 21.1.265"
+      placeholder: "zas 1.0.0, zas_atmos 1.0.0, NeoForge 21.1.265"
     validations:
       required: true
   - type: dropdown
