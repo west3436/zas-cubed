@@ -5,9 +5,12 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.airlock.AirSensorBlockEntity;
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity;
+import io.github.west3436.zas.atmos.analyzer.AnalyzerTarget;
 import io.github.west3436.zas.atmos.controller.AreaAirControllerBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.gauge.GaugeBlock;
+import io.github.west3436.zas.atmos.gauge.GaugeBlockEntity;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.heater.ThermoMachineBlockEntity;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
@@ -39,6 +42,8 @@ import org.jetbrains.annotations.Nullable;
  *       canister, a large gas tank from either half, a portable pump or scrubber): its pressure,
  *       temperature and gases. A node reads as its network does, since it holds its share of the
  *       network's gas by volume.
+ *   <li><b>A gauge</b>: what it reads, as one body of gas: the vessel or network it is on, or the
+ *       port of a pump, filter or mixer it is by. Its needle shows one value of it; this shows each.
  *   <li><b>Several ports</b> (a pump, filter, mixer or electrolyzer): each port's pressure and
  *       temperature, and no gases.
  *   <li><b>Tanks</b>: a tank holder reads the tank a click takes out, the last one put in; a tank
@@ -64,6 +69,7 @@ final class DeviceReadings {
      */
     static boolean reads(@Nullable BlockEntity be) {
         return be instanceof PipeNodeEntity
+                || be instanceof GaugeBlockEntity
                 || be instanceof InlineDeviceEntity
                 || be instanceof PortableGasDevice
                 || be instanceof TankHolderBlockEntity
@@ -90,6 +96,9 @@ final class DeviceReadings {
         }
         if (be instanceof InlineDeviceEntity device) {
             return ports(device);
+        }
+        if (be instanceof GaugeBlockEntity gauge) {
+            return gauge(gauge);
         }
         if (be instanceof PortableGasDevice portable) {
             GasStore store = portable.store();
@@ -125,6 +134,21 @@ final class DeviceReadings {
             return room(Double.NaN, machine.roomTemperature());
         }
         return null;
+    }
+
+    /** What a gauge reads, as one body of gas; null if what it is on has gone. */
+    private static @Nullable Reading gauge(GaugeBlockEntity gauge) {
+        AnalyzerTarget target = GaugeBlock.reads(gauge.getLevel(), gauge.getBlockPos(), gauge.getBlockState());
+        if (target == null) {
+            return null;
+        }
+        BlockEntity host = gauge.getLevel().getBlockEntity(target.pos());
+        if (target.port() >= 0 && host instanceof InlineDeviceEntity device) {
+            PipePort port = device.port(target.port());
+            GasParcel gas = port.share();
+            return body(Reading.Lead.BODY, "", gas.moles(), gas.temperature(), port.nodeVolume());
+        }
+        return host instanceof PipeNodeEntity ? of(host) : null;
     }
 
     /** A row for each of a device's ports, in the ports' order. */

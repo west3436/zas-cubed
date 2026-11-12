@@ -138,6 +138,11 @@ final class ListeningPlayer {
                 .toList();
     }
 
+    /** The packets of one type it was sent, in order. */
+    <T extends Packet<?>> List<T> packets(Class<T> type) {
+        return sent.stream().filter(type::isInstance).map(type::cast).toList();
+    }
+
     /** The custom payloads it was sent, in order, which is how the mods tell a client anything. */
     List<CustomPacketPayload> payloads() {
         return sent.stream()

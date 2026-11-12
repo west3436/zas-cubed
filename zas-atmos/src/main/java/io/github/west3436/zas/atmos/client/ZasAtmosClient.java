@@ -6,6 +6,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
 import io.github.west3436.zas.atmos.compat.PonderGate;
+import io.github.west3436.zas.atmos.gauge.GaugeReading;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
@@ -16,6 +17,7 @@ import io.github.west3436.zas.atmos.pipe.PipeColor;
 import io.github.west3436.zas.atmos.pipe.PipeItem;
 import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
 import io.github.west3436.zas.atmos.radiator.HeatExchangerTint;
+import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosEntities;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
@@ -85,6 +87,7 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveColors);
         modBus.addListener(ZasAtmosClient::transferValveModels);
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
+        modBus.addListener(ZasAtmosClient::gaugeRenderer);
         modBus.addListener(ConnectedTextures::addPack);
         modBus.addListener(FirelockDoorModel::wrap);
         // The Ponder scenes, on a client that has Ponder: Create brings it, and so does the ZAS³ Ponder
@@ -137,6 +140,13 @@ public final class ZasAtmosClient {
                         ? 0xFF000000 | HeatExchangerTint.colour(state.getValue(HeatExchangerBlock.HEAT))
                         : -1,
                 AtmosBlocks.HEAT_EXCHANGER.get());
+        // A gauge's arc for a gas's share is in the gas's colour (#488).
+        event.register(
+                (state, level, pos, tintIndex) -> {
+                    var gas = state.getValue(GaugeReading.PROPERTY).gas();
+                    return tintIndex == 1 && gas != null ? 0xFF000000 | GasParts.colour(gas.toString()) : -1;
+                },
+                AtmosBlocks.GAUGE.get());
 
         // A tank holder's tanks are tinted by their kinds: tint index n is the tank in place n (CONT-151).
         event.register(
@@ -200,6 +210,11 @@ public final class ZasAtmosClient {
 
     private static void transferValveRenderer(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(AtmosEntities.PRIMED_TANK_TRANSFER_VALVE.get(), PrimedTransferValveRenderer::new);
+    }
+
+    /** A gauge's needle (#488). */
+    private static void gaugeRenderer(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(AtmosBlockEntities.GAUGE.get(), GaugeRenderer::new);
     }
 
     /** The device GUIs (CONT-074). */

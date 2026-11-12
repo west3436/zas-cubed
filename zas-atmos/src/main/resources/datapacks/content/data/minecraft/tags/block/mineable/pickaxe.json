@@ -39,6 +39,7 @@
     "zas_atmos:firelock_door",
     "zas_atmos:large_gas_tank",
     "zas_atmos:station_wall_pipe",
-    "zas_atmos:reinforced_station_wall_pipe"
+    "zas_atmos:reinforced_station_wall_pipe",
+    "zas_atmos:gauge"
   ]
 }

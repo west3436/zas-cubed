@@ -1,0 +1,272 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "housing": "zas_atmos:block/gauge",
+    "dial": "zas_atmos:block/gauge_pressure",
+    "particle": "zas_atmos:block/gauge"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        -5,
+        7
+      ],
+      "to": [
+        9,
+        0,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#housing",
+          "uv": [
+            0,
+            2,
+            2,
+            7
+          ]
+        },
+        "south": {
+          "texture": "#housing",
+          "uv": [
+            0,
+            2,
+            2,
+            7
+          ]
+        },
+        "east": {
+          "texture": "#housing",
+          "uv": [
+            0,
+            2,
+            2,
+            7
+          ]
+        },
+        "west": {
+          "texture": "#housing",
+          "uv": [
+            0,
+            2,
+            2,
+            7
+          ]
+        },
+        "down": {
+          "texture": "#housing",
+          "uv": [
+            0,
+            6,
+            2,
+            8
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        0,
+        4
+      ],
+      "to": [
+        14,
+        2,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#housing",
+          "uv": [
+            2,
+            0,
+            14,
+            2
+          ]
+        },
+        "south": {
+          "texture": "#housing",
+          "uv": [
+            2,
+            0,
+            14,
+            2
+          ]
+        },
+        "east": {
+          "texture": "#housing",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "west": {
+          "texture": "#housing",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "down": {
+          "texture": "#housing",
+          "uv": [
+            2,
+            4,
+            14,
+            12
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        0,
+        2
+      ],
+      "to": [
+        12,
+        2,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#housing",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "south": {
+          "texture": "#housing",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "east": {
+          "texture": "#housing",
+          "uv": [
+            2,
+            0,
+            14,
+            2
+          ]
+        },
+        "west": {
+          "texture": "#housing",
+          "uv": [
+            2,
+            0,
+            14,
+            2
+          ]
+        },
+        "down": {
+          "texture": "#housing",
+          "uv": [
+            4,
+            2,
+            12,
+            14
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        2,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#housing",
+          "uv": [
+            3,
+            0,
+            13,
+            2
+          ]
+        },
+        "south": {
+          "texture": "#housing",
+          "uv": [
+            3,
+            0,
+            13,
+            2
+          ]
+        },
+        "east": {
+          "texture": "#housing",
+          "uv": [
+            3,
+            0,
+            13,
+            2
+          ]
+        },
+        "west": {
+          "texture": "#housing",
+          "uv": [
+            3,
+            0,
+            13,
+            2
+          ]
+        },
+        "down": {
+          "texture": "#housing",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        2,
+        2
+      ],
+      "to": [
+        14,
+        2,
+        14
+      ],
+      "faces": {
+        "up": {
+          "texture": "#dial",
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "rotation": 180
+        }
+      }
+    }
+  ]
+}

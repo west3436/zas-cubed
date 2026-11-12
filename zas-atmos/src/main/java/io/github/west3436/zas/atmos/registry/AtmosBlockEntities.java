@@ -13,6 +13,7 @@ import io.github.west3436.zas.atmos.filter.FilterBlockEntity;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlockEntity;
+import io.github.west3436.zas.atmos.gauge.GaugeBlockEntity;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlockEntity;
 import io.github.west3436.zas.atmos.heater.HeaterBlockEntity;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
@@ -242,6 +243,13 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<LargeTankBlockEntity>> LARGE_GAS_TANK = BLOCK_ENTITIES.register(
             "large_gas_tank",
             () -> BlockEntityType.Builder.of(LargeTankBlockEntity::new, AtmosBlocks.LARGE_GAS_TANK.get())
+                    .build(null));
+
+    // The gauge (#488).
+
+    public static final Supplier<BlockEntityType<GaugeBlockEntity>> GAUGE = BLOCK_ENTITIES.register(
+            "gauge",
+            () -> BlockEntityType.Builder.of(GaugeBlockEntity::new, AtmosBlocks.GAUGE.get())
                     .build(null));
 
     private AtmosBlockEntities() {}
