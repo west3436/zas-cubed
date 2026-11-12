@@ -20,8 +20,8 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 
 /**
  * A connector port (CONT-083): set in the floor, facing up. A canister standing on it joins the
- * port's network, as does a large gas tank whose inlet half lies on it, and a pipe joins it only on
- * its bottom. Its {@link #CONNECTED} state shows a collar while one is attached.
+ * port's network, as does a large gas tank standing on it, and a pipe joins it only on its
+ * bottom. Its {@link #CONNECTED} state shows a collar while one is attached.
  */
 public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector {
     public static final MapCodec<ConnectorPortBlock> CODEC = simpleCodec(ConnectorPortBlock::new);
@@ -44,7 +44,7 @@ public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector
         builder.add(CONNECTED);
     }
 
-    /** A pipe below, or a canister or a large tank above: the tank joins it by its inlet half. */
+    /** A pipe below, or a canister or a large tank above: the tank joins it by its lower half. */
     @Override
     public boolean pipeConnects(BlockState self, Direction face, BlockState neighbour) {
         return face == Direction.DOWN

@@ -12,7 +12,7 @@
               "condition": "minecraft:block_state_property",
               "block": "zas_atmos:large_gas_tank",
               "properties": {
-                "part": "inlet"
+                "half": "lower"
               }
             }
           ],

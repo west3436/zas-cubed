@@ -26,7 +26,6 @@ import io.github.west3436.zas.atmos.registry.AtmosCreativeTab;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tank.GasVessels;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
-import io.github.west3436.zas.atmos.tank.LargeTankBlock.Part;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.tool.WrenchItem;
 import java.io.ByteArrayInputStream;
@@ -71,6 +70,7 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -80,7 +80,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * The large gas tank in the world: its volume, where pipes and a connector port join it, filling and
  * emptying it through a pipe with no gas made or lost, its pressure limit, what breaking it does, its
- * two halves side by side, dyeing it, what it saves, the wrench on it, and that it seals nothing. Each
+ * two halves one above the other, dyeing it, what it saves, the wrench on it, and that it seals nothing. Each
  * test builds in its own {@link Area} and drives device steps and atmos ticks itself, within one game
  * tick, in a batch of its own.
  *
@@ -102,39 +102,36 @@ public final class LargeTankTests {
 
     // ---- Helpers ----------------------------------------------------------------------------------
 
-    /** A tank's inlet half, its end half the way it faces. */
-    static BlockState inlet(Direction facing) {
-        return AtmosBlocks.LARGE_GAS_TANK.get().defaultBlockState().setValue(LargeTankBlock.FACING, facing);
+    /** A tank's lower half, which holds its gas. */
+    static BlockState lower() {
+        return AtmosBlocks.LARGE_GAS_TANK.get().defaultBlockState();
     }
 
-    static BlockState end(Direction facing) {
-        return inlet(facing).setValue(LargeTankBlock.PART, Part.END);
+    static BlockState upper() {
+        return lower().setValue(LargeTankBlock.HALF, DoubleBlockHalf.UPPER);
     }
 
     /**
-     * Lays a whole tank with its inlet half at a place and its end half next to it the way it faces.
-     * The end half goes in first: the inlet one would go at once with nothing beside it.
+     * Stands a whole tank with its lower half at a place and its upper half above it. The upper half
+     * goes in first: the lower one would go at once with nothing above it.
      */
-    static LargeTankBlockEntity lay(Area a, int x, int y, int z, Direction facing) {
-        a.set(x + facing.getStepX(), y, z + facing.getStepZ(), end(facing));
-        a.place(x, y, z, inlet(facing));
+    static LargeTankBlockEntity stand(Area a, int x, int y, int z) {
+        a.set(x, y + 1, z, upper());
+        a.place(x, y, z, lower());
         return a.entity(x, y, z);
     }
 
-    /** Whether a whole tank lies with its inlet half at a place, in one colour. */
+    /** Whether a whole tank stands with its lower half at a place, in one colour. */
     private static boolean whole(Area a, int x, int y, int z) {
-        BlockState in = a.get(x, y, z);
-        if (!in.is(AtmosBlocks.LARGE_GAS_TANK.get()) || in.getValue(LargeTankBlock.PART) != Part.INLET) {
-            return false;
-        }
-        Direction facing = in.getValue(LargeTankBlock.FACING);
-        return a.get(x + facing.getStepX(), y, z + facing.getStepZ()) == in.setValue(LargeTankBlock.PART, Part.END);
+        BlockState low = a.get(x, y, z);
+        return low.is(AtmosBlocks.LARGE_GAS_TANK.get())
+                && low.getValue(LargeTankBlock.HALF) == DoubleBlockHalf.LOWER
+                && a.get(x, y + 1, z) == low.setValue(LargeTankBlock.HALF, DoubleBlockHalf.UPPER);
     }
 
-    /** Whether nothing of a tank lying from a place one way is left. */
-    private static boolean gone(Area a, int x, int y, int z, Direction facing) {
-        return a.get(x, y, z).isAir()
-                && a.get(x + facing.getStepX(), y, z + facing.getStepZ()).isAir();
+    /** Whether nothing of a tank standing at a place is left. */
+    private static boolean gone(Area a, int x, int y, int z) {
+        return a.get(x, y, z).isAir() && a.get(x, y + 1, z).isAir();
     }
 
     /** The stacks dropped since {@link WrenchTests#watchDrops}, taken out of the level. */
@@ -203,82 +200,70 @@ public final class LargeTankTests {
     // ---- Its volume, and where pipes join it ------------------------------------------------------
 
     /**
-     * A tank holds ten canisters' worth. Whichever way it lies, a pipe joins it under its inlet half
-     * and nowhere else: not at its sides, its ends or its top, and not under its end half. Each pipe
-     * is tried alone, so only the tank can join it. It offers its gas to another mod's pipe on that one
-     * face, and its end half has no block entity.
+     * A tank holds ten canisters' worth. A pipe joins it under its lower half and nowhere else: not at
+     * the sides of either half, not on its top, and not at the faces where its halves meet. Each pipe is
+     * tried alone, so only the tank can join it. It offers its gas to another mod's pipe on that one
+     * face, and its upper half has no block entity.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void large_tank_holds_ten_canisters_and_takes_a_pipe_only_under_its_inlet_half(GameTestHelper h) {
+    public static void large_tank_holds_ten_canisters_and_takes_a_pipe_only_under_its_lower_half(GameTestHelper h) {
         Area a = new Area(h, 4850);
-        a.clear(0, 0, 30, 6);
+        a.clear(0, 0, 6, 6);
         h.assertValueEqual(PipeVolumes.LARGE_TANK, 10 * PipeVolumes.CANISTER, "its volume against a canister's");
         LargeTankBlock block = AtmosBlocks.LARGE_GAS_TANK.get();
         BlockState pipe = GasDeviceTests.pipe();
-        int x = 3;
-        for (Direction facing : Direction.Plane.HORIZONTAL) {
-            LargeTankBlockEntity tank = lay(a, x, 2, 3, facing);
-            int ex = x + facing.getStepX();
-            int ez = 3 + facing.getStepZ();
-            h.assertTrue(whole(a, x, 2, 3), facing + ": the tank doesn't lie whole");
-            a.close(tank.nodeVolume(), 10_000, facing + ": its volume");
-            a.close(tank.network().volume(), PipeVolumes.LARGE_TANK, facing + ": its network, alone");
-            h.assertTrue(
-                    a.level.getBlockEntity(a.abs(ex, 2, ez)) == null, facing + ": the end half has a block entity");
-            for (Direction face : Direction.values()) {
-                h.assertValueEqual(
-                        block.pipeConnects(inlet(facing), face, pipe),
-                        face == Direction.DOWN,
-                        facing + ": a pipe on its inlet half's " + face);
-                h.assertFalse(
-                        block.pipeConnects(end(facing), face, pipe), facing + ": a pipe joins its end half on " + face);
-            }
+        LargeTankBlockEntity tank = stand(a, 3, 2, 3);
+        h.assertTrue(whole(a, 3, 2, 3), "the tank doesn't stand whole");
+        a.close(tank.nodeVolume(), 10_000, "its volume");
+        a.close(tank.network().volume(), PipeVolumes.LARGE_TANK, "its network, alone");
+        h.assertTrue(a.level.getBlockEntity(a.abs(3, 3, 3)) == null, "the upper half has a block entity");
+        for (Direction face : Direction.values()) {
             h.assertValueEqual(
-                    offered(a, x, 2, 3), EnumSet.of(Direction.DOWN), facing + ": the faces it offers gas on");
-            h.assertValueEqual(
-                    offered(a, ex, 2, ez), EnumSet.noneOf(Direction.class), facing + ": the faces of its end half");
-
-            // One pipe at a time beside each face of each half, but where the halves meet.
-            for (boolean atInlet : new boolean[] {true, false}) {
-                int hx = atInlet ? x : ex;
-                int hz = atInlet ? 3 : ez;
-                for (Direction face : Direction.values()) {
-                    if (face == (atInlet ? facing : facing.getOpposite())) {
-                        continue;
-                    }
-                    int px = hx + face.getStepX();
-                    int py = 2 + face.getStepY();
-                    int pz = hz + face.getStepZ();
-                    String where = facing + ": a pipe by the " + (atInlet ? "inlet" : "end") + " half's " + face;
-                    a.place(px, py, pz, pipe);
-                    boolean joins = atInlet && face == Direction.DOWN;
-                    h.assertValueEqual(GasDeviceTests.joined(a.get(px, py, pz), face.getOpposite()), joins, where);
-                    a.close(
-                            tank.network().volume(),
-                            PipeVolumes.LARGE_TANK + (joins ? PipeVolumes.PIPE : 0),
-                            where + ": the tank's network");
-                    a.set(px, py, pz, AIR);
-                }
-            }
-            x += 6;
+                    block.pipeConnects(lower(), face, pipe),
+                    face == Direction.DOWN,
+                    "a pipe on its lower half's " + face);
+            h.assertFalse(block.pipeConnects(upper(), face, pipe), "a pipe joins its upper half on " + face);
         }
-        a.clear(0, 0, 30, 6);
+        h.assertValueEqual(offered(a, 3, 2, 3), EnumSet.of(Direction.DOWN), "the faces it offers gas on");
+        h.assertValueEqual(offered(a, 3, 3, 3), EnumSet.noneOf(Direction.class), "the faces of its upper half");
+
+        // One pipe at a time beside each face of each half, but where the halves meet.
+        for (int y : new int[] {2, 3}) {
+            boolean atLower = y == 2;
+            for (Direction face : Direction.values()) {
+                if (face == (atLower ? Direction.UP : Direction.DOWN)) {
+                    continue;
+                }
+                int px = 3 + face.getStepX();
+                int py = y + face.getStepY();
+                int pz = 3 + face.getStepZ();
+                String where = "a pipe by the " + (atLower ? "lower" : "upper") + " half's " + face;
+                a.place(px, py, pz, pipe);
+                boolean joins = atLower && face == Direction.DOWN;
+                h.assertValueEqual(GasDeviceTests.joined(a.get(px, py, pz), face.getOpposite()), joins, where);
+                a.close(
+                        tank.network().volume(),
+                        PipeVolumes.LARGE_TANK + (joins ? PipeVolumes.PIPE : 0),
+                        where + ": the tank's network");
+                a.set(px, py, pz, AIR);
+            }
+        }
+        a.clear(0, 0, 6, 6);
         h.succeed();
     }
 
     /**
-     * A tank whose inlet half lies on a connector port joins the port's network, as a canister on it
-     * does: the port shows its collar, and the tank, the port and the pipe under the port share one
-     * gas. Placed from its item on the port's top, it joins it too. A port under its end half stays
-     * bare and alone.
+     * A tank standing on a connector port joins the port's network, as a canister on it does: the port
+     * shows its collar, and the tank, the port and the pipe under the port share one gas. Placed from
+     * its item on the port's top, it joins it too. A port on the tank's top stays bare and alone.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void large_tank_lies_on_a_connector_port_by_its_inlet_half(GameTestHelper h) {
+    public static void large_tank_stands_on_a_connector_port(GameTestHelper h) {
         Area a = new Area(h, 4865);
         a.clear(0, 0, 8, 6);
         a.place(2, 1, 3, GasDeviceTests.pipe());
         a.place(2, 2, 3, GasDeviceTests.port());
-        LargeTankBlockEntity tank = lay(a, 2, 3, 3, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 3, 3);
         h.assertTrue(a.get(2, 2, 3).getValue(ConnectorPortBlock.CONNECTED), "the port doesn't show the tank");
         PipeNetwork net = tank.network();
         a.close(net.volume(), PipeVolumes.LARGE_TANK + PipeVolumes.PORT + PipeVolumes.PIPE, "the network's volume");
@@ -288,10 +273,9 @@ public final class LargeTankTests {
 
         // Placed by a player on the port's top.
         a.set(2, 3, 3, AIR);
-        h.assertTrue(gone(a, 2, 3, 3, Direction.NORTH), "taking the inlet half away left its end half");
+        h.assertTrue(gone(a, 2, 3, 3), "taking the lower half away left its upper half");
         h.assertFalse(a.get(2, 2, 3).getValue(ConnectorPortBlock.CONNECTED), "the port still shows a tank");
         ServerPlayer p = player(a, 2, 3, 6);
-        p.moveTo(p.getX(), p.getY(), p.getZ(), Direction.NORTH.toYRot(), 0);
         ItemStack item = new ItemStack(AtmosItems.LARGE_GAS_TANK.get());
         h.assertTrue(use(a, p, item, 2, 2, 3, Direction.UP).consumesAction(), "it wasn't placed on the port");
         h.assertTrue(whole(a, 2, 3, 3), "placed on the port, it isn't whole: " + a.get(2, 3, 3));
@@ -302,11 +286,12 @@ public final class LargeTankTests {
                 PipeVolumes.LARGE_TANK + PipeVolumes.PORT + PipeVolumes.PIPE,
                 "placed on the port, its network's volume");
 
-        // A port under the end half.
-        a.place(5, 2, 2, GasDeviceTests.port());
-        LargeTankBlockEntity other = lay(a, 5, 3, 3, Direction.NORTH); // its end half above the port
-        h.assertFalse(a.get(5, 2, 2).getValue(ConnectorPortBlock.CONNECTED), "a port under the end half shows it");
-        a.close(other.network().volume(), PipeVolumes.LARGE_TANK, "the tank over a port by its end half");
+        // A port on the top of another tank.
+        LargeTankBlockEntity other = stand(a, 5, 1, 3);
+        a.place(5, 3, 3, GasDeviceTests.port());
+        h.assertFalse(a.get(5, 3, 3).getValue(ConnectorPortBlock.CONNECTED), "a port on the tank's top shows it");
+        a.close(other.network().volume(), PipeVolumes.LARGE_TANK, "the tank under a port");
+        a.close(network(a, 5, 3, 3).volume(), PipeVolumes.PORT, "the port on the tank's top");
         a.clear(0, 0, 8, 6);
         h.succeed();
     }
@@ -322,7 +307,7 @@ public final class LargeTankTests {
     public static void large_tank_fills_and_empties_through_a_pipe_and_no_gas_is_made_or_lost(GameTestHelper h) {
         Area a = new Area(h, 4851);
         a.clear(0, 0, 8, 4);
-        LargeTankBlockEntity from = lay(a, 1, 2, 2, Direction.NORTH);
+        LargeTankBlockEntity from = stand(a, 1, 2, 2);
         a.place(1, 1, 2, GasDeviceTests.pipe());
         a.place(2, 1, 2, GasDeviceTests.pipe());
         a.place(
@@ -332,7 +317,7 @@ public final class LargeTankTests {
                 AtmosBlocks.PRESSURE_PUMP.get().defaultBlockState().setValue(InlineDeviceBlock.FACING, Direction.EAST));
         a.place(4, 1, 2, GasDeviceTests.pipe());
         a.place(5, 1, 2, GasDeviceTests.pipe());
-        LargeTankBlockEntity to = lay(a, 5, 2, 2, Direction.NORTH);
+        LargeTankBlockEntity to = stand(a, 5, 2, 2);
         PressurePumpBlockEntity pump = a.entity(3, 1, 2);
         pump.power().setTestPowered(true);
 
@@ -384,7 +369,7 @@ public final class LargeTankTests {
         Area a = new Area(h, 4852);
         GasDeviceTests.room(a);
         double room = a.zone(1, 1, 1).mixture().totalMoles();
-        LargeTankBlockEntity tank = lay(a, 2, 1, 2, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 1, 2);
         a.tick();
         double below = molesFor(9_119, PipeVolumes.LARGE_TANK, T);
         tank.network().gas().add(new GasParcel(Map.of(N2, below), T));
@@ -396,9 +381,7 @@ public final class LargeTankTests {
         tank.network().gas().add(new GasParcel(Map.of(N2, raised - below), T));
         WrenchTests.watchDrops();
         a.step();
-        h.assertTrue(
-                gone(a, 2, 1, 2, Direction.NORTH),
-                "a tank at 9,121 kPa held: " + a.get(2, 1, 2) + ", " + a.get(2, 1, 1));
+        h.assertTrue(gone(a, 2, 1, 2), "a tank at 9,121 kPa held: " + a.get(2, 1, 2) + ", " + a.get(2, 1, 3));
         h.assertTrue(drops().isEmpty(), "a ruptured tank dropped something");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().totalMoles(), room + raised, "the room's gas after the rupture");
@@ -415,7 +398,7 @@ public final class LargeTankTests {
         Area a = new Area(h, 4853);
         GasDeviceTests.room(a);
         double room = a.zone(1, 1, 1).mixture().totalMoles();
-        LargeTankBlockEntity tank = lay(a, 2, 2, 2, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 2, 2);
         a.place(2, 1, 2, GasDeviceTests.pipe());
         PipeTests.cap(a, 2, 1, 3, Direction.NORTH);
         a.tick();
@@ -425,7 +408,7 @@ public final class LargeTankTests {
         double share = total * PipeVolumes.LARGE_TANK / net.volume();
         net.gas().add(new GasParcel(Map.of(N2, total), T));
         a.step();
-        h.assertTrue(gone(a, 2, 2, 2, Direction.NORTH), "the tank held above its rating");
+        h.assertTrue(gone(a, 2, 2, 2), "the tank held above its rating");
         h.assertTrue(a.get(2, 1, 2).is(AtmosBlocks.PIPE.get()), "the pipe went with the tank");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().totalMoles(), room + share, "the room's gas: the tank's share");
@@ -435,7 +418,7 @@ public final class LargeTankTests {
 
     /**
      * Raised past 135 atm in one tick, a tank goes straight to the explosion, with a canister's power
-     * for its pressure, at its inlet half, and its gas goes into its cell (CONT-102).
+     * for its pressure, at its lower half, and its gas goes into its cell (CONT-102).
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_102_a_large_tank_raised_past_135_atm_explodes_with_a_canisters_power(GameTestHelper h) {
@@ -443,7 +426,7 @@ public final class LargeTankTests {
         Area a = new Area(h, 4854);
         GasDeviceTests.room(a);
         double room = a.zone(1, 1, 1).mixture().totalMoles();
-        LargeTankBlockEntity tank = lay(a, 2, 1, 2, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 1, 2);
         a.tick();
         double start = molesFor(5_000, PipeVolumes.LARGE_TANK, T);
         tank.network().gas().add(new GasParcel(Map.of(N2, start), T));
@@ -453,7 +436,7 @@ public final class LargeTankTests {
         double raised = molesFor(ContainerFailure.CANISTER_EXPLODE_KPA + 25 * ATM, PipeVolumes.LARGE_TANK, T);
         tank.network().gas().add(new GasParcel(Map.of(N2, raised - start), T));
         a.step();
-        h.assertTrue(gone(a, 2, 1, 2, Direction.NORTH), "the tank is still there");
+        h.assertTrue(gone(a, 2, 1, 2), "the tank is still there");
         var blasts = Blasts.take(a.point(2, 1, 2));
         h.assertValueEqual(blasts.size(), 1, "explosions");
         h.assertTrue(
@@ -461,35 +444,35 @@ public final class LargeTankTests {
                 "the explosion's power: " + blasts.get(0).radius());
         h.assertTrue(
                 blasts.get(0).center().distanceTo(a.point(2, 1, 2)) < 1e-6,
-                "the explosion is at " + blasts.get(0).center() + ", not at its inlet half");
+                "the explosion is at " + blasts.get(0).center() + ", not at its lower half");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().totalMoles(), room + raised, "the room's gas after the explosion");
         h.succeed();
     }
 
-    /** A blast beside its end half ruptures it: the end half stands for the tank. */
+    /** A blast beside its upper half ruptures it: the upper half stands for the tank. */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_101_a_blast_beside_a_large_tanks_end_half_ruptures_it(GameTestHelper h) {
+    public static void cont_101_a_blast_beside_a_large_tanks_upper_half_ruptures_it(GameTestHelper h) {
         caughtInABlast(h, new Area(h, 4855), true);
     }
 
-    /** A blast beside its inlet half ruptures it too. */
+    /** A blast beside its lower half ruptures it too. */
     @GameTest(template = "empty", batch = BATCH)
-    public static void cont_101_a_blast_beside_a_large_tanks_inlet_half_ruptures_it(GameTestHelper h) {
+    public static void cont_101_a_blast_beside_a_large_tanks_lower_half_ruptures_it(GameTestHelper h) {
         caughtInABlast(h, new Area(h, 4856), false);
     }
 
     /** A blast that keeps blocks, as a container's does under Normal: the tank goes whole, its gas into its cell. */
-    private static void caughtInABlast(GameTestHelper h, Area a, boolean byEnd) {
+    private static void caughtInABlast(GameTestHelper h, Area a, boolean byUpper) {
         GasDeviceTests.room(a);
-        LargeTankBlockEntity tank = lay(a, 2, 1, 2, Direction.NORTH); // its end half at (2, 1, 1)
+        LargeTankBlockEntity tank = stand(a, 2, 1, 2); // its upper half at (2, 2, 2)
         a.tick();
-        h.assertTrue(GasVessels.at(a.level, a.abs(2, 1, 1)) == tank, "the end half doesn't stand for the tank");
+        h.assertTrue(GasVessels.at(a.level, a.abs(2, 2, 2)) == tank, "the upper half doesn't stand for the tank");
         tank.network().gas().add(new GasParcel(Map.of(CO2, 800.0), T));
-        Vec3 at = byEnd ? a.point(3, 1, 1) : a.point(3, 1, 3);
+        Vec3 at = byUpper ? a.point(3, 3, 2) : a.point(3, 1, 2);
         WrenchTests.watchDrops();
         a.level.explode(null, at.x, at.y, at.z, 4f, Level.ExplosionInteraction.NONE);
-        h.assertTrue(gone(a, 2, 1, 2, Direction.NORTH), "the blast left " + a.get(2, 1, 2) + " and " + a.get(2, 1, 1));
+        h.assertTrue(gone(a, 2, 1, 2), "the blast left " + a.get(2, 1, 2) + " and " + a.get(2, 2, 2));
         h.assertTrue(drops().isEmpty(), "a tank caught in a blast dropped something");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().moles(CO2), 800.0, "the room's CO2 after the blast");
@@ -509,23 +492,23 @@ public final class LargeTankTests {
         GasDeviceTests.room(a);
         ServerPlayer p = player(a, 1, 1, 3);
         double held = 0;
-        for (boolean byEnd : new boolean[] {false, true}) {
-            String half = byEnd ? "end" : "inlet";
+        for (boolean byUpper : new boolean[] {false, true}) {
+            String half = byUpper ? "upper" : "lower";
             p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_PICKAXE));
-            List<ItemStack> mined = broken(h, a, p, byEnd, "mined by its " + half + " half");
+            List<ItemStack> mined = broken(h, a, p, byUpper, "mined by its " + half + " half");
             h.assertTrue(
                     mined.size() == 1 && plainTank(mined.get(0)),
                     "mined by its " + half + " half, it dropped " + mined);
             p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            List<ItemStack> byHand = broken(h, a, p, byEnd, "broken by hand by its " + half + " half");
+            List<ItemStack> byHand = broken(h, a, p, byUpper, "broken by hand by its " + half + " half");
             h.assertTrue(byHand.isEmpty(), "broken by hand by its " + half + " half, it dropped " + byHand);
             held += 80;
             a.close(a.zone(1, 1, 1).mixture().moles(CO2), held, "the room's CO2 after its " + half + " half");
         }
         p.setGameMode(GameType.CREATIVE);
-        for (boolean byEnd : new boolean[] {false, true}) {
-            String what = "broken in creative by its " + (byEnd ? "end" : "inlet") + " half";
-            List<ItemStack> dropped = broken(h, a, p, byEnd, what);
+        for (boolean byUpper : new boolean[] {false, true}) {
+            String what = "broken in creative by its " + (byUpper ? "upper" : "lower") + " half";
+            List<ItemStack> dropped = broken(h, a, p, byUpper, what);
             h.assertTrue(dropped.isEmpty(), what + ", it dropped " + dropped);
             held += 40;
             a.close(a.zone(1, 1, 1).mixture().moles(CO2), held, "the room's CO2, " + what);
@@ -534,15 +517,14 @@ public final class LargeTankTests {
     }
 
     /** Lays a tank holding 40 mol of CO2 in the room, has the player break one half, and returns what dropped. */
-    private static List<ItemStack> broken(GameTestHelper h, Area a, ServerPlayer p, boolean byEnd, String what) {
-        LargeTankBlockEntity tank = lay(a, 2, 1, 2, Direction.NORTH);
+    private static List<ItemStack> broken(GameTestHelper h, Area a, ServerPlayer p, boolean byUpper, String what) {
+        LargeTankBlockEntity tank = stand(a, 2, 1, 2);
         a.tick();
         tank.network().gas().add(new GasParcel(Map.of(CO2, 40.0), T));
         WrenchTests.watchDrops();
-        h.assertTrue(p.gameMode.destroyBlock(a.abs(2, 1, byEnd ? 1 : 2)), what + ": it didn't break");
+        h.assertTrue(p.gameMode.destroyBlock(a.abs(2, byUpper ? 2 : 1, 2)), what + ": it didn't break");
         List<ItemStack> dropped = drops();
-        h.assertTrue(
-                gone(a, 2, 1, 2, Direction.NORTH), what + ", it left " + a.get(2, 1, 2) + " and " + a.get(2, 1, 1));
+        h.assertTrue(gone(a, 2, 1, 2), what + ", it left " + a.get(2, 1, 2) + " and " + a.get(2, 2, 2));
         a.tick();
         return dropped;
     }
@@ -550,12 +532,12 @@ public final class LargeTankTests {
     // ---- Its two halves ---------------------------------------------------------------------------
 
     /**
-     * Placed from its item, a tank lies whole along the player's look: its inlet half where they
-     * clicked, its end half past it, whichever way they look, and takes the item. With a block past
-     * it, it isn't placed.
+     * Placed from its item, a tank stands whole: its lower half where the player clicked, its upper
+     * half above it, the same whichever way they look, and takes the item. With a block above where it
+     * would go, it isn't placed.
      */
     @GameTest(template = "empty", batch = BATCH)
-    public static void large_tank_is_placed_whole_along_the_players_look_and_needs_the_block_past_it(GameTestHelper h) {
+    public static void large_tank_is_placed_whole_and_needs_the_block_above_it(GameTestHelper h) {
         Area a = new Area(h, 4858);
         a.clear(0, 0, 22, 8);
         for (int x = 0; x <= 22; x++) {
@@ -570,21 +552,19 @@ public final class LargeTankTests {
             ItemStack item = new ItemStack(AtmosItems.LARGE_GAS_TANK.get());
             h.assertTrue(use(a, p, item, x, 0, 4, Direction.UP).consumesAction(), "looking " + looks + ", not placed");
             h.assertTrue(item.isEmpty(), "looking " + looks + ", placing it didn't take the item");
-            h.assertValueEqual(a.get(x, 1, 4), inlet(looks), "looking " + looks + ", its inlet half");
-            h.assertValueEqual(
-                    a.get(x + looks.getStepX(), 1, 4 + looks.getStepZ()), end(looks), "looking " + looks + ", its end");
+            h.assertValueEqual(a.get(x, 1, 4), lower(), "looking " + looks + ", its lower half");
+            h.assertValueEqual(a.get(x, 2, 4), upper(), "looking " + looks + ", its upper half");
             h.assertTrue(
                     a.level.getBlockEntity(a.abs(x, 1, 4)) instanceof LargeTankBlockEntity,
-                    "looking " + looks + ", its inlet half has no tank's block entity");
+                    "looking " + looks + ", its lower half has no tank's block entity");
             x += 4;
         }
 
-        // A block past it: there is no room for it.
-        p.moveTo(p.getX(), p.getY(), p.getZ(), Direction.EAST.toYRot(), 0);
-        a.set(x + 1, 1, 4, STONE);
+        // A block above: there is no room for it.
+        a.set(x, 2, 4, STONE);
         ItemStack item = new ItemStack(AtmosItems.LARGE_GAS_TANK.get());
-        h.assertFalse(use(a, p, item, x, 0, 4, Direction.UP).consumesAction(), "it was placed against a block");
-        h.assertTrue(a.get(x, 1, 4).isAir(), "against a block, it left " + a.get(x, 1, 4));
+        h.assertFalse(use(a, p, item, x, 0, 4, Direction.UP).consumesAction(), "it was placed under a block");
+        h.assertTrue(a.get(x, 1, 4).isAir(), "under a block, it left " + a.get(x, 1, 4));
         h.assertValueEqual(item.getCount(), 1, "the items left after it wasn't placed");
         a.clear(0, 0, 22, 8);
         h.succeed();
@@ -592,57 +572,49 @@ public final class LargeTankTests {
 
     /**
      * Half a tank never stays: with either half taken away or replaced, as a command does it, the
-     * other goes too, and only the inlet half drops the item. Half a tank turned another way from its
-     * other half goes as well. A piston moves neither half, and a structure turned or mirrored keeps the
-     * two halves lying one way.
+     * other goes too, and only the lower half drops the item. A lower half under another lower half
+     * goes as well. A piston moves neither half, and turning or mirroring a structure leaves both as
+     * they are: it has no facing.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void large_tank_never_leaves_half_a_tank(GameTestHelper h) {
         Area a = new Area(h, 4859);
         a.clear(0, 0, 4, 4);
 
-        lay(a, 2, 1, 2, Direction.EAST); // its end half at (3, 1, 2)
+        stand(a, 2, 1, 2); // its upper half at (2, 2, 2)
         WrenchTests.watchDrops();
-        a.set(3, 1, 2, AIR);
-        h.assertTrue(gone(a, 2, 1, 2, Direction.EAST), "with its end half taken away, it left " + a.get(2, 1, 2));
+        a.set(2, 2, 2, AIR);
+        h.assertTrue(gone(a, 2, 1, 2), "with its upper half taken away, it left " + a.get(2, 1, 2));
         List<ItemStack> dropped = drops();
-        h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "its inlet half dropped " + dropped);
+        h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "its lower half dropped " + dropped);
 
-        lay(a, 2, 1, 2, Direction.EAST);
+        stand(a, 2, 1, 2);
         WrenchTests.watchDrops();
         a.set(2, 1, 2, AIR);
-        h.assertTrue(gone(a, 2, 1, 2, Direction.EAST), "with its inlet half taken away, it left " + a.get(3, 1, 2));
-        h.assertTrue(drops().isEmpty(), "its end half dropped something");
+        h.assertTrue(gone(a, 2, 1, 2), "with its lower half taken away, it left " + a.get(2, 2, 2));
+        h.assertTrue(drops().isEmpty(), "its upper half dropped something");
 
-        lay(a, 2, 1, 2, Direction.EAST);
+        stand(a, 2, 1, 2);
         WrenchTests.watchDrops();
-        a.set(3, 1, 2, STONE);
-        h.assertTrue(a.get(2, 1, 2).isAir(), "with its end half replaced, it left " + a.get(2, 1, 2));
+        a.set(2, 2, 2, STONE);
+        h.assertTrue(a.get(2, 1, 2).isAir(), "with its upper half replaced, it left " + a.get(2, 1, 2));
         drops();
-        a.set(3, 1, 2, AIR);
+        a.set(2, 2, 2, AIR);
 
-        lay(a, 2, 1, 2, Direction.EAST);
+        stand(a, 2, 1, 2);
         WrenchTests.watchDrops();
-        a.set(3, 1, 2, end(Direction.NORTH)); // an end half lying another way
-        h.assertTrue(a.get(2, 1, 2).isAir(), "beside an end half lying north, it left " + a.get(2, 1, 2));
+        a.set(2, 2, 2, lower()); // a lower half above it
+        h.assertTrue(a.get(2, 1, 2).isAir(), "under a lower half, it left " + a.get(2, 1, 2));
         drops();
         a.clear(0, 0, 4, 4);
 
-        for (Direction facing : Direction.Plane.HORIZONTAL) {
-            for (BlockState half : List.of(inlet(facing), end(facing))) {
-                h.assertValueEqual(half.getPistonPushReaction(), PushReaction.BLOCK, "a piston on " + half);
-                for (Rotation turn : Rotation.values()) {
-                    h.assertValueEqual(
-                            half.rotate(turn),
-                            half.setValue(LargeTankBlock.FACING, turn.rotate(facing)),
-                            half + " turned " + turn);
-                }
-                for (Mirror mirror : Mirror.values()) {
-                    h.assertValueEqual(
-                            half.mirror(mirror),
-                            half.setValue(LargeTankBlock.FACING, mirror.mirror(facing)),
-                            half + " mirrored " + mirror);
-                }
+        for (BlockState half : List.of(lower(), upper())) {
+            h.assertValueEqual(half.getPistonPushReaction(), PushReaction.BLOCK, "a piston on " + half);
+            for (Rotation turn : Rotation.values()) {
+                h.assertValueEqual(half.rotate(turn), half, half + " turned " + turn);
+            }
+            for (Mirror mirror : Mirror.values()) {
+                h.assertValueEqual(half.mirror(mirror), half, half + " mirrored " + mirror);
             }
         }
         h.succeed();
@@ -669,18 +641,25 @@ public final class LargeTankTests {
                 LargeTankBlock.tint(PipeColor.RED),
                 DyeColor.RED.getTextureDiffuseColor() & 0xFFFFFF,
                 "a red tank's tint");
-        lay(a, 2, 1, 2, Direction.EAST); // its end half at (3, 1, 2)
+        stand(a, 2, 1, 2); // its upper half at (2, 2, 2)
         h.assertValueEqual(a.get(2, 1, 2).getValue(PipeColor.PROPERTY), PipeColor.NONE, "a new tank's colour");
         ServerPlayer p = player(a, 2, 1, 4);
 
         ItemStack dye = new ItemStack(Items.RED_DYE, 2);
-        h.assertTrue(use(a, p, dye, 3, 1, 2, Direction.UP).consumesAction(), "the dye on its end half did nothing");
+        h.assertTrue(use(a, p, dye, 2, 2, 2, Direction.EAST).consumesAction(), "the dye on its upper half did nothing");
         h.assertTrue(
-                whole(a, 2, 1, 2), "dyed, it isn't whole in one colour: " + a.get(2, 1, 2) + ", " + a.get(3, 1, 2));
+                whole(a, 2, 1, 2), "dyed, it isn't whole in one colour: " + a.get(2, 1, 2) + ", " + a.get(2, 2, 2));
         h.assertValueEqual(a.get(2, 1, 2).getValue(PipeColor.PROPERTY), PipeColor.RED, "its colour after the dye");
         h.assertValueEqual(dye.getCount(), 1, "the dye left after one use");
-        use(a, p, dye, 2, 1, 2, Direction.UP);
+        use(a, p, dye, 2, 1, 2, Direction.EAST);
         h.assertValueEqual(dye.getCount(), 1, "the dye left after it was used on a tank its colour");
+        ItemStack blue = new ItemStack(Items.BLUE_DYE);
+        h.assertTrue(
+                use(a, p, blue, 2, 1, 2, Direction.EAST).consumesAction(), "the dye on its lower half did nothing");
+        h.assertTrue(whole(a, 2, 1, 2), "dyed again, it isn't whole in one colour");
+        h.assertValueEqual(a.get(2, 2, 2).getValue(PipeColor.PROPERTY), PipeColor.BLUE, "its upper half's colour");
+        h.assertTrue(use(a, p, dye, 2, 2, 2, Direction.EAST).consumesAction(), "red again on its upper half");
+        h.assertValueEqual(dye.getCount(), 0, "the dye left after two uses");
 
         ItemStack picked = a.get(2, 1, 2)
                 .getCloneItemStack(
@@ -692,7 +671,7 @@ public final class LargeTankTests {
 
         p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_PICKAXE));
         WrenchTests.watchDrops();
-        h.assertTrue(p.gameMode.destroyBlock(a.abs(3, 1, 2)), "the red tank didn't break");
+        h.assertTrue(p.gameMode.destroyBlock(a.abs(2, 2, 2)), "the red tank didn't break");
         List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && tankOf(dropped.get(0), PipeColor.RED), "the red tank dropped " + dropped);
         h.assertTrue(
@@ -700,12 +679,10 @@ public final class LargeTankTests {
                         && t.getKey().equals("item.zas_atmos.dyed"),
                 "the red tank's item is named " + dropped.get(0).getHoverName());
 
-        p.moveTo(p.getX(), p.getY(), p.getZ(), Direction.SOUTH.toYRot(), 0);
         ItemStack red = dropped.get(0).copy();
         h.assertTrue(use(a, p, red, 5, 0, 2, Direction.UP).consumesAction(), "the red item wasn't placed");
         h.assertTrue(whole(a, 5, 1, 2), "placed, the red tank isn't whole in one colour");
         h.assertValueEqual(a.get(5, 1, 2).getValue(PipeColor.PROPERTY), PipeColor.RED, "the placed tank's colour");
-        h.assertValueEqual(a.get(5, 1, 2).getValue(LargeTankBlock.FACING), Direction.SOUTH, "the placed tank's way");
         a.clear(0, 0, 8, 6);
         h.succeed();
     }
@@ -721,7 +698,7 @@ public final class LargeTankTests {
     public static void large_tank_saves_and_loads_its_share_and_its_colour(GameTestHelper h) throws IOException {
         Area a = new Area(h, 4860);
         a.clear(0, 0, 4, 6);
-        LargeTankBlockEntity tank = lay(a, 2, 2, 2, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 2, 2);
         a.set(2, 2, 2, a.get(2, 2, 2).setValue(PipeColor.PROPERTY, PipeColor.CYAN));
         h.assertTrue(whole(a, 2, 2, 2), "dyed cyan, it isn't whole in one colour");
         a.place(2, 1, 2, GasDeviceTests.pipe());
@@ -745,7 +722,7 @@ public final class LargeTankTests {
         a.close(again.nodeVolume(), PipeVolumes.LARGE_TANK, "the volume it read back with");
 
         var blocks = a.level.holderLookup(Registries.BLOCK);
-        for (BlockState half : List.of(a.get(2, 2, 2), a.get(2, 2, 1))) {
+        for (BlockState half : List.of(a.get(2, 2, 2), a.get(2, 3, 2))) {
             h.assertValueEqual(half.getValue(PipeColor.PROPERTY), PipeColor.CYAN, "a half's colour");
             h.assertValueEqual(
                     NbtUtils.readBlockState(blocks, NbtUtils.writeBlockState(half)), half, "the state read back");
@@ -757,42 +734,42 @@ public final class LargeTankTests {
     // ---- The wrench -------------------------------------------------------------------------------
 
     /**
-     * A wrench doesn't turn a tank, whose pipe joins it from below whichever way it lies: used on
-     * either half, nothing changes. Sneaking, it takes the tank down as one item, by either half, and
-     * a dyed tank's item keeps its colour (CONT-035).
+     * A wrench doesn't turn a tank, which has no facing: used on any face of either half, nothing
+     * changes. Sneaking, it takes the tank down as one item, by either half, and a dyed tank's item
+     * keeps its colour (CONT-035).
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_035_a_wrench_takes_a_large_tank_down_by_either_half_and_doesnt_turn_it(GameTestHelper h) {
         Area a = new Area(h, 4861);
         a.clear(0, 0, 6, 6);
-        LargeTankBlockEntity tank = lay(a, 3, 2, 3, Direction.NORTH); // its end half at (3, 2, 2)
+        LargeTankBlockEntity tank = stand(a, 3, 2, 3); // its upper half at (3, 3, 3)
         a.place(3, 1, 3, GasDeviceTests.pipe());
         PipeNetwork net = tank.network();
         h.assertTrue(net == network(a, 3, 1, 3), "the tank isn't on the pipe under it");
         Player player = wrenching(h);
 
-        for (int z : new int[] {3, 2}) {
+        for (int y : new int[] {2, 3}) {
             for (Direction face : Direction.values()) {
                 h.assertFalse(
-                        wrench(a, player, 3, 2, z, face, false).consumesAction(), "the wrench on " + face + " acted");
+                        wrench(a, player, 3, y, 3, face, false).consumesAction(), "the wrench on " + face + " acted");
             }
         }
         h.assertTrue(whole(a, 3, 2, 3), "the wrench changed the tank");
-        h.assertValueEqual(a.get(3, 2, 3), inlet(Direction.NORTH), "its inlet half after the wrench");
+        h.assertValueEqual(a.get(3, 2, 3), lower(), "its lower half after the wrench");
 
-        // Sneaking, by its end half: the tank comes down as one item.
+        // Sneaking, by its upper half: the tank comes down as one item.
         WrenchTests.watchDrops();
-        h.assertTrue(wrench(a, player, 3, 2, 2, Direction.UP, true).consumesAction(), "the tank's removal");
-        h.assertTrue(gone(a, 3, 2, 3, Direction.NORTH), "the wrench left " + a.get(3, 2, 3) + " and " + a.get(3, 2, 2));
+        h.assertTrue(wrench(a, player, 3, 3, 3, Direction.UP, true).consumesAction(), "the tank's removal");
+        h.assertTrue(gone(a, 3, 2, 3), "the wrench left " + a.get(3, 2, 3) + " and " + a.get(3, 3, 3));
         List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "taken down, it dropped " + dropped);
 
-        // And by its inlet half, dyed.
-        lay(a, 3, 2, 3, Direction.NORTH);
+        // And by its lower half, dyed.
+        stand(a, 3, 2, 3);
         a.set(3, 2, 3, a.get(3, 2, 3).setValue(PipeColor.PROPERTY, PipeColor.LIME));
         WrenchTests.watchDrops();
         h.assertTrue(wrench(a, player, 3, 2, 3, Direction.WEST, true).consumesAction(), "the second tank's removal");
-        h.assertTrue(gone(a, 3, 2, 3, Direction.NORTH), "the wrench left " + a.get(3, 2, 3) + " and " + a.get(3, 2, 2));
+        h.assertTrue(gone(a, 3, 2, 3), "the wrench left " + a.get(3, 2, 3) + " and " + a.get(3, 3, 3));
         dropped = drops();
         h.assertTrue(
                 dropped.size() == 1 && tankOf(dropped.get(0), PipeColor.LIME),
@@ -811,7 +788,7 @@ public final class LargeTankTests {
     public static void cont_091_a_large_tank_3_atm_over_ambient_stays_and_under_2_atm_comes_off(GameTestHelper h) {
         Area a = new Area(h, 4862);
         GasDeviceTests.room(a);
-        LargeTankBlockEntity tank = lay(a, 2, 1, 2, Direction.NORTH);
+        LargeTankBlockEntity tank = stand(a, 2, 1, 2);
         a.tick();
         BlockPos at = a.abs(2, 1, 2);
         double ambient = a.zone(1, 1, 1).mixture().pressure();
@@ -821,9 +798,9 @@ public final class LargeTankTests {
         double held = gas.totalMoles();
         Player player = wrenching(h);
 
-        for (int z = 1; z <= 2; z++) {
-            wrench(a, player, 2, 1, z, Direction.EAST, true);
-            h.assertTrue(whole(a, 2, 1, 2), "the tank came off at 3 atm over, clicked at z = " + z);
+        for (int y = 1; y <= 2; y++) {
+            wrench(a, player, 2, y, 2, Direction.EAST, true);
+            h.assertTrue(whole(a, 2, 1, 2), "the tank came off at 3 atm over, clicked at y = " + y);
         }
         Optional<Component> refusal = WrenchItem.remove(a.level, at, player, player.getMainHandItem());
         h.assertTrue(whole(a, 2, 1, 2), "the call removed the tank at 3 atm over");
@@ -837,8 +814,8 @@ public final class LargeTankTests {
         gas.takeFraction(1 - (ambient + 1.99 * ATM) / gas.pressure());
         double left = gas.totalMoles();
         WrenchTests.watchDrops();
-        wrench(a, player, 2, 1, 1, Direction.EAST, true);
-        h.assertTrue(gone(a, 2, 1, 2, Direction.NORTH), "the tank didn't come off under 2 atm over");
+        wrench(a, player, 2, 2, 2, Direction.EAST, true);
+        h.assertTrue(gone(a, 2, 1, 2), "the tank didn't come off under 2 atm over");
         List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "taken down, it dropped " + dropped);
         a.tick();
@@ -850,8 +827,8 @@ public final class LargeTankTests {
     // ---- The room round it ------------------------------------------------------------------------
 
     /**
-     * A tank seals nothing, as a canister doesn't: one lying along a corridor 1 wide leaves it one
-     * room, the tank's own two cells among its ten.
+     * A tank seals nothing, as a canister doesn't: one standing in a corridor 1 wide and 2 high leaves
+     * it one room, the tank's own two cells among its ten.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void large_tank_seals_no_face_so_a_corridor_it_fills_stays_one_room(GameTestHelper h) {
@@ -860,11 +837,11 @@ public final class LargeTankTests {
         for (int x = 1; x <= 5; x++) {
             a.set(x, 3, 1, STONE); // the corridor is 5 long, 2 high and 1 wide
         }
-        lay(a, 2, 1, 1, Direction.EAST);
+        stand(a, 3, 1, 1);
         a.fill(1, 1, 1, Map.of(N2, 10.0));
         var zone = a.zone(1, 1, 1);
         h.assertValueEqual(zone.cellCount(), 10, "the cells of the corridor's room");
-        for (int[] cell : new int[][] {{5, 1, 1}, {2, 1, 1}, {3, 1, 1}, {3, 2, 1}}) {
+        for (int[] cell : new int[][] {{5, 1, 1}, {2, 1, 1}, {3, 1, 1}, {3, 2, 1}, {4, 2, 1}}) {
             h.assertValueEqual(
                     a.zone(cell[0], cell[1], cell[2]).id(), zone.id(), "the room at " + cell[0] + ", " + cell[1]);
         }

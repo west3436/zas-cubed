@@ -131,7 +131,7 @@ public final class PipeGasHandlerTests {
      * or not, a cap where it points, a
      * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
      * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
-     * electrolyzer on each port, a large gas tank under its inlet half. A canister and radiator pipe
+     * electrolyzer on each port, a large gas tank under its lower half. A canister and radiator pipe
      * offer none. Every pipe part the mod registers is covered.
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -148,7 +148,7 @@ public final class PipeGasHandlerTests {
                 EnumSet.of(Direction.UP));
         expected.put(GasDeviceTests.port(), EnumSet.of(Direction.DOWN));
         expected.put(GasDeviceTests.canister(), EnumSet.noneOf(Direction.class));
-        expected.put(LargeTankTests.inlet(Direction.NORTH), EnumSet.of(Direction.DOWN));
+        expected.put(LargeTankTests.lower(), EnumSet.of(Direction.DOWN));
         expected.put(GasDeviceTests.vent(Direction.DOWN), EnumSet.of(Direction.UP));
         expected.put(ScrubberTests.scrubber(Direction.DOWN), EnumSet.of(Direction.UP));
         expected.put(
@@ -185,8 +185,8 @@ public final class PipeGasHandlerTests {
         int x = 0;
         for (Map.Entry<BlockState, Set<Direction>> part : expected.entrySet()) {
             if (part.getKey().getBlock() instanceof LargeTankBlock) {
-                // Its end half first, north of it: the inlet one goes at once with nothing beside it.
-                a.set(x, 2, 1, LargeTankTests.end(part.getKey().getValue(LargeTankBlock.FACING)));
+                // Its upper half first: the lower one goes at once with nothing above it.
+                a.set(x, 3, 2, LargeTankTests.upper());
             }
             a.place(x, 2, 2, part.getKey());
             h.assertValueEqual(

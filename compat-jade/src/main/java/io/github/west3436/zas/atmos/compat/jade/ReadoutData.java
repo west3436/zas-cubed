@@ -46,7 +46,7 @@ enum ReadoutData implements IServerDataProvider<BlockAccessor> {
         return DeviceReadings.reads(device(accessor));
     }
 
-    /** The block entity a block reads: its own, or for a large tank's end half its inlet half's. */
+    /** The block entity a block reads: its own, or for a large tank's upper half its lower half's. */
     private static @Nullable BlockEntity device(BlockAccessor accessor) {
         BlockEntity be = accessor.getBlockEntity();
         return be != null ? be : LargeTankBlock.entity(accessor.getLevel(), accessor.getPosition());

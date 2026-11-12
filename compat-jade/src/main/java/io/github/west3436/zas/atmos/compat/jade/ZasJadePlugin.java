@@ -37,7 +37,7 @@ public final class ZasJadePlugin implements IWailaPlugin {
         // asked about: see ReadoutData.shouldRequestData.
         registration.registerBlockDataProvider(ReadoutData.INSTANCE, AtmosDevice.class);
         registration.registerBlockDataProvider(ReadoutData.INSTANCE, TankHolderBlockEntity.class);
-        // A large tank's end half has no block entity, so it is found by its block.
+        // A large tank's upper half has no block entity, so it is found by its block.
         registration.registerBlockDataProvider(ReadoutData.INSTANCE, LargeTankBlock.class);
     }
 

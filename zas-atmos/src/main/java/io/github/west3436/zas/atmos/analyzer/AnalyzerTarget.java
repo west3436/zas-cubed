@@ -61,7 +61,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param kind what it is: {@link Kind#HERE}, {@link Kind#POINT}, {@link Kind#NETWORK}, {@link
  *     Kind#CANISTER} or {@link Kind#STORE}
- * @param pos the block it was used on, a large tank's inlet half for either of its halves, or the
+ * @param pos the block it was used on, a large tank's lower half for either of its halves, or the
  *     block holding the point; null for {@link Kind#HERE}
  * @param point the point read, for {@link Kind#POINT}
  * @param port the device's port for a network, or -1 for a node that is one network
