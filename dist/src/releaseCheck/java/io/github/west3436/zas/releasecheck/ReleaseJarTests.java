@@ -9,6 +9,7 @@ import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.compat.PonderGate;
 import io.github.west3436.zas.compat.Adapters;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -59,6 +60,9 @@ public final class ReleaseJarTests {
 
     /** The Jade adapter's package, which is part of zas_atmos. */
     private static final String JADE_ADAPTER = "io.github.west3436.zas.atmos.compat.jade";
+
+    /** The KubeJS adapter's package. */
+    private static final String KUBEJS_ADAPTER = "io.github.west3436.zas.compat.kubejs";
 
     /** The Ponder scenes' package, which is part of zas_atmos. */
     private static final String PONDER_SCENES = "io.github.west3436.zas.atmos.compat.ponder";
@@ -229,6 +233,40 @@ public final class ReleaseJarTests {
             throw new IllegalStateException("The release jar's JadeGate has no pluginStarted()", e);
         }
         h.assertFalse(started, "the Jade plugin was created");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the KubeJS adapter, and on a server without KubeJS none of it runs
+     * (COMPAT-001, NFR-022): only KubeJS reads the file that names its plugin, and nothing in the
+     * two mods names it.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_kubejs_adapter_runs_without_kubejs(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("kubejs"), "KubeJS is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        String plugin = KUBEJS_ADAPTER + ".ZasKubeJsPlugin";
+        h.assertTrue(jar.getResource(plugin.replace('.', '/') + ".class") != null, "the release jar has no " + plugin);
+        // The file KubeJS finds the plugin through, at the jar's root, naming that class.
+        String named;
+        try (InputStream in = jar.getResourceAsStream("kubejs.plugins.txt")) {
+            h.assertTrue(in != null, "the release jar has no kubejs.plugins.txt");
+            named = new String(in.readAllBytes(), StandardCharsets.UTF_8).strip();
+        } catch (IOException e) {
+            throw new IllegalStateException("Can't read the release jar's kubejs.plugins.txt", e);
+        }
+        h.assertValueEqual(named, plugin, "the plugin kubejs.plugins.txt names");
+        // The adapter's own word, from its one class that names nothing of KubeJS's.
+        boolean started;
+        try {
+            started = (boolean) Class.forName(KUBEJS_ADAPTER + ".KubeJsGate")
+                    .getMethod("pluginStarted")
+                    .invoke(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("The release jar's KubeJsGate has no pluginStarted()", e);
+        }
+        h.assertFalse(started, "the KubeJS plugin was created");
         h.succeed();
     }
 
