@@ -1,0 +1,158 @@
+// The CC: Tweaked adapter (COMPAT-020 to COMPAT-022): each atmospherics device with a window is a
+// peripheral that a computer reads and sets, and a computer on an area air controller hears of
+// breaches and fires. Its classes are part of zas_atmos and ship in the release jar, where zas loads
+// them only with CC: Tweaked installed in a supported version, so the game runs the same without it
+// (COMPAT-001, COMPAT-002). CC: Tweaked is never in a jar of ours: its API is compiled against, and
+// the mod is added to this project's own runs.
+
+// The CC: Tweaked the runs load: the oldest supported by default, the newest with
+// -Pcc.version=newest, or any published version by name. The range itself is in zas's Adapters.
+def chosen = providers.gradleProperty('cc.version').getOrElse('floor')
+def named = [floor: cc_version, newest: cc_newest_version]
+def ccRun = named.getOrDefault(chosen, chosen)
+
+// The newest build asks for a newer NeoForge than the one the mods are built and released for, so a
+// run with it builds this project with that NeoForge and starts its server on it. The root build
+// reads this as the plugin is applied.
+if (ccRun == cc_newest_version) {
+    ext.runNeoVersion = cc_newest_neo_version
+}
+
+apply plugin: 'net.neoforged.moddev'
+
+evaluationDependsOn(':zas-atmos')
+
+// With the content off (-Pcontent=off, CONT-155) there are no devices, so only the tests of how the
+// adapter starts run.
+def gateOnly = contentOff
+
+// CC: Tweaked comes from its own maven.
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.squiddev.cc' }
+        }
+        filter { includeGroup 'cc.tweaked' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with CC: Tweaked loaded (COMPAT-004). They stay out of
+    // every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that zas starts it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_cc', 'zas_cc_gate'].each { namespace ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${namespace}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+def zasMod = project(':zas').neoForge.mods.zas
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    // Unit tests of the adapter's pure logic. Minecraft's classes are on the test classpath, but the
+    // game is never bootstrapped.
+    addModdingDependenciesTo(sourceSets.test)
+    runs {
+        // ./gradlew :compat-cc:runClient: a dev client with zas, zas_atmos and CC: Tweaked.
+        client {
+            client()
+        }
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs CC: Tweaked, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', gateOnly ? 'zas_cc_gate' : 'zas_cc,zas_cc_gate'
+            // The CC: Tweaked the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.cc.version', ccRun
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    // The dev client's mods. The adapter is part of zas_atmos, as it is in the release jar.
+    mods {
+        zas {
+            zasMod.modSourceSets.get().each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet project(':zas-atmos').sourceSets.main
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
+    implementation project(':zas-api')
+    implementation project(':zas-atmos')
+
+    // Compile-only, never bundled: the adapter is optional (COMPAT-001). Only CC: Tweaked's API,
+    // and the oldest supported one, so the adapter can use nothing else of it.
+    compileOnly "cc.tweaked:cc-tweaked-${minecraft_version}-forge-api:${cc_version}"
+    // For the dev client.
+    runtimeOnly "cc.tweaked:cc-tweaked-${minecraft_version}-forge:${ccRun}"
+
+    // The tests alone may use the framework's adapter loader and its hook that drives atmos ticks.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+
+    testImplementation "cc.tweaked:cc-tweaked-${minecraft_version}-forge-api:${cc_version}"
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// The release jar plus the tests and their empty structures.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly "cc.tweaked:cc-tweaked-${minecraft_version}-forge:${ccRun}"
+}
+
+// The tests start from a fresh world, so each computer starts with the files its test gave it.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    testLogging.exceptionFormat = 'full'
+}

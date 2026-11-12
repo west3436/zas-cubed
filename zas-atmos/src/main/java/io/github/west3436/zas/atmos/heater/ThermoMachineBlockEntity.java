@@ -51,7 +51,7 @@ public abstract class ThermoMachineBlockEntity extends PortableDevice {
     }
 
     /** A setpoint clamped to this machine's range. */
-    protected abstract double clampSetpoint(double kelvin);
+    public abstract double clampSetpoint(double kelvin);
 
     /** The most heat it moves, W. */
     protected abstract double maxWatts();

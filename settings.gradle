@@ -27,11 +27,17 @@ include 'zas-ponder'
 // The Mekanism adapter (MEK), bundled into the zas jar like compat-adastra.
 include 'compat-mekanism'
 
+// The Curios and Accessories adapters (COMPAT-040 to COMPAT-043), bundled into the zas jar likewise.
+include 'compat-slots'
+
 // The jar players install: zas and zas_atmos in one file (D-88).
 include 'dist'
 
 // The Jade adapter (COMPAT-030 to COMPAT-032): part of zas_atmos in the release jar.
 include 'compat-jade'
+
+// The CC: Tweaked adapter (COMPAT-020 to COMPAT-022): part of zas_atmos in the release jar.
+include 'compat-cc'
 
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

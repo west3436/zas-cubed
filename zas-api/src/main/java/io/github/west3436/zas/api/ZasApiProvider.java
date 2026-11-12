@@ -14,6 +14,7 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.ExtraSlotVisitor;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
@@ -563,4 +564,21 @@ public interface ZasApiProvider {
     default @Nullable GasMixture localAir(ServerLevel level, Vec3 point) {
         return null;
     }
+
+    /**
+     * Gives a visitor each item an entity wears in the equipment slots other mods add, for {@link
+     * io.github.west3436.zas.api.life.ExtraSlots#forEach}.
+     *
+     * <p>The default is the fallback's answer: nothing is given, as without ZAS³ no provider is
+     * asked (D-17). It is there for the same reason as {@link #hotspots}'s.
+     *
+     * <p>Thread: the main thread of the entity's logical side; for a server-side entity the caller
+     * has checked.
+     *
+     * @param entity the entity, server or client side
+     * @param visitor takes each worn item
+     * @since 1.1.0
+     */
+    @LevelThread
+    default void extraSlotItems(LivingEntity entity, ExtraSlotVisitor visitor) {}
 }
