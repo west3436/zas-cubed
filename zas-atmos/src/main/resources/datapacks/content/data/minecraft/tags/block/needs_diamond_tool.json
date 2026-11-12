@@ -1,6 +1,7 @@
 {
   "values": [
     "zas_atmos:reinforced_station_wall",
-    "zas_atmos:reinforced_glass_block"
+    "zas_atmos:reinforced_glass_block",
+    "zas_atmos:reinforced_station_wall_pipe"
   ]
 }

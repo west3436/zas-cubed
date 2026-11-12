@@ -84,7 +84,18 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
     }
 
     public PipeBlock(Properties properties) {
-        super(properties.noOcclusion());
+        this(properties.noOcclusion(), null);
+    }
+
+    /**
+     * For a pipe in a casing ({@link EncasedPipeBlock}), which keeps its casing's properties: a wall
+     * hides what is behind it, and a bare pipe never does.
+     *
+     * @param properties the block's properties, taken as they are
+     * @param cased unused: it tells this constructor from the public one
+     */
+    protected PipeBlock(Properties properties, @Nullable Void cased) {
+        super(properties);
         BlockState state = stateDefinition.any().setValue(PipeColor.PROPERTY, PipeColor.NONE);
         for (BooleanProperty p : CONNECTIONS.values()) {
             state = state.setValue(p, false);
@@ -140,12 +151,31 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
         return only == null ? null : only.getOpposite();
     }
 
+    /**
+     * Whether a pipe state has an open end, which leaks into its cell (CONT-004): a bare pipe with
+     * fewer than two connections. A pipe in a casing has none ({@link EncasedPipeBlock}).
+     *
+     * @param state a state of this block
+     * @return true if it leaks
+     */
+    public boolean leaks(BlockState state) {
+        return connections(state) < 2;
+    }
+
     @Override
     public boolean pipeConnects(BlockState self, Direction face, BlockState neighbour) {
         return true;
     }
 
-    private BlockState connect(BlockState state, Level level, BlockPos pos) {
+    /**
+     * A state with an arm toward each neighbour that joins it now, as a newly placed pipe has.
+     *
+     * @param state a state of this block
+     * @param level the level
+     * @param pos where the pipe is, or is about to be
+     * @return the state with its arms set
+     */
+    public BlockState connect(BlockState state, Level level, BlockPos pos) {
         for (Direction d : Direction.values()) {
             state = state.setValue(
                     CONNECTIONS.get(d),
@@ -199,7 +229,21 @@ public class PipeBlock extends BaseEntityBlock implements PipeConnector {
             Player player,
             InteractionHand hand,
             BlockHitResult hit) {
-        return dye(stack, state, level, pos, player);
+        ItemInteractionResult dyed = dye(stack, state, level, pos, player);
+        return dyed != ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION
+                ? dyed
+                : EncasedPipeBlock.encase(stack, state, level, pos, player, hit);
+    }
+
+    /**
+     * A pipe keeps its block entity when its block becomes another pipe block, as when a casing goes
+     * on it: it is the same pipe, with its place in its network and its share of the gas.
+     */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!(newState.getBlock() instanceof PipeBlock)) {
+            super.onRemove(state, level, pos, newState, movedByPiston);
+        }
     }
 
     /** Dyes a pipe or cap with the dye in hand (CONT-114), using up one dye outside creative. */

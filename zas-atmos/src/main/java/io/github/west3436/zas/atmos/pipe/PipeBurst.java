@@ -15,6 +15,7 @@ import java.util.function.ToDoubleFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -85,7 +86,12 @@ public final class PipeBurst {
         }
         BlockPos pos = ((PipeNodeEntity) chosen).getBlockPos();
         GasParcel all = net.gas().drain();
-        level.destroyBlock(pos, false);
+        BlockState state = level.getBlockState(pos);
+        if (state.getBlock() instanceof EncasedPipeBlock cased) {
+            cased.burst(level, pos, state); // its casing stays, and the gas goes into the cell beside it
+        } else {
+            level.destroyBlock(pos, false);
+        }
         Vec3 at = Vec3.atCenterOf(pos);
         GasMutations.add(level, at, all, SOURCE);
         GasJets.burst(level, at, all.totalMoles());
@@ -96,13 +102,16 @@ public final class PipeBurst {
     /**
      * The pressure of a member's cell, or NaN if it can't burst now: it isn't a segment, its chunk
      * has left full status, or its cell is paused or unresolved, whose reading isn't its real
-     * pressure.
+     * pressure. A pipe in a casing has no cell of its own: its cell is the one beside it, where its
+     * gas would go (API-015).
      */
     private static double cellPressure(ServerLevel level, PipeNode member) {
         if (!(member instanceof PipeNodeEntity node) || !node.isSegment() || !level.isLoaded(node.getBlockPos())) {
             return Double.NaN;
         }
-        AtmosphereSample cell = Atmospheres.at(level, node.getBlockPos());
+        AtmosphereSample cell = node.getBlockState().getBlock() instanceof EncasedPipeBlock
+                ? Atmospheres.at(level, Vec3.atCenterOf(node.getBlockPos()))
+                : Atmospheres.at(level, node.getBlockPos());
         return cell.state() == AtmosphereState.ZONED || cell.state() == AtmosphereState.AMBIENT
                 ? cell.mixture().pressure()
                 : Double.NaN;

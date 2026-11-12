@@ -112,7 +112,7 @@ public final class WrenchTests {
      * them, so these tests see each one as it joins. Each runs within one call, so nothing else drops
      * an item in the meantime.
      */
-    private static void watchDrops() {
+    static void watchDrops() {
         if (!listening) {
             listening = true;
             NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
@@ -132,7 +132,7 @@ public final class WrenchTests {
     }
 
     /** Stops collecting, and removes from the level the items dropped since {@link #watchDrops}. */
-    private static List<ItemEntity> takeDrops() {
+    static List<ItemEntity> takeDrops() {
         watching = false;
         List<ItemEntity> drops = new ArrayList<>(DROPPED);
         DROPPED.clear();

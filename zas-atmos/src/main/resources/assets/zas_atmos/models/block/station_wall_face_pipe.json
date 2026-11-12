@@ -1,0 +1,6 @@
+{
+  "parent": "zas_atmos:block/encased_face_pipe",
+  "textures": {
+    "casing": "zas_atmos:block/station_wall"
+  }
+}

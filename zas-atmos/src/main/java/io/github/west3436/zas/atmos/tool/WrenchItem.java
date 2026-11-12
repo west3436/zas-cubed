@@ -3,8 +3,10 @@ package io.github.west3436.zas.atmos.tool;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
+import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
+import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -37,7 +39,9 @@ import org.jetbrains.annotations.Nullable;
  *       stays mirrored, its side port where its own rule puts it (D-77).
  *   <li><b>Sneak-use</b> removes it as mining would: it drops its item, except in creative, and what
  *       it held goes into its cell (CONT-009). It refuses while the part holds more than 2 atm over
- *       the ambient, and says by how much (CONT-091).
+ *       the ambient, and says by how much (CONT-091). From a pipe in a casing it takes the pipe and
+ *       leaves the casing, a wall still whole ({@link EncasedPipeBlock#takeOut}), and the pipe's gas
+ *       goes into the cell beside the face clicked.
  * </ul>
  *
  * <p>It acts before the block's own use, so a part's GUI or a valve's switch doesn't get the click.
@@ -62,7 +66,8 @@ public class WrenchItem extends Item {
         }
         if (player != null && player.isSecondaryUseActive()) {
             if (level instanceof ServerLevel server) {
-                remove(server, pos, player, stack).ifPresent(refusal -> player.displayClientMessage(refusal, true));
+                remove(server, pos, player, stack, context.getClickedFace())
+                        .ifPresent(refusal -> player.displayClientMessage(refusal, true));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
@@ -143,11 +148,27 @@ public class WrenchItem extends Item {
      * in a zone that is the zone's; for a full block, the cell beside it that its gas would reach.
      */
     public static double overAmbient(ServerLevel level, BlockPos pos) {
+        return overAmbient(level, pos, null);
+    }
+
+    /**
+     * {@link #overAmbient(ServerLevel, BlockPos)} for a part taken off from one face: a full block's
+     * gas then goes into the cell beside that face, if there is one ({@link
+     * PipeNodeEntity#releaseToward}).
+     *
+     * @param level the level
+     * @param pos the part
+     * @param face the face it is taken off from, or null for none in particular
+     * @return the pressure over the ambient, in kPa; 0 for a block that holds no gas
+     */
+    public static double overAmbient(ServerLevel level, BlockPos pos, @Nullable Direction face) {
         if (!(level.getBlockEntity(pos) instanceof PipeHost host)) {
             return 0;
         }
+        Vec3 to = Vec3.atCenterOf(pos);
         return host.highestPressure()
-                - Atmospheres.at(level, Vec3.atCenterOf(pos)).pressure();
+                - Atmospheres.at(level, face == null ? to : to.relative(face, 0.49))
+                        .pressure();
     }
 
     /**
@@ -162,20 +183,41 @@ public class WrenchItem extends Item {
      * @return what to tell the player if it refused for the pressure; empty otherwise
      */
     public static Optional<Component> remove(ServerLevel level, BlockPos pos, @Nullable Player player, ItemStack tool) {
-        double over = overAmbient(level, pos);
-        if (over > LOCK_KPA) {
+        return remove(level, pos, player, tool, null);
+    }
+
+    /**
+     * {@link #remove(ServerLevel, BlockPos, Player, ItemStack)} from one face. A pipe in a casing
+     * comes out of that face and leaves its casing, a full block still: only the pipe's item drops,
+     * and its gas goes into the cell beside the face.
+     *
+     * @param level the level
+     * @param pos the part
+     * @param player who removes it, or null
+     * @param tool the wrench, as the drops' tool
+     * @param face the face clicked, or null for none in particular
+     * @return what to tell the player if it refused for the pressure; empty otherwise
+     */
+    public static Optional<Component> remove(
+            ServerLevel level, BlockPos pos, @Nullable Player player, ItemStack tool, @Nullable Direction face) {
+        BlockState state = level.getBlockState(pos);
+        boolean cased = state.getBlock() instanceof EncasedPipeBlock;
+        if (overAmbient(level, pos, cased ? face : null) > LOCK_KPA) {
             return Optional.of(Component.translatable("item.zas_atmos.wrench.pressurized"));
         }
-        BlockState state = level.getBlockState(pos);
         if (player instanceof ServerPlayer server
                 && CommonHooks.fireBlockBreak(level, server.gameMode.getGameModeForPlayer(), server, pos, state)
                         .isCanceled()) {
             return Optional.empty();
         }
-        if (player == null || !player.isCreative()) {
-            Block.dropResources(state, level, pos, level.getBlockEntity(pos), player, tool);
+        if (state.getBlock() instanceof EncasedPipeBlock pipe) {
+            pipe.takeOut(level, pos, state, player, face);
+        } else {
+            if (player == null || !player.isCreative()) {
+                Block.dropResources(state, level, pos, level.getBlockEntity(pos), player, tool);
+            }
+            level.destroyBlock(pos, false, player);
         }
-        level.destroyBlock(pos, false, player);
         AtmosSounds.play(level, pos, AtmosSounds.WRENCH);
         return Optional.empty();
     }

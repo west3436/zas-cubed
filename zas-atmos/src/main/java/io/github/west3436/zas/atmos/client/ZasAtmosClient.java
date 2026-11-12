@@ -25,6 +25,7 @@ import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -113,12 +114,12 @@ public final class ZasAtmosClient {
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
     private static void blockColors(RegisterColorHandlersEvent.Block event) {
-        event.register(
-                (state, level, pos, tintIndex) -> tintIndex == 0 && state.hasProperty(PipeColor.PROPERTY)
-                        ? 0xFF000000 | state.getValue(PipeColor.PROPERTY).tint()
-                        : -1,
-                AtmosBlocks.PIPE.get(),
-                AtmosBlocks.PIPE_CAP.get());
+        BlockColor dye = (state, level, pos, tintIndex) -> tintIndex == 0 && state.hasProperty(PipeColor.PROPERTY)
+                ? 0xFF000000 | state.getValue(PipeColor.PROPERTY).tint()
+                : -1;
+        event.register(dye, AtmosBlocks.PIPE_CAP.get());
+        // A pipe in a casing too: its end in the casing's face is the pipe's (#487).
+        event.register(dye, AtmosBlocks.pipes());
         // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
         event.register(
                 (state, level, pos, tintIndex) -> tintIndex == 0

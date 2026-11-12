@@ -173,7 +173,7 @@ public final class StationBlockTests {
         h.succeed();
     }
 
-    private static void block(
+    static void block(
             GameTestHelper h, Block block, double u, float blastResistance, float hardness, TagKey<Block> tool) {
         String name = block.getDescriptionId();
         h.assertValueEqual(block.getExplosionResistance(), blastResistance, name + "'s blast resistance");

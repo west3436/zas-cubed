@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.awt.image.BufferedImage;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +30,9 @@ class ConnectedTexturesTest {
     private static final List<String> BLOCKS =
             List.of("station_wall", "reinforced_station_wall", "reinforced_glass_block");
 
+    /** The walls a pipe goes into (#487): each joins itself with a pipe in it as well. */
+    private static final List<String> WALLS = List.of("station_wall", "reinforced_station_wall");
+
     /** Fusion's pieced layout: five tiles side by side. */
     private static final int TILES = 5;
 
@@ -44,7 +49,9 @@ class ConnectedTexturesTest {
                 .get("translate")
                 .getAsString();
         assertTrue(json(lang()).has(description), description + " isn't in en_us.json");
-        assertTrue(meta.getAsJsonObject("fusion").has("min_version"));
+        // 1.2.0 has the pieced layout, and 1.2.9 is the first to cut a face that comes in parts right:
+        // the faces of a wall with a pipe in it do (#487).
+        assertEquals("1.2.9", meta.getAsJsonObject("fusion").get("min_version").getAsString());
     }
 
     @Test
@@ -62,21 +69,39 @@ class ConnectedTexturesTest {
         }
     }
 
+    /**
+     * The glass joins glass. A wall joins the same wall, with a pipe in it or not (#487): its texture is
+     * on both blocks, so it names the two rather than asking for the same block.
+     */
     @Test
     void cont_132_each_strip_is_pieced_and_joins_its_own_block() throws IOException {
         for (String block : BLOCKS) {
             BufferedImage strip = strip(block);
             assertEquals(16 * TILES, strip.getWidth(), block);
             assertEquals(16, strip.getHeight(), block);
-            JsonObject fusion = json(pack().resolve("assets/zas_atmos/textures/block/" + block + ".png.mcmeta"))
-                    .getAsJsonObject("fusion");
-            assertEquals("connecting", fusion.get("type").getAsString(), block);
-            assertEquals("pieced", fusion.get("layout").getAsString(), block);
-            assertEquals(
-                    "is_same_block",
-                    fusion.getAsJsonObject("connections").get("type").getAsString(),
-                    block);
+            JsonObject connections = pieced(block).getAsJsonObject("connections");
+            if (!WALLS.contains(block)) {
+                assertEquals("is_same_block", connections.get("type").getAsString(), block);
+                continue;
+            }
+            assertEquals("or", connections.get("type").getAsString(), block);
+            List<String> joined = new ArrayList<>();
+            for (JsonElement predicate : connections.getAsJsonArray("predicates")) {
+                assertEquals(
+                        "match_block", predicate.getAsJsonObject().get("type").getAsString(), block);
+                joined.add(predicate.getAsJsonObject().get("block").getAsString());
+            }
+            assertEquals(List.of("zas_atmos:" + block, "zas_atmos:" + block + "_pipe"), joined, block);
         }
+    }
+
+    /** A strip's Fusion metadata, checked to be a connecting texture in the pieced layout. */
+    private static JsonObject pieced(String texture) throws IOException {
+        JsonObject fusion = json(pack().resolve("assets/zas_atmos/textures/block/" + texture + ".png.mcmeta"))
+                .getAsJsonObject("fusion");
+        assertEquals("connecting", fusion.get("type").getAsString(), texture);
+        assertEquals("pieced", fusion.get("layout").getAsString(), texture);
+        return fusion;
     }
 
     @Test
