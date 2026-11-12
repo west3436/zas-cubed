@@ -22,6 +22,11 @@ def jadeAdapter = project(':compat-jade').sourceSets.main.output
 evaluationDependsOn(':compat-ponder')
 def ponderScenes = project(':compat-ponder').sourceSets.main.output
 
+// CC: Tweaked adapter (COMPAT-001): built the same way, against CC: Tweaked's API, and part of
+// zas_atmos here. zas starts it, by its row in Adapters, and only with CC: Tweaked installed.
+evaluationDependsOn(':compat-cc')
+def ccAdapter = project(':compat-cc').sourceSets.main.output
+
 // One neoforge.mods.toml for both: the content mod's file-level keys, whose license covers the
 // framework's assets as well, then each file's tables. TOML lets an array of tables such as [[mods]]
 // be split, so each mod keeps its own [[mods]], [[mixins]] and [[dependencies.<id>]] as written.
@@ -61,6 +66,7 @@ tasks.named('jar', Jar) {
     from(modsToml) { into 'META-INF' }
     from jadeAdapter
     from ponderScenes
+    from ccAdapter
     // The two mods share no file but the ones above; a second would mean one hides the other.
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }

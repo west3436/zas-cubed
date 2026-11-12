@@ -152,6 +152,11 @@ tasks.named('test', Test) {
     dependsOn ':compat-jade:compileJava'
     inputs.files(jadeClasses)
     systemProperty 'zas_atmos.jadeClasses', jadeClasses.get().asFile.absolutePath
+    // And the CC: Tweaked adapter's, which are part of this mod in the release jar too.
+    def ccClasses = project(':compat-cc').layout.buildDirectory.dir('classes/java/main')
+    dependsOn ':compat-cc:compileJava'
+    inputs.files(ccClasses)
+    systemProperty 'zas_atmos.ccClasses', ccClasses.get().asFile.absolutePath
     testLogging.exceptionFormat = 'full'
 }
 

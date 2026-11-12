@@ -68,6 +68,16 @@ jobs:
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=1.1.24"
           - adapter: emi (older than supported)
             task: ":compat-emi:runAdapterGameTestServer -Pemi.version=unsupported"
+          # COMPAT-020 to COMPAT-022: the oldest CC: Tweaked the adapter supports,
+          # which is its first build for this Minecraft, and the newest when the
+          # row was written. The newest needs a newer NeoForge than the mods are
+          # built for, so its row builds and runs the adapter on that one.
+          # COMPAT-002: no older build starts on this Minecraft, so both rows
+          # check the range against version numbers below it instead.
+          - adapter: cc (oldest supported)
+            task: ":compat-cc:runAdapterGameTestServer"
+          - adapter: cc (newest)
+            task: ":compat-cc:runAdapterGameTestServer -Pcc.version=newest"
           # COMPAT-040 to COMPAT-043: the Curios and Accessories adapters, each
           # with the oldest build of its target that it supports and the newest.
           # COMPAT-002: with an older one the adapter stays off. Curios has no
@@ -121,6 +131,8 @@ jobs:
           # copy of the scenes: the ones in the release jar stand down.
           - adapter: ponder (the addon released as 1.0.0)
             task: ":compat-ponder:runAdapterGameTestServer -Pponder.from=released"
+          - adapter: cc (content off)
+            task: ":compat-cc:runAdapterGameTestServer -Pcontent=off"
           # The slot adapters register as the game loads, and their tags and
           # the player's Curios slots come and go with the content.
           - adapter: curios (content off)

@@ -307,13 +307,16 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
             case InlineDeviceMenu.DATA_STATUS -> status.ordinal();
             default -> {
                 int port = index - InlineDeviceMenu.DATA_PRESSURE;
-                yield port >= 0 && port < ports.length && !isRemoved()
-                        ? (int) Math.min(
-                                Short.MAX_VALUE,
-                                Math.round(ports[port].network().gas().pressure()))
+                yield port >= 0 && port < ports.length
+                        ? (int) Math.min(Short.MAX_VALUE, Math.round(portPressure(port)))
                         : 0;
             }
         };
+    }
+
+    /** The pressure of a port's network, kPa, as its GUI shows it; 0 once the device is removed. */
+    public double portPressure(int port) {
+        return isRemoved() ? 0 : ports[port].network().gas().pressure();
     }
 
     @Override
