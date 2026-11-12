@@ -259,7 +259,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void large_tank_stands_on_a_connector_port(GameTestHelper h) {
-        Area a = new Area(h, 4865);
+        Area a = new Area(h, 4885);
         a.clear(0, 0, 8, 6);
         a.place(2, 1, 3, GasDeviceTests.pipe());
         a.place(2, 2, 3, GasDeviceTests.port());
@@ -629,7 +629,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_114_a_large_tank_is_dyed_as_a_pipe_is_and_its_item_keeps_the_colour(GameTestHelper h) {
-        Area a = new Area(h, 4866);
+        Area a = new Area(h, 4886);
         a.clear(0, 0, 8, 6);
         for (int x = 0; x <= 8; x++) {
             for (int z = 0; z <= 6; z++) {
@@ -696,7 +696,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void large_tank_saves_and_loads_its_share_and_its_colour(GameTestHelper h) throws IOException {
-        Area a = new Area(h, 4860);
+        Area a = new Area(h, 4880);
         a.clear(0, 0, 4, 6);
         LargeTankBlockEntity tank = stand(a, 2, 2, 2);
         a.set(2, 2, 2, a.get(2, 2, 2).setValue(PipeColor.PROPERTY, PipeColor.CYAN));
@@ -740,7 +740,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_035_a_wrench_takes_a_large_tank_down_by_either_half_and_doesnt_turn_it(GameTestHelper h) {
-        Area a = new Area(h, 4861);
+        Area a = new Area(h, 4881);
         a.clear(0, 0, 6, 6);
         LargeTankBlockEntity tank = stand(a, 3, 2, 3); // its upper half at (3, 3, 3)
         a.place(3, 1, 3, GasDeviceTests.pipe());
@@ -786,7 +786,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_091_a_large_tank_3_atm_over_ambient_stays_and_under_2_atm_comes_off(GameTestHelper h) {
-        Area a = new Area(h, 4862);
+        Area a = new Area(h, 4882);
         GasDeviceTests.room(a);
         LargeTankBlockEntity tank = stand(a, 2, 1, 2);
         a.tick();
@@ -832,7 +832,7 @@ public final class LargeTankTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void large_tank_seals_no_face_so_a_corridor_it_fills_stays_one_room(GameTestHelper h) {
-        Area a = new Area(h, 4863);
+        Area a = new Area(h, 4883);
         a.box(0, 0, 6, 2);
         for (int x = 1; x <= 5; x++) {
             a.set(x, 3, 1, STONE); // the corridor is 5 long, 2 high and 1 wide

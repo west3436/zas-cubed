@@ -427,7 +427,7 @@ public final class AnalyzerTests {
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_034_used_on_either_half_of_a_large_tank_it_reads_the_tanks_own_gas(GameTestHelper h) {
-        Area a = new Area(h, 4864);
+        Area a = new Area(h, 4887);
         a.clear(0, 0, 6, 6);
         LargeTankBlockEntity tank = LargeTankTests.stand(a, 2, 2, 2); // its upper half at (2, 3, 2)
         a.place(2, 1, 2, GasDeviceTests.pipe());
