@@ -101,6 +101,16 @@ jobs:
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=both"
           - adapter: accessories with its curios layer
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=layer"
+          # COMPAT-050 to COMPAT-053: the KubeJS adapter, with real scripts in
+          # the server's kubejs folder, with the oldest KubeJS it supports and
+          # the newest. COMPAT-002: with the last build before the oldest, the
+          # adapter stays off, and KubeJS still runs the pack's script.
+          - adapter: kubejs (oldest supported)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pkubejs.version=floor"
+          - adapter: kubejs (newest)
+            task: ":compat-kubejs:runAdapterGameTestServer"
+          - adapter: kubejs (older than supported)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pkubejs.version=unsupported"
           # CONT-155: with the adapter's target mod installed and the content
           # switched off, the game starts and the tests that need none of the
           # content pass. For the adapters that do something as a server
@@ -139,6 +149,10 @@ jobs:
             task: ":compat-slots:runAdapterGameTestServer -Pcontent=off"
           - adapter: accessories (content off)
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=accessories -Pcontent=off"
+          # What scripts get is the public API, which is all there with the
+          # content off, so every test of the adapter runs.
+          - adapter: kubejs (content off)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pcontent=off"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
