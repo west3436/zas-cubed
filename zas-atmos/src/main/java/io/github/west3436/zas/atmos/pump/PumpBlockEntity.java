@@ -78,9 +78,14 @@ public abstract class PumpBlockEntity extends InlineDeviceEntity {
         return setting;
     }
 
+    /** A setting clamped to what it allows: 0 to its highest. */
+    public double clamp(double value) {
+        return Mth.clamp(value, 0, max);
+    }
+
     /** Sets its setting, clamped to what it allows. Server side. */
     public void set(double value) {
-        double next = Mth.clamp(value, 0, max);
+        double next = clamp(value);
         if (Double.isFinite(next) && next != setting) {
             setting = next;
             setChanged();

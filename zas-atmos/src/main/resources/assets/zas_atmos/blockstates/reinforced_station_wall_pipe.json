@@ -1,0 +1,517 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "false",
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "true",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "true",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "false",
+            "north": "true"
+          },
+          {
+            "east": "false",
+            "south": "true"
+          },
+          {
+            "east": "false",
+            "up": "true"
+          },
+          {
+            "east": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "y": 90,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "true",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "y": 90,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "true",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "false",
+            "east": "true"
+          },
+          {
+            "south": "false",
+            "west": "true"
+          },
+          {
+            "south": "false",
+            "up": "true"
+          },
+          {
+            "south": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "y": 180,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "true"
+          },
+          {
+            "north": "true",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "y": 180,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "true"
+          },
+          {
+            "north": "true",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "false",
+            "north": "true"
+          },
+          {
+            "west": "false",
+            "south": "true"
+          },
+          {
+            "west": "false",
+            "up": "true"
+          },
+          {
+            "west": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "y": 270,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "east": "true",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "y": 270,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "east": "true",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "false",
+            "north": "true"
+          },
+          {
+            "up": "false",
+            "east": "true"
+          },
+          {
+            "up": "false",
+            "south": "true"
+          },
+          {
+            "up": "false",
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "x": 270,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "x": 270,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "false",
+            "north": "true"
+          },
+          {
+            "down": "false",
+            "east": "true"
+          },
+          {
+            "down": "false",
+            "south": "true"
+          },
+          {
+            "down": "false",
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face",
+        "x": 90,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "true",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/reinforced_station_wall_face_pipe",
+        "x": 90,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "true",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_end",
+        "x": 90
+      }
+    }
+  ]
+}

@@ -125,9 +125,12 @@ public class ElectrolyzerBlockEntity extends InlineDeviceEntity {
 
     @Override
     protected int dataValue(int index) {
-        return index == ElectrolyzerMenu.DATA_WATER
-                ? (int) Math.ceil(tank.water() - ElectrolyzerMath.EMPTY_MB)
-                : super.dataValue(index);
+        return index == ElectrolyzerMenu.DATA_WATER ? shownWater() : super.dataValue(index);
+    }
+
+    /** The water in its tank as its GUI shows it: mB, rounded up so that any water shows. */
+    public int shownWater() {
+        return (int) Math.ceil(tank.water() - ElectrolyzerMath.EMPTY_MB);
     }
 
     @Override

@@ -20,11 +20,11 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /**
- * No player-facing text in {@code zas}, {@code zas_atmos} or {@code zas_ponder} is written in the code,
- * and every key the code spells out is in {@code en_us.json} (CLIENT-007). It lives here because
- * {@code zas_atmos} may look at {@code zas}, and {@code zas} never names {@code zas_atmos}. The Ponder
- * addon, which requires {@code zas_atmos}, is read from its build, and so is the Jade adapter, which is
- * part of {@code zas_atmos} in the release jar.
+ * No player-facing text in {@code zas} or {@code zas_atmos} is written in the code, and every key the
+ * code spells out is in {@code en_us.json} (CLIENT-007). It lives here because {@code zas_atmos} may
+ * look at {@code zas}, and {@code zas} never names {@code zas_atmos}. The Jade and CC: Tweaked adapters
+ * and the Ponder scenes, which are part of {@code zas_atmos} in the release jar, are read from their
+ * builds. The scenes' text is in a language file of its own, in the {@code zas_ponder} resource folder.
  *
  * <p>Text with no letters, such as "●", "—" or a number, is never flagged. Everything else that's
  * allowed is in the three lists below, and each entry is an exact match.
@@ -54,7 +54,8 @@ class PlayerTextTest {
                 classes("zas.mainClasses"),
                 classes("zas_atmos.mainClasses"),
                 classes("zas_atmos.jadeClasses"),
-                classes("zas_ponder.mainClasses"))) {
+                classes("zas_atmos.ccClasses"),
+                classes("zas_atmos.ponderClasses"))) {
             hardCoded(PlayerTextScan.of(classes, OPERATOR_LINES)).forEach(found -> problems.add(found.toString()));
         }
         assertTrue(
@@ -69,14 +70,15 @@ class PlayerTextTest {
         // zas_atmos requires zas, so it can name zas's keys too. zas can't name zas_atmos's.
         Set<String> atmos = new HashSet<>(zas);
         atmos.addAll(lang("zas_atmos.resources", "zas_atmos"));
-        // The Ponder addon requires zas_atmos, so it can name the keys of both.
+        // The Ponder scenes are part of zas_atmos, so they can name its keys and zas's, and their own.
         Set<String> ponder = new HashSet<>(atmos);
-        ponder.addAll(lang("zas_ponder.resources", "zas_ponder"));
+        ponder.addAll(lang("zas_atmos.ponderResources", "zas_ponder"));
         List<String> problems = new ArrayList<>();
         problems.addAll(missing(classes("zas.mainClasses"), zas));
         problems.addAll(missing(classes("zas_atmos.mainClasses"), atmos));
         problems.addAll(missing(classes("zas_atmos.jadeClasses"), atmos));
-        problems.addAll(missing(classes("zas_ponder.mainClasses"), ponder));
+        // The CC: Tweaked adapter names no keys: what it says is a Lua error, which a program may match.
+        problems.addAll(missing(classes("zas_atmos.ponderClasses"), ponder));
         assertTrue(problems.isEmpty(), "Translation keys missing from en_us.json:\n  " + String.join("\n  ", problems));
     }
 

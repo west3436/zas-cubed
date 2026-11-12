@@ -6,8 +6,9 @@ name: Release
 # same jars without releasing anything, so the workflow is tried before a tag
 # needs it.
 #
-# Assets: the ZAS³ jar (zas and zas_atmos, D-88), the optional ZAS³ Ponder
-# addon, and the API jar with its sources and javadoc jars for mod developers.
+# Assets: the ZAS³ jar (zas and zas_atmos, D-88, with the Ponder scenes), the
+# optional ZAS³ Ponder addon, which brings Ponder to players without Create,
+# and the API jar with its sources and javadoc jars for mod developers.
 
 on:
   push:
@@ -99,7 +100,7 @@ jobs:
           For Minecraft 1.21.1 on NeoForge.
 
           - **\`zas-$MOD.jar\`**: ZAS³ and ZAS³ Atmospherics. Install it on the server and on every client.
-          - **\`zas_ponder-$MOD.jar\`**: ZAS³ Ponder, optional and client only: animated guides to the devices.
+          - **\`zas_ponder-$MOD.jar\`**: ZAS³ Ponder, optional and client only: Ponder and Flywheel, for the animated guides to the devices. Not needed with Create, which brings both.
           - **\`zas-api-*.jar\`**: the API, with its sources and javadoc, for mod developers.
 
           What's new: the [changelog]($wiki/Changelog). How to play: [getting started]($wiki/Getting-Started) and the rest of the [wiki]($wiki).
