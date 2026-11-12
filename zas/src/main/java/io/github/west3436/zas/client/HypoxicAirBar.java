@@ -38,7 +38,8 @@ final class HypoxicAirBar {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         // Vanilla draws the camera's player's air; spectating another player leaves it to vanilla.
-        if (player == null || mc.getCameraEntity() != player
+        if (player == null
+                || mc.getCameraEntity() != player
                 || !ClientBreath.LOCAL.drainsForOxygen(ClientBreath.eyesInFluid(player))) {
             return;
         }
