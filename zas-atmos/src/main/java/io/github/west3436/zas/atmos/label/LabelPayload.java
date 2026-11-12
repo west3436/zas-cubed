@@ -15,8 +15,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * block, so it can only reach the device whose window the sender has open: the server refuses one
  * for any other window, for a window of a device that takes no label, from a spectator, and from a
  * player the window no longer lets act, as it refuses that window's buttons (CONT-074). The text is
- * cleaned and cut by {@link Labels#clean} on the server, whatever the client sent; nothing clears
- * the label.
+ * cleaned and cut by {@link Labels#clean} on the server, whatever the client sent, and text that
+ * cleans to nothing clears the label.
  *
  * @param containerId the open window
  * @param text what was typed

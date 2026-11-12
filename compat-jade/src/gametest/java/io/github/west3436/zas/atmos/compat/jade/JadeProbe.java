@@ -111,7 +111,8 @@ final class JadeProbe {
         if (!found) {
             throw new GameTestAssertException("Jade holds no name provider for the block at " + pos.toShortString());
         }
-        return data;
+        // Older versions write their answer through the accessor, into a copy of the data it holds.
+        return data.merge(accessor.getServerData());
     }
 
     /** Whether the server sends nothing for a block. */
