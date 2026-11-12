@@ -11,6 +11,10 @@ subprojects {
     group = 'io.github.west3436'
     version = mod_version
 
+    // The API versions a mod's nested API accepts: from this one up to the next major, since only
+    // a new major may break it (API-002).
+    ext.api_range = "[${api_version},${(api_version.tokenize('.')[0] as int) + 1}.0)"
+
     java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
     repositories {

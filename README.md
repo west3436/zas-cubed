@@ -4,7 +4,7 @@ Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
 (Zone Atmospherics System) of the Space Station 13 codebase
 [vgstation13](https://github.com/vgstation-coders/vgstation13).
 
-> **Status: beta.** 0.1.0 is on [GitHub Releases](https://github.com/west3436/zas-cubed/releases).
+> **Status: released.** 1.0.0 is on [GitHub Releases](https://github.com/west3436/zas-cubed/releases).
 > Guides for players, server owners, pack makers and mod developers are on the
 > [wiki](https://github.com/west3436/zas-cubed/wiki).
 
