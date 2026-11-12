@@ -202,6 +202,22 @@ public final class AtmosBlocks {
             p -> new EncasedPipeBlock(p, REINFORCED_STATION_WALL),
             reinforcedStationWall());
 
+    // ---- The floor grille (#486) ----
+
+    /**
+     * A pipe under a floor grille: a full, walkable, gas-tight block that the pipe shows through. It
+     * is made by using the grille, which is only an item, on a placed pipe. As hard as the pipe; it
+     * lets light through and is no place to spawn, as glass.
+     */
+    public static final DeferredBlock<EncasedPipeBlock> FLOOR_GRILLE_PIPE = BLOCKS.registerBlock(
+            "floor_grille_pipe",
+            p -> new EncasedPipeBlock(p, () -> AtmosItems.FLOOR_GRILLE.get()),
+            metal().noOcclusion()
+                    .isValidSpawn((state, level, pos, type) -> false)
+                    .isRedstoneConductor((state, level, pos) -> false)
+                    .isSuffocating((state, level, pos) -> false)
+                    .isViewBlocking((state, level, pos) -> false));
+
     /**
      * Reinforced glass: seen through as glass is, conducts no heat, never broken by a pressure
      * difference, since it isn't in {@code #zas:pressure_fragile}, with obsidian's blast resistance
@@ -262,9 +278,9 @@ public final class AtmosBlocks {
 
     private AtmosBlocks() {}
 
-    /** The pipes in casings, one for each block a pipe goes into. */
+    /** The pipes in casings: one for each block a pipe goes into, and the pipe under a floor grille. */
     public static List<DeferredBlock<EncasedPipeBlock>> encasedPipes() {
-        return List.of(STATION_WALL_PIPE, REINFORCED_STATION_WALL_PIPE);
+        return List.of(STATION_WALL_PIPE, REINFORCED_STATION_WALL_PIPE, FLOOR_GRILLE_PIPE);
     }
 
     /** The pipe, bare and in each casing: the blocks of a pipe's block entity, and those a dye tints. */

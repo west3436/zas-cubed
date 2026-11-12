@@ -8,6 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,6 +24,9 @@ import org.junit.jupiter.api.Test;
  * shows on is the wall's face with the shape of the pipe's flange left out, and the flange set into the
  * gap. No two pieces share a place, so nothing fights for depth, whatever cuts a face up (Fusion cuts a
  * joined face into its corners).
+ *
+ * <p>And the look of a pipe under a floor grille (#486): the pipe's own core and arms inside a cube of
+ * lattice, which is clear in the middle of each face, where the end of an arm lies.
  */
 class EncasedPipeFacesTest {
     private static final List<String> WALLS = List.of("station_wall", "reinforced_station_wall");
@@ -150,6 +155,94 @@ class EncasedPipeFacesTest {
                             .getAsString(),
                     "the wall's own texture");
         }
+    }
+
+    /** Under a grille the pipe is drawn as it is bare, with an arm where a bare pipe would have a mouth. */
+    @Test
+    void under_a_grille_the_pipe_is_whole_inside_one_cube_of_lattice() throws IOException {
+        JsonObject blockstate = json(assets().resolve("blockstates/floor_grille_pipe.json"));
+        for (int arms = 0; arms < 64; arms++) {
+            JsonObject state = new JsonObject();
+            for (int i = 0; i < 6; i++) {
+                state.addProperty(FACES.get(i), (arms & (1 << i)) != 0 ? "true" : "false");
+            }
+            int cubes = 0;
+            int cores = 0;
+            int shown = 0;
+            for (JsonElement e : blockstate.getAsJsonArray("multipart")) {
+                JsonObject part = e.getAsJsonObject();
+                if (part.has("when") && !matches(part.getAsJsonObject("when"), state)) {
+                    continue;
+                }
+                JsonObject apply = part.getAsJsonObject("apply");
+                switch (apply.get("model").getAsString()) {
+                    case "zas_atmos:block/floor_grille" -> cubes++;
+                    case "zas_atmos:block/pipe_core" -> cores++;
+                    case "zas_atmos:block/pipe_arm" -> {
+                        int face = 1 << FACES.indexOf(turned(apply));
+                        assertEquals(0, shown & face, "two arms on one face");
+                        shown |= face;
+                    }
+                    default -> throw new AssertionError("the grille shows " + apply.get("model"));
+                }
+            }
+            String what = "arms " + Integer.toBinaryString(arms);
+            assertEquals(1, cubes, what + ": cubes of lattice");
+            assertEquals(1, cores, what + ": cores");
+            assertEquals(arms | PipeMouths.of(arms), shown, what + ": arms shown");
+        }
+    }
+
+    /**
+     * The end of a pipe's arm lies in the block's face, 6 px in its middle. The lattice is clear there,
+     * so the two never share a pixel, and it is cut out: each pixel is there or not. The cube shows the
+     * lattice from inside as well, and hides each inner face with the outer face it lies behind.
+     */
+    @Test
+    void the_lattice_is_clear_where_the_end_of_an_arm_lies() throws IOException {
+        BufferedImage lattice =
+                ImageIO.read(assets().resolve("textures/block/floor_grille.png").toFile());
+        assertEquals(16, lattice.getWidth());
+        assertEquals(16, lattice.getHeight());
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                int alpha = lattice.getRGB(x, y) >>> 24;
+                boolean edge = x == 0 || y == 0 || x == 15 || y == 15;
+                boolean middle = x >= 5 && x < 11 && y >= 5 && y < 11;
+                assertTrue(alpha == 0 || alpha == 255, "half-clear at " + x + ", " + y);
+                assertTrue(!edge || alpha == 255, "the frame is open at " + x + ", " + y);
+                assertTrue(!middle || alpha == 0, "the lattice crosses the pipe's end at " + x + ", " + y);
+            }
+        }
+        JsonObject model = json(assets().resolve("models/block/floor_grille.json"));
+        assertEquals("minecraft:cutout", model.get("render_type").getAsString());
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                model.getAsJsonObject("textures").get("all").getAsString());
+        JsonArray elements = model.getAsJsonArray("elements");
+        assertEquals(2, elements.size());
+        Map<String, String> behind =
+                Map.of("north", "north", "south", "south", "east", "west", "west", "east", "up", "up", "down", "down");
+        for (int i = 0; i < 2; i++) {
+            JsonObject element = elements.get(i).getAsJsonObject();
+            boolean inner = element.getAsJsonArray("from").get(0).getAsDouble()
+                    > element.getAsJsonArray("to").get(0).getAsDouble();
+            assertEquals(i == 1, inner, "element " + i + " is turned inside out");
+            JsonObject faces = element.getAsJsonObject("faces");
+            assertEquals(6, faces.size());
+            for (Map.Entry<String, JsonElement> face : faces.entrySet()) {
+                // Turned inside out along x, the faces named east and west change sides.
+                assertEquals(
+                        inner ? behind.get(face.getKey()) : face.getKey(),
+                        face.getValue().getAsJsonObject().get("cullface").getAsString(),
+                        "element " + i + ", " + face.getKey());
+            }
+        }
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                json(assets().resolve("models/item/floor_grille.json"))
+                        .get("parent")
+                        .getAsString());
     }
 
     /**

@@ -25,6 +25,8 @@ import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tool.WrenchItem;
 import io.github.west3436.zas.change.ChangeTracker;
+import io.github.west3436.zas.engine.Face;
+import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.geometry.Geometries;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,15 +47,21 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
@@ -62,6 +70,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -70,6 +79,9 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
  * is the wall for the air and a pipe for the pipes. Two rooms either side of it stay two zones with
  * their own gas, while one network runs through it. The pipe comes back out with a wrench, and the
  * block drops both when mined.
+ *
+ * <p>The floor grille (#486): a grille used on a placed pipe makes a full, gas-tight block of it that
+ * the pipe shows through. A wrench takes the grille back off and leaves the pipe.
  *
  * <p>Each test builds in its own {@link Area} and drives its atmos ticks and device steps itself,
  * within one game tick, so they share a batch of their own.
@@ -97,6 +109,10 @@ public final class EncasedPipeTests {
 
     private static BlockState inWall(PipeColor color) {
         return inWall().setValue(PipeColor.PROPERTY, color);
+    }
+
+    private static BlockState grille() {
+        return AtmosBlocks.FLOOR_GRILLE_PIPE.get().defaultBlockState();
     }
 
     private static BlockState cap(Direction facing) {
@@ -211,7 +227,12 @@ public final class EncasedPipeTests {
         Map<Block, EncasedPipeBlock> walls = Map.of(
                 AtmosBlocks.STATION_WALL.get(), AtmosBlocks.STATION_WALL_PIPE.get(),
                 AtmosBlocks.REINFORCED_STATION_WALL.get(), AtmosBlocks.REINFORCED_STATION_WALL_PIPE.get());
-        h.assertValueEqual(AtmosBlocks.encasedPipes().size(), walls.size(), "the blocks a pipe goes into");
+        h.assertValueEqual(
+                AtmosBlocks.encasedPipes().stream()
+                        .filter(cased -> cased.get().shell() != null)
+                        .count(),
+                (long) walls.size(),
+                "the blocks a pipe goes into");
         for (Map.Entry<Block, EncasedPipeBlock> pair : walls.entrySet()) {
             Block wall = pair.getKey();
             EncasedPipeBlock piped = pair.getValue();
@@ -735,6 +756,427 @@ public final class EncasedPipeTests {
         a.close(GasCensus.total(a, CO2, new ChunkPos(a.abs(WALL, 2, 2))), all, "the CO2 in all");
 
         a.clear(-1, -1, 9, 5);
+        h.succeed();
+    }
+
+    // ---- The floor grille (#486) ------------------------------------------------------------------
+
+    /**
+     * A pipe under a floor grille is a full block for the air and for whoever walks on it: gas-tight on
+     * every face with no cell, and a whole cube to stand on. It has no heat data of its own, so it
+     * passes heat as any plain block does, where a station block passes none. It is seen through and
+     * lets light through, as glass does, and two side by side show no face between them. It is still
+     * the pipe's block, as hard as a pipe and mined with any pickaxe, and it never leaks. The grille
+     * is an item and places no block: picking the block gives it.
+     */
+    @GameTest(template = "empty")
+    public static void a_pipe_under_a_floor_grille_is_a_full_block_that_is_seen_through(GameTestHelper h) {
+        EncasedPipeBlock grille = AtmosBlocks.FLOOR_GRILLE_PIPE.get();
+        Item item = AtmosItems.FLOOR_GRILLE.get();
+        h.assertTrue(grille.shell() == null, "the grille is a block of its own: " + grille.shell());
+        h.assertTrue(grille.casing() == item, "the grille's item is " + grille.casing());
+        h.assertTrue(EncasedPipeBlock.of(item) == grille, "what a floor grille makes of a pipe");
+        h.assertFalse(item instanceof BlockItem, "the floor grille places a block");
+        h.assertTrue(grille.asItem() == Items.AIR, "the block has an item");
+        ServerLevel level = h.getLevel();
+        for (BlockState state : grille.getStateDefinition().getPossibleStates()) {
+            Geometry g = Geometries.table().geometry(state);
+            for (Face f : Face.values()) {
+                h.assertTrue(g.isFaceFull(f), state + " doesn't seal its " + f + " face");
+            }
+            h.assertValueEqual(g.cellCount(), 0, "the cells of " + state);
+            h.assertTrue(Double.isNaN(g.transmittance()), state + " has a U of its own: " + g.transmittance());
+            h.assertTrue(
+                    state.getCollisionShape(level, BlockPos.ZERO) == Shapes.block(),
+                    state + " isn't a cube to stand on");
+            h.assertFalse(state.canOcclude(), state + " hides what is behind it");
+            h.assertTrue(state.propagatesSkylightDown(level, BlockPos.ZERO), state + " stops the sky's light");
+            h.assertValueEqual(state.getLightBlock(level, BlockPos.ZERO), 0, "the light " + state + " takes");
+            h.assertFalse(state.isRedstoneConductor(level, BlockPos.ZERO), state + " conducts redstone");
+            h.assertFalse(
+                    state.isValidSpawn(level, BlockPos.ZERO, EntityType.ZOMBIE), state + " lets a zombie spawn on it");
+            h.assertFalse(grille.leaks(state), state + " has an open end");
+            h.assertTrue(AtmosBlockEntities.PIPE.get().isValid(state), state + " can't hold a pipe's block entity");
+        }
+        BlockState state = grille.defaultBlockState();
+        BlockState pipe = AtmosBlocks.PIPE.get().defaultBlockState();
+        h.assertValueEqual(
+                state.getDestroySpeed(level, BlockPos.ZERO),
+                pipe.getDestroySpeed(level, BlockPos.ZERO),
+                "its hardness");
+        h.assertValueEqual(
+                grille.getExplosionResistance(),
+                AtmosBlocks.PIPE.get().getExplosionResistance(),
+                "its blast resistance");
+        h.assertTrue(state.is(BlockTags.MINEABLE_WITH_PICKAXE), "a pickaxe doesn't mine it");
+        h.assertTrue(new ItemStack(Items.WOODEN_PICKAXE).isCorrectToolForDrops(state), "a wooden pickaxe won't do");
+        h.assertFalse(new ItemStack(Items.WOODEN_AXE).isCorrectToolForDrops(state), "an axe will do");
+        h.assertTrue(state.getSoundType() == SoundType.METAL, "its sound");
+        h.assertTrue(state.skipRendering(state, Direction.EAST), "two grilles show the face between them");
+        h.assertFalse(state.skipRendering(wall(), Direction.EAST), "a grille hides its face beside a wall");
+        h.assertFalse(inWall().skipRendering(inWall(), Direction.EAST), "a wall with a pipe hides nothing of its kind");
+        h.assertTrue(
+                grille.getCloneItemStack(level, BlockPos.ZERO, state).is(item), "picking it doesn't give the grille");
+        h.succeed();
+    }
+
+    /** Four iron bars make four floor grilles. */
+    @GameTest(template = "empty")
+    public static void floor_grilles_are_crafted_from_iron_bars(GameTestHelper h) {
+        RecipeHolder<?> recipe = h.getLevel()
+                .getRecipeManager()
+                .byKey(ResourceLocation.fromNamespaceAndPath(ZasAtmosMod.MOD_ID, "floor_grille"))
+                .orElse(null);
+        h.assertTrue(recipe != null, "there is no floor grille recipe");
+        ItemStack result = recipe.value().getResultItem(h.getLevel().registryAccess());
+        h.assertTrue(
+                ItemStack.matches(result, new ItemStack(AtmosItems.FLOOR_GRILLE.get(), 4)),
+                "the recipe makes " + result);
+        List<Ingredient> ingredients = recipe.value().getIngredients().stream()
+                .filter(i -> !i.isEmpty())
+                .toList();
+        h.assertValueEqual(ingredients.size(), 4, "the recipe's ingredients");
+        for (Ingredient ingredient : ingredients) {
+            h.assertTrue(ingredient.test(new ItemStack(Items.IRON_BARS)), "an ingredient isn't iron bars");
+            h.assertFalse(ingredient.test(new ItemStack(Items.IRON_INGOT)), "an ingredient takes an iron ingot");
+        }
+        h.succeed();
+    }
+
+    /**
+     * The issue's case. A run passes through a gap in the wall between two rooms, and the bare pipe
+     * leaves the gap open: the rooms are one zone. A floor grille used on the pipe in the gap makes a
+     * full block of it, and one grille is used up. The rooms part into two zones, and gas let into one
+     * stays out of the other. The pipe keeps its dye, its arms, its block entity and its network with
+     * its gas. A second grille does nothing, and a grille goes on no end cap and no pipe in a wall.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_floor_grille_used_on_a_pipe_makes_a_full_block_and_closes_the_gap(GameTestHelper h) {
+        Area a = new Area(h, 4860);
+        a.box(0, 0, 8, 4);
+        for (int y = 1; y <= 3; y++) {
+            for (int z = 1; z <= 3; z++) {
+                if (y != 2 || z != 2) {
+                    a.set(WALL, y, z, Area.STONE);
+                }
+            }
+        }
+        a.place(1, 2, 2, cap(Direction.EAST));
+        for (int x = 2; x <= 6; x++) {
+            a.place(
+                    x,
+                    2,
+                    2,
+                    GasDeviceTests.pipe().setValue(PipeColor.PROPERTY, x == WALL ? PipeColor.ORANGE : PipeColor.NONE));
+        }
+        a.place(7, 2, 2, cap(Direction.WEST));
+        a.place(WALL, 1, 1, inWall());
+        a.fill(1, 3, 1, Map.of(N2, 10.0));
+        a.tick();
+        h.assertValueEqual(a.zone(1, 3, 1).id(), a.zone(7, 3, 1).id(), "the zone either side of a bare pipe in a gap");
+        PipeBlockEntity before = a.entity(WALL, 2, 2);
+        PipeNetwork net = before.network();
+        a.close(net.volume(), 7 * PipeVolumes.PIPE, "the run's volume: five pipes and two caps");
+        net.gas().add(new GasParcel(Map.of(CO2, 20.0), T));
+        BlockState bare = a.get(WALL, 2, 2);
+        Player player = holding(h, GameType.SURVIVAL, new ItemStack(AtmosItems.FLOOR_GRILLE.get(), 2));
+
+        h.assertTrue(useOnBlock(a, player, WALL, 2, 2, Direction.UP).consumesAction(), "the grille didn't go on");
+        BlockState cased = a.get(WALL, 2, 2);
+        h.assertTrue(cased.is(AtmosBlocks.FLOOR_GRILLE_PIPE.get()), "the pipe is now " + cased);
+        h.assertValueEqual(
+                cased.getValue(PipeColor.PROPERTY), PipeColor.ORANGE, "the dye of the pipe under the grille");
+        for (Direction d : Direction.values()) {
+            h.assertValueEqual(
+                    cased.getValue(PipeBlock.CONNECTIONS.get(d)),
+                    bare.getValue(PipeBlock.CONNECTIONS.get(d)),
+                    "the arm on the " + d + " face");
+        }
+        h.assertTrue(a.level.getBlockEntity(a.abs(WALL, 2, 2)) == before, "the pipe got a new block entity");
+        h.assertFalse(before.isRemoved(), "the pipe's block entity was removed");
+        h.assertTrue(before.network() == net && net.valid(), "the pipe's network was rebuilt");
+        a.close(net.gas().moles(CO2), 20, "the network's CO2");
+        h.assertValueEqual(player.getMainHandItem().getCount(), 1, "the grilles left in hand");
+
+        // The gap is shut: two zones, and what goes into one stays out of the other.
+        a.tick();
+        a.tick();
+        h.assertFalse(
+                a.zone(1, 3, 1).id().equals(a.zone(7, 3, 1).id()),
+                "the rooms are one zone still, the gap under a grille");
+        double east = a.zone(7, 3, 1).mixture().moles(N2);
+        a.fill(1, 3, 1, Map.of(N2, 500.0));
+        for (int i = 0; i < 6; i++) {
+            a.step();
+        }
+        a.close(a.zone(7, 3, 1).mixture().moles(N2), east, "the east room's N2");
+        double apart =
+                a.zone(1, 3, 1).mixture().pressure() - a.zone(7, 3, 1).mixture().pressure();
+        h.assertTrue(apart > 20, "the rooms are only " + apart + " kPa apart");
+        a.close(before.network().gas().moles(CO2), 20, "the run's CO2 after its steps");
+        a.close(a.zone(1, 3, 1).mixture().moles(CO2), 0, "the west room's CO2");
+        a.close(a.zone(7, 3, 1).mixture().moles(CO2), 0, "the east room's CO2");
+
+        // A pipe takes one casing, and only a bare pipe takes a grille.
+        for (int[] at : new int[][] {{WALL, 2, 2}, {1, 2, 2}, {WALL, 1, 1}}) {
+            BlockState was = a.get(at[0], at[1], at[2]);
+            h.assertValueEqual(
+                    useOnBlock(a, player, at[0], at[1], at[2], Direction.UP),
+                    ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION,
+                    "a grille on " + was);
+            h.assertTrue(a.get(at[0], at[1], at[2]) == was, "a grille changed " + was);
+        }
+        h.assertValueEqual(player.getMainHandItem().getCount(), 1, "the grilles left in hand");
+
+        a.clear(-1, -1, 9, 5);
+        player.discard();
+        h.succeed();
+    }
+
+    /**
+     * A pipe under a grille has no open end, where a bare pipe with fewer than two connections has one
+     * (CONT-004): alone, and then with one end cap on it, it keeps its gas through its steps.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_pipe_under_a_floor_grille_has_no_open_end(GameTestHelper h) {
+        Area a = new Area(h, 4861);
+        a.box(0, 0, 6, 4);
+        a.fill(1, 3, 1, Map.of(N2, 10.0));
+        a.place(3, 2, 2, grille());
+        a.tick();
+        PipeBlockEntity pipe = a.entity(3, 2, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(CO2, 30.0), T));
+        h.assertTrue(pipe.network().gas().pressure() > 1000, "the pipe isn't above the room's pressure");
+        h.assertFalse(pipe.isOpen(), "alone under its grille, the pipe has an open end");
+        for (int i = 0; i < 6; i++) {
+            a.step();
+        }
+        a.close(pipe.network().gas().moles(CO2), 30, "the CO2 of a pipe alone under its grille");
+        a.place(2, 2, 2, cap(Direction.EAST));
+        h.assertValueEqual(PipeBlock.connections(a.get(3, 2, 2)), 1, "the arms of the pipe under the grille");
+        h.assertFalse(pipe.isOpen(), "with one connection, the pipe under the grille has an open end");
+        for (int i = 0; i < 6; i++) {
+            a.step();
+        }
+        a.close(pipe.network().gas().moles(CO2), 30, "the CO2 of the run that ends under the grille");
+        a.close(a.zone(1, 3, 1).mixture().moles(CO2), 0, "the room's CO2");
+
+        a.clear(-1, -1, 7, 5);
+        h.succeed();
+    }
+
+    /**
+     * A wrench has nothing to turn on a pipe under a grille. Sneaking, it takes the grille off and
+     * leaves the pipe: the grille drops, and the pipe keeps its dye, its arms, its block entity and its
+     * network with all its gas, however far over the room's pressure it is, for none is let out. In
+     * creative nothing drops. Where the pipe would be left with an open end (CONT-004), gas would get
+     * out, so there the wrench refuses over 2 atm above the room, as it does for a pipe (CONT-091).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_wrench_takes_the_grille_off_and_leaves_the_pipe(GameTestHelper h) {
+        Area a = new Area(h, 4862);
+        a.box(0, 0, 6, 4);
+        a.fill(1, 3, 1, Map.of(N2, 10.0));
+        a.place(1, 2, 2, cap(Direction.EAST));
+        a.place(2, 2, 2, GasDeviceTests.pipe());
+        a.place(3, 2, 2, grille().setValue(PipeColor.PROPERTY, PipeColor.PINK));
+        a.place(4, 2, 2, GasDeviceTests.pipe());
+        a.place(5, 2, 2, cap(Direction.WEST));
+        a.tick();
+        BlockPos pos = a.abs(3, 2, 2);
+        PipeBlockEntity before = a.entity(3, 2, 2);
+        PipeNetwork net = before.network();
+        a.close(net.volume(), 5 * PipeVolumes.PIPE, "the run's volume: three pipes and two caps");
+        PipeBurstTests.fillTo(net, a.zone(1, 3, 1).mixture().pressure() + WrenchItem.LOCK_KPA + 500);
+        double held = net.gas().moles(CO2);
+        h.assertTrue(
+                WrenchItem.overAmbient(a.level, pos, Direction.UP) > WrenchItem.LOCK_KPA,
+                "the pipe is under the limit");
+        BlockState cased = a.get(3, 2, 2);
+        Player player = holding(h, GameType.SURVIVAL, new ItemStack(AtmosItems.WRENCH.get()));
+
+        h.assertValueEqual(wrench(a, player, 3, 2, 2, Direction.UP, false), InteractionResult.FAIL, "a plain click");
+        h.assertTrue(a.get(3, 2, 2) == cased, "a plain click changed the block");
+        WrenchTests.watchDrops();
+        h.assertTrue(wrench(a, player, 3, 2, 2, Direction.UP, true).consumesAction(), "the grille's removal");
+        BlockState bare = a.get(3, 2, 2);
+        h.assertTrue(bare.is(AtmosBlocks.PIPE.get()), "what is left is " + bare);
+        h.assertValueEqual(bare.getValue(PipeColor.PROPERTY), PipeColor.PINK, "the dye of the pipe left");
+        for (Direction d : Direction.values()) {
+            h.assertValueEqual(
+                    bare.getValue(PipeBlock.CONNECTIONS.get(d)),
+                    cased.getValue(PipeBlock.CONNECTIONS.get(d)),
+                    "the arm on the " + d + " face");
+        }
+        h.assertTrue(a.level.getBlockEntity(pos) == before, "the pipe got a new block entity");
+        h.assertFalse(before.isRemoved(), "the pipe's block entity was removed");
+        h.assertTrue(before.network() == net && net.valid(), "the pipe's network was rebuilt");
+        a.close(net.gas().moles(CO2), held, "what the run holds, the grille off");
+        List<ItemEntity> drops = WrenchTests.takeDrops();
+        h.assertTrue(
+                drops.size() == 1
+                        && ItemStack.matches(drops.get(0).getItem(), new ItemStack(AtmosItems.FLOOR_GRILLE.get())),
+                "what dropped: " + drops);
+        h.assertTrue(
+                drops.get(0).getY() > pos.getY() + 0.5,
+                "the grille dropped at y " + drops.get(0).getY());
+        for (int i = 0; i < 4; i++) {
+            a.step();
+        }
+        a.close(before.network().gas().moles(CO2), held, "what the run holds after its steps");
+        a.close(a.zone(1, 3, 1).mixture().moles(CO2), 0, "the room's CO2");
+
+        // In creative, the grille comes off and nothing drops.
+        a.place(3, 2, 2, grille());
+        Player creative = holding(h, GameType.CREATIVE, new ItemStack(AtmosItems.WRENCH.get()));
+        WrenchTests.watchDrops();
+        wrench(a, creative, 3, 2, 2, Direction.UP, true);
+        h.assertTrue(a.get(3, 2, 2).is(AtmosBlocks.PIPE.get()), "in creative, the grille didn't come off");
+        h.assertTrue(WrenchTests.takeDrops().isEmpty(), "in creative, something dropped");
+
+        // Alone, the pipe would be left with an open end, so there the lock holds, measured against the
+        // room: a pipe just over the limit keeps its grille, and one just under it loses it.
+        double room = a.zone(1, 3, 1).mixture().pressure();
+        a.place(2, 1, 1, grille());
+        a.place(4, 1, 1, grille());
+        BlockPos high = a.abs(4, 1, 1);
+        PipeNetwork over = a.<PipeBlockEntity>entity(4, 1, 1).network();
+        PipeBurstTests.fillTo(a.<PipeBlockEntity>entity(2, 1, 1).network(), room + WrenchItem.LOCK_KPA - 40);
+        PipeBurstTests.fillTo(over, room + WrenchItem.LOCK_KPA + 40);
+        double kept = over.gas().moles(CO2);
+        a.close(
+                WrenchItem.overAmbient(a.level, high, Direction.UP),
+                WrenchItem.LOCK_KPA + 40,
+                "the lone pipe's pressure over the room's");
+        wrench(a, player, 4, 1, 1, Direction.UP, true);
+        h.assertTrue(
+                a.get(4, 1, 1).is(AtmosBlocks.FLOOR_GRILLE_PIPE.get()),
+                "the grille came off an open end over the limit");
+        Optional<Component> refusal = WrenchItem.remove(a.level, high, player, player.getMainHandItem(), Direction.UP);
+        h.assertTrue(
+                refusal.isPresent()
+                        && refusal.get().getContents() instanceof TranslatableContents t
+                        && t.getKey().equals("item.zas_atmos.wrench.pressurized"),
+                "the refusal: " + refusal);
+        a.close(over.gas().moles(CO2), kept, "what the lone pipe holds, refused");
+        h.assertTrue(wrench(a, player, 2, 1, 1, Direction.UP, true).consumesAction(), "the removal under the limit");
+        h.assertTrue(a.get(2, 1, 1).is(AtmosBlocks.PIPE.get()), "under the limit, the grille stayed on an open end");
+
+        a.clear(-1, -1, 7, 5);
+        player.discard();
+        creative.discard();
+        h.succeed();
+    }
+
+    /**
+     * Mined, a pipe under a grille drops the grille and the pipe, the pipe in its dye and an undyed one
+     * as a new pipe, and its gas is released as a mined pipe's is (CONT-009).
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void mined_the_grille_drops_with_its_pipe_and_releases_its_gas(GameTestHelper h) {
+        Area a = new Area(h, 4863);
+        a.box(0, 0, 6, 4);
+        a.fill(1, 3, 1, Map.of(N2, 10.0));
+        a.tick();
+        BlockPos pos = a.abs(3, 2, 2);
+        Player player = holding(h, GameType.SURVIVAL, new ItemStack(Items.WOODEN_PICKAXE));
+
+        List<ItemStack> drops = Block.getDrops(grille(), a.level, pos, null, player, player.getMainHandItem());
+        h.assertValueEqual(drops.size(), 2, "the drops of a pipe under a grille: " + drops);
+        h.assertTrue(
+                drops.stream().anyMatch(s -> ItemStack.matches(s, new ItemStack(AtmosItems.FLOOR_GRILLE.get()))),
+                "no floor grille among " + drops);
+        h.assertTrue(
+                drops.stream().anyMatch(s -> ItemStack.matches(s, new ItemStack(AtmosItems.PIPE.get()))),
+                "no new pipe among " + drops);
+
+        BlockState dyed = grille().setValue(PipeColor.PROPERTY, PipeColor.LIME);
+        a.place(3, 2, 2, dyed);
+        PipeBlockEntity pipe = a.entity(3, 2, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(CO2, 4.0), T));
+        drops = Block.getDrops(dyed, a.level, pos, pipe, player, player.getMainHandItem());
+        h.assertValueEqual(drops.size(), 2, "the drops of a dyed pipe under a grille: " + drops);
+        h.assertTrue(
+                drops.stream()
+                        .anyMatch(s -> s.is(AtmosItems.PIPE.get())
+                                && s.getCount() == 1
+                                && PipeItem.color(s) == PipeColor.LIME),
+                "no lime pipe among " + drops);
+
+        a.level.destroyBlock(pos, false);
+        h.assertTrue(a.get(3, 2, 2).isAir(), "the block is still there");
+        a.tick();
+        a.tick();
+        a.close(GasCensus.total(a, CO2, new ChunkPos(pos)), 4, "the CO2 in the room, the grille mined");
+
+        a.clear(-1, -1, 7, 5);
+        player.discard();
+        h.succeed();
+    }
+
+    /**
+     * A pipe under a grille bursts as a pipe does (CONT-108), measured against the room beside it, and
+     * the grille goes with it: the block is gone, nothing drops, and the room gets the gas.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_pipe_that_bursts_under_a_grille_takes_the_grille_with_it(GameTestHelper h) {
+        Area a = new Area(h, 4864);
+        a.box(0, 0, 6, 4);
+        a.fill(1, 3, 1, Map.of(N2, 10.0));
+        a.place(3, 2, 2, grille());
+        a.tick();
+        BlockPos pos = a.abs(3, 2, 2);
+        PipeNetwork net = a.<PipeBlockEntity>entity(3, 2, 2).network();
+        double room = Atmospheres.at(a.level, Vec3.atCenterOf(pos)).pressure();
+        a.close(room, a.zone(1, 3, 1).mixture().pressure(), "the pressure beside the pipe");
+
+        PipeBurstTests.fillTo(net, room + PipeBurst.THRESHOLD_KPA - 1);
+        double below = net.gas().moles(CO2);
+        a.step();
+        a.step();
+        h.assertTrue(a.get(3, 2, 2).is(AtmosBlocks.FLOOR_GRILLE_PIPE.get()), "the pipe burst below the threshold");
+        a.close(net.gas().moles(CO2), below, "the pipe's CO2 just below the threshold");
+
+        PipeBurstTests.fillTo(net, room + PipeBurst.THRESHOLD_KPA + 1);
+        double all = net.gas().moles(CO2);
+        WrenchTests.watchDrops();
+        a.step();
+        a.tick();
+        h.assertTrue(a.get(3, 2, 2).isAir(), "what the burst left is " + a.get(3, 2, 2));
+        h.assertTrue(WrenchTests.takeDrops().isEmpty(), "the burst dropped something");
+        a.tick();
+        a.close(GasCensus.total(a, CO2, new ChunkPos(pos)), all, "the CO2 in the room, the pipe burst");
+
+        a.clear(-1, -1, 7, 5);
+        h.succeed();
+    }
+
+    /** What a restart keeps of a pipe under a grille: its state, with its dye and its arms, and its gas. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_pipe_under_a_floor_grille_is_saved_with_its_dye_and_its_gas(GameTestHelper h) {
+        Area a = new Area(h, 4865);
+        a.clear(0, 0, 6, 4);
+        a.place(2, 2, 2, cap(Direction.EAST));
+        a.place(3, 2, 2, grille().setValue(PipeColor.PROPERTY, PipeColor.PURPLE));
+        a.place(4, 2, 2, cap(Direction.WEST));
+        BlockPos pos = a.abs(3, 2, 2);
+        BlockState state = a.get(3, 2, 2);
+        h.assertValueEqual(PipeBlock.connections(state), 2, "the arms of the pipe under the grille");
+        PipeBlockEntity pipe = a.entity(3, 2, 2);
+        pipe.network().gas().add(new GasParcel(Map.of(CO2, 21.0), T));
+        double share = 21.0 * PipeVolumes.PIPE / pipe.network().volume();
+
+        BlockState read = NbtUtils.readBlockState(
+                a.level.holderLookup(Registries.BLOCK), throughDisk(NbtUtils.writeBlockState(state)));
+        h.assertTrue(read == state, "the state read back is " + read + ", not " + state);
+        CompoundTag saved = throughDisk(pipe.saveWithFullMetadata(a.level.registryAccess()));
+        h.assertValueEqual(saved.getString("id"), "zas_atmos:pipe", "the block entity's id");
+        BlockEntity loaded = BlockEntity.loadStatic(pos, state, saved, a.level.registryAccess());
+        h.assertTrue(loaded instanceof PipeBlockEntity, "what loads is " + loaded);
+        a.close(((PipeBlockEntity) loaded).share().moles(CO2), share, "the share that loads");
+        h.assertFalse(((PipeBlockEntity) loaded).isOpen(), "the pipe that loads has an open end");
+
+        a.clear(0, 0, 6, 4);
         h.succeed();
     }
 }

@@ -1,0 +1,187 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "zas_atmos:block/floor_grille"
+      }
+    },
+    {
+      "apply": {
+        "model": "zas_atmos:block/pipe_core"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "true",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "true",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "true"
+          },
+          {
+            "north": "true",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "east": "true",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "true",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/pipe_arm",
+        "x": 90
+      }
+    }
+  ]
+}
