@@ -55,8 +55,8 @@ public record Lockdown(Reason reason, double value) {
         return Optional.empty();
     }
 
-    /** The warning a player gets when the firelock refuses to open. */
+    /** The warning a player gets when the firelock refuses to open: its reason, without the reading. */
     public Component message() {
-        return FirelockBlock.lockedMessage(reason.key(), String.format(Locale.ROOT, "%.0f", value));
+        return FirelockBlock.lockedMessage(reason.key());
     }
 }

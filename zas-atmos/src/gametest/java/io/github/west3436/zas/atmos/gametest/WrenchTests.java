@@ -287,7 +287,7 @@ public final class WrenchTests {
 
     /**
      * CONT-091: a pipe holding 3 atm over its room's pressure doesn't come off, and the player is told
-     * by how much. Its cap turned away, it vents through its open end, and once it is no more than 2
+     * it's pressurized. Its cap turned away, it vents through its open end, and once it is no more than 2
      * atm over, it comes off.
      */
     @GameTest(template = "empty", batch = BATCH)
@@ -309,7 +309,7 @@ public final class WrenchTests {
         double held = net.gas().totalMoles();
         Player player = holding(h);
 
-        // Refused, by the click and by the call, which says by how much.
+        // Refused, by the click and by the call, which says why.
         use(a, player, 2, 1, 2, Direction.UP, true);
         h.assertTrue(a.get(2, 1, 2).is(AtmosBlocks.PIPE.get()), "the pipe came off at 3 atm over");
         Optional<Component> refusal = WrenchItem.remove(a.level, at, player, player.getMainHandItem());
@@ -318,8 +318,7 @@ public final class WrenchTests {
                 refusal.isPresent()
                         && refusal.get().getContents() instanceof TranslatableContents t
                         && t.getKey().equals("item.zas_atmos.wrench.pressurized")
-                        && t.getArgs().length == 1
-                        && t.getArgs()[0].equals("304"),
+                        && t.getArgs().length == 0,
                 "the refusal: " + refusal);
         a.close(network(a, 2, 1, 2).gas().totalMoles(), held, "what the pipe holds after the refusals");
 
