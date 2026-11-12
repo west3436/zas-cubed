@@ -1,0 +1,58 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "grille": "zas_atmos:block/floor_grille_open",
+    "particle": "zas_atmos:block/floor_grille"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#grille",
+          "cullface": "north"
+        }
+      }
+    },
+    {
+      "from": [
+        15.998,
+        0.002,
+        0.002
+      ],
+      "to": [
+        0.002,
+        15.998,
+        15.998
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            16,
+            0,
+            0,
+            16
+          ],
+          "texture": "#grille",
+          "cullface": "north"
+        }
+      }
+    }
+  ]
+}

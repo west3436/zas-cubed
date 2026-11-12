@@ -1,8 +1,331 @@
 {
   "multipart": [
     {
+      "when": {
+        "OR": [
+          {
+            "north": "false",
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "down": "true"
+          }
+        ]
+      },
       "apply": {
-        "model": "zas_atmos:block/floor_grille"
+        "model": "zas_atmos:block/floor_grille_face"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "false",
+            "north": "true"
+          },
+          {
+            "east": "false",
+            "south": "true"
+          },
+          {
+            "east": "false",
+            "up": "true"
+          },
+          {
+            "east": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "false",
+            "east": "true"
+          },
+          {
+            "south": "false",
+            "west": "true"
+          },
+          {
+            "south": "false",
+            "up": "true"
+          },
+          {
+            "south": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "false",
+            "north": "true"
+          },
+          {
+            "west": "false",
+            "south": "true"
+          },
+          {
+            "west": "false",
+            "up": "true"
+          },
+          {
+            "west": "false",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "false",
+            "north": "true"
+          },
+          {
+            "up": "false",
+            "east": "true"
+          },
+          {
+            "up": "false",
+            "south": "true"
+          },
+          {
+            "up": "false",
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "false",
+            "north": "true"
+          },
+          {
+            "down": "false",
+            "east": "true"
+          },
+          {
+            "down": "false",
+            "south": "true"
+          },
+          {
+            "down": "false",
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "north": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "true",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "east": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "true",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "south": "true"
+          },
+          {
+            "north": "true",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "west": "true"
+          },
+          {
+            "north": "false",
+            "east": "true",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "up": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "down": "true"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "true",
+            "down": "false"
+          },
+          {
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "zas_atmos:block/floor_grille_face_open",
+        "x": 90
       }
     },
     {
