@@ -1,0 +1,185 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Curios and Accessories adapters (COMPAT-040 to COMPAT-043): tanks and masks work from the
+// equipment slots those two mods add. Each is a reference integration: it compiles against the
+// public API and its own target only, so another mod with slots can copy it. Their classes ship
+// inside the zas jar (zas/build.gradle's `bundled`), and zas starts each one only when its target is
+// installed in a version it supports (COMPAT-001, COMPAT-002). Neither target is ever in a jar of
+// ours: both are compiled against, and added to this project's own runs.
+//
+// The two share a project because their tests do: one run has both mods, and another has
+// Accessories with its compatibility layer for Curios.
+
+// What a run of the GameTests loads, by its name: -Pslots.run=<name>, curios by default. The
+// versions are in gradle.properties.
+//   curios, curios-floor            Curios, the newest build and the oldest supported one
+//   curios-old                      a Curios older than supported. No such build of Curios exists
+//                                   for this Minecraft, so it is the one an old build of
+//                                   Accessories' compatibility layer says it is
+//   accessories, accessories-floor  Accessories, the newest build and the oldest supported one
+//   accessories-old                 the last build of Accessories below the oldest supported one
+//   both                            Curios and Accessories, the newest of each
+//   layer                           Accessories with the newest build of its compatibility layer
+// Each names the mods it loads, the namespaces of the tests that run, and the version of each
+// target the game should then report, which the tests check. A namespace with a _content twin has
+// tests that need the content mod's items there; -Pcontent=off leaves those out (CONT-155).
+def curios = { "top.theillusivec4.curios:curios-neoforge:${it}" }
+def accessories = { "io.wispforest:accessories-neoforge:${it}" }
+def owo = { "io.wispforest:owo-lib-neoforge:${it}" }
+def modrinth = { slug, version -> "maven.modrinth:${slug}:${version}" }
+def table = [
+    'curios'           : [mods  : [curios(curios_version)],
+                          tests : ['zas_curios'],
+                          curios: curios_version],
+    'curios-floor'     : [mods  : [curios(curios_floor_version)],
+                          tests : ['zas_curios'],
+                          curios: curios_floor_version],
+    'curios-old'       : [mods       : [modrinth('accessories-cc-layer', curios_layer_old_build),
+                                        modrinth('accessories', curios_layer_old_accessories_build),
+                                        owo(owo_version)],
+                          tests      : ['zas_curios_off'],
+                          curios     : curios_unsupported_version],
+    'accessories'      : [mods       : [accessories(accessories_version), owo(owo_version)],
+                          tests      : ['zas_accessories'],
+                          accessories: accessories_version],
+    'accessories-floor': [mods       : [accessories(accessories_floor_version), owo(owo_floor_version)],
+                          tests      : ['zas_accessories'],
+                          accessories: accessories_floor_version],
+    'accessories-old'  : [mods       : [accessories(accessories_unsupported_version),
+                                        modrinth('cloth-config', cloth_config_version)],
+                          tests      : ['zas_accessories_off'],
+                          accessories: accessories_unsupported_version],
+    'both'             : [mods       : [curios(curios_version), accessories(accessories_version), owo(owo_version)],
+                          tests      : ['zas_curios', 'zas_accessories', 'zas_slots_both'],
+                          curios     : curios_version,
+                          accessories: accessories_version],
+    'layer'            : [mods       : [accessories(accessories_version), owo(owo_version),
+                                        modrinth('accessories-cc-layer', curios_layer_build)],
+                          tests      : ['zas_accessories', 'zas_slots_layer'],
+                          curios     : curios_layer_version,
+                          accessories: accessories_version],
+]
+def runName = providers.gradleProperty('slots.run').getOrElse('curios')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Pslots.run is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+def withContent = ['zas_curios', 'zas_accessories']
+def namespaces = chosen.tests.collectMany { it in withContent && !contentOff ? [it, "${it}_content"] : [it] }
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.theillusivec4.top/' }
+        }
+        filter { includeGroup 'top.theillusivec4.curios' }
+    }
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.wispforest.io/releases' }
+        }
+        filter { includeGroup 'io.wispforest' }
+    }
+    // The compatibility layer, the builds of Accessories its old build goes with, and Cloth Config.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+sourceSets {
+    // The adapters' GameTests, which run with their targets loaded (COMPAT-004). They stay out of
+    // every jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapters and that zas starts
+    // them.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_curios', 'zas_curios_content', 'zas_curios_off',
+     'zas_accessories', 'zas_accessories_content', 'zas_accessories_off',
+     'zas_slots_both', 'zas_slots_layer'].each { namespace ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${namespace}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    // Rule of a reference integration: the public API and the target, nothing else of ours.
+    implementation project(':zas-api')
+    // Compile-only, so no jar and no run but this project's own ever holds a target. Curios is
+    // compiled against in its newest build, for the one method 9.5 added, which the adapter asks for
+    // only where it exists; its API jar is all the adapter may name (COMPAT-003). Accessories is
+    // compiled against in the oldest build the adapter supports, so that it uses nothing newer.
+    // Neither brings what its POM names: a mod's libraries are nested in its jar, where the game
+    // finds them.
+    compileOnly("top.theillusivec4.curios:curios-neoforge:${curios_version}:api") { transitive = false }
+    compileOnly(accessories(accessories_floor_version)) { transitive = false }
+
+    // GameTests (only) may ask the framework and the content mod what they did. main stays API-only.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':zas-atmos')
+
+    releaseJar project(':dist')
+}
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs the targets, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespaces.join(',')
+            // What the tests expect to find installed: a version, or nothing for a target that isn't.
+            systemProperty 'zas.slots.curios', chosen.curios ?: ''
+            systemProperty 'zas.slots.accessories', chosen.accessories ?: ''
+            systemProperty 'zas.slots.content', contentOff ? 'off' : 'on'
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    chosen.mods.each { mod -> gametestRunRuntimeOnly(mod) { transitive = false } }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+    }
+}

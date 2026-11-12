@@ -31,6 +31,10 @@ import net.neoforged.neoforge.capabilities.ItemCapability;
  * {@code zas/protection} datapack directory). <b>Entities.</b> Register a provider for {@link
  * #ENTITY} on the entity type. What an entity gives itself covers its whole body.
  *
+ * <p><b>Extra slots.</b> In an equipment slot another mod adds ({@link
+ * io.github.west3436.zas.api.life.ExtraSlots}), an item covers none of the body. Its internal
+ * supply still counts there, and in a head slot so do its seal and its filter.
+ *
  * <p><b>Coverage.</b> A piece protects against a pressure P if P is within its pressure range on
  * that side of 1 atm. The worn pieces that do give the coverage c, and (1 − c⁵) of the difference
  * |P − 1 atm| still reaches the wearer (LIFE-020). Likewise c of pieces whose thermal range holds
@@ -95,7 +99,7 @@ public interface ILifeSupport {
 
     /**
      * Whether it seals the wearer's breathing, so internals can work (LIFE-021). It counts only in
-     * the head slot, or on the entity itself. False by default.
+     * the head slot, in a head slot another mod adds, or on the entity itself. False by default.
      *
      * @return true if it seals the breathing
      */
@@ -107,7 +111,8 @@ public interface ILifeSupport {
      * Whether it filters the {@link io.github.west3436.zas.api.gas.GasTags#TOXIC} gases out of the
      * wearer's breath, whether that comes from the atmosphere or its internals, as a gas mask does
      * (CONT-088). It supplies no O₂, holds nothing and never wears out: the gases stay where they
-     * were. It counts only in the head slot, or on the entity itself. False by default.
+     * were. It counts only in the head slot, in a head slot another mod adds, or on the entity
+     * itself. False by default.
      *
      * @return true if it filters
      */
@@ -127,9 +132,10 @@ public interface ILifeSupport {
 
     /**
      * The internal supply of breathable gas it holds, for internals, or empty for none (the
-     * default). A gas tank gives its own gas, and counts in the offhand and the hotbar too; a suit
-     * gives the tank in its tank slot (LIFE-028). Gear with a switch of its own gives its supply
-     * only while it runs, and makes it {@linkplain IInternalSupply#alwaysOn() always on}.
+     * default). A gas tank gives its own gas, and counts in the slots other mods add, the offhand
+     * and the hotbar too; a suit gives the tank in its tank slot (LIFE-028). Gear with a switch of
+     * its own gives its supply only while it runs, and makes it {@linkplain
+     * IInternalSupply#alwaysOn() always on}.
      *
      * @return the supply, or empty
      */
