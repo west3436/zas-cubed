@@ -10,15 +10,17 @@ displayName = "ZAS³ Ponder"
 logoFile = "assets/zas_ponder/logo.png"
 authors = "west3436"
 description = '''
-Ponder scenes for ZAS³ Atmospherics. Nests Ponder and Flywheel.
+Ponder and Flywheel, for ZAS³ Atmospherics' Ponder scenes without Create.
 '''
 # Client only: a server with it or without it is the same to a client (CLIENT-025).
 displayTest = "IGNORE_ALL_VERSION"
 
+# The scenes are in zas_atmos, from this version on. The addon holds no code, so a later zas_atmos
+# needs no new addon.
 [[dependencies.zas_ponder]]
 modId = "zas_atmos"
 type = "required"
-versionRange = "[${mod_version}]"
+versionRange = "[${mod_version},)"
 ordering = "AFTER"
 side = "BOTH"
 

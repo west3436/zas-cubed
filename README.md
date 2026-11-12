@@ -22,7 +22,7 @@ This mod contains two modules; **ZAS³** (`zas`) is the air itself and the publi
  - **Power:** devices run on FE from a generator or any other mod's power source, handed out through the controllers. There are no cables. Portables and heaters run on rechargeable batteries.
  - **Building:** station walls, reinforced station walls and reinforced glass.
 
-Animated guides to every device are in the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon.
+Animated guides to every device are built in as Ponder scenes. They show when Create is installed. Without Create, the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon brings Ponder.
 
 ## Mod Support
 **Mekanism** (10.7.15+)
@@ -66,5 +66,5 @@ The public API (`zas-api`) is what space, tech and survival mods can build on: r
 - **Bundled libraries:** the Ponder addon (`zas_ponder`) nests
   [Ponder](https://github.com/Creators-of-Create/Ponder) and
   [Flywheel](https://github.com/Engine-Room/Flywheel), both under the MIT
-  License, for its scenes. Their licences ship in its jar. The ZAS³ jar,
-  which holds `zas` and `zas_atmos`, bundles neither.
+  License, and holds nothing else. Their licences ship in its jar. The ZAS³
+  jar, which holds `zas`, `zas_atmos` and the Ponder scenes, bundles neither.
