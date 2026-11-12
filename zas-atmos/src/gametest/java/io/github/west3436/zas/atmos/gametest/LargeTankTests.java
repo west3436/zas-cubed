@@ -49,6 +49,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
@@ -123,6 +124,11 @@ public final class LargeTankTests {
     /** Whether nothing of a tank is left at a place. */
     private static boolean gone(Area a, int x, int y, int z) {
         return a.get(x, y, z).isAir() && a.get(x, y + 1, z).isAir();
+    }
+
+    /** The stacks dropped since {@link WrenchTests#watchDrops}, taken out of the level. */
+    private static List<ItemStack> drops() {
+        return WrenchTests.takeDrops().stream().map(ItemEntity::getItem).toList();
     }
 
     /** The moles that make a pressure in a volume at a temperature. */
@@ -317,10 +323,10 @@ public final class LargeTankTests {
 
         double raised = molesFor(9_121, PipeVolumes.LARGE_TANK, T);
         tank.network().gas().add(new GasParcel(Map.of(N2, raised - below), T));
-        DropLog.watch();
+        WrenchTests.watchDrops();
         a.step();
         h.assertTrue(gone(a, 2, 1, 2), "a tank at 9,121 kPa held: " + a.get(2, 1, 2) + ", " + a.get(2, 2, 2));
-        h.assertTrue(DropLog.take().isEmpty(), "a ruptured tank dropped something");
+        h.assertTrue(drops().isEmpty(), "a ruptured tank dropped something");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().totalMoles(), room + raised, "the room's gas after the rupture");
         h.assertTrue(Blasts.take(a.point(2, 1, 2)).isEmpty(), "a rupturing tank exploded");
@@ -407,10 +413,10 @@ public final class LargeTankTests {
         a.tick();
         tank.network().gas().add(new GasParcel(Map.of(CO2, 800.0), T));
         Vec3 at = above ? a.point(2, 3, 2) : a.point(1, 1, 2);
-        DropLog.watch();
+        WrenchTests.watchDrops();
         a.level.explode(null, at.x, at.y, at.z, 4f, Level.ExplosionInteraction.NONE);
         h.assertTrue(gone(a, 2, 1, 2), "the blast left " + a.get(2, 1, 2) + " and " + a.get(2, 2, 2));
-        h.assertTrue(DropLog.take().isEmpty(), "a tank caught in a blast dropped something");
+        h.assertTrue(drops().isEmpty(), "a tank caught in a blast dropped something");
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().moles(CO2), 800.0, "the room's CO2 after the blast");
         h.succeed();
@@ -458,9 +464,9 @@ public final class LargeTankTests {
         LargeTankBlockEntity tank = stand(a, 2, 1, 2, Direction.NORTH);
         a.tick();
         tank.network().gas().add(new GasParcel(Map.of(CO2, 40.0), T));
-        DropLog.watch();
+        WrenchTests.watchDrops();
         h.assertTrue(p.gameMode.destroyBlock(a.abs(2, top ? 2 : 1, 2)), what + ": it didn't break");
-        List<ItemStack> dropped = DropLog.take();
+        List<ItemStack> dropped = drops();
         h.assertTrue(gone(a, 2, 1, 2), what + ", it left " + a.get(2, 1, 2) + " and " + a.get(2, 2, 2));
         a.tick();
         return dropped;
@@ -528,23 +534,23 @@ public final class LargeTankTests {
         a.clear(0, 0, 4, 4);
 
         stand(a, 2, 1, 2, Direction.EAST);
-        DropLog.watch();
+        WrenchTests.watchDrops();
         a.set(2, 2, 2, AIR);
         h.assertTrue(gone(a, 2, 1, 2), "with its upper half taken away, it left " + a.get(2, 1, 2));
-        List<ItemStack> dropped = DropLog.take();
+        List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "its lower half dropped " + dropped);
 
         stand(a, 2, 1, 2, Direction.EAST);
-        DropLog.watch();
+        WrenchTests.watchDrops();
         a.set(2, 1, 2, AIR);
         h.assertTrue(gone(a, 2, 1, 2), "with its lower half taken away, it left " + a.get(2, 2, 2));
-        h.assertTrue(DropLog.take().isEmpty(), "its upper half dropped something");
+        h.assertTrue(drops().isEmpty(), "its upper half dropped something");
 
         stand(a, 2, 1, 2, Direction.EAST);
-        DropLog.watch();
+        WrenchTests.watchDrops();
         a.set(2, 2, 2, STONE);
         h.assertTrue(a.get(2, 1, 2).isAir(), "with its upper half replaced, it left " + a.get(2, 1, 2));
-        DropLog.take();
+        drops();
         a.set(2, 2, 2, AIR);
 
         for (Direction facing : Direction.Plane.HORIZONTAL) {
@@ -649,18 +655,18 @@ public final class LargeTankTests {
                 "the tank's share after the second turn");
 
         // Sneaking, by its upper half: the tank comes down as one item.
-        DropLog.watch();
+        WrenchTests.watchDrops();
         h.assertTrue(wrench(a, player, 3, 2, 3, Direction.UP, true).consumesAction(), "the tank's removal");
         h.assertTrue(gone(a, 3, 1, 3), "the wrench left " + a.get(3, 1, 3) + " and " + a.get(3, 2, 3));
-        List<ItemStack> dropped = DropLog.take();
+        List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "taken down, it dropped " + dropped);
 
         // And by its lower half.
         stand(a, 3, 1, 3, Direction.NORTH);
-        DropLog.watch();
+        WrenchTests.watchDrops();
         h.assertTrue(wrench(a, player, 3, 1, 3, Direction.WEST, true).consumesAction(), "the second tank's removal");
         h.assertTrue(gone(a, 3, 1, 3), "the wrench left " + a.get(3, 1, 3) + " and " + a.get(3, 2, 3));
-        dropped = DropLog.take();
+        dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "taken down again, it dropped " + dropped);
 
         a.clear(0, 0, 6, 6);
@@ -701,10 +707,10 @@ public final class LargeTankTests {
 
         gas.takeFraction(1 - (ambient + 1.99 * ATM) / gas.pressure());
         double left = gas.totalMoles();
-        DropLog.watch();
+        WrenchTests.watchDrops();
         wrench(a, player, 2, 2, 2, Direction.EAST, true);
         h.assertTrue(gone(a, 2, 1, 2), "the tank didn't come off under 2 atm over");
-        List<ItemStack> dropped = DropLog.take();
+        List<ItemStack> dropped = drops();
         h.assertTrue(dropped.size() == 1 && plainTank(dropped.get(0)), "taken down, it dropped " + dropped);
         a.tick();
         a.close(a.zone(1, 1, 1).mixture().moles(CO2), left, "the room's CO2 after it came off");
