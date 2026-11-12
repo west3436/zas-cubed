@@ -76,6 +76,15 @@ public final class Adapters {
         // part of zas_atmos in this jar, since the peripherals are of the content's devices.
         rows.add(new Row("computercraft", "[1.113.0,)", "io.github.west3436.zas.atmos.compat.cc.CcCompat"));
 
+        // Curios (COMPAT-040): 9.2.0 is its oldest build for this Minecraft, and has what the adapter
+        // uses. Accessories (COMPAT-041): 1.1.0-beta.3 is its first build made for this Minecraft;
+        // the 1.0.0 builds before it were made for 1.21 and the adapter was never run with one. No
+        // upper bounds: the adapters' GameTests run with the newest builds too, every night
+        // (COMPAT-004).
+        rows.add(new Row("curios", "[9.2.0,)", "io.github.west3436.zas.compat.curios.CuriosCompat"));
+        rows.add(new Row(
+                "accessories", "[1.1.0-beta.3,)", "io.github.west3436.zas.compat.accessories.AccessoriesCompat"));
+
         return rows;
     }
 

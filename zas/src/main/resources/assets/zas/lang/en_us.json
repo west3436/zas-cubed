@@ -212,6 +212,7 @@
   "message.zas.internals.no_tank": "Internals off: missing tank",
   "message.zas.internals.empty": "Internals off: empty tank",
   "message.zas.internals.place.slot": "slot %s",
+  "message.zas.internals.place.worn": "worn",
   "message.zas.internals.place.offhand": "offhand",
   "message.zas.internals.place.head": "head",
   "message.zas.internals.place.chest": "chest",

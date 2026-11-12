@@ -5,6 +5,7 @@ base { archivesName = 'zas' }
 evaluationDependsOn(':engine')
 evaluationDependsOn(':compat-adastra')
 evaluationDependsOn(':compat-mekanism')
+evaluationDependsOn(':compat-slots')
 evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
 
@@ -19,7 +20,8 @@ sourceSets {
 // Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins compile
 // against zas, so zas only runs with them: it never compiles against them.
 def viewers = [project(':compat-jei'), project(':compat-emi')]
-def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism')] + viewers)
+def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots')]
+        + viewers)
         .collect { it.sourceSets.main }
 
 neoForge {
@@ -74,8 +76,9 @@ dependencies {
     implementation project(':engine')
     implementation project(':compat-adastra')
     implementation project(':zas-api')
-    // Started by name (Adapters), so zas never compiles against it.
+    // Started by name (Adapters), so zas never compiles against them.
     runtimeOnly project(':compat-mekanism')
+    runtimeOnly project(':compat-slots')
     viewers.each { runtimeOnly it }
 
     // ModDevGradle takes the jar-in-jar range only from a module selector, so
