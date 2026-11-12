@@ -6,6 +6,7 @@ evaluationDependsOn(':engine')
 evaluationDependsOn(':compat-adastra')
 evaluationDependsOn(':compat-mekanism')
 evaluationDependsOn(':compat-slots')
+evaluationDependsOn(':compat-kubejs')
 evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
 
@@ -17,10 +18,11 @@ sourceSets {
     }
 }
 
-// Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins compile
-// against zas, so zas only runs with them: it never compiles against them.
+// Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins and the
+// KubeJS plugin compile against zas, so zas only runs with them: it never compiles against them.
 def viewers = [project(':compat-jei'), project(':compat-emi')]
-def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots')]
+def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
+                project(':compat-kubejs')]
         + viewers)
         .collect { it.sourceSets.main }
 
@@ -79,6 +81,8 @@ dependencies {
     // Started by name (Adapters), so zas never compiles against them.
     runtimeOnly project(':compat-mekanism')
     runtimeOnly project(':compat-slots')
+    // Found by KubeJS, through the kubejs.plugins.txt that ships with it.
+    runtimeOnly project(':compat-kubejs')
     viewers.each { runtimeOnly it }
 
     // ModDevGradle takes the jar-in-jar range only from a module selector, so

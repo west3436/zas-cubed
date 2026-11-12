@@ -1,0 +1,139 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The KubeJS adapter (COMPAT-050 to COMPAT-053): ZAS³'s events and calls in a pack's server scripts,
+// and hazards and ambients registered from them. Its classes and its kubejs.plugins.txt ship inside
+// the zas jar (zas/build.gradle's `bundled`), where only KubeJS ever reads the file and loads the
+// plugin it names, so the game runs the same without KubeJS (COMPAT-001, NFR-022). What scripts get
+// is the public API, which works with the content off, so the adapter compiles against the API, and
+// against zas for one thing only: the version check (VersionGate). KubeJS and Rhino are never in a
+// jar of ours: both are compiled against, and added to this project's own runs.
+
+// What a run of the GameTests loads: the newest KubeJS by default, the oldest supported one with
+// -Pkubejs.version=floor, or the last one before it with -Pkubejs.version=unsupported. Each goes
+// with the Rhino its own POM names. The versions are in gradle.properties.
+def table = [
+    newest     : [kubejs: kubejs_version, rhino: kubejs_rhino_version, supported: true],
+    floor      : [kubejs: kubejs_floor_version, rhino: kubejs_floor_rhino_version, supported: true],
+    unsupported: [kubejs: kubejs_unsupported_version, rhino: kubejs_unsupported_rhino_version, supported: false],
+]
+def runName = providers.gradleProperty('kubejs.version').getOrElse('newest')
+def chosen = table[runName]
+if (chosen == null) {
+    throw new GradleException("-Pkubejs.version is one of ${table.keySet().join(', ')}, not '${runName}'")
+}
+// The tests of a KubeJS the adapter supports, or the ones that check it stays off (COMPAT-002).
+// Each set has its own scripts, since a script that names ZasEvents fails where the adapter is off.
+def namespace = chosen.supported ? 'zas_kubejs' : 'zas_kubejs_off'
+def scripts = chosen.supported ? 'on' : 'off'
+
+// KubeJS's own maven, for KubeJS and Rhino alone.
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.latvian.dev/releases' }
+        }
+        filter { includeGroup 'dev.latvian.mods' }
+    }
+}
+
+sourceSets {
+    // The adapter's GameTests, which run with KubeJS loaded (COMPAT-004). They stay out of every
+    // jar but the one their own run loads.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the adapter and that KubeJS
+    // finds it.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// The GameTests' empty structure in each of their namespaces, copied from the framework's so no
+// second binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    ['zas_kubejs', 'zas_kubejs_off'].each { ns ->
+        from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+            into "data/${ns}/structure"
+        }
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+dependencies {
+    implementation project(':zas-api')
+    // For VersionGate alone: KubeJS finds the plugin by itself, so the plugin checks KubeJS's
+    // version before it registers anything.
+    compileOnly project(':zas')
+    // Compile-only, so no jar and no run but this project's own ever holds them. Both in the
+    // oldest builds the adapter supports, so that it uses nothing newer. Neither brings what its
+    // POM names: KubeJS nests its libraries in its jar, where the game finds them.
+    compileOnly("dev.latvian.mods:kubejs-neoforge:${kubejs_floor_version}") { transitive = false }
+    compileOnly("dev.latvian.mods:rhino:${kubejs_floor_rhino_version}") { transitive = false }
+
+    // GameTests (only) drive the framework's atmos ticks and breath checks.
+    gametestCompileOnly project(':zas')
+    gametestCompileOnly project(':engine')
+
+    releaseJar project(':dist')
+}
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs KubeJS, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', namespace
+            // The KubeJS the run asked for, which the tests check is the one that loaded.
+            systemProperty 'zas.kubejs.version', chosen.kubejs
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+        }
+    }
+}
+
+// The release jar plus the tests and their data.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    from({ configurations.releaseJar.collect { zipTree(it) } })
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    gametestRunRuntimeOnly("dev.latvian.mods:kubejs-neoforge:${chosen.kubejs}") { transitive = false }
+    gametestRunRuntimeOnly("dev.latvian.mods:rhino:${chosen.rhino}") { transitive = false }
+}
+
+// The tests start from a fresh world, as zas's do: saved zones would otherwise come back. From a
+// fresh log, which one of them reads. And from the run's own scripts, put where a pack has its
+// scripts: the kubejs folder of the game directory.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    def run = layout.buildDirectory.dir('adapterRun')
+    def packScripts = layout.projectDirectory.dir("src/gametest/kubejs/${scripts}")
+    inputs.dir(packScripts)
+    doFirst {
+        delete run.map { it.dir('world') }
+        delete run.map { it.dir('logs') }
+        delete run.map { it.dir('kubejs') }
+        copy {
+            from packScripts
+            into run.map { it.dir('kubejs') }
+        }
+    }
+}
