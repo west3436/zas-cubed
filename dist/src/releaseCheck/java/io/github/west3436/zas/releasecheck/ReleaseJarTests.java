@@ -51,6 +51,9 @@ public final class ReleaseJarTests {
     /** The Jade adapter's package, which is part of zas_atmos. */
     private static final String JADE_ADAPTER = "io.github.west3436.zas.atmos.compat.jade";
 
+    /** The CC: Tweaked adapter's package, which is part of zas_atmos. */
+    private static final String CC_ADAPTER = "io.github.west3436.zas.atmos.compat.cc";
+
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
 
@@ -214,6 +217,31 @@ public final class ReleaseJarTests {
             throw new IllegalStateException("The release jar's JadeGate has no pluginStarted()", e);
         }
         h.assertFalse(started, "the Jade plugin was created");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the CC: Tweaked adapter, and on a server without CC: Tweaked none of it
+     * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class, which names
+     * CC: Tweaked's, was never asked for.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_cc_tweaked_adapter_loads_without_cc_tweaked(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("computercraft"), "CC: Tweaked is on the release check's server");
+        // It ships: this is looked up as a file, which loads nothing.
+        String entry = CC_ADAPTER.replace('.', '/') + "/CcCompat.class";
+        h.assertTrue(
+                ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
+
+        // zas went through its row and found no CC: Tweaked, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("computercraft"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for CC: Tweaked");
+        h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
+        h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
         h.succeed();
     }
 

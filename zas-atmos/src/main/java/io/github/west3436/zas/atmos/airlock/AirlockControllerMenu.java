@@ -127,8 +127,8 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
         return at == null ? 0 : (short) (at.asLong() >> 16 * (part % 4));
     }
 
-    /** Door {@code i}'s open and bolted bits, or 0 if it isn't set or loaded. */
-    private static int door(AirlockControllerBlockEntity controller, int i) {
+    /** Door {@code i}'s look as the window shows it: bit 0 open, bit 1 bolted, or 0 if it isn't set or loaded. */
+    public static int door(AirlockControllerBlockEntity controller, int i) {
         BlockPos at = controller.airlocks()[i];
         Level level = controller.getLevel();
         if (at == null || level == null || !level.isLoaded(at)) {
