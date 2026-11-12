@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
+import io.github.west3436.zas.atmos.compat.PonderGate;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
@@ -46,7 +47,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The content mod's client entry point: block and item tints, device GUIs, item model properties, the
- * magnetic boots' keybind and the station blocks' connected textures with Fusion.
+ * magnetic boots' keybind, the station blocks' connected textures with Fusion and the Ponder scenes
+ * with Ponder.
  */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
 public final class ZasAtmosClient {
@@ -83,6 +85,9 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
         modBus.addListener(ConnectedTextures::addPack);
         modBus.addListener(FirelockDoorModel::wrap);
+        // The Ponder scenes, on a client that has Ponder: Create brings it, and so does the ZAS³ Ponder
+        // addon. Ponder gathers its plugins' scenes once every mod has set up, so this is in time.
+        modBus.addListener((FMLClientSetupEvent e) -> PonderGate.start());
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);

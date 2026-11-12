@@ -1,0 +1,248 @@
+apply plugin: 'net.neoforged.moddev'
+
+// The Ponder scenes (CLIENT-023): a scene for each device and tool. Their classes are part of
+// zas_atmos and ship in the release jar, where only zas_atmos's PonderGate loads them, on a client
+// that has Ponder, so the game runs the same without it (NFR-022). Ponder is never in the release
+// jar: Create nests it, and so does the ZAS³ Ponder addon (:zas-ponder) for players without Create.
+
+evaluationDependsOn(':zas-atmos')
+
+// What the GameTest server loads beside the release jar (-Pponder.from):
+//   create        Create, which nests Ponder and Flywheel (the default);
+//   create+addon  Create and the ZAS³ Ponder addon as this build makes it;
+//   released      the ZAS³ Ponder addon as release 1.0.0 shipped it, which holds its own scenes.
+// -Pcreate.version=<version> picks another Create, as Modrinth names it. `unsupported` is the last
+// one whose Ponder is older than the scenes support, where they stay off (COMPAT-002).
+def ponderFrom = providers.gradleProperty('ponder.from').getOrElse('create')
+if (!(ponderFrom in ['create', 'create+addon', 'released'])) {
+    throw new GradleException("-Pponder.from is create, create+addon or released, not '${ponderFrom}'")
+}
+def withCreate = ponderFrom != 'released'
+def createChosen = providers.gradleProperty('create.version').getOrElse(create_version)
+def createRun = createChosen == 'unsupported' ? create_unsupported_version : createChosen
+
+// The addon as release 1.0.0 shipped it. Players have it, and it registers its own copy of the
+// scenes, so the ones in the release jar must stand down beside it. The SHA-256 is its line in that
+// release's SHA256SUMS.txt.
+def releasedAddonVersion = '1.0.0'
+def releasedAddonSha256 = '3a20b4820c6ff012b5a87fc54e04140c47a18d30bd369ecb51cdac5f61716436'
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://maven.createmod.net' }
+        }
+        filter {
+            includeGroup 'net.createmod.ponder'
+            includeGroup 'dev.engine-room.flywheel'
+        }
+    }
+    // Create comes from Modrinth's maven, as a player downloads it, with what it nests.
+    exclusiveContent {
+        forRepository {
+            maven { url = 'https://api.modrinth.com/maven' }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+    // The released addon is the jar attached to the GitHub release: an Ivy repository of bare jars,
+    // which answers for these coordinates and nothing else, as the API's baseline does.
+    exclusiveContent {
+        forRepository {
+            ivy {
+                name = 'ponderAddonRelease'
+                url = 'https://github.com/west3436/zas-cubed/releases/download'
+                patternLayout { artifact "v[revision]/[artifact]-[revision].[ext]" }
+                metadataSources { artifact() }
+            }
+        }
+        filter { includeModule('io.github.west3436', 'zas_ponder') }
+    }
+}
+
+sourceSets {
+    // The GameTests, which run with Ponder loaded (COMPAT-004). They stay out of every jar but the
+    // one their own run loads.
+    gametest {
+        compileClasspath += main.compileClasspath
+    }
+    // That run's classpath, empty on purpose: zas and zas_atmos come in as the release jar, as a
+    // player has them, so the tests also show that the jar holds the scenes.
+    gametestRun
+}
+
+configurations {
+    releaseJar {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+// Detached, so that nothing but the released variant's run ever resolves it.
+def releasedAddon = configurations.detachedConfiguration(
+        dependencies.create("io.github.west3436:zas_ponder:${releasedAddonVersion}"))
+releasedAddon.transitive = false
+
+// The GameTests' empty structure in their namespace, copied from the framework's so no second
+// binary is kept here.
+def emptyStructures = tasks.register('copyEmptyStructures', Sync) {
+    from(project(':zas').file('src/gametest/resources/data/zas/structure/empty.nbt')) {
+        into 'data/zas_ponder_gate/structure'
+    }
+    into layout.buildDirectory.dir('generated/emptyStructures')
+}
+sourceSets.gametest.resources.srcDir(emptyStructures)
+
+def zasMod = project(':zas').neoForge.mods.zas
+
+neoForge {
+    addModdingDependenciesTo(sourceSets.gametestRun)
+    runs {
+        // ./gradlew :compat-ponder:runClient: a dev client with zas, zas_atmos, Ponder and Flywheel.
+        client {
+            client()
+        }
+        // Not named gameTestServer: the main CI runs every project's runGameTestServer, and this
+        // one needs Create, which that build never downloads to run.
+        adapterGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.gametestRun
+            loadedMods = []
+            gameDirectory = layout.buildDirectory.dir('adapterRun')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'zas_ponder_gate'
+            // What the run asked for, which the tests check is what loaded.
+            systemProperty 'zas.ponder.run', withCreate ? "${ponderFrom} ${createRun}" : ponderFrom
+            jvmArgument '-Xmx4G'
+            jvmArgument '-XX:+ExitOnOutOfMemoryError'
+            // Every class the JVM loads, for the test that none of the scenes' is among them.
+            jvmArgument '-Xlog:class+load=info:file=class-load.log::filecount=0'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+    // The dev client's mods. The scenes are part of zas_atmos, as they are in the release jar.
+    mods {
+        zas {
+            zasMod.modSourceSets.get().each { sourceSet it }
+        }
+        zas_atmos {
+            sourceSet project(':zas-atmos').sourceSets.main
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // As zas_atmos itself: the public API to compile against (CONT-095), zas at run time.
+    implementation project(':zas-api')
+    implementation project(':zas-atmos')
+
+    // Compile-only, never bundled: the scenes are optional (NFR-022). The oldest Ponder they
+    // support, so that they use nothing newer.
+    compileOnly "net.createmod.ponder:ponder-neoforge:${ponder_floor_version}"
+    // For the dev client: the copies the addon nests.
+    runtimeOnly "net.createmod.ponder:ponder-neoforge:${ponder_version}"
+    runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-1.21.1:${flywheel_version}"
+
+    releaseJar project(':dist')
+}
+
+// The 3 × 3 to 9 × 9 floors the scenes stand on, Ponder's usual white concrete and snow, written as
+// structure files so no binary is kept in the repository. Each scene builds the rest itself. Ponder
+// changes no block outside what the structure placed, so one block of air in the top corner makes
+// each stage a cube.
+def ponderStages = tasks.register('generatePonderStages') {
+    def out = layout.buildDirectory.dir('generated/ponderStages')
+    outputs.dir(out)
+    doLast {
+        [3, 5, 7, 9].each { size ->
+            def file = out.get().file("assets/zas_atmos/ponder/stage_${size}.nbt").asFile
+            file.parentFile.mkdirs()
+            file.withOutputStream { raw ->
+                def nbt = new DataOutputStream(new java.util.zip.GZIPOutputStream(raw))
+                def name = { String s -> nbt.writeShort(s.getBytes('UTF-8').length); nbt.write(s.getBytes('UTF-8')) }
+                def ints = { String key, List<Integer> values ->
+                    nbt.writeByte(9); name(key); nbt.writeByte(3); nbt.writeInt(values.size())
+                    values.each { nbt.writeInt(it) }
+                }
+                def block = { List<Integer> pos, int state ->
+                    ints('pos', pos)
+                    nbt.writeByte(3); name('state'); nbt.writeInt(state)
+                    nbt.writeByte(0)
+                }
+                nbt.writeByte(10); name('')
+                ints('size', [size, size, size])
+                def palette = ['minecraft:white_concrete', 'minecraft:snow_block', 'minecraft:air']
+                nbt.writeByte(9); name('palette'); nbt.writeByte(10); nbt.writeInt(palette.size())
+                palette.each {
+                    nbt.writeByte(8); name('Name'); name(it); nbt.writeByte(0)
+                }
+                nbt.writeByte(9); name('blocks'); nbt.writeByte(10); nbt.writeInt(size * size + 1)
+                for (int x = 0; x < size; x++) {
+                    for (int z = 0; z < size; z++) {
+                        block([x, 0, z], (x + z) % 2)
+                    }
+                }
+                block([size - 1, size - 1, size - 1], 2)
+                nbt.writeByte(9); name('entities'); nbt.writeByte(10); nbt.writeInt(0)
+                // 1.21.1's data version.
+                nbt.writeByte(3); name('DataVersion'); nbt.writeInt(3955)
+                nbt.writeByte(0)
+                nbt.close()
+            }
+        }
+    }
+}
+sourceSets.main.resources.srcDir(ponderStages)
+
+// The release jar plus the tests and their empty structure. The released addon accepts zas_atmos
+// 1.0.0 and no other version, so beside it the release jar is given that version whatever this
+// build's is: the check is of the scenes' code beside the addon's.
+def adapterTestJar = tasks.register('adapterTestJar', Jar) {
+    archiveClassifier = 'adapter-test'
+    dependsOn configurations.releaseJar
+    inputs.files(configurations.releaseJar)
+    inputs.property('ponderFrom', ponderFrom)
+    from({ configurations.releaseJar.collect { zipTree(it) } }) {
+        if (ponderFrom == 'released') {
+            filesMatching('META-INF/neoforge.mods.toml') {
+                filter { String line ->
+                    line.replace("version = \"${mod_version}\"", "version = \"${releasedAddonVersion}\"")
+                            .replace("versionRange = \"[${mod_version}]\"", "versionRange = \"[${releasedAddonVersion}]\"")
+                }
+            }
+        }
+    }
+    from sourceSets.gametest.output
+}
+
+dependencies {
+    gametestRunRuntimeOnly files(adapterTestJar)
+    if (withCreate) {
+        gametestRunRuntimeOnly "maven.modrinth:create:${createRun}"
+    }
+    if (ponderFrom == 'create+addon') {
+        gametestRunRuntimeOnly(project(':zas-ponder')) { transitive = false }
+    }
+    if (ponderFrom == 'released') {
+        gametestRunRuntimeOnly files(releasedAddon)
+    }
+}
+
+// The tests start from a fresh world, a fresh log and a fresh list of loaded classes, which they
+// read. A release's files can be replaced, so the released addon must be the jar that was checked.
+tasks.matching { it.name == 'runAdapterGameTestServer' }.configureEach {
+    doFirst {
+        delete layout.buildDirectory.dir('adapterRun/world')
+        delete layout.buildDirectory.dir('adapterRun/logs')
+        delete layout.buildDirectory.file('adapterRun/class-load.log')
+        if (ponderFrom == 'released') {
+            def jar = releasedAddon.singleFile
+            def sha256 = java.security.MessageDigest.getInstance('SHA-256').digest(jar.bytes).encodeHex().toString()
+            if (sha256 != releasedAddonSha256) {
+                throw new GradleException("${jar.name} from the GitHub release v${releasedAddonVersion} has SHA-256 " +
+                        "${sha256}, not ${releasedAddonSha256}, its line in that release's SHA256SUMS.txt.")
+            }
+        }
+    }
+}

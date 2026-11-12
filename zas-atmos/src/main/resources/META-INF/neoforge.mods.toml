@@ -42,3 +42,12 @@ type = "optional"
 versionRange = "[1.1.1,)"
 ordering = "NONE"
 side = "CLIENT"
+
+# The Ponder scenes show when Ponder is installed, which Create brings. No version range: a range
+# on an optional dependency stops the game when the installed version is outside it. PonderGate
+# checks Ponder's version itself and leaves the scenes off outside it.
+[[dependencies.zas_atmos]]
+modId = "create"
+type = "optional"
+ordering = "NONE"
+side = "CLIENT"

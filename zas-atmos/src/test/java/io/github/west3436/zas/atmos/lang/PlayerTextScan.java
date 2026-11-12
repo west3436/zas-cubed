@@ -76,7 +76,7 @@ final class PlayerTextScan {
             "net/minecraft/client/gui/Font.drawInBatch",
             "net/minecraft/client/renderer/debug/DebugRenderer.renderFloatingText",
             "com/mojang/brigadier/LiteralMessage.<init>",
-            // Ponder's text in the code, which zas_ponder never writes: its text is keyed.
+            // Ponder's text in the code, which the scenes never write: their text is keyed.
             "net/createmod/ponder/api/element/TextElementBuilder.text",
             "net/createmod/ponder/api/registration/TagBuilder.title",
             "net/createmod/ponder/api/registration/TagBuilder.description");
@@ -89,19 +89,20 @@ final class PlayerTextScan {
 
     /**
      * Ponder's calls whose first argument becomes translation keys, as the prefix and suffix Ponder puts
-     * around it (CLIENT-023). Ponder puts the plugin's mod id first, and only {@code zas_ponder} has one.
+     * around it (CLIENT-023). Ponder puts the plugin's mod id first, which is {@code zas_atmos} for the
+     * scenes.
      * Any other argument is shown as text, as with {@link #TRANSLATED}, so a scene's title in the code,
      * which {@code en_us.json}'s replaces, is left empty.
      */
     private static final Map<String, List<String[]>> PONDER_KEYS = Map.of(
             "net/createmod/ponder/api/element/TextElementBuilder.sharedText",
-            List.<String[]>of(new String[] {"zas_ponder.ponder.shared.", ""}),
+            List.<String[]>of(new String[] {"zas_atmos.ponder.shared.", ""}),
             "net/createmod/ponder/api/scene/SceneBuilder.title",
-            List.<String[]>of(new String[] {"zas_ponder.ponder.", ".header"}),
+            List.<String[]>of(new String[] {"zas_atmos.ponder.", ".header"}),
             "net/createmod/ponder/api/registration/PonderTagRegistrationHelper.registerTag",
             List.<String[]>of(
-                    new String[] {"zas_ponder.ponder.tag.", ""},
-                    new String[] {"zas_ponder.ponder.tag.", ".description"}));
+                    new String[] {"zas_atmos.ponder.tag.", ""},
+                    new String[] {"zas_atmos.ponder.tag.", ".description"}));
 
     /** A conversion in a format string, such as {@code %,.1f}, which isn't language. */
     private static final Pattern FORMAT_CONVERSION =
