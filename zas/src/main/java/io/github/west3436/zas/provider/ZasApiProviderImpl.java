@@ -15,6 +15,7 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.api.life.Breathability;
 import io.github.west3436.zas.api.life.Breathing;
+import io.github.west3436.zas.api.life.ExtraSlotVisitor;
 import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationOutcome;
 import io.github.west3436.zas.api.mutation.MutationResult;
@@ -40,6 +41,7 @@ import io.github.west3436.zas.geometry.PositionGeometries;
 import io.github.west3436.zas.life.Breathers;
 import io.github.west3436.zas.life.BreathingRules;
 import io.github.west3436.zas.life.ClientBreath;
+import io.github.west3436.zas.life.ExtraSlotItems;
 import io.github.west3436.zas.persistence.AtmosPersistence;
 import io.github.west3436.zas.reaction.ServerReactions;
 import io.github.west3436.zas.reaction.StandaloneReactions;
@@ -476,6 +478,12 @@ public final class ZasApiProviderImpl implements ZasApiProvider {
             return ClientBreath.isLocal(entity) ? ClientBreath.LOCAL.verdict(entity) : Breathing.vanilla(entity);
         }
         return Breathers.verdict(entity);
+    }
+
+    /** What the entity wears in the slots other mods add, each provider behind NFR-013's guard. */
+    @Override
+    public void extraSlotItems(LivingEntity entity, ExtraSlotVisitor visitor) {
+        ExtraSlotItems.forEach(entity, visitor);
     }
 
     /** The server's configured O₂ minimum (LIFE-003). */
