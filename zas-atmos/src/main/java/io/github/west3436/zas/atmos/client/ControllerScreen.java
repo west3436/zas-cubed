@@ -27,6 +27,9 @@ import net.minecraft.world.entity.player.Inventory;
  * controller a central atmospherics controller has claimed names it (CONT-118), and when its window
  * was opened from there, a button goes back to that central controller's window (CONT-124).
  *
+ * <p>A part a player has labelled is listed by its label in place of its kind, and the central
+ * controller by its label in place of its position; pointing at either shows what it stands in for.
+ *
  * <p>A danger shows an icon and a word as well as a colour (CLIENT-014). Readings follow the player's
  * display units (CLIENT-006), while a threshold's steps stay in kPa and K, which is what the server
  * applies. The window is at most 240 tall, the least a screen has at any Auto GUI scale.
@@ -38,6 +41,12 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
     private static final int STEPPER_HEIGHT = 16;
     private static final int MODE_ROW = 11;
     private static final int AIR_ROW = 11;
+
+    /** The parts' name column, and how far a label may widen it. */
+    private static final int NAME_WIDTH = 72;
+
+    private static final int NAME_WIDTH_MAX = 100;
+    private static final int POSITION_WIDTH = 62;
 
     private static final String KEY = "gui.zas_atmos.controller.";
     private static final String SAFE_ICON = "✔";
@@ -155,7 +164,7 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
         ui.line(text(s.edited() ? "summary_edited" : "summary", mode, preset), valueX, y, Ui.ROW, Ui.WHITE, Face.BODY);
         if (s.central() != null) {
             y += Ui.ROW;
-            central(ui, s.central(), labelX, valueX, x + w - Ui.PAD, y);
+            central(ui, s.central(), s.centralLabel(), labelX, valueX, x + w - Ui.PAD, y);
         }
         return y + Ui.ROW + 2;
     }
@@ -164,19 +173,26 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
      * The central controller it belongs to (CONT-118) and, opened from there, a button back to its
      * window (CONT-124).
      */
-    private void central(Ui ui, BlockPos central, int labelX, int valueX, int right, int y) {
+    private void central(Ui ui, BlockPos central, String label, int labelX, int valueX, int right, int y) {
         ui.line(text("label.central"), labelX, y, Ui.ROW, Ui.LABEL, Face.BODY);
-        ui.line(
-                Component.literal(central.getX() + ", " + central.getY() + ", " + central.getZ()),
-                valueX,
-                y,
-                Ui.ROW,
-                Ui.WHITE,
-                Face.BODY);
         if (menu.remote()) {
             Component back = text("back");
             int width = ui.buttonWidth(back);
             ui.button(right - width, y, width, Ui.BUTTON_HEIGHT, back, Tone.DEFAULT, () -> press(ControllerMenu.BACK));
+            right -= width + Ui.PAD;
+        }
+        Component position = Component.literal(central.getX() + ", " + central.getY() + ", " + central.getZ());
+        if (label.isEmpty()) {
+            ui.line(position, valueX, y, Ui.ROW, Ui.WHITE, Face.BODY);
+        } else {
+            ui.line(
+                    ui.fit(Component.literal(label), Face.BODY, right - valueX),
+                    valueX,
+                    y,
+                    Ui.ROW,
+                    Ui.WHITE,
+                    Face.BODY);
+            ui.tooltip(valueX, y, right - valueX, Ui.ROW, position);
         }
     }
 
@@ -466,8 +482,16 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
             return;
         }
         int scrollbar = 3;
-        int positionX = inner + 72;
-        int fromX = inner + 134;
+        // A label longer than a kind's name takes room from the gap before the last column.
+        int nameWidth = NAME_WIDTH;
+        for (AreaAirControllerBlockEntity.Part p : parts) {
+            if (!p.label().isEmpty()) {
+                int needed = (int) Math.ceil(ui.width(Component.literal(p.label()), Face.BODY)) + 2 * Ui.PAD;
+                nameWidth = Math.max(nameWidth, Math.min(NAME_WIDTH_MAX, needed));
+            }
+        }
+        int positionX = inner + nameWidth;
+        int fromX = positionX + POSITION_WIDTH;
         int powerRight = x + w - Ui.PAD - scrollbar;
         int rowY = y + 1;
         ui.line(text("parts.part"), inner, rowY, Ui.ROW, Ui.WHITE, Face.BOLD);
@@ -497,14 +521,21 @@ public class ControllerScreen extends TguiScreen<ControllerMenu> {
 
     private void part(
             Ui ui, AreaAirControllerBlockEntity.Part p, int nameX, int positionX, int fromX, int powerRight, int y) {
-        ui.line(
-                Component.translatable(
-                        "block." + p.block().getNamespace() + "." + p.block().getPath()),
-                nameX,
-                y,
-                Ui.ROW,
-                Ui.WHITE,
-                Face.BODY);
+        Component kind = Component.translatable(
+                "block." + p.block().getNamespace() + "." + p.block().getPath());
+        if (p.label().isEmpty()) {
+            ui.line(kind, nameX, y, Ui.ROW, Ui.WHITE, Face.BODY);
+        } else {
+            Component label = Component.literal(p.label());
+            int room = positionX - nameX - Ui.PAD;
+            ui.line(ui.fit(label, Face.BODY, room), nameX, y, Ui.ROW, Ui.WHITE, Face.BODY);
+            ui.tooltip(
+                    nameX,
+                    y,
+                    room,
+                    Ui.ROW,
+                    Component.empty().append(label).append(" · ").append(kind));
+        }
         BlockPos pos = p.pos();
         ui.line(
                 Component.literal(pos.getX() + ", " + pos.getY() + ", " + pos.getZ()),

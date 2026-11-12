@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.label.Labels;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -40,6 +41,7 @@ public record CentralSync(
      * @param priority its {@link ZonePriority} ordinal
      * @param contact whether it is in contact, loaded and stepping, so these are its readings now
      *     rather than its last
+     * @param label what a player called it, as last seen, or the empty string
      */
     public record Row(
             BlockPos pos,
@@ -48,7 +50,8 @@ public record CentralSync(
             int danger,
             boolean powered,
             int priority,
-            boolean contact) {}
+            boolean contact,
+            String label) {}
 
     public static final Type<CentralSync> TYPE = new Type<>(ZasAtmosMod.id("central_sync"));
 
@@ -71,6 +74,7 @@ public record CentralSync(
             buf.writeBoolean(r.powered());
             buf.writeByte(r.priority());
             buf.writeBoolean(r.contact());
+            buf.writeUtf(r.label());
         }
     }
 
@@ -91,7 +95,8 @@ public record CentralSync(
                     Math.max(0, Math.min(2, buf.readByte())),
                     buf.readBoolean(),
                     Math.max(0, Math.min(ZonePriority.values().length - 1, buf.readByte())),
-                    buf.readBoolean()));
+                    buf.readBoolean(),
+                    Labels.clean(buf.readUtf())));
         }
         return new CentralSync(
                 containerId,

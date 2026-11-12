@@ -229,13 +229,23 @@ public class CentralScreen extends TguiScreen<CentralMenu> {
         boolean contact = r.contact();
         int colour = contact ? Ui.WHITE : Ui.DIM;
         BlockPos p = r.pos();
-        ui.line(
-                Component.literal(p.getX() + ", " + p.getY() + ", " + p.getZ()),
-                c.position,
-                textY,
-                Ui.ROW,
-                contact ? Ui.LABEL : Ui.DIM,
-                Face.BODY);
+        Component position = Component.literal(p.getX() + ", " + p.getY() + ", " + p.getZ());
+        if (r.label().isEmpty()) {
+            ui.line(position, c.position, textY, Ui.ROW, contact ? Ui.LABEL : Ui.DIM, Face.BODY);
+        } else {
+            // Its label in the position's place, which pointing at it shows.
+            Component pressure =
+                    Component.literal(Double.isFinite(r.pressure()) ? Readout.pressure(r.pressure()) : "—");
+            int room = c.pressureRight - c.position - (int) Math.ceil(ui.width(pressure, Face.BODY)) - Ui.PAD;
+            Component label = Component.literal(r.label());
+            ui.line(ui.fit(label, Face.BODY, room), c.position, textY, Ui.ROW, colour, Face.BODY);
+            ui.tooltip(
+                    c.position,
+                    textY,
+                    room,
+                    Ui.ROW,
+                    Component.empty().append(label).append(" · ").append(position));
+        }
         ui.lineRight(
                 Component.literal(Double.isFinite(r.pressure()) ? Readout.pressure(r.pressure()) : "—"),
                 c.pressureRight,

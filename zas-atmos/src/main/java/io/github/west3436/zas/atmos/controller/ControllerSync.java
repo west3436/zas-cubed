@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.label.Labels;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -33,6 +34,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * @param breach whether its last reading was a breach (CONT-043)
  * @param fire whether a fire alarm it covers was triggered at its last reading (CONT-044)
  * @param central the central controller it belongs to, or null (CONT-118)
+ * @param centralLabel what a player called that central controller, or the empty string
  */
 public record ControllerSync(
         int containerId,
@@ -52,7 +54,8 @@ public record ControllerSync(
         String pin,
         boolean breach,
         boolean fire,
-        BlockPos central)
+        BlockPos central,
+        String centralLabel)
         implements CustomPacketPayload {
 
     public static final Type<ControllerSync> TYPE = new Type<>(ZasAtmosMod.id("controller_sync"));
@@ -88,6 +91,7 @@ public record ControllerSync(
             buf.writeBoolean(p.inZone());
             buf.writeBoolean(p.linked());
             buf.writeBoolean(p.powered());
+            buf.writeUtf(p.label());
         }
         buf.writeUtf(pin);
         buf.writeBoolean(breach);
@@ -96,6 +100,7 @@ public record ControllerSync(
         if (central != null) {
             buf.writeBlockPos(central);
         }
+        buf.writeUtf(centralLabel);
     }
 
     private static ControllerSync read(RegistryFriendlyByteBuf buf) {
@@ -128,12 +133,13 @@ public record ControllerSync(
             ResourceLocation block = buf.readResourceLocation();
             BlockPos pos = buf.readBlockPos();
             parts.add(new AreaAirControllerBlockEntity.Part(
-                    block, pos, buf.readBoolean(), buf.readBoolean(), buf.readBoolean()));
+                    block, pos, buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), Labels.clean(buf.readUtf())));
         }
         String pin = buf.readUtf();
         boolean breach = buf.readBoolean();
         boolean fire = buf.readBoolean();
         BlockPos central = buf.readBoolean() ? buf.readBlockPos() : null;
+        String centralLabel = Labels.clean(buf.readUtf());
         return new ControllerSync(
                 containerId,
                 mode,
@@ -152,7 +158,8 @@ public record ControllerSync(
                 pin,
                 breach,
                 fire,
-                central);
+                central,
+                centralLabel);
     }
 
     @Override

@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.battery;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -28,7 +29,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>It charges only on power paid for, so a lease its controller gave it while it drew nothing
  * charges nothing ({@link DevicePower#paidFor}).
  */
-public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice {
+public class RechargerBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
     /** What the recharger did at its last atmos tick, which its sounds follow. */
     public enum Status {
         /** Its slot is empty. */

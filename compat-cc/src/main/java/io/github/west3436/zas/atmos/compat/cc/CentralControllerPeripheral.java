@@ -63,7 +63,8 @@ public final class CentralControllerPeripheral extends DevicePeripheral<CentralC
      * Its area air controllers, in the order it claimed them: each a table of its {@code x}, {@code
      * y} and {@code z}, its zone's {@code pressure} in kPa and {@code temperature} in K (both left
      * out before its first reading), its {@code danger} from 0 to 2, whether it is {@code powered},
-     * its {@code priority}, and whether it is in {@code contact}, so these are its readings now.
+     * its {@code priority}, whether it is in {@code contact}, so these are its readings now, and
+     * the {@code label} a player gave it, left out if it has none.
      */
     @LuaFunction(mainThread = true)
     public List<Map<String, Object>> getControllers() throws LuaException {
@@ -83,6 +84,9 @@ public final class CentralControllerPeripheral extends DevicePeripheral<CentralC
             table.put("powered", row.powered());
             table.put("priority", Lua.word(ZonePriority.values()[row.priority()]));
             table.put("contact", row.contact());
+            if (!row.label().isEmpty()) {
+                table.put("label", row.label());
+            }
             list.add(table);
         }
         return list;

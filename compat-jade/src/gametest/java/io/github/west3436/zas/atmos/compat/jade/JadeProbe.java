@@ -31,6 +31,9 @@ final class JadeProbe {
     /** The most bytes a reading may be: a few of these a second go to each player looking. */
     static final int MOST_BYTES = 200;
 
+    /** The path of the id of Jade's own provider of a block's name. */
+    private static final String NAME_PROVIDER = "object_name";
+
     private JadeProbe() {}
 
     /** Whether Jade holds the adapter's server part for a block. */
@@ -83,6 +86,32 @@ final class JadeProbe {
         }
         return ReadingCodec.decode(bytes)
                 .orElseThrow(() -> new GameTestAssertException("the bytes for the " + what + " aren't a reading"));
+    }
+
+    /**
+     * What Jade's server sends for its own name line of a block: the answer of whichever of its
+     * providers names things, which the adapter has no part in. Empty if it sends none, and Jade
+     * shows the block's own name.
+     */
+    static CompoundTag name(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        BlockEntity be = level.getBlockEntity(pos);
+        CompoundTag data = new CompoundTag();
+        BlockAccessor accessor = accessor(level, pos, state, be);
+        boolean found = false;
+        for (IServerDataProvider<BlockAccessor> provider :
+                WailaCommonRegistration.instance().getBlockNBTProviders(state.getBlock(), be)) {
+            if (provider.getUid().getPath().equals(NAME_PROVIDER)) {
+                found = true;
+                if (provider.shouldRequestData(accessor)) {
+                    provider.appendServerData(data, accessor);
+                }
+            }
+        }
+        if (!found) {
+            throw new GameTestAssertException("Jade holds no name provider for the block at " + pos.toShortString());
+        }
+        return data;
     }
 
     /** Whether the server sends nothing for a block. */

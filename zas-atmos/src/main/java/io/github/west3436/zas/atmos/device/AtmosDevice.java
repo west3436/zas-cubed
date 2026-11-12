@@ -1,12 +1,22 @@
 package io.github.west3436.zas.atmos.device;
 
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,22 +39,33 @@ import org.jetbrains.annotations.Nullable;
  * io.github.west3436.zas.api.mutation.GasMutations}, through a {@link ZonePort} per port so that each
  * port has at most one mutation outstanding (CONT-072). A device that draws power implements {@link
  * io.github.west3436.zas.atmos.power.PoweredDevice}.
+ *
+ * <p>A device a player can label names {@link Labelled}, and this keeps its label: saved with the
+ * block, sent to the clients that have it loaded, taken from the name of the item that placed it and
+ * given back as an item's name, as the game does for a chest. A device that doesn't name it never
+ * has one.
  */
 public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.Member {
+    private static final String LABEL = "Label";
+
     /** How hard it reads as working (DATA-017): made by its first report, so most pay nothing. */
     private @Nullable DeviceActivity activity;
 
     private @Nullable LevelChunk chunk;
 
+    /** What a player called it, as {@link Labels#clean} leaves it; empty for none. */
+    private String label = "";
+
     protected AtmosDevice(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
-    /** Writes the format version of what this block entity saves (DATA-003). */
+    /** Writes the format version of what this block entity saves (DATA-003), and its label if it has one. */
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         DeviceData.writeVersion(tag);
+        writeLabel(tag);
     }
 
     /** Brings an older save forward (DATA-012), before any subclass reads it. */
@@ -52,7 +73,106 @@ public abstract class AtmosDevice extends BlockEntity implements DeviceSchedule.
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         DeviceData.migrate(tag);
+        readLabel(tag);
     }
+
+    // ---- Its label --------------------------------------------------------------------------
+
+    /** The label a player gave it, or the empty string: always empty for a device that takes none. */
+    public final String label() {
+        return label;
+    }
+
+    /**
+     * Sets the label, on the server: saved, and sent to the clients that have the block loaded. The
+     * text goes through {@link Labels#clean} first, so nothing else is ever kept. A device that isn't
+     * {@link Labelled} takes none.
+     *
+     * @param text what a player typed; null or nothing left of it clears the label
+     * @return whether the label changed
+     */
+    public final boolean setLabel(@Nullable String text) {
+        String cleaned = this instanceof Labelled ? Labels.clean(text) : "";
+        if (cleaned.equals(label)) {
+            return false;
+        }
+        label = cleaned;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
+        return true;
+    }
+
+    private void writeLabel(CompoundTag tag) {
+        if (!label.isEmpty()) {
+            tag.putString(LABEL, label);
+        }
+    }
+
+    /** Reads a label as saved or sent, cleaned again: a save or a server could hold anything. */
+    private void readLabel(@Nullable CompoundTag tag) {
+        label = tag != null && this instanceof Labelled ? Labels.clean(tag.getString(LABEL)) : "";
+    }
+
+    /** An item renamed in an anvil gives the block it places its name as a label, as it does a chest. */
+    @Override
+    protected void applyImplicitComponents(BlockEntity.DataComponentInput input) {
+        super.applyImplicitComponents(input);
+        if (!(this instanceof Labelled)) {
+            return; // asking for the name would take it from a device that keeps its item's components
+        }
+        Component name = input.get(DataComponents.CUSTOM_NAME);
+        if (name != null) {
+            label = Labels.clean(name.getString());
+        }
+    }
+
+    /** An item that copies the block, as a creative player's pick does, is named by its label. */
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        if (!label.isEmpty()) {
+            components.set(DataComponents.CUSTOM_NAME, Component.literal(label));
+        }
+    }
+
+    /** The label is the item's name there, not also in its copy of the block's data. */
+    @Override
+    @SuppressWarnings("deprecation")
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove(LABEL);
+    }
+
+    /** Clients are sent the label, and nothing else. */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        writeLabel(tag);
+        return tag;
+    }
+
+    /** Only a device that takes a label has anything to send when its block is updated. */
+    @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return this instanceof Labelled ? ClientboundBlockEntityDataPacket.create(this) : null;
+    }
+
+    /** A client reads only the label from what it is sent, with its chunk. */
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        readLabel(tag);
+    }
+
+    /** And when the block is updated: nothing sent is a label cleared. */
+    @Override
+    public void onDataPacket(
+            Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        readLabel(packet.getTag());
+    }
+
+    // ---- Its place in the schedule ----------------------------------------------------------
 
     /**
      * The chunk that saves this block entity, on a server. It is kept from the first time it is asked

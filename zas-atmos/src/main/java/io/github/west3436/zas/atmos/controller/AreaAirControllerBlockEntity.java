@@ -17,6 +17,8 @@ import io.github.west3436.zas.atmos.device.LoadedBlocks;
 import io.github.west3436.zas.atmos.device.ZoneIndex;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlockEntity;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.power.PowerFeed;
@@ -71,9 +73,14 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>It records what a step costs ({@link #demand()}), so a central atmospherics controller that has
  * claimed it can pay what its buffer doesn't hold before its next step (CONT-120).
  */
-public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider {
-    /** A part the controller covers, as the GUI lists it (CONT-049). */
-    public record Part(ResourceLocation block, BlockPos pos, boolean inZone, boolean linked, boolean powered) {}
+public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuProvider, Labelled {
+    /**
+     * A part the controller covers, as the GUI lists it (CONT-049).
+     *
+     * @param label what a player called it, or the empty string
+     */
+    public record Part(
+            ResourceLocation block, BlockPos pos, boolean inZone, boolean linked, boolean powered, String label) {}
 
     private final EnergyStore buffer = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.CONTROLLER_BUFFER), true, false, this::setChanged);
@@ -396,7 +403,8 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                     be.getBlockPos(),
                     in,
                     links.contains(be.getBlockPos()),
-                    supplied[i]));
+                    supplied[i],
+                    be instanceof Labelled named ? named.label() : ""));
         }
         return List.copyOf(out);
     }
@@ -554,7 +562,7 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.area_air_controller");
+        return Labels.title(label(), Component.translatable("block.zas_atmos.area_air_controller"));
     }
 
     @Override
