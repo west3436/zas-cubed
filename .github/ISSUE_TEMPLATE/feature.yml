@@ -1,0 +1,23 @@
+name: Feature request
+description: A new block, item, behaviour or integration you'd like to see.
+labels: ["type: feature"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you'd like
+      description: The feature, and how you'd expect it to work in game.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it would help
+      description: What you're trying to build or do, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: References, sketches, or how another game or mod does it.
