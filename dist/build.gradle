@@ -2,7 +2,8 @@ apply plugin: 'net.neoforged.moddev'
 
 // The jar players install (D-88): the framework zas and the content mod zas_atmos, two mods in one
 // file, with the API nested once as zas nests it. Both are still built and tested as projects of their
-// own; this one only packs their jars together. The Ponder addon stays a jar of its own.
+// own; this one only packs their jars together. The ZAS³ Ponder addon, which only nests Ponder and
+// Flywheel, stays a jar of its own.
 base { archivesName = 'zas' }
 
 evaluationDependsOn(':zas')
@@ -14,6 +15,12 @@ def parts = [project(':zas'), project(':zas-atmos')]
 // this jar as part of zas_atmos. Nothing in the two mods names them; only Jade loads them.
 evaluationDependsOn(':compat-jade')
 def jadeAdapter = project(':compat-jade').sourceSets.main.output
+
+// Ponder scenes (CLIENT-023): classes built in a project of their own, against Ponder, with their
+// text and floors, which ship in this jar as part of zas_atmos. Only zas_atmos's PonderGate loads
+// them, by name, on a client that has Ponder.
+evaluationDependsOn(':compat-ponder')
+def ponderScenes = project(':compat-ponder').sourceSets.main.output
 
 // One neoforge.mods.toml for both: the content mod's file-level keys, whose license covers the
 // framework's assets as well, then each file's tables. TOML lets an array of tables such as [[mods]]
@@ -53,6 +60,7 @@ tasks.named('jar', Jar) {
     }
     from(modsToml) { into 'META-INF' }
     from jadeAdapter
+    from ponderScenes
     // The two mods share no file but the ones above; a second would mean one hides the other.
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }
@@ -88,6 +96,9 @@ neoForge {
                 gameDirectory = layout.buildDirectory.dir("${name}Run")
                 systemProperty 'neoforge.enabledGameTestNamespaces', 'zas'
                 systemProperty 'zas.releaseCheck.contentOff', String.valueOf(off)
+                // Every class the JVM loads, for the check that none of the Ponder scenes', of
+                // Ponder's or of Flywheel's is among them (NFR-022).
+                jvmArgument '-Xlog:class+load=info:file=class-load.log::filecount=0'
             }
         }
     }
@@ -115,6 +126,7 @@ checkRuns.each { name, off ->
         doFirst {
             def dir = layout.buildDirectory.dir("${name}Run").get()
             delete dir.dir('world')
+            delete dir.file('class-load.log')
             def config = dir.file('config/zas_atmos-startup.toml').asFile
             config.parentFile.mkdirs()
             config.setText("[content]\nenabled = ${!off}\n", 'UTF-8')

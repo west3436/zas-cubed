@@ -21,8 +21,9 @@ include 'engine', 'zas-api', 'zas', 'compat-adastra', 'zas-atmos', 'example-addo
 // The recipe viewer plugins (COMPAT-060 to COMPAT-062). Their classes ship inside the zas jar.
 include 'compat-jei', 'compat-emi'
 
-// The Ponder scenes, a client addon of their own that nests Ponder and Flywheel (D-83).
-include 'zas-ponder'
+// The Ponder scenes (CLIENT-023): part of zas_atmos in the release jar, on with any Ponder. And the
+// ZAS³ Ponder addon, a client addon that nests Ponder and Flywheel for players without Create (D-83).
+include 'compat-ponder', 'zas-ponder'
 
 // The Mekanism adapter (MEK), bundled into the zas jar like compat-adastra.
 include 'compat-mekanism'
