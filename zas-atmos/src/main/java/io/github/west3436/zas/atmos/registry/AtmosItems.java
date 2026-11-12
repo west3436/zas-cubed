@@ -325,6 +325,11 @@ public final class AtmosItems {
 
     public static final DeferredItem<BlockItem> TANK_HOLDER = ITEMS.registerSimpleBlockItem(AtmosBlocks.TANK_HOLDER);
 
+    // The large gas tank.
+
+    public static final DeferredItem<BlockItem> LARGE_GAS_TANK =
+            ITEMS.registerSimpleBlockItem(AtmosBlocks.LARGE_GAS_TANK);
+
     // The bike horn (CONT-154, D-87): an easter egg with no recipe, found in dungeon and stronghold chests.
 
     public static final DeferredItem<BikeHornItem> BIKE_HORN = ITEMS.registerItem("bike_horn", BikeHornItem::new);

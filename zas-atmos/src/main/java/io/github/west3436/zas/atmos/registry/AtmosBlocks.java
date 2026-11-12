@@ -31,6 +31,7 @@ import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlock;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlock;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlock;
 import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
@@ -242,6 +243,12 @@ public final class AtmosBlocks {
     /** The tank holder, a rack of ten personal tanks. */
     public static final DeferredBlock<TankHolderBlock> TANK_HOLDER =
             BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
+
+    // ---- The large gas tank ----
+
+    /** The large gas tank, one block wide and two high: a fixed store on a pipe network. */
+    public static final DeferredBlock<LargeTankBlock> LARGE_GAS_TANK =
+            BLOCKS.registerBlock("large_gas_tank", LargeTankBlock::new, metal().pushReaction(PushReaction.BLOCK));
 
     private AtmosBlocks() {}
 

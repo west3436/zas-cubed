@@ -30,6 +30,7 @@ import io.github.west3436.zas.atmos.radiator.HeatExchangerBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlockEntity;
 import io.github.west3436.zas.atmos.radiator.RadiatorPipeBlockEntity;
 import io.github.west3436.zas.atmos.scrubber.ScrubberBlockEntity;
+import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.valve.ValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlockEntity;
@@ -233,6 +234,13 @@ public final class AtmosBlockEntities {
     public static final Supplier<BlockEntityType<TankHolderBlockEntity>> TANK_HOLDER = BLOCK_ENTITIES.register(
             "tank_holder",
             () -> BlockEntityType.Builder.of(TankHolderBlockEntity::new, AtmosBlocks.TANK_HOLDER.get())
+                    .build(null));
+
+    // The large gas tank: on its lower half.
+
+    public static final Supplier<BlockEntityType<LargeTankBlockEntity>> LARGE_GAS_TANK = BLOCK_ENTITIES.register(
+            "large_gas_tank",
+            () -> BlockEntityType.Builder.of(LargeTankBlockEntity::new, AtmosBlocks.LARGE_GAS_TANK.get())
                     .build(null));
 
     private AtmosBlockEntities() {}

@@ -1,0 +1,42 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:large_gas_tank"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:machine_frame"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:pipe"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "zas_atmos:plasteel_sheet"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SPS",
+    "S S",
+    "SFS"
+  ],
+  "key": {
+    "S": {
+      "item": "zas_atmos:plasteel_sheet"
+    },
+    "P": {
+      "item": "zas_atmos:pipe"
+    },
+    "F": {
+      "item": "zas_atmos:machine_frame"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "zas_atmos:large_gas_tank"
+  }
+}

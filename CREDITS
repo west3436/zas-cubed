@@ -3343,3 +3343,23 @@ notes: A cloud in greys, 16 by 16, which the game tints with each gas's colour.
 path: zas/src/main/resources/assets/zas/textures/gui/viewer/icons.png
 origin: original
 notes: Fifteen 9 by 9 icons for conditions and properties (spark, flame, thermometer, share of a mixture, gauge, clock, heat out, heat in, energy barrier, gear, weight, heat store, tag, oxidizer ring, skull) and a 16 by 16 flask, the reactions' icon.
+
+# The large gas tank (issue #485), drawn from scratch: vg's tank sprites weren't used.
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_gas_tank.png
+origin: original
+notes: A vertical pressure vessel on a 32x32 sheet, in the canisters' light grey with their hazard band: its shell from the side, its shoulder, dome and cap, the view from above and a round bolted manway.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_gas_tank_lower.json
+origin: original
+notes: The tank's lower half: a 14 px round shell on a skirt, a manway on its front and the pipe's flange (pipe_fitting.png, untinted) on its back.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_gas_tank_upper.json
+origin: original
+notes: The tank's upper half: the shell, its shoulder, dome and relief cap.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/large_gas_tank.json
+origin: original
+notes: The tank item: both halves in one model, scaled down in the inventory.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/large_gas_tank.json
+origin: original

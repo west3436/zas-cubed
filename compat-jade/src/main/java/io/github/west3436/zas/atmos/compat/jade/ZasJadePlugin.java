@@ -3,6 +3,7 @@ package io.github.west3436.zas.atmos.compat.jade;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import net.minecraft.world.level.block.Block;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
@@ -36,6 +37,8 @@ public final class ZasJadePlugin implements IWailaPlugin {
         // asked about: see ReadoutData.shouldRequestData.
         registration.registerBlockDataProvider(ReadoutData.INSTANCE, AtmosDevice.class);
         registration.registerBlockDataProvider(ReadoutData.INSTANCE, TankHolderBlockEntity.class);
+        // A large tank's upper half has no block entity, so it is found by its block.
+        registration.registerBlockDataProvider(ReadoutData.INSTANCE, LargeTankBlock.class);
     }
 
     @Override

@@ -24,6 +24,7 @@ import io.github.west3436.zas.atmos.pipe.PipeVolumes;
 import io.github.west3436.zas.atmos.radiator.HeatExchangerBlock;
 import io.github.west3436.zas.atmos.radiator.RadiatorAdaptorBlock;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.valve.ValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import java.util.EnumSet;
@@ -129,8 +130,8 @@ public final class PipeGasHandlerTests {
      * Each part offers it where a pipe would join it and nowhere else: a cap where it points, a
      * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
      * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
-     * electrolyzer on each port. A canister and radiator pipe offer none. Every pipe part the mod
-     * registers is covered.
+     * electrolyzer on each port, a large gas tank behind its lower half. A canister and radiator pipe
+     * offer none. Every pipe part the mod registers is covered.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void api_021_every_pipe_part_offers_it_where_a_pipe_joins(GameTestHelper h) {
@@ -143,6 +144,7 @@ public final class PipeGasHandlerTests {
                 EnumSet.of(Direction.UP));
         expected.put(GasDeviceTests.port(), EnumSet.of(Direction.DOWN));
         expected.put(GasDeviceTests.canister(), EnumSet.noneOf(Direction.class));
+        expected.put(LargeTankTests.lower(Direction.NORTH), EnumSet.of(Direction.SOUTH));
         expected.put(GasDeviceTests.vent(Direction.DOWN), EnumSet.of(Direction.UP));
         expected.put(ScrubberTests.scrubber(Direction.DOWN), EnumSet.of(Direction.UP));
         expected.put(
@@ -178,6 +180,10 @@ public final class PipeGasHandlerTests {
 
         int x = 0;
         for (Map.Entry<BlockState, Set<Direction>> part : expected.entrySet()) {
+            if (part.getKey().getBlock() instanceof LargeTankBlock) {
+                // Its upper half first: the lower one goes at once with nothing above it.
+                a.set(x, 3, 2, LargeTankTests.upper(part.getKey().getValue(LargeTankBlock.FACING)));
+            }
             a.place(x, 2, 2, part.getKey());
             h.assertValueEqual(
                     offered(a, x, 2, 2),

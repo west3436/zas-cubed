@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "zas_atmos:block/large_gas_tank_lower"
+    },
+    "facing=east,half=lower": {
+      "model": "zas_atmos:block/large_gas_tank_lower",
+      "y": 90
+    },
+    "facing=south,half=lower": {
+      "model": "zas_atmos:block/large_gas_tank_lower",
+      "y": 180
+    },
+    "facing=west,half=lower": {
+      "model": "zas_atmos:block/large_gas_tank_lower",
+      "y": 270
+    },
+    "facing=north,half=upper": {
+      "model": "zas_atmos:block/large_gas_tank_upper"
+    },
+    "facing=east,half=upper": {
+      "model": "zas_atmos:block/large_gas_tank_upper",
+      "y": 90
+    },
+    "facing=south,half=upper": {
+      "model": "zas_atmos:block/large_gas_tank_upper",
+      "y": 180
+    },
+    "facing=west,half=upper": {
+      "model": "zas_atmos:block/large_gas_tank_upper",
+      "y": 270
+    }
+  }
+}

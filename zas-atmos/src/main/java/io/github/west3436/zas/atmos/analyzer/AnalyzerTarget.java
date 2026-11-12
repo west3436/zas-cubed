@@ -7,13 +7,13 @@ import io.github.west3436.zas.api.gas.GasMixture;
 import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync.Kind;
-import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
+import io.github.west3436.zas.atmos.tank.GasVessels;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>A pipe, or a device on a network:</b> that network's gas. A device with several ports, a
  *       pump, filter or mixer, reads the port on the face clicked, or else the one nearest the point
  *       clicked.
- *   <li><b>A canister:</b> its own gas, its share of the network it's on.
+ *   <li><b>A canister or a large gas tank:</b> its own gas, its share of the network it's on. Either
+ *       half of a tank reads the tank.
  *   <li><b>Another mod's tank or machine:</b> a block that provides the gas-handler capability
  *       (API-021), and isn't a pipe part of ours, is read through it under the block's name: what it
  *       holds on the face clicked, or else for no face in particular, in the volume it gives ({@link
@@ -60,7 +61,8 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param kind what it is: {@link Kind#HERE}, {@link Kind#POINT}, {@link Kind#NETWORK}, {@link
  *     Kind#CANISTER} or {@link Kind#STORE}
- * @param pos the block it was used on, or the one holding the point; null for {@link Kind#HERE}
+ * @param pos the block it was used on, a large tank's lower half for either of its halves, or the
+ *     block holding the point; null for {@link Kind#HERE}
  * @param point the point read, for {@link Kind#POINT}
  * @param port the device's port for a network, or -1 for a node that is one network
  * @param face the face it was used on, for {@link Kind#STORE}: the one its handler is asked on first
@@ -115,10 +117,11 @@ public record AnalyzerTarget(
     /** What a click on a block reads. */
     public static AnalyzerTarget on(Level level, BlockHitResult hit) {
         BlockPos pos = hit.getBlockPos();
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof CanisterBlockEntity) {
-            return new AnalyzerTarget(Kind.CANISTER, pos, null, -1, null);
+        PipeNodeEntity vessel = GasVessels.at(level, pos);
+        if (vessel != null) {
+            return new AnalyzerTarget(Kind.CANISTER, vessel.getBlockPos(), null, -1, null);
         }
+        BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof PipeNodeEntity) {
             return new AnalyzerTarget(Kind.NETWORK, pos, null, -1, null);
         }
@@ -170,7 +173,7 @@ public record AnalyzerTarget(
     private boolean present(Level level) {
         BlockEntity be = level.getBlockEntity(pos);
         return switch (kind) {
-            case CANISTER -> be instanceof CanisterBlockEntity c && !c.isRemoved();
+            case CANISTER -> GasVessels.at(level, pos) instanceof PipeNodeEntity v && !v.isRemoved();
             case STORE -> level instanceof ServerLevel server && GasHandlers.providesStore(server, pos, face);
             case NETWORK ->
                 port < 0
@@ -201,9 +204,9 @@ public record AnalyzerTarget(
                 return air(coordinates(pos), level, point);
             }
             case CANISTER -> {
-                CanisterBlockEntity canister = (CanisterBlockEntity) level.getBlockEntity(pos);
-                GasParcel share = canister.share();
-                GasMixture gas = new GasMixture(share.moles(), share.temperature(), canister.nodeVolume());
+                PipeNodeEntity vessel = GasVessels.at(level, pos);
+                GasParcel share = vessel.share();
+                GasMixture gas = new GasMixture(share.moles(), share.temperature(), vessel.nodeVolume());
                 return new Reading(blockName(level), null, false, gas);
             }
             case STORE -> {
