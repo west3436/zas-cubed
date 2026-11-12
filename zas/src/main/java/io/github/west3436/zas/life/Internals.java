@@ -57,8 +57,9 @@ import org.jetbrains.annotations.Nullable;
  *   <li><b>The tank</b> (LIFE-028). They draw from the first internal supply found ({@link
  *       IInternalSupply}, from an item's life support or its {@link IInternalSupply#ITEM}
  *       capability): in an armor piece, the chestplate's first, such as a suit's tank slot;
- *       then the offhand; then, for a player, the hotbar from left to right, or else the main hand;
- *       then the entity's own life support.
+ *       then in the equipment slots other mods add, such as a back or belt slot ({@link
+ *       ExtraSlotItems}, COMPAT-040, COMPAT-041); then the offhand; then, for a player, the hotbar
+ *       from left to right, or else the main hand; then the entity's own life support.
  *   <li><b>The breath</b> (LIFE-044, LIFE-046). The tank delivers its gas at its distribution
  *       pressure while it holds at least that pressure: the breath is the tank's mixture at that
  *       pressure. Otherwise the entity breathes the atmosphere.
@@ -236,14 +237,15 @@ public final class Internals {
     public record Active(IInternalSupply supply, GasMixture breath, Place place) {}
 
     /**
-     * Where a supply was found (LIFE-028): an armor slot, the offhand, a hotbar slot, a mob's main
-     * hand, or the entity's own life support.
+     * Where a supply was found (LIFE-028): an armor slot, a slot another mod adds, the offhand, a
+     * hotbar slot, a mob's main hand, or the entity's own life support.
      *
-     * @param key the place's name in the lang file: an armor slot's name, {@code offhand}, {@code
-     *     main_hand} or {@code suit}; unused for a hotbar slot
+     * @param key the place's name in the lang file: an armor slot's name, {@code worn}, {@code
+     *     offhand}, {@code main_hand} or {@code suit}; unused for a hotbar slot
      * @param slot the hotbar slot, 0 to 8, or -1 for any other place
      */
     public record Place(String key, int slot) {
+        static final Place WORN = new Place("worn", -1);
         static final Place OFFHAND = new Place("offhand", -1);
         static final Place MAIN_HAND = new Place("main_hand", -1);
         static final Place SUIT = new Place("suit", -1);
@@ -256,7 +258,7 @@ public final class Internals {
             return new Place("slot", slot);
         }
 
-        /** The place as the action bar names it: "slot 3", "offhand", "chest", "suit". */
+        /** The place as the action bar names it: "slot 3", "offhand", "chest", "worn", "suit". */
         public Component label() {
             return slot >= 0
                     ? Component.translatable("message.zas.internals.place.slot", slot + 1)
@@ -309,6 +311,10 @@ public final class Internals {
             if (s.isPresent()) {
                 return Optional.of(new Found(s.get(), Place.armor(slot)));
             }
+        }
+        IInternalSupply worn = ExtraSlotItems.firstSupply(entity, Internals::supply, wanted);
+        if (worn != null) {
+            return Optional.of(new Found(worn, Place.WORN));
         }
         Optional<IInternalSupply> offhand = supply(entity.getOffhandItem()).filter(wanted);
         if (offhand.isPresent()) {

@@ -1,0 +1,8 @@
+{
+  "values": [
+    { "id": "zas_atmos:oxygen_tank", "required": false },
+    { "id": "zas_atmos:emergency_oxygen_tank", "required": false },
+    { "id": "zas_atmos:air_tank", "required": false },
+    { "id": "zas_atmos:empty_tank", "required": false }
+  ]
+}

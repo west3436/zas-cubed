@@ -60,6 +60,38 @@ class VersionGateTest {
         assertEquals(Verdict.UNSUPPORTED, VersionGate.check("1.16.26-beta.1", BOUNDED));
     }
 
+    /**
+     * The Curios and Accessories rows against the versions those mods really carry, which end in
+     * the Minecraft version and, for Accessories, are betas throughout (COMPAT-040, COMPAT-041).
+     * Accessories' compatibility layer says it is Curios in a version of its own choosing.
+     */
+    @Test
+    void compat_002_the_curios_and_accessories_ranges_fit_their_real_versions() {
+        String curios = range("curios");
+        for (String version : List.of("9.2.0+1.21.1", "9.2.3+1.21.1", "9.3.1+1.21.1", "9.5.1+1.21.1", "10.0.0")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, curios), version);
+        }
+        for (String version : List.of("9.0.12+1.21.1", "9.1.4+1.21.1", "8.1.0+1.20.6")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, curios), version);
+        }
+        String accessories = range("accessories");
+        for (String version : List.of(
+                "1.1.0-beta.3+1.21.1", "1.1.0-beta.22+1.21.1", "1.1.0-beta.54+1.21.1", "1.1.0+1.21.1", "1.2.0")) {
+            assertEquals(Verdict.SUPPORTED, VersionGate.check(version, accessories), version);
+        }
+        for (String version : List.of("1.0.0-beta.35+1.21", "1.1.0-beta.2+1.21.1", "1.0.0")) {
+            assertEquals(Verdict.UNSUPPORTED, VersionGate.check(version, accessories), version);
+        }
+    }
+
+    private static String range(String modId) {
+        return Adapters.rows().stream()
+                .filter(row -> row.modId().equals(modId))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no row for " + modId))
+                .range();
+    }
+
     /** A version that isn't numbers still gets a verdict, never an exception. */
     @Test
     void compat_002_a_version_that_is_not_a_number_is_unsupported() {

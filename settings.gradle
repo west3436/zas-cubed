@@ -27,6 +27,9 @@ include 'zas-ponder'
 // The Mekanism adapter (MEK), bundled into the zas jar like compat-adastra.
 include 'compat-mekanism'
 
+// The Curios and Accessories adapters (COMPAT-040 to COMPAT-043), bundled into the zas jar likewise.
+include 'compat-slots'
+
 // The jar players install: zas and zas_atmos in one file (D-88).
 include 'dist'
 
