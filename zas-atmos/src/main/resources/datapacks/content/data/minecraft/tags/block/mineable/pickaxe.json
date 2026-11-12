@@ -37,6 +37,8 @@
     "zas_atmos:airlock_controller",
     "zas_atmos:air_sensor",
     "zas_atmos:firelock_door",
-    "zas_atmos:large_gas_tank"
+    "zas_atmos:large_gas_tank",
+    "zas_atmos:station_wall_pipe",
+    "zas_atmos:reinforced_station_wall_pipe"
   ]
 }

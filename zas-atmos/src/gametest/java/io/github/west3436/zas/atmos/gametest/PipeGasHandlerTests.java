@@ -127,7 +127,8 @@ public final class PipeGasHandlerTests {
     }
 
     /**
-     * Each part offers it where a pipe would join it and nowhere else: a cap where it points, a
+     * Each part offers it where a pipe would join it and nowhere else: a pipe on every face, in a wall
+     * or not, a cap where it points, a
      * connector port below and not above, a vent, scrubber, passive vent and heat exchanger at the
      * back, a valve on its two flanges, a radiator adaptor on its pipe end, a pump, filter, mixer and
      * electrolyzer on each port, a large gas tank behind its lower half. A canister and radiator pipe
@@ -139,6 +140,9 @@ public final class PipeGasHandlerTests {
         a.clear(-1, -1, 80, 5);
         Map<BlockState, Set<Direction>> expected = new LinkedHashMap<>();
         expected.put(AtmosBlocks.PIPE.get().defaultBlockState(), EnumSet.allOf(Direction.class));
+        // A pipe in a wall is a pipe on every face (#487).
+        AtmosBlocks.encasedPipes()
+                .forEach(cased -> expected.put(cased.get().defaultBlockState(), EnumSet.allOf(Direction.class)));
         expected.put(
                 AtmosBlocks.PIPE_CAP.get().defaultBlockState().setValue(PipeCapBlock.FACING, Direction.UP),
                 EnumSet.of(Direction.UP));

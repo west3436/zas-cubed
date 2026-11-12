@@ -49,9 +49,10 @@ public final class AtmosBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, ZasAtmosMod.MOD_ID);
 
+    /** A pipe's, bare or in a casing: one type, so a pipe keeps its block entity when a casing goes on it. */
     public static final Supplier<BlockEntityType<PipeBlockEntity>> PIPE = BLOCK_ENTITIES.register(
             "pipe",
-            () -> BlockEntityType.Builder.of(PipeBlockEntity::new, AtmosBlocks.PIPE.get())
+            () -> BlockEntityType.Builder.of(PipeBlockEntity::new, AtmosBlocks.pipes())
                     .build(null));
 
     public static final Supplier<BlockEntityType<PipeCapBlockEntity>> PIPE_CAP = BLOCK_ENTITIES.register(

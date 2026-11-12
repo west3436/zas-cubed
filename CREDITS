@@ -2511,7 +2511,7 @@ notes: The station wall's texture, joined as vg's walls join (metal15): the rim 
 
 path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/station_wall.png.mcmeta
 origin: original
-notes: Fusion's connecting texture, pieced, joining only to station walls.
+notes: Fusion's connecting texture, pieced, joining only to station walls, with a pipe in them or not.
 
 path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_station_wall.png
 origin: vgstation13
@@ -2522,7 +2522,7 @@ notes: The reinforced station wall's texture, joined as vg's reinforced walls jo
 
 path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_station_wall.png.mcmeta
 origin: original
-notes: Fusion's connecting texture, pieced, joining only to reinforced station walls.
+notes: Fusion's connecting texture, pieced, joining only to reinforced station walls, with a pipe in them or not.
 
 path: zas-atmos/src/main/resources/resourcepacks/fusion_connected/assets/zas_atmos/textures/block/reinforced_glass_block.png
 origin: vgstation13
@@ -3367,3 +3367,40 @@ notes: The tank item: both halves in one model, scaled down in the inventory.
 
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/large_gas_tank.json
 origin: original
+
+# Pipes in walls (#487): a station wall with a pipe through it.
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/encased_face.json
+origin: original
+notes: One whole face of a casing a pipe is in, the north one, in the casing's own texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/encased_face_pipe.json
+origin: original
+notes: The same face with the shape of a pipe's flange left out of its middle: eight pieces around a 6 px gap.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/pipe_end.json
+origin: original
+notes: The flange that fills the gap: the end face of pipe_arm, from pipe.png and dyed as the pipe is. No two quads share a place, so nothing fights for depth when Fusion cuts a joined face into corners.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/station_wall_face.json
+origin: original
+notes: encased_face in the station wall's texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/station_wall_face_pipe.json
+origin: original
+notes: encased_face_pipe in the station wall's texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/station_wall_pipe.json
+origin: original
+notes: The station wall's six faces, each turned from the north one: with the pipe's end where the pipe shows (where it connects, and where a bare pipe would have a mouth), whole elsewhere.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_station_wall_face.json
+origin: original
+notes: encased_face in the reinforced station wall's texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/reinforced_station_wall_face_pipe.json
+origin: original
+notes: encased_face_pipe in the reinforced station wall's texture.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_station_wall_pipe.json
+origin: original
+notes: The reinforced station wall's six faces, each turned from the north one: with the pipe's end where the pipe shows (where it connects, and where a bare pipe would have a mouth), whole elsewhere.
