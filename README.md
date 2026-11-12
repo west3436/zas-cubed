@@ -1,37 +1,53 @@
 # ZAS³
+ZAS³ adds fluid mechanics to your world inspired by Space Station 13's early atmospheric system. Make use of pumps, vents, scrubbers, heaters, and more to keep your space station pressurized or your greenhouse conditioned properly.
 
-Zone-based atmospherics for Minecraft (NeoForge 1.21.1), inspired by the ZAS
-(Zone Atmospherics System) of the Space Station 13 codebase
-[vgstation13](https://github.com/vgstation-coders/vgstation13).
+## The Atmosphere
+ - Open air is unsimulated while areas which have been deliberately sealed and pressurized form zones. Ais is unsimulated outdoors, in caves, and in rooms you haven't sealed; this air has the same properties throughout the dimension and can never run out.
+ - A sealed room gets its own air once something changes it; a device adds or removes gas, a leak, or an air controller on its wall. From then on it has a pressure, a temperature and a mix of gases that equalise through openings, vent to vacuum, burn and conduct heat.
+ - Too little oxygen, toxic gases, pressure too low or too high, heat/cold or rushing air throwing you into things can hurt you. The HUD indicates whether you are standing in unsafe air prior to taking damage.
+ - Combustion needs oxygen; a furnace in a sealed room uses the oxygen up and stops while  hydrogen, methane and other fuels may violently combust if placed under the proper conditions.
+ - Normal and Hardcore presets are present to adjust the difficulty; see [the wiki page](https://github.com/west3436/zas-cubed/wiki/Presets) for a specific list of differences. 
+ - Gases, each dimension's open air, fire and reactions, hazards, suit protection and heat are all highly configurable via datapacks.
 
-> **Status: released.** 1.0.0 is on [GitHub Releases](https://github.com/west3436/zas-cubed/releases).
-> Guides for players, server owners, pack makers and mod developers are on the
-> [wiki](https://github.com/west3436/zas-cubed/wiki).
+## Mod Contents
 
-The requirements, plan, design notes and research were retired before the
-first release. They're archived in
-[`docs/`](https://github.com/west3436/zas-cubed/tree/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs),
-with the completed requirements in
-[`docs/requirements`](https://github.com/west3436/zas-cubed/tree/128e69fe9056e122f5cc8b095d8cca84e51592e4/docs/requirements).
+This mod contains two modules; **ZAS³** (`zas`) is the air itself and the public API while **ZAS³ Atmospherics** (`zas_atmos`) is the SS13-style content. A pack can turn the content off and keep the simulation alone.
 
-## Goals
+ - **Pipe network:** pipes, end caps, manual and redstone valves, connector ports, pressure and volume pumps, filters, mixers, radiator pipes and heat exchangers.
+ - **Room air:** vents, scrubbers, passive vents, area air controllers, a central atmospherics controller, air sensors, heaters and air conditioners.
+ - **Fire and doors:** fire alarms, firelocks, igniters, airlocks and airlock controllers.
+ - **Gas handling:** canisters, portable pumps and scrubbers, tank holders, tank transfer valves and a water electrolyzer.
+ - **Staying alive:** oxygen and air tanks, breath masks and gas masks, softsuits, hardsuits and magnetic boots.
+ - **Tools:** atmos analyzer, multitool, wrench, crowbar and fire extinguisher. Also a bike horn.
+ - **Power:** devices run on FE from a generator or any other mod's power source, handed out through the controllers. There are no cables. Portables and heaters run on rechargeable batteries.
+ - **Building:** station walls, reinforced station walls and reinforced glass.
 
-- **Faithful ZAS-style simulation.** Sealed spaces become *zones* holding real
-  gas mixtures (composition, pressure, temperature) that equalize across
-  openings, vent to vacuum or the ambient atmosphere, burn, and conduct heat.
-  Ordinary open air and caves are never simulated. A zone only forms once an
-  enclosed space's air is actually modified.
-- **The shared atmosphere API for NeoForge.** A stable, documented public API
-  (mod ID `zas`) that space, tech and survival mods can build on, with
-  first-class support for space-like environments: vacuum and exotic
-  per-dimension atmospheres, and life support. Mods can bundle the API and
-  still run when ZAS³ isn't installed.
-- **SS13-style atmospherics content,** a companion mod in the same jar:
-  pipes, pumps, vents, scrubbers, canisters, area air controllers, firelocks,
-  suits and power. A pack can turn it off and keep only the simulation.
-- **Integrations.** Adapters for Mekanism, Ad Astra, Jade, JEI and EMI, in
-  the same jar and off unless the other mod is installed. Mekanism's and
-  Ad Astra's are reference integrations built only on the public API.
+Animated guides to every device are in the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon.
+
+## Mod Support
+**Mekanism** (10.7.15+)
+ - Oxygen, hydrogen, water vapour, steam, chlorine, hydrogen chloride, sulfur dioxide, ethene, deuterium, tritium and fusion fuel are ZAS³ gases, at 1 mB to 1 L. 
+ - Nitrogen, CO₂, CO, N₂O and methane are added as Mekanism chemicals.
+ - Pressurized tubes, chemical tanks and machines connect to ZAS pipes.
+ - Chemicals Mekanism would delete, such as an electrolytic separator's dumped output, are released into the room instead.
+ - Scuba gear, the MekaSuit and the Inhalation Purification Unit work as ZAS³ life support.
+ - Heaters, thermodynamic conductors, boilers, reactor ports and other heat blocks warm and cool the rooms they stand in. A running fusion reactor makes a sealed room deadly in minutes unless it is cooled.
+
+**Ad Astra** (1.16.26+)
+ - ZAS³ decides who can breathe and what the air does to them. Ad Astra's own oxygen, freezing and burning damage is disabled, and its HUD reflects ZAS³'s atmospherics.
+ - Each planet's open air comes from Ad Astra's planet data: vacuum at the planet's temperature, or standard air where the planet has oxygen. Planets from datapacks get theirs the same way.
+ - Ad Astra's space suits protect like ZAS³'s, and their oxygen feeds your internals.
+ - Torches and lanterns can be placed in a room whose air can keep a flame.
+
+**Jade**: looking at a device shows its pressure, temperature and gas shares, port by port on pumps, filters and mixers.
+
+**JEI** and **EMI**: gas properties and reactions are detailed.
+
+**Fusion**: connected textures for the station walls and reinforced glass blocks.
+
+## For mod developers
+
+The public API (`zas-api`) is what space, tech and survival mods can build on: read and change a zone's gas and heat, give a dimension its open air, offer a block's gas store to pipes, and make items that protect or supply breath. A mod can bundle it and still run when ZAS³ isn't installed. The Mekanism and Ad Astra adapters use the public API alone, so they double as worked examples. The guide and Javadoc are on the [wiki](https://github.com/west3436/zas-cubed/wiki).
 
 ## Licensing
 
