@@ -37,10 +37,12 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
-    // Every ModDevGradle project uses the same NeoForge and Parchment.
+    // Every ModDevGradle project uses the same NeoForge and Parchment. One whose target mod needs a
+    // newer NeoForge for a run of its own names it as ext.runNeoVersion before it applies the plugin,
+    // as compat-cc does; nothing that ships is built that way.
     plugins.withId('net.neoforged.moddev') {
         neoForge {
-            version = neo_version
+            version = project.findProperty('runNeoVersion') ?: neo_version
             parchment {
                 mappingsVersion = parchment_mappings_version
                 minecraftVersion = parchment_minecraft_version

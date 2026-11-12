@@ -69,13 +69,9 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
             return switch (index) {
                 case CanisterMenu.DATA_RELEASE -> (int) Math.round(releasePressure);
                 case CanisterMenu.DATA_OPEN -> valveOpen() ? 1 : 0;
-                case CanisterMenu.DATA_PRESSURE ->
-                    clampShort(GasMixture.GAS_CONSTANT * gasNow().temperature() * gasNow().totalMoles() / nodeVolume());
+                case CanisterMenu.DATA_PRESSURE -> clampShort(pressure());
                 case CanisterMenu.DATA_MOLES -> clampShort(gasNow().totalMoles());
-                case CanisterMenu.DATA_PORT ->
-                    level != null && level.getBlockState(worldPosition.below()).getBlock() instanceof ConnectorPortBlock
-                            ? 1
-                            : 0;
+                case CanisterMenu.DATA_PORT -> onPort() ? 1 : 0;
                 default -> 0;
             };
         }
@@ -100,6 +96,17 @@ public class CanisterBlockEntity extends PipeNodeEntity implements MenuProvider 
     /** The canister's own share of the gas, as its GUI shows it: of its network if it is in one. */
     private GasParcel gasNow() {
         return share();
+    }
+
+    /** Its pressure, kPa, as its GUI shows it: its share of the gas in its own volume. */
+    public double pressure() {
+        GasParcel gas = gasNow();
+        return GasMixture.GAS_CONSTANT * gas.temperature() * gas.totalMoles() / nodeVolume();
+    }
+
+    /** Whether it stands on a connector port, as its GUI shows it. */
+    public boolean onPort() {
+        return level != null && level.getBlockState(worldPosition.below()).getBlock() instanceof ConnectorPortBlock;
     }
 
     /** Whether the valve is open: the block state's. */

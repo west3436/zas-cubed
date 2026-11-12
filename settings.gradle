@@ -33,5 +33,8 @@ include 'dist'
 // The Jade adapter (COMPAT-030 to COMPAT-032): part of zas_atmos in the release jar.
 include 'compat-jade'
 
+// The CC: Tweaked adapter (COMPAT-020 to COMPAT-022): part of zas_atmos in the release jar.
+include 'compat-cc'
+
 // The in-game S-10 bench: a dev-only mod and server run, never published.
 include 's10-bench'

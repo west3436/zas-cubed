@@ -31,7 +31,7 @@ public class HeaterBlockEntity extends ThermoMachineBlockEntity {
     }
 
     @Override
-    protected double clampSetpoint(double kelvin) {
+    public double clampSetpoint(double kelvin) {
         return HeaterMath.clampSetpoint(kelvin);
     }
 

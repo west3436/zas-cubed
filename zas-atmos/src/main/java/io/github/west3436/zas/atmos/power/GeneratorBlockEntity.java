@@ -165,6 +165,11 @@ public class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
         return burnLeft;
     }
 
+    /** Game ticks the burning piece of fuel burns for in all; 0 before the first. */
+    public int burnTotal() {
+        return burnTotal;
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);

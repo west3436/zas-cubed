@@ -71,6 +71,11 @@ public final class Adapters {
         // adapter's GameTests run against the newest build every night (MEK-003).
         rows.add(new Row("mekanism", "[10.7.15,)", "io.github.west3436.zas.compat.mekanism.MekanismCompat"));
 
+        // CC: Tweaked (COMPAT-020 to COMPAT-022): 1.113.0 is its first build for this Minecraft, and
+        // the peripheral API the adapter uses is the same in its newest. The adapter's classes are
+        // part of zas_atmos in this jar, since the peripherals are of the content's devices.
+        rows.add(new Row("computercraft", "[1.113.0,)", "io.github.west3436.zas.atmos.compat.cc.CcCompat"));
+
         return rows;
     }
 

@@ -134,6 +134,20 @@ public record ControllerPreset(
     }
 
     /**
+     * This preset with one bound of reading {@code i} set to a value, as the GUI's steps set it: to
+     * thousandths, at least 0, and kept in order with the reading's other enabled bounds ({@link
+     * Thresholds#with}). Marked edited.
+     *
+     * @param i the reading
+     * @param bound 0 to 3, as in {@link Thresholds#bound}
+     * @param value the new value, in the reading's unit
+     */
+    public ControllerPreset withBound(int i, int bound, double value) {
+        double next = Math.round(value * 1000) / 1000.0;
+        return with(i, thresholds(i).with(bound, Math.max(0, next)));
+    }
+
+    /**
      * The pressure vents blow to in Scrubbing mode, and the target of Replacement and Fill
      * (CONT-041): the middle of the safe band, min1 to max1, a disabled min1 counting as 0. 101 kPa
      * for Human.
@@ -190,9 +204,7 @@ public record ControllerPreset(
         ListTag list = new ListTag();
         for (int i = 0; i < readings(); i++) {
             CompoundTag r = new CompoundTag();
-            ResourceLocation gas = gas(i);
-            r.putString(
-                    "Reading", i == 0 ? "pressure" : i == 1 ? "temperature" : gas == null ? "others" : gas.toString());
+            r.putString("Reading", label(i));
             Thresholds t = thresholds(i);
             r.putDouble("Min2", t.min2());
             r.putDouble("Min1", t.min1());
@@ -231,7 +243,17 @@ public record ControllerPreset(
         return new ControllerPreset(p.name, edited, p.pressure, p.temperature, p.gases, p.others);
     }
 
-    private int indexOf(String reading) {
+    /**
+     * Reading {@code i}'s name, in saves and for the GUI: {@code pressure}, {@code temperature}, a
+     * listed gas's id, or {@code others}.
+     */
+    public String label(int i) {
+        ResourceLocation gas = gas(i);
+        return i == 0 ? "pressure" : i == 1 ? "temperature" : gas == null ? "others" : gas.toString();
+    }
+
+    /** The reading with a {@link #label}, or −1 if this preset has none by that name. */
+    public int indexOf(String reading) {
         switch (reading) {
             case "pressure":
                 return 0;
