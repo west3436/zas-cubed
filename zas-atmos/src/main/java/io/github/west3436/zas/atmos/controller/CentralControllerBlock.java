@@ -232,6 +232,14 @@ public class CentralControllerBlock extends HorizontalDirectionalBlock implement
     }
 
     @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moved) {
+        super.onPlace(state, level, pos, oldState, moved);
+        if (!state.is(oldState.getBlock())) {
+            capabilitiesChanged(state, level, pos);
+        }
+    }
+
+    @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock())
                 && level instanceof ServerLevel server
@@ -239,6 +247,21 @@ public class CentralControllerBlock extends HorizontalDirectionalBlock implement
             be.removedFromWorld(server);
         }
         super.onRemove(state, level, pos, newState, moved);
+        if (!state.is(newState.getBlock())) {
+            capabilitiesChanged(state, level, pos);
+        }
+    }
+
+    /**
+     * Tells the game that the console's capabilities came or went at each of its four blocks. Any of
+     * them stands for the console (CONT-115) but only the lower left one has a block entity, which
+     * is all the game watches by itself: without this a cable or a computer that looked at another
+     * block before the console was whole would never look again.
+     */
+    private static void capabilitiesChanged(BlockState state, Level level, BlockPos pos) {
+        for (BlockPos part : parts(origin(state, pos), state.getValue(FACING))) {
+            level.invalidateCapabilities(part);
+        }
     }
 
     @Override

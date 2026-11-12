@@ -44,9 +44,14 @@ public class MixerBlockEntity extends SidePortEntity {
         return backPercent;
     }
 
+    /** A share clamped to what a mixer allows: 0–100 %. */
+    public static int clampBackPercent(int percent) {
+        return Mth.clamp(percent, 0, 100);
+    }
+
     /** Sets the back input's share, clamped to 0–100 %. Server side. */
     public void setBackPercent(int percent) {
-        int next = Mth.clamp(percent, 0, 100);
+        int next = clampBackPercent(percent);
         if (next != backPercent) {
             backPercent = next;
             setChanged();

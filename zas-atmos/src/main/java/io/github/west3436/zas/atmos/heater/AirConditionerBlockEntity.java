@@ -32,7 +32,7 @@ public class AirConditionerBlockEntity extends ThermoMachineBlockEntity {
     }
 
     @Override
-    protected double clampSetpoint(double kelvin) {
+    public double clampSetpoint(double kelvin) {
         return AirConditionerMath.clampSetpoint(kelvin);
     }
 
