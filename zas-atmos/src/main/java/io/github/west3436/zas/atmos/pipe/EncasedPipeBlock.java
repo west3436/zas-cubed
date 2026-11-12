@@ -17,12 +17,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LevelEvent;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -37,9 +35,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A pipe in a casing (#487, #486): a full block that is still the pipe. The casing is a block of its
- * own, such as a station wall, and the pipe passes through it, so a pipe goes from one room to the
- * next with no gap in the wall between them. Or it is only an item, the floor grille, which goes on
- * a placed pipe and makes a floor of it that the pipe shows through.
+ * own, and the pipe passes through it: a station wall, so that a pipe goes from one room to the next
+ * with no gap in the wall between them, or a floor grille ({@link FloorGrilleBlock}), so that a run
+ * lies in a floor that is walked on and shows through it.
  *
  * <ul>
  *   <li><b>For the air</b> it is the casing: a full cube, so its gas geometry is a full block's and
@@ -50,32 +48,32 @@ import org.jetbrains.annotations.Nullable;
  *       handler a pipe offers (API-021). It has no open end: with fewer than two connections its
  *       casing closes it, where a bare pipe would leak (CONT-004).
  *   <li><b>For the player</b> it is the casing with a pipe's end in each face the pipe shows on: its
- *       hardness, blast resistance, tool and sound are the casing's, given at registration.
+ *       hardness, blast resistance, tool and sound are the casing's, given at registration. A
+ *       casing that is seen through, which is one that doesn't occlude, stays seen through: it lets
+ *       light by and shows no face against its own kind, with a pipe in it or without.
  * </ul>
  *
  * <p>It is made in either order, and has no item of its own: a pipe used on the casing's block goes
  * into it ({@link #insert}), and the casing's item used on a bare pipe goes round it ({@link
  * #encase}), the pipe keeping its block entity, so its network and its gas never notice. Mined, it
- * drops both. A wrench parts the two and leaves the one that is a block ({@link #takeOut}): the
- * wall, or under a grille the pipe. A burst leaves a wall and takes a grille with it ({@link #burst}).
+ * drops both. A wrench takes the pipe back out and leaves the casing ({@link #takeOut}), and so does
+ * a burst ({@link #burst}).
  */
 public class EncasedPipeBlock extends PipeBlock {
     public static final MapCodec<EncasedPipeBlock> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                     propertiesCodec(),
-                    BuiltInRegistries.ITEM.byNameCodec().fieldOf("casing").forGetter(EncasedPipeBlock::casing))
-            .apply(i, (properties, casing) -> new EncasedPipeBlock(properties, () -> casing)));
+                    BuiltInRegistries.BLOCK.byNameCodec().fieldOf("shell").forGetter(EncasedPipeBlock::shell))
+            .apply(i, (properties, shell) -> new EncasedPipeBlock(properties, () -> shell)));
 
-    private final Supplier<? extends ItemLike> casing;
+    private final Supplier<? extends Block> shell;
 
     /**
-     * @param properties the block's properties: a wall's own, which this block keeps, or a see-through
-     *     casing's, which must not occlude
-     * @param casing the casing: a block of its own, such as the station wall, or only an item, such as
-     *     the floor grille
+     * @param properties the casing's own properties, which this block keeps
+     * @param shell the casing as a block of its own, such as the station wall or the floor grille
      */
-    public EncasedPipeBlock(Properties properties, Supplier<? extends ItemLike> casing) {
+    public EncasedPipeBlock(Properties properties, Supplier<? extends Block> shell) {
         super(properties, null);
-        this.casing = casing;
+        this.shell = shell;
     }
 
     @Override
@@ -83,18 +81,9 @@ public class EncasedPipeBlock extends PipeBlock {
         return CODEC;
     }
 
-    /** The casing's item: what goes round a pipe to make this block, and what picking it gives. */
-    public Item casing() {
-        return casing.get().asItem();
-    }
-
-    /**
-     * The casing as a block of its own: what the pipe was put into, and what is left when it goes.
-     * Null for a casing that is only an item, such as the floor grille: then the pipe is what is left.
-     */
-    public @Nullable Block shell() {
-        Block block = Block.byItem(casing());
-        return block == Blocks.AIR ? null : block;
+    /** The casing as a block of its own: what the pipe was put into, and what is left when it goes. */
+    public Block shell() {
+        return shell.get();
     }
 
     /** The pipe-in-casing block of a casing's own block, or null if no pipe goes into that block. */
@@ -110,7 +99,7 @@ public class EncasedPipeBlock extends PipeBlock {
     /** The pipe-in-casing block a casing's item makes of a pipe, or null if the item is no casing. */
     public static @Nullable EncasedPipeBlock of(Item casing) {
         for (DeferredBlock<EncasedPipeBlock> cased : AtmosBlocks.encasedPipes()) {
-            if (cased.get().casing() == casing) {
+            if (cased.get().shell().asItem() == casing) {
                 return cased.get();
             }
         }
@@ -123,18 +112,6 @@ public class EncasedPipeBlock extends PipeBlock {
         return false;
     }
 
-    /**
-     * Whether parting the pipe and its casing ({@link #takeOut}) lets the pipe's gas out. Taking a
-     * pipe out of a casing that is a block always does. Taking a casing off a pipe does only where the
-     * bare pipe left has an open end (CONT-004): a wrench's pressure lock is for those (CONT-091).
-     *
-     * @param state a state of this block
-     * @return true if gas would get out
-     */
-    public boolean opens(BlockState state) {
-        return shell() != null || connections(state) < 2;
-    }
-
     /** A full cube in every state, which is what makes it gas-tight (GEO-041). */
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
@@ -144,25 +121,35 @@ public class EncasedPipeBlock extends PipeBlock {
     /** Picking it gives its casing: it looks like one, and the pipe's item would place a bare pipe. */
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
-        return new ItemStack(casing());
+        return new ItemStack(shell());
     }
 
-    /** A see-through casing lets light through, as glass does. A wall lets none. */
+    /** A casing that is seen through lets light through, as glass does. A wall lets none. */
     @Override
     protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
         return !state.canOcclude();
     }
 
-    /** A see-through casing casts no shade on the blocks round it, as glass casts none. */
+    /** A casing that is seen through casts no shade on the blocks round it, as glass casts none. */
     @Override
     protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
         return state.canOcclude() ? super.getShadeBrightness(state, level, pos) : 1.0f;
     }
 
-    /** Two see-through casings side by side show no face between them: a run under grilles is one channel. */
+    /** A casing that is seen through is nothing to a line of sight, as glass is nothing. */
+    @Override
+    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.canOcclude() ? super.getVisualShape(state, level, pos, context) : Shapes.empty();
+    }
+
+    /**
+     * A casing that is seen through shows no face against its own kind, with a pipe in it or without:
+     * a run under floor grilles is one channel, and so is a floor of them.
+     */
     @Override
     protected boolean skipRendering(BlockState state, BlockState adjacent, Direction direction) {
-        return !state.canOcclude() && adjacent.is(this) || super.skipRendering(state, adjacent, direction);
+        return !state.canOcclude() && (adjacent.is(this) || adjacent.is(shell()))
+                || super.skipRendering(state, adjacent, direction);
     }
 
     /**
@@ -245,67 +232,44 @@ public class EncasedPipeBlock extends PipeBlock {
     }
 
     /**
-     * Parts the pipe and its casing, as a wrench does (CONT-035), and leaves the one that is a block.
-     *
-     * <ul>
-     *   <li>From a casing that is a block, such as a wall, the pipe is taken out and the casing left:
-     *       the pipe's item drops, in its dye, and its share of the gas is released as a removed
-     *       pipe's is (CONT-009), into the cell beside the face it is taken out of. The block stays
-     *       full, so nothing changes for the air but that gas arriving.
-     *   <li>A casing that is only an item, such as the floor grille, is taken off and the pipe left,
-     *       with its dye, its connections and its block entity, so its network keeps its gas: the
-     *       casing's item drops. The pipe stands in an open cell again, as when any block is removed.
-     * </ul>
-     *
-     * <p>Nothing drops for a player in creative.
+     * Takes the pipe out and leaves the casing, as a wrench does (CONT-035): the pipe's item drops, in
+     * its dye, unless the player is in creative, and its share of the gas is released as a removed
+     * pipe's is (CONT-009), into the cell beside the face it is taken out of. The block stays full, so
+     * nothing changes for the air but that gas arriving.
      *
      * @param level the level
      * @param pos the block
      * @param state its state
-     * @param player who parts them, or null
-     * @param face the face clicked, or null for none in particular
+     * @param player who takes it out, or null
+     * @param face the face it is taken out of, or null for none in particular
      */
     public void takeOut(
             ServerLevel level, BlockPos pos, BlockState state, @Nullable Player player, @Nullable Direction face) {
-        Block shell = shell();
-        ItemStack drop;
-        if (shell != null) {
-            if (face != null && level.getBlockEntity(pos) instanceof PipeNodeEntity node) {
-                node.releaseToward(face);
-            }
-            level.setBlock(pos, shell.defaultBlockState(), Block.UPDATE_ALL);
-            drop = PipeItem.of(AtmosItems.PIPE.get(), state.getValue(PipeColor.PROPERTY), 1);
-        } else {
-            level.setBlock(pos, copy(state, AtmosBlocks.PIPE.get().defaultBlockState()), Block.UPDATE_ALL);
-            level.invalidateCapabilities(pos);
-            drop = new ItemStack(casing());
+        if (face != null && level.getBlockEntity(pos) instanceof PipeNodeEntity node) {
+            node.releaseToward(face);
         }
+        level.setBlock(pos, shell().defaultBlockState(), Block.UPDATE_ALL);
         if (player == null || !player.isCreative()) {
+            ItemStack pipe = PipeItem.of(AtmosItems.PIPE.get(), state.getValue(PipeColor.PROPERTY), 1);
             if (face != null) {
-                Block.popResourceFromFace(level, pos, face, drop);
+                Block.popResourceFromFace(level, pos, face, pipe);
             } else {
-                Block.popResource(level, pos, drop);
+                Block.popResource(level, pos, pipe);
             }
         }
     }
 
     /**
-     * Destroys the pipe, as a burst does (CONT-108), and nothing drops. A casing that is a block is
-     * left, and the caller, which has taken the network's gas, releases it at this block, where it
-     * goes into the cell beside it. A casing that is only an item goes with the pipe, as a bare
-     * pipe's block does, and the gas goes into the cell that opens there.
+     * Destroys the pipe and leaves the casing, as a burst does (CONT-108): nothing drops, and the
+     * caller, which has taken the network's gas, releases it at this block, where it goes into the
+     * cell beside it.
      *
      * @param level the level
      * @param pos the block
      * @param state its state
      */
     void burst(ServerLevel level, BlockPos pos, BlockState state) {
-        Block shell = shell();
-        if (shell == null) {
-            level.destroyBlock(pos, false);
-            return;
-        }
         level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, pos, Block.getId(state));
-        level.setBlock(pos, shell.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(pos, shell().defaultBlockState(), Block.UPDATE_ALL);
     }
 }

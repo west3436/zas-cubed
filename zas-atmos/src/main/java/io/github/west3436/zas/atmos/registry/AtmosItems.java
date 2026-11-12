@@ -39,8 +39,8 @@ public final class AtmosItems {
     public static final DeferredItem<PipeItem> PIPE_CAP =
             ITEMS.registerItem("pipe_cap", p -> new PipeItem(AtmosBlocks.PIPE_CAP.get(), p));
 
-    /** The floor grille (#486): used on a placed pipe, it makes a full, gas-tight block of it. */
-    public static final DeferredItem<Item> FLOOR_GRILLE = ITEMS.registerSimpleItem("floor_grille");
+    /** The floor grille (#486): a block of its own, and used on a placed pipe it goes round it. */
+    public static final DeferredItem<BlockItem> FLOOR_GRILLE = ITEMS.registerSimpleBlockItem(AtmosBlocks.FLOOR_GRILLE);
 
     public static final DeferredItem<BlockItem> CONNECTOR_PORT =
             ITEMS.registerSimpleBlockItem(AtmosBlocks.CONNECTOR_PORT);

@@ -25,9 +25,9 @@ import org.junit.jupiter.api.Test;
  * gap. No two pieces share a place, so nothing fights for depth, whatever cuts a face up (Fusion cuts a
  * joined face into its corners).
  *
- * <p>And the look of a pipe under a floor grille (#486): the pipe's own core and arms inside a cube of
- * grating, near-black bars at one even pitch. A face the pipe shows on has an opening in its middle,
- * where the end of an arm lies; every other face is bars all over.
+ * <p>And the look of a floor grille (#486): a cube of grating, near-black bars at one even pitch. With
+ * a pipe in it, the pipe's own core and arms are inside the cube, and a face the pipe shows on has an
+ * opening in its middle, where the end of an arm lies; every other face is bars all over.
  */
 class EncasedPipeFacesTest {
     private static final List<String> WALLS = List.of("station_wall", "reinforced_station_wall");
@@ -254,8 +254,8 @@ class EncasedPipeFacesTest {
 
     /**
      * A face of the grating is seen from outside and from inside, like a cage: the second element is
-     * turned inside out, and both are hidden by a block against that face. The item is a whole cube of
-     * the grating, drawn the same way.
+     * turned inside out, and both are hidden by a block against that face. The grille with no pipe in
+     * it is a whole cube of the grating, drawn the same way, and so is the item.
      */
     @Test
     void the_grating_is_seen_from_inside_as_well() throws IOException {
@@ -301,6 +301,13 @@ class EncasedPipeFacesTest {
                         "element " + i + ", " + face.getKey());
             }
         }
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                json(assets().resolve("blockstates/floor_grille.json"))
+                        .getAsJsonObject("variants")
+                        .getAsJsonObject("")
+                        .get("model")
+                        .getAsString());
         assertEquals(
                 "zas_atmos:block/floor_grille",
                 json(assets().resolve("models/item/floor_grille.json"))

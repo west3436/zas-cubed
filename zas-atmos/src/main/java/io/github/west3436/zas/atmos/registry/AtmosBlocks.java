@@ -20,6 +20,7 @@ import io.github.west3436.zas.atmos.holder.TankHolderBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
 import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
+import io.github.west3436.zas.atmos.pipe.FloorGrilleBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -203,20 +204,17 @@ public final class AtmosBlocks {
             reinforcedStationWall());
 
     // ---- The floor grille (#486) ----
+    // A grating that is a full block: walked on and gas-tight, seen through, and the casing of a
+    // pipe as a station wall is. With a pipe in it, it is for the air the same block, and has the
+    // same properties: as hard as a pipe, and no item, made in either order and dropping both.
 
-    /**
-     * A pipe under a floor grille: a full, walkable, gas-tight block that the pipe shows through. It
-     * is made by using the grille, which is only an item, on a placed pipe. As hard as the pipe; it
-     * lets light through and is no place to spawn, as glass.
-     */
-    public static final DeferredBlock<EncasedPipeBlock> FLOOR_GRILLE_PIPE = BLOCKS.registerBlock(
-            "floor_grille_pipe",
-            p -> new EncasedPipeBlock(p, () -> AtmosItems.FLOOR_GRILLE.get()),
-            metal().noOcclusion()
-                    .isValidSpawn((state, level, pos, type) -> false)
-                    .isRedstoneConductor((state, level, pos) -> false)
-                    .isSuffocating((state, level, pos) -> false)
-                    .isViewBlocking((state, level, pos) -> false));
+    /** The floor grille: a full, gas-tight block that is seen through. */
+    public static final DeferredBlock<FloorGrilleBlock> FLOOR_GRILLE =
+            BLOCKS.registerBlock("floor_grille", FloorGrilleBlock::new, floorGrille());
+
+    /** A pipe under a floor grille, which the pipe shows through. */
+    public static final DeferredBlock<EncasedPipeBlock> FLOOR_GRILLE_PIPE =
+            BLOCKS.registerBlock("floor_grille_pipe", p -> new EncasedPipeBlock(p, FLOOR_GRILLE), floorGrille());
 
     /**
      * Reinforced glass: seen through as glass is, conducts no heat, never broken by a pressure
@@ -278,7 +276,7 @@ public final class AtmosBlocks {
 
     private AtmosBlocks() {}
 
-    /** The pipes in casings: one for each block a pipe goes into, and the pipe under a floor grille. */
+    /** The pipes in casings, one for each block a pipe goes into. */
     public static List<DeferredBlock<EncasedPipeBlock>> encasedPipes() {
         return List.of(STATION_WALL_PIPE, REINFORCED_STATION_WALL_PIPE, FLOOR_GRILLE_PIPE);
     }
@@ -307,6 +305,18 @@ public final class AtmosBlocks {
                 .mapColor(MapColor.METAL)
                 .requiresCorrectToolForDrops()
                 .sound(SoundType.METAL);
+    }
+
+    /**
+     * The floor grille's properties, with a pipe in it or without: a metal part's, and it lets light
+     * through and is no place to spawn, as glass.
+     */
+    private static BlockBehaviour.Properties floorGrille() {
+        return metal().noOcclusion()
+                .isValidSpawn((state, level, pos, type) -> false)
+                .isRedstoneConductor((state, level, pos) -> false)
+                .isSuffocating((state, level, pos) -> false)
+                .isViewBlocking((state, level, pos) -> false);
     }
 
     /** The properties of a metal atmospherics part: as hard as a hopper, mined with a pickaxe. */

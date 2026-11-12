@@ -41,8 +41,7 @@ import org.jetbrains.annotations.Nullable;
  *       it held goes into its cell (CONT-009). It refuses while the part holds more than 2 atm over
  *       the ambient, and says by how much (CONT-091). From a pipe in a casing it takes the pipe and
  *       leaves the casing, a wall still whole ({@link EncasedPipeBlock#takeOut}), and the pipe's gas
- *       goes into the cell beside the face clicked. A floor grille it takes off its pipe, which
- *       stays and lets no gas out; the lock holds there only if the pipe is left with an open end.
+ *       goes into the cell beside the face clicked.
  * </ul>
  *
  * <p>It acts before the block's own use, so a part's GUI or a valve's switch doesn't get the click.
@@ -190,9 +189,7 @@ public class WrenchItem extends Item {
     /**
      * {@link #remove(ServerLevel, BlockPos, Player, ItemStack)} from one face. A pipe in a casing
      * comes out of that face and leaves its casing, a full block still: only the pipe's item drops,
-     * and its gas goes into the cell beside the face. A floor grille comes off its pipe instead, and
-     * the pipe stays: it lets no gas out, so the pressure doesn't matter, unless the pipe is left with
-     * an open end (CONT-004), and then the lock holds as it does for a pipe.
+     * and its gas goes into the cell beside the face.
      *
      * @param level the level
      * @param pos the part
@@ -204,9 +201,8 @@ public class WrenchItem extends Item {
     public static Optional<Component> remove(
             ServerLevel level, BlockPos pos, @Nullable Player player, ItemStack tool, @Nullable Direction face) {
         BlockState state = level.getBlockState(pos);
-        EncasedPipeBlock cased = state.getBlock() instanceof EncasedPipeBlock pipe ? pipe : null;
-        boolean opens = cased == null || cased.opens(state);
-        if (opens && overAmbient(level, pos, cased != null ? face : null) > LOCK_KPA) {
+        boolean cased = state.getBlock() instanceof EncasedPipeBlock;
+        if (overAmbient(level, pos, cased ? face : null) > LOCK_KPA) {
             return Optional.of(Component.translatable("item.zas_atmos.wrench.pressurized"));
         }
         if (player instanceof ServerPlayer server
@@ -214,8 +210,8 @@ public class WrenchItem extends Item {
                         .isCanceled()) {
             return Optional.empty();
         }
-        if (cased != null) {
-            cased.takeOut(level, pos, state, player, face);
+        if (state.getBlock() instanceof EncasedPipeBlock pipe) {
+            pipe.takeOut(level, pos, state, player, face);
         } else {
             if (player == null || !player.isCreative()) {
                 Block.dropResources(state, level, pos, level.getBlockEntity(pos), player, tool);
