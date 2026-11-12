@@ -36,17 +36,23 @@ final class GaugeRenderer implements BlockEntityRenderer<GaugeBlockEntity> {
     /** The dial's face above the floor, and a hair over it so the needle never fights it. */
     private static final float FACE_Y = 2 * PX + 0.002f;
 
-    /** The needle's reach past the middle, its tail behind it, and its width, in pixels. */
-    private static final float REACH = 4.5f;
+    /**
+     * The needle's reach past the middle, into the arc, and its tail behind it, in model pixels. It
+     * tapers from its width at the pivot to its width at the tip: finer than a texel of the 16 px faces
+     * the other blocks have, as the gauge's 32 px dial is (the owner's exemption, 2026-11-12), and
+     * still a dark line from across a room.
+     */
+    private static final float REACH = 4.6f;
 
-    private static final float TAIL = 1f;
-    private static final float WIDTH = 1f;
+    private static final float TAIL = 0.75f;
+    private static final float WIDTH_AT_PIVOT = 0.9f;
+    private static final float WIDTH_AT_TIP = 0.4f;
 
-    /** The needle's strip in the texture: 6 pixels long, 1 high, from the left of the bottom row. */
+    /** The needle's strip in the texture, in 16ths: 6 long and half a pixel high, the bottom row of 32. */
     private static final float STRIP_U0 = 0;
 
     private static final float STRIP_U1 = 6;
-    private static final float STRIP_V0 = 15;
+    private static final float STRIP_V0 = 15.5f;
     private static final float STRIP_V1 = 16;
 
     GaugeRenderer(BlockEntityRendererProvider.Context context) {}
@@ -98,17 +104,17 @@ final class GaugeRenderer implements BlockEntityRenderer<GaugeBlockEntity> {
         pose.mulPose(Axis.YP.rotation((float) (-Math.PI * along)));
         float x0 = -TAIL * PX;
         float x1 = REACH * PX;
-        float z0 = -WIDTH / 2 * PX;
-        float z1 = WIDTH / 2 * PX;
+        float wide = WIDTH_AT_PIVOT / 2 * PX;
+        float fine = WIDTH_AT_TIP / 2 * PX;
         float u0 = sprite.getU(STRIP_U0 / 16f);
         float u1 = sprite.getU(STRIP_U1 / 16f);
         float v0 = sprite.getV(STRIP_V0 / 16f);
         float v1 = sprite.getV(STRIP_V1 / 16f);
         PoseStack.Pose last = pose.last();
-        vertex(out, last, x0, z0, u0, v0, light, overlay);
-        vertex(out, last, x0, z1, u0, v1, light, overlay);
-        vertex(out, last, x1, z1, u1, v1, light, overlay);
-        vertex(out, last, x1, z0, u1, v0, light, overlay);
+        vertex(out, last, x0, -wide, u0, v0, light, overlay);
+        vertex(out, last, x0, wide, u0, v1, light, overlay);
+        vertex(out, last, x1, fine, u1, v1, light, overlay);
+        vertex(out, last, x1, -fine, u1, v0, light, overlay);
         pose.popPose();
     }
 
