@@ -413,6 +413,8 @@
   "block.zas_atmos.station_wall": "Station Wall",
   "block.zas_atmos.reinforced_station_wall": "Reinforced Station Wall",
   "block.zas_atmos.reinforced_glass_block": "Reinforced Glass",
+  "block.zas_atmos.station_wall_pipe": "Station Wall with Pipe",
+  "block.zas_atmos.reinforced_station_wall_pipe": "Reinforced Station Wall with Pipe",
   "block.zas_atmos.radiator_pipe": "Radiator Pipe",
   "block.zas_atmos.radiator_adaptor": "Radiator Adaptor",
   "block.zas_atmos.heat_exchanger": "Heat Exchanger",

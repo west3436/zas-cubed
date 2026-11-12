@@ -1,0 +1,1 @@
+io.github.west3436.zas.compat.kubejs.ZasKubeJsPlugin

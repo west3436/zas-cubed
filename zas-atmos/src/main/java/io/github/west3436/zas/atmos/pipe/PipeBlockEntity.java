@@ -54,9 +54,23 @@ public class PipeBlockEntity extends PipeNodeEntity {
         return true;
     }
 
-    /** Whether the pipe has an open end: fewer than two connections. */
+    /** Whether the pipe has an open end: fewer than two connections, and no casing to close it. */
     public boolean isOpen() {
-        return PipeBlock.connections(getBlockState()) < 2;
+        BlockState state = getBlockState();
+        return !(state.getBlock() instanceof PipeBlock pipe) || pipe.leaks(state);
+    }
+
+    /**
+     * Its block changes under it when a casing goes on or comes off, and it stays ({@link
+     * PipeBlock#onRemove}). The cell it acts on is then a new one, so its watch starts again.
+     */
+    @Override
+    @SuppressWarnings("deprecation") // overridden as vanilla's block entities do
+    public void setBlockState(BlockState state) {
+        if (state.getBlock() != getBlockState().getBlock()) {
+            cellWatch().reset();
+        }
+        super.setBlockState(state);
     }
 
     @Override

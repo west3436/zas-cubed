@@ -19,6 +19,7 @@ import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.holder.TankHolderBlock;
 import io.github.west3436.zas.atmos.igniter.IgniterBlock;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
+import io.github.west3436.zas.atmos.pipe.EncasedPipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeBlock;
 import io.github.west3436.zas.atmos.pipe.PipeCapBlock;
 import io.github.west3436.zas.atmos.port.ConnectorPortBlock;
@@ -36,6 +37,8 @@ import io.github.west3436.zas.atmos.valve.ManualValveBlock;
 import io.github.west3436.zas.atmos.valve.RedstoneValveBlock;
 import io.github.west3436.zas.atmos.vent.PassiveVentBlock;
 import io.github.west3436.zas.atmos.vent.VentBlock;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.TransparentBlock;
@@ -178,12 +181,26 @@ public final class AtmosBlocks {
     // better; the reinforced wall and the glass at 25, a diamond pickaxe or better.
 
     /** The station wall: conducts no heat, with stone's blast resistance (CONT-129). */
-    public static final DeferredBlock<Block> STATION_WALL =
-            BLOCKS.registerSimpleBlock("station_wall", wall().strength(3.0f, 6.0f));
+    public static final DeferredBlock<Block> STATION_WALL = BLOCKS.registerSimpleBlock("station_wall", stationWall());
 
     /** The reinforced station wall: conducts no heat, with obsidian's blast resistance (CONT-130). */
     public static final DeferredBlock<Block> REINFORCED_STATION_WALL =
-            BLOCKS.registerSimpleBlock("reinforced_station_wall", wall().strength(25.0f, 1200.0f));
+            BLOCKS.registerSimpleBlock("reinforced_station_wall", reinforcedStationWall());
+
+    // ---- Pipes in walls (#487) ----
+    // A wall with a pipe through it: for the air it is the wall, a full block, and for the pipes a
+    // pipe. Each has its wall's properties, its U of 0 and its mining tags, and no item: it is made
+    // by using a pipe on the wall, or the wall on a pipe, and drops both.
+
+    /** A pipe in a station wall. */
+    public static final DeferredBlock<EncasedPipeBlock> STATION_WALL_PIPE =
+            BLOCKS.registerBlock("station_wall_pipe", p -> new EncasedPipeBlock(p, STATION_WALL), stationWall());
+
+    /** A pipe in a reinforced station wall. */
+    public static final DeferredBlock<EncasedPipeBlock> REINFORCED_STATION_WALL_PIPE = BLOCKS.registerBlock(
+            "reinforced_station_wall_pipe",
+            p -> new EncasedPipeBlock(p, REINFORCED_STATION_WALL),
+            reinforcedStationWall());
 
     /**
      * Reinforced glass: seen through as glass is, conducts no heat, never broken by a pressure
@@ -244,6 +261,29 @@ public final class AtmosBlocks {
             BLOCKS.registerBlock("tank_holder", TankHolderBlock::new, metal());
 
     private AtmosBlocks() {}
+
+    /** The pipes in casings, one for each block a pipe goes into. */
+    public static List<DeferredBlock<EncasedPipeBlock>> encasedPipes() {
+        return List.of(STATION_WALL_PIPE, REINFORCED_STATION_WALL_PIPE);
+    }
+
+    /** The pipe, bare and in each casing: the blocks of a pipe's block entity, and those a dye tints. */
+    public static Block[] pipes() {
+        List<Block> pipes = new ArrayList<>();
+        pipes.add(PIPE.get());
+        encasedPipes().forEach(cased -> pipes.add(cased.get()));
+        return pipes.toArray(Block[]::new);
+    }
+
+    /** The station wall's properties: hardness 3, stone's blast resistance. */
+    private static BlockBehaviour.Properties stationWall() {
+        return wall().strength(3.0f, 6.0f);
+    }
+
+    /** The reinforced station wall's properties: hardness 25, obsidian's blast resistance. */
+    private static BlockBehaviour.Properties reinforcedStationWall() {
+        return wall().strength(25.0f, 1200.0f);
+    }
 
     /** The properties of a station wall, before its strength: metal, mined with a pickaxe. */
     private static BlockBehaviour.Properties wall() {

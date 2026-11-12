@@ -12,6 +12,8 @@ on:
     paths:
       - "compat-*/**"
       - "zas/src/main/java/io/github/west3436/zas/compat/**"
+      - "zas-atmos/src/main/java/io/github/west3436/zas/atmos/compat/**"
+      - "zas-ponder/**"
       - "zas-api/**"
       - "build.gradle"
       - ".github/workflows/compat-adapters.yml"
@@ -99,6 +101,16 @@ jobs:
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=both"
           - adapter: accessories with its curios layer
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=layer"
+          # COMPAT-050 to COMPAT-053: the KubeJS adapter, with real scripts in
+          # the server's kubejs folder, with the oldest KubeJS it supports and
+          # the newest. COMPAT-002: with the last build before the oldest, the
+          # adapter stays off, and KubeJS still runs the pack's script.
+          - adapter: kubejs (oldest supported)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pkubejs.version=floor"
+          - adapter: kubejs (newest)
+            task: ":compat-kubejs:runAdapterGameTestServer"
+          - adapter: kubejs (older than supported)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pkubejs.version=unsupported"
           # CONT-155: with the adapter's target mod installed and the content
           # switched off, the game starts and the tests that need none of the
           # content pass. For the adapters that do something as a server
@@ -109,6 +121,26 @@ jobs:
             task: ":compat-adastra:runAdapterGameTestServer -Pcontent=off"
           - adapter: jade (content off)
             task: ":compat-jade:runAdapterGameTestServer -Pcontent=off"
+          # CLIENT-023: the Ponder scenes, which are part of zas_atmos and on
+          # with any Ponder. A server shows that the game starts, what a client
+          # with the same mods would do and that it loads none of the scenes'
+          # classes itself. Create 6.0.10 nests the oldest Ponder they support
+          # and is the newest Create; 6.0.9 nests an older one, so they stay
+          # off (COMPAT-002).
+          - adapter: ponder (create, oldest supported and newest)
+            task: ":compat-ponder:runAdapterGameTestServer"
+          - adapter: ponder (create, older than supported)
+            task: ":compat-ponder:runAdapterGameTestServer -Pcreate.version=unsupported"
+          - adapter: ponder (create, content off)
+            task: ":compat-ponder:runAdapterGameTestServer -Pcontent=off"
+          # Create and the Ponder addon together: the addon holds no scenes, so
+          # they are there once.
+          - adapter: ponder (create and the addon)
+            task: ":compat-ponder:runAdapterGameTestServer -Pponder.from=create+addon"
+          # The Ponder addon as release 1.0.0 shipped it, which registers its own
+          # copy of the scenes: the ones in the release jar stand down.
+          - adapter: ponder (the addon released as 1.0.0)
+            task: ":compat-ponder:runAdapterGameTestServer -Pponder.from=released"
           - adapter: cc (content off)
             task: ":compat-cc:runAdapterGameTestServer -Pcontent=off"
           # The slot adapters register as the game loads, and their tags and
@@ -117,6 +149,10 @@ jobs:
             task: ":compat-slots:runAdapterGameTestServer -Pcontent=off"
           - adapter: accessories (content off)
             task: ":compat-slots:runAdapterGameTestServer -Pslots.run=accessories -Pcontent=off"
+          # What scripts get is the public API, which is all there with the
+          # content off, so every test of the adapter runs.
+          - adapter: kubejs (content off)
+            task: ":compat-kubejs:runAdapterGameTestServer -Pcontent=off"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

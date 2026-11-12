@@ -3,9 +3,11 @@ package io.github.west3436.zas.atmos.pipe;
 import java.util.Locale;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.BlockItemStateProperties;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 
 /**
@@ -33,6 +35,21 @@ public class PipeItem extends BlockItem {
             stack.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(PipeColor.PROPERTY, color));
         }
         return stack;
+    }
+
+    /**
+     * A pipe used on a block that takes one, such as a station wall, goes into it (#487). Sneaking, it
+     * is placed against the block, as against any other.
+     */
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        if (getBlock() instanceof PipeBlock && !context.isSecondaryUseActive()) {
+            InteractionResult inserted = EncasedPipeBlock.insert(context);
+            if (inserted != InteractionResult.PASS) {
+                return inserted;
+            }
+        }
+        return super.useOn(context);
     }
 
     @Override

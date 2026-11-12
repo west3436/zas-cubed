@@ -134,14 +134,19 @@ tasks.named('test', Test) {
     systemProperty 'zas.resources', project(':zas').file('src/main/resources').absolutePath
     systemProperty 'zas.mainClasses', zasMain.java.destinationDirectory.get().asFile.absolutePath
     systemProperty 'zas_atmos.mainClasses', sourceSets.main.java.destinationDirectory.get().asFile.absolutePath
-    // And the Ponder addon's. It requires this mod, so it's named by path here, not evaluated first.
-    def ponder = project(':zas-ponder')
+    // And the Ponder scenes', which are part of this mod in the release jar. Their project requires
+    // this one, so it's named by path here, not evaluated first.
+    def ponder = project(':compat-ponder')
     def ponderClasses = ponder.layout.buildDirectory.dir('classes/java/main')
-    dependsOn ':zas-ponder:compileJava'
+    dependsOn ':compat-ponder:compileJava'
     inputs.files(ponderClasses)
     inputs.dir(ponder.file('src/main/resources/assets/zas_ponder/lang'))
-    systemProperty 'zas_ponder.resources', ponder.file('src/main/resources').absolutePath
-    systemProperty 'zas_ponder.mainClasses', ponderClasses.get().asFile.absolutePath
+    systemProperty 'zas_atmos.ponderResources', ponder.file('src/main/resources').absolutePath
+    systemProperty 'zas_atmos.ponderClasses', ponderClasses.get().asFile.absolutePath
+    // And the ZAS³ Ponder addon's description, which is all the text it has.
+    def ponderAddon = project(':zas-ponder').file('src/main/resources')
+    inputs.dir(new File(ponderAddon, 'assets/zas_ponder/lang'))
+    systemProperty 'zas_ponder.resources', ponderAddon.absolutePath
     // And the Jade adapter's, which are part of this mod in the release jar. Named by path too.
     def jadeClasses = project(':compat-jade').layout.buildDirectory.dir('classes/java/main')
     dependsOn ':compat-jade:compileJava'

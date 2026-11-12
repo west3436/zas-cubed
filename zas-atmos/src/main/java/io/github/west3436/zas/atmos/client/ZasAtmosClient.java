@@ -5,6 +5,7 @@ import io.github.west3436.zas.api.client.ClientSounds;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterColor;
+import io.github.west3436.zas.atmos.compat.PonderGate;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.heater.AirConditionerMenu;
@@ -25,6 +26,7 @@ import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveItem;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -46,7 +48,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The content mod's client entry point: block and item tints, device GUIs, item model properties, the
- * magnetic boots' keybind and the station blocks' connected textures with Fusion.
+ * magnetic boots' keybind, the station blocks' connected textures with Fusion and the Ponder scenes
+ * with Ponder.
  */
 @Mod(value = ZasAtmosMod.MOD_ID, dist = Dist.CLIENT)
 public final class ZasAtmosClient {
@@ -83,6 +86,9 @@ public final class ZasAtmosClient {
         modBus.addListener(ZasAtmosClient::transferValveRenderer);
         modBus.addListener(ConnectedTextures::addPack);
         modBus.addListener(FirelockDoorModel::wrap);
+        // The Ponder scenes, on a client that has Ponder: Create brings it, and so does the ZAS³ Ponder
+        // addon. Ponder gathers its plugins' scenes once every mod has set up, so this is in time.
+        modBus.addListener((FMLClientSetupEvent e) -> PonderGate.start());
         GasTankItem.settingsScreen = hand -> Minecraft.getInstance()
                 .setScreen(new TankScreen(hand, Component.translatable("gui.zas_atmos.gas_tank.title")));
         GasJetParticles.register(NeoForge.EVENT_BUS);
@@ -113,12 +119,12 @@ public final class ZasAtmosClient {
 
     /** Dyed pipes and caps are tinted with their dye's colour (CONT-114); tint index 0 is the whole pipe. */
     private static void blockColors(RegisterColorHandlersEvent.Block event) {
-        event.register(
-                (state, level, pos, tintIndex) -> tintIndex == 0 && state.hasProperty(PipeColor.PROPERTY)
-                        ? 0xFF000000 | state.getValue(PipeColor.PROPERTY).tint()
-                        : -1,
-                AtmosBlocks.PIPE.get(),
-                AtmosBlocks.PIPE_CAP.get());
+        BlockColor dye = (state, level, pos, tintIndex) -> tintIndex == 0 && state.hasProperty(PipeColor.PROPERTY)
+                ? 0xFF000000 | state.getValue(PipeColor.PROPERTY).tint()
+                : -1;
+        event.register(dye, AtmosBlocks.PIPE_CAP.get());
+        // A pipe in a casing too: its end in the casing's face is the pipe's (#487).
+        event.register(dye, AtmosBlocks.pipes());
         // A heat exchanger's coil and pipe show its gas's temperature band (CONT-148).
         event.register(
                 (state, level, pos, tintIndex) -> tintIndex == 0
