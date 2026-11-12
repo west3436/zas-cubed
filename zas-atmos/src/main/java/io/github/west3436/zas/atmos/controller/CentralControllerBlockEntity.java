@@ -331,6 +331,57 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
         return status;
     }
 
+    /**
+     * Its area air controllers as its GUI lists them (CONT-123): in the order it claimed them, at
+     * most {@link CentralSync#MAX_ROWS}, each with its last readings, its priority and whether it is
+     * in contact. Server side.
+     */
+    public List<CentralSync.Row> rows() {
+        List<CentralSync.Row> out = new ArrayList<>();
+        if (level instanceof ServerLevel server) {
+            CentralClaims claims = CentralClaims.of(server);
+            Map<BlockPos, AreaAirControllerBlockEntity> loaded = new HashMap<>();
+            for (AtmosDevice d : DeviceTicker.loaded(server)) {
+                if (d instanceof AreaAirControllerBlockEntity c && !c.isRemoved()) {
+                    loaded.put(c.getBlockPos(), c);
+                }
+            }
+            for (BlockPos p : claims.claimedBy(getBlockPos())) {
+                if (out.size() >= CentralSync.MAX_ROWS) {
+                    break;
+                }
+                AreaAirControllerBlockEntity c = inContact(server, loaded, p);
+                CentralClaims.Readings r = claims.last(p);
+                out.add(new CentralSync.Row(
+                        p,
+                        r.pressure(),
+                        r.temperature(),
+                        r.danger(),
+                        r.powered(),
+                        claims.priority(p).ordinal(),
+                        c != null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Sets the zone power priority of an area air controller it has claimed (CONT-121).
+     *
+     * @return false, changing nothing, if this central controller doesn't have it
+     */
+    public boolean setPriority(BlockPos controller, ZonePriority priority) {
+        if (!(level instanceof ServerLevel server)) {
+            return false;
+        }
+        CentralClaims claims = CentralClaims.of(server);
+        if (claims.centralOf(controller).filter(getBlockPos()::equals).isEmpty()) {
+            return false;
+        }
+        claims.setPriority(controller, priority);
+        return true;
+    }
+
     // ---- Saving and the menu -------------------------------------------------------------
 
     @Override

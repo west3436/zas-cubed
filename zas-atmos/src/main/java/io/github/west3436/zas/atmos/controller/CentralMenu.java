@@ -1,13 +1,9 @@
 package io.github.west3436.zas.atmos.controller;
 
-import io.github.west3436.zas.atmos.device.AtmosDevice;
-import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -96,11 +92,7 @@ public class CentralMenu extends AbstractContainerMenu {
             done = open(level, player, rows.get(id - OPEN));
         } else if (id >= PRIORITY && id < PRIORITY + rows.size() * ZonePriority.values().length) {
             int n = ZonePriority.values().length;
-            BlockPos controller = rows.get((id - PRIORITY) / n);
-            done = mine(level, controller);
-            if (done) {
-                CentralClaims.of(level).setPriority(controller, ZonePriority.values()[(id - PRIORITY) % n]);
-            }
+            done = central.setPriority(rows.get((id - PRIORITY) / n), ZonePriority.values()[(id - PRIORITY) % n]);
         } else {
             done = false;
         }
@@ -145,32 +137,10 @@ public class CentralMenu extends AbstractContainerMenu {
 
     /** The state the screen shows now. The rows' buttons refer to this list until the next. */
     public CentralSync sync() {
-        List<CentralSync.Row> out = new ArrayList<>();
+        List<CentralSync.Row> out = central.rows();
         List<BlockPos> listed = new ArrayList<>();
-        if (central.getLevel() instanceof ServerLevel level) {
-            CentralClaims claims = CentralClaims.of(level);
-            Map<BlockPos, AreaAirControllerBlockEntity> loaded = new HashMap<>();
-            for (AtmosDevice d : DeviceTicker.loaded(level)) {
-                if (d instanceof AreaAirControllerBlockEntity c && !c.isRemoved()) {
-                    loaded.put(c.getBlockPos(), c);
-                }
-            }
-            for (BlockPos p : claims.claimedBy(pos)) {
-                if (listed.size() >= CentralSync.MAX_ROWS) {
-                    break;
-                }
-                AreaAirControllerBlockEntity c = CentralControllerBlockEntity.inContact(level, loaded, p);
-                CentralClaims.Readings r = claims.last(p);
-                out.add(new CentralSync.Row(
-                        p,
-                        r.pressure(),
-                        r.temperature(),
-                        r.danger(),
-                        r.powered(),
-                        claims.priority(p).ordinal(),
-                        c != null));
-                listed.add(p);
-            }
+        for (CentralSync.Row row : out) {
+            listed.add(row.pos());
         }
         rows = List.copyOf(listed);
         return new CentralSync(

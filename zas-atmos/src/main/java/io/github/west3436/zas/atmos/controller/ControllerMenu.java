@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -150,8 +149,7 @@ public class ControllerMenu extends AbstractContainerMenu {
             if (now == Thresholds.OFF) {
                 return false; // an off bound has no value to change; turn it on first
             }
-            double next = Math.round((now + STEPS[id - ADJUST]) * 1000) / 1000.0;
-            controller.setPreset(preset.with(reading, t.with(bound, Math.max(0, next))));
+            controller.setPreset(preset.withBound(reading, bound, now + STEPS[id - ADJUST]));
         } else if (id == TOGGLE_BOUND) {
             Thresholds t = preset.thresholds(reading);
             double now = t.bound(bound);
@@ -209,8 +207,7 @@ public class ControllerMenu extends AbstractContainerMenu {
         List<String> labels = new ArrayList<>();
         double[] bounds = new double[preset.readings() * 4];
         for (int i = 0; i < preset.readings(); i++) {
-            ResourceLocation gas = preset.gas(i);
-            labels.add(i == 0 ? "pressure" : i == 1 ? "temperature" : gas == null ? "others" : gas.toString());
+            labels.add(preset.label(i));
             for (int b = 0; b < 4; b++) {
                 bounds[i * 4 + b] = preset.thresholds(i).bound(b);
             }

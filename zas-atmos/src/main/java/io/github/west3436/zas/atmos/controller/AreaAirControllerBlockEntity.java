@@ -313,6 +313,11 @@ public class AreaAirControllerBlockEntity extends AtmosDevice implements MenuPro
                 && side.zone().filter(coveredZone.get()::equals).isPresent();
     }
 
+    /** The zone it covers, its own, as of its last step; empty in the open or before its first. */
+    public Optional<ZoneId> zone() {
+        return coveredZone;
+    }
+
     /** Whether its last reading was a breach (CONT-043). */
     public boolean breach() {
         return breach;

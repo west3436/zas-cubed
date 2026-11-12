@@ -6,12 +6,20 @@ import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.life.ExtraSlots;
 import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.ZasAtmosMod;
+import io.github.west3436.zas.atmos.compat.PonderGate;
 import io.github.west3436.zas.compat.Adapters;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -24,13 +32,14 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.config.ModConfigs;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforgespi.language.IModFileInfo;
 
 /**
  * Checks that run inside the release jar on a dedicated server (CONT-052, CONT-155, MEK-001,
- * COMPAT-001, SPACE-003). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
+ * COMPAT-001, SPACE-003, CLIENT-023). Gradle runs them twice: {@code runReleaseCheckGameTestServer} with the content on and {@code
  * runContentOffGameTestServer} with it off, as {@code zas.releaseCheck.contentOff} says.
  */
 @GameTestHolder("zas")
@@ -50,6 +59,12 @@ public final class ReleaseJarTests {
 
     /** The Jade adapter's package, which is part of zas_atmos. */
     private static final String JADE_ADAPTER = "io.github.west3436.zas.atmos.compat.jade";
+
+    /** The Ponder scenes' package, which is part of zas_atmos. */
+    private static final String PONDER_SCENES = "io.github.west3436.zas.atmos.compat.ponder";
+
+    /** The CC: Tweaked adapter's package, which is part of zas_atmos. */
+    private static final String CC_ADAPTER = "io.github.west3436.zas.atmos.compat.cc";
 
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
@@ -218,6 +233,31 @@ public final class ReleaseJarTests {
     }
 
     /**
+     * The release jar holds the CC: Tweaked adapter, and on a server without CC: Tweaked none of it
+     * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class, which names
+     * CC: Tweaked's, was never asked for.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_cc_tweaked_adapter_loads_without_cc_tweaked(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("computercraft"), "CC: Tweaked is on the release check's server");
+        // It ships: this is looked up as a file, which loads nothing.
+        String entry = CC_ADAPTER.replace('.', '/') + "/CcCompat.class";
+        h.assertTrue(
+                ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
+
+        // zas went through its row and found no CC: Tweaked, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("computercraft"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for CC: Tweaked");
+        h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
+        h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
+        h.succeed();
+    }
+
+    /**
      * The release jar holds the whole Ad Astra adapter, and on a server without Ad Astra none of it
      * loads (SPACE-003, NFR-022): {@code zas} left the adapter off, and its data pack, its settings
      * file, its planet seed and its distributor areas aren't there. A zombie, which the pack makes
@@ -262,6 +302,68 @@ public final class ReleaseJarTests {
         h.assertFalse(EntityType.ZOMBIE.is(ATMOSPHERE_IMMUNE), "a zombie is immune to the atmosphere");
         h.assertTrue(EntityType.IRON_GOLEM.is(ATMOSPHERE_IMMUNE), "zas's own immune entity tag didn't load");
         h.succeed();
+    }
+
+    /**
+     * The release jar holds the Ponder scenes, and without Ponder none of them loads (CLIENT-023,
+     * NFR-022). Asked as a client asks it, the content mod's switch finds no Ponder and starts
+     * nothing; the JVM's own list of the classes it loaded has none of the scenes', of Ponder's or of
+     * Flywheel's; and the log says nothing of it.
+     */
+    @GameTest(template = "empty")
+    public static void client_023_nothing_of_the_ponder_scenes_loads_without_ponder(GameTestHelper h) {
+        for (String mod : new String[] {"ponder", "flywheel", "create", "zas_ponder"}) {
+            h.assertFalse(ModList.get().isLoaded(mod), mod + " is on the release check's server");
+        }
+        // They ship: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            PonderGate.ENTRY.replace('.', '/') + ".class",
+            PONDER_SCENES.replace('.', '/') + "/ZasPonderPlugin.class",
+            "assets/zas_ponder/lang/en_us.json",
+            "assets/zas_atmos/ponder/stage_5.nbt"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+        h.assertTrue(PonderGate.ENTRY.startsWith(PONDER_SCENES + "."), "the entry class isn't in the scenes' package");
+
+        boolean on = !Boolean.getBoolean("zas.releaseCheck.contentOff");
+        h.assertValueEqual(
+                PonderGate.verdict(),
+                on ? PonderGate.Verdict.ABSENT : PonderGate.Verdict.CONTENT_OFF,
+                "what the switch makes of a game without Ponder");
+        PonderGate.start();
+        h.assertFalse(PonderGate.started(), "the scenes started");
+
+        Path gameDir = FMLPaths.GAMEDIR.get();
+        List<String> loaded = lines(gameDir.resolve("class-load.log"));
+        // The list is live if it has this class, which is running.
+        h.assertTrue(
+                loaded.stream().anyMatch(line -> line.contains(" " + ReleaseJarTests.class.getName() + " ")),
+                "class-load.log doesn't list this test's own class, so it isn't the JVM's list");
+        for (String theirs : new String[] {PONDER_SCENES + ".", "net.createmod.", "dev.engine_room."}) {
+            h.assertValueEqual(
+                    loaded.stream().filter(line -> line.contains(" " + theirs)).count(),
+                    0L,
+                    "the classes of " + theirs + "* this server loaded");
+        }
+        // The log file holds what is logged at info and above.
+        h.assertValueEqual(
+                lines(gameDir.resolve("logs/latest.log")).stream()
+                        .filter(line -> line.contains("Ponder scenes"))
+                        .count(),
+                0L,
+                "the log's lines about the Ponder scenes");
+        h.succeed();
+    }
+
+    /** A file's lines. Latin-1 reads any byte, whatever the file's encoding, and what is looked for is ASCII. */
+    private static List<String> lines(Path file) {
+        try (Stream<String> lines = Files.lines(file, StandardCharsets.ISO_8859_1)) {
+            return lines.toList();
+        } catch (IOException | UncheckedIOException e) {
+            throw new GameTestAssertException("couldn't read " + file + ": " + e);
+        }
     }
 
     /**
