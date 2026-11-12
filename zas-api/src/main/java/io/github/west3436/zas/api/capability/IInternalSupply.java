@@ -41,7 +41,8 @@ public interface IInternalSupply {
      * as another mod's suit that holds its own oxygen, with its ratings shipped as data (SPACE-023).
      *
      * <p>ZAS³ looks for it wherever internals look for a supply (LIFE-028): in the armor slots, the
-     * offhand and the hotbar. On an item that has both, the supply of its {@link ILifeSupport} is
+     * slots other mods add ({@link io.github.west3436.zas.api.life.ExtraSlots}), the offhand and the
+     * hotbar. On an item that has both, the supply of its {@link ILifeSupport} is
      * used and this one isn't asked. Without ZAS³ the capability still exists, but nothing reads
      * it.
      */

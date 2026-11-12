@@ -12,7 +12,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * An entity's protection where it is now (LIFE-020, LIFE-024, LIFE-025): the life support of the
  * pieces in its armor slots, each covering its slot's share of the body ({@link ProtectionConfig}),
- * and its own, which covers all of it ({@link Protections}).
+ * and its own, which covers all of it ({@link Protections}). An item in a slot another mod adds
+ * covers none of the body, so it is no piece here (COMPAT-042): a head slot's counts only for the
+ * seal and the filter.
  *
  * <p><b>Coverage.</b> A piece protects against a pressure P below 1 atm if its {@link
  * ILifeSupport#minPressure()} is at most P, and above 1 atm if its {@link
@@ -125,22 +127,28 @@ public final class WornProtection implements Shielding {
 
     /**
      * Whether an entity's breathing is sealed, which internals need (LIFE-021): by the item in its
-     * head slot, or by its own life support. Server thread.
+     * head slot, by its own life support, or by an item in a head slot another mod adds ({@link
+     * ExtraSlotItems}, COMPAT-042). Server thread.
      */
     public static boolean sealedBreathing(LivingEntity entity) {
         ILifeSupport head = Protections.of(entity.getItemBySlot(EquipmentSlot.HEAD));
         ILifeSupport own = Protections.of(entity);
-        return (head != null && head.sealedBreathing()) || (own != null && own.sealedBreathing());
+        return (head != null && head.sealedBreathing())
+                || (own != null && own.sealedBreathing())
+                || ExtraSlotItems.headPiece(entity, ILifeSupport::sealedBreathing);
     }
 
     /**
-     * Whether an entity's breath is filtered (API-022, CONT-088): by the item in its head slot, or by
-     * its own life support. Server thread.
+     * Whether an entity's breath is filtered (API-022, CONT-088): by the item in its head slot, by
+     * its own life support, or by an item in a head slot another mod adds (COMPAT-042). So a helmet
+     * and a mask under it each count for what they give. Server thread.
      */
     public static boolean gasFiltering(LivingEntity entity) {
         ILifeSupport head = Protections.of(entity.getItemBySlot(EquipmentSlot.HEAD));
         ILifeSupport own = Protections.of(entity);
-        return (head != null && head.gasFiltering()) || (own != null && own.gasFiltering());
+        return (head != null && head.gasFiltering())
+                || (own != null && own.gasFiltering())
+                || ExtraSlotItems.headPiece(entity, ILifeSupport::gasFiltering);
     }
 
     /**

@@ -1,0 +1,6 @@
+{
+  "values": [
+    { "id": "zas_atmos:breath_mask", "required": false },
+    { "id": "zas_atmos:gas_mask", "required": false }
+  ]
+}
