@@ -14,6 +14,7 @@ import io.github.west3436.zas.atmos.filter.FilterBlock;
 import io.github.west3436.zas.atmos.firealarm.FireAlarmBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
+import io.github.west3436.zas.atmos.gauge.GaugeBlock;
 import io.github.west3436.zas.atmos.heater.AirConditionerBlock;
 import io.github.west3436.zas.atmos.heater.HeaterBlock;
 import io.github.west3436.zas.atmos.holder.TankHolderBlock;
@@ -280,6 +281,12 @@ public final class AtmosBlocks {
     /** The large gas tank, two blocks long and one high: a fixed store on a pipe network. */
     public static final DeferredBlock<LargeTankBlock> LARGE_GAS_TANK =
             BLOCKS.registerBlock("large_gas_tank", LargeTankBlock::new, metal().pushReaction(PushReaction.BLOCK));
+
+    // ---- The gauge (#488) ----
+
+    /** A gauge, a dial on a face of a pipe, a pipe part, a canister or a large tank. As hard as the air sensor. */
+    public static final DeferredBlock<GaugeBlock> GAUGE = BLOCKS.registerBlock(
+            "gauge", GaugeBlock::new, metal().strength(1.5f, 4.8f).noOcclusion().pushReaction(PushReaction.DESTROY));
 
     private AtmosBlocks() {}
 

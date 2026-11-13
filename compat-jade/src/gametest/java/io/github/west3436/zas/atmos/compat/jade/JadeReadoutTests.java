@@ -5,6 +5,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.electrolyzer.ElectrolyzerBlockEntity;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.gauge.GaugeBlock;
+import io.github.west3436.zas.atmos.gauge.GaugeBlockEntity;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.holder.TankHolderBlockEntity;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
@@ -294,6 +296,56 @@ public final class JadeReadoutTests {
                     moles,
                     what);
         }
+        s.clear();
+        h.succeed();
+    }
+
+    // ---- A gauge (#488) ------------------------------------------------------------------------
+
+    /**
+     * A gauge reads what it is on as one body of gas, with its gases: a pipe's network, a canister's
+     * own gas, and the port of a pump it is beside. Reading it moves no gas.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_gauge_reads_what_it_is_on(GameTestHelper h) {
+        Spot s = new Spot(h, 30);
+        s.clear();
+        // On a wall facing north: on the block south of it.
+        BlockState gauge = AtmosBlocks.GAUGE.get().defaultBlockState();
+        Map<ResourceLocation, Double> moles = Map.of(Spot.N2, 30.0, Spot.O2, 4.0);
+
+        PipeBlockEntity pipe = s.place(1, 1, 2, AtmosBlocks.PIPE.get().defaultBlockState(), PipeBlockEntity.class);
+        GaugeBlockEntity onPipe = s.place(1, 1, 1, gauge, GaugeBlockEntity.class);
+        pipe.network().gas().add(new GasParcel(moles, 310));
+        GasStore gas = pipe.network().gas();
+        h.assertTrue(JadeProbe.asks(s.level, onPipe.getBlockPos()), "a client wouldn't ask about a gauge");
+        body(h, JadeProbe.reading(s.level, onPipe.getBlockPos()), gas.pressure(), 310, moles, "the pipe's gauge");
+        h.assertTrue(Spot.close(gas.totalMoles(), 34.0), "reading the gauge changed the pipe's gas");
+
+        CanisterBlockEntity canister =
+                s.place(4, 1, 2, AtmosBlocks.CANISTER.get().defaultBlockState(), CanisterBlockEntity.class);
+        GaugeBlockEntity onCanister = s.place(4, 1, 1, gauge, GaugeBlockEntity.class);
+        canister.network().gas().add(new GasParcel(moles, 300));
+        double kpa = 34.0 * GasMixture.GAS_CONSTANT * 300 / canister.nodeVolume();
+        body(h, JadeProbe.reading(s.level, onCanister.getBlockPos()), kpa, 300, moles, "the canister's gauge");
+
+        InlineDeviceEntity pump =
+                s.place(7, 1, 2, AtmosBlocks.PRESSURE_PUMP.get().defaultBlockState(), InlineDeviceEntity.class);
+        GaugeBlockEntity onPump = s.place(7, 1, 1, gauge, GaugeBlockEntity.class);
+        for (int port = 0; port < 2; port++) {
+            pump.port(port).network().gas().add(new GasParcel(Map.of(Spot.O2, 1.0 + port), 280 + 10 * port));
+        }
+        int port = GaugeBlock.reads(s.level, onPump.getBlockPos(), onPump.getBlockState())
+                .port();
+        h.assertTrue(port >= 0, "the pump's gauge reads no port");
+        GasStore portGas = pump.port(port).network().gas();
+        body(
+                h,
+                JadeProbe.reading(s.level, onPump.getBlockPos()),
+                portGas.pressure(),
+                280 + 10 * port,
+                Map.of(Spot.O2, 1.0 + port),
+                "the pump's gauge");
         s.clear();
         h.succeed();
     }

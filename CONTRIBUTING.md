@@ -87,7 +87,9 @@ No NonCommercial or NoDerivatives asset ships in any jar (NFR-046). RE:SS3D and 
 reference and inspiration only.
 
 Models are Minecraft's own JSON block and item models: boxes on the
-1/16-block grid, with textures at 16 pixels per block (D-67). Make them in
+1/16-block grid, with textures at 16 pixels per block (D-67). The one
+exception is the gauge: its own textures (`gauge*.png`) are 32 x 32, for a
+clearer dial (the owner's decision, 2026-11-12). Make them in
 [Blockbench](https://www.blockbench.net/) or write them by hand. Handheld
 items are flat item sprites, and wearables use the standard armor texture
 layout. Don't use OBJ or other free-form meshes. vg's sprites are drawn in a

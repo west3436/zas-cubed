@@ -3461,3 +3461,48 @@ notes: The grille with no pipe in it: the cube of grating.
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/floor_grille_pipe.json
 origin: original
 notes: The grille with a pipe in it. The grating's six faces, each turned from the north one: with the opening where the pipe shows (where it connects, and where a bare pipe would have a mouth), bars all over elsewhere. Inside them, the pipe's own core and arms.
+
+# The gauge (issue #488). Its textures are 32 x 32, the one exception to 16 px per block (D-67):
+# the owner's decision of 2026-11-12, for a clearer dial. Its models stay on the 1/16 grid.
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gauge.png
+origin: original
+notes: The gauge's housing at 32 x 32, the one exception to 16 px per block (D-67), the owner's decision of 2026-11-12: its sides, its back, its stem in the pipe's greys (its own copy), and the needle's strip on the bottom row, which the renderer draws.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gauge_pressure.png
+origin: original
+notes: The pressure dial at 32 x 32 (the gauge's exemption, 2026-11-12): a round face with a rim, and an arc over its top half in the analyzer's bands, green, amber and red, a texel of face between it and the rim, and a round pivot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gauge_temperature.png
+origin: original
+notes: The temperature dial at 32 x 32 (the gauge's exemption, 2026-11-12): its arc in the heat exchanger's colours from 0 to 1,000 K, cut at each quarter, and a thermometer under the pivot.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gauge_share.png
+origin: original
+notes: The share dial's face at 32 x 32 (the gauge's exemption, 2026-11-12), with no arc but a thin grey edge inside where it goes, so a grey or pale gas still shows: gauge_share_arc.png lies over it.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/gauge_share_arc.png
+origin: original
+notes: The share dial's arc at 32 x 32 (the gauge's exemption, 2026-11-12), cut at each quarter, and the chip under its pivot, pale, for the gas's tint.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/item/gauge.png
+origin: original
+notes: The gauge from the front at 32 x 32 (the gauge's exemption, 2026-11-12), on its stem, its needle in the green.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/gauge_pressure.json
+origin: original
+notes: The gauge on a floor, its top to the south: a 12 px dial of three boxes 2 px deep, its face over them, and a stem 5 px long into the block it is on.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/gauge_temperature.json
+origin: original
+notes: gauge_pressure with the temperature dial.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/gauge_share.json
+origin: original
+notes: gauge_pressure with the share dial, and its arc over the face in the same place, tint index 1.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/gauge.json
+origin: original
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/gauge.json
+origin: original
+notes: The floor model turned for each face and facing, as a button's is, and on a floor half a turn more, so the dial reads upright on a wall and from where it was placed on a floor or a ceiling.

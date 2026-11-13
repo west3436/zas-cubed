@@ -8,6 +8,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.life.LocalAtmospheres;
 import io.github.west3436.zas.atmos.analyzer.AnalyzerSync.Kind;
 import io.github.west3436.zas.atmos.filter.FilterBlock;
+import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.gauge.GaugeBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceBlock;
 import io.github.west3436.zas.atmos.inline.InlineDeviceEntity;
 import io.github.west3436.zas.atmos.mixer.MixerBlock;
@@ -23,6 +25,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -43,6 +46,8 @@ import org.jetbrains.annotations.Nullable;
  *       clicked.
  *   <li><b>A canister or a large gas tank:</b> its own gas, its share of the network it's on. Either
  *       half of a tank reads the tank.
+ *   <li><b>A gauge:</b> what the gauge is on, as the gauge reads it: the vessel or the network, and
+ *       for a pump, filter or mixer the port on that face, or else the nearest.
  *   <li><b>Another mod's tank or machine:</b> a block that provides the gas-handler capability
  *       (API-021), and isn't a pipe part of ours, is read through it under the block's name: what it
  *       holds on the face clicked, or else for no face in particular, in the volume it gives ({@link
@@ -114,9 +119,46 @@ public record AnalyzerTarget(
         return new AnalyzerTarget(Kind.HERE, null, null, -1, null);
     }
 
-    /** What a click on a block reads. */
+    /**
+     * What a click on a block reads. A click on a gauge reads what the gauge is on, as the gauge does.
+     */
     public static AnalyzerTarget on(Level level, BlockHitResult hit) {
         BlockPos pos = hit.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+        if (state.getBlock() instanceof GaugeBlock) {
+            AnalyzerTarget host = GaugeBlock.reads(level, pos, state);
+            if (host != null) {
+                return host;
+            }
+        }
+        AnalyzerTarget part = part(level, pos, hit.getDirection(), hit.getLocation());
+        if (part != null) {
+            return part;
+        }
+        Direction face = hit.getDirection();
+        if (level instanceof ServerLevel server && GasHandlers.stored(server, pos, face) != null) {
+            return new AnalyzerTarget(Kind.STORE, pos, null, -1, face);
+        }
+        Vec3 point = hit.getLocation().add(face.getStepX() * FRONT, face.getStepY() * FRONT, face.getStepZ() * FRONT);
+        return new AnalyzerTarget(Kind.POINT, BlockPos.containing(point), point, -1, null);
+    }
+
+    /**
+     * What a click in the middle of a face of one of our parts reads, as a gauge on that face reads it:
+     * a canister or large tank as a {@link Kind#CANISTER}, a pipe, a device with a port buffer or a
+     * pump, filter or mixer as a {@link Kind#NETWORK}.
+     *
+     * @param level the level
+     * @param pos the part
+     * @param face the face
+     * @return the target, or null if the block is none of those
+     */
+    public static @Nullable AnalyzerTarget onFace(BlockGetter level, BlockPos pos, Direction face) {
+        return part(level, pos, face, Vec3.atCenterOf(pos).relative(face, 0.5));
+    }
+
+    /** A vessel or a network a click reads, or null for any other block. */
+    private static @Nullable AnalyzerTarget part(BlockGetter level, BlockPos pos, Direction face, Vec3 at) {
         PipeNodeEntity vessel = GasVessels.at(level, pos);
         if (vessel != null) {
             return new AnalyzerTarget(Kind.CANISTER, vessel.getBlockPos(), null, -1, null);
@@ -127,23 +169,18 @@ public record AnalyzerTarget(
         }
         BlockState state = level.getBlockState(pos);
         if (be instanceof InlineDeviceEntity && state.getBlock() instanceof InlineDeviceBlock block) {
-            return new AnalyzerTarget(Kind.NETWORK, pos, null, portAt(block.portFaces(state), pos, hit), null);
+            return new AnalyzerTarget(Kind.NETWORK, pos, null, portAt(block.portFaces(state), pos, face, at), null);
         }
-        Direction face = hit.getDirection();
-        if (level instanceof ServerLevel server && GasHandlers.stored(server, pos, face) != null) {
-            return new AnalyzerTarget(Kind.STORE, pos, null, -1, face);
-        }
-        Vec3 point = hit.getLocation().add(face.getStepX() * FRONT, face.getStepY() * FRONT, face.getStepZ() * FRONT);
-        return new AnalyzerTarget(Kind.POINT, BlockPos.containing(point), point, -1, null);
+        return null;
     }
 
     /** The port on the face clicked, or else the one whose face is nearest the point clicked. */
-    private static int portAt(List<Direction> faces, BlockPos pos, BlockHitResult hit) {
-        int on = faces.indexOf(hit.getDirection());
+    private static int portAt(List<Direction> faces, BlockPos pos, Direction face, Vec3 at) {
+        int on = faces.indexOf(face);
         if (on >= 0) {
             return on;
         }
-        Vec3 from = hit.getLocation().subtract(Vec3.atCenterOf(pos));
+        Vec3 from = at.subtract(Vec3.atCenterOf(pos));
         int best = 0;
         double bestToward = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < faces.size(); i++) {
@@ -186,6 +223,26 @@ public record AnalyzerTarget(
                                                 .size();
             default -> true;
         };
+    }
+
+    /**
+     * The gas a vessel or a network reads, live and not copied, for a gauge's step: a vessel's network,
+     * whose pressure, temperature and shares its own share has. It builds the network if it has none.
+     *
+     * @param level the level
+     * @return the gas, or null for another kind, or once the part is gone
+     */
+    public @Nullable GasStore gas(ServerLevel level) {
+        if ((kind != Kind.CANISTER && kind != Kind.NETWORK) || !present(level)) {
+            return null;
+        }
+        if (kind == Kind.CANISTER) {
+            return GasVessels.at(level, pos).network().gas();
+        }
+        BlockEntity be = level.getBlockEntity(pos);
+        return be instanceof InlineDeviceEntity device
+                ? device.port(port).network().gas()
+                : ((PipeNodeEntity) be).network().gas();
     }
 
     /**

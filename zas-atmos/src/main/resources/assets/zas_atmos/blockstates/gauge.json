@@ -1,0 +1,534 @@
+{
+  "variants": {
+    "face=floor,facing=north,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=north,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 180
+    },
+    "face=floor,facing=east,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=east,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 270
+    },
+    "face=floor,facing=south,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure"
+    },
+    "face=floor,facing=south,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature"
+    },
+    "face=floor,facing=south,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=methane": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=south,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share"
+    },
+    "face=floor,facing=west,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=floor,facing=west,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "y": 90
+    },
+    "face=wall,facing=north,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=north,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90
+    },
+    "face=wall,facing=east,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=east,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 90
+    },
+    "face=wall,facing=south,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=south,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 180
+    },
+    "face=wall,facing=west,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=wall,facing=west,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 90,
+      "y": 270
+    },
+    "face=ceiling,facing=north,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=north,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180
+    },
+    "face=ceiling,facing=east,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=east,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 90
+    },
+    "face=ceiling,facing=south,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=south,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 180
+    },
+    "face=ceiling,facing=west,reading=pressure": {
+      "model": "zas_atmos:block/gauge_pressure",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=temperature": {
+      "model": "zas_atmos:block/gauge_temperature",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=oxygen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=nitrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=carbon_dioxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=nitrous_oxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=carbon_monoxide": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=hydrogen": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=methane": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    },
+    "face=ceiling,facing=west,reading=water_vapor": {
+      "model": "zas_atmos:block/gauge_share",
+      "x": 180,
+      "y": 270
+    }
+  }
+}

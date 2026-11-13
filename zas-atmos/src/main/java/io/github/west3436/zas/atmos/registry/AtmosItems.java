@@ -7,6 +7,7 @@ import io.github.west3436.zas.atmos.analyzer.AnalyzerItem;
 import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.canister.CanisterItem;
 import io.github.west3436.zas.atmos.firelock.FirelockItem;
+import io.github.west3436.zas.atmos.gauge.GaugeItem;
 import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
@@ -333,6 +334,11 @@ public final class AtmosItems {
 
     public static final DeferredItem<PipeItem> LARGE_GAS_TANK =
             ITEMS.registerItem("large_gas_tank", p -> new PipeItem(AtmosBlocks.LARGE_GAS_TANK.get(), p));
+
+    // The gauge (#488): its item places it ahead of a part's own window.
+
+    public static final DeferredItem<GaugeItem> GAUGE =
+            ITEMS.registerItem("gauge", p -> new GaugeItem(AtmosBlocks.GAUGE.get(), p));
 
     // The bike horn (CONT-154, D-87): an easter egg with no recipe, found in dungeon and stronghold chests.
 
