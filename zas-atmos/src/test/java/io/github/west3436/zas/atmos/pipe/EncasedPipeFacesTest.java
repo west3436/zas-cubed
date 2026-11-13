@@ -8,6 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,6 +24,10 @@ import org.junit.jupiter.api.Test;
  * shows on is the wall's face with the shape of the pipe's flange left out, and the flange set into the
  * gap. No two pieces share a place, so nothing fights for depth, whatever cuts a face up (Fusion cuts a
  * joined face into its corners).
+ *
+ * <p>And the look of a floor grille (#486): a cube of grating, near-black bars at one even pitch. With
+ * a pipe in it, the pipe's own core and arms are inside the cube, and a face the pipe shows on has an
+ * opening in its middle, where the end of an arm lies; every other face is bars all over.
  */
 class EncasedPipeFacesTest {
     private static final List<String> WALLS = List.of("station_wall", "reinforced_station_wall");
@@ -150,6 +156,183 @@ class EncasedPipeFacesTest {
                             .getAsString(),
                     "the wall's own texture");
         }
+    }
+
+    /**
+     * Under a grille the pipe is drawn as it is bare, with an arm where a bare pipe would have a mouth.
+     * The grating is drawn a face at a time: with the opening on a face the pipe shows on, and bars all
+     * over on every other.
+     */
+    @Test
+    void under_a_grille_a_face_is_bars_all_over_unless_the_pipe_shows_on_it() throws IOException {
+        JsonObject blockstate = json(assets().resolve("blockstates/floor_grille_pipe.json"));
+        for (int arms = 0; arms < 64; arms++) {
+            JsonObject state = new JsonObject();
+            for (int i = 0; i < 6; i++) {
+                state.addProperty(FACES.get(i), (arms & (1 << i)) != 0 ? "true" : "false");
+            }
+            int cores = 0;
+            int[] whole = new int[6];
+            int[] opened = new int[6];
+            int[] ends = new int[6];
+            for (JsonElement e : blockstate.getAsJsonArray("multipart")) {
+                JsonObject part = e.getAsJsonObject();
+                if (part.has("when") && !matches(part.getAsJsonObject("when"), state)) {
+                    continue;
+                }
+                JsonObject apply = part.getAsJsonObject("apply");
+                switch (apply.get("model").getAsString()) {
+                    case "zas_atmos:block/floor_grille_face" -> whole[FACES.indexOf(turned(apply))]++;
+                    case "zas_atmos:block/floor_grille_face_open" -> opened[FACES.indexOf(turned(apply))]++;
+                    case "zas_atmos:block/pipe_arm" -> ends[FACES.indexOf(turned(apply))]++;
+                    case "zas_atmos:block/pipe_core" -> cores++;
+                    default -> throw new AssertionError("the grille shows " + apply.get("model"));
+                }
+            }
+            assertEquals(1, cores, "arms " + Integer.toBinaryString(arms) + ": cores");
+            int shows = arms | PipeMouths.of(arms);
+            for (int face = 0; face < 6; face++) {
+                String what = "arms " + Integer.toBinaryString(arms) + ", " + FACES.get(face);
+                boolean end = (shows & (1 << face)) != 0;
+                assertEquals(end ? 0 : 1, whole[face], what + ": faces of bars all over");
+                assertEquals(end ? 1 : 0, opened[face], what + ": faces with the opening");
+                assertEquals(end ? 1 : 0, ends[face], what + ": arms");
+            }
+        }
+    }
+
+    /**
+     * The grating is bars 1 px wide every 3 px each way, the first and the last on the face's edges, so
+     * every gap is 2 px, at the edges as well. It is cut out: each pixel is there or not. The face with
+     * the opening is the same grating with the 8 px between its second and its fifth bar left clear: the
+     * end of a pipe's arm lies in the 6 px in the middle of that, so the two never share a pixel.
+     */
+    @Test
+    void the_grating_is_even_bars_and_is_clear_where_the_end_of_an_arm_lies() throws IOException {
+        BufferedImage bars = texture("floor_grille");
+        BufferedImage open = texture("floor_grille_open");
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                String at = x + ", " + y;
+                int alpha = bars.getRGB(x, y) >>> 24;
+                assertTrue(alpha == 0 || alpha == 255, "half-clear at " + at);
+                assertEquals(x % 3 == 0 || y % 3 == 0, alpha == 255, "a bar at " + at);
+                boolean opening = x > 3 && x < 12 && y > 3 && y < 12;
+                assertEquals(opening ? 0 : bars.getRGB(x, y), open.getRGB(x, y), "with the opening, at " + at);
+                boolean end = x >= 5 && x < 11 && y >= 5 && y < 11;
+                assertTrue(!end || open.getRGB(x, y) >>> 24 == 0, "a bar crosses the pipe's end at " + at);
+            }
+        }
+    }
+
+    /**
+     * The grille is not to be taken for a window: its metal is near black, each of its tones darker than
+     * a station wall is on the whole, so that it is the darkest thing in a floor of either wall.
+     */
+    @Test
+    void the_grating_is_darker_than_the_walls() throws IOException {
+        int brightest = 0;
+        BufferedImage bars = texture("floor_grille");
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                if (bars.getRGB(x, y) >>> 24 != 0) {
+                    brightest = Math.max(brightest, brightness(bars.getRGB(x, y)));
+                }
+            }
+        }
+        for (String wall : WALLS) {
+            BufferedImage image = texture(wall);
+            int sum = 0;
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    sum += brightness(image.getRGB(x, y));
+                }
+            }
+            assertTrue(brightest < sum / 256, "the grating's brightest tone, " + brightest + ", against " + wall);
+        }
+    }
+
+    /**
+     * A face of the grating is seen from outside and from inside, like a cage: the second element is
+     * turned inside out, and both are hidden by a block against that face. The grille with no pipe in
+     * it is a whole cube of the grating, drawn the same way, and so is the item.
+     */
+    @Test
+    void the_grating_is_seen_from_inside_as_well() throws IOException {
+        for (String name : List.of("floor_grille_face", "floor_grille_face_open")) {
+            JsonObject model = json(assets().resolve("models/block/" + name + ".json"));
+            assertEquals("minecraft:cutout", model.get("render_type").getAsString(), name);
+            String texture = name.equals("floor_grille_face") ? "floor_grille" : "floor_grille_open";
+            assertEquals(
+                    "zas_atmos:block/" + texture,
+                    model.getAsJsonObject("textures").get("grille").getAsString(),
+                    name);
+            JsonArray elements = model.getAsJsonArray("elements");
+            assertEquals(2, elements.size(), name);
+            for (int i = 0; i < 2; i++) {
+                JsonObject element = elements.get(i).getAsJsonObject();
+                assertEquals(i == 1, insideOut(element), name + ": element " + i + " is turned inside out");
+                JsonObject faces = element.getAsJsonObject("faces");
+                assertEquals(List.of("north"), List.copyOf(faces.keySet()), name);
+                assertEquals(
+                        "north", faces.getAsJsonObject("north").get("cullface").getAsString(), name);
+            }
+        }
+        JsonObject cube = json(assets().resolve("models/block/floor_grille.json"));
+        assertEquals("minecraft:cutout", cube.get("render_type").getAsString());
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                cube.getAsJsonObject("textures").get("all").getAsString());
+        JsonArray elements = cube.getAsJsonArray("elements");
+        assertEquals(2, elements.size());
+        Map<String, String> behind =
+                Map.of("north", "north", "south", "south", "east", "west", "west", "east", "up", "up", "down", "down");
+        for (int i = 0; i < 2; i++) {
+            JsonObject element = elements.get(i).getAsJsonObject();
+            boolean inner = insideOut(element);
+            assertEquals(i == 1, inner, "element " + i + " is turned inside out");
+            JsonObject faces = element.getAsJsonObject("faces");
+            assertEquals(6, faces.size());
+            for (Map.Entry<String, JsonElement> face : faces.entrySet()) {
+                // Turned inside out along x, the faces named east and west change sides.
+                assertEquals(
+                        inner ? behind.get(face.getKey()) : face.getKey(),
+                        face.getValue().getAsJsonObject().get("cullface").getAsString(),
+                        "element " + i + ", " + face.getKey());
+            }
+        }
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                json(assets().resolve("blockstates/floor_grille.json"))
+                        .getAsJsonObject("variants")
+                        .getAsJsonObject("")
+                        .get("model")
+                        .getAsString());
+        assertEquals(
+                "zas_atmos:block/floor_grille",
+                json(assets().resolve("models/item/floor_grille.json"))
+                        .get("parent")
+                        .getAsString());
+    }
+
+    /** Whether an element runs from east to west, which turns its faces to look inward. */
+    private static boolean insideOut(JsonObject element) {
+        return element.getAsJsonArray("from").get(0).getAsDouble()
+                > element.getAsJsonArray("to").get(0).getAsDouble();
+    }
+
+    /** A block texture, which is 16 px square. */
+    private static BufferedImage texture(String name) throws IOException {
+        BufferedImage image =
+                ImageIO.read(assets().resolve("textures/block/" + name + ".png").toFile());
+        assertEquals(16, image.getWidth(), name);
+        assertEquals(16, image.getHeight(), name);
+        return image;
+    }
+
+    /** How bright a pixel is, 0 to 255: its red, green and blue weighed as the eye does. */
+    private static int brightness(int argb) {
+        return (299 * (argb >> 16 & 255) + 587 * (argb >> 8 & 255) + 114 * (argb & 255)) / 1000;
     }
 
     /**

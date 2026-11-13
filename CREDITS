@@ -3384,3 +3384,36 @@ notes: encased_face_pipe in the reinforced station wall's texture.
 path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/reinforced_station_wall_pipe.json
 origin: original
 notes: The reinforced station wall's six faces, each turned from the north one: with the pipe's end where the pipe shows (where it connects, and where a bare pipe would have a mouth), whole elsewhere.
+
+# The floor grille (#486): a grating that is a full block, and takes a pipe.
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/floor_grille.png
+origin: original
+notes: A grating of near-black iron, 16 px, drawn pixel by pixel: bars 1 px wide every 3 px each way, the first and the last on the edges, so every gap is 2 px. The bars across are lit, the bars down are in shade, and their crossings are bright.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/floor_grille_open.png
+origin: original
+notes: The same grating with the 8 px between its second and its fifth bar left clear, where the end of a pipe's arm shows.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/floor_grille_face.json
+origin: original
+notes: One face of the grating, cut out, seen from outside and from inside: the inner face is an element turned inside out, as vanilla's cube_all_inner_faces is, hidden with the outer face it lies behind.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/floor_grille_face_open.json
+origin: original
+notes: The same face in the texture with the opening.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/floor_grille.json
+origin: original
+notes: A whole cube of the grating, seen from outside and from inside: the grille with no pipe in it, and the item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/floor_grille.json
+origin: original
+notes: The cube of grating, as the item.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/floor_grille.json
+origin: original
+notes: The grille with no pipe in it: the cube of grating.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/floor_grille_pipe.json
+origin: original
+notes: The grille with a pipe in it. The grating's six faces, each turned from the north one: with the opening where the pipe shows (where it connects, and where a bare pipe would have a mouth), bars all over elsewhere. Inside them, the pipe's own core and arms.
