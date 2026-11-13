@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The central atmospherics controller's GUI (CONT-117, CONT-121, CONT-123, CONT-124, CONT-074). It
@@ -33,7 +36,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  *       ZonePriority} {@code p} (CONT-121).
  * </ul>
  */
-public class CentralMenu extends AbstractContainerMenu {
+public class CentralMenu extends AbstractContainerMenu implements LabelledMenu {
     public static final int RANGE_DOWN = 0;
     public static final int RANGE_UP = 1;
     public static final int OPEN = 1_000;
@@ -167,6 +170,12 @@ public class CentralMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return central;
     }
 
     @Override

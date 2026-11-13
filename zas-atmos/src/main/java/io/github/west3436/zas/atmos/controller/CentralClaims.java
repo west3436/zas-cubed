@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.controller;
 
 import io.github.west3436.zas.atmos.device.DeviceData;
+import io.github.west3436.zas.atmos.label.Labels;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -23,8 +24,8 @@ import net.minecraft.world.level.saveddata.SavedData;
  * <p>One table per level, keyed by the area air controller, holds every claim, so an area air
  * controller belongs to at most one central controller even while either is unloaded, and two central
  * controllers never fight over one. Each claim keeps its zone power priority, when it was made, for
- * the order within a priority, and the area air controller's last readings, which the central
- * controller's GUI shows while it is out of contact (CONT-123).
+ * the order within a priority, and the area air controller's last readings and label, which the
+ * central controller's GUI shows while it is out of contact (CONT-123).
  *
  * <p>Saved with a {@code FormatVersion}, which {@link DeviceData#migrate(CompoundTag, List)} brings
  * forward (DATA-012). Server thread only.
@@ -48,10 +49,12 @@ public final class CentralClaims extends SavedData {
      * @param temperature its zone's temperature in K, or NaN before its first reading
      * @param danger its danger level, 0 to 2
      * @param powered whether it paid its own draw at its last step
+     * @param label what a player called it, or the empty string: kept with its readings, so a list
+     *     still names it while it is out of contact
      */
-    public record Readings(double pressure, double temperature, int danger, boolean powered) {
+    public record Readings(double pressure, double temperature, int danger, boolean powered, String label) {
         /** Nothing read yet. */
-        public static final Readings NONE = new Readings(Double.NaN, Double.NaN, 0, false);
+        public static final Readings NONE = new Readings(Double.NaN, Double.NaN, 0, false, "");
     }
 
     /** One claim. */
@@ -187,6 +190,9 @@ public final class CentralClaims extends SavedData {
             e.putDouble("Temperature", c.last.temperature());
             e.putInt("Danger", c.last.danger());
             e.putBoolean("Powered", c.last.powered());
+            if (!c.last.label().isEmpty()) {
+                e.putString("Label", c.last.label());
+            }
             list.add(e);
         });
         tag.put("Claims", list);
@@ -208,7 +214,8 @@ public final class CentralClaims extends SavedData {
                     e.contains("Pressure") ? e.getDouble("Pressure") : Double.NaN,
                     e.contains("Temperature") ? e.getDouble("Temperature") : Double.NaN,
                     Math.max(0, Math.min(2, e.getInt("Danger"))),
-                    e.getBoolean("Powered"));
+                    e.getBoolean("Powered"),
+                    Labels.clean(e.getString("Label")));
             out.claims.put(BlockPos.of(e.getLong("Controller")), c);
             out.nextOrder = Math.max(out.nextOrder, c.order + 1);
         }

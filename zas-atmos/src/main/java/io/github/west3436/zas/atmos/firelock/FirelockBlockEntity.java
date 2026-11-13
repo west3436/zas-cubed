@@ -1,6 +1,7 @@
 package io.github.west3436.zas.atmos.firelock;
 
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -14,7 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * CONT-093, architecture §11.8). The work itself is {@link FirelockLogic}'s, which a firelock fitted
  * to an airlock shares.
  */
-public class FirelockBlockEntity extends AtmosDevice implements FirelockLogic.Holder {
+public class FirelockBlockEntity extends AtmosDevice implements FirelockLogic.Holder, Labelled {
     /** Atmos ticks an opening lasts while the alarm holds, 5 s. */
     public static final int RECLOSE_STEPS = FirelockLogic.RECLOSE_STEPS;
 

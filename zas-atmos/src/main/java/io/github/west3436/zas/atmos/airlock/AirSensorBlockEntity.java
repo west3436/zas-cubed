@@ -4,6 +4,7 @@ import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -18,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
  * it's linked to reads the same point for its cycle, and marks it as cycling while it cycles
  * ({@link #markCycling}).
  */
-public class AirSensorBlockEntity extends AtmosDevice {
+public class AirSensorBlockEntity extends AtmosDevice implements Labelled {
     private long cyclingUntil = Long.MIN_VALUE;
     private double kpa = Double.NaN;
 

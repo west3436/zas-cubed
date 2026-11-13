@@ -9,6 +9,7 @@ import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
 import io.github.west3436.zas.atmos.gear.Encumbrance;
 import io.github.west3436.zas.atmos.gear.GearMaterials;
+import io.github.west3436.zas.atmos.label.LabelTag;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosCapabilities;
@@ -69,6 +70,7 @@ public final class ZasAtmosMod {
         CanisterFailure.register(NeoForge.EVENT_BUS);
         DeviceActivitySync.register(NeoForge.EVENT_BUS);
         Encumbrance.register(NeoForge.EVENT_BUS);
+        LabelTag.register(NeoForge.EVENT_BUS);
     }
 
     /**

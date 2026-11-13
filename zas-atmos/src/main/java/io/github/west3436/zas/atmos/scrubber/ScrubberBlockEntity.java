@@ -11,6 +11,8 @@ import io.github.west3436.zas.atmos.controller.ScrubberOrder;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.ZonePort;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.PipeBlockEntity;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pipe.PipeVolumes;
@@ -54,7 +56,8 @@ import net.minecraft.world.phys.Vec3;
  * <p>Its GUI also shows its network's pressure, which its stall is read from, and its {@link
  * ScrubberStatus}: whether it took gas at its last atmos tick, or why not.
  */
-public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice, ScrubberControl, MenuProvider {
+public class ScrubberBlockEntity extends PipeNodeEntity
+        implements PoweredDevice, ScrubberControl, MenuProvider, Labelled {
     /** Who a scrubber's changes are made by. */
     public static final SourceId SCRUBBER = SourceId.of(ZasAtmosMod.MOD_ID, "scrubber");
 
@@ -303,7 +306,7 @@ public class ScrubberBlockEntity extends PipeNodeEntity implements PoweredDevice
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.scrubber");
+        return Labels.title(label(), Component.translatable("block.zas_atmos.scrubber"));
     }
 
     @Override

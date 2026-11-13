@@ -4,6 +4,8 @@ import io.github.west3436.zas.api.gas.GasParcel;
 import io.github.west3436.zas.api.mutation.GasMutations;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.pipe.GasHandlers;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNode;
@@ -47,7 +49,8 @@ import org.jetbrains.annotations.Nullable;
  * <p>A device extends this, gives {@link #work} and {@link #drawWhenOn}, and opens a menu that
  * extends {@link InlineDeviceMenu}.
  */
-public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost, PoweredDevice, MenuProvider {
+public abstract class InlineDeviceEntity extends AtmosDevice
+        implements PipeHost, PoweredDevice, MenuProvider, Labelled {
     private static final String PORTS = "Ports";
     private static final String ON = "On";
 
@@ -321,7 +324,7 @@ public abstract class InlineDeviceEntity extends AtmosDevice implements PipeHost
 
     @Override
     public Component getDisplayName() {
-        return getBlockState().getBlock().getName();
+        return Labels.title(label(), getBlockState().getBlock().getName());
     }
 
     // ---- Its ports' lives, as a PipeNodeEntity's ---------------------------------------------------

@@ -6,6 +6,7 @@ import io.github.west3436.zas.api.atmosphere.Atmospheres;
 import io.github.west3436.zas.api.fire.Fires;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -30,7 +31,7 @@ import net.minecraft.world.phys.Vec3;
  * <p>A client plays its alarm from its block state ({@link FireAlarmVoice}, CONT-128). All the server
  * plays is the click when it resets.
  */
-public class FireAlarmBlockEntity extends AtmosDevice implements PoweredDevice {
+public class FireAlarmBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
     /** vg's fire alarm trips above 473 K (CONT-044). */
     public static final double TRIGGER_KELVIN = 473.0;
 

@@ -1,5 +1,8 @@
 package io.github.west3436.zas.atmos.controller;
 
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.ArrayList;
@@ -14,6 +17,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The area air controller's GUI (CONT-041, CONT-047, CONT-049, CONT-074). It has no slots. The
@@ -37,7 +41,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  *   <li>{@code 100} and up: select a bound for editing, {@code 100 + reading * 4 + bound}.
  * </ul>
  */
-public class ControllerMenu extends AbstractContainerMenu {
+public class ControllerMenu extends AbstractContainerMenu implements LabelledMenu {
     public static final int LOAD_PRESET = 10;
     public static final int ADJUST = 30;
     public static final int TOGGLE_BOUND = 36;
@@ -212,6 +216,7 @@ public class ControllerMenu extends AbstractContainerMenu {
                 bounds[i * 4 + b] = preset.thresholds(i).bound(b);
             }
         }
+        BlockPos central = central();
         return new ControllerSync(
                 containerId,
                 controller.mode().ordinal(),
@@ -230,7 +235,8 @@ public class ControllerMenu extends AbstractContainerMenu {
                 controller.lastPin() == null ? "" : controller.lastPin().name(),
                 controller.breach(),
                 controller.fire(),
-                central());
+                central,
+                central == null ? "" : Labels.of(controller.getLevel(), central));
     }
 
     /** The central controller it belongs to, or null (CONT-118). */
@@ -243,6 +249,12 @@ public class ControllerMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return controller;
     }
 
     /**

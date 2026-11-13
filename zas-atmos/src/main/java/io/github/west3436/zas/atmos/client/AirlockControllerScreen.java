@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.client.tgui.TguiScreen;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
+import io.github.west3436.zas.atmos.label.Labels;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -165,8 +166,9 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
             BlockPos at = menu.slotPos(s);
             int dotX = left + buttonW + 5;
             ui.dot(dotX, row + (Ui.BUTTON_HEIGHT - 4) / 2, isArmed ? Ui.AVERAGE : at != null ? Ui.GOOD : Ui.DIM);
+            int room = x + w - Ui.PAD - CLEAR_WIDTH - Ui.PAD - (dotX + 8);
             ui.line(
-                    Component.literal(at == null ? "—" : at.getX() + " " + at.getY() + " " + at.getZ()),
+                    ui.fit(Component.literal(at == null ? "—" : named(at)), Face.BODY, room),
                     dotX + 8,
                     row,
                     Ui.BUTTON_HEIGHT,
@@ -182,6 +184,13 @@ final class AirlockControllerScreen extends TguiScreen<AirlockControllerMenu> {
                     at != null ? () -> press(AirlockControllerMenu.CLEAR + s.ordinal()) : null);
             row += Ui.BUTTON_ROW;
         }
+    }
+
+    /** What fills a slot: its label, if a player gave it one and it is loaded here, or where it is. */
+    private String named(BlockPos at) {
+        return minecraft == null || minecraft.level == null
+                ? at.getX() + " " + at.getY() + " " + at.getZ()
+                : Labels.named(minecraft.level, at);
     }
 
     private Component state() {

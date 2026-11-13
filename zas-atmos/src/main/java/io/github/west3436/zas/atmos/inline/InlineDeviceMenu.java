@@ -1,11 +1,14 @@
 package io.github.west3436.zas.atmos.inline;
 
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The base of an inline device's GUI (CONT-074): its switch, whether it has power, what it did last
@@ -16,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
  * <p>A device's own data slots follow {@link #DATA_COUNT}, and its own buttons follow {@link
  * #TOGGLE}.
  */
-public abstract class InlineDeviceMenu extends AbstractContainerMenu {
+public abstract class InlineDeviceMenu extends AbstractContainerMenu implements LabelledMenu {
     /** Switches the device on or off. */
     public static final int TOGGLE = 0;
 
@@ -106,6 +109,12 @@ public abstract class InlineDeviceMenu extends AbstractContainerMenu {
      * @return false to refuse it
      */
     protected abstract boolean ownButton(int id);
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return device;
+    }
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {

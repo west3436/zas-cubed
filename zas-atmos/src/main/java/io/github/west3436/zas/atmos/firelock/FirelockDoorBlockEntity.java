@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.firelock;
 
 import io.github.west3436.zas.atmos.airlock.AirlockFirelock;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -9,6 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -28,7 +30,7 @@ import net.neoforged.neoforge.client.model.data.ModelProperty;
  * per atmos tick, as a standalone firelock's does ({@link FirelockLogic}): its alarm reads the cells
  * on the two sides of the closed door, and a controller links it at the lower half.
  */
-public class FirelockDoorBlockEntity extends AtmosDevice implements FirelockLogic.Holder {
+public class FirelockDoorBlockEntity extends AtmosDevice implements FirelockLogic.Holder, Labelled {
     /** Which door to draw under the firelock, in the block's model data. */
     public static final ModelProperty<Block> DOOR = new ModelProperty<>();
 
@@ -152,10 +154,10 @@ public class FirelockDoorBlockEntity extends AtmosDevice implements FirelockLogi
         }
     }
 
-    /** Clients get which door it was, and nothing else. */
+    /** Clients get which door it was and its label, and nothing else. */
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        CompoundTag tag = new CompoundTag();
+        CompoundTag tag = super.getUpdateTag(registries);
         saveDoor(tag);
         return tag;
     }
@@ -163,6 +165,18 @@ public class FirelockDoorBlockEntity extends AtmosDevice implements FirelockLogi
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** A client reads the door as well as the label, so it loads what it is sent as a whole. */
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        loadWithComponents(tag, registries);
+    }
+
+    @Override
+    public void onDataPacket(
+            Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        loadWithComponents(packet.getTag(), registries);
     }
 
     @Override

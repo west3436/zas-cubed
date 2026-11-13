@@ -1,5 +1,7 @@
 package io.github.west3436.zas.atmos.vent;
 
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.core.BlockPos;
@@ -10,6 +12,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A vent's GUI (CONT-074, CONT-014): its mode and bounds, its network's pressure, what it did last
@@ -17,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
  * each id, refuses every button while a controller controls the vent, and {@link VentSettings}
  * clamps the bounds to 0–5,066 kPa.
  */
-public class VentMenu extends AbstractContainerMenu {
+public class VentMenu extends AbstractContainerMenu implements LabelledMenu {
     /** Sets the mode, by {@link VentMode} ordinal (ids 0–2). */
     public static final int SET_MODE = 0;
 
@@ -140,6 +143,12 @@ public class VentMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return vent;
     }
 
     @Override

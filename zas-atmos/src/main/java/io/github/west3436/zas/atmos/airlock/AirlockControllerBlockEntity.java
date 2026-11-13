@@ -7,6 +7,8 @@ import io.github.west3436.zas.api.atmosphere.ZoneId;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -68,7 +70,7 @@ import org.jetbrains.annotations.Nullable;
  * is powered it powers them. Unpowered, a cycle waits. Its vents take its orders alone, off between
  * cycles (CONT-152).
  */
-public class AirlockControllerBlockEntity extends AtmosDevice implements PoweredDevice, MenuProvider {
+public class AirlockControllerBlockEntity extends AtmosDevice implements PoweredDevice, MenuProvider, Labelled {
     /** Its slots, in the window's order. */
     public enum Slot {
         INNER_DOOR(true, "Airlock0"),
@@ -777,7 +779,7 @@ public class AirlockControllerBlockEntity extends AtmosDevice implements Powered
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.airlock_controller");
+        return Labels.title(label(), Component.translatable("block.zas_atmos.airlock_controller"));
     }
 
     @Override

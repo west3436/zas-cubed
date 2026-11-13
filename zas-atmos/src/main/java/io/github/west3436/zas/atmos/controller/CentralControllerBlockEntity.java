@@ -5,6 +5,8 @@ import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.device.AtmosTicks;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.device.LoadedBlocks;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.EnergyStore;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import java.util.ArrayList;
@@ -52,7 +54,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * ticks block entities (architecture §11.2). One that isn't, unloaded or waiting in a chunk that
  * doesn't tick, keeps its claim, gets no FE, and is listed with its last readings.
  */
-public class CentralControllerBlockEntity extends AtmosDevice implements MenuProvider {
+public class CentralControllerBlockEntity extends AtmosDevice implements MenuProvider, Labelled {
     private final EnergyStore buffer = new EnergyStore(
             () -> AtmosServerConfig.get(AtmosServerConfig.CENTRAL_BUFFER), true, false, this::setChanged);
 
@@ -263,7 +265,8 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
                 values.length > 0 ? values[0] : Double.NaN,
                 values.length > 1 ? values[1] : Double.NaN,
                 c.danger(),
-                c.powered());
+                c.powered(),
+                c.label());
     }
 
     /** The console's four blocks, this one first, as {@link CentralControllerBlock#parts} lists them. */
@@ -333,8 +336,8 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
 
     /**
      * Its area air controllers as its GUI lists them (CONT-123): in the order it claimed them, at
-     * most {@link CentralSync#MAX_ROWS}, each with its last readings, its priority and whether it is
-     * in contact. Server side.
+     * most {@link CentralSync#MAX_ROWS}, each with its last readings, its priority, whether it is
+     * in contact and its label: the one it has now, or out of contact the one it had last. Server side.
      */
     public List<CentralSync.Row> rows() {
         List<CentralSync.Row> out = new ArrayList<>();
@@ -359,7 +362,8 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
                         r.danger(),
                         r.powered(),
                         claims.priority(p).ordinal(),
-                        c != null));
+                        c != null,
+                        c != null ? c.label() : r.label()));
             }
         }
         return out;
@@ -400,7 +404,7 @@ public class CentralControllerBlockEntity extends AtmosDevice implements MenuPro
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.zas_atmos.central_atmos_controller");
+        return Labels.title(label(), Component.translatable("block.zas_atmos.central_atmos_controller"));
     }
 
     @Override

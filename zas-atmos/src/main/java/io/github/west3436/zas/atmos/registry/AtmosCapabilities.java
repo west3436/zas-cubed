@@ -15,6 +15,7 @@ import io.github.west3436.zas.atmos.gear.GasTankItem;
 import io.github.west3436.zas.atmos.gear.MagneticBootsItem;
 import io.github.west3436.zas.atmos.gear.SuitItem;
 import io.github.west3436.zas.atmos.gear.TankSettings;
+import io.github.west3436.zas.atmos.label.LabelPayload;
 import io.github.west3436.zas.atmos.particle.GasJet;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeGasHandler;
@@ -110,6 +111,7 @@ public final class AtmosCapabilities {
                 .playToClient(GasJet.TYPE, GasJet.CODEC, GasJet::handle)
                 .playToClient(DeviceActivityPayload.TYPE, DeviceActivityPayload.CODEC, ClientDeviceActivity::handle)
                 .playToServer(TankSettings.TYPE, TankSettings.CODEC, TankSettings::handle)
+                .playToServer(LabelPayload.TYPE, LabelPayload.CODEC, LabelPayload::handle)
                 .playToServer(
                         MagneticBootsItem.TogglePayload.TYPE,
                         MagneticBootsItem.TogglePayload.CODEC,

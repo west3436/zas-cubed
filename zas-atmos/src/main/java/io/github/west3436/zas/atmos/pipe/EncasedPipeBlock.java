@@ -34,9 +34,10 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A pipe in a casing (#487): a full block that is still the pipe. The casing is a block of its own,
- * such as a station wall, and the pipe passes through it, so a pipe goes from one room to the next
- * with no gap in the wall between them.
+ * A pipe in a casing (#487, #486): a full block that is still the pipe. The casing is a block of its
+ * own, and the pipe passes through it: a station wall, so that a pipe goes from one room to the next
+ * with no gap in the wall between them, or a floor grille ({@link FloorGrilleBlock}), so that a run
+ * lies in a floor that is walked on and shows through it.
  *
  * <ul>
  *   <li><b>For the air</b> it is the casing: a full cube, so its gas geometry is a full block's and
@@ -47,7 +48,9 @@ import org.jetbrains.annotations.Nullable;
  *       handler a pipe offers (API-021). It has no open end: with fewer than two connections its
  *       casing closes it, where a bare pipe would leak (CONT-004).
  *   <li><b>For the player</b> it is the casing with a pipe's end in each face the pipe shows on: its
- *       hardness, blast resistance, tool and sound are the casing's, given at registration.
+ *       hardness, blast resistance, tool and sound are the casing's, given at registration. A
+ *       casing that is seen through, which is one that doesn't occlude, stays seen through: it lets
+ *       light by and shows no face against its own kind, with a pipe in it or without.
  * </ul>
  *
  * <p>It is made in either order, and has no item of its own: a pipe used on the casing's block goes
@@ -66,7 +69,7 @@ public class EncasedPipeBlock extends PipeBlock {
 
     /**
      * @param properties the casing's own properties, which this block keeps
-     * @param shell the casing as a block of its own, such as the station wall
+     * @param shell the casing as a block of its own, such as the station wall or the floor grille
      */
     public EncasedPipeBlock(Properties properties, Supplier<? extends Block> shell) {
         super(properties, null);
@@ -119,6 +122,34 @@ public class EncasedPipeBlock extends PipeBlock {
     @Override
     public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
         return new ItemStack(shell());
+    }
+
+    /** A casing that is seen through lets light through, as glass does. A wall lets none. */
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+        return !state.canOcclude();
+    }
+
+    /** A casing that is seen through casts no shade on the blocks round it, as glass casts none. */
+    @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return state.canOcclude() ? super.getShadeBrightness(state, level, pos) : 1.0f;
+    }
+
+    /** A casing that is seen through is nothing to a line of sight, as glass is nothing. */
+    @Override
+    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.canOcclude() ? super.getVisualShape(state, level, pos, context) : Shapes.empty();
+    }
+
+    /**
+     * A casing that is seen through shows no face against its own kind, with a pipe in it or without:
+     * a run under floor grilles is one channel, and so is a floor of them.
+     */
+    @Override
+    protected boolean skipRendering(BlockState state, BlockState adjacent, Direction direction) {
+        return !state.canOcclude() && (adjacent.is(this) || adjacent.is(shell()))
+                || super.skipRendering(state, adjacent, direction);
     }
 
     /**

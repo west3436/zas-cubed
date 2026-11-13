@@ -18,6 +18,8 @@ import io.github.west3436.zas.atmos.registry.AtmosItems;
 import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
+import io.github.west3436.zas.atmos.vent.VentBlockEntity;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,8 @@ import java.util.TreeMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -111,6 +115,43 @@ public final class JadeReadoutTests {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM
                 .getKey(stack.getItem())
                 .toString();
+    }
+
+    // ---- Labels ------------------------------------------------------------------------------------
+
+    /**
+     * A device a player has labelled is named by its label in Jade's own name line, which reads any
+     * block entity with a name of its own as it reads a named chest: the adapter adds nothing for it.
+     * With no label Jade is sent no name, and shows the block's as before.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void a_labelled_device_is_named_by_its_label(GameTestHelper h) {
+        Spot s = new Spot(h, 41);
+        s.clear();
+        VentBlockEntity vent = s.place(1, 1, 1, AtmosBlocks.VENT.get().defaultBlockState(), VentBlockEntity.class);
+        BlockPos pos = vent.getBlockPos();
+        h.assertTrue(JadeProbe.name(s.level, pos).isEmpty(), "a name is sent for a vent with no label");
+        vent.setLabel("Supply 1");
+        String sent = text(JadeProbe.name(s.level, pos));
+        h.assertTrue(sent.contains("Supply 1"), "the name sent for a labelled vent: " + sent);
+        vent.setLabel("");
+        h.assertTrue(JadeProbe.name(s.level, pos).isEmpty(), "a name is sent for a vent whose label was cleared");
+        s.clear();
+        h.succeed();
+    }
+
+    /**
+     * The text in what Jade sends for a name. Newer versions send the name as a component encoded in
+     * a byte array, so the text in each byte array is read as well as the tag's own.
+     */
+    private static String text(CompoundTag sent) {
+        StringBuilder out = new StringBuilder(sent.toString());
+        for (String key : sent.getAllKeys()) {
+            if (sent.get(key) instanceof ByteArrayTag bytes) {
+                out.append(' ').append(new String(bytes.getAsByteArray(), StandardCharsets.UTF_8));
+            }
+        }
+        return out.toString();
     }
 
     // ---- COMPAT-030 and COMPAT-031: one body of gas ----------------------------------------------

@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.firelock;
 
 import io.github.west3436.zas.atmos.airlock.AirlockBlock;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.Labels;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
@@ -14,6 +16,9 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * The firelock item. It places a standalone firelock (CONT-043), and used on a door or an airlock
  * that has none, sneaking or not, it fits one to it instead (CONT-137): before the door would open.
+ *
+ * <p>One renamed in an anvil gives its name as a label to the firelock it places, as any labelled
+ * device's item does, and to the door or the airlock it is fitted to, unless that has a label already.
  */
 public class FirelockItem extends DoubleHighBlockItem {
     public FirelockItem(Block block, Properties properties) {
@@ -35,6 +40,11 @@ public class FirelockItem extends DoubleHighBlockItem {
                     ? AirlockBlock.fitFirelock(server, AirlockBlock.origin(state, pos))
                     : FirelockDoorBlock.fit(server, pos);
             if (fitted) {
+                String name = Labels.of(stack);
+                Labelled target = Labels.at(server, pos);
+                if (!name.isEmpty() && target != null && target.label().isEmpty()) {
+                    target.setLabel(name);
+                }
                 stack.consume(1, context.getPlayer());
             }
         }
