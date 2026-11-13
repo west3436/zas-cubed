@@ -1,6 +1,8 @@
 package io.github.west3436.zas.atmos.airlock;
 
 import io.github.west3436.zas.atmos.airlock.AirlockControllerBlockEntity.Slot;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import net.minecraft.core.BlockPos;
@@ -23,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
  * AirlockControllerBlockEntity#requestCycle(int)} refuses a cycle toward a door that isn't set, as it
  * does one with no power, without the sensors it needs, or one already running.
  */
-public class AirlockControllerMenu extends AbstractContainerMenu {
+public class AirlockControllerMenu extends AbstractContainerMenu implements LabelledMenu {
     private static final int SLOTS = Slot.values().length;
 
     /** Cycle toward the inner door (id 0) or the outer door (id 1). */
@@ -206,6 +208,12 @@ public class AirlockControllerMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return controller;
     }
 
     @Override

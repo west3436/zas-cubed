@@ -9,6 +9,7 @@ import io.github.west3436.zas.atmos.controller.CentralControllerBlockEntity;
 import io.github.west3436.zas.atmos.device.DeviceData;
 import io.github.west3436.zas.atmos.firelock.FirelockBlock;
 import io.github.west3436.zas.atmos.firelock.FirelockDoorBlock;
+import io.github.west3436.zas.atmos.label.Labels;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
@@ -39,6 +40,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * controller alarms (CONT-043). Used on a central atmospherics controller, it moves the selected
  * controller to that one, if it is in range (CONT-118). Use it on nothing while sneaking to clear the
  * selection. The selection is kept on the stack, as the controller's position and dimension.
+ *
+ * <p>What it says names a part or a controller by its label, if a player gave it one ({@link Labels}),
+ * and by its position if not.
  *
  * <p>It selects an airlock controller too, and then links airlocks and air sensors into its slots,
  * and vents, to it (CONT-138). Used sneaking on an airlock controller, it links that controller to the selected area
@@ -110,7 +114,7 @@ public class MultitoolItem extends Item {
                                 be instanceof AirlockControllerBlockEntity
                                         ? "item.zas_atmos.multitool.selected_airlock"
                                         : "item.zas_atmos.multitool.selected",
-                                pos(pos)));
+                                where(level, pos)));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
@@ -241,11 +245,17 @@ public class MultitoolItem extends Item {
                     AirlockControllerBlockEntity.Slot slot = airlockController.slotOf(part);
                     yield slot == null
                             ? Component.translatable(
-                                    "item.zas_atmos.multitool.linked_airlock", pos(part), pos(at.get()))
-                            : Component.translatable("item.zas_atmos.multitool.linked_slot", slotName(slot), pos(part));
+                                    "item.zas_atmos.multitool.linked_airlock",
+                                    Labels.named(level, part),
+                                    where(level, at.get()))
+                            : Component.translatable(
+                                    "item.zas_atmos.multitool.linked_slot", slotName(slot), Labels.named(level, part));
                 }
                 case UNLINKED ->
-                    Component.translatable("item.zas_atmos.multitool.unlinked_airlock", pos(part), pos(at.get()));
+                    Component.translatable(
+                            "item.zas_atmos.multitool.unlinked_airlock",
+                            Labels.named(level, part),
+                            where(level, at.get()));
                 case AIRLOCKS_FULL -> Component.translatable("item.zas_atmos.multitool.airlocks_full");
                 case SENSOR_FULL -> Component.translatable("item.zas_atmos.multitool.sensor_full");
                 case WRONG_KIND -> {
@@ -266,8 +276,8 @@ public class MultitoolItem extends Item {
         boolean linked = controller.toggleLink(part);
         return Component.translatable(
                 linked ? "item.zas_atmos.multitool.linked" : "item.zas_atmos.multitool.unlinked",
-                pos(part),
-                pos(at.get()));
+                Labels.named(level, part),
+                where(level, at.get()));
     }
 
     /**
@@ -284,9 +294,10 @@ public class MultitoolItem extends Item {
             return noController(at);
         }
         if (!central.take(at.get())) {
-            return Component.translatable("item.zas_atmos.multitool.out_of_range", pos(at.get()));
+            return Component.translatable("item.zas_atmos.multitool.out_of_range", where(level, at.get()));
         }
-        return Component.translatable("item.zas_atmos.multitool.moved", pos(at.get()), pos(central.getBlockPos()));
+        return Component.translatable(
+                "item.zas_atmos.multitool.moved", where(level, at.get()), where(level, central.getBlockPos()));
     }
 
     /** An airlock controller's slot by its name in the controller's window. */
@@ -296,6 +307,17 @@ public class MultitoolItem extends Item {
 
     private static String pos(BlockPos p) {
         return p.getX() + " " + p.getY() + " " + p.getZ();
+    }
+
+    /**
+     * How a message says which controller it means: by its label, or without one by where it is, as
+     * these messages always have.
+     */
+    private static Component where(Level level, BlockPos pos) {
+        String label = Labels.of(level, pos);
+        return label.isEmpty()
+                ? Component.translatable("item.zas_atmos.multitool.at", pos(pos))
+                : Component.literal(label);
     }
 
     private static void tell(Player player, Component message) {

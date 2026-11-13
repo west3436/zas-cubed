@@ -491,6 +491,20 @@ public final class CcReadTests {
         }
         h.assertValueEqual(parts.get(0).get("block"), "zas_atmos:vent", "the part's block");
 
+        // A part a player has labelled says so, as the window's list does.
+        h.assertTrue(!parts.get(0).containsKey("label"), "a label on a part that has none");
+        vent.setLabel("Supply");
+        controller.step();
+        h.assertValueEqual(p.getParts().get(0).get("label"), "Supply", "the labelled part's label");
+        h.assertValueEqual(
+                new ControllerMenu(1, player.getInventory(), controller)
+                        .sync()
+                        .parts()
+                        .get(0)
+                        .label(),
+                "Supply",
+                "the window's label for it");
+
         // With no power its status says so, as the window's does.
         controller.buffer().set(0);
         controller.step();
@@ -547,6 +561,18 @@ public final class CcReadTests {
         h.assertValueEqual(given.get("powered"), row.powered(), "whether the row has power");
         h.assertValueEqual(given.get("priority"), Lua.word(ZonePriority.values()[row.priority()]), "its priority");
         h.assertValueEqual(given.get("contact"), row.contact(), "whether it is in contact");
+        // A controller a player has labelled says so, as the window's row does.
+        h.assertTrue(!given.containsKey("label"), "a label on a controller that has none");
+        controller.setLabel("Bridge");
+        h.assertValueEqual(p.getControllers().get(0).get("label"), "Bridge", "the labelled controller's label");
+        h.assertValueEqual(
+                new CentralMenu(1, player.getInventory(), central)
+                        .sync()
+                        .rows()
+                        .get(0)
+                        .label(),
+                "Bridge",
+                "the window's label for it");
         h.assertValueEqual(
                 s.peripheral(2, 2, 1, AreaAirControllerPeripheral.class).getCentral(),
                 Lua.position(central.getBlockPos()),

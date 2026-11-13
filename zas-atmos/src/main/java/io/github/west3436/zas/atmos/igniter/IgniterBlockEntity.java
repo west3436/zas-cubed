@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.igniter;
 
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.device.AtmosDevice;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.power.DevicePower;
 import io.github.west3436.zas.atmos.power.PowerPriority;
 import io.github.west3436.zas.atmos.power.PoweredDevice;
@@ -23,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
  * signal and power paid for, and stops if either is gone. It never touches gas itself: the
  * framework ignites a flammable mixture beside a lit igniter (API-053).
  */
-public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice {
+public class IgniterBlockEntity extends AtmosDevice implements PoweredDevice, Labelled {
     /** Atmos ticks between its spark sounds while it stays lit, 3 s (CONT-127). */
     public static final int SPARK_STEPS = 3;
 

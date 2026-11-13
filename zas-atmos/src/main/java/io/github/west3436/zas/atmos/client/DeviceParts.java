@@ -4,9 +4,12 @@ import io.github.west3436.zas.atmos.battery.BatteryItem;
 import io.github.west3436.zas.atmos.client.tgui.Ui;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Face;
 import io.github.west3436.zas.atmos.client.tgui.Ui.Tone;
+import io.github.west3436.zas.atmos.label.Labels;
 import java.util.Optional;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 
 /**
  * What the device windows share. They hold to labels, values and graphics: a status is a dot and a
@@ -70,6 +73,20 @@ final class DeviceParts {
                 text("fe", BatteryItem.fe(energy), BatteryItem.fe(capacity)));
     }
 
+    /**
+     * Which controller a device follows: by its label, if a player gave it one and it is loaded here,
+     * cut to fit the notice's one line, or by where it is.
+     */
+    private static Component controllerAt(Ui ui, BlockPos p, int room) {
+        Level level = Minecraft.getInstance().level;
+        String label = level == null ? "" : Labels.of(level, p);
+        if (label.isEmpty()) {
+            return text("controller_at", p.getX(), p.getY(), p.getZ());
+        }
+        float before = ui.width(text("controller_named", ""), Face.BOLD);
+        return text("controller_named", ui.fit(Component.literal(label), Face.BOLD, room - before));
+    }
+
     /** How tall {@link #notices} draws. */
     static int noticesHeight(boolean powered, boolean controlled) {
         return ((powered ? 0 : 1) + (controlled ? 1 : 0)) * (Ui.NOTICE_HEIGHT + Ui.PAD);
@@ -85,9 +102,8 @@ final class DeviceParts {
             y += ui.notice(x, y, w, Ui.NOTICE, Ui.BLACK, text("no_power")) + Ui.PAD;
         }
         if (controlled) {
-            Component who = controller
-                    .map(p -> text("controller_at", p.getX(), p.getY(), p.getZ()))
-                    .orElseGet(() -> text("controller"));
+            int room = w - 2 * Ui.PAD - LOCK_ROOM;
+            Component who = controller.map(p -> controllerAt(ui, p, room)).orElseGet(() -> text("controller"));
             int h = ui.notice(x, y, w, Ui.NOTICE_INFO, Ui.WHITE, who, LOCK_ROOM);
             ui.lock(x + Ui.PAD, y + 2, Ui.WHITE);
             y += h + Ui.PAD;

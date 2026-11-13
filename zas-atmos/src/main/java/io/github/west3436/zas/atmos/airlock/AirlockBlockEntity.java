@@ -2,6 +2,7 @@ package io.github.west3436.zas.atmos.airlock;
 
 import io.github.west3436.zas.atmos.device.AtmosDevice;
 import io.github.west3436.zas.atmos.firelock.FirelockLogic;
+import io.github.west3436.zas.atmos.label.Labelled;
 import io.github.west3436.zas.atmos.registry.AtmosBlockEntities;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
 import net.minecraft.core.BlockPos;
@@ -17,7 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * FirelockLogic}): its alarm reads the cells in front of the origin's leaf and behind it, and a
  * controller links it at the origin.
  */
-public class AirlockBlockEntity extends AtmosDevice implements FirelockLogic.Holder {
+public class AirlockBlockEntity extends AtmosDevice implements FirelockLogic.Holder, Labelled {
     private final FirelockLogic logic = new FirelockLogic();
 
     /** The game time the open airlock closes itself at, or -1 if it isn't waiting to. */

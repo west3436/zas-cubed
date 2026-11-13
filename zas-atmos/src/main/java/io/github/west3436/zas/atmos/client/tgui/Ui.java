@@ -74,9 +74,21 @@ public final class Ui {
     private static final int GHOST = 0xA0111111;
     private static final int SCROLL_TRACK = 0x14FFFFFF;
     private static final int SCROLL_THUMB = 0xFF6A6A6A;
+    private static final int TITLE_DIM = 0x59FFFFFF;
+    private static final int FIELD = 0xFF0A0A0A;
+    private static final int FIELD_EDGE = 0xFF88BFFF;
+
+    /** What ends text that was cut to fit. */
+    private static final String ELLIPSIS = "…";
 
     /** The title bar's height. */
     public static final int TITLE_HEIGHT = 16;
+
+    /** Where the title starts, from the window's left edge. */
+    static final int TITLE_LEFT = 22;
+
+    /** The close button's width. */
+    static final int CLOSE_WIDTH = 20;
 
     /** The padding inside the window, and the gap between its sections. */
     public static final int PAD = 3;
@@ -196,6 +208,28 @@ public final class Ui {
     /** How wide a piece of text is. */
     public float width(Component text, Face face) {
         return font.getSplitter().stringWidth(styled(text, face));
+    }
+
+    /**
+     * Text cut to fit a width, ending in an ellipsis where it is cut: a name a player chose can be
+     * longer than its column. Text that fits comes back as it is.
+     */
+    public Component fit(Component text, Face face, float width) {
+        if (width(text, face) <= width) {
+            return text;
+        }
+        String whole = text.getString();
+        for (int n = whole.length() - 1; n > 0; n--) {
+            if (Character.isHighSurrogate(whole.charAt(n - 1))) {
+                continue;
+            }
+            Component cut = Component.literal(whole.substring(0, n).stripTrailing() + ELLIPSIS)
+                    .withStyle(text.getStyle());
+            if (width(cut, face) <= width) {
+                return cut;
+            }
+        }
+        return Component.literal(ELLIPSIS);
     }
 
     /** Text starting at {@code x}, centred in a line {@code height} tall. */
@@ -406,20 +440,96 @@ public final class Ui {
 
     /** The window, its title bar and the close button. The title bar's eye shows who can act. */
     void window(int x, int y, int w, int h, Component title, int eye, Runnable onClose) {
+        frame(x, y, w, h, eye, onClose);
+        title(title, x + TITLE_LEFT, y, false);
+    }
+
+    /** The same with no title, for a window that draws its own in the bar. */
+    void frame(int x, int y, int w, int h, int eye, Runnable onClose) {
         fill(x - 1, y - 1, w + 2, h + 2, WINDOW_EDGE);
         g.fillGradient(x, y, x + w, y + h, WINDOW_TOP, WINDOW_BOTTOM);
         fill(x, y, w, TITLE_HEIGHT, TITLE_BAR);
         box(x, y + TITLE_HEIGHT - HAIRLINE, w, HAIRLINE, SECTION);
         eye(x + 11, y + TITLE_HEIGHT / 2f, eye);
-        line(title, x + 22, y, TITLE_HEIGHT, TITLE_TEXT, Face.TITLE);
-        int closeWidth = 20;
-        int closeX = x + w - closeWidth;
-        boolean over = hovered(closeX, y, closeWidth, TITLE_HEIGHT);
-        if (over) {
-            fill(closeX, y, closeWidth, TITLE_HEIGHT, TAB_HOVER);
+        titleButton(x + w - CLOSE_WIDTH, y, CLOSE_WIDTH, Component.literal("✕"), false, onClose);
+    }
+
+    /** A title in the title bar, starting at {@code x}: the window's own, or dimmer, what follows it. */
+    void title(Component text, float x, int y, boolean dim) {
+        line(text, x, y, TITLE_HEIGHT, dim ? TITLE_DIM : TITLE_TEXT, Face.TITLE);
+    }
+
+    /** A button in the title bar, as the close button is: a mark that lights under the mouse, or while it is on. */
+    void titleButton(int x, int y, int w, Component mark, boolean on, Runnable onClick) {
+        lineCentred(mark, x, w, y, TITLE_HEIGHT, titleButton(x, y, w, on, onClick), Face.BODY);
+    }
+
+    /** The same with a pencil for its mark: the button that turns the title into a line to type in. */
+    void editButton(int x, int y, int w, boolean on, Runnable onClick) {
+        pencil(x + w / 2f, y + TITLE_HEIGHT / 2f, titleButton(x, y, w, on, onClick));
+    }
+
+    /** A title-bar button's ground and where it is clicked. Returns the colour its mark is drawn in. */
+    private int titleButton(int x, int y, int w, boolean on, Runnable onClick) {
+        boolean over = hovered(x, y, w, TITLE_HEIGHT);
+        if (over || on) {
+            fill(x, y, w, TITLE_HEIGHT, TAB_HOVER);
         }
-        lineCentred(Component.literal("✕"), closeX, closeWidth, y, TITLE_HEIGHT, over ? WHITE : DIM, Face.BODY);
-        hits.add(new Hit(closeX, y, closeWidth, TITLE_HEIGHT, onClose));
+        hits.add(new Hit(x, y, w, TITLE_HEIGHT, onClick));
+        return over || on ? WHITE : DIM;
+    }
+
+    /**
+     * A pencil about a point, its tip down to the left, beside the line it writes: 8 wide and 9 tall.
+     * A font's pencil is too fine to read at this size.
+     */
+    private void pencil(float cx, float cy, int colour) {
+        float half = 0.9f; // half the pencil's width, along each axis
+        float neckX = cx - 1.5f;
+        float neckY = cy + 0.5f;
+        // The tip, the wood behind it up to the band, and the end past the band.
+        anyQuad(
+                cx - 3.5f,
+                cy + 2.5f,
+                neckX - half,
+                neckY - half,
+                neckX + half,
+                neckY + half,
+                neckX + half,
+                neckY + half,
+                colour);
+        addLine(neckX, neckY, cx + 1.6f, cy - 2.6f, 2 * half * 1.414f, colour);
+        addLine(cx + 2.1f, cy - 3.1f, cx + 3.0f, cy - 4.0f, 2 * half * 1.414f, colour);
+        addBox(cx - 1, cy + 3, 5, 1, colour);
+        g.flush();
+    }
+
+    /**
+     * A line being typed, as TGUI's input: a dark box with a lit edge, the text, and a caret. Text too
+     * long for the box moves along so the caret stays in it. With nothing typed it shows what the line
+     * stands for, dimmed.
+     *
+     * @param caret how many characters of the text come before the caret
+     * @param placeholder what an empty line shows
+     * @param caretShown whether the caret is in the lit half of its blink
+     */
+    void field(
+            int x, int y, int w, int h, String text, int caret, Component placeholder, boolean caretShown, Face face) {
+        fill(x, y, w, h, FIELD);
+        outline(x, y, w, h, FIELD_EDGE);
+        int inside = w - 2 * PAD;
+        float before = width(Component.literal(text.substring(0, caret)), face);
+        float along = Math.max(0, before - inside);
+        clip(x + 1, y, w - 2, h);
+        if (text.isEmpty()) {
+            line(fit(placeholder, face, inside), x + PAD, y, h, CELL_OFF, face);
+        } else {
+            line(Component.literal(text), x + PAD - along, y, h, WHITE, face);
+        }
+        if (caretShown) {
+            box(x + PAD + before - along, y + 2, HAIRLINE, h - 4, WHITE);
+        }
+        endClip();
     }
 
     /**

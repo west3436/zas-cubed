@@ -4,6 +4,8 @@ import io.github.west3436.zas.api.gas.GasTag;
 import io.github.west3436.zas.api.gas.GasTags;
 import io.github.west3436.zas.api.gas.StandardAir;
 import io.github.west3436.zas.atmos.controller.ControllerPreset;
+import io.github.west3436.zas.atmos.label.Labelled;
+import io.github.west3436.zas.atmos.label.LabelledMenu;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosMenus;
 import java.util.List;
@@ -17,6 +19,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A scrubber's GUI (CONT-074, CONT-015): its mode and selection, its network's pressure, what it did
@@ -28,7 +31,7 @@ import net.minecraft.world.item.ItemStack;
  * through a tag it joins, and an order or saved selection may name others: a toggle changes only its
  * own gas or tag.
  */
-public class ScrubberMenu extends AbstractContainerMenu {
+public class ScrubberMenu extends AbstractContainerMenu implements LabelledMenu {
     /** Sets the mode, by {@link ScrubberMode} ordinal (ids 0–3). */
     public static final int SET_MODE = 0;
 
@@ -173,6 +176,12 @@ public class ScrubberMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    /** The device whose label the title bar sets. */
+    @Override
+    public @Nullable Labelled labelled() {
+        return scrubber;
     }
 
     @Override
