@@ -13,14 +13,15 @@ ZAS³ adds fluid mechanics to your world inspired by Space Station 13's early at
 
 This mod contains two modules; **ZAS³** (`zas`) is the air itself and the public API while **ZAS³ Atmospherics** (`zas_atmos`) is the SS13-style content. A pack can turn the content off and keep the simulation alone.
 
- - **Pipe network:** pipes, end caps, manual and redstone valves, connector ports, pressure and volume pumps, filters, mixers, radiator pipes and heat exchangers.
+ - **Pipe network:** pipes, end caps, manual and redstone valves, connector ports, pressure and volume pumps, filters, mixers, radiator pipes, heat exchangers and gauges that read a pipe, canister or tank and give a redstone signal.
  - **Room air:** vents, scrubbers, passive vents, area air controllers, a central atmospherics controller, air sensors, heaters and air conditioners.
  - **Fire and doors:** fire alarms, firelocks, igniters, airlocks and airlock controllers.
- - **Gas handling:** canisters, portable pumps and scrubbers, tank holders, tank transfer valves and a water electrolyzer.
+ - **Gas handling:** canisters, large gas tanks, portable pumps and scrubbers, tank holders, tank transfer valves and a water electrolyzer.
  - **Staying alive:** oxygen and air tanks, breath masks and gas masks, softsuits, hardsuits and magnetic boots.
  - **Tools:** atmos analyzer, multitool, wrench, crowbar and fire extinguisher. Also a bike horn.
  - **Power:** devices run on FE from a generator or any other mod's power source, handed out through the controllers. There are no cables. Portables and heaters run on rechargeable batteries.
- - **Building:** station walls, reinforced station walls and reinforced glass.
+ - **Building:** station walls, reinforced station walls, reinforced glass and floor grilles. A pipe can run through a station wall or under a floor grille and the room stays airtight.
+ - **Labels:** name a device with a name tag, an anvil or its window's title bar, and controllers list it by that name.
 
 Animated guides to every device are built in as Ponder scenes. They show when Create is installed. Without Create, the separate [ZAS³ Ponder](https://modrinth.com/mod/zas-ponders) addon brings Ponder.
 
@@ -43,7 +44,15 @@ Animated guides to every device are built in as Ponder scenes. They show when Cr
 
 **JEI** and **EMI**: gas properties and reactions are detailed.
 
-**Fusion**: connected textures for the station walls and reinforced glass blocks.
+**Fusion** (1.2.9+): connected textures for the station walls and reinforced glass blocks.
+
+**CC: Tweaked** (1.113.0+): devices and controllers are peripherals. A computer reads and sets what each device's window shows, and gets an event when a zone is breached or sealed and when a fire starts or goes out.
+
+**Curios** (9.2.0+) and **Accessories** (1.1.0-beta.3+): gas tanks work from their slots, and masks from a head slot.
+
+**KubeJS** (2101.7.0+): server scripts get the zone and fire events, read and change the air, and add their own hazards and open air.
+
+**Create** (6.0.10+): brings Ponder, so the built-in Ponder scenes show.
 
 ## For mod developers
 
