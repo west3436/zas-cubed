@@ -13,6 +13,8 @@ import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.portable.PortableGasDevice;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.atmos.ttv.TransferValveBlockEntity;
 import io.github.west3436.zas.atmos.vent.VentBlockEntity;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +33,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -205,6 +209,26 @@ public final class JadeReadoutTests {
                 reading.shares().stream().map(Reading.Share::gas).toList(),
                 List.of("zas:carbon_dioxide", "zas:nitrogen", "zas:oxygen"),
                 "the canister's gases");
+        s.clear();
+        h.succeed();
+    }
+
+    /** A large tank reads its gas from either half, though only its lower half has a block entity. */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void compat_030_a_large_tank_reads_its_gas_from_either_half(GameTestHelper h) {
+        Spot s = new Spot(h, 12);
+        s.clear();
+        BlockState lower = AtmosBlocks.LARGE_GAS_TANK.get().defaultBlockState();
+        // The upper half first: the lower one goes at once with nothing above it.
+        s.set(1, 2, 1, lower.setValue(LargeTankBlock.HALF, DoubleBlockHalf.UPPER));
+        LargeTankBlockEntity tank = s.place(1, 1, 1, lower, LargeTankBlockEntity.class);
+        Map<ResourceLocation, Double> moles = Map.of(Spot.N2, 900.0, Spot.O2, 100.0);
+        tank.network().gas().add(new GasParcel(moles, 300));
+        double kpa = 1000.0 * GasMixture.GAS_CONSTANT * 300 / tank.nodeVolume();
+        for (BlockPos half : List.of(s.abs(1, 1, 1), s.abs(1, 2, 1))) {
+            h.assertTrue(JadeProbe.asks(s.level, half), "a client wouldn't ask about a large tank's half");
+            body(h, JadeProbe.reading(s.level, half), kpa, 300, moles, "the large tank");
+        }
         s.clear();
         h.succeed();
     }

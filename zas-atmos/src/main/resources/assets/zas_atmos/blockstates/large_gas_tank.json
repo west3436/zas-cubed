@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "zas_atmos:block/large_gas_tank_lower"
+    },
+    "half=upper": {
+      "model": "zas_atmos:block/large_gas_tank_upper"
+    }
+  }
+}

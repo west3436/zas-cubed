@@ -73,6 +73,7 @@ public final class AtmosCreativeTab {
         out.accept(AtmosItems.SCRUBBER.get());
         out.accept(AtmosItems.PASSIVE_VENT.get());
         out.accept(AtmosItems.HEAT_EXCHANGER.get());
+        out.accept(AtmosItems.LARGE_GAS_TANK.get());
         out.accept(AtmosItems.CANISTER.get());
         FILLED.forEach((gas, color) ->
                 out.accept(AtmosItems.CANISTER.get().filled(ResourceLocation.fromNamespaceAndPath("zas", gas), color)));

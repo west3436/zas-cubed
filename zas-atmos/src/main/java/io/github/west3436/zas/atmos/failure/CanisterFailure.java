@@ -3,10 +3,11 @@ package io.github.west3436.zas.atmos.failure;
 import io.github.west3436.zas.api.atmosphere.AtmosphereSample;
 import io.github.west3436.zas.api.atmosphere.AtmosphereState;
 import io.github.west3436.zas.api.atmosphere.Atmospheres;
-import io.github.west3436.zas.atmos.canister.CanisterBlockEntity;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Kind;
 import io.github.west3436.zas.atmos.failure.ContainerFailure.Verdict;
 import io.github.west3436.zas.atmos.gas.GasStore;
+import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
+import io.github.west3436.zas.atmos.tank.GasVessels;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Explosion;
@@ -16,7 +17,7 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
 
 /**
  * How a canister fails (CONT-085, CONT-101, CONT-102): by its pressure or temperature, at its atmos
- * tick, or when an explosion reaches it.
+ * tick, or when an explosion reaches it. A large gas tank is rated the same and fails the same way.
  *
  * <p>Either way the block goes and leaves nothing behind. As it is removed, its share of its
  * network's gas goes into its cell, and the rest stays with the network's other members (CONT-009).
@@ -35,7 +36,7 @@ public final class CanisterFailure {
      * goes by the air around it. Hot gas inside it is left to the pressure limits (CONT-085, D-57).
      *
      * @param level the level
-     * @param pos the canister
+     * @param pos the canister, or a large tank's lower half
      * @param gas its network's gas
      * @return whether the canister failed, and is gone
      */
@@ -57,9 +58,8 @@ public final class CanisterFailure {
 
     /** The moles a canister lets out when it goes, read before it does: its share of its network's gas. */
     private static double shareOf(ServerLevel level, BlockPos pos) {
-        return level.getBlockEntity(pos) instanceof CanisterBlockEntity canister
-                ? canister.share().totalMoles()
-                : 0;
+        PipeNodeEntity vessel = GasVessels.at(level, pos);
+        return vessel == null ? 0 : vessel.share().totalMoles();
     }
 
     /**
@@ -85,9 +85,12 @@ public final class CanisterFailure {
                 || event.getExplosion().getBlockInteraction() == Explosion.BlockInteraction.TRIGGER_BLOCK) {
             return;
         }
-        for (BlockPos pos : event.getAffectedBlocks()) {
-            if (level.getBlockEntity(pos) instanceof CanisterBlockEntity) {
-                double moles = shareOf(level, pos);
+        for (BlockPos reached : event.getAffectedBlocks()) {
+            PipeNodeEntity vessel = GasVessels.at(level, reached);
+            if (vessel != null && !vessel.isRemoved()) {
+                // A tank goes by its lower half, which holds its gas, whichever half the blast reached.
+                BlockPos pos = vessel.getBlockPos();
+                double moles = vessel.share().totalMoles();
                 level.removeBlock(pos, false);
                 ContainerBlast.burst(level, Vec3.atCenterOf(pos), moles);
             }

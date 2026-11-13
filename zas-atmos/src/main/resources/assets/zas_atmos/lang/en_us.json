@@ -7,6 +7,7 @@
   "block.zas_atmos.redstone_valve": "Redstone Valve",
   "block.zas_atmos.connector_port": "Connector Port",
   "block.zas_atmos.canister": "Canister",
+  "block.zas_atmos.large_gas_tank": "Large Gas Tank",
   "block.zas_atmos.vent": "Vent",
   "block.zas_atmos.scrubber": "Scrubber",
   "block.zas_atmos.passive_vent": "Passive Vent",

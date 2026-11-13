@@ -17,5 +17,8 @@ public final class PipeVolumes {
     /** A canister. */
     public static final double CANISTER = 1000;
 
+    /** A large gas tank: ten canisters' worth, in two blocks. */
+    public static final double LARGE_TANK = 10 * CANISTER;
+
     private PipeVolumes() {}
 }

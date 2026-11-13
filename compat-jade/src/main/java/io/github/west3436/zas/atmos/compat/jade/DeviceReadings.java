@@ -36,8 +36,9 @@ import org.jetbrains.annotations.Nullable;
  *
  * <ul>
  *   <li><b>One body of gas</b> (a pipe and every device that is one node of a pipe network, a
- *       canister, a portable pump or scrubber): its pressure, temperature and gases. A node reads as
- *       its network does, since it holds its share of the network's gas by volume.
+ *       canister, a large gas tank from either half, a portable pump or scrubber): its pressure,
+ *       temperature and gases. A node reads as its network does, since it holds its share of the
+ *       network's gas by volume.
  *   <li><b>Several ports</b> (a pump, filter, mixer or electrolyzer): each port's pressure and
  *       temperature, and no gases.
  *   <li><b>Tanks</b>: a tank holder reads the tank a click takes out, the last one put in; a tank

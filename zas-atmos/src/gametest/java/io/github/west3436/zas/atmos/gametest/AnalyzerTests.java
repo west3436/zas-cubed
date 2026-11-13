@@ -30,6 +30,9 @@ import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.pump.PressurePumpBlockEntity;
 import io.github.west3436.zas.atmos.registry.AtmosBlocks;
 import io.github.west3436.zas.atmos.registry.AtmosItems;
+import io.github.west3436.zas.atmos.tank.GasVessels;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
+import io.github.west3436.zas.atmos.tank.LargeTankBlockEntity;
 import io.github.west3436.zas.command.ZasCommands;
 import io.github.west3436.zas.hud.AtmosHudPayload;
 import io.github.west3436.zas.hud.HudLevels;
@@ -419,6 +422,48 @@ public final class AnalyzerTests {
     }
 
     /**
+     * Used on either half of a large gas tank, it reads the tank's own gas, its share of its network's,
+     * as it reads a canister's, and names the tank.
+     */
+    @GameTest(template = "empty", batch = BATCH)
+    public static void cont_034_used_on_either_half_of_a_large_tank_it_reads_the_tanks_own_gas(GameTestHelper h) {
+        Area a = new Area(h, 4887);
+        a.clear(0, 0, 6, 6);
+        LargeTankBlockEntity tank = LargeTankTests.stand(a, 2, 2, 2); // its upper half at (2, 3, 2)
+        a.place(2, 1, 2, GasDeviceTests.pipe());
+        a.tick();
+        tank.network().gas().add(new GasParcel(Map.of(N2, 1_200.0, O2, 300.0), T));
+        h.assertTrue(tank.network().volume() > tank.nodeVolume(), "the tank is alone in its network");
+        GasParcel share = tank.share();
+        GasMixture own = new GasMixture(share.moles(), share.temperature(), tank.nodeVolume());
+        ListeningPlayer l = player(a, 4, 2, 2);
+        ServerPlayer p = l.player();
+
+        for (int y = 2; y <= 3; y++) {
+            BlockPos half = a.abs(2, y, 2);
+            String which = y == 2 ? "its lower half" : "its upper half";
+            for (Direction face : Direction.values()) {
+                AnalyzerTarget target =
+                        AnalyzerTarget.on(a.level, new BlockHitResult(faceCentre(half, face), face, half, false));
+                h.assertValueEqual(target.kind(), Kind.CANISTER, "what the tank reads at " + which + " on " + face);
+                h.assertValueEqual(target.pos(), a.abs(2, 2, 2), "the block read at " + which + " on " + face);
+            }
+            h.assertTrue(
+                    useOn(p, half, Direction.EAST, faceCentre(half, Direction.EAST))
+                            .consumesAction(),
+                    "using it on " + which + " did nothing");
+            menu(a, l);
+            AnalyzerSync s = last(a, l);
+            h.assertValueEqual(s.kind(), Kind.CANISTER, "what the tank reads");
+            h.assertValueEqual(s.target(), AtmosBlocks.LARGE_GAS_TANK.get().getName(), "its name");
+            same(a, s.gas(), own, "the reading at " + which);
+            p.closeContainer();
+        }
+        a.clear(0, 0, 6, 6);
+        h.succeed();
+    }
+
+    /**
      * A tank in the other hand gets a tab: chosen, the window reads the tank as the tank's own contents
      * give it; the target's tab goes back to the target; and with the tank gone, the window goes back
      * to the target and refuses the tank's tab.
@@ -757,8 +802,9 @@ public final class AnalyzerTests {
      * Our own parts read as they did, whatever handler they offer other mods' blocks. Each block of
      * ours that joins pipes, stood among blocks that provide the capability so that it offers its own
      * on every face it can, is read on each face as a canister, as its network, or as the air in front,
-     * and never through its handler. The electrolyzer is the one that offers a handler and is none of
-     * the first two: it reads the air in front of the face.
+     * and never through its handler. A canister and a large gas tank read as a canister. The
+     * electrolyzer is the one that offers a handler and is none of the first two: it reads the air in
+     * front of the face.
      */
     @GameTest(template = "empty", batch = BATCH)
     public static void cont_034_used_on_our_own_parts_it_never_reads_their_gas_handler(GameTestHelper h) {
@@ -778,10 +824,15 @@ public final class AnalyzerTests {
                 continue;
             }
             parts++;
+            if (block instanceof LargeTankBlock) {
+                // Its upper half takes the place of the store above it, and goes with the tank.
+                a.level.setBlockAndUpdate(pos.above(), LargeTankTests.upper());
+            }
             a.place(2, 2, 2, block.defaultBlockState());
             BlockEntity be = a.level.getBlockEntity(pos);
             BlockState state = a.level.getBlockState(pos);
-            Kind expected = be instanceof CanisterBlockEntity
+            h.assertTrue(state.is(block), holder.getId() + " didn't stand: " + state);
+            Kind expected = GasVessels.at(a.level, pos) != null
                     ? Kind.CANISTER
                     : be instanceof PipeNodeEntity
                                     || be instanceof InlineDeviceEntity && state.getBlock() instanceof InlineDeviceBlock
@@ -797,14 +848,17 @@ public final class AnalyzerTests {
             }
             read.merge(expected, 1, Integer::sum);
             a.level.setBlockAndUpdate(pos, Area.AIR);
+            if (block instanceof LargeTankBlock) {
+                a.level.setBlockAndUpdate(pos.above(), TestGasHandler.block().defaultBlockState());
+            }
         }
         h.assertTrue(parts >= 12, "blocks of ours that join pipes: " + parts);
         h.assertTrue(offering.contains(AtmosBlocks.PIPE.get()), "a pipe beside a store offers no handler");
         h.assertTrue(
                 offering.contains(AtmosBlocks.ELECTROLYZER.get()), "an electrolyzer beside a store offers no handler");
-        h.assertValueEqual(read.get(Kind.CANISTER), 1, "blocks of ours read as a canister");
+        h.assertValueEqual(read.get(Kind.CANISTER), 2, "blocks of ours read as a canister: it and the large tank");
         h.assertValueEqual(read.get(Kind.POINT), 1, "blocks of ours read as the air in front: the electrolyzer");
-        h.assertValueEqual(read.get(Kind.NETWORK), parts - 2, "blocks of ours read as their network");
+        h.assertValueEqual(read.get(Kind.NETWORK), parts - 3, "blocks of ours read as their network");
         a.clear(-1, -1, 5, 5);
         h.succeed();
     }

@@ -55,7 +55,7 @@ public record AnalyzerSync(
         POINT,
         /** A pipe network. */
         NETWORK,
-        /** A canister's own gas. */
+        /** A canister's or a large gas tank's own gas. */
         CANISTER,
         /** The tank in the hand without the analyzer. */
         TANK,

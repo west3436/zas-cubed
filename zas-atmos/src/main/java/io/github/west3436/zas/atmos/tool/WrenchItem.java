@@ -8,6 +8,7 @@ import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.pipe.PipeHost;
 import io.github.west3436.zas.atmos.pipe.PipeNodeEntity;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,8 +30,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * The wrench turns and removes atmos parts (CONT-035): the blocks pipes join, which are pipes, caps,
- * valves, connector ports, vents, scrubbers, pumps, filters and mixers. A canister is a portable,
- * mined into an item that keeps its gas (CONT-017), so it isn't one.
+ * valves, connector ports, vents, scrubbers, pumps, filters, mixers and large gas tanks. A canister is
+ * a portable, mined into an item that keeps its gas (CONT-017), so it isn't one. A large tank is one
+ * part: a click on either half acts on the tank, whose gas its lower half holds. It has no facing, so
+ * nothing to turn.
  *
  * <ul>
  *   <li><b>Use</b> turns a part a quarter turn about the face clicked, clockwise as seen from that
@@ -63,6 +66,13 @@ public class WrenchItem extends Item {
         Player player = context.getPlayer();
         if (!isPart(state)) {
             return InteractionResult.PASS;
+        }
+        if (state.getBlock() instanceof LargeTankBlock) {
+            pos = LargeTankBlock.lower(state, pos);
+            state = level.getBlockState(pos);
+            if (!isPart(state)) {
+                return InteractionResult.PASS; // half a tank, as a command can leave
+            }
         }
         if (player != null && player.isSecondaryUseActive()) {
             if (level instanceof ServerLevel server) {

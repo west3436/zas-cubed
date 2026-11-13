@@ -11,7 +11,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 
 /**
- * The item of a pipe or pipe cap, which keeps its dye (CONT-114). The colour is carried as the
+ * The item of a pipe, a pipe cap or a large gas tank, which keeps its dye (CONT-114). The colour is carried as the
  * vanilla block state component, so a dyed item places a dyed block and a dyed block, mined, drops
  * an item of its colour (its loot table copies the colour). An undyed item has no component, so it
  * stacks with new ones.

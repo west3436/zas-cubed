@@ -3348,6 +3348,50 @@ path: zas/src/main/resources/assets/zas/textures/gui/viewer/icons.png
 origin: original
 notes: Fifteen 9 by 9 icons for conditions and properties (spark, flame, thermometer, share of a mixture, gauge, clock, heat out, heat in, energy barrier, gear, weight, heat store, tag, oxidizer ring, skull) and a 16 by 16 flask, the reactions' icon.
 
+# The large gas tank (issue #485): vg's stationary pressure tank, standing upright as vg draws it.
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_gas_tank.png
+origin: vgstation13
+source: icons/obj/atmospherics/pipe_tank.dmi
+state: grey
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The tank's shell, 16 by 16, from vg's grey plate and its mottling, lightened by the undyed tint (#a4a4a4) so the game shows vg's grey and a dye shows its colour.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_gas_tank_arrow.png
+origin: vgstation13
+source: icons/obj/atmospherics/pipe_tank.dmi
+state: grey
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The shell with vg's white arrow, pointing down at the pipe, on the four sides of the lower half.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_gas_tank_hoop.png
+origin: vgstation13
+source: icons/obj/atmospherics/pipe_tank.dmi
+state: grey
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: The hoops round the shell, in vg's rib highlight, lightened as the shell is.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/textures/block/large_gas_tank_legs.png
+origin: vgstation13
+source: icons/obj/atmospherics/pipe_tank.dmi
+state: grey
+commit: 23f25f386f7a6c75b1a604029848d798e8b7ec06
+notes: vg's dark legs and black relief cap, not tinted.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_gas_tank_lower.json
+origin: original
+notes: The lower half, the one a pipe joins: four legs, a bottom dome, a 14 px round shell of four boxes, a hoop 1 px proud, and a pipe's end with its flange (pipe_fitting.png, untinted) underneath.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/large_gas_tank_upper.json
+origin: original
+notes: The upper half: the shell, two hoops, a stepped dome and the relief cap on top.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/models/item/large_gas_tank.json
+origin: original
+notes: The tank item: both halves in one model, one above the other, centred on the block and scaled down.
+
+path: zas-atmos/src/main/resources/assets/zas_atmos/blockstates/large_gas_tank.json
+origin: original
+
 # Pipes in walls (#487): a station wall with a pipe through it.
 path: zas-atmos/src/main/resources/assets/zas_atmos/models/block/encased_face.json
 origin: original

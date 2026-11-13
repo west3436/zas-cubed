@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import io.github.west3436.zas.atmos.canister.CanisterBlock;
 import io.github.west3436.zas.atmos.pipe.PipeConnector;
 import io.github.west3436.zas.atmos.registry.AtmosSounds;
+import io.github.west3436.zas.atmos.tank.LargeTankBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -19,13 +20,13 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 
 /**
  * A connector port (CONT-083): set in the floor, facing up. A canister standing on it joins the
- * port's network, and a pipe joins it only on its bottom. Its {@link #CONNECTED} state shows a
- * collar while a canister is attached.
+ * port's network, as does a large gas tank standing on it, and a pipe joins it only on its
+ * bottom. Its {@link #CONNECTED} state shows a collar while one is attached.
  */
 public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector {
     public static final MapCodec<ConnectorPortBlock> CODEC = simpleCodec(ConnectorPortBlock::new);
 
-    /** Whether a canister stands on the port, attached. */
+    /** Whether a canister or a large tank stands on the port, attached. */
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
 
     public ConnectorPortBlock(Properties properties) {
@@ -43,10 +44,13 @@ public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector
         builder.add(CONNECTED);
     }
 
-    /** A pipe below, or a canister above. */
+    /** A pipe below, or a canister or a large tank above: the tank joins it by its lower half. */
     @Override
     public boolean pipeConnects(BlockState self, Direction face, BlockState neighbour) {
-        return face == Direction.DOWN || (face == Direction.UP && neighbour.getBlock() instanceof CanisterBlock);
+        return face == Direction.DOWN
+                || (face == Direction.UP
+                        && (neighbour.getBlock() instanceof CanisterBlock
+                                || neighbour.getBlock() instanceof LargeTankBlock));
     }
 
     @Override
@@ -72,8 +76,8 @@ public class ConnectorPortBlock extends BaseEntityBlock implements PipeConnector
     }
 
     /**
-     * Plays its sound as a canister attaches or leaves (CONT-126). A port placed under a canister
-     * attaches it too. The server calls this for each change of state, and never for a chunk loading.
+     * Plays its sound as a canister or a large tank attaches or leaves (CONT-126). A port placed under
+     * one attaches it too. The server calls this for each change of state, and never for a chunk loading.
      */
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
