@@ -70,8 +70,14 @@ public final class ReleaseJarTests {
     /** The CC: Tweaked adapter's package, which is part of zas_atmos. */
     private static final String CC_ADAPTER = "io.github.west3436.zas.atmos.compat.cc";
 
+    /** The Applied Energistics 2 adapter's package. */
+    private static final String AE2_ADAPTER = "io.github.west3436.zas.compat.ae2";
+
     /** The PneumaticCraft adapter's package. */
     private static final String PNEUMATICCRAFT_ADAPTER = "io.github.west3436.zas.compat.pneumaticcraft";
+
+    /** The Create Aeronautics adapter's package. */
+    private static final String AERONAUTICS_ADAPTER = "io.github.west3436.zas.compat.aeronautics";
 
     /** The Ad Astra adapter's package. */
     private static final String AD_ASTRA_ADAPTER = "io.github.west3436.zas.compat.adastra";
@@ -295,6 +301,71 @@ public final class ReleaseJarTests {
         h.assertValueEqual(status.row().entryClass(), CC_ADAPTER + ".CcCompat", "the row's entry class");
         h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the CC: Tweaked adapter's state");
         h.assertFalse(Adapters.isActive("computercraft"), "the CC: Tweaked adapter is on");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the Applied Energistics 2 adapter, and on a server without AE2 none of it
+     * loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its entry class, which names
+     * AE2's, was never asked for, and its config file isn't there.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_ae2_adapter_loads_without_ae2(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("ae2"), "AE2 is on the release check's server");
+        // It ships: this is looked up as a file, which loads nothing.
+        String entry = AE2_ADAPTER.replace('.', '/') + "/Ae2Compat.class";
+        h.assertTrue(
+                ReleaseJarTests.class.getClassLoader().getResource(entry) != null, "the release jar has no " + entry);
+
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("ae2"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for AE2");
+        h.assertValueEqual(status.row().entryClass(), AE2_ADAPTER + ".Ae2Compat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the AE2 adapter's state");
+        h.assertFalse(Adapters.isActive("ae2"), "the AE2 adapter is on");
+        h.assertFalse(
+                ModConfigs.getFileMap().containsKey("zas-ae2-server.toml"),
+                "the AE2 adapter's config file is registered");
+        h.succeed();
+    }
+
+    /**
+     * The release jar holds the Create Aeronautics adapter and its hook, and on a server without
+     * Aeronautics none of it loads (COMPAT-001, NFR-022): {@code zas} left the adapter off, so its
+     * entry class was never asked for, and its seed and settings file aren't there.
+     */
+    @GameTest(template = "empty")
+    public static void compat_001_nothing_of_the_aeronautics_adapter_loads_without_aeronautics(GameTestHelper h) {
+        h.assertFalse(ModList.get().isLoaded("aeronautics"), "Create Aeronautics is on the release check's server");
+        h.assertFalse(ModList.get().isLoaded("sable"), "Sable is on the release check's server");
+        // It ships: these are looked up as files, which loads nothing.
+        ClassLoader jar = ReleaseJarTests.class.getClassLoader();
+        for (String file : new String[] {
+            AERONAUTICS_ADAPTER.replace('.', '/') + "/AeronauticsCompat.class",
+            AERONAUTICS_ADAPTER.replace('.', '/') + "/mixin/AirPressureMixin.class",
+            "zas.aeronautics.mixins.json"
+        }) {
+            h.assertTrue(jar.getResource(file) != null, "the release jar has no " + file);
+        }
+
+        // zas went through its row and found no Aeronautics, so it never loaded the entry class.
+        Adapters.Status status = Adapters.statuses().stream()
+                .filter(s -> s.row().modId().equals("aeronautics"))
+                .findFirst()
+                .orElse(null);
+        h.assertTrue(status != null, "zas has no adapter row for Create Aeronautics");
+        h.assertValueEqual(
+                status.row().entryClass(), AERONAUTICS_ADAPTER + ".AeronauticsCompat", "the row's entry class");
+        h.assertValueEqual(status.state(), Adapters.State.ABSENT, "the Aeronautics adapter's state");
+        h.assertFalse(Adapters.isActive("aeronautics"), "the Aeronautics adapter is on");
+
+        // What the adapter would have added.
+        ResourceLocation seed = ResourceLocation.fromNamespaceAndPath("zas", "sable_dimension_physics");
+        h.assertFalse(AmbientSeeds.registered().stream().anyMatch(r -> r.id().equals(seed)), "its seed is registered");
+        h.assertFalse(
+                ModConfigs.getFileMap().containsKey("zas-aeronautics-server.toml"), "its config file is registered");
         h.succeed();
     }
 

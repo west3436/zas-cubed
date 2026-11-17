@@ -10,6 +10,7 @@ evaluationDependsOn(':compat-kubejs')
 evaluationDependsOn(':compat-jei')
 evaluationDependsOn(':compat-emi')
 evaluationDependsOn(':compat-pneumaticcraft')
+evaluationDependsOn(':compat-ae2')
 evaluationDependsOn(':compat-aeronautics')
 
 // GameTests live in their own source set so they stay out of the mod jar.
@@ -21,11 +22,14 @@ sourceSets {
 }
 
 // Source sets compiled elsewhere whose classes ship inside the zas jar. The viewer plugins and the
-// KubeJS plugin and the Aeronautics adapter compile against zas, so zas only runs with them: it never compiles against them.
+// KubeJS plugin compile against zas, so zas only runs with them: it never compiles against them. So
+// does the AE2 adapter, which names gases and draws them as the viewers do, and the Aeronautics
+// adapter, which reads each dimension's ambient.
 def viewers = [project(':compat-jei'), project(':compat-emi')]
+def onZas = viewers + [project(':compat-ae2'), project(':compat-aeronautics')]
 def bundled = ([project(':engine'), project(':compat-adastra'), project(':compat-mekanism'), project(':compat-slots'),
-                project(':compat-kubejs'), project(':compat-pneumaticcraft'), project(':compat-aeronautics')]
-        + viewers)
+                project(':compat-kubejs'), project(':compat-pneumaticcraft')]
+        + onZas)
         .collect { it.sourceSets.main }
 
 neoForge {
@@ -84,10 +88,9 @@ dependencies {
     runtimeOnly project(':compat-mekanism')
     runtimeOnly project(':compat-slots')
     runtimeOnly project(':compat-pneumaticcraft')
-    runtimeOnly project(':compat-aeronautics')
     // Found by KubeJS, through the kubejs.plugins.txt that ships with it.
     runtimeOnly project(':compat-kubejs')
-    viewers.each { runtimeOnly it }
+    onZas.each { runtimeOnly it }
 
     // ModDevGradle takes the jar-in-jar range only from a module selector, so
     // the API is requested by coordinates and substituted with the project.
