@@ -20,6 +20,9 @@ import io.github.west3436.zas.api.mutation.HeatResult;
 import io.github.west3436.zas.api.mutation.MutationResult;
 import io.github.west3436.zas.api.mutation.PinResult;
 import io.github.west3436.zas.api.mutation.SourceId;
+import io.github.west3436.zas.api.relocation.Destination;
+import io.github.west3436.zas.api.relocation.RelocationResult;
+import io.github.west3436.zas.api.relocation.RelocationTicket;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +35,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -599,4 +603,75 @@ public interface ZasApiProvider {
      */
     @LevelThread
     default void extraSlotItems(LivingEntity entity, ExtraSlotVisitor visitor) {}
+    /**
+     * Starts a move of a box of blocks, suspending the zones wholly inside it (API-065).
+     *
+     * <p>The default is the fallback's answer: a ticket whose begin is {@link
+     * RelocationResult#ABSENT} at once. It is there for the same reason as {@link #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level the blocks leave
+     * @param box the blocks
+     * @param mover who moves them
+     * @return the ticket
+     * @since 1.2.0
+     */
+    @ServerThread
+    default RelocationTicket beginRelocation(ServerLevel level, BoundingBox box, SourceId mover) {
+        return new RelocationTicket(level, box, mover, 0, CompletableFuture.completedFuture(RelocationResult.ABSENT));
+    }
+
+    /**
+     * Ends a move, carrying the ticket's zones to the destination (API-065).
+     *
+     * <p>The default is the fallback's answer: {@link RelocationResult#ABSENT} at once. It is there
+     * for the same reason as {@link #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param ticket the ticket
+     * @param destination where the blocks went
+     * @return a future that completes on the server thread once the zones have arrived
+     * @since 1.2.0
+     */
+    @ServerThread
+    default CompletableFuture<RelocationResult> completeRelocation(RelocationTicket ticket, Destination destination) {
+        return CompletableFuture.completedFuture(RelocationResult.ABSENT);
+    }
+
+    /**
+     * Ends a move without moving (API-065).
+     *
+     * <p>The default is the fallback's answer: {@link RelocationResult#ABSENT} at once. It is there
+     * for the same reason as {@link #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param ticket the ticket
+     * @return a future that completes on the server thread once the zones carry on
+     * @since 1.2.0
+     */
+    @ServerThread
+    default CompletableFuture<RelocationResult> cancelRelocation(RelocationTicket ticket) {
+        return CompletableFuture.completedFuture(RelocationResult.ABSENT);
+    }
+
+    /**
+     * Whether a move holds a block (API-067).
+     *
+     * <p>The default is the fallback's answer: false. It is there for the same reason as {@link
+     * #pin}'s.
+     *
+     * <p>Thread: server thread only; the caller has checked.
+     *
+     * @param level the level
+     * @param pos the block
+     * @return whether it is in an open ticket's box or a destination not yet arrived at
+     * @since 1.2.0
+     */
+    @ServerThread
+    default boolean isRelocating(ServerLevel level, BlockPos pos) {
+        return false;
+    }
 }

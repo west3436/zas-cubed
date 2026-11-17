@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.west3436.zas.atmos.config.AtmosServerConfig;
 import io.github.west3436.zas.atmos.config.AtmosStartupConfig;
 import io.github.west3436.zas.atmos.controller.CentralChunks;
+import io.github.west3436.zas.atmos.controller.MovedDevices;
 import io.github.west3436.zas.atmos.device.DeviceActivitySync;
 import io.github.west3436.zas.atmos.device.DeviceTicker;
 import io.github.west3436.zas.atmos.failure.CanisterFailure;
@@ -73,6 +74,7 @@ public final class ZasAtmosMod {
         Encumbrance.register(NeoForge.EVENT_BUS);
         LabelTag.register(NeoForge.EVENT_BUS);
         FluidConnection.init(modBus, NeoForge.EVENT_BUS);
+        MovedDevices.register(NeoForge.EVENT_BUS);
     }
 
     /**

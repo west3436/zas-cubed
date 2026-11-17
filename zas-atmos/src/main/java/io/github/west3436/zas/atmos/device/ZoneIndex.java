@@ -11,6 +11,7 @@ import io.github.west3436.zas.api.event.ZoneDissolvedEvent;
 import io.github.west3436.zas.api.event.ZoneLifecycleEvent;
 import io.github.west3436.zas.api.event.ZoneMergedEvent;
 import io.github.west3436.zas.api.event.ZonePausedEvent;
+import io.github.west3436.zas.api.event.ZoneRelocatedEvent;
 import io.github.west3436.zas.api.event.ZoneResumedEvent;
 import io.github.west3436.zas.api.event.ZoneSealedEvent;
 import io.github.west3436.zas.api.event.ZoneSplitEvent;
@@ -99,6 +100,7 @@ public final class ZoneIndex {
         gameBus.addListener((ZoneDissolvedEvent e) -> zonesChanged(e));
         gameBus.addListener((ZonePausedEvent e) -> zonesChanged(e));
         gameBus.addListener((ZoneResumedEvent e) -> zonesChanged(e));
+        gameBus.addListener((ZoneRelocatedEvent e) -> zonesChanged(e));
     }
 
     /** Notes the zones a lifecycle event names: its own, and the other a merge or a split names. */

@@ -9,7 +9,8 @@ import java.util.Objects;
  * @param kind what happened
  * @param zoneId the zone: for {@link Kind#MERGED} the survivor, for {@link Kind#SPLIT} the zone that
  *     keeps its id
- * @param otherId for {@link Kind#MERGED} the zone absorbed, for {@link Kind#SPLIT} the new zone, otherwise 0
+ * @param otherId for {@link Kind#MERGED} the zone absorbed, for {@link Kind#SPLIT} the new zone, for
+ *     {@link Kind#RELOCATED} its id where it left, otherwise 0
  * @param cell a cell of the zone, or for a zone now gone, a cell it had
  * @param undoable whether a rejected exchange component takes this back. What happens before the
  *     undo point stands, so a rejected component's zones still fire those events
@@ -32,7 +33,12 @@ public record ZoneEvent(Kind kind, long zoneId, long otherId, long cell, boolean
         /** A zone stopped being simulated. */
         PAUSED,
         /** A paused zone, or one back from chunk storage, is simulated again. */
-        RESUMED
+        RESUMED,
+        /**
+         * A zone arrived where a mover put its blocks (API-066): {@code otherId} is its id where it
+         * left, possibly in another dimension.
+         */
+        RELOCATED
     }
 
     public ZoneEvent {

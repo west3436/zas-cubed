@@ -11,7 +11,8 @@ import net.neoforged.bus.api.Event;
  * Something happened in a zone's life (API-030). This is only the base of those events: the bus takes
  * no listener for an abstract class, so listen for {@link ZoneCreatedEvent}, {@link ZoneMergedEvent},
  * {@link ZoneSplitEvent}, {@link ZoneBreachedEvent}, {@link ZoneSealedEvent}, {@link
- * ZoneDissolvedEvent}, {@link ZonePausedEvent} or {@link ZoneResumedEvent}.
+ * ZoneDissolvedEvent}, {@link ZonePausedEvent}, {@link ZoneResumedEvent} or {@link
+ * ZoneRelocatedEvent}.
  *
  * <p>Fired on {@code NeoForge.EVENT_BUS}, on the server thread, when the atmos tick in which it
  * happened is applied (API-032), once per change and in the order the changes happened, ahead of that

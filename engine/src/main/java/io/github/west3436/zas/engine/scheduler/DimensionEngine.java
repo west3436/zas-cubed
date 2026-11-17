@@ -3,6 +3,7 @@ package io.github.west3436.zas.engine.scheduler;
 import io.github.west3436.zas.engine.Ambient;
 import io.github.west3436.zas.engine.EngineLog;
 import io.github.west3436.zas.engine.Face;
+import io.github.west3436.zas.engine.FaceMask;
 import io.github.west3436.zas.engine.Geometry;
 import io.github.west3436.zas.engine.GeometryPalette;
 import io.github.west3436.zas.engine.SectionKeys;
@@ -135,6 +136,24 @@ public final class DimensionEngine {
     private boolean dimensionPaused;
     /** Cells to classify once the dimension resumes, ascending: found while it was paused. */
     private long[] classifyOnResume = new long[0];
+
+    // Moves (API-065, GEO-046): zones carried along with their blocks ({@link Relocation}).
+    /** Open tickets: ticket to the zones it suspends, ascending. */
+    private final TreeMap<Long, long[]> relocating = new TreeMap<>();
+    /** Arrivals waiting for the sections their cells are in, in sequence order. */
+    private final List<Relocation.Arrive> waitingArrivals = new ArrayList<>();
+    /** Sections waiting arrivals need, asked for at the end of the tick. */
+    private final TreeSet<Long> arrivalSections = new TreeSet<>();
+    /** The cells zones left by a move last tick, ascending: refreshed and classified this tick. */
+    private long[] vacated = new long[0];
+    /** What this tick's move operations did. */
+    private final List<Relocation.Outcome> tickRelocations = new ArrayList<>();
+    /** The last tick's completed moves by the component they were in, which a rejection puts back. */
+    private Map<Integer, List<Relocation.Complete>> lastCompletes = Map.of();
+    /** The zones of the last tick's completed moves, by ticket. */
+    private Map<Long, long[]> lastDeparted = Map.of();
+    /** Completed moves a rejection put back, run again this tick. */
+    private final List<Relocation.Complete> requeuedCompletes = new ArrayList<>();
 
     /**
      * Which zone each cell is in, by section palette (architecture §4.4): kept up to date by the
@@ -355,6 +374,18 @@ public final class DimensionEngine {
         for (long c : classifyOnResume) {
             h.add(c);
         }
+        for (Map.Entry<Long, long[]> e : relocating.entrySet()) {
+            h.add(e.getKey());
+            for (long id : e.getValue()) {
+                h.add(id);
+            }
+        }
+        for (Relocation.Arrive a : waitingArrivals) {
+            h.add(a.seq());
+        }
+        for (long c : vacated) {
+            h.add(c);
+        }
         long[] keys = mirror.keys();
         for (long k : keys) {
             h.add(k);
@@ -386,6 +417,7 @@ public final class DimensionEngine {
             ambient = batch.ambient();
             graph.setAmbient(ambientMixture(ambient));
         }
+        tickRelocations.clear();
         List<GasOp> requeued = restore(batch.rejection());
         lastTick = tick;
         graph.beginConservationPeriod();
@@ -398,7 +430,8 @@ public final class DimensionEngine {
 
         // 2. Boundaries, then pause and resume zones.
         phases.enter(Phase.BOUNDARIES);
-        TreeSet<Long> requested = new TreeSet<>();
+        TreeSet<Long> requested = new TreeSet<>(arrivalSections);
+        arrivalSections.clear();
         long[] extra = surfaces.sorted();
         long[] toClassify = extra.length == 0 ? refreshed : union(refreshed, extra);
         geometryChanged = toClassify.length > 0;
@@ -484,6 +517,28 @@ public final class DimensionEngine {
                 outcomes[i] = apply(ops.get(i), targets[i], events, opZone, i);
             }
         }
+        // Moves complete after the undo point, so a rejected component puts their zones back
+        // (API-065, CORE-070).
+        List<Relocation.Complete> completes = new ArrayList<>(requeuedCompletes);
+        requeuedCompletes.clear();
+        for (Relocation.Op op : batch.relocations()) {
+            if (op instanceof Relocation.Complete c) {
+                completes.add(c);
+            }
+        }
+        List<long[]> together = new ArrayList<>();
+        Map<Long, long[]> departed = new HashMap<>();
+        int[] completeOutcome = new int[completes.size()];
+        for (int k = 0; k < completes.size(); k++) {
+            Relocation.Complete c = completes.get(k);
+            Relocation.Outcome o = complete(c);
+            completeOutcome[k] = tickRelocations.size();
+            tickRelocations.add(o);
+            if (o.status() == Relocation.Status.DEPARTED && o.zones().length > 0) {
+                together.add(o.zones());
+                departed.put(c.ticket(), o.zones());
+            }
+        }
 
         // 4. Exchange.
         phases.enter(Phase.EXCHANGE);
@@ -537,7 +592,22 @@ public final class DimensionEngine {
 
         // Components, outcomes and the snapshot.
         int[] componentOf = new int[undo.zoneIds.length];
-        List<Component> components = components(undo, undoCopies, undoPartners, ops, opZone, componentOf);
+        List<Component> components = components(undo, undoCopies, undoPartners, ops, opZone, componentOf, together);
+        Map<Integer, List<Relocation.Complete>> completesByComponent = new HashMap<>();
+        for (int k = 0; k < completes.size(); k++) {
+            Relocation.Outcome o = tickRelocations.get(completeOutcome[k]);
+            if (o.status() != Relocation.Status.DEPARTED || o.zones().length == 0) {
+                continue;
+            }
+            int idx = undo.indexOf(o.zones()[0]);
+            int component = idx >= 0 ? componentOf[idx] : -1;
+            if (component >= 0) {
+                tickRelocations.set(completeOutcome[k], o.inComponent(component));
+                completesByComponent
+                        .computeIfAbsent(component, x -> new ArrayList<>())
+                        .add(completes.get(k));
+            }
+        }
         List<OpOutcome> finished = new ArrayList<>(ops.size());
         Map<Long, GasOp> zoneOps = new HashMap<>();
         for (int i = 0; i < ops.size(); i++) {
@@ -556,7 +626,11 @@ public final class DimensionEngine {
             finished.add(o);
         }
         AtmosSnapshot snapshot = snapshot(tick);
-        retain();
+        if (departed.isEmpty()) {
+            // A departure keeps what it left mirrored for a tick: a rejection puts the zones back, and
+            // otherwise the cells they left are refreshed next tick.
+            retain();
+        }
         List<PressureBreak> breaks =
                 fragile.find(batch.settings().fragile(), block -> snapshot.heldAt(block, -1), section -> {
                     // Only a section retain() keeps: another would be asked for again every other tick.
@@ -570,6 +644,8 @@ public final class DimensionEngine {
         undoPinned = undoPins;
         lastComponents = components;
         lastZoneOps = zoneOps;
+        lastCompletes = completesByComponent;
+        lastDeparted = departed;
         lastSnapshot = snapshot;
 
         long[] mirrored = mirror.keys();
@@ -596,7 +672,8 @@ public final class DimensionEngine {
                 fireEvents,
                 hotspots.table(),
                 breaks,
-                zoneEvents);
+                zoneEvents,
+                tickRelocations);
         phases.finished();
         return result;
     }
@@ -691,6 +768,15 @@ public final class DimensionEngine {
             for (long seq : c.opSeqs()) {
                 requeued.add(lastZoneOps.get(seq));
             }
+            // A move that completed in it runs again, its zones suspended as they were (API-065).
+            for (Relocation.Complete op : lastCompletes.getOrDefault(index, List.of())) {
+                long[] ids = lastDeparted.get(op.ticket());
+                relocating.put(op.ticket(), ids);
+                for (long id : ids) {
+                    graph.setReportedPaused(graph.zone(id), true);
+                }
+                requeuedCompletes.add(op);
+            }
             hotspots.restore(c.zoneIds());
         }
         return requeued;
@@ -721,6 +807,8 @@ public final class DimensionEngine {
             evictUnloaded();
         }
         dropUnloadedSections(toRefresh);
+        beginsAndCancels(batch.relocations());
+        refreshVacated(toRefresh);
         Set<Long> pausedNow = pausedZones();
         // Before any block change: one could take a zone's last cell out of a chunk that kept its gas.
         Set<ZoneShare> sharesInMemory = sharesInMemory(batch);
@@ -812,6 +900,7 @@ public final class DimensionEngine {
             }
         }
         ingest(batch, sharesInMemory);
+        arrivals(batch.relocations());
         resumeRebuilt(surfaces, resuming);
         return cells;
     }
@@ -1014,6 +1103,11 @@ public final class DimensionEngine {
         out.addAll(missingChunks.keySet());
         for (long z : heldZoneIds) {
             out.add(z);
+        }
+        for (long[] ids : relocating.values()) {
+            for (long id : ids) {
+                out.add(id);
+            }
         }
         return out;
     }
@@ -1226,6 +1320,359 @@ public final class DimensionEngine {
                 SectionKeys.blockX(block) + f.dx(),
                 SectionKeys.blockY(block) + f.dy(),
                 SectionKeys.blockZ(block) + f.dz());
+    }
+
+    // ---- Moves (API-065, GEO-046) -----------------------------------------------------
+
+    /** The open tickets and the zones each suspends, ascending. Same thread rule as {@link #graph()}. */
+    public Map<Long, long[]> relocating() {
+        Map<Long, long[]> out = new TreeMap<>();
+        for (Map.Entry<Long, long[]> e : relocating.entrySet()) {
+            out.put(e.getKey(), e.getValue().clone());
+        }
+        return out;
+    }
+
+    /** How many arrivals wait for their sections. Same thread rule as {@link #graph()}. */
+    public int waitingArrivals() {
+        return waitingArrivals.size();
+    }
+
+    /** Runs a batch's begins and cancels, in sequence order, before any block change is looked at. */
+    private void beginsAndCancels(List<Relocation.Op> ops) {
+        for (Relocation.Op op : ops) {
+            if (op instanceof Relocation.Begin b) {
+                tickRelocations.add(begin(b));
+            } else if (op instanceof Relocation.Cancel c) {
+                tickRelocations.add(cancel(c));
+            }
+        }
+    }
+
+    /**
+     * Suspends the zones wholly inside a box (GEO-046): they pause without news, so they keep their
+     * gas and the block changes touching them are held (GEO-037). Zones with cells on both sides
+     * stay where they are and are listed. Fails whole.
+     */
+    private Relocation.Outcome begin(Relocation.Begin op) {
+        if (dimensionPaused) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.PAUSED);
+        }
+        if (relocating.containsKey(op.ticket())) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.BUSY);
+        }
+        Relocation.Box box = op.box();
+        Set<Long> taken = new HashSet<>();
+        for (long[] ids : relocating.values()) {
+            for (long id : ids) {
+                taken.add(id);
+            }
+        }
+        Set<Long> paused = pausedZones();
+        List<Long> inside = new ArrayList<>();
+        List<Long> straddling = new ArrayList<>();
+        long cells = 0;
+        boolean busy = false;
+        boolean held = false;
+        for (Zone z : graph.zones()) {
+            boolean near = false;
+            for (long c : membership.chunks(z.id())) {
+                if (box.touchesChunk(c)) {
+                    near = true;
+                    break;
+                }
+            }
+            if (!near) {
+                continue;
+            }
+            int in = 0;
+            int out = 0;
+            for (long cell : z.cells()) {
+                if (box.contains(space.position(cell))) {
+                    in++;
+                } else {
+                    out++;
+                }
+            }
+            if (in == 0) {
+                continue;
+            }
+            if (out > 0) {
+                straddling.add(z.id());
+                continue;
+            }
+            inside.add(z.id());
+            cells += z.cellCount();
+            if (taken.contains(z.id())) {
+                busy = true;
+            } else if (z.isPaused() || paused.contains(z.id()) || rebuilt.containsKey(z.id())) {
+                held = true;
+            }
+        }
+        if (busy) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.BUSY);
+        }
+        if (held) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.PAUSED);
+        }
+        if (cells > op.maxCells()) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.TOO_LARGE);
+        }
+        long[] ids = toArray(inside);
+        for (long id : ids) {
+            graph.setReportedPaused(graph.zone(id), true);
+        }
+        relocating.put(op.ticket(), ids);
+        return new Relocation.Outcome(op.seq(), Relocation.Status.BEGUN, ids, toArray(straddling), List.of(), 0, -1);
+    }
+
+    /** Lets a ticket's zones resume where they are, as quietly as they paused. */
+    private Relocation.Outcome cancel(Relocation.Cancel op) {
+        long[] ids = relocating.remove(op.ticket());
+        if (ids == null) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.ENDED);
+        }
+        quietlyResume(ids);
+        return new Relocation.Outcome(op.seq(), Relocation.Status.CANCELLED, ids, new long[0], List.of(), 0, -1);
+    }
+
+    /**
+     * Marks a ticket's live zones as having last reported running: they resume without news, or, if
+     * they are still paused for another reason, report that.
+     */
+    private void quietlyResume(long[] ids) {
+        for (long id : ids) {
+            Zone z = graph.zone(id);
+            if (z != null) {
+                graph.setReportedPaused(z, false);
+            }
+        }
+    }
+
+    /**
+     * Takes a ticket's zones out of the graph as departures whose cells are where the move puts
+     * them (GEO-046). After the undo point: a rejected component puts them back and the move runs
+     * again next tick. If a zone has left memory or has a chunk unloaded, nothing leaves and the
+     * ticket stays open.
+     */
+    private Relocation.Outcome complete(Relocation.Complete op) {
+        long[] ids = relocating.get(op.ticket());
+        if (ids == null) {
+            return Relocation.Outcome.of(op.seq(), Relocation.Status.ENDED);
+        }
+        for (long id : ids) {
+            Zone z = graph.zone(id);
+            boolean unloaded = z == null;
+            if (z != null) {
+                for (long c : membership.chunks(id)) {
+                    unloaded |= mirror.isChunkUnloaded(c);
+                }
+            }
+            if (unloaded) {
+                return new Relocation.Outcome(op.seq(), Relocation.Status.UNLOADED, ids, new long[0], List.of(), 0, -1);
+            }
+        }
+        relocating.remove(op.ticket());
+        Relocation.Transform t = op.transform();
+        List<Relocation.Departure> out = new ArrayList<>(ids.length);
+        long[] left = vacated;
+        for (long id : ids) {
+            Zone z = graph.zone(id);
+            long[] cells = z.cells();
+            Arrays.sort(cells);
+            long[] blocks = new long[cells.length];
+            int[] hints = new int[cells.length];
+            for (int i = 0; i < cells.length; i++) {
+                long block = space.position(cells[i]);
+                blocks[i] = t.block(block);
+                hints[i] = t.hint(hintOf(cells[i], block));
+            }
+            double[] moles = new double[registry.size()];
+            for (int g = 0; g < moles.length; g++) {
+                moles[g] = z.mixture().moles(g);
+            }
+            out.add(new Relocation.Departure(
+                    id, blocks, hints, moles, z.mixture().temperature(), z.pins(), z.ambientEdge() != null));
+            graph.relocateOut(z);
+            left = concat(left, cells);
+        }
+        vacated = Membership.sortedDistinct(left);
+        return new Relocation.Outcome(op.seq(), Relocation.Status.DEPARTED, ids, new long[0], out, 0, -1);
+    }
+
+    /**
+     * A cell's {@linkplain Relocation hint}: -1 where its block has one cell; otherwise a bit of a
+     * face that only it reaches, or failing that any bit it reaches.
+     */
+    private int hintOf(long cell, long block) {
+        int id = mirror.geometryAt(block);
+        if (id < 0) {
+            return -1;
+        }
+        Geometry g = palette.geometry(id);
+        int sub = space.naming().subIndex(cell);
+        if (g.cellCount() <= 1 || sub < 0 || sub >= g.cellCount()) {
+            return -1;
+        }
+        int fallback = -1;
+        for (Face f : Face.values()) {
+            FaceMask mine = g.cell(sub).footprint(f);
+            if (mine.isEmpty()) {
+                continue;
+            }
+            FaceMask others = FaceMask.EMPTY;
+            for (int k = 0; k < g.cellCount(); k++) {
+                if (k != sub) {
+                    others = others.or(g.cell(k).footprint(f));
+                }
+            }
+            FaceMask only = mine.and(others.not());
+            if (!only.isEmpty()) {
+                int bit = firstBit(only);
+                return Relocation.hint(f, bit & 15, bit >> 4);
+            }
+            if (fallback < 0) {
+                int bit = firstBit(mine);
+                fallback = Relocation.hint(f, bit & 15, bit >> 4);
+            }
+        }
+        return fallback;
+    }
+
+    private static int firstBit(FaceMask mask) {
+        for (int w = 0; w < 4; w++) {
+            long word = mask.word(w);
+            if (word != 0) {
+                return w * 64 + Long.numberOfTrailingZeros(word);
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * The cell an arriving cell takes at a block: the sub-cell that reaches its hint's bit, or the
+     * block's largest cell for a hint of -1 or none that reaches it; {@link CellSpace#NO_CELL} if the
+     * block has no cell.
+     */
+    private long arrivalCell(long block, int hint) {
+        if (hint < 0) {
+            return space.cellAt(block);
+        }
+        int id = mirror.geometryAt(block);
+        if (id < 0) {
+            return CellSpace.NO_CELL;
+        }
+        Geometry g = palette.geometry(id);
+        if (g.cellCount() > 1) {
+            Face f = Relocation.hintFace(hint);
+            int u = Relocation.hintU(hint);
+            int v = Relocation.hintV(hint);
+            for (int k = 0; k < g.cellCount(); k++) {
+                if (g.cell(k).footprint(f).get(u, v) && g.cell(k).volume() > 0) {
+                    return space.naming().cell(block, k);
+                }
+            }
+        }
+        return space.cellAt(block);
+    }
+
+    /** Refreshes and classifies the cells zones left by a move, with their neighbours. */
+    private void refreshVacated(CellSet toRefresh) {
+        if (vacated.length == 0) {
+            return;
+        }
+        for (long cell : vacated) {
+            long block = space.position(cell);
+            space.forEachCellAt(block, toRefresh::add);
+            for (Face f : Face.values()) {
+                space.forEachCellAt(offset(block, f), toRefresh::add);
+            }
+        }
+        vacated = new long[0];
+    }
+
+    /**
+     * Rebuilds the zones arriving in this batch and those that waited (GEO-046), once the sections
+     * their cells are in are mirrored. Each is then classified before it resumes, as a zone rebuilt
+     * from saved shares is (DATA-002).
+     */
+    private void arrivals(List<Relocation.Op> ops) {
+        if (waitingArrivals.isEmpty()) {
+            boolean any = false;
+            for (Relocation.Op op : ops) {
+                any |= op instanceof Relocation.Arrive;
+            }
+            if (!any) {
+                return;
+            }
+        }
+        List<Relocation.Arrive> todo = new ArrayList<>(waitingArrivals);
+        waitingArrivals.clear();
+        for (Relocation.Op op : ops) {
+            if (op instanceof Relocation.Arrive a) {
+                todo.add(a);
+            }
+        }
+        for (Relocation.Arrive a : todo) {
+            if (ready(a)) {
+                tickRelocations.add(arrive(a));
+            } else {
+                waitingArrivals.add(a);
+            }
+        }
+    }
+
+    /**
+     * Whether every section an arrival's cells are in is mirrored; the missing ones in loaded chunks
+     * are asked for. Positions outside the world's height have no cells and need nothing.
+     */
+    private boolean ready(Relocation.Arrive a) {
+        boolean ready = true;
+        long last = Long.MIN_VALUE;
+        for (int i = 0; i < a.cellCount(); i++) {
+            long section = SectionKeys.sectionOfBlockKey(a.block(i));
+            if (section == last) {
+                continue;
+            }
+            last = section;
+            int y = SectionKeys.y(section);
+            if (y < mirror.minSectionY() || y > mirror.maxSectionY() || mirror.section(section) != null) {
+                continue;
+            }
+            ready = false;
+            if (!mirror.isChunkUnloaded(SectionKeys.chunkOf(section))) {
+                arrivalSections.add(section);
+            }
+        }
+        return ready;
+    }
+
+    private Relocation.Outcome arrive(Relocation.Arrive a) {
+        long[] cells = new long[a.cellCount()];
+        int n = 0;
+        for (int i = 0; i < a.cellCount(); i++) {
+            long c = arrivalCell(a.block(i), a.hint(i));
+            if (c != CellSpace.NO_CELL) {
+                cells[n++] = c;
+            }
+        }
+        double[] moles = a.moles();
+        GasMixture gas = new GasMixture(registry, config, 1, a.temperature());
+        for (int g = 0; g < Math.min(moles.length, registry.size()); g++) {
+            if (moles[g] > 0) {
+                gas.setMoles(g, moles[g]);
+            }
+        }
+        Zone z = n == 0
+                ? null
+                : graph.arrive(a.keepId(), a.fromId(), Arrays.copyOf(cells, n), gas, a.pins(), a.breached());
+        if (z == null) {
+            return Relocation.Outcome.of(a.seq(), Relocation.Status.ADDED);
+        }
+        // Classified before it resumes, as a zone back from its chunks is.
+        rebuilt.put(z.id(), new long[0]);
+        return new Relocation.Outcome(
+                a.seq(), Relocation.Status.ARRIVED, new long[] {z.id()}, new long[0], List.of(), z.id(), -1);
     }
 
     // ---- 3. Gas operations ------------------------------------------------------------
@@ -1605,7 +2052,8 @@ public final class DimensionEngine {
             long[][] partners,
             List<GasOp> ops,
             long[] opZone,
-            int[] componentOf) {
+            int[] componentOf,
+            List<long[]> together) {
         int n = undo.zoneIds.length;
         boolean[] changed = new boolean[n];
         int[] parent = new int[n];
@@ -1622,6 +2070,16 @@ public final class DimensionEngine {
                 int j = undo.indexOf(other);
                 if (j >= 0 && changed[j]) {
                     union(parent, i, j);
+                }
+            }
+        }
+        // The zones one move carried are linked, so a rejection puts them all back (API-065).
+        for (long[] ids : together) {
+            int first = undo.indexOf(ids[0]);
+            for (long id : ids) {
+                int j = undo.indexOf(id);
+                if (first >= 0 && j >= 0 && changed[first] && changed[j]) {
+                    union(parent, first, j);
                 }
             }
         }
@@ -1824,7 +2282,7 @@ public final class DimensionEngine {
      * round of fetching adds to what the next fill sees and the classification always finishes.
      */
     private void retain() {
-        if (!buffered.isEmpty() || classifier.hasPending()) {
+        if (!buffered.isEmpty() || classifier.hasPending() || !waitingArrivals.isEmpty()) {
             return;
         }
         for (long key : mirror.keys()) {
