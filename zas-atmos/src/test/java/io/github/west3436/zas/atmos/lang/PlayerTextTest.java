@@ -14,9 +14,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -88,6 +92,43 @@ class PlayerTextTest {
         assertTrue(lang("zas.resources", "zas").contains("fml.menu.mods.info.description.zas"));
         assertTrue(lang("zas_atmos.resources", "zas_atmos").contains("fml.menu.mods.info.description.zas_atmos"));
         assertTrue(lang("zas_ponder.resources", "zas_ponder").contains("fml.menu.mods.info.description.zas_ponder"));
+    }
+
+    /**
+     * Each item, block and fluid tag of ours has a name in its own mod's {@code en_us.json}, under
+     * NeoForge's key {@code tag.<registry>.<namespace>.<path>}, a slash in the path as a dot: recipe
+     * viewers such as EMI show it, and log the tags without one. Tags of ours are those in the
+     * {@code zas} and {@code zas_atmos} namespaces, wherever the two mods' resources declare them,
+     * their built-in content pack included.
+     */
+    @Test
+    void client_007_each_of_our_item_block_and_fluid_tags_has_a_name() throws IOException {
+        Map<String, Set<String>> lang =
+                Map.of("zas", lang("zas.resources", "zas"), "zas_atmos", lang("zas_atmos.resources", "zas_atmos"));
+        Pattern tagFile = Pattern.compile("(?:^|/)data/(zas|zas_atmos)/tags/(item|block|fluid)/(.+)\\.json$");
+        Set<String> problems = new TreeSet<>();
+        int tags = 0;
+        for (String property : List.of("zas.resources", "zas_atmos.resources")) {
+            Path root = Path.of(System.getProperty(property));
+            List<Path> files;
+            try (Stream<Path> walk = Files.walk(root)) {
+                files = walk.filter(Files::isRegularFile).toList();
+            }
+            for (Path file : files) {
+                Matcher m = tagFile.matcher(root.relativize(file).toString().replace('\\', '/'));
+                if (!m.find()) {
+                    continue;
+                }
+                tags++;
+                String key = "tag." + m.group(2) + "." + m.group(1) + "."
+                        + m.group(3).replace('/', '.');
+                if (!lang.get(m.group(1)).contains(key)) {
+                    problems.add(key + " (" + root.relativize(file) + ")");
+                }
+            }
+        }
+        assertTrue(tags > 0, "no tags found");
+        assertTrue(problems.isEmpty(), "Tags with no name in en_us.json:\n  " + String.join("\n  ", problems));
     }
 
     @Test

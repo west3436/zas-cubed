@@ -51,10 +51,12 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentHolder;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.entity.living.LivingBreatheEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDrownEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -229,6 +231,106 @@ public final class InternalsTests {
         FakePlayer after = TestPlayers.hurtable(h.getLevel(), "zas_switch_after");
         after.copyAttachmentsFrom(before, true);
         h.assertTrue(Internals.on(after), "internals switched on were lost on death");
+        h.succeed();
+    }
+
+    /**
+     * Internals that are on switch off on their own at the next breath check once there is nothing
+     * they could breathe from (LIFE-029, as in vg): the tank taken away, the mask taken off, both
+     * gone with the armor, or a zombie with neither. A tank that is still there but empty leaves
+     * them on, failing (LIFE-046, CLIENT-009), and they breathe from it again once it is refilled.
+     */
+    @GameTest(template = "empty")
+    public static void life_029_internals_switch_off_when_the_source_is_gone(GameTestHelper h) {
+        try (Lab lab = new Lab(h, 281)) {
+            long now = lab.r.level.getGameTime();
+            FakePlayer p = lab.player(2);
+            Runnable[] gone = {
+                () -> p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY),
+                () -> p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY),
+                () -> {
+                    p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+                    p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                }
+            };
+            String[] cases = {"the tank taken away", "the mask taken off", "both taken off"};
+            for (int i = 0; i < gone.length; i++) {
+                seal(p);
+                p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+                h.assertTrue(Internals.toggle(p), cases[i] + ": toggling didn't switch them on");
+                Breathers.checkAt(p, now + 1);
+                h.assertTrue(Internals.on(p), cases[i] + ": a check with the tank switched them off");
+                h.assertValueEqual(
+                        p.getData(Breathers.STATE).verdict().source(),
+                        BreathSource.INTERNALS,
+                        cases[i] + ": the breath before");
+
+                gone[i].run();
+                h.assertValueEqual(
+                        HudLevels.internals(p), AtmosHudPayload.INTERNALS_FAILING, cases[i] + ": before the check");
+                Breathers.checkAt(p, now + 2);
+                h.assertFalse(Internals.on(p), cases[i] + ": still on after the check");
+                h.assertValueEqual(
+                        p.getData(Breathers.STATE).verdict().source(),
+                        BreathSource.ATMOSPHERE,
+                        cases[i] + ": the breath after");
+                h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_OFF, cases[i] + ": the HUD");
+                // Gear back on doesn't switch them on again: that takes the key.
+                seal(p);
+                p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+                Breathers.checkAt(p, now + 3);
+                h.assertFalse(Internals.on(p), cases[i] + ": switched on again by the gear alone");
+            }
+
+            // An emptied tank is still found: they stay on, failing, and breathe again once it's refilled.
+            seal(p);
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            h.assertTrue(Internals.toggle(p), "toggling didn't switch them on for the empty tank");
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(Map.of(), 21.3));
+            Breathers.checkAt(p, now + 4);
+            h.assertTrue(Internals.on(p), "an empty tank switched them off");
+            h.assertValueEqual(HudLevels.internals(p), AtmosHudPayload.INTERNALS_FAILING, "the HUD with an empty tank");
+            p.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+            Breathers.checkAt(p, now + 5);
+            h.assertValueEqual(
+                    p.getData(Breathers.STATE).verdict().source(),
+                    BreathSource.INTERNALS,
+                    "the breath once the tank is refilled");
+
+            // A mob too.
+            Zombie z = lab.zombie(6);
+            Internals.set(z, true);
+            Breathers.checkAt(z, now + 1);
+            h.assertFalse(Internals.on(z), "a zombie with no seal or tank kept them on");
+        }
+        h.succeed();
+    }
+
+    /**
+     * A player who respawns with nothing to breathe from has internals off, before its first
+     * check; one who kept its gear keeps them on (LIFE-029).
+     */
+    @GameTest(template = "empty")
+    public static void life_029_a_respawn_without_gear_switches_internals_off(GameTestHelper h) {
+        FakePlayer died = TestPlayers.hurtable(h.getLevel(), "zas_respawn_died");
+        seal(died);
+        died.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+        h.assertTrue(Internals.toggle(died), "toggling didn't switch them on");
+
+        // Gear dropped on death: the copy has the switch on, and the respawn switches it off.
+        FakePlayer bare = TestPlayers.hurtable(h.getLevel(), "zas_respawn_bare");
+        bare.copyAttachmentsFrom(died, true);
+        h.assertTrue(Internals.on(bare), "the switch wasn't kept through death");
+        NeoForge.EVENT_BUS.post(new PlayerEvent.PlayerRespawnEvent(bare, false));
+        h.assertFalse(Internals.on(bare), "respawned with nothing to breathe from and still on");
+
+        // Gear kept (keepInventory): they stay on.
+        FakePlayer kept = TestPlayers.hurtable(h.getLevel(), "zas_respawn_kept");
+        kept.copyAttachmentsFrom(died, true);
+        seal(kept);
+        kept.setItemInHand(InteractionHand.OFF_HAND, TestLifeSupport.tank(FULL, 21.3));
+        NeoForge.EVENT_BUS.post(new PlayerEvent.PlayerRespawnEvent(kept, false));
+        h.assertTrue(Internals.on(kept), "respawned with its gear and switched off");
         h.succeed();
     }
 
@@ -751,6 +853,8 @@ public final class InternalsTests {
                     p.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
                 },
                 () -> {
+                    // The check before switched them off with the seal gone (LIFE-029).
+                    Internals.set(p, true);
                     seal(p);
                     p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
                 }

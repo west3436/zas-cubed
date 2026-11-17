@@ -284,5 +284,15 @@
   "viewer.zas.hint.incomplete": "Incomplete combustion",
   "viewer.zas.hint.molar_mass": "Molar mass",
   "viewer.zas.hint.rate": "Rate",
-  "viewer.zas.hint.temperature": "Temperature"
+  "viewer.zas.hint.temperature": "Temperature",
+
+  "tag.item.zas.shows_hud": "Shows HUD",
+  "tag.item.zas.shows_readings": "Shows readings",
+  "tag.block.zas.combustion": "Combustion",
+  "tag.block.zas.crop_plants": "Crop plants",
+  "tag.block.zas.ignition_sources": "Ignition sources",
+  "tag.block.zas.leaf_plants": "Leaf plants",
+  "tag.block.zas.plants": "Plants",
+  "tag.block.zas.pressure_fragile": "Pressure fragile",
+  "tag.block.zas.zone_boundary": "Zone boundaries"
 }
