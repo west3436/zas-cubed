@@ -432,5 +432,9 @@
   "item.zas_atmos.bike_horn": "Bike Horn",
   "subtitles.zas_atmos.item.bike_horn.honk": "Honk",
 
-  "config.jade.plugin_zas_atmos.readout": "Device Readouts"
+  "config.jade.plugin_zas_atmos.readout": "Device Readouts",
+
+  "tag.item.zas_atmos.batteries": "Batteries",
+  "tag.block.zas_atmos.no_fluid_view": "No fluid view",
+  "tag.fluid.zas_atmos.never_gas": "Never gas"
 }

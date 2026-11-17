@@ -65,7 +65,7 @@ public final class ZasMod {
         DebugOverlay.register(modBus);
         Breathers.register(modBus, NeoForge.EVENT_BUS);
         Airflow.register(modBus, NeoForge.EVENT_BUS);
-        Internals.register(modBus);
+        Internals.register(modBus, NeoForge.EVENT_BUS);
         Photosynthesis.register(NeoForge.EVENT_BUS);
         AtmosHud.register(modBus, NeoForge.EVENT_BUS);
         ListenerAir.register(modBus, NeoForge.EVENT_BUS);
